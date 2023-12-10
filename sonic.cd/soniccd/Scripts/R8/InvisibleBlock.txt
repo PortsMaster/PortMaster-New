@@ -1,0 +1,90 @@
+//--------------Sonic CD Invisible Block Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+// Collision
+#alias 4	:	C_BOX3
+#alias 2	:	PLAYER_COL_LWALL
+#alias 3	:	PLAYER_COL_RWALL
+#alias 4	:	PLAYER_COL_ROOF
+
+// Ink Effect Aliases
+#alias 2	:	INK_ALPHA
+
+// Climbable
+#alias 0	:	CLIMBABLE
+#alias 1	:	NOT_CLIMBABLE
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+	if Player.Gravity == GRAVITY_GROUND
+		if CheckResult == PLAYER_COL_ROOF
+			CallFunction(Player_Kill)
+		end if
+	end if
+#endplatform
+
+#platform: Use_Origins
+	switch Object.PropertyValue
+	case CLIMBABLE
+		if Player.State != Player_State_LedgePullUp
+			if Player.Animation == ANI_CLIMBING
+				PlayerObjectCollision(C_BOX3, -16, -16, 16, 16)
+			else
+				PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+				if Player.Animation == ANI_GLIDING
+					switch CheckResult
+					case PLAYER_COL_LWALL
+					case PLAYER_COL_RWALL
+						PlayerObjectCollision(C_BOX3, -16, -16, 16, 16)
+						CallFunction(Player_ClimbBlock)
+						break
+					end switch
+				end if
+				
+				if Player.Gravity == GRAVITY_GROUND
+					if CheckResult == PLAYER_COL_ROOF
+						CallFunction(Player_Kill)
+					end if
+				end if
+			end if
+		end if
+		break
+		
+	case NOT_CLIMBABLE
+		PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+		// Bug Details: The crush code is missing here LOL
+		break
+	end switch
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0  = Object.XPos
+	TempValue0 -= 0x100000
+	TempValue1  = Object.YPos
+	TempValue1 -= 0x100000
+	
+	DrawRectOutline(TempValue0, TempValue1, 0x20, 0x20, 0xFF, 0xFF, 0, 0xFF)
+	
+	Object.InkEffect = INK_ALPHA
+	Object.Alpha = 1
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

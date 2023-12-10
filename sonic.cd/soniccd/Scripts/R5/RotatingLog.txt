@@ -1,0 +1,290 @@
+//----------------Sonic CD Rotating Log Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Angle
+
+#alias Object.Value1 : Object.LogX
+#alias Object.Value2 : Object.LogY
+
+#alias Object.Value3 : Object.ChangeX
+#alias Object.Value4 : Object.ChangeY
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+
+// Time Period Aliases
+#alias Object[24].PropertyValue : HUD.CurrentTimePeriod
+
+#alias 0 : TIME_PRESENT
+#alias 1 : TIME_PAST
+#alias 2 : TIME_GOOD_FUTURE
+#alias 3 : TIME_BAD_FUTURE
+
+// Ink Effect
+#alias 1 : INK_BLEND
+
+// Property Values
+#alias 0	:	CHILD_OBJECT
+#alias 1	:	PARENT_OBJECT
+
+
+sub ObjectMain
+
+	Object.Angle++
+	Object.Angle &= 511
+	
+	// Radius value
+	TempValue1 = 96
+	
+	// Get the X change for the platform
+	Cos(Object.ChangeX, Object.Angle)
+	Object.ChangeX  *= TempValue1
+	Object.ChangeX <<= 7
+	Object.ChangeX  += Object.XPos
+	Object.ChangeX  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeX  -= Object.LogX
+	
+	// And then get the Y change for the platform
+	Sin(Object.ChangeY, Object.Angle)
+	Object.ChangeY  *= TempValue1
+	Object.ChangeY <<= 7
+	Object.ChangeY  += Object.YPos
+	Object.ChangeY  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeY  -= Object.LogY
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// Backup the Object's base position
+	TempValue0 = Object.XPos
+	TempValue1 = Object.YPos
+	
+	// And move the object to where the Log Platform actually is
+	Object.XPos = Object.LogX
+	Object.YPos = Object.LogY
+	
+	// Test to see if the Player's on the Log
+	PlayerObjectCollision(C_BOX, -8, -8, 8, 8)
+	if CheckResult == PLAYER_COL_FLOOR
+		
+		// Move them along if needed
+		Player.XPos += Object.ChangeX
+		Player.YPos += Object.ChangeY
+		
+	end if
+
+	// Restore the Object to its base position
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+
+end sub
+
+
+sub ObjectDraw
+
+	// Radius value
+	TempValue1 = 96
+	
+	// Get the X Position of the Log
+	Cos(Object.LogX, Object.Angle)
+	Object.LogX  *= TempValue1
+	Object.LogX <<= 7
+	Object.LogX  += Object.XPos
+	Object.LogX  &= 0xFFFF0000 // Truncate the value
+	
+	// Get the Y Position of the Log
+	Sin(Object.LogY, Object.Angle)
+	Object.LogY  *= TempValue1
+	Object.LogY <<= 7
+	Object.LogY  += Object.YPos
+	Object.LogY  &= 0xFFFF0000 // Truncate the value
+	
+	DrawSpriteXY(0, Object.LogX, Object.LogY)
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Rotating Log Frames
+	// Uses separate sprites for each time zone
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+		
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+		
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+		
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+		
+	end switch
+	
+	// Cycle through all Rotating Log objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rotating Log]
+		
+			// See if the object is a Leading Log
+			switch Object[ArrayPos0].PropertyValue
+			case PARENT_OBJECT
+				// Set the starting angle of the next 7 Logs, as well as the current one
+				
+				Object[ArrayPos0].Angle = 504
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 8
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 120
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 136
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 248
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 264
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 376
+				ArrayPos0++
+				
+				Object[ArrayPos0].Angle = 392
+				break
+			end switch
+		end if
+		
+		ArrayPos0++
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // IsLeader
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // IsLeader
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		if Object.PropertyValue == 1
+			TempValue0 = 504
+		else
+			GetObjectType(TempValue1, "Rotating Log")
+			ArrayPos0 = Object.EntityNo
+			TempValue0 = 0
+
+			TempValue2 = false
+
+			while TempValue2 == false
+				if TempValue0 == 8
+					TempValue2 = true
+				end if
+				
+				ArrayPos0--
+				TempValue0++
+				
+				CheckEqual(Object[ArrayPos0].Type, TempValue1)
+				TempValue2 = CheckResult
+				CheckEqual(Object[ArrayPos0].PropertyValue, true)
+				TempValue2 &= CheckResult
+			loop
+			
+			switch TempValue0
+			case 1
+				TempValue0 = 392; break
+			case 2
+				TempValue0 = 376; break
+			case 3
+				TempValue0 = 264; break
+			case 4
+				TempValue0 = 248; break
+			case 5
+				TempValue0 = 136; break
+			case 6
+				TempValue0 = 120; break
+			case 7
+				TempValue0 =   8; break
+				
+			// should never get here!
+			case 0
+			default
+				TempValue0 = 504; break
+				
+			end switch
+		end if
+
+		Cos(TempValue1, TempValue0)
+		TempValue1 *= 96
+		TempValue1 <<= 7
+		TempValue1 += Object.XPos
+		TempValue1 &= 0xFFFF0000 // Truncate the value
+		
+		// Get the Y Position of the Log
+		Sin(TempValue2, TempValue0)
+		TempValue2 *= 96
+		TempValue2 <<= 7
+		TempValue2 += Object.YPos
+		TempValue2 &= 0xFFFF0000 // Truncate the value
+		
+		Object.InkEffect = INK_BLEND
+		
+		DrawSpriteFX(0, FX_INK, TempValue1, TempValue2)
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// TODO: this is currently using the Present version of the sprite, with no heed for other time zones
+	// however, surely there's some better way to do this than 10 CheckCurrentStageFolder checks..?
+	SpriteFrame(-8, -8, 16, 16, 35, 1)
+
+	AddEditorVariable("IsLeader")
+	SetActiveVariable("IsLeader")
+	AddEnumVariable("false", 0)
+	AddEnumVariable("true",  1)
+end sub

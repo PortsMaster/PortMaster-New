@@ -1,0 +1,308 @@
+//------------------Sonic CD Seesaw Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.YVelocity
+#alias Object.Value2	:	Object.YCollisionOffset
+#alias Object.Value3	:	Object.SpikeBallYPos
+#alias Object.Value4	:	Object.SpikeBallFrame
+#alias Object.Value5	:	Object.SeesawFrame
+#alias Object.Value6	:	Object.OnObject
+
+// States
+#alias 0	:	SEESAW_IDLE
+#alias 1	:	SEESAW_SWING_DOWN
+#alias 2	:	SEESAW_SWING_UP
+#alias 3	:	SEESAW_SPIKEBALL_LAND
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case SEESAW_SWING_DOWN
+		switch Object.SeesawFrame
+		case 0
+			if Object.Timer < 2
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+				Object.YCollisionOffset = 0x100000
+			end if
+			break
+		case 1
+			if Object.Timer < 6
+				Object.Timer++
+				Object.Frame = 1
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+				Object.YCollisionOffset = 0x100000
+			end if
+			break
+		case 2
+			if Object.Timer < 6
+				Object.Timer++
+				Object.Frame = 2
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+				Object.YCollisionOffset = 0x180000
+			end if
+			break
+		case 3
+			if Object.Timer < 6
+				Object.Timer++
+				Object.Frame = 3
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+				Object.YCollisionOffset = 0x100000
+			end if
+			break
+		case 4
+			if Object.Timer < 11
+				Object.Timer++
+				Object.Frame = 4
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+			end if
+			break
+		case 5
+			if Object.OnObject == false
+				Object.State = SEESAW_SWING_UP
+				Object.SeesawFrame = 0
+			end if
+			break
+		end switch
+
+		Object.SpikeBallYPos += Object.YVelocity
+		Object.YVelocity += 0x4000
+
+		TempValue0 = Object.YPos
+		TempValue0 += 0x40000
+		if Object.SpikeBallYPos > TempValue0
+			Object.SpikeBallYPos = TempValue0
+			Object.Frame = 4
+			Object.State = SEESAW_SPIKEBALL_LAND
+		end if
+
+		if Object.YVelocity > 0
+			Object.SpikeBallFrame = 12
+		else
+			if Object.YVelocity > -0x90000
+				Object.SpikeBallFrame = 11
+			end if
+		end if
+		break
+
+	case SEESAW_SWING_UP
+		switch Object.SeesawFrame
+		case 0
+			if Object.Timer < 11
+				Object.Frame = 3
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+			end if
+			break
+		case 1
+			if Object.Timer < 11
+				Object.Frame = 2
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+			end if
+			break
+		case 2
+			if Object.Timer < 11
+				Object.Frame = 1
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.SeesawFrame++
+			end if
+			break
+		case 3
+			if Object.Timer < 11
+				Object.Frame = 2
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.SeesawFrame = 0
+			end if
+			break
+		end switch
+
+		Object.SpikeBallYPos += Object.YVelocity
+		Object.YVelocity += 0x4000
+		TempValue0  = Object.YPos
+		TempValue0 += 0x40000
+		if Object.SpikeBallYPos > TempValue0
+			Object.SpikeBallYPos = TempValue0
+			Object.Frame = 4
+			Object.State = SEESAW_SPIKEBALL_LAND
+		end if
+
+		if Object.YVelocity > 0
+			Object.SpikeBallFrame = 12
+		else
+			if Object.YVelocity > -0x90000
+				Object.SpikeBallFrame = 11
+			end if
+		end if
+		if Object.OnObject == true
+			Object.State = SEESAW_SWING_DOWN
+			Object.Timer = 0
+			Object.SeesawFrame = Object.Frame
+		end if
+		break
+	end switch
+
+	Object.OnObject = false
+	if Object.OutOfBounds == true
+		Object.State   = SEESAW_IDLE
+		Object.SpikeBallYPos   = Object.YPos
+		Object.SpikeBallFrame  = 10
+		Object.Frame   = 0
+		Object.Timer   = 0
+		Object.SeesawFrame = 0
+		Object.YCollisionOffset = 0
+		Object.Priority = PRIORITY_BOUNDS
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == SEESAW_IDLE
+		PlayerObjectCollision(C_PLATFORM, -40, -56, 40, -36)
+		if CheckResult == true
+			Object.State = SEESAW_SWING_DOWN
+			Object.Priority = PRIORITY_ACTIVE
+			Object.YVelocity = -0xC0000
+		end if
+	else
+		switch Object.Frame
+		case 0
+			PlayerObjectCollision(C_PLATFORM, -40, -56, 40, -36)
+			break
+		case 1
+			PlayerObjectCollision(C_PLATFORM, -40, -40, 40, -20)
+			break
+		case 2
+			PlayerObjectCollision(C_PLATFORM, -40, -24, 40, -4)
+			break
+		case 3
+			PlayerObjectCollision(C_PLATFORM, -40, 0, 40, 20)
+			break
+		case 4
+			PlayerObjectCollision(C_PLATFORM, -40, 16, 40, 36)
+			break
+		end switch
+		if Object.State < SEESAW_SPIKEBALL_LAND
+			if CheckResult == true
+				Object.OnObject = true
+				if Object.YCollisionOffset > 0
+					Player.YPos += Object.YCollisionOffset
+					Object.YCollisionOffset = 0
+					Object.Frame++
+				end if
+			end if
+		end if
+		if Object.SpikeBallFrame > 11
+			TempValue0 = Object.YPos
+			Object.YPos = Object.SpikeBallYPos
+			PlayerObjectCollision(C_TOUCH, -24, -24, 24, 24)
+			if CheckResult == true
+				CallFunction(Player_Hit)
+			end if
+			Object.YPos = TempValue0
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.DrawOrder == 3
+		if Object.SpikeBallFrame < 11
+			DrawSpriteXY(Object.SpikeBallFrame, Object.XPos, Object.SpikeBallYPos)
+			DrawSprite(Object.Frame)
+			DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSprite(Object.Frame)
+			DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteXY(Object.SpikeBallFrame, Object.XPos, Object.SpikeBallYPos)
+		end if
+		SetDrawListEntityRef(Object.EntityNo, 4, Screen[4].DrawListSize)
+		Screen[4].DrawListSize++
+		Object.DrawOrder = 4
+	else
+		TempValue0 = Object.Frame
+		TempValue0 += 5
+		DrawSprite(TempValue0)
+		Object.DrawOrder = 3
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-40, -56, 40, 112, 66, 1)	// #0  - SeeSaw
+	SpriteFrame(-40, -40, 40, 96, 107, 1)	// #1  - SeeSaw BG move frame 0
+	SpriteFrame(-24, -24, 24, 80, 123, 17)	// #2  - SeeSaw BG move frame 1
+	SpriteFrame(-40, -32, 40, 88, 148, 1)	// #3  - SeeSaw BG move frame 2
+	SpriteFrame(-40, -40, 40, 96, 189, 1)	// #4  - SeeSaw BG move frame 3
+
+	SpriteFrame(-40, -56, 80, 24, 175, 98)	// #5  - SeeSaw front platform Top
+	SpriteFrame(-40, -40, 80, 24, 175, 98)	// #6  - SeeSaw front platform Middle Top
+	SpriteFrame(-40, -24, 80, 24, 175, 98)	// #7  - SeeSaw front platform Middle
+	SpriteFrame(-40, 0, 80, 24, 175, 98)	// #8  - SeeSaw front platform Middle Bottom
+	SpriteFrame(-40, 16, 80, 24, 175, 98)	// #9  - SeeSaw front platform Bottom
+
+	SpriteFrame(-16, -16, 32, 32, 1, 213)	// #10 - SpikeBall BG
+	SpriteFrame(-24, -24, 48, 48, 1, 164)	// #11 - SpikeBall halfway
+	SpriteFrame(-28, -32, 56, 64, 1, 99)	// #12 - SpikeBall FG
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Seesaw]
+			Object[ArrayPos0].Direction = FACING_LEFT
+			Object[ArrayPos0].SpikeBallYPos = Object[ArrayPos0].YPos
+			Object[ArrayPos0].SpikeBallFrame = 10
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.Direction = FACING_LEFT
+	DrawSpriteXY(2, Object.XPos, Object.YPos)
+	DrawSprite(0)
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-40, -56, 40, 112, 66, 1)	// #0 - SeeSaw
+	SpriteFrame(-40, -56, 80, 24, 175, 98)	// #1 - SeeSaw front platform Top
+	SpriteFrame(-16, -16, 32, 32, 1, 213)	// #2 - SpikeBall BG
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

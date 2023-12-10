@@ -1,0 +1,224 @@
+//-------------Sonic CD Shrink Grow Laser Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.YDrawPos
+
+// States
+#alias 0	:	SGLASER_SHOOT_LASER
+#alias 1	:	SGLASER_LASER
+#alias 2	:	SGLASER_SPLASH
+
+// Property Values
+#alias 0	:	GIMMICK_SHRINK_LASER
+#alias 1	:	GIMMICK_GROW_LASER
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+
+// Stage SFX
+#alias 3	:	SFX_S_SHRINKLASER
+#alias 4	:	SFX_S_TIMEUFO
+
+
+sub ObjectMain
+	switch Object.State
+	case SGLASER_SHOOT_LASER
+		if Object.Timer < 24
+			TempValue0 = Object.Timer
+			TempValue0 &= 3
+			if TempValue0 == 0
+				CreateTempObject(TypeName[S G Laser], Object.PropertyValue, Object.XPos, Object.YPos)
+				Object[TempObjectPos].State = SGLASER_LASER
+			end if
+		end if
+		
+		if Object.Timer == 0
+			PlayerObjectCollision(C_TOUCH, -96, -128, 96, 128)
+			if CheckResult == true
+				if Object.PropertyValue == GIMMICK_SHRINK_LASER
+					PlayStageSfx(SFX_S_SHRINKLASER, false)
+				else
+					PlayStageSfx(SFX_S_TIMEUFO, false)
+				end if
+			end if
+		end if
+		Object.Timer++
+		Object.Timer &= 31
+		break
+
+	case SGLASER_LASER
+		Object.YPos += 0x40000
+		ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+		if CheckResult == true
+			Object.YDrawPos = Object.YPos
+			Object.State++
+		end if
+		break
+
+	case SGLASER_SPLASH
+		if Object.Timer < 4
+			Object.YPos += 0x40000
+			Object.Timer++
+		else
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State > SGLASER_SHOOT_LASER	// Check that this is the laser and not the machine
+		if Object.PropertyValue == Mini_PlayerFlag
+			if Player.State != Player_State_SizeChange
+				PlayerObjectCollision(C_TOUCH, -4, -8, 4, 8)
+				if CheckResult == true
+
+#platform: Use_Haptics
+					if Object.PropertyValue == GIMMICK_SHRINK_LASER
+						HapticEffect(39, 0, 0, 0)
+					else
+						HapticEffect(33, 0, 0, 0)
+					end if
+#endplatform
+
+					Player.State = Player_State_SizeChange
+					Player.Animation = ANI_SIZE_CHANGE
+					Player.YVelocity = -0x40000
+					Player.Gravity = GRAVITY_AIR
+					if Player.XPos > Object.XPos
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case SGLASER_SHOOT_LASER
+		DrawSprite(Object.PropertyValue)
+		break
+
+	case SGLASER_LASER
+		if Object.AnimationTimer < 2
+			TempValue0  = 2
+			TempValue0 += Object.PropertyValue
+			DrawSprite(TempValue0)
+		else
+			DrawSprite(4)
+		end if
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 3
+		break
+
+	case SGLASER_SPLASH
+		if Object.AnimationTimer < 2
+			TempValue0  = 2
+			TempValue0 += Object.PropertyValue
+			DrawSprite(TempValue0)
+			TempValue0 += 3
+			DrawSpriteXY(TempValue0, Object.XPos, Object.YDrawPos)
+		else
+			DrawSprite(4)
+			DrawSpriteXY(7, Object.XPos, Object.YDrawPos)
+		end if
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 3
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Origins loads this from playerobject so, goodbye!
+#platform: Use_Standalone
+	Mini_PlayerFlag = false
+	if Stage.PlayerListPos == PLAYER_SONIC_A
+		LoadAnimation("MiniSonic.Ani")
+	else
+		LoadAnimation("MiniTails.Ani")
+	end if
+#endplatform
+
+	SpriteFrame(-8, -12, 16, 24, 151, 144)	// #0 - Shrink Grow Machine Red
+	SpriteFrame(-8, -12, 16, 24, 168, 144)	// #1 - Shrink Grow Machine Blue
+
+	SpriteFrame(-4, -8, 8, 16, 82, 196)		// #2 - Laser Red
+	SpriteFrame(-4, -8, 8, 16, 91, 196)		// #3 - Laser Blue
+	SpriteFrame(-4, -8, 8, 16, 100, 196)	// #4 - Laser White
+
+	SpriteFrame(-8, 0, 16, 8, 169, 169)		// #5 - Laser Splash Red
+	SpriteFrame(-8, 0, 16, 8, 134, 178)		// #6 - Laser Splash Blue
+	SpriteFrame(-8, 0, 16, 8, 152, 169)		// #7 - Laser Splash White
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[S G Laser]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // laserType
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // laserType
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	SpriteFrame(-8, -12, 16, 24, 151, 144)	// #0 - Shrink Grow Machine Red
+	SpriteFrame(-8, -12, 16, 24, 168, 144)	// #1 - Shrink Grow Machine Blue
+
+	AddEditorVariable("laserType")
+	SetActiveVariable("laserType")
+	AddEnumVariable("Shrink Laser", GIMMICK_SHRINK_LASER)
+	AddEnumVariable("Growth Laser", GIMMICK_GROW_LASER)
+end sub

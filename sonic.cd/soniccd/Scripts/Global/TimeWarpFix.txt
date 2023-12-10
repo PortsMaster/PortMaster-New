@@ -1,0 +1,194 @@
+//---------------Sonic CD Time Warp Fix Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// Property Values
+#alias 0	:	TIMEWARPFIX_ERASE_TOUCH			// Touch this while trying to warp, no more time travel for you
+#alias 1	:	TIMEWARPFIX_ERASE_AREA			// Get past this, no more warp for you
+#alias 2	:	TIMEWARPFIX_SAVE_POINT			// Sets your position to the next object after time-travelling
+#alias 3	:	TIMEWARPFIX_SAVE_POINT_AIR		// Sets your position to the next object after time-travelling, but in the air
+#alias 4	:	TIMEWARPFIX_FORCE_ERASE_TOUCH	// Touch this, no more time travel for you (introduced in Origins Plus)
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Warp Destination
+#alias 0	:	WARP_NONE
+
+
+sub ObjectMain
+	switch Object.PropertyValue
+	case TIMEWARPFIX_ERASE_TOUCH
+		PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+		if CheckResult == true
+			if Warp.Destination > WARP_NONE
+				if Warp.Timer > 99
+					if Warp.Timer < 220	// They forgot to fix the warp timer here
+						Warp.Destination = WARP_NONE
+					end if
+				end if
+				
+				Warp.Timer = 0
+			end if
+		end if
+		break
+
+	case TIMEWARPFIX_ERASE_AREA
+		if Player.XPos < Object.XPos
+			Warp.Destination = WARP_NONE
+			Warp.Timer = 0
+		end if
+		break
+
+	case TIMEWARPFIX_SAVE_POINT
+		PlayerObjectCollision(C_TOUCH, -48, -48, 48, 48)
+		if CheckResult == true
+			Object.Type = TypeName[Blank Object]
+			Player.XPos = Object[+1].XPos
+			Player.YPos = Object[+1].YPos
+		end if
+		
+		Object.Timer++
+		if Object.Timer == 2
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+
+	case TIMEWARPFIX_SAVE_POINT_AIR
+		PlayerObjectCollision(C_TOUCH, -96, -96, 96, 96)
+		if CheckResult == true
+			Object.Type = TypeName[Blank Object]
+			Player.XPos = Object[+1].XPos
+			Player.YPos = Object[+1].YPos
+			Player.Gravity = GRAVITY_AIR
+		end if
+		
+		Object.Timer++
+		if Object.Timer == 2
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+		
+	case TIMEWARPFIX_FORCE_ERASE_TOUCH
+#platform: Use_Origins
+		PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+		if CheckResult == true
+			if Warp.Destination > WARP_NONE
+				Warp.Destination = WARP_NONE
+				Warp.Timer = 0
+			end if
+		end if
+#endplatform
+		break
+		
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	// Check some interaction with the Player... but don't do anything with it
+	PlayerObjectCollision(C_TOUCH, -14, -15, 14, 16)
+	
+	// All the actual interaction is handled in ObjectMain instead, which is certainly quite the risky business..
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Well this event exists in the object's ByteCode, but there's not actually any code within it...
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			CheckResult &= 3
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 3
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		TempValue0 = -1
+		
+		switch Object.PropertyValue
+		case TIMEWARPFIX_ERASE_TOUCH
+		case TIMEWARPFIX_FORCE_ERASE_TOUCH
+			TempValue0 = 16; TempValue1 = 16; TempValue2 = 16; TempValue3 = 16;
+			break
+			
+		case TIMEWARPFIX_ERASE_AREA
+			// Draw a rightward arrow, should convey what this object does well enough
+			TempValue1 = Object.XPos
+			TempValue1 += 0x380000
+			DrawArrow(Object.XPos, Object.YPos, TempValue1, Object.YPos, 0, 0, 255)
+			break
+			
+		case TIMEWARPFIX_SAVE_POINT
+			TempValue0 = 48; TempValue1 = 48; TempValue2 = 48; TempValue3 = 48;
+			
+			// Draw an arrow to where the player will be sent
+			DrawArrow(Object.XPos, Object.YPos, Object[+1].XPos, Object[+1].YPos, 255, 255, 0)
+			break
+			
+		case TIMEWARPFIX_SAVE_POINT_AIR
+			TempValue0 = 96; TempValue1 = 96; TempValue2 = 96; TempValue3 = 96;
+			
+			// Draw an arrow to where the player will be sent
+			DrawArrow(Object.XPos, Object.YPos, Object[+1].XPos, Object[+1].YPos, 255, 255, 0)
+			break
+			
+		end switch
+		
+		if TempValue0 != -1
+			CallFunction(EditorHelpers_DrawHitbox)
+		end if
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // "T" (rigger) Icon
+	
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Erase Time Warp on Touch", 0)
+	AddEnumVariable("Erase Time Warp on Pass", 1)
+	AddEnumVariable("Set Time Warp Pos (Ground)", 2)
+	AddEnumVariable("Set Time Warp Pos (Air)", 3)
+	AddEnumVariable("Erase Time Warp on Touch", 4)
+end sub

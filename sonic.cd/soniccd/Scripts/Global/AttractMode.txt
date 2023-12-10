@@ -1,0 +1,292 @@
+//----------------Sonic CD Attract Mode Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.DemoTime
+#alias Object.Value2	:	Object.DemoLength
+#alias Object.Value3	:	Object.DemoInput
+
+// States
+#alias 0	:	ATTRACTMODE_SETUP
+#alias 1	:	ATTRACTMODE_HANDLE_INPUT
+
+// Control Modes
+#alias  0	:	CONTROLMODE_NORMAL
+
+// Demo ID Aliases
+#alias 0	:	DEMO_R11A
+#alias 1	:	DEMO_SS1
+#alias 2	:	DEMO_R43C
+#alias 3	:	DEMO_SS6
+#alias 4	:	DEMO_R82A
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Engine & CallBacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Player Aliases
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Presentation Stages
+#alias 0	:	STAGE_P_TITLE
+
+// Text Info type
+#alias 0	:	TEXTINFO_TEXTDATA
+#alias 1	:	TEXTINFO_TEXTSIZE
+
+
+sub ObjectMain
+	switch Object.State
+	case ATTRACTMODE_SETUP
+		if Player.ControlMode == CONTROLMODE_NORMAL
+			Object.State++
+			Object.DemoInput  = Object.DemoLength
+			Object.DemoInput -= 60
+		end if
+		break
+		
+	case ATTRACTMODE_HANDLE_INPUT
+		
+		// Get the inputs for the current frame
+		GetTextInfo(TempValue0, MENU_1, TEXTINFO_TEXTDATA, 0, Object.DemoTime)
+		
+		// Set all the input stuff as needed
+		GetBit(Player.Up, TempValue0, 0)
+		GetBit(Player.Down, TempValue0, 1)
+		GetBit(Player.Left, TempValue0, 2)
+		GetBit(Player.Right, TempValue0, 3)
+		GetBit(Player.JumpPress, TempValue0, 4)
+		GetBit(Player.JumpHold, TempValue0, 5)
+		
+		if Object.DemoTime < Object.DemoLength
+			Object.DemoTime++
+		else
+			StopMusic()
+			Options.AttractMode = false
+			Stage.ActiveList	  = PRESENTATION_STAGE
+			Stage.ListPos		  = STAGE_P_TITLE
+			Transporter_Destroyed = false
+			MetalSonic_Destroyed  = false
+			Good_Future 		  = false
+			LoadStage()
+			LampPost.Check = 0
+			
+			Engine.HapticsEnabled = SaveRAM[40]
+		end if
+		
+		if Object.DemoTime >= Object.DemoInput
+			// Fade out
+			
+			Music.Volume -= 2
+			
+			Screen.CameraEnabled = false
+			
+			TempValue0   = Object.DemoTime
+			TempValue0  -= Object.DemoInput
+			TempValue0 <<= 3
+			if TempValue0 > 255
+				TempValue0 = 255
+			end if
+			
+			SetScreenFade(0, 0, 0, TempValue0)
+		else
+			if KeyPress[0].ButtonA == true
+				Object.DemoTime = Object.DemoInput
+			end if
+			
+			if KeyPress[0].ButtonB == true
+				Object.DemoTime = Object.DemoInput
+			end if
+			
+			if KeyPress[0].ButtonC == true
+				Object.DemoTime = Object.DemoInput
+			end if
+			
+			if KeyPress[0].AnyStart == true
+				Object.DemoTime = Object.DemoInput
+			end if
+			
+#platform: Mobile
+			CheckTouchRect(0, 0, Screen.XSize, 240)
+			if CheckResult > -1
+				Object.DemoTime = Object.DemoInput
+			end if
+			
+			if Engine.Message == MESSAGE_LOSTFOCUS
+				Object.DemoTime = Object.DemoInput
+			end if
+#endplatform
+		
+		end if
+		break
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	
+	if Object[20].Type != TypeName[Title Card]
+		Object.AnimationTimer++
+		Object.AnimationTimer %= 60
+		
+		if Object.AnimationTimer > 29
+			// Code would be here, presumably?
+			// This entire ObjectDraw sub exists, but nothing's actually drawn...
+			
+			// A fit guess would be the "Demo" sprite from below, but since it doesn't show up in the original game
+			// it may have been removed for accuracy reasons
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// This Object never draws anything anyway, but load a sheet and set up Sprite Frames anyway
+	if Stage.ActiveList == REGULAR_STAGE
+		// Load the corresponding Display sheet for the current character
+		if Stage.PlayerListPos == PLAYER_SONIC_A
+			LoadSpriteSheet("Global/Display.gif")
+		end if
+		if Stage.PlayerListPos == PLAYER_TAILS_A
+			LoadSpriteSheet("Global/Display_t.gif")
+		end if
+#platform: Use_Origins
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			LoadSpriteSheet("Global/Display_k.gif")
+		end if
+		if Stage.PlayerListPos == PLAYER_AMY
+			LoadSpriteSheet("Global/Display_a.gif")
+		end if
+#endplatform
+		
+		// "Demo" - unused
+		SpriteFrame(-17, -5, 34, 11, 1, 176)
+	else
+		LoadSpriteSheet("Special/Objects.gif")
+		
+		// "Demo" - unused
+		SpriteFrame(-17, -5, 34, 11, 83, 168)
+	end if
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Attract Mode]
+			if Options.AttractMode == true
+				
+				// Make the Object always active, regardless of where it's located in the stage
+				Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+				
+				// Give it a high Draw Order as well... though nothing's ever really drawn by this Object
+				Object[ArrayPos0].DrawOrder = 6
+				
+				switch Object[ArrayPos0].PropertyValue
+				case DEMO_R11A
+					// Palmtree Panic Act 1, Present
+					
+					LoadTextFile(MENU_1, "Data/Game/Demos/Key11a.bin", 0)
+					LampPost.Check = 0
+					break
+					
+				case DEMO_SS1
+					// Special Stage 1
+					
+					LoadTextFile(MENU_1, "Data/Game/Demos/Special1.bin", 0)
+					LampPost.Check = 0
+					break
+					
+				case DEMO_R43C
+					// Tidal Tempest 3, Good Future
+					
+					LoadTextFile(MENU_1, "Data/Game/Demos/Key43c.bin", 0)
+					
+					// Move the Player to where the Attract Mode object is placed
+					Player.XPos = Object[ArrayPos0].XPos
+					Player.YPos = Object[ArrayPos0].YPos
+					
+					LampPost.Check = 33
+					break
+					
+				case DEMO_SS6
+					// Special Stage 6
+					
+					LoadTextFile(MENU_1, "Data/Game/Demos/Special6.bin", 0)
+					LampPost.Check = 0
+					break
+					
+				case DEMO_R82A
+					// Metallic Madness 2, Present
+					
+					LoadTextFile(MENU_1, "Data/Game/Demos/Key82a.bin", 0)
+					
+					// Move the Player to where the Attract Mode object's placed
+					Player.XPos = Object[ArrayPos0].XPos
+					Player.YPos = Object[ArrayPos0].YPos
+					
+					LampPost.Check = 33
+					break
+					
+				end switch
+				
+				// Get how long the Demo is, and store it in the Attract Mode Object
+				GetTextInfo(Object[ArrayPos0].DemoLength, MENU_1, TEXTINFO_TEXTSIZE, 0, 0)
+				
+			else
+				
+				// If Attract Mode isn't active, then remove the Object
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+				
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // DemoID
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // DemoID
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-17, -5, 34, 11, 1, 176) // "Demo"
+
+	AddEditorVariable("DemoID")
+	SetActiveVariable("DemoID")
+	AddEnumVariable("Palmtree Panic 1", 0)
+	AddEnumVariable("Special Zone 1", 1)
+	AddEnumVariable("Tidal Tempest 3", 2)
+	AddEnumVariable("Special Zone 6", 3)
+	AddEnumVariable("Metallic Madness 2", 4)
+end sub

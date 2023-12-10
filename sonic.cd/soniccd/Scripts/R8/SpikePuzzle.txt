@@ -1,0 +1,379 @@
+//---------------Sonic CD Spike Puzzle Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.YVelocity
+#alias Object.Value2	:	Object.PieceType	// 0 is not an actual piece
+#alias Object.Value3	:	Object.YOffset
+#alias Object.Value4	:	Object.PuzzlePiece
+
+// States
+#alias 0	:	SPIKEPUZZLE_SETUP
+#alias 1	:	SPIKEPUZZLE_CHECK_BOUNDS
+#alias 2	:	SPIKEPUZZLE_CREATE_PIECE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Collision
+#alias 0	:	CSIDE_FLOOR
+
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 4	:	PLAYER_COL_ROOF
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+// Property Values
+#alias 0	:	PUZZLE_A
+#alias 1	:	PUZZLE_B
+
+// Function declarations
+#function SpikePuzzle_Reset
+
+function SpikePuzzle_Reset
+	
+	Object.Timer = 0
+	Object.PuzzlePiece = 1
+	
+	Object[+1].Type = TypeName[Spike Puzzle]
+	Object[+1].XPos = Object.XPos
+	Object[+1].YPos = Object.YPos
+	Object[+1].YVelocity = 0
+	Object[+1].YOffset = 16
+	
+	Object[+2].Type = TypeName[Blank Object]
+	Object[+2].YVelocity = 0
+	Object[+2].YOffset = 40
+	
+	Object[+3].Type = TypeName[Blank Object]
+	Object[+3].YVelocity = 0
+	Object[+3].YOffset = 64
+	
+	Object[+4].Type = TypeName[Blank Object]
+	Object[+4].YVelocity = 0
+	Object[+4].YOffset = 88
+	
+	Object[+5].Type = TypeName[Blank Object]
+	Object[+5].YVelocity = 0
+	Object[+5].YOffset = 112
+	
+	if Object.PropertyValue == PUZZLE_A
+		Object[+1].PieceType = 1
+		Object[+2].PieceType = 2
+		Object[+3].PieceType = 1
+		Object[+4].PieceType = 3
+		Object[+5].PieceType = 1
+	else
+		Object[+1].PieceType = 1
+		Object[+2].PieceType = 3
+		Object[+3].PieceType = 1
+		Object[+4].PieceType = 2
+		Object[+5].PieceType = 1
+	end if
+end function
+
+
+sub ObjectMain
+	if Object.PieceType == 0
+		if Object.OutOfBounds == true
+			CallFunction(SpikePuzzle_Reset)
+			Object.State = SPIKEPUZZLE_CHECK_BOUNDS
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		
+		switch Object.State
+		case SPIKEPUZZLE_SETUP
+			CallFunction(SpikePuzzle_Reset)
+			Object.State++
+			break
+			
+		case SPIKEPUZZLE_CHECK_BOUNDS
+			PlayerObjectCollision(C_TOUCH, -80, -8, 80, 224)
+			if CheckResult == true
+				Object.Priority = PRIORITY_ACTIVE
+				Object.State++
+				Object[+1].YVelocity = 0x8000
+			end if
+			break
+			
+		case SPIKEPUZZLE_CREATE_PIECE
+			if Object.Timer < 284
+				Object.Timer++
+			else
+				TempValue0  = Object.YPos
+				TempValue0 += 0x400000
+				if Player.YPos > TempValue0
+					Object.Timer = 0
+					Object.PuzzlePiece++
+					if Object.PuzzlePiece < 6
+						ArrayPos0  = Object.EntityNo
+						ArrayPos0 += Object.PuzzlePiece
+
+						Object[ArrayPos0].Type  = TypeName[Spike Puzzle]
+						Object[ArrayPos0].XPos  = Object.XPos
+
+						Object[ArrayPos0].YPos  = Object.YPos
+						Object[ArrayPos0].YPos -= 0x200000
+
+						Object[ArrayPos0].YVelocity = 0x8000
+					else
+						Object.State++
+					end if
+				end if
+			end if
+			break
+			
+		end switch
+	else
+		Object.YPos += Object.YVelocity
+		ObjectTileCollision(CSIDE_FLOOR, 0, Object.YOffset, 0)
+		if CheckResult == true
+			Object.YVelocity = 0
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	switch Object.PieceType
+	case 1
+		PlayerObjectCollision(C_BOX, -80, -9, -24, 16)
+		TempValue0  = CheckResult
+		PlayerObjectCollision(C_BOX, 24, -9, 80, 16)
+		TempValue0 += CheckResult
+		if TempValue0 == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		if TempValue0 == PLAYER_COL_ROOF
+			if Player.Gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			else
+				CallFunction(Player_Hit)
+			end if
+		end if
+		break
+
+	case 2
+		PlayerObjectCollision(C_BOX, -80, -9, -56, 16)
+		TempValue0  = CheckResult
+		PlayerObjectCollision(C_BOX, -8, -9, 80, 16)
+		TempValue0 += CheckResult
+		if TempValue0 == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		if TempValue0 == PLAYER_COL_ROOF
+			if Player.Gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			else
+				CallFunction(Player_Hit)
+			end if
+		end if
+		break
+		
+	case 3
+		PlayerObjectCollision(C_BOX, -80, -9, 8, 16)
+		TempValue0  = CheckResult
+		PlayerObjectCollision(C_BOX, 56, -9, 80, 16)
+		TempValue0 += CheckResult
+		if TempValue0 == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		if TempValue0 == PLAYER_COL_ROOF
+			if Player.Gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			else
+				CallFunction(Player_Hit)
+			end if
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.PieceType
+	case 1
+		DrawSprite(0)
+		DrawSprite(1)
+		DrawSprite(2)
+		DrawSprite(3)
+		DrawSprite(4)
+		DrawSprite(5)
+		break
+	case 2
+		DrawSprite(6)
+		DrawSprite(7)
+		DrawSprite(8)
+		DrawSprite(9)
+		DrawSprite(10)
+		DrawSprite(11)
+		break
+	case 3
+		DrawSprite(12)
+		DrawSprite(13)
+		DrawSprite(14)
+		DrawSprite(15)
+		DrawSprite(16)
+		DrawSprite(17)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+	
+	// First Piece
+	SpriteFrame(-80, -8, 24, 24, 133, 1)	// #0  - Spike Small Chunk
+	SpriteFrame(-56, -8, 32, 24, 100, 1)	// #1  - Spike Medium Chunk
+	SpriteFrame(-24, -8, 24, 16, 158, 1)	// #2  - Spike BG Chunk
+	SpriteFrame(0, -8, 24, 16, 158, 1)		// #3  - Spike BG Chunk
+	SpriteFrame(24, -8, 32, 24, 100, 1)		// #4  - Spike Medium Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #5  - Spike Small Chunk
+	
+	// Second Piece
+	SpriteFrame(-80, -8, 24, 24, 133, 1)	// #6  - Spike Small Chunk
+	SpriteFrame(-56, -8, 24, 16, 158, 1)	// #7  - Spike BG Chunk
+	SpriteFrame(-32, -8, 24, 16, 158, 1)	// #8  - Spike BG Chunk
+	SpriteFrame(-8, -8, 32, 24, 100, 1)		// #9  - Spike Medium Chunk
+	SpriteFrame(24, -8, 32, 24, 100, 1)		// #10 - Spike Medium Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #11 - Spike Small Chunk
+	
+	// Third Piece
+	SpriteFrame(-80, -8, 32, 24, 100, 1)	// #12 - Spike Medium Chunk
+	SpriteFrame(-48, -8, 32, 24, 100, 1)	// #13 - Spike Medium Chunk
+	SpriteFrame(-16, -8, 24, 24, 133, 1)	// #14 - Spike Small Chunk
+	SpriteFrame(8, -8, 24, 16, 158, 1)		// #15 - Spike BG Chunk
+	SpriteFrame(32, -8, 24, 16, 158, 1)		// #16 - Spike BG Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #17 - Spike Small Chunk
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // type
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // type
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	TempValue1  = 0
+	TempValue2  = TempValue1
+	TempValue2 += 6
+	while TempValue1 < TempValue2
+		DrawSprite(TempValue1)
+		TempValue1++
+	loop
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		TempValue0  = Object.YPos
+		TempValue0 += 0x600000
+		Object.InkEffect = 1
+		ArrayPos0 = 5
+		while ArrayPos0 > 1
+			switch ArrayPos0
+			case 5
+			case 3
+			case 1
+				TempValue1 = 0
+				break
+			case 2
+				if Object.PropertyValue == PUZZLE_A
+					TempValue1 = 6
+				else
+					TempValue1 = 12
+				end if
+				break
+			case 4
+				if Object.PropertyValue == PUZZLE_A
+					TempValue1 = 12
+				else
+					TempValue1 = 6
+				end if
+				break
+			end switch
+			TempValue2  = TempValue1
+			TempValue2 += 6
+			while TempValue1 < TempValue2
+				DrawSpriteFX(TempValue1, FX_INK, Object.XPos, TempValue0)
+				TempValue1++
+			loop
+			TempValue0 -= 0x180000
+			ArrayPos0 --
+		loop
+		ArrayPos0  = Object.EntityNo
+		ArrayPos1  = ArrayPos0
+		ArrayPos1 += 5
+		while ArrayPos0 <= ArrayPos1
+			if Object[ArrayPos0].Type == TypeName[Blank Object]
+				DrawLine(Object.XPos, Object.YPos, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos, 255, 255, 0)
+			end if
+			ArrayPos0++
+		loop
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	
+	// First Piece
+	SpriteFrame(-80, -8, 24, 24, 133, 1)	// #0  - Spike Small Chunk
+	SpriteFrame(-56, -8, 32, 24, 100, 1)	// #1  - Spike Medium Chunk
+	SpriteFrame(-24, -8, 24, 16, 158, 1)	// #2  - Spike BG Chunk
+	SpriteFrame(0, -8, 24, 16, 158, 1)		// #3  - Spike BG Chunk
+	SpriteFrame(24, -8, 32, 24, 100, 1)		// #4  - Spike Medium Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #5  - Spike Small Chunk
+	
+	// Second Piece
+	SpriteFrame(-80, -8, 24, 24, 133, 1)	// #6  - Spike Small Chunk
+	SpriteFrame(-56, -8, 24, 16, 158, 1)	// #7  - Spike BG Chunk
+	SpriteFrame(-32, -8, 24, 16, 158, 1)	// #8  - Spike BG Chunk
+	SpriteFrame(-8, -8, 32, 24, 100, 1)		// #9  - Spike Medium Chunk
+	SpriteFrame(24, -8, 32, 24, 100, 1)		// #10 - Spike Medium Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #11 - Spike Small Chunk
+	
+	// Third Piece
+	SpriteFrame(-80, -8, 32, 24, 100, 1)	// #12 - Spike Medium Chunk
+	SpriteFrame(-48, -8, 32, 24, 100, 1)	// #13 - Spike Medium Chunk
+	SpriteFrame(-16, -8, 24, 24, 133, 1)	// #14 - Spike Small Chunk
+	SpriteFrame(8, -8, 24, 16, 158, 1)		// #15 - Spike BG Chunk
+	SpriteFrame(32, -8, 24, 16, 158, 1)		// #16 - Spike BG Chunk
+	SpriteFrame(56, -8, 24, 24, 133, 1)		// #17 - Spike Small Chunk
+
+	AddEditorVariable("puzzle")
+	SetActiveVariable("puzzle")
+	AddEnumVariable("Puzzle A", PUZZLE_A)
+	AddEnumVariable("Puzzle B", PUZZLE_B)
+end sub

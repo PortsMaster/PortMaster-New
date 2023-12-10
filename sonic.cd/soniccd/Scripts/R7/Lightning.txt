@@ -1,0 +1,179 @@
+//-----------------Sonic CD Lightning Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Timer
+#alias Object.Value1 : Object.Flash
+
+// Note - Object.Alpha is used for the actual lightning sprites, while Object.Flash is used for the screen-wide lightning flash
+
+// States
+#alias 0	:	LIGHTNING_WAIT
+#alias 1	:	LIGHTNING_FALL
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+
+sub ObjectMain
+	switch Object.State
+	case LIGHTNING_WAIT
+		if Object.Timer < 256
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.Alpha = 254
+			Object.Flash = 128
+			Object.State++
+		end if
+		break
+		
+	case LIGHTNING_FALL
+		if Object.Alpha > 0
+			Object.Alpha -= 2
+		else
+			Object.State = LIGHTNING_WAIT
+			Object.Frame++
+			Object.Frame &= 3
+		end if
+		
+		if Object.Flash > 0
+			Object.Flash -= 4
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.State > LIGHTNING_WAIT
+		if Object.DrawOrder == 1
+			// In this Draw Order, we're in the BG
+			
+			Object.YPos   = Screen.YOffset
+			Object.YPos  *= Object.PropertyValue
+			Object.YPos >>= 7
+			FlipSign(Object.YPos)
+			Object.YPos += 312
+
+			TempValue0   = Object.Flash
+			TempValue0 >>= 1
+			DrawRect(0, 0, Screen.XSize, Screen.YSize, 224, 192, 128, TempValue0)
+
+			TempValue0   = Screen.XOffset
+			TempValue0 >>= 3
+			TempValue0  &= 511
+			FlipSign(TempValue0)
+
+			TempValue1  = Object.Frame
+			TempValue0 += 64
+			if TempValue0 < -64
+				TempValue0 += 512
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+				TempValue0 -= 512
+			else
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+			end if
+			
+			TempValue1++
+			TempValue1 &= 3
+			TempValue0 += 128
+			if TempValue0 < -64
+				TempValue0 += 512
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+				TempValue0 -= 512
+			else
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+			end if
+			
+			TempValue1++
+			TempValue1 &= 3
+			TempValue0 += 128
+			if TempValue0 < -64
+				TempValue0 += 512
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+				TempValue0 -= 512
+			else
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+			end if
+			
+			TempValue1++
+			TempValue1 &= 3
+			TempValue0 += 96
+			if TempValue0 < -64
+				TempValue0 += 512
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+				TempValue0 -= 512
+			else
+				DrawSpriteScreenFX(TempValue1, FX_INK, TempValue0, Object.YPos)
+			end if
+			
+			// For the flash, add this Object to a higher draw list
+			SetDrawListEntityRef(Object.EntityNo, 5, Screen.DrawListSize[5])
+			Screen[5].DrawListSize++
+			Object.DrawOrder = 5
+		else
+			// On this Draw Order, we're between the game objects and the HUD
+			
+			DrawRect(0, 0, Screen.XSize, Screen.YSize, 224, 224, 192, Object.Flash)
+			Object.DrawOrder = 1
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects3.gif")
+	
+	// Lightning Frames
+	SpriteFrame(-8, 0, 16, 40, 43, 140)
+	SpriteFrame(-8, 0, 16, 24, 60, 140)
+	SpriteFrame(-16, 0, 32, 40, 77, 132)
+	SpriteFrame(-8, 0, 16, 24, 60, 140)
+	
+	// Go through the level to find and setup the Lightning object
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Lightning]
+			
+			// Lightning never stops, make it always active
+			// (In terms of the actual object layout, normally this object is far out of bounds!)
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			// The lightning should be in the BG, so give it a low draw order
+			Object[ArrayPos0].DrawOrder = 1
+			
+			// Lightning flashes and pulses, so give it the INK_ALPHA effect
+			Object[ArrayPos0].InkEffect = INK_ALPHA
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects3.gif")
+	SpriteFrame(-16, 0, 32, 40, 77, 132)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

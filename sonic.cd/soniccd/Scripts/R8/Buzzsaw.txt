@@ -1,0 +1,319 @@
+//------------------Sonic CD Buzzsaw Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.FrameTimer
+#alias Object.Value4	:	Object.SfxTimer
+
+// States
+#alias 0	:	BUZZSAW_STOPPED
+#alias 1	:	BUZZSAW_DROP
+#alias 2	:	BUZZSAW_LOW_STOPPED
+#alias 3	:	BUZZSAW_LIFT
+
+// Stage SFX
+#alias 1	:	SFX_S_BUZZSAW
+
+// Property Values
+// tecnically direction is used, but it's set according to the property value so
+#alias 0	:	DIR_FACING_RIGHT
+#alias 1	:	DIR_FACING_LEFT
+#alias 2	:	DIR_FACING_UPEND_RIGHT
+#alias 3	:	DIR_FACING_UPEND_LEFT
+
+// These prop vals are going to switch the first state to 2
+// then behave the same as the ones above it
+#alias 128	:	LOW_FACING_RIGHT
+#alias 129	:	LOW_FACING_LEFT
+#alias 130	:	LOW_FACING_UPEND_RIGHT
+#alias 131	:	LOW_FACING_UPEND_LEFT
+
+
+sub ObjectMain
+	switch Object.State
+	case BUZZSAW_STOPPED
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case BUZZSAW_DROP
+		if Object.Timer < 74
+			Object.Timer++
+			Object.FrameTimer++
+			Object.XPos += Object.XVelocity
+			Object.YPos += Object.YVelocity
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case BUZZSAW_LOW_STOPPED
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case BUZZSAW_LIFT
+		if Object.Timer < 74
+			Object.Timer++
+			Object.FrameTimer--
+			Object.XPos -= Object.XVelocity
+			Object.YPos -= Object.YVelocity
+		else
+			Object.Timer = 0
+			Object.State = BUZZSAW_STOPPED
+		end if
+		break
+	end switch
+	
+	if Object.SfxTimer > 0
+		Object.SfxTimer--
+	else
+		PlayStageSfx(SFX_S_BUZZSAW, false)
+		Object.SfxTimer += 48
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -24, -24, 24, 24)
+	if CheckResult == true
+		CallFunction(Player_Hit)
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0   = Object.Frame
+	TempValue0 >>= 1
+	DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+	Object.Frame++
+	Object.Frame &= 3
+
+	TempValue0  = Object.FrameTimer
+	TempValue0 /= 20
+	switch TempValue0
+	case 0
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 1
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 2
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 3
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-33, -36, 66, 68, 67, 127)		// #0 - Buzzsaw frame 0
+	SpriteFrame(-33, -36, 66, 68, 190, 154)		// #1 - Buzzsaw frame 1
+
+	SpriteFrame(-53, -53, 26, 26, 158, 43)		// #2 - Buzzsaw Extension frame 0
+	SpriteFrame(-73, -73, 26, 26, 158, 43)		// #3 - Buzzsaw Extension frame 1
+	SpriteFrame(-93, -93, 26, 26, 158, 43)		// #4 - Buzzsaw Extension frame 2
+	SpriteFrame(-113, -113, 26, 26, 158, 43)	// #5 - Buzzsaw Extension frame 3
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Buzzsaw]
+			if Object[ArrayPos0].PropertyValue > 127
+				Object[ArrayPos0].PropertyValue -= 128
+				Object[ArrayPos0].Direction = Object[ArrayPos0].PropertyValue
+				Object[ArrayPos0].FrameTimer = 74
+				Object[ArrayPos0].State = BUZZSAW_LOW_STOPPED
+			else
+				Object[ArrayPos0].Direction = Object[ArrayPos0].PropertyValue
+			end if
+
+			switch Object[ArrayPos0].Direction
+			case 0
+				Object[ArrayPos0].XVelocity = 0x10000
+				Object[ArrayPos0].YVelocity = 0x10000
+				break
+			case 1
+				Object[ArrayPos0].XVelocity = -0x10000
+				Object[ArrayPos0].YVelocity =  0x10000
+				break
+			case 2
+				Object[ArrayPos0].XVelocity =  0x10000
+				Object[ArrayPos0].YVelocity = -0x10000
+				break
+			case 3
+				Object[ArrayPos0].XVelocity = -0x10000
+				Object[ArrayPos0].YVelocity = -0x10000
+				break
+			end switch
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // startStreched
+			GetBit(CheckResult, Object.PropertyValue, 7)
+			break
+		case 1 // direction
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 3
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			break
+		case 0 // startStreched
+			Object.PropertyValue &= 127
+			SetBit(Object.PropertyValue, 7, Editor.VariableValue)
+			break
+
+		case 1 // direction
+			Object.PropertyValue &= 128
+			Object.PropertyValue |= Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	Object.Direction  = Object.PropertyValue
+	Object.Direction &= 3
+	if Object.PropertyValue > 127
+		TempValue1 = 74
+	else
+		TempValue1 = 0
+	end if
+	TempValue0  = TempValue1
+	TempValue0 /= 20
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+	switch TempValue0
+	case 0
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 1
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 2
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	case 3
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	end switch
+
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+		TempValue2  = 0x10000
+		TempValue2 *= 74
+		if Object.PropertyValue < 127
+			switch Object.Direction
+			case 0
+				TempValue0 += TempValue2
+				TempValue1 += TempValue2
+				break
+			case 1
+				TempValue0 -= TempValue2
+				TempValue1 += TempValue2
+				break
+			case 2
+				TempValue0 += TempValue2
+				TempValue1 -= TempValue2
+				break
+			case 3
+				TempValue0 -= TempValue2
+				TempValue1 -= TempValue2
+				break
+			end switch
+		else
+			switch Object.Direction
+			case 0
+				TempValue0 -= TempValue2
+				TempValue1 -= TempValue2
+				break
+			case 1
+				TempValue0 += TempValue2
+				TempValue1 -= TempValue2
+				break
+			case 2
+				TempValue0 -= TempValue2
+				TempValue1 += TempValue2
+				break
+			case 3
+				TempValue0 += TempValue2
+				TempValue1 += TempValue2
+				break
+			end switch
+
+		end if
+		DrawArrow(Object.XPos, Object.YPos, TempValue0, TempValue1, 255, 255, 0)
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-33, -36, 66, 68, 67, 127)		// #0 - Buzzsaw frame 0
+	SpriteFrame(-33, -36, 66, 68, 190, 154)		// #1 - Buzzsaw frame 1
+
+	SpriteFrame(-53, -53, 26, 26, 158, 43)		// #2 - Buzzsaw Extension frame 0
+	SpriteFrame(-73, -73, 26, 26, 158, 43)		// #3 - Buzzsaw Extension frame 1
+	SpriteFrame(-93, -93, 26, 26, 158, 43)		// #4 - Buzzsaw Extension frame 2
+	SpriteFrame(-113, -113, 26, 26, 158, 43)	// #5 - Buzzsaw Extension frame 3
+
+	AddEditorVariable("startStreched")
+	SetActiveVariable("startStreched")
+	AddEnumVariable("false", 0)
+	AddEnumVariable("true", 1)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
+	AddEnumVariable("Upside-Down Right", 2)
+	AddEnumVariable("Upside-Down Left", 3)
+end sub

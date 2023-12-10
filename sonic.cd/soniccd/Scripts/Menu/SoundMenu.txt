@@ -1,0 +1,410 @@
+//--------------Sonic CD Soundtrack Menu Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.FadeValue
+#alias Object.Value1			:	Object.SelectedOption
+#alias Object.Value2			:	Object.EggmanAnimTimer
+#alias Object.Value3			:	Object.NoteOscillation
+
+//Object[33] is MenuHeading
+#alias Object[33].State			:	MenuHeading.State
+#alias Object[33].PropertyValue	:	MenuHeading.Header
+
+//Object[-1] is MenuWindow
+#alias Object[-1].State			:	MenuWindow.State
+
+// Soundtrack Options
+#alias -1	:	OST_NONE // Touching nothing on mobile
+#alias  0	:	OST_JP
+#alias  1	:	OST_US
+
+// States
+#alias 0	:	SOUNDMENU_INITIALIZE
+#alias 1	:	SOUNDMENU_OST_SELECTION
+#alias 2	:	SOUNDMENU_OST_SELECTED
+#alias 3	:	SOUNDMENU_BACK
+#alias 4	:	SOUNDMENU_EXIT
+#alias 5	:	SOUNDMENU_RETURN_TO_TITLE
+
+// Menu Heading States
+#alias 1	:	MENUHEADING_LEAVE_SCREEN
+
+// Menu Heading Property Values
+#alias 5	:	MAINMENU_HEADER
+
+// Menu Window States
+#alias 3	:	MENUWINDOW_SHRINK
+
+// Menu Button States
+#alias 1	:	MENUBUTTON_BUTTONS_IN
+
+// Presentation Stage
+#alias 0	:	STAGE_P_TITLE
+
+// Global SFX
+#alias 23	:	SFX_G_MENUBUTTON
+#alias 27	:	SFX_G_SELECT
+
+// Stage SFX
+#alias 1	:	SFX_S_BACKBUTTON
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+
+sub ObjectMain
+	switch Object.State
+	case SOUNDMENU_INITIALIZE
+
+#platform: Standard
+		Object.SelectedOption = Options.Soundtrack
+#endplatform
+
+#platform: Mobile
+		if Options.PhysicalControls == false
+			Object.SelectedOption = OST_NONE
+		else
+			Object.SelectedOption = Options.Soundtrack
+		end if
+#endplatform
+
+#platform: Use_Origins
+		if Options.PhysicalControls == false
+			Object.SelectedOption = OST_NONE
+		else
+			Object.SelectedOption = Options.Soundtrack
+		end if
+#endplatform
+
+
+		if Object.FadeValue < 256
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue += 6
+		else
+			Object.FadeValue = 0
+			Object.Alpha	 = 255
+			Object.State	 = SOUNDMENU_OST_SELECTION
+		end if
+		break
+		
+	case SOUNDMENU_OST_SELECTION
+
+#platform: Standard
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+		// 2011 Steam lacks Options.PhysicalControls, so we force it here first and the other platforms can override it
+		if CheckResult == true
+			// Physical Controls
+			if KeyPress[0].Left == true
+				Object.SelectedOption--
+				if Object.SelectedOption < OST_JP
+					Object.SelectedOption = OST_US
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+			
+			if KeyPress[0].Right == true
+				Object.SelectedOption++
+				if Object.SelectedOption > OST_US
+					Object.SelectedOption = OST_JP
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+			// Enable touch controls if the screen is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+#platform: Mobile
+				Options.PhysicalControls = false
+				Object.SelectedOption = OST_NONE
+#endplatform
+#platform: Use_Origins
+				Options.PhysicalControls = false
+				Object.SelectedOption = OST_NONE
+#endplatform
+			end if
+		else
+			// Touch Controls
+			
+			// Check if JP button is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3  = CheckResult
+			TempValue0  = Screen.CenterX
+			TempValue0 -= 90
+			TempValue1  = Screen.CenterX
+			TempValue1 -= 22
+			CheckTouchRect(TempValue0, 112, TempValue1, 144)
+			if CheckResult > -1
+				Object.SelectedOption = OST_JP
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == OST_JP
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == OST_JP
+						Object.SelectedOption = OST_NONE
+					end if
+				end if
+			end if
+			
+			// Check if US button is touched
+			TempValue0  = Screen.CenterX
+			TempValue0 += 22
+			TempValue1  = Screen.CenterX
+			TempValue1 += 90
+			CheckTouchRect(TempValue0, 112, TempValue1, 144)
+			if CheckResult > -1
+				Object.SelectedOption = OST_US
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == OST_US
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == OST_US
+						Object.SelectedOption = OST_NONE
+					end if
+				end if
+			end if
+			
+			CallFunction(MenuHeading_CheckTouchBack)
+			
+			// Enable physical controls if a button is pressed
+			if KeyPress[0].Left == true
+				Object.SelectedOption = OST_US
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+			end if
+			if KeyPress[0].Right == true
+				Object.SelectedOption = OST_JP
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+			end if
+		end if
+
+		CheckResult = false
+
+		if Object.SelectedOption > OST_NONE // If a button was touched
+			if KeyPress[0].Start == true
+				CheckResult = true
+			end if
+
+			if KeyPress[0].ButtonA == true
+				CheckResult = true
+			end if
+		end if
+
+		if CheckResult == true
+			Options.Soundtrack = Object.SelectedOption
+			SaveRAM[38] = Options.Soundtrack
+			Object.State = SOUNDMENU_OST_SELECTED
+			StopMusic()
+			PlaySfx(SFX_G_SELECT, false)
+			WriteSaveRAM()
+#platform: Use_Origins
+			game.callbackParam0 = Options.Soundtrack
+			EngineCallback(NOTIFY_SOUND_TRACK)
+#endplatform
+		end if
+		
+		if KeyPress[0].ButtonB == true
+			Object.FadeValue = 248
+			Object.State = SOUNDMENU_BACK
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+		
+	case SOUNDMENU_OST_SELECTED
+		if Object.AnimationTimer < 30
+			Object.AnimationTimer++
+		else
+			Object.AnimationTimer = 0
+			Object.State = SOUNDMENU_BACK
+			PlayMusic(Options.Soundtrack)
+		end if
+		break
+		
+	case SOUNDMENU_BACK
+#platform: Use_Origins
+		Object.FadeValue = 0
+		Object.State	 = SOUNDMENU_RETURN_TO_TITLE
+		break
+#endplatform
+		// Making a fallthrough here so standalone datafiles can return to the menus as usual
+	case SOUNDMENU_EXIT
+		if Object.FadeValue > 0
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue -= 8
+		else
+			// Tell the other objects the menu is being exited
+			Object.Type = TypeName[Blank Object]
+			MenuWindow.State = MENUWINDOW_SHRINK
+			//All of this is MenuButton Objects
+			Object[34].State = MENUBUTTON_BUTTONS_IN
+			Object[35].State = MENUBUTTON_BUTTONS_IN
+			Object[36].State = MENUBUTTON_BUTTONS_IN
+			Object[37].State = MENUBUTTON_BUTTONS_IN
+			Object[38].State = MENUBUTTON_BUTTONS_IN
+			Object[39].State = MENUBUTTON_BUTTONS_IN
+			Object[40].State = MENUBUTTON_BUTTONS_IN
+			Object[41].State = MENUBUTTON_BUTTONS_IN
+			Object[42].State = MENUBUTTON_BUTTONS_IN
+			//End
+			MenuHeading.State  = MENUHEADING_LEAVE_SCREEN
+			MenuHeading.Header = MAINMENU_HEADER // Set the heading to "MAIN MENU"
+		end if
+		break
+
+#platform: Use_Origins
+	case SOUNDMENU_RETURN_TO_TITLE
+		Object.FadeValue += 4
+		if Object.FadeValue == 384
+			Stage.ActiveList = PRESENTATION_STAGE
+			Stage.ListPos = STAGE_P_TITLE
+			StopMusic()
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.FadeValue)
+		break
+#endplatform
+	end switch
+end sub
+
+
+sub ObjectDraw
+	// Animate and draw Eggman
+	TempValue0   = Object.EggmanAnimTimer
+	TempValue0 >>= 5
+	DrawSpriteScreenFX(TempValue0, FX_INK, Screen.CenterX, Screen.CenterY)
+	Object.EggmanAnimTimer++
+	Object.EggmanAnimTimer &= 63
+	
+	// Oscillate and draw the music notes
+	Sin(TempValue0, Object.NoteOscillation)
+	TempValue0 >>= 6
+	TempValue0  += Screen.CenterY
+	DrawSpriteScreenFX(6, FX_INK, Screen.CenterX, TempValue0)
+	Sin(TempValue0, Object.NoteOscillation)
+	TempValue0 >>= 6
+	FlipSign(TempValue0)
+	TempValue0  += Screen.CenterY
+	DrawSpriteScreenFX(7, FX_INK, Screen.CenterX, TempValue0)
+	Object.NoteOscillation += 2
+	Object.NoteOscillation &= 511
+	
+	// Set up the positioning for the buttons
+	TempValue0  = Screen.CenterX
+	TempValue0 -= 56
+	TempValue1  = Screen.CenterX
+	TempValue1 += 56
+	TempValue3  = Screen.CenterY
+	TempValue3 += 8
+	
+	// Draw the JP button
+	if Object.SelectedOption == OST_JP
+		TempValue2   = Object.AnimationTimer
+		TempValue2  &= 3
+		TempValue2 >>= 1
+		TempValue2  += 2
+		DrawSpriteScreenFX(TempValue2, FX_INK, TempValue0, TempValue3)
+	else
+		DrawSpriteScreenFX(3, FX_INK, TempValue0, TempValue3)
+	end if
+	
+	// Draw the US button
+	if Object.SelectedOption == OST_US
+		TempValue2   = Object.AnimationTimer
+		TempValue2  &= 3
+		TempValue2 >>= 1
+		TempValue2  += 4
+		DrawSpriteScreenFX(TempValue2, FX_INK, TempValue1, TempValue3)
+	else
+		DrawSpriteScreenFX(5, FX_INK, TempValue1, TempValue3)
+	end if
+	
+	// Draw the border for the soundtrack that's currently playing
+	if Options.Soundtrack == OST_JP
+		DrawSpriteScreenFX(8, FX_INK, TempValue0, TempValue3)
+	else
+		DrawSpriteScreenFX(8, FX_INK, TempValue1, TempValue3)
+	end if
+end sub
+
+
+sub ObjectStartup
+	switch Engine.Language
+	case LANG_ENGLISH
+		LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+		break
+	case LANG_FRENCH
+		LoadSpriteSheet("Menu/MenuGfx2_FR.gif")
+		break
+	case LANG_ITALIAN
+		LoadSpriteSheet("Menu/MenuGfx2_IT.gif")
+		break
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Menu/MenuGfx2_DE.gif")
+		break
+	case LANG_SPANISH
+		LoadSpriteSheet("Menu/MenuGfx2_ES.gif")
+		break
+	case LANG_JAPANESE
+		LoadSpriteSheet("Menu/MenuGfx2_JP.gif")
+		break
+	end switch
+	
+	SpriteFrame(-20, -56, 40, 40, 259, 513) // #0 - Eggman 1
+	SpriteFrame(-20, -56, 40, 40, 259, 554) // #1 - Eggman 2
+	SpriteFrame(-32, -10, 64, 21, 300, 535) // #2 - JP Selected
+	SpriteFrame(-32, -10, 64, 21, 300, 513) // #3 - JP Unselected
+	SpriteFrame(-32, -10, 64, 21, 365, 535) // #4 - US Selected
+	SpriteFrame(-32, -10, 64, 21, 365, 513) // #5 - US Unselected
+	SpriteFrame(-46, -48, 11, 19, 300, 557) // #6 - Music Notes 1
+	SpriteFrame(32, -48, 17, 16, 312, 557)  // #7 - Music Notes 2
+	SpriteFrame(-35, -13, 70, 27, 430, 497) // #8 - Current Soundtrack Border
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+	SpriteFrame(-20, -56, 40, 40, 259, 513) // #0 - Eggman 1
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

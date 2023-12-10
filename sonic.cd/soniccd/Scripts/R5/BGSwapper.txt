@@ -1,0 +1,141 @@
+//-----------------Sonic CD BG Swapper Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// ========================
+// Aliases
+// ========================
+
+// Layer Aliases, correspond to BG layers in the scene file
+#alias 1 : LAYER_INSIDE
+#alias 2 : LAYER_OUTSIDE
+
+
+// ========================
+// Events
+// ========================
+
+sub ObjectDraw
+	if Object.PropertyValue == 0
+		// Inside to the left of the BG Swapper object, outside to the right
+
+		if Player.XPos > Object.XPos
+			Stage.ActiveLayer[0] = LAYER_OUTSIDE
+		else
+			Stage.ActiveLayer[0] = LAYER_INSIDE
+		end if
+	else
+		// Outside to the left of the BG Swapper object, inside to the right
+
+		if Player.XPos > Object.XPos
+			Stage.ActiveLayer[0] = LAYER_INSIDE
+		else
+			Stage.ActiveLayer[0] = LAYER_OUTSIDE
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	// In this setup, we're gonna find what the initial BG should be when starting the level
+	// This is based on seeing what BG Swapper checkpoints the player spawns between
+
+	// TempValue0 is iXPos of first BG Swapper
+	//    (Default of 64 chunks in)
+	// TempValue1 is iXPos of last BG Swapper
+	//    (Default of level's start itself)
+	TempValue0 = 0x4000
+	TempValue1 = 0
+
+	// (We can use iXPos because the last few bytes of the BG Swapper's position aren't important)
+
+	// Cycle throuh all BG Swapper Objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BG Swapper]
+			if Object[ArrayPos0].iXPos < TempValue0
+				TempValue0 = Object[ArrayPos0].iXPos
+			end if
+
+			if Object[ArrayPos0].iXPos > TempValue1
+				TempValue1 = Object[ArrayPos0].iXPos
+			end if
+		end if
+
+		ArrayPos0++
+	loop
+
+	// Get the Player's truncated XPos
+	// In this case, we can't use iXPos because Player position is too important to shave the last few bits off of
+	TempValue2   = Player.XPos
+	TempValue2 >>= 16
+
+	// See which BG Swappers the player is inbetween and set the Background accordingly
+	if TempValue2 > TempValue0
+		if TempValue2 > TempValue1
+			Stage.ActiveLayer[0] = LAYER_INSIDE
+		else
+			Stage.ActiveLayer[0] = LAYER_OUTSIDE
+		end if
+	else
+		Stage.ActiveLayer[0] = LAYER_INSIDE
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+			
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+			
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+			
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+			
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	Editor.DrawingOverlay = true
+	
+	// draw a cool little line behind the Trigger icon
+	TempValue0  = Object.YPos
+	TempValue0 -= 0x80000
+	
+	DrawRectWorld(Object.XPos, TempValue0, 1, 16, 255, 255, 255, 255)
+	
+	Editor.DrawingOverlay = false
+	
+	// and then draw the Trigger icon, atop the line
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // "T" (rigger) icon
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Inside on left, Outside on right", 0)
+	AddEnumVariable("Outside on left, Inside on right", 1)
+end sub

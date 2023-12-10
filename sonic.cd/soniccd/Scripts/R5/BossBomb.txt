@@ -1,0 +1,238 @@
+//-----------------Sonic CD Boss Bomb Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.Gravity
+
+// Player Aliases
+#alias Object[0].Value0	:	Player.Rings
+
+// States
+#alias 0	:	BOSSBOMB_CARRIED
+#alias 1	:	BOSSBOMB_ACTIVE
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Stage SFX
+#alias 4	:	SFX_S_IMPACT1
+
+// Property Values
+#alias 0	:	BOMB
+#alias 1	:	BOMB_FRAGMENT
+
+
+sub ObjectMain
+	
+	if Object.PropertyValue == BOMB
+		// Object is a Bomb
+		
+		if Object.State == BOSSBOMB_ACTIVE
+			
+			// Make the Bomb fall at a rate of 2px per frame
+			Object.YPos += 0x20000
+			
+			// See if the Bomb's touched the ground yet
+			ObjectTileCollision(CSIDE_FLOOR, 0, 10, 0)
+			
+			if CheckResult == true
+				if Object.Timer < 4
+					// There's a short delay between hitting the ground and actually exploding
+					Object.Timer++
+				else
+					PlayStageSfx(SFX_S_IMPACT1, false)
+					
+					// Now that the Bomb's supposed to explode, create all of the Bomb Fragments
+					
+					// Create the first Bomb Fragment, with starting values of:
+					// - Offset of 4px left, 4px up
+					// - XVelocity of 0.625px left per frame
+					// - YVelocity of 4px up per frame
+					// - Gravity acceleration of 0.1875px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos -= 0x40000
+					Object[TempObjectPos].YPos -= 0x40000
+					Object[TempObjectPos].XVelocity = -0xA000
+					Object[TempObjectPos].YVelocity = -0x40000
+					Object[TempObjectPos].Gravity = 0x3000
+					
+					// And then the next Fragment, with initial values of:
+					// - Offset of 4px right, 4px up
+					// - XVelocity of 0.625px right per frame
+					// - YVelocity of 4px up per frame
+					// - Gravity acceleration of 0.1875px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos += 0x40000
+					Object[TempObjectPos].YPos -= 0x40000
+					Object[TempObjectPos].XVelocity = 0xA000
+					Object[TempObjectPos].YVelocity = -0x40000
+					Object[TempObjectPos].Gravity = 0x3000
+					
+					// And another!
+					// This one's initial values are:
+					// - Offset of 4px left, 4px down
+					// - XVelocity of 1.25px left per frame
+					// - YVelocity of 2.25px up per frame
+					// - Gravity acceleration of 0.09375px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos -= 0x40000
+					Object[TempObjectPos].YPos += 0x40000
+					Object[TempObjectPos].XVelocity = -0x14000
+					Object[TempObjectPos].YVelocity = -0x24000
+					Object[TempObjectPos].Gravity = 0x1800
+					
+					// Last but certainly not least, give this final Fragment
+					// some pretty good starting values of:
+					// - Offset of 4px right, 4px down
+					// - XVelocity of 1.25px left per frame
+					// - YVelocity of 2.25px up per frame
+					// - Gravity acceleration of 0.09375px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos += 0x40000
+					Object[TempObjectPos].YPos += 0x40000
+					Object[TempObjectPos].XVelocity = 0x14000
+					Object[TempObjectPos].YVelocity = -0x24000
+					Object[TempObjectPos].Gravity = 0x1800
+					
+					// This main Boss Bomb Object doesn't actually explode and unload -
+					// instead, upon landing on the ground and exploding, it resets itself
+					// and the same Object is used for future explosions
+					
+					Object.State = BOSSBOMB_CARRIED
+					Object.Timer = 0
+					
+					// Return back to the Boss Top's Position
+					Object.XPos = Object[+2].XPos
+					Object.YPos = Object[+2].YPos
+
+#platform: Use_Haptics
+					HapticEffect(77, 0, 0, 0)
+#endplatform
+				end if
+			end if
+		end if
+	else
+		// Bomb Fragment
+		
+		// Update the Fragment's horizontal movements
+		Object.XPos += Object.XVelocity
+		
+		// Apply Gravity to the Fragment
+		// -> Each piece has different Gravity values, which is why
+		//    this is an Object Value and not a constant value
+		Object.YVelocity += Object.Gravity
+		
+		// And then, actually apply Y movement
+		Object.YPos += Object.YVelocity
+		
+		if Object.OutOfBounds == true
+			// If no longer needed, unload the Object
+			Object.Type = TypeName[Blank Object]
+		end if
+		
+	end if
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.State == BOSSBOMB_ACTIVE
+		
+		// Check Interaction with the Player
+		PlayerObjectCollision(C_TOUCH, -10, -10, 10, 10)
+		
+		if CheckResult == true
+			
+			// Explode if the Player has zero rings... except I think this is bugged?
+			// This check always returns true, regardless of how many rings the Player has,
+			// so the bomb always disappears...
+			if Player.Rings == 0
+				Object.State = BOSSBOMB_CARRIED
+				
+				// Explode, creating the Explosion as a Temp Object rather than in this Object
+				// slot because the Bomb should remain
+				CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+				
+				// Move the Bomb back to the Boss Top's Position
+				Object.XPos = Object[+2].XPos
+				Object.YPos = Object[+2].YPos
+				
+				PlaySfx(SFX_G_EXPLOSION, false)
+			end if
+			
+			// And now, only after checking the Player's rings, see if we should hurt the Player
+			CallFunction(Player_Hit)
+			
+			// If the Player was indeed hurt...
+			if Player.State == Player_State_GotHit
+				// ...then reset the Boss Platform's Speed Value
+				Object[+5].Value3 = 0xC000
+			end if
+			
+		end if
+	else
+		if Object.PropertyValue == 1
+			// Bomb Fragment
+			
+			PlayerObjectCollision(C_TOUCH, -7, -7, 7, 7)
+
+			if CheckResult == true
+				
+				// Similarly to above, I believe this check against the Player's Rings
+				// may actually be a bit bugged...
+				if Player.Rings == 0
+					Object.State = BOSSBOMB_CARRIED
+					CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+					Object.Type = TypeName[Blank Object]
+					PlaySfx(SFX_G_EXPLOSION, false)
+				end if
+				
+				CallFunction(Player_Hit)
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+	
+	// Bomb Frame
+	SpriteFrame(-12, -12, 24, 24, 75, 113)
+	
+	// Bomb Fragment Frame
+	SpriteFrame(-8, -8, 16, 16, 131, 138)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-12, -12, 24, 24, 75, 113)
+
+	// Although used by the Object, only the normal Boss Bomb Object should ever be placed in a scene
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

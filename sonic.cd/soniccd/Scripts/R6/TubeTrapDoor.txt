@@ -1,0 +1,207 @@
+//---------------Sonic CD Tube Trap Door Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// States
+#alias 0	:	TUBETRAPDOOR_ASCEND
+#alias 1	:	TUBETRAPDOOR_DELAY_1
+#alias 2	:	TUBETRAPDOOR_DESCEND
+#alias 3	:	TUBETRAPDOOR_DELAY_2
+
+
+sub ObjectMain
+	switch Object.State
+	case TUBETRAPDOOR_ASCEND
+		if Object.Timer < 8
+			Object.Timer++
+			Object.YPos -= 0xA0000
+		else
+			Object.Timer = 0
+			Object.State++
+			
+#platform: Use_Haptics
+			HapticEffect(100, 0, 0, 0)
+#endplatform
+
+		end if
+		break
+
+	case TUBETRAPDOOR_DELAY_1
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case TUBETRAPDOOR_DESCEND
+		if Object.Timer < 80
+			Object.Timer++
+			Object.YPos += 0x10000
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+		
+	case TUBETRAPDOOR_DELAY_2
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State = TUBETRAPDOOR_ASCEND
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -33, -40, 33, 20)
+	if CheckResult == true
+		if Player.XPos < Object.XPos
+			TempValue0  = Object.XPos
+			TempValue0 -= Player.XPos
+
+			TempValue1  = 0x240000
+			TempValue1 -= Player.XVelocity
+
+			if TempValue0 > TempValue1
+				if Player.Speed > -1
+					Player.XPos   = -32
+					Player.XPos  -= Player.CollisionRight
+					Player.XPos <<= 16
+					Player.XPos  += Object.XPos
+				end if
+
+				if Player.Speed > 0
+					if Player.Direction == FACING_RIGHT
+						Player.Pushing = 2
+					end if
+					Player.Speed	 = 0
+					Player.XVelocity = 0
+				end if
+			else
+				if Object.State < TUBETRAPDOOR_DESCEND
+					if TempValue0 > 0x180000
+						Player.XPos		+= 0x140000
+						Player.Speed	 = 0
+						Player.XVelocity = 0
+					end if
+				end if
+			end if
+		else
+			TempValue0  = Player.XPos
+			TempValue0 -= Object.XPos
+
+			TempValue1  = 0x240000
+			TempValue1 += Player.XVelocity
+
+			if TempValue0 > TempValue1
+				if Player.Speed < 1
+					Player.XPos   = 32
+					Player.XPos  -= Player.CollisionLeft
+					Player.XPos <<= 16
+					Player.XPos  += Object.XPos
+				end if
+
+				if Player.Speed < 0
+					if Player.Direction == FACING_LEFT
+						Player.Pushing = 2
+					end if
+					Player.Speed	 = 0
+					Player.XVelocity = 0
+				end if
+			else
+				if Object.State < TUBETRAPDOOR_DESCEND
+					if TempValue0 > 0x180000
+						Player.XPos		-= 0x140000
+						Player.Speed	 = 0
+						Player.XVelocity = 0
+					end if
+				end if
+			end if
+		end if
+	end if
+
+	switch Object.State
+	case TUBETRAPDOOR_ASCEND
+		if Object.Timer < 4
+			PlayerObjectCollision(C_PLATFORM, -30, -40, 30, -20)
+		else
+			PlayerObjectCollision(C_TOUCH, -16, -40, 16, 20)
+			if CheckResult == true
+				Player.Speed	 >>= 1
+				Player.XVelocity >>= 1
+				PlayerObjectCollision(C_BOX, -48, -80, -32, 20)
+				PlayerObjectCollision(C_BOX, 32, -80, 48, 20)
+				if Player.State == Player_State_Fly
+
+#platform: Use_Origins
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+					Player.State = Player_State_Air
+#endplatform
+
+					Player.Animation = ANI_WALKING
+				end if
+			end if
+		end if
+		break
+
+	case TUBETRAPDOOR_DESCEND
+		PlayerObjectCollision(C_PLATFORM, -30, -41, 30, -20)
+		if CheckResult == true
+			Player.YPos += 0x10000
+		end if
+		break
+
+	case TUBETRAPDOOR_DELAY_2
+		PlayerObjectCollision(C_PLATFORM, -30, -40, 30, -20)
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-32, -40, 64, 80, 191, 175)	// #0 - Tube Trap Door
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Tube Trap Door]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-32, -40, 64, 80, 191, 175)	// #0 - Tube Trap Door
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

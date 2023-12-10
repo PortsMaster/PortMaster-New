@@ -1,0 +1,347 @@
+//--------------Sonic CD Crush Platform Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.YDrawPos
+#alias Object.Value2	:	Object.YCollisionOffset
+#alias Object.Value3	:	Object.Oscillation
+#alias Object.Value4	:	Object.Speed
+#alias Object.Value5	:	Object.LargePlatform
+#alias Object.Value6	:	Object.IncreaseValue
+
+// Player Aliases
+#alias Player.Value7	:	Player.AnimationReserve
+
+#alias 0	:	CRUSHPLATFORM_DESCEND
+#alias 1	:	CRUSHPLATFORM_WAIT
+#alias 2	:	CRUSHPLATFORM_ASCEND
+#alias 3	:	CRUSHPLATFORM_WAIT_2
+
+// Property Values
+#alias 0	:	PLATFORM_START_TOP
+#alias 1	:	PLATFORM_START_BOTTOM
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 4	:	PLAYER_COL_ROOF
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+#alias 1	:	GRAVITY_AIR
+
+// Property Values
+#alias 0	:	NORMAL_SPEED
+#alias 5	:	LARGE_NORMAL_SPEED
+#alias 69	:	LARGE_FAST_SPEED
+#alias 72	:	NORMAL_FAST_LAUNCH
+
+
+sub ObjectMain
+	if Object.LargePlatform == false
+		Object.Oscillation += Object.IncreaseValue
+		Object.Oscillation &= 511
+		if Object.PropertyValue == PLATFORM_START_BOTTOM
+			Object.Oscillation += 256
+		end if
+
+		Sin(Object.YCollisionOffset, Object.Oscillation)
+		Object.YCollisionOffset *= Object.Speed
+		Object.YCollisionOffset += Object.YPos
+		Object.YCollisionOffset &= 0xFFFF0000 // Truncate the value
+		Object.YCollisionOffset -= Object.YDrawPos
+	else
+		switch Object.State
+		case CRUSHPLATFORM_DESCEND
+			Object.Oscillation += 4
+			Object.Oscillation &= 511
+			if Object.Oscillation == 128
+				Object.State++
+			end if
+			break
+
+		case CRUSHPLATFORM_WAIT
+			if Object.Timer < 64
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+
+		case CRUSHPLATFORM_ASCEND
+			Object.Oscillation += 4
+			Object.Oscillation &= 511
+			if Object.Oscillation == 384
+				Object.State++
+			end if
+			break
+
+		case CRUSHPLATFORM_WAIT_2
+			if Object.Timer < 64
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State = CRUSHPLATFORM_DESCEND
+			end if
+			break
+		end switch
+
+		Sin(Object.YCollisionOffset, Object.Oscillation)
+		Object.YCollisionOffset *= Object.Speed
+		Object.YCollisionOffset += Object.YPos
+		Object.YCollisionOffset &= 0xFFFF0000 // Truncate the value
+		Object.YCollisionOffset -= Object.YDrawPos
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = Object.YPos
+	TempValue1 = Player.YPos
+	Object.YPos = Object.YDrawPos
+
+	if Object.LargePlatform == false
+#platform: Use_Origins
+		PlayerObjectCollision(C_BOX2, -32, -32, 32, 32)
+#endplatform
+#platform: Use_Standalone
+		PlayerObjectCollision(C_BOX, -32, -32, 32, 32)
+#endplatform
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += Object.YCollisionOffset
+		else
+			if CheckResult == PLAYER_COL_ROOF
+				if Player.Gravity == GRAVITY_GROUND
+					if Object.YCollisionOffset > 0
+						CallFunction(Player_Kill)
+					else
+						Player.YPos = TempValue1
+					end if
+				else
+#platform: Use_Origins
+					if Player.State == Player_State_LedgePullUp
+						CallFunction(Player_Kill)
+					end if
+#endplatform
+				end if
+			end if
+		end if
+	else
+#platform: Use_Origins
+		PlayerObjectCollision(C_BOX2, -32, -96, 32, 96)
+#endplatform
+#platform: Use_Standalone
+		PlayerObjectCollision(C_BOX, -32, -96, 32, 96)
+#endplatform
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += Object.YCollisionOffset
+			if Object.Oscillation == 320
+				
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+				Player.Timer = 0
+				Player.YVelocity = -0x100000
+				Player.Animation = ANI_BOUNCING
+				Player.Gravity = GRAVITY_AIR
+				Player.AnimationReserve = ANI_WALKING
+			end if
+		else
+			if CheckResult == PLAYER_COL_ROOF
+				if Player.Gravity == GRAVITY_GROUND
+					if Object.YCollisionOffset > 0
+						CallFunction(Player_Kill)
+					else
+						Player.YPos = TempValue1
+					end if
+				else
+#platform: Use_Origins
+					if Player.State == Player_State_LedgePullUp
+						CallFunction(Player_Kill)
+					end if
+#endplatform
+				end if
+			end if
+		end if
+	end if
+	Object.YPos = TempValue0
+
+end sub
+
+
+sub ObjectDraw
+	Sin(Object.YDrawPos, Object.Oscillation)
+	Object.YDrawPos *= Object.Speed
+	Object.YDrawPos += Object.YPos
+	Object.YDrawPos &= 0xFFFF0000 // Truncate the value
+	DrawSpriteXY(0, Object.XPos, Object.YDrawPos)
+	if Object.LargePlatform == true
+		DrawSpriteXY(1, Object.XPos, Object.YDrawPos)
+		DrawSpriteXY(2, Object.XPos, Object.YDrawPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-32, -32, 64, 64, 1, 1)	// #0 - Crush Platform (also the middle of the large Crush Platform)
+	SpriteFrame(-32, -96, 64, 64, 1, 1)	// #1 - Large Crush Platform Top
+	SpriteFrame(-32, 32, 64, 64, 1, 1)	// #2 - Large Crush Platform Bottom
+
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Crush Platform]
+			Object[ArrayPos0].IncreaseValue = 2
+			if Object[ArrayPos0].PropertyValue == NORMAL_SPEED
+				Object[ArrayPos0].Speed = 0x1000
+			else
+				Object[ArrayPos0].Speed = 0x1800
+			end if
+
+			if Object[ArrayPos0].PropertyValue == LARGE_NORMAL_SPEED
+				Object[ArrayPos0].LargePlatform = true
+				Object[ArrayPos0].Speed = 0x1000
+			end if
+
+			if Object[ArrayPos0].PropertyValue == LARGE_FAST_SPEED
+				Object[ArrayPos0].LargePlatform = true
+				Object[ArrayPos0].Speed = 0x1800
+			end if
+
+			if Object[ArrayPos0].PropertyValue == NORMAL_FAST_LAUNCH
+				Object[ArrayPos0].IncreaseValue = 6
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Property Value
+			CheckResult  = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			if Editor.VariableValue >= 72
+				Object.PropertyValue = 72
+			else
+				if Editor.VariableValue >= 69
+					Object.PropertyValue = 69
+				else
+					if Editor.VariableValue >= 5
+						Object.PropertyValue = 5
+					else
+						if Editor.VariableValue >= 2
+							Object.PropertyValue = 2
+						else
+							Object.PropertyValue = Editor.VariableValue
+						end if
+					end if
+				end if
+			end if
+			break
+		case 0 // type
+			switch Editor.VariableValue
+			case 0
+				Object.PropertyValue = 0
+				break
+			case 1
+				Object.PropertyValue = 1
+				break
+			case 2
+				Object.PropertyValue = 5
+				break
+			case 3
+				Object.PropertyValue = 69
+				break
+			case 4
+				Object.PropertyValue = 72
+				break
+			end switch
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	switch Object.PropertyValue
+	case NORMAL_SPEED
+	case LARGE_NORMAL_SPEED
+		TempValue2 = 0x1000
+		break
+	default
+	case LARGE_FAST_SPEED
+		TempValue2 = 0x1800
+		break
+	endswitch
+
+	Sin(TempValue5, 0)
+	TempValue5 *= TempValue2
+	TempValue5 += Object.YPos
+	TempValue5 &= 0xFFFF0000 // Truncate the value
+	DrawSpriteXY(0, Object.XPos, TempValue5)
+	switch Object.PropertyValue
+	case LARGE_NORMAL_SPEED
+	case LARGE_FAST_SPEED
+		DrawSpriteXY(1, Object.XPos, TempValue5)
+		DrawSpriteXY(2, Object.XPos, TempValue5)
+		break
+	end switch
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		TempValue0  = Object.YPos
+		switch Object.PropertyValue
+		case NORMAL_SPEED
+		case NORMAL_FAST_LAUNCH
+			TempValue0 -= 0x400000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 0)
+			TempValue0 += 0x800000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 0)
+			break
+		case LARGE_NORMAL_SPEED
+		case LARGE_FAST_SPEED
+			TempValue0 -= 0x800000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 0)
+			TempValue0 += 0x1100000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 0)
+			break
+		end switch
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-32, -32, 64, 64, 1, 1)	// #0 - Crush Platform (also the middle of the large Crush Platform)
+	SpriteFrame(-32, -96, 64, 64, 1, 1)	// #1 - Large Crush Platform Top
+	SpriteFrame(-32, 32, 64, 64, 1, 1)	// #2 - Large Crush Platform Bottom
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Normal Speed", 0)
+	AddEnumVariable("Normal Speed, Start Bottom", 1)
+	AddEnumVariable("Large, Normal Speed", 2)
+	AddEnumVariable("Large, Fast Speed", 3)
+	AddEnumVariable("Normal Speed, Fast Launch", 4)
+end sub

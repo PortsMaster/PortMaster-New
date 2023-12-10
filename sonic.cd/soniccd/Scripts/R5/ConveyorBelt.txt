@@ -1,0 +1,217 @@
+//----------------Sonic CD ConveyorBelt Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+#alias Object.Value1			:	Object.BeltFrame
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Tile Aliases
+#alias 1	:	TILE_CONVEYORBELT
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Tile Info
+#alias 8	:	TILEINFO_ANGLEB
+
+
+sub ObjectPlayerInteraction
+
+	// Only affect the Player if they're on the Ground
+	if Player.Gravity == GRAVITY_GROUND
+	
+		// The Tunnel state makes Players intangible to Conveyor Belts
+		if Player.State != Player_State_TubeRoll
+		
+			// Get the X Position of the tile on the Player's right side
+			TempValue1 = Player.XPos
+			TempValue1 >>= 16
+			TempValue1 += Player.CollisionRight
+			
+			// Get the Y Position of the tile right underneath tthe Player
+			TempValue2 = Player.YPos
+			TempValue2 >>= 16
+			TempValue2 += Player.CollisionBottom
+			TempValue2 += 2
+			
+			// Get the B Angle/Flags value of the Tile at the specified positions
+			Get16x16TileInfo(TempValue0, TempValue1, TempValue2, TILEINFO_ANGLEB)
+			
+			// See if it's a Conveyor Belt tile
+			if TempValue0 == TILE_CONVEYORBELT
+			
+				// If it is, then move the Player in the corresponding direction and at the corresponding rate
+				if ConveyorBelt_Flag == FACING_RIGHT
+					Player.XPos += ConveyorBelt_Speed
+				else
+					Player.XPos -= ConveyorBelt_Speed
+				end if
+				
+			else
+			
+				// If the right tile did't have anything, then check the one to the Player's left
+				TempValue1   = Player.XPos
+				TempValue1 >>= 16
+				TempValue1  += Player.CollisionLeft
+				
+				Get16x16TileInfo(TempValue0, TempValue1, TempValue2, TILEINFO_ANGLEB)
+				
+				if TempValue0 == TILE_CONVEYORBELT
+				
+					// If this one is a Conveyer tile, then convey the player
+					if ConveyorBelt_Flag == FACING_RIGHT
+						Player.XPos += ConveyorBelt_Speed
+					else
+						Player.XPos -= ConveyorBelt_Speed
+					end if
+				
+				end if
+			end if
+		end if
+		
+	end if
+
+end sub
+
+
+sub ObjectDraw
+
+	// Some palette cycling to make the Conveyer Belts look like they're moving
+	
+	Object.Timer++
+	if Object.Timer == 5
+		Object.Timer = 0
+		Object.BeltFrame++
+		Object.BeltFrame %= 3
+	end if
+	
+	TempValue0 = Object.BeltFrame
+	TempValue0 += ConveyorBelt_Flag
+	
+	SetActivePalette(TempValue0, 0, 240)
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Place a ConveyorBelt Object into the scene
+	Object[19].Type = TypeName[ConveyorBelt]
+	
+	// Make it active, because Conveyor Belts should always be pushing the Player
+	Object[19].Priority = PRIORITY_ACTIVE
+	
+	// And give it a low Draw Order as well, but not too low!
+	// That's because, this Object's Draw Order has to be above the one used by the R5A Glow Effect!
+	// They both do palette trickery, so they have separate draw orders to make sure they don't interfere with each other
+	Object[19].DrawOrder = 1
+
+	// Setup the alternate palettes for the Conveyer Belt
+	CopyPalette(0, 1)
+	CopyPalette(0, 2)
+	CopyPalette(0, 3)
+	CopyPalette(0, 4)
+	CopyPalette(0, 5)
+
+	TempValue0 = 0
+	TempValue1 = 0
+	TempValue2 = 16
+
+	ConveyorBelt_Flag = 0
+	ConveyorBelt_Frame = 0
+
+	// Some Conveyor Belt properties that are different between time period
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+	
+		// Give the Conveyer Belts a speed of 1 pixel per frame
+		ConveyorBelt_Speed = 0x10000
+		
+		// Setup the palette cycle for them, using the R5A bank
+		while TempValue0 < 6
+			LoadPalette("R5A_PalCycle.act", TempValue0, 160, TempValue1, TempValue2)
+			TempValue1 += 16
+			TempValue2 += 16
+			
+			LoadPalette("R5A_PalCycle.act", TempValue0, 192, TempValue1, TempValue2)
+			TempValue1 += 16
+			TempValue2 += 16
+			TempValue0++
+		loop
+		break
+		
+	case TIME_PAST
+	
+		// In the Past, technology wasn't as developed, so give the Conveyer Belts a slower speed of 0.5 pixels per frame
+		ConveyorBelt_Speed = 0x8000
+		
+		// The Past's palette cycle should pull from the R5B palette bank
+		while TempValue0 < 6
+			LoadPalette("R5B_PalCycle.act", TempValue0, 160, TempValue1, TempValue2)
+			TempValue1 += 16
+			TempValue2 += 16
+			TempValue0++
+		loop
+		break
+		
+	case TIME_GOOD_FUTURE
+	
+		// Technology is pretty advanced in the future, the Conveyer Belts have grown so much to have a speed of 2 pixels per frame now!
+		ConveyorBelt_Speed = 0x20000
+		
+		// The Good Future uses the R5C bank
+		while TempValue0 < 6
+			LoadPalette("R5C_PalCycle.act", TempValue0, 160, TempValue1, TempValue2)
+			TempValue1 += 16
+			TempValue2 += 16
+			TempValue0++
+		loop
+		break
+		
+	case TIME_BAD_FUTURE
+	
+		// Even after taking over the world, Eggman was kind enough to let Conveyer Belt innovations still continue!
+		// What a kind man, Conveyer Belts still go at a speed of 2 pixels per frame now!
+		ConveyorBelt_Speed = 0x20000
+		
+		// Bad Future pulls from the R5D bank
+		while TempValue0 < 6
+			LoadPalette("R5D_PalCycle.act", TempValue0, 160, TempValue1, TempValue2)
+			TempValue1 += 16
+			TempValue2 += 16
+			TempValue0++
+		loop
+		break
+		
+	end switch
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

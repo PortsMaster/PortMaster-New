@@ -1,0 +1,381 @@
+//------------------Sonic CD Kabasira Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0        : Object.Timer
+#alias Object.Value1        : Object.Angle
+#alias Object.Value2        : Object.StartPosX
+#alias Object.Value3        : Object.StartPosY
+#alias Object.Value4        : Object.DrawPosX
+#alias Object.Value5        : Object.DrawPosY
+
+#alias Object.PropertyValue : Object.Quality
+
+// Kabasira Shot Aliases
+#alias Object.Value1 : Object.XVelocity
+#alias Object.Value2 : Object.YVelocity
+
+// States 0-1 are never used, aside from state 0 being the default state
+#alias 2	:	KABASIRA_INACTIVE
+
+// Ink Effect
+#alias 2	:	INK_ALPHA
+
+// Stage SFX
+#alias 2	:	SFX_S_SHOT
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		// The object is out of bounds, reset it
+		Object.State = KABASIRA_INACTIVE
+		Object.Timer = 0
+		
+		// Neutral angle, right between 512 and 000
+		Object.Angle = 256
+		
+		// The object never seems to refrence its direction, nor does it use FX_FLIP, so I believe this is effectively unused?
+		Object.Direction = FACING_RIGHT
+		
+		// Move it back to its starting position
+		// (Although, normally there's a check to make sure the starting position is OOB too to prevent visible teleporting, why isn't there a check like that this time?)
+		Object.XPos = Object.StartPosX
+		Object.YPos = Object.StartPosY
+	end if
+	
+	if Object.Quality == GOOD_QUALITY
+		// Good variant of the object, able to attack
+		
+		Object.Angle += 2
+		Object.Angle &= 511
+		Object.Frame = Object.AnimationTimer
+		Object.Frame >>= 3
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 15
+		
+		if Object.Timer == 0
+			Object.Timer = 240
+			
+			// Shoot a shot at the player
+			
+			PlayStageSfx(SFX_S_SHOT, false)
+			
+			// Different shot subtypes based on the player's position relative to the Kabasira
+			if Player.XPos > Object.XPos
+				CreateTempObject(TypeName[Kabasira Shot], 0, Object.XPos, Object.YPos)
+			else
+				CreateTempObject(TypeName[Kabasira Shot], 1, Object.XPos, Object.YPos)
+			end if
+			
+			Object[TempObjectPos].InkEffect = INK_ALPHA
+			Object[TempObjectPos].Alpha = 192
+			
+			// Find the velocities to send the shot at
+			
+			TempValue0 = Player.XPos
+			TempValue0 -= Object.XPos
+			TempValue1 = Player.YPos
+			TempValue1 -= Object.YPos
+			
+			ATan2(TempValue2, TempValue0, TempValue1)
+			
+			Cos256(Object[TempObjectPos].XVelocity, TempValue2)
+			Sin256(Object[TempObjectPos].YVelocity, TempValue2)
+			Object[TempObjectPos].XVelocity <<= 9
+			Object[TempObjectPos].YVelocity <<= 9
+		else
+			Object.Timer--
+		end if
+	else
+		// Peaceful variant of the object, no attacking the player needed so just float around
+		Object.Angle++
+		Object.Angle &= 511
+		
+		Object.Frame = Object.AnimationTimer
+		Object.Frame >>= 4
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 31
+	end if
+	
+	Cos(Object.YPos, Object.Angle)
+	Object.YPos <<= 13
+	Object.YPos += Object.StartPosY
+	
+	TempValue0 = Object.Angle
+	TempValue0 <<= 1
+	
+	Sin(Object.XPos, TempValue0)
+	Object.XPos *= 0xA00
+	Object.XPos += Object.StartPosX
+	
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	// Check if the player's touched the head
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -6, -6, 6, 6)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -6, -6, 6, 6)
+#endplatform
+	
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+	
+	// (No collision checks for the rest of the body)
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.State < KABASIRA_INACTIVE
+		
+		// First, draw each body part
+		TempValue0 = 0
+		TempValue1 = 488
+		TempValue3 = Object.Angle
+		TempValue3 += 464
+		TempValue3 &= 511
+		Object.Alpha = 64
+		
+		while TempValue0 < 4
+			TempValue2 = Object.Angle
+			TempValue2 += TempValue1
+			TempValue2 &= 511
+			TempValue2 /= 42
+			TempValue2 %= 12
+			
+			Cos(Object.DrawPosY, TempValue3)
+			Object.DrawPosY <<= 13
+			Object.DrawPosY += Object.StartPosY
+			
+			TempValue4 = TempValue3
+			TempValue4 <<= 1
+			
+			Sin(Object.DrawPosX, TempValue4)
+			Object.DrawPosX *= 0xA00
+			Object.DrawPosX += Object.StartPosX
+			
+			switch TempValue2
+			case 0
+			case 6
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				DrawSpriteFX(0, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				TempValue2 = 6
+				TempValue2 += Object.Frame
+				break
+				
+			case 1
+			case 7
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				DrawSpriteFX(1, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				TempValue2 = 8
+				TempValue2 += Object.Frame
+				break
+				
+			case 2
+			case 8
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				DrawSpriteFX(2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				TempValue2 = 10
+				TempValue2 += Object.Frame
+				break
+				
+			case 3
+			case 9
+				DrawSpriteFX(3, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				TempValue2 = 12
+				TempValue2 += Object.Frame
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				break
+				
+			case 4
+			case 10
+				TempValue2 = 14
+				TempValue2 += Object.Frame
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				DrawSpriteFX(4, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				break
+				
+			case 5
+			case 11
+				TempValue2 = 16
+				TempValue2 += Object.Frame
+				DrawSpriteFX(TempValue2, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				DrawSpriteFX(5, FX_INK, Object.DrawPosX, Object.DrawPosY)
+				break
+				
+			end switch
+			
+			TempValue0++
+			TempValue1 += 8
+			TempValue3 += 12
+			TempValue3 &= 511
+			Object.Alpha += 32
+		loop
+		
+		// Draw the head & wings
+		// Different sprites & priority for the Kabasira's different directions
+		
+		TempValue0 = Object.Angle
+		TempValue0 += 8
+		TempValue0 &= 511
+		TempValue0 /= 42
+		TempValue0 %= 12
+		switch TempValue0
+		case 0
+		case 6
+			DrawSpriteXY(0, Object.DrawPosX, Object.DrawPosY)
+			TempValue2 = 6
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		case 1
+		case 7
+			DrawSpriteXY(1, Object.DrawPosX, Object.DrawPosY)
+			TempValue2 = 8
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		case 2
+		case 8
+			DrawSpriteXY(2, Object.DrawPosX, Object.DrawPosY)
+			TempValue2 = 10
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		case 3
+		case 9
+			DrawSpriteXY(3, Object.DrawPosX, Object.DrawPosY)
+			TempValue2 = 12
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		case 4
+		case 10
+			TempValue2 = 14
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			DrawSpriteXY(4, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		case 5
+		case 11
+			TempValue2 = 16
+			TempValue2 += Object.Frame
+			DrawSpriteXY(TempValue2, Object.DrawPosX, Object.DrawPosY)
+			DrawSpriteXY(5, Object.DrawPosX, Object.DrawPosY)
+			break
+			
+		end switch
+		
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Kabasira Body Frames
+	SpriteFrame(-8, -8, 16, 16, 133, 100)
+	SpriteFrame(-8, -8, 16, 16, 150, 100)
+	SpriteFrame(-8, -8, 16, 16, 167, 100)
+	SpriteFrame(-8, -8, 16, 16, 184, 100)
+	SpriteFrame(-8, -8, 16, 16, 99, 100)
+	SpriteFrame(-8, -8, 16, 16, 116, 100)
+	
+	// Kabasira Wing Frames
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+	SpriteFrame(-8, -6, 8, 8, 243, 110)
+	SpriteFrame(-12, -6, 24, 8, 218, 101)
+	SpriteFrame(-12, -6, 24, 8, 218, 110)
+	SpriteFrame(-8, -6, 16, 8, 218, 92)
+	SpriteFrame(-8, -6, 16, 8, 235, 92)
+	SpriteFrame(0, -6, 8, 8, 240, 74)
+	SpriteFrame(0, -6, 8, 8, 240, 83)
+	SpriteFrame(-8, -6, 16, 8, 218, 92)
+	SpriteFrame(-8, -6, 16, 8, 235, 92)
+	SpriteFrame(-12, -6, 24, 8, 218, 101)
+	SpriteFrame(-12, -6, 24, 8, 218, 110)
+	
+	// Setup all Kabasira objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Kabasira]
+			
+			// Store the starting Positions since the Kabasira moves around
+			Object[ArrayPos0].StartPosX = Object[ArrayPos0].XPos
+			Object[ArrayPos0].StartPosY = Object[ArrayPos0].YPos
+			
+			// Kabasira's tail has a fade effect, so give it the INK_ALPHA effect
+			Object[ArrayPos0].InkEffect = INK_ALPHA
+			
+			// Give it 2 seconds of starting idle time before it starts to shoot
+			Object[ArrayPos0].Timer = 120
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 116, 100)
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad",  BAD_QUALITY)
+end sub

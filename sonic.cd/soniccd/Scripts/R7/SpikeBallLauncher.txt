@@ -1,0 +1,317 @@
+//---------------Sonic CD Spike Launcher Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// Position is an offset relative to the base Spike Launcher Object, in world-space
+#alias Object.Value1	:	Object.SpikeBallPosition
+#alias Object.Value2	:	Object.SpikeBallVelocity
+
+#alias 0	:	SPIKELAUNCHER_INIT
+#alias 1	:	SPIKELAUNCHER_RAISING
+#alias 2	:	SPIKELAUNCHER_PAUSE
+#alias 3	:	SPIKELAUNCHER_THROWN
+#alias 4	:	SPIKELAUNCHER_CATCHING
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Property Values
+#alias 0	:	LAUNCH_DIR_UP
+#alias 1	:	LAUNCH_DIR_DOWN
+#alias 2	:	LAUNCH_DIR_LEFT
+#alias 3	:	LAUNCH_DIR_RIGHT
+
+
+sub ObjectMain
+
+	switch Object.State
+	case SPIKELAUNCHER_INIT
+		// Set the object to always be active
+		Object.Priority = PRIORITY_ACTIVE
+		
+		// Give it a bit of time before starting the object's main routine proper
+		if Object.Timer < 150
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.SpikeBallPosition = 0
+			Object.State++
+		end if
+		break
+		
+	case SPIKELAUNCHER_RAISING
+		// Start by poking the Spike Ball out of the Launcher's face, half a pixel per frame at a time
+		if Object.Timer < 32
+			Object.Timer++
+			Object.SpikeBallPosition -= 0x8000
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+		
+	case SPIKELAUNCHER_PAUSE
+		// Now, pause for a moment before shooting the Spike Ball away
+		if Object.Timer < 30
+			Object.Timer++
+		else
+			Object.Timer = 0
+			
+			// Initial velocity of 6 pixels per frame
+			Object.SpikeBallVelocity = -0x60000
+
+			Object.State++
+		end if
+		break
+		
+	case SPIKELAUNCHER_THROWN
+		if Object.SpikeBallPosition < 0
+			// Apply a gravity of 0.25 pixels to the Spike Ball every frame
+			Object.SpikeBallVelocity += 0x4000
+			
+			// And then actually add the Velocity to the Spike Ball's position
+			Object.SpikeBallPosition += Object.SpikeBallVelocity
+		else
+			Object.State++
+		end if
+		break
+		
+	case SPIKELAUNCHER_CATCHING
+		if Object.Timer < 40
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.SpikeBallPosition = 0
+			Object.State = SPIKELAUNCHER_RAISING
+		end if
+		break
+		
+	end switch
+
+	if Object.OutOfBounds == true
+
+		// Reset the object and give it normal priority
+		
+		Object.State = SPIKELAUNCHER_INIT
+		Object.Timer = 0
+		Object.Priority = PRIORITY_BOUNDS
+
+	end if
+
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	// Only check for Spike Ball collisions if it's a state where the Spike ball is actually visible
+	switch Object.State
+	case SPIKELAUNCHER_RAISING
+	case SPIKELAUNCHER_PAUSE
+	case SPIKELAUNCHER_THROWN
+		
+		// First, backup the base object's position
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+		
+		// Then, add the corresponding offset based on the Spike Ball's position
+		switch Object.PropertyValue
+		case LAUNCH_DIR_UP
+			// Upwards
+			Object.YPos += Object.SpikeBallPosition
+			break
+			
+		case LAUNCH_DIR_DOWN
+			// Downwards
+			Object.YPos -= Object.SpikeBallPosition
+			break
+			
+		case LAUNCH_DIR_LEFT
+			// Left
+			Object.XPos += Object.SpikeBallPosition
+			break
+			
+		case LAUNCH_DIR_RIGHT
+			// Right
+			Object.XPos -= Object.SpikeBallPosition
+			break
+			
+		end switch
+		
+		// Check collision with the player & hurt them if needed
+		PlayerObjectCollision(C_TOUCH, -12, -12, 12, 12)
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+		
+		// Restore the object's base position
+		Object.XPos = TempValue0
+		Object.YPos = TempValue1
+		
+		// No break is used here, although it doesn't matter too much anyway since there's nothing afterwards
+		
+	end switch
+
+end sub
+
+
+
+sub ObjectDraw
+
+	if Object.DrawOrder == 3
+		// Drawing the Spike Ball...
+
+		switch Object.State
+		case SPIKELAUNCHER_RAISING
+		case SPIKELAUNCHER_PAUSE
+		case SPIKELAUNCHER_THROWN
+			switch Object.PropertyValue
+			case LAUNCH_DIR_UP
+				// Upwards
+				TempValue0 = Object.YPos
+				TempValue0 += Object.SpikeBallPosition
+				DrawSpriteXY(4, Object.XPos, TempValue0)
+				break
+				
+			case LAUNCH_DIR_DOWN
+				// Downwards
+				TempValue0 = Object.YPos
+				TempValue0 -= Object.SpikeBallPosition
+				DrawSpriteXY(4, Object.XPos, TempValue0)
+				break
+				
+			case LAUNCH_DIR_LEFT
+				// Facing left
+				TempValue0 = Object.XPos
+				TempValue0 += Object.SpikeBallPosition
+				DrawSpriteXY(4, TempValue0, Object.YPos)
+				break
+				
+			case LAUNCH_DIR_RIGHT
+				// Facing right
+				TempValue0 = Object.XPos
+				TempValue0 -= Object.SpikeBallPosition
+				DrawSpriteXY(4, TempValue0, Object.YPos)
+				break
+				
+			end switch // Object.PropertyValue
+		
+		// No break is used here, as it's not needed
+		
+		end switch // Object.State
+		
+		// Add the Object to Draw List 4 so that its other half can draw above the Spike Ball
+		SetDrawListEntityRef(Object.EntityNo, 4, Screen.DrawListSize[4])
+		Screen.DrawListSize[4]++
+		Object.DrawOrder = 4
+		
+	else
+		// Drawing the Spike Ball Launcher itself...
+		
+		// The object's direction is stored in its Property Value, which also happens to align with the correct Sprite Frames
+		DrawSprite(Object.PropertyValue)
+		
+		// Reset the object's Draw Order back to 3 so that this whole process can be done again next frame
+		Object.DrawOrder = 3
+	end if
+	
+end sub
+
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Upwards Launcher Frame
+	SpriteFrame(-16, -16, 32, 16, 133, 1)
+	
+	// Downwards Launcher Frame
+	SpriteFrame(-16, 0, 32, 16, 166, 1)
+	
+	// Left-facing Launcher Frame
+	SpriteFrame(-16, -16, 16, 32, 1, 166)
+	
+	// Right-facing Launcher Frame
+	SpriteFrame(0, -16, 16, 32, 17, 166)
+	
+	// Spike Ball Frame
+	SpriteFrame(-16, -16, 32, 32, 1, 199)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Direction
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Direction
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(4)
+	DrawSprite(Object.PropertyValue)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+		
+		switch Object.PropertyValue
+		case 0
+		default
+			TempValue1 -= 0x300000; break;
+		case 1
+			TempValue1 += 0x300000; break;
+		case 2
+			TempValue0 -= 0x300000; break;
+		case 3
+			TempValue0 += 0x300000; break;
+		end switch
+
+		DrawArrow(Object.XPos, Object.YPos, TempValue0, TempValue1, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-16, -16, 32, 16, 133, 1)
+	SpriteFrame(-16, 0, 32, 16, 166, 1)
+	SpriteFrame(-16, -16, 16, 32, 1, 166)
+	SpriteFrame(0, -16, 16, 32, 17, 166)
+	SpriteFrame(-16, -16, 32, 32, 1, 199)
+
+	AddEditorVariable("Direction")
+	SetActiveVariable("Direction")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Right", 3)
+end sub

@@ -1,0 +1,170 @@
+//-----------------Sonic CD Stalactite Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.YVelocity
+#alias Object.Value1			:	Object.YOriginPos
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	STALACTITE_IDLE
+#alias 1	:	STALACTITE_FALLING
+#alias 2	:	STALACTITE_OFFSCREEN
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	
+	switch Object.State
+	
+	// State STALACTITE_IDLE doesn't really do anything...
+	// Instead, falling is triggered over in ObjectPlayerInteraction
+	
+	case STALACTITE_FALLING
+		// Update Gravity, maximum velocity of 8 pixels
+		if Object.YVelocity < 0x80000
+			// Gravity rate of 0.25 pixels per frame
+			Object.YVelocity += 0x4000
+		end if
+		
+		Object.YPos += Object.YVelocity
+		
+		if Object.OutOfBounds == true
+			// If this object goes offscreen, then put it back at its starting position and into the temp buffer state
+			Object.State = STALACTITE_OFFSCREEN
+			Object.YPos = Object.YOriginPos
+		end if
+		break
+		
+	case STALACTITE_OFFSCREEN
+		// This state is here just in case the Stalactite fell off screen, but the Player is still near it too
+		// In this case, we need the Object to stay away just a bit longer so that it doesn't suddenly snap back to position
+		
+		if Object.OutOfBounds == true
+			// It's safe to go back now, restore
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State = STALACTITE_IDLE
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	switch Object.State
+	case STALACTITE_IDLE
+		// First check if the player's within falling trigger range
+		PlayerObjectCollision(C_TOUCH, -4, 0, 4, 96)
+		if CheckResult == true
+			// Make the Stalactite start falling
+			
+			// Make it always active, since it'll end up falling out of bounds
+			Object.Priority = PRIORITY_ACTIVE
+			
+			// Reset its falling properties
+			Object.YVelocity = 0
+			Object.State = STALACTITE_FALLING
+		end if
+		
+		// [Fallthrough]
+		
+	case STALACTITE_FALLING
+		
+		// Just act as a plain 'ol hitbox too, in case the player jumps at it for whatever reason
+		PlayerObjectCollision(C_TOUCH, -8, -24, 8, 20)
+		
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	
+	switch Object.State
+	case STALACTITE_IDLE
+	case STALACTITE_FALLING
+		DrawSprite(0)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Use different frames for the different time period
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-8, -24, 16, 48, 172, 207)
+		break
+		
+	case TIME_PAST
+		SpriteFrame(-8, -24, 16, 48, 189, 207)
+		break
+		
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -24, 16, 48, 172, 207) // Same as Present, is this supposed to be the frame next to the Flowers instead?
+		break
+		
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -24, 16, 48, 155, 207)
+		break
+		
+	end switch
+	
+	// Cycle through all Stalactite Objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Stalactite]
+			
+			// Store its Starting Position, this will be needed for restoration after the Object falls
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// TODO: support other time periods
+	// Surely there's a better way to do it than 10 separate checkCurrentStageFolder checks?
+	SpriteFrame(-8, -24, 16, 48, 172, 207)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

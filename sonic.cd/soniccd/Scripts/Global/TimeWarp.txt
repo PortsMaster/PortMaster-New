@@ -1,0 +1,320 @@
+//-----------------Sonic CD Time Warp Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value7			:	Object.CurrentPeriod
+#alias Object.Value1			:	Object.Timer
+
+// Player Aliases
+#alias Player.Value0			:	Player.Rings
+#alias Player.Value4			:	Player.InvincibleTimer
+#alias Player.Value6			:	Player.MinRollSpeed
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	TIMEWARP_SETUP
+#alias 1	:	TIMEWARP_FADE_IN
+#alias 2	:	TIMEWARP_BACKGROUND
+#alias 3	:	TIMEWARP_BLANK
+#alias 4	:	TIMEWARP_LEAVING
+#alias 5	:	TIMEWARP_TRAVEL
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+
+// Global SFX
+#alias 14	:	SFX_G_TIMEWARP
+#alias 24	:	SFX_G_FLYING
+#alias 25	:	SFX_G_TIRED
+
+// Warp Destination
+#alias 1	:	WARPDEST_PAST
+
+// Next Period
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+
+sub ObjectDraw
+	switch Object.State
+	case TIMEWARP_SETUP
+		if Object.Timer < 320
+			if Object.Timer == 0
+				Warp.XPos = Player.XPos
+				Warp.YPos = Player.YPos
+
+				Warp.XVelocity 		= Player.XVelocity
+				Warp.YVelocity		= Player.YVelocity
+				Warp.Speed 			= Player.Speed
+				Warp.MinRollSpeed	= Player.MinRollSpeed
+
+				Warp.CollisionMode	= Player.CollisionMode
+				Warp.Gravity		= Player.Gravity
+
+				if Player.State == Player_State_Static
+					Warp.State = Player_State_Air
+				else
+					if Player.State == Player_State_SpinningTop
+						Warp.State = Player_State_Air
+					else
+						if Player.State == Player_State_WaterCurrent
+							Warp.State = Player_State_Air
+						else
+							Warp.State = Player.State
+						endif
+					endif
+				endif
+
+				Warp.Animation	 = Player.Animation
+				Warp.Angle		 = Player.Angle
+				Warp.PlayerFrame = Player.Frame
+
+				Player.InvincibleTimer	= 1000
+				Player.ControlMode		= CONTROLMODE_NONE
+				Player.Visible			= false
+			end if
+			Music.Volume -= 8
+			SetScreenFade(208, 255, 224, Object.Timer)
+			Object.Timer += 10
+		else
+			// 88 Miles per Hour unlock criteria
+			if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+				if Stage.DebugMode == false
+					SetAchievement(0, 100)
+				end if
+			end if
+				
+#platform: Use_Haptics
+			HapticEffect(91, 0, 0, 0)
+#endplatform
+
+			StopSFX(SFX_G_FLYING)
+			StopSFX(SFX_G_TIRED)
+			Stage.State = STAGE_RUNNING
+			Stage.TimeEnabled = false
+
+			// Saves everything
+			CallFunction(StageSetup_SaveStageState)
+			Rec_Milliseconds = Stage.MilliSeconds
+			Rec_Seconds		 = Stage.Seconds
+			Rec_Minutes		 = Stage.Minutes
+
+			Warp.Rings  = Player.Rings
+			TempValue2  = HUD.CurrentTimePeriod
+
+			// Sets every object as a blank object in the current period
+			//(likely to avoid the player's death during the cutscene)
+			TempValue0 = 0
+			while TempValue0 < 1184
+				ResetObjectEntity(TempValue0, TypeName[Blank Object], 0, 0, 0)
+				TempValue0++
+			loop
+			// Blanks the level layers
+			Screen.XOffset = 0
+			Screen.YOffset = 0
+			Stage[0].ActiveLayer = 9
+			Stage[1].ActiveLayer = 9
+			Stage[2].ActiveLayer = 9
+			Stage[3].ActiveLayer = 9
+			ArrayPos0 = 0
+
+			// Sets the fade in
+			Object[ArrayPos0].Type			 = TypeName[Time Warp]
+			Object[ArrayPos0].State			 = TIMEWARP_FADE_IN
+			Object[ArrayPos0].Timer			 = 320
+			Object[ArrayPos0].CurrentPeriod	 = TempValue2
+			ArrayPos0++
+
+			// Creates the background
+			TempValue0 = -32
+			while TempValue0 < 256
+				TempValue1 = 0
+				while TempValue1 < Screen.XSize
+					Object[ArrayPos0].Type  = TypeName[Time Warp]
+					Object[ArrayPos0].State = TIMEWARP_BACKGROUND
+					Rand(Object[ArrayPos0].Frame, 27)
+					Object[ArrayPos0].Frame >>= 2
+					Object[ArrayPos0].Frame <<= 2
+					Object[ArrayPos0].iXPos   = TempValue1
+					Object[ArrayPos0].iYPos   = TempValue0
+					Object[ArrayPos0].iXPos  += 16
+					Object[ArrayPos0].iYPos  += 16
+					Rand(Object[ArrayPos0].Direction, 15)
+					Object[ArrayPos0].Direction >>= 2
+					ArrayPos0++
+					TempValue1 += 32
+				loop
+				TempValue0 += 32
+			loop
+			// And of course, the star of the show appears
+			Object[ArrayPos0].Type  = TypeName[Warp Sonic]
+			Object[ArrayPos0].iXPos = Screen.CenterX
+			Object[ArrayPos0].iYPos = 480
+
+			SetScreenFade(208, 255, 224, 255)
+
+			PlaySfx(SFX_G_TIMEWARP, false)
+		end if
+		break
+
+	case TIMEWARP_FADE_IN
+		if Object.Timer > 0
+			SetScreenFade(208, 255, 224, Object.Timer)
+			Object.Timer -= 10
+		else
+
+#platform: Use_Origins
+			game.callbackParam0 = Object.PropertyValue	// Signal the new period over to the engine
+			EngineCallback(NOTIFY_FUTURE_PAST)
+#endplatform
+
+			Object.State = TIMEWARP_BLANK
+		end if
+		break
+
+	case TIMEWARP_BACKGROUND
+		TempValue0   = Object.Frame
+		TempValue0 >>= 1
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		Object.Frame++
+		if Object.Frame == 28
+			Object.Frame = 0
+		end if
+
+		Object.YPos += 0x40000
+		if Object.YPos >= 0x1000000
+			Object.YPos -= 0x1200000
+		end if
+		break
+
+	case TIMEWARP_BLANK
+		break
+
+	case TIMEWARP_LEAVING
+		Object.Timer++
+		if Object.Timer == 40
+			Object.Timer = 0
+			Object.State = TIMEWARP_TRAVEL
+		end if
+		break
+
+	case TIMEWARP_TRAVEL
+		if Object.Timer < 1800
+			SetScreenFade(208, 255, 224, Object.Timer)
+			Object.Timer += 10
+		else
+			SetScreenFade(208, 255, 224, 255)
+			switch Object.CurrentPeriod
+			// from this point onward any "Object.CurrentPeriod" was added by Origins for HE2 tracking
+			case TIME_PRESENT
+				if Warp.Destination == WARPDEST_PAST
+					Stage.ListPos++
+					Object.CurrentPeriod = TIME_PAST
+				else
+					if Transporter_Destroyed == true
+						Stage.ListPos += 2
+						Object.CurrentPeriod = TIME_GOOD_FUTURE
+					else
+						Stage.ListPos += 3
+						Object.CurrentPeriod = TIME_BAD_FUTURE
+					end if
+				end if
+				break
+
+			case TIME_PAST
+				Stage.ListPos--
+				Object.CurrentPeriod = TIME_PRESENT
+				break
+
+			case TIME_GOOD_FUTURE
+				Stage.ListPos -= 2
+				Object.CurrentPeriod = TIME_PRESENT
+				break
+
+			case TIME_BAD_FUTURE
+			
+#platform: Use_Standalone
+				Stage.ListPos -= 3
+#endplatform
+
+#platform: Use_Origins
+				if game.playMode != BOOT_PLAYMODE_MISSION
+					Stage.ListPos -= 3
+				else
+					Stage.ListPos -= 2
+				endif
+#endplatform
+
+				Object.CurrentPeriod = TIME_PRESENT
+				break
+
+			end switch
+			Fade_Colour   = 208
+			Fade_Colour <<= 16
+			TempValue0    = 255
+			TempValue0  <<= 8
+			Fade_Colour  += TempValue0
+			Fade_Colour  += 224
+
+#platform: Use_Origins
+			game.callbackParam0 = 1	// Lamp Post Related?
+			EngineCallback(NOTIFY_STATS_PARAM_1)
+			game.callbackParam0 = Object.CurrentPeriod	// Get current period
+			EngineCallback(NOTIFY_GOTO_FUTURE_PAST)
+#endplatform
+
+			LoadStage()
+#platform: Use_Origins
+			// PlayerObject will use this as part of a check to keep mini state after the stage load
+			Warp.Timer = 204
+			Warp.Timer += 1
+#endplatform
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	SpriteFrame(-16, -16, 32, 32, 83, 0)	// #0  - Time Travel BG Chunk 0
+	SpriteFrame(-16, -16, 32, 32, 83, 32)	// #1  - Time Travel BG Chunk 1
+	SpriteFrame(-16, -16, 32, 32, 83, 64)	// #2  - Time Travel BG Chunk 2
+	SpriteFrame(-16, -16, 32, 32, 83, 96)	// #3  - Time Travel BG Chunk 3
+	SpriteFrame(-16, -16, 32, 32, 83, 128)	// #4  - Time Travel BG Chunk 4
+	SpriteFrame(-16, -16, 32, 32, 83, 160)	// #5  - Time Travel BG Chunk 5
+	SpriteFrame(-16, -16, 32, 32, 83, 192)	// #6  - Time Travel BG Chunk 6
+	SpriteFrame(-16, -16, 32, 32, 83, 224)	// #7  - Time Travel BG Chunk 7
+	SpriteFrame(-16, -16, 32, 32, 115, 0)	// #8  - Time Travel BG Chunk 8
+	SpriteFrame(-16, -16, 32, 32, 115, 32)	// #9  - Time Travel BG Chunk 9
+	SpriteFrame(-16, -16, 32, 32, 115, 64)	// #10 - Time Travel BG Chunk 10
+	SpriteFrame(-16, -16, 32, 32, 115, 96)	// #11 - Time Travel BG Chunk 11
+	SpriteFrame(-16, -16, 32, 32, 115, 128)	// #12 - Time Travel BG Chunk 12
+	SpriteFrame(-16, -16, 32, 32, 115, 160)	// #13 - Time Travel BG Chunk 13
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-16, -16, 32, 32, 83, 0)	// #0  - Time Travel BG Chunk 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

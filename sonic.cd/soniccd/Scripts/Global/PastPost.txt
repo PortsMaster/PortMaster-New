@@ -1,0 +1,164 @@
+//-----------------Sonic CD Past Post Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.CollisionPlane
+
+// States
+#alias 0	:	PASTPOST_IDLE
+#alias 1	:	PASTPOST_ROTATE
+#alias 2	:	PASTPOST_USED
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Warp Destination
+#alias 1	:	WARPDEST_PAST
+
+// Collision Plane
+#alias 1	:	COLLISION_PLANE_B
+
+// Global SFX
+#alias 13	:	SFX_G_PAST
+
+// Property Values
+#alias 1	:	DRAWING_PLANE_B
+
+
+sub ObjectPlayerInteraction
+	if Object.State == PASTPOST_IDLE
+		if Player.CollisionPlane == Object.CollisionPlane
+			PlayerObjectCollision(C_TOUCH, -8, -24, 8, 32)
+			if CheckResult == true
+				Warp.Destination = WARPDEST_PAST
+				Object.State     = PASTPOST_ROTATE
+				Object.Priority  = PRIORITY_ACTIVE
+				Object.Frame = 1
+				PlaySfx(SFX_G_PAST, false)
+				
+#platform: Use_Haptics
+				HapticEffect(20, 0, 0, 0)
+#endplatform
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case PASTPOST_IDLE
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	case PASTPOST_ROTATE
+		DrawSprite(0)
+		Object.Timer++
+		if Object.Timer == 64
+			Object.Timer = 0
+			Object.State = PASTPOST_USED
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		DrawSprite(Object.Frame)
+
+		TempValue0 = Object.Timer
+		TempValue0 &= 1
+		Object.Frame += TempValue0
+		if Object.Frame > 8
+			Object.Frame = 1
+		end if
+		break
+
+	case PASTPOST_USED
+		DrawSprite(0)
+		DrawSprite(5)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+	// Past Head
+	SpriteFrame(-16, -40, 32, 16, 118, 239)		// #2 - Post Head
+	SpriteFrame(-8, -40, 16, 16, 51, 183)		// #3 - Post Head Flip 1
+	SpriteFrame(-3, -40, 8, 16, 68, 183)		// #4 - Post Head Flip 2
+	SpriteFrame(-8, -40, 16, 16, 52, 200)		// #5 - Post Head Flip 3
+	SpriteFrame(-16, -40, 32, 16, 151, 239)		// #6 - Post Head Backwards
+	SpriteFrame(-8, -40, 16, 16, 51, 183)		// #7 - Post Head Flip 1
+	SpriteFrame(-3, -40, 8, 16, 68, 183)		// #8 - Post Head Flip 2
+	SpriteFrame(-8, -40, 16, 16, 52, 200)		// #9 - Post Head Flip 3
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Past Post]
+			if Object[ArrayPos0].PropertyValue == DRAWING_PLANE_B
+				Object[ArrayPos0].DrawOrder 	 = 1
+				Object[ArrayPos0].CollisionPlane = COLLISION_PLANE_B
+			end if
+
+			if Options.GameMode == MODE_TIMEATTACK
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // CollisionPlane
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // CollisionPlane
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+	SpriteFrame(-16, -40, 32, 16, 118, 239)		// #1 - Post Head
+
+
+	AddEditorVariable("CollisionPlane")
+	SetActiveVariable("CollisionPlane")
+	AddEnumVariable("Plane A", 0)
+	AddEnumVariable("Plane B", 1)
+end sub

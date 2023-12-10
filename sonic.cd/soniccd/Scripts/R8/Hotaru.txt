@@ -1,0 +1,444 @@
+//------------------Sonic CD Hotaru Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+#alias Object.Value1			:	Object.XVelocity
+#alias Object.Value2			:	Object.YVelocity
+#alias Object.Value3			:	Object.XOriginPos
+#alias Object.Value4			:	Object.YOriginPos
+#alias Object.Value5			:	Object.LeftBound
+#alias Object.Value6			:	Object.RightBound
+#alias Object.Value7			:	Object.CheckBounds
+
+// Hotaru Laser alias
+#alias Object.Value2			:	Object.HotaruEntity
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// One Way Door Alias
+#alias Object[+5].State			:	OneWayDoor.State
+
+// Hotaru Spawner States
+#alias 0	:	HOTARU_SPAWNER_CHECK_BOUNDS
+#alias 1	:	HOTARU_SPAWNER_SPAWN_CHILD_1
+#alias 2	:	HOTARU_SPAWNER_CHECK_CHILD_1
+#alias 3	:	HOTARU_SPAWNER_SPAWN_CHILD_2
+#alias 4	:	HOTARU_SPAWNER_CHECK_CHILD_2
+#alias 5	:	HOTARU_SPAWNER_OPEN_DOORS
+
+// Hotaru States
+#alias 0	:	HOTARU_FADE_IN
+#alias 1	:	HOTARU_MOVE
+#alias 2	:	HOTARU_CHARGE_LASER
+#alias 3	:	HOTARU_SHOT_LASER
+#alias 4	:	HOTARU_SET_NEW_DESTINATION
+
+// One Way Door States
+#alias 1	:	ONEWAYDOOR_OPEN
+
+// Stage SFX
+#alias 4	:	SFX_S_HLASER
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Property Values
+#alias 0	:	PARENT_OBJECT
+#alias 1	:	CHILD_OBJECT
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+
+// Function declarations
+#function Hotaru_Set_Destination
+
+function Hotaru_Set_Destination
+	if Object.CheckBounds == false
+		TempValue0 = true
+	else
+		TempValue1   = Player.XPos
+		TempValue1 >>= 16
+		TempValue1  &= 0x7FF8
+		
+		CheckLower(TempValue1, Object.LeftBound)
+		TempValue0  = CheckResult
+
+		CheckGreater(TempValue1, Object.RightBound)
+		TempValue0 |= CheckResult
+	end if
+
+	if TempValue0 == true
+		TempValue2  = Oscillation
+		TempValue2 &= 127
+		TempValue2 += Object.XOriginPos
+		TempValue2 -= 64
+
+		TempValue3   = Player.XPos
+		TempValue3 >>= 16
+		TempValue3  *= 5
+		TempValue3  &= 31
+		TempValue3  += Object.YOriginPos
+	else
+		TempValue2 = TempValue1
+
+		TempValue3  = Object.YOriginPos
+		TempValue3 -= 8
+	end if
+	Object.XVelocity   = TempValue2
+	Object.XVelocity  -= Object.iXPos
+	Object.XVelocity <<= 11
+
+	Object.YVelocity   = TempValue3
+	Object.YVelocity  -= Object.iYPos
+	Object.YVelocity <<= 11
+
+	Object.CheckBounds++
+	Object.CheckBounds &= 1
+end function
+
+
+sub ObjectMain
+#platform: Use_Origins
+	if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+		Object.Type = TypeName[Blank Object]
+	else
+#endplatform
+		if Object.PropertyValue == PARENT_OBJECT
+			switch Object.State
+			case HOTARU_SPAWNER_CHECK_BOUNDS
+				TempValue0  = Object.XPos
+				TempValue0 -= 0x300000
+
+				if Player.XPos > TempValue0
+					Object.State++
+				end if
+				break
+
+			case HOTARU_SPAWNER_SPAWN_CHILD_1
+				if Object.Timer < 60
+					Object.Timer++
+				else
+					Object.Timer = 0
+					
+					Object[+1].Type  = TypeName[Hotaru]
+					Object[+1].XPos  = Object.XPos
+					Object[+1].XPos -= 0x500000
+					Object[+1].YPos  = Object.YPos
+					Object[+1].YPos += 0x300000
+					Object.State++
+				end if
+				break
+
+			case HOTARU_SPAWNER_CHECK_CHILD_1
+				// Check if the first Hotaru got destroyed
+				if Object[+1].Type != TypeName[Hotaru]
+					Object.State++
+				else
+					if Object[+1].State < HOTARU_CHARGE_LASER
+						TempValue0 = 176
+					else
+						TempValue0 = 0
+					end if
+					TempValue0  -= Object.Alpha
+					TempValue0 >>= 3
+					Object.Alpha += TempValue0
+				end if
+				break
+
+			case HOTARU_SPAWNER_SPAWN_CHILD_2
+				if Object.Timer < 60
+					Object.Timer++
+				else
+					Object.Timer = 0
+					Object[+2].Type = TypeName[Hotaru]
+					Object[+2].CheckBounds = true
+
+					Object[+2].XPos = Object.XPos
+					Object[+2].XPos -= 0x500000
+
+					Object[+2].YPos = Object.YPos
+					Object[+2].YPos += 0x280000
+
+					Object[+3].Type = TypeName[Hotaru]
+					Object[+3].CheckBounds = false
+
+					Object[+3].XPos = Object.XPos
+					Object[+3].XPos += 0x500000
+
+					Object[+3].YPos = Object.YPos
+					Object[+3].YPos += 0x280000
+					Object.State++
+				end if
+				break
+
+			case HOTARU_SPAWNER_CHECK_CHILD_2
+				if Object[+2].Type != TypeName[Hotaru]
+					if Object[+3].Type != TypeName[Hotaru]
+						TempValue0  = 3840
+						TempValue0 -= Screen.CenterX
+						Stage.NewXBoundary1 = TempValue0
+						TempValue0 += Screen.XSize
+						Stage.NewXBoundary2 = TempValue0
+						Object.Priority = PRIORITY_ACTIVE
+						Object.State++
+					else
+						if Object[+3].State < HOTARU_CHARGE_LASER
+							TempValue0 = 176
+						else
+							TempValue0 = 0
+						end if
+						TempValue0   -= Object.Alpha
+						TempValue0  >>= 3
+						Object.Alpha += TempValue0
+					end if
+				else
+					if Object[+2].State < HOTARU_CHARGE_LASER
+						TempValue0 = 176
+					else
+						TempValue0 = 0
+					end if
+					TempValue0   -= Object.Alpha
+					TempValue0  >>= 3
+					Object.Alpha += TempValue0
+				end if
+				break
+
+			case HOTARU_SPAWNER_OPEN_DOORS
+				if Object[+2].State > HOTARU_MOVE
+					if Object[+3].State > HOTARU_MOVE
+						OneWayDoor.State = ONEWAYDOOR_OPEN
+					end if
+				end if
+
+				if HUD.CurrentTimePeriod == TIME_BAD_FUTURE
+					if Object.Alpha < 176
+						Object.Alpha++
+					end if
+				else
+					if Object.Alpha > 0
+						Object.Alpha--
+					end if
+				end if
+				
+				PlayerObjectCollision(C_TOUCH, -192, -256, 420, 256)
+				if CheckResult == false
+					ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+				end if
+				break
+			end switch
+		else
+			switch Object.State
+			case HOTARU_FADE_IN
+				if Object.Timer < 60
+					Object.Timer++
+				else
+					Object.Timer = 32
+					CallFunction(Hotaru_Set_Destination)
+					Object.State++
+				end if
+				Object.Alpha = Object.Timer
+				Object.Alpha <<= 2
+				break
+
+			case HOTARU_MOVE
+				Object.XPos += Object.XVelocity
+				Object.YPos += Object.YVelocity
+
+				TempValue0  = Object.Timer
+				TempValue0 &= 3
+				if TempValue0 == 0
+					CreateTempObject(TypeName[Hotaru Trail], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].InkEffect = INK_ALPHA
+					Object[TempObjectPos].Alpha		= 248
+				end if
+
+				Object.Timer--
+				if Object.Timer == 0
+					Object.State++
+				end if
+				break
+
+			case HOTARU_CHARGE_LASER
+				Object.Timer++
+				if Object.Timer == 32
+					Object.Timer = 0
+					Object.State++
+					PlayStageSfx(SFX_S_HLASER, false)
+				end if
+				break
+
+			case HOTARU_SHOT_LASER
+				TempValue0  = Object.Timer
+				TempValue0 &= 1
+				if TempValue0 == 0
+					CreateTempObject(TypeName[Hotaru Laser], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].HotaruEntity = Object.EntityNo
+				end if
+				Object.Timer++
+				if Object.Timer == 20
+					Object.Timer = 0
+					Object.State++
+				end if
+				break
+
+			case HOTARU_SET_NEW_DESTINATION
+				Object.Timer++
+				if Object.Timer == 16
+					Object.Timer = 32
+					CallFunction(Hotaru_Set_Destination)
+					Object.State = HOTARU_MOVE
+				end if
+				break
+			end switch
+		end if
+#platform: Use_Origins
+	end if
+#endplatform
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.PropertyValue == CHILD_OBJECT
+		if Object.State == HOTARU_SHOT_LASER
+			if Object.Timer > 1
+#platform: Use_Standalone
+				PlayerObjectCollision(C_TOUCH, -5, -5, 5, 5)
+#endplatform
+#platform: Use_Origins
+				PlayerObjectCollision(C_ENEMY, -5, -5, 5, 5)
+#endplatform
+				if CheckResult == true
+					CallFunction(Player_BadnikBreak)
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.PropertyValue == CHILD_OBJECT
+		switch Object.State
+		case HOTARU_FADE_IN
+			DrawSpriteFX(2, FX_INK, Object.XPos, Object.YPos)
+			break
+
+		case HOTARU_MOVE
+			DrawSprite(2)
+			break
+
+		case HOTARU_CHARGE_LASER
+			TempValue0   = Object.Timer
+			TempValue0  &= 3
+			TempValue0 >>= 1
+			if TempValue0 == 0
+				DrawSprite(3)
+			else
+				DrawSprite(0)
+			end if
+			break
+
+		case HOTARU_SHOT_LASER
+			TempValue0   = Object.Timer
+			TempValue0  &= 7
+			TempValue0 >>= 2
+			DrawSprite(TempValue0)
+			DrawSprite(3)
+			break
+
+		case HOTARU_SET_NEW_DESTINATION
+			TempValue0   = Object.Timer
+			TempValue0  &= 3
+			TempValue0 >>= 1
+			if TempValue0 == 0
+				DrawSprite(3)
+			else
+				DrawSprite(0)
+			end if
+			break
+		end switch
+	else
+		DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 0, Object.Alpha)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects3.gif")
+
+	SpriteFrame(-12, -24, 24, 40, 96, 133)	// #0 - Hotaru Idle frame 0
+	SpriteFrame(-12, -24, 24, 40, 121, 133)	// #1 - Hotaru Idle frame 1
+
+	SpriteFrame(-12, -10, 24, 24, 146, 133)	// #2 - Hotaru Bulb frame 0
+	SpriteFrame(-12, -10, 24, 24, 171, 133)	// #3 - Hotaru Bulb frame 1
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Hotaru]
+			Object[ArrayPos0].Alpha = 0
+			Object[ArrayPos0].InkEffect = INK_ALPHA
+
+			if HUD.CurrentTimePeriod == TIME_BAD_FUTURE
+				Object[ArrayPos0].DrawOrder = 2
+			end if
+
+			ArrayPos1 = ArrayPos0
+			ArrayPos1++
+			TempValue0 = 0
+			while TempValue0 < 3
+				// Setups the next 3 blank objects
+				Object[ArrayPos1].PropertyValue	= CHILD_OBJECT
+				Object[ArrayPos1].DrawOrder		= 4
+				Object[ArrayPos1].InkEffect		= INK_ALPHA
+
+				Object[ArrayPos1].XOriginPos	= Object[ArrayPos0].iXPos
+				Object[ArrayPos1].YOriginPos	= Object[ArrayPos0].iYPos
+
+				Object[ArrayPos1].LeftBound		= Object[ArrayPos0].iXPos
+				Object[ArrayPos1].LeftBound    -= 112
+
+				Object[ArrayPos1].RightBound	= Object[ArrayPos0].iXPos
+				Object[ArrayPos1].RightBound   += 112
+				TempValue0++
+				ArrayPos1++
+			loop
+			ArrayPos0 += 3
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		DrawLine(Object.XPos, Object.YPos, Object[+1].XPos, Object[+1].YPos, 255, 255, 0)
+		DrawLine(Object.XPos, Object.YPos, Object[+2].XPos, Object[+2].YPos, 255, 255, 0)
+		DrawLine(Object.XPos, Object.YPos, Object[+3].XPos, Object[+3].YPos, 255, 255, 0)
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects3.gif")
+
+	SpriteFrame(-12, -24, 24, 40, 96, 133)	// #0 - Hotaru Idle frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

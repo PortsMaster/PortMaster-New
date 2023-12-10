@@ -1,0 +1,305 @@
+//----------------Sonic CD Fade Screen Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.Timer
+
+// Player Aliases
+#alias Object[0].Value0	:	Player.Rings
+
+// States
+#alias 0	:	FADESCREEN_SETUP
+#alias 1	:	FADESCREEN_AMY
+#alias 2	:	FADESCREEN_TAILS
+#alias 3	:	FADESCREEN_BLANK
+#alias 4	:	FADESCREEN_BOSSRUSH		// Origins Exclusive
+
+// Property Values
+#alias 0	:	CUTSCENE_NO_SKIP
+#alias 1	:	CUTSCENE_SKIP
+
+// Game Mode Aliases
+#alias 1	:	MODE_SAVEGAME
+#alias 2	:	MODE_TIMEATTACK
+
+// Presentation Stages
+#alias 0	:	STAGE_P_TITLE
+#alias 2	:	STAGE_P_TATTACK
+#alias 7	:	STAGE_P_STAFFCREDITS
+#alias 8	:	STAGE_P_TAILSUNLOCK
+
+// Soundstrack
+#alias 0	:	OST_JP
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Engine States
+#alias 1	:	ENGINE_MAINGAME
+#alias 8	:	ENGINE_WAIT
+
+// Callbacks
+#alias 4	:	CALLBACK_FINISHGAME_NOTIFY
+
+sub ObjectMain
+	switch Object.State
+	case FADESCREEN_SETUP
+		if Object.Timer < 480
+			Object.Timer += 4
+			Music.Volume--
+		else
+			Object.Timer = 224
+			if Object.PropertyValue == CUTSCENE_NO_SKIP
+				Object.State++
+			else
+				Object.State += 2
+			end if
+		end if
+
+		if Object.PropertyValue == CUTSCENE_SKIP
+			SetScreenFade(0, 0, 0, Object.Timer)
+		else
+			SetScreenFade(224, 224, 224, Object.Timer)
+		end if
+		break
+
+	case FADESCREEN_AMY
+		if Object.Timer > 0
+			Music.Volume--
+			Object.Timer -= 16
+		else
+			StopMusic()
+
+#platform: Use_Origins
+			EngineCallback(NOTIFY_BOSS_END)
+			TempValue0 = false
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				TempValue0 = true
+			else
+				// Check if the player is replaying the stage from My Data & Rankings
+				if game.oneStageFlag != false
+					TempValue0 = true
+					EngineCallback(NOTIFY_ACT_FINISH)
+					game.callbackResult = -1				// Reset any callback result
+					game.callbackParam0 =  1				// 0 - Normal Retry, anything else - Show current and best time
+					game.callbackParam1 =  Stage.ListPos	// Get current stage
+					game.callbackParam2 =  0				// Unknown
+					EngineCallback(NOTIFY_STAGE_RETRY)
+				end if
+			end if
+#endplatform
+#platform: Use_Standalone
+			TempValue0 = false
+#endplatform
+			if TempValue0 != false
+				Object.State = FADESCREEN_BOSSRUSH
+			else
+				if Options.GameMode == MODE_TIMEATTACK
+					TimeAttack.Result  = Stage.Seconds
+					TimeAttack.Result *= 100
+					TempValue0		   = Stage.Minutes
+					TempValue0		  *= 6000
+					TimeAttack.Result += TempValue0
+					TimeAttack.Result += Stage.MilliSeconds
+
+					TempValue0   = Stage.ListPos
+					TempValue0  %= 10
+					TempValue0 >>= 2
+					TempValue1   = Stage.ListPos
+					TempValue1  /= 10
+					TempValue1  *= 3
+					TempValue0  += TempValue1
+					TempValue0++
+					TempValue1   = Stage.Seconds
+					TempValue1  *= 100
+					TempValue2   = Stage.Minutes
+					TempValue2  *= 6000
+					TempValue1  += TempValue2
+					TempValue1  += Stage.MilliSeconds
+					SetLeaderboard(TempValue0, TempValue1)
+					Stage.ListPos = STAGE_P_TATTACK
+				else
+					EngineCallback(CALLBACK_FINISHGAME_NOTIFY)
+					if Player.Score > 0
+						if Options.GameMode == MODE_SAVEGAME
+							if Stage.DebugMode == false
+								SetLeaderboard(0, Player.Score)
+							end if
+						end if
+					end if
+#platform: Use_Origins
+					game.callbackParam0 = StageStatsUsabilityParam1	// Enemies destroyed by any means
+					game.callbackParam1 = StageStatsUsabilityParam2	// Enemies destroyed by rolling
+					game.callbackParam2 = 0
+					EngineCallback(NOTIFY_STATS_ENEMY)
+
+					game.callbackParam0 = Player.Rings
+					EngineCallback(NOTIFY_STATS_RING)
+
+					game.callbackParam0 = StageStatsUsabilityParam5	// Lamp Post related
+					EngineCallback(NOTIFY_STATS_PARAM_1)
+
+					game.callbackParam0 = 0							// Unknown
+					game.callbackParam1 = StageStatsUsabilityParam4	// Unknown
+					game.callbackParam2 = 0							// Unknown
+					EngineCallback(NOTIFY_STATS_CHARA_ACTION)
+
+					EngineCallback(NOTIFY_ACT_FINISH)
+
+					StageStatsUsabilityParam1 = 0
+					StageStatsUsabilityParam2 = 0
+					StageStatsUsabilityParam3 = 0
+					StageStatsUsabilityParam4 = 0
+					StatsUsabilityParam1 = 0
+					StatsUsabilityParam2 = 0
+					StatsUsabilityParam3 = 0
+					StatsUsabilityParam4 = 0
+
+					if SpecialStage.TimeStones > 126	// 0b1111110, each '1' bit represents an obtained time stone
+						EngineCallback(NOTIFY_GOOD_ENDING)
+					else
+						if Good_Future_List > 0x3FFE	// 0b11111111111110, each '1' bit represents a zone with the robot transporters destroyed
+							EngineCallback(NOTIFY_GOOD_ENDING)
+						end if
+					end if
+#endplatform
+
+#platform: Use_Standalone
+					if Stage.PlayerListPos == PLAYER_SONIC_A
+#endplatform
+						if SpecialStage.TimeStones > 126	// 0b1111110, each '1' bit represents an obtained time stone
+							LoadVideo("Good_Ending")
+						else
+							if Good_Future_List > 0x3FFE	// 0b11111111111110, each '1' bit represents a zone with the robot transporters destroyed
+								LoadVideo("Good_Ending")
+							else
+								LoadVideo("Bad_Ending")
+							end if
+						end if
+#platform: Use_Standalone
+					end if
+#endplatform
+
+// Because of the way mobile cd worked (using the phone's native video player)
+// it needed to reproduce separated videos depending of the soundtrack option
+// for the sake of clarity and simplicity, the mobile code got commented out
+//#platform: Use_Standalone
+//					if Stage.PlayerListPos == PLAYER_SONIC_A
+//#endplatform
+//						if SpecialStage.TimeStones > 126	// 0b1111110, each '1' bit represents an obtained time stone
+//							if Options.Soundtrack == OST_JP
+//								LoadVideo("Good_Ending")
+//							else
+//								LoadVideo("Good_EndingUS")
+//							end if
+//						else
+//							if Good_Future_List > 0x3FFE	// 0b11111111111110, each '1' bit represents a zone with the robot transporters destroyed
+//								if Options.Soundtrack == OST_JP
+//									LoadVideo("Good_Ending")
+//								else
+//									LoadVideo("Good_EndingUS")
+//								end if
+//							else
+//								if Options.Soundtrack == OST_JP
+//									LoadVideo("Bad_Ending")
+//								else
+//									LoadVideo("Bad_EndingUS")
+//								end if
+//							end if
+//						end if
+//#platform: Use_Standalone
+//					end if
+//#endplatform
+
+					if SaveRAM[36] == false	// Is Tails unlocked?
+#platform: Use_Origins
+						if game.playMode == BOOT_PLAYMODE_CLASSIC
+							Stage.ListPos = STAGE_P_TITLE
+							Engine.State = ENGINE_WAIT
+						else
+							SaveRAM[36] = true
+							WriteSaveRAM()
+							Stage.ListPos = STAGE_P_TAILSUNLOCK
+						end if
+#endplatform
+
+#platform: Use_Standalone
+						SaveRAM[36] = true
+						WriteSaveRAM()
+						Stage.ListPos = STAGE_P_TAILSUNLOCK
+#endplatform
+					else
+						Stage.ListPos = STAGE_P_TITLE
+#platform: Use_Origins
+						Engine.State = ENGINE_WAIT
+#endplatform
+					end if
+
+#platform: Use_Decomp
+					// We don't really want to softlock the game don't we?
+					if Engine.State == ENGINE_WAIT
+						Engine.State = ENGINE_MAINGAME
+					end if
+#endplatform
+
+#platform: Use_Origins
+					// Unlock ending on the Museum
+					game.callbackParam0 = true
+					EngineCallback(NOTIFY_STATS_MOVIE)
+#endplatform
+
+#platform: Use_Standalone
+					// Originally the game checked if the player was using sonic or tails
+					// This got removed on origins, but since it covers this whole thing, this workaround should do
+					if Stage.PlayerListPos == PLAYER_TAILS_A
+						Stage.ListPos = STAGE_P_STAFFCREDITS
+					end if
+#endplatform
+				end if
+				Stage.ActiveList = PRESENTATION_STAGE
+				LoadStage()
+			end if
+
+		end if
+		SetScreenFade(Object.Timer, Object.Timer, Object.Timer, 255)
+		break
+
+	case FADESCREEN_TAILS
+		if Object.Timer > 0
+			Music.Volume--
+			Object.Timer -= 16
+		else
+			StopMusic()
+			Stage.ListPos += 2
+			LoadStage()
+		end if
+		break
+
+	case FADESCREEN_BLANK
+		break
+
+	case FADESCREEN_BOSSRUSH
+		SetScreenFade(255, 255, 255, 255)
+		break
+	end switch
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

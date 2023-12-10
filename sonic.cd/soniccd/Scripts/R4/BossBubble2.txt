@@ -1,0 +1,162 @@
+//---------------Sonic CD Boss Bubble 2 Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// States
+#alias 0	:	BOSSBUBBLE2_GROWTH_1
+#alias 1	:	BOSSBUBBLE2_GROWTH_2
+#alias 2	:	BOSSBUBBLE2_BREATHABLE
+#alias 3	:	BOSSBUBBLE2_CONSUMED
+#alias 4	:	BOSSBUBBLE2_DISSAPEAR
+
+// Stage SFX
+#alias 6	:	SFX_S_BREATHING
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSBUBBLE2_GROWTH_1
+		if Object.Timer < 20
+			Object.Timer++
+		else
+			Object.State++
+		end if
+		break
+
+	case BOSSBUBBLE2_GROWTH_2
+		Object.State++
+		break
+
+	case BOSSBUBBLE2_BREATHABLE	// only here for display purposes, waits for player to interact with it
+		break
+
+	case BOSSBUBBLE2_CONSUMED
+		if Object.Timer < 22
+			Object.Timer++
+		else
+			Object.State++
+		end if
+		break
+
+	case BOSSBUBBLE2_DISSAPEAR
+		if Object.Timer < 42
+			Object.Timer++
+		else
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == BOSSBUBBLE2_BREATHABLE
+		CheckResult = false
+		if Player.Animation == ANI_JUMPING
+			CheckResult = true
+		end if
+#platform: Use_Origins
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			if Player.Animation == ANI_GLIDING
+				CheckResult = true
+			end if
+			if Player.Animation == ANI_GLIDING_STOP
+				CheckResult = true
+			end if
+		end if
+		if Stage.PlayerListPos == PLAYER_AMY
+			if Player.Animation == ANI_HAMMER_JUMP
+				CheckResult = true
+			end if
+		end if
+#endplatform
+		if CheckResult == true
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				Object.State = BOSSBUBBLE2_CONSUMED
+				FlipSign(Player.Speed)
+				FlipSign(Player.XVelocity)
+
+				Player.YVelocity = 0x40000
+#platform: Use_Origins
+				if Player.Animation == ANI_HAMMER_JUMP
+					Player.State = Player_State_Air_NoDropDash
+				end if
+#endplatform
+
+				Player.Animation = ANI_BREATHING
+				Player.AirTimer  = 0
+				
+				PlayStageSfx(SFX_S_BREATHING, false)
+				
+#platform: Use_Haptics
+				HapticEffect(19, 0, 0, 0)
+#endplatform
+			end if
+		end if
+
+		if Player.Animation == ANI_FLYING
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				Object.State = BOSSBUBBLE2_CONSUMED
+				FlipSign(Player.Speed)
+				FlipSign(Player.XVelocity)
+
+				Player.YVelocity = 0x40000
+				
+				Player.Animation = ANI_BREATHING
+				
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+
+				Player.AirTimer = 0
+				PlayStageSfx(SFX_S_BREATHING, false)
+				
+#platform: Use_Haptics
+				HapticEffect(19, 0, 0, 0)
+#endplatform
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.State)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects2.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 99, 118)		// #0 - Small bubble
+	SpriteFrame(-12, -12, 24, 24, 116, 126)		// #1 - Medium bubble
+	SpriteFrame(-16, -16, 32, 32, 222, 115)		// #2 - Big bubble
+	SpriteFrame(-16, -16, 32, 32, 189, 115)		// #3 - Big bubble inhaled
+	SpriteFrame(-16, -16, 32, 32, 156, 126)		// #4 - Big bubler bursted
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects2.gif")
+	SpriteFrame(-16, -16, 32, 32, 222, 115)		// #2 - Big bubble
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

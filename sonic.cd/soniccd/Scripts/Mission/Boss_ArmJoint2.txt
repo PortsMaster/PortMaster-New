@@ -1,0 +1,141 @@
+//--------------Sonic CD Boss Arm Joint 2 Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//---------Used on Mission "M099 - Eggman: Speed Up"----------//
+
+// Aliases
+#alias Object.Value0	:	Object.ShoulderEntity
+#alias Object.Value2	:	Object.XOffSet
+#alias Object.Value4	:	Object.Charging
+#alias Object.Value5	:	Object.YOffSet
+#alias Object.Value6	:	Object.OffsetValue
+
+// Shoulder Aliases
+#alias Object.Xpos	:	Shoulder.XPos
+#alias Object.YPos	:	Shoulder.YPos
+
+// States
+#alias 0	:	BOSSARMJOINT2_SETUP
+#alias 1	:	BOSSARMJOINT2_REPOSITION_F
+#alias 2	:	BOSSARMJOINT2_HANDLE_F_JOINT
+#alias 3	:	BOSSARMJOINT2_REPOSITION_B
+#alias 4	:	BOSSARMJOINT2_HANDLE_B_JOINT
+#alias 5	:	BOSSARMJOINT2_DESTROYED
+
+// Priotity
+#alias 0	:	PRIORITY_BOUNDS
+
+// Function declarations
+#function BossArmJoint2_HandleMovement
+
+
+function BossArmJoint2_HandleMovement
+	TempValue0 = Object.XOffSet
+	TempValue0 += 64
+
+	Sin256(TempValue6, TempValue0)
+	TempValue6 <<= 12
+
+	Cos256(TempValue7, TempValue0)
+	TempValue7 <<= 12
+
+	ArrayPos0 = Object.ShoulderEntity
+
+	Object.XPos = Shoulder[ArrayPos0].XPos
+	Object.XPos += TempValue7
+
+	Object.YPos = Shoulder[ArrayPos0].YPos
+	Object.YPos += TempValue6
+
+	if Object.DrawOrder == 2	// Right Arm Joint
+		Object.XPos -= 0xA0000
+	end if
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSARMJOINT2_SETUP
+		if Object.DrawOrder == 3	// Left Arm Joint
+			Object.XOffSet = 128	// Delays the left arm joint
+		end if
+		Object.State = BOSSARMJOINT2_REPOSITION_B
+
+		Object.OffsetValue  = 2
+		Object.OffsetValue *= Object.PropertyValue	// Set the XOffset value based on it's property value
+		Object.OffsetValue /= 10
+		// Fall Through
+	case BOSSARMJOINT2_REPOSITION_F
+		Object.XOffSet -= Object.OffsetValue
+		if Object.XOffSet <= 0
+			Object.State = BOSSARMJOINT2_HANDLE_F_JOINT
+			Object.XOffSet = 0
+			SetBit(Object.Charging, 0, 1)
+		end if
+		CallFunction(BossArmJoint2_HandleMovement)
+		break
+
+	case BOSSARMJOINT2_HANDLE_F_JOINT
+		CallFunction(BossArmJoint2_HandleMovement)
+		break
+
+	case BOSSARMJOINT2_REPOSITION_B
+		Object.XOffSet += Object.OffsetValue
+		if Object.XOffSet >= 48
+			Object.State = BOSSARMJOINT2_HANDLE_B_JOINT
+			Object.XOffSet = 48
+			SetBit(Object.Charging, 0, 1)
+		end if
+		CallFunction(BossArmJoint2_HandleMovement)
+		break
+
+	case BOSSARMJOINT2_HANDLE_B_JOINT
+		CallFunction(BossArmJoint2_HandleMovement)
+		break
+
+	case BOSSARMJOINT2_DESTROYED
+		Object.XOffSet += 0x600
+		Object.YOffSet += 0x1F00
+
+		Object.XPos += Object.XOffSet
+		Object.YPos += Object.YOffSet
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 124, 34)	// #0 - Arm Joint
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-8, -8, 16, 16, 124, 34)	// #0 - Arm Joint
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
+
+
+

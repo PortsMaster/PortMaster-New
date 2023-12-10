@@ -1,0 +1,358 @@
+//----------------Sonic CD Menu Heading Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.PropertyValue	:	Object.Header
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.YOffset
+#alias Object.Value2		:	Object.XOffset
+#alias Object.Value3		:	Object.Angle
+#alias Object.Value4		:	Object.GFX1
+#alias Object.Value5		:	Object.GFX2
+
+// Object[1] is a blank object just to share values
+#alias Object[1].Value2		:	Object.MaxButtonCount
+
+//MenuHeading_CheckTouchBack Specific Values
+#alias Object.Value1		:	CurrentMenu.ButtonPressed	//Current Menu Button Pressed
+#alias Object[1].Value4		:	Object.BackTouchPress
+
+// States
+#alias 0	:	MENUHEADING_IDLE
+#alias 1	:	MENUHEADING_LEAVE_SCREEN
+#alias 2	:	MENUHEADING_ENTER_SCREEN
+
+// Property Values
+#alias 5	:	MAINMENU_HEADER
+#alias 6	:	SAVESELECT_HEADER
+#alias 7	:	HELP&OPTIONS_HEADER
+#alias 8	:	EXTRAS_HEADER
+#alias 9	:	SOUNDTRACK_HEADER
+#alias 10	:	STAGESELECT_HEADER
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+//Engine & CallBacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Device Type
+#alias 0	:	RETRO_STANDARD
+
+// Function declarations
+#function MenuHeading_CheckTouchBack
+
+
+function MenuHeading_CheckTouchBack	//This is used by other scripts to check if the back touch button is pressed
+	if Engine.Message == MESSAGE_LOSTFOCUS
+		CurrentMenu.ButtonPressed = -1
+	end if
+
+	TempValue0  = Screen.XSize
+	TempValue0 -= 76
+	CheckTouchRect(TempValue0, 192, Screen.XSize, Screen.YSize)
+	if CheckResult > -1
+		CurrentMenu.ButtonPressed = 5
+		Object.BackTouchPress = true
+	else
+		Object.BackTouchPress = false
+		if TempValue3 < 0
+			if CurrentMenu.ButtonPressed == 5
+				KeyPress[0].ButtonB = true
+			end if
+		else
+			if CurrentMenu.ButtonPressed == 5
+				CurrentMenu.ButtonPressed = -1
+			end if
+		end if
+	end if
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case MENUHEADING_LEAVE_SCREEN
+		if Object.Timer < 16
+			Object.Timer++
+			Object.XOffset -= 16
+		else
+			Object.Frame = Object.Header
+			Object.Timer = 0
+			Object.State++
+		end if
+
+		if Object.Alpha == 255
+			Object.Alpha = 240
+		else
+			if Object.Alpha > 0
+				Object.Alpha -= 16
+			end if
+		end if
+		break
+
+	case MENUHEADING_ENTER_SCREEN
+		if Object.Timer < 16
+			Object.Timer++
+			Object.XOffset += 16
+		else
+			Object.Timer = 0
+			Object.State = MENUHEADING_IDLE
+		end if
+
+		if Object.Header == MAINMENU_HEADER
+			if Object.Alpha == 240
+				Object.Alpha = 255
+			else
+				if Object.Alpha < 255
+					Object.Alpha += 16
+				end if
+			end if
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectDraw
+	//Draw BG Details
+	Object.YOffset--
+	Object.YOffset %= 240
+	Object.SpriteSheet = Object.GFX1
+	DrawSpriteScreenXY(1, Screen.CenterX, Object.YOffset)
+	DrawSpriteScreenXY(2, Screen.CenterX, Object.YOffset)
+	DrawSpriteScreenXY(0, Screen.CenterX, 20)
+
+#platform: Use_Decomp	// Small decomp change to extend the SONIC THE HEDGEHOG CD bar for wider resolutions
+	TempValue0  = Screen.CenterX
+	TempValue0 += 200
+	DrawRect(TempValue0, 20, screen.XSize, 9, 0, 0, 0, 255)
+#endplatform
+
+	TempValue0  = Screen.CenterX
+	TempValue0 += 12
+	DrawRect(0, 212, TempValue0, 13, 0, 0, 0, 255)
+
+	//Draw Menu Header
+	Object.SpriteSheet = Object.GFX2
+	TempValue0   = Screen.CenterX
+	TempValue0  -= 160
+	TempValue0 >>= 2
+	TempValue0  += Object.XOffset
+	DrawSpriteScreenXY(Object.Frame, TempValue0, 194)
+
+	//Draw Detail Arrows (Standard) / Drag Arrows (Mobile)
+	Object.SpriteSheet = Object.GFX1
+
+	Object.Angle += 4
+	Object.Angle &= 511
+
+	TempValue0  = Screen.XSize
+	TempValue0 -= 40
+	//Check if the menu needs dragging to reach all the buttons
+	if Object.MaxButtonCount > 4
+		Sin(TempValue1, Object.Angle)
+		TempValue1 >>= 6
+		TempValue1  += 96
+		DrawSpriteScreenFX(3, FX_INK, TempValue0, TempValue1)
+
+		Sin(TempValue1, Object.Angle)
+		TempValue1 /= -64
+		TempValue1 += 144
+		DrawSpriteScreenFX(4, FX_INK, 40, TempValue1)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Menu/MenuGfx1_EN.gif")
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Menu Heading]
+#platform: Use_Origins
+			if game.continueFlag == false	// they really duped the whole thing
+				Object[ArrayPos0].Frame		 = 5 // "Main Menu"
+				Object[ArrayPos0].Alpha		 = 255
+				Object[ArrayPos0].Header	 = MAINMENU_HEADER
+				Object[ArrayPos0].InkEffect	 = INK_ALPHA
+				Object[ArrayPos0].XOffset	 = -256
+				Object[ArrayPos0].State		 = MENUHEADING_ENTER_SCREEN
+			else
+				Object[ArrayPos0].Frame		 = 6 // "Save Select"
+				Object[ArrayPos0].Alpha		 = 255
+				Object[ArrayPos0].Header	 = SAVESELECT_HEADER
+				Object[ArrayPos0].InkEffect	 = INK_ALPHA
+				Object[ArrayPos0].XOffset	 = -256
+				Object[ArrayPos0].State		 = MENUHEADING_ENTER_SCREEN
+			end if
+			
+#endplatform
+
+#platform: Use_Standalone
+			Object[ArrayPos0].Frame		 = 5
+			Object[ArrayPos0].Alpha		 = 255
+			Object[ArrayPos0].Header	 = MAINMENU_HEADER
+			Object[ArrayPos0].InkEffect	 = INK_ALPHA
+			Object[ArrayPos0].XOffset	 = -256
+			Object[ArrayPos0].State		 = MENUHEADING_ENTER_SCREEN
+#endplatform
+
+			LoadSpriteSheet("Menu/MenuGfx1_EN.gif")
+			Object[ArrayPos0].GFX1 = Object[ArrayPos0].SpriteSheet
+			switch Engine.Language
+			case LANG_ENGLISH
+				LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+				break
+			case LANG_FRENCH
+				LoadSpriteSheet("Menu/MenuGfx2_FR.gif")
+				break
+			case LANG_ITALIAN
+				LoadSpriteSheet("Menu/MenuGfx2_IT.gif")
+				break
+			case LANG_DEUTSCH
+				LoadSpriteSheet("Menu/MenuGfx2_DE.gif")
+				break
+			case LANG_SPANISH
+				LoadSpriteSheet("Menu/MenuGfx2_ES.gif")
+				break
+			case LANG_JAPANESE
+				LoadSpriteSheet("Menu/MenuGfx2_JP.gif")
+				break
+			end switch
+			Object[ArrayPos0].GFX2 = Object[ArrayPos0].SpriteSheet
+		end if
+		ArrayPos0++
+	loop
+	//MenuGfx1
+	SpriteFrame(12, 0, 216, 9, 1, 225)		// #0 Sonic The Hedgehog CD Bar
+
+	SpriteFrame(8, 0, 8, 240, 503, 1)		// #1 Vertical Line 1
+	SpriteFrame(8, 240, 8, 240, 503, 1)		// #2 Vertical Line
+
+// Slight modification, in origins this was a normal "if Engine.DeviceType == RETRO_STANDARD", written like this to help with compatibility
+#platform: Use_Origins
+	CheckEqual(Engine.DeviceType, RETRO_STANDARD)
+#endplatform
+
+#platform: Use_Standalone
+	#platform: Standard
+		CheckResult = true
+	#endplatform
+#endplatform
+
+#platform: Use_Standalone
+	#platform: Mobile
+		CheckResult = false
+	#endplatform
+#endplatform
+
+	if CheckResult == true
+		SpriteFrame(-11, -36, 22, 72, 418, 366)		// #3 Up Arrow
+		SpriteFrame(-11, -36, 22, 72, 441, 366)		// #4 Down Arrow
+	else
+		switch Engine.Language
+		case LANG_ENGLISH
+		case LANG_JAPANESE
+			SpriteFrame(-11, -36, 22, 72, 418, 1)		// #3 Up Arrow
+			SpriteFrame(-11, -36, 22, 72, 441, 1)		// #4 Down Arrow
+			break
+
+		case LANG_FRENCH
+			SpriteFrame(-11, -36, 22, 72, 418, 74)		// #3 Up Arrow
+			SpriteFrame(-11, -36, 22, 72, 441, 74)		// #4 Down Arrow
+			break
+
+		case LANG_ITALIAN
+			SpriteFrame(-11, -36, 22, 72, 418, 147)		// #3 Up Arrow
+			SpriteFrame(-11, -36, 22, 72, 441, 147)		// #4 Down Arrow
+			break
+
+		case LANG_DEUTSCH
+			SpriteFrame(-11, -36, 22, 72, 418, 220)		// #3 Up Arrow
+			SpriteFrame(-11, -36, 22, 72, 441, 220)		// #4 Down Arrow
+			break
+
+		case LANG_SPANISH
+			SpriteFrame(-11, -36, 22, 72, 418, 293)		// #3 Up Arrow
+			SpriteFrame(-11, -36, 22, 72, 441, 293)		// #4 Down Arrow
+			break
+
+		end switch
+	end if
+	//MenuGfx2
+	switch Engine.Language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+		SpriteFrame(32, 0, 160, 30, 1, 615)			// #5 Main Menu
+		SpriteFrame(32, 0, 160, 30, 1, 646)			// #6 Save Select
+		SpriteFrame(16, 0, 160, 30, 1, 677)			// #7 Help & Options
+		SpriteFrame(32, 0, 160, 30, 1, 708)			// #8 Extras
+		SpriteFrame(24, 0, 160, 30, 1, 739)			// #9 Soundtrack
+		SpriteFrame(24, 0, 160, 30, 1, 770)			// #10 Stage Select (Used in Trial versions, this will be a blank sprite in steam, but we cannot see it there anyway)
+		break
+
+	case LANG_FRENCH
+		SpriteFrame(12, 0, 160, 30, 1, 615)			// #5 Main Menu
+		SpriteFrame(20, 0, 160, 30, 1, 646)			// #6 Save Select
+		SpriteFrame(14, 0, 160, 30, 1, 677)			// #7 Help & Options
+		SpriteFrame(32, 0, 160, 30, 1, 708)			// #8 Extras
+		SpriteFrame(10, 0, 160, 30, 1, 739)			// #9 Soundtrack
+		SpriteFrame(24, 0, 160, 30, 1, 770)			// #10 Stage Select (Used in Trial versions, this will be a blank sprite in steam, but we cannot see it there anyway)
+
+		break
+	case LANG_ITALIAN
+		SpriteFrame(8, 0, 160, 30, 1, 615)			// #5 Main Menu
+		SpriteFrame(32, 0, 160, 30, 1, 646)			// #6 Save Select
+		SpriteFrame(14, 0, 160, 30, 1, 677)			// #7 Help & Options
+		SpriteFrame(32, 0, 160, 30, 1, 708)			// #8 Extras
+		SpriteFrame(8, 0, 160, 30, 1, 739)			// #9 Soundtrack
+		SpriteFrame(24, 0, 160, 30, 1, 770)			// #10 Stage Select (Used in Trial versions, this will be a blank sprite in steam, but we cannot see it there anyway)
+
+		break
+	case LANG_DEUTSCH
+		SpriteFrame(24, 0, 160, 30, 1, 615)			// #5 Main Menu
+		SpriteFrame(16, 0, 160, 30, 1, 646)			// #6 Save Select
+		SpriteFrame(6, 0, 160, 30, 1, 677)			// #7 Help & Options
+		SpriteFrame(32, 0, 160, 30, 1, 708)			// #8 Extras
+		SpriteFrame(24, 0, 160, 30, 1, 739)			// #9 Soundtrack
+		SpriteFrame(24, 0, 160, 30, 1, 770)			// #10 Stage Select (Used in Trial versions, this will be a blank sprite in steam, but we cannot see it there anyway)
+
+		break
+	case LANG_SPANISH
+		SpriteFrame(16, 0, 160, 30, 1, 615)			// #5 Main Menu
+		SpriteFrame(16, 0, 160, 30, 1, 646)			// #6 Save Select
+		SpriteFrame(8, 0, 160, 30, 1, 677)			// #7 Help & Options
+		SpriteFrame(32, 0, 160, 30, 1, 708)			// #8 Extras
+		SpriteFrame(6, 0, 160, 30, 1, 739)			// #9 Soundtrack
+		SpriteFrame(24, 0, 160, 30, 1, 770)			// #10 Stage Select (Used in Trial versions, this will be a blank sprite in steam, but we cannot see it there anyway)
+
+		break
+	end switch
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+	SpriteFrame(32, 0, 160, 30, 1, 615)			// #5 Main Menu
+
+	// Although used by the object, it's not to be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

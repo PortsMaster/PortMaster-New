@@ -1,0 +1,117 @@
+//--------------Sonic CD Diagonal Platform Script-------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.XOriginPos
+#alias Object.Value2	:	Object.XPlayerFloor
+#alias Object.Value3	:	Object.YOriginPos
+#alias Object.Value4	:	Object.YPlayerFloor
+#alias Object.Value5	:	Object.Angle
+#alias Object.Value6	:	Object.Amplitude
+
+// Property Values
+// This property values only cover the starting position
+#alias 0	:	START_MOVING_LEFT_DOWN
+#alias 1	:	START_MOVING_RIGHT_DOWN
+// On a map editor this would rather be (0)Left-Down, (1)Right-Down, (2)Left-Up and (3)Right-Up
+// But here we only cover what's useful for the script itself
+
+
+sub ObjectMain
+	Object.Angle   = Oscillation
+	Object.Angle <<= 1
+	if Object.PropertyValue == START_MOVING_RIGHT_DOWN
+		Object.Angle += 256
+	end if
+
+	Cos(Object.XPlayerFloor, Object.Angle)
+	Object.XPlayerFloor *= 0x1800
+	Object.XPlayerFloor += Object.XPos
+	Object.XPlayerFloor &= 0xFFFF0000	// Truncate the value
+	Object.XPlayerFloor -= Object.XOriginPos
+
+	Cos(Object.YPlayerFloor, Object.Angle)
+	FlipSign(Object.YPlayerFloor)
+	Object.YPlayerFloor *= Object.Amplitude
+	Object.YPlayerFloor += Object.YPos
+	Object.YPlayerFloor &= 0xFFFF0000 // Truncate the value
+	Object.YPlayerFloor -= Object.YOriginPos
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0  = Object.XPos
+	Object.XPos = Object.XOriginPos
+
+	TempValue1  = Object.YPos
+	Object.YPos = Object.YOriginPos
+
+	PlayerObjectCollision(C_PLATFORM, -32, -9, 32, 12)
+	if CheckResult == true
+		Player.XPos += Object.XPlayerFloor
+		Player.YPos += Object.YPlayerFloor
+	end if
+
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+end sub
+
+
+sub ObjectDraw
+	Cos(Object.XOriginPos, Object.Angle)
+	Object.XOriginPos *= 0x1800
+	Object.XOriginPos += Object.XPos
+	Object.XOriginPos &= 0xFFFF0000
+
+	Cos(Object.YOriginPos, Object.Angle)
+	FlipSign(Object.YOriginPos)
+	Object.YOriginPos *= Object.Amplitude
+	Object.YOriginPos += Object.YPos
+	Object.YOriginPos &= 0xFFFF0000
+	
+	DrawSpriteXY(0, Object.XOriginPos, Object.YOriginPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Platform
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Diag Platform]
+			if Object[ArrayPos0].PropertyValue > 1
+				Object[ArrayPos0].Amplitude = -0x1800
+				Object[ArrayPos0].PropertyValue -= 2
+			else
+				Object[ArrayPos0].Amplitude = 0x1800
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Platform
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left, Down", 0)
+	AddEnumVariable("Right, Down", 1)
+	AddEnumVariable("Left, Up", 2)
+	AddEnumVariable("Right, Up", 3)
+end sub

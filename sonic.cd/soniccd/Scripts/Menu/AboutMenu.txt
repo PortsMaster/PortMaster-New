@@ -1,0 +1,308 @@
+//-----------------Sonic CD About Menu Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//---This Object is normally only used by Mobile Data files---//
+
+// Aliases
+#alias Object.Value1		:	Object.ButtonSelected
+#alias Object.Value2		:	Object.DrawHeight
+#alias Object[-10].Alpha	:	Object.OptionsAlpha	//a.k.a the alpha value from the menu that called this
+
+// States
+#alias 0	:	ABOUTMENU_CONTROLS
+#alias 1	:	ABOUTMENU_OPTION_SELECTED
+
+// Global SFX
+#alias 23	:	SFX_G_MENUBUTTON
+#alias 27	:	SFX_G_SELECT
+
+// Engine States & Callbacks
+#alias 9	:	CALLBACK_TERMS_SELECTED
+#alias 10	:	CALLBACK_PRIVACY_SELECTED
+
+// Text Info type
+#alias 0	:	TEXTINFO_TEXTDATA
+#alias 1	:	TEXTINFO_TEXTSIZE
+
+
+sub ObjectMain
+	Object.Alpha = Object.OptionsAlpha
+#platform: Mobile
+	if Object.Alpha > 254
+		switch Object.State
+		case ABOUTMENU_CONTROLS
+			if Options.PhysicalControls == true
+				if KeyPress[0].Up == true
+					Object.ButtonSelected--
+					if Object.ButtonSelected < 0
+						Object.ButtonSelected = 1
+					end if
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+
+				if KeyPress[0].Down == true
+					Object.ButtonSelected++
+					if Object.ButtonSelected > 1
+						Object.ButtonSelected = 0
+					end if
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+
+				CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)	//Touch input reset
+				if CheckResult > -1
+					Options.PhysicalControls = false
+					Object.ButtonSelected = -1
+				end if
+			else
+				CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)	//Touch input reset
+				TempValue3 = CheckResult
+
+				TempValue0  = Screen.CenterX
+				TempValue0 += 36
+				TempValue1  = Screen.CenterX
+				TempValue1 += 110
+				CheckTouchRect(TempValue0, 124, TempValue1, 152)	//Terms button press
+				if CheckResult > -1
+					Object.ButtonSelected = 0
+				else
+					if TempValue3 < 0
+						if Object.ButtonSelected == 0
+							KeyPress[0].Start = true
+						end if
+					else
+						if Object.ButtonSelected == 0
+							Object.ButtonSelected = -1
+						end if
+					end if
+				end if
+
+				TempValue0  = Screen.CenterX
+				TempValue0 += 36
+				TempValue1  = Screen.CenterX
+				TempValue1 += 110
+				CheckTouchRect(TempValue0, 152, TempValue1, 180)	//Privacy button press
+				if CheckResult > -1
+					Object.ButtonSelected = 1
+				else
+					if TempValue3 < 0
+						if Object.ButtonSelected == 1
+							KeyPress[0].Start = true
+						end if
+					else
+						if Object.ButtonSelected == 1
+							Object.ButtonSelected = -1
+						end if
+					end if
+				end if
+
+				CallFunction(MenuHeading_CheckTouchBack)
+				if KeyPress[0].Up == true
+					Object.ButtonSelected = 1
+					Options.PhysicalControls = true
+				end if
+				
+				if KeyPress[0].Down == true
+					Object.ButtonSelected = 0
+					Options.PhysicalControls = true
+				end if
+
+			end if
+
+			CheckResult = false
+			if Object.ButtonSelected > -1
+				if KeyPress[0].Start == true
+					CheckResult = true
+				end if
+
+				if KeyPress[0].ButtonA == true
+					CheckResult = true
+				end if
+			end if
+
+			if CheckResult == true
+				PlaySfx(SFX_G_SELECT, false)
+				Object.State++
+			end if
+			break
+			
+		case ABOUTMENU_OPTION_SELECTED
+			if Object.AnimationTimer < 30
+				Object.AnimationTimer++
+			else
+				Object.AnimationTimer = 0
+				Object.State = ABOUTMENU_CONTROLS
+				switch Object.ButtonSelected
+				case 0
+					EngineCallback(CALLBACK_TERMS_SELECTED)
+					break
+				case 1
+					EngineCallback(CALLBACK_PRIVACY_SELECTED)
+					break
+				end switch
+				Object.ButtonSelected = -1
+			end if
+			break
+
+		end switch
+	else
+		if Options.PhysicalControls == false
+			Object.ButtonSelected = -1
+		end if
+
+		Object.AnimationTimer = 0
+		Object.State = ABOUTMENU_CONTROLS
+	end if
+#endplatform
+
+#platform: Use_Origins
+	if Object.Alpha > 254
+		if Options.PhysicalControls == false
+			CallFunction(MenuHeading_CheckTouchBack)
+		end if
+	else
+		if Options.PhysicalControls == false
+			Object.ButtonSelected = -1
+		end if
+		Object.AnimationTimer = 0
+		Object.State = ABOUTMENU_CONTROLS
+	end if
+#endplatform
+end sub
+
+
+sub ObjectDraw
+	TempValue0  = Screen.CenterX
+	TempValue0 -= 120
+	DrawSpriteScreenFX(0, FX_INK, TempValue0, 72)
+
+	TempValue0  = Screen.CenterX
+	TempValue0 += 72
+	DrawSpriteScreenFX(1, FX_INK, TempValue0, 82)
+	
+	TempValue0  = Screen.CenterX
+	TempValue0 += 72
+	if Object.ButtonSelected == 0
+		TempValue2   = Object.AnimationTimer
+		TempValue2  &= 3
+		TempValue2 >>= 1
+		TempValue2  += 44
+		DrawSpriteScreenFX(TempValue2, FX_INK, TempValue0, 128)
+	else
+		DrawSpriteScreenFX(45, FX_INK, TempValue0, 128)
+	end if
+	if Object.ButtonSelected == 1
+		TempValue2   = Object.AnimationTimer
+		TempValue2  &= 3
+		TempValue2 >>= 1
+		TempValue2  += 46
+		DrawSpriteScreenFX(TempValue2, FX_INK, TempValue0, 156)
+	else
+		DrawSpriteScreenFX(47, FX_INK, TempValue0, 156)
+	end if
+
+	ArrayPos0 = 0
+	GetTextInfo(TempValue1, MENU_1, TEXTINFO_TEXTSIZE, 0, 0)	//Gets version numbers
+	TempValue2   = TempValue1
+	TempValue2 <<= 2
+	FlipSign(TempValue2)
+	TempValue2 += Screen.CenterX
+	TempValue2 += 72
+	Object.DrawHeight = 102
+	
+	//This handles the drawing of the game version
+	while TempValue1 > 0
+		GetTextInfo(TempValue0, MENU_1, TEXTINFO_TEXTDATA, 0, ArrayPos0)
+		switch TempValue0
+		default
+			Object.Frame = 0
+			if TempValue0 > 64
+				if TempValue0 < 91
+					Object.Frame  = TempValue0
+					Object.Frame -= 63
+				end if
+			end if
+			if TempValue0 > 96
+				if TempValue0 < 123
+					Object.Frame  = TempValue0
+					Object.Frame -= 95
+				end if
+			end if
+			if TempValue0 > 47
+				if TempValue0 < 58
+					Object.Frame  = TempValue0
+					Object.Frame -= 18
+				end if
+			end if
+			if Object.Frame > 0
+				DrawSpriteScreenFX(Object.Frame, FX_INK, TempValue2, Object.DrawHeight)
+			end if
+			break
+			
+		case 38
+			DrawSpriteScreenFX(33, FX_INK, TempValue2, Object.DrawHeight)
+			break
+			
+		case 39
+			DrawSpriteScreenFX(31, FX_INK, TempValue2, Object.DrawHeight)
+			break
+
+		case 44
+			DrawSpriteScreenFX(29, FX_INK, TempValue2, Object.DrawHeight)
+			break
+
+		case 46
+			DrawSpriteScreenFX(28, FX_INK, TempValue2, Object.DrawHeight)
+			break
+
+		end switch
+		ArrayPos0++
+		TempValue1--
+		TempValue2 += 8
+	loop
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Menu/MenuGfx1_EN.gif")
+	
+	SpriteFrame(0, 0, 132, 113, 154, 235)	//	#0 - Sonic CD Mini Logo
+	SpriteFrame(-28, 0, 56, 16, 154, 349)	//	#1 - Version
+
+	TempValue1 = 366
+	while TempValue1 < 417
+		TempValue0 = 154
+		while TempValue0 < 280
+			SpriteFrame(-3, 0, 8, 16, TempValue0, TempValue1)	//	#2 to #44 - Alphabet and Numbers
+			TempValue0 += 9
+		loop
+		TempValue1 += 17
+	loop
+
+	SpriteFrame(-32, 0, 64, 21, 195, 476)	//	#45 - Terms Highlight
+	SpriteFrame(-32, 0, 64, 21, 130, 476)	//	#46 - Terms
+	SpriteFrame(-32, 0, 64, 21, 195, 454)	//	#47 - Privacy Highlight
+	SpriteFrame(-32, 0, 64, 21, 130, 454)	//	#48 - Privacy
+	SpriteFrame(-32, 0, 42, 21, 418, 439)	//	#49 - Facebook Log
+	SpriteFrame(-32, 0, 42, 21, 418, 461)	//	#50 - Facebook Log Highlight
+	SpriteFrame(10, 0, 22, 21, 464, 395)	//	#51 - Facebook Log In
+	SpriteFrame(10, 0, 22, 21, 464, 417)	//	#52 - Facebook Log In Highlight
+	SpriteFrame(10, 0, 22, 21, 464, 439)	//	#53 - Facebook Log Out
+	SpriteFrame(10, 0, 22, 21, 464, 461)	//	#54 - Facebook Log Out Highlight
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

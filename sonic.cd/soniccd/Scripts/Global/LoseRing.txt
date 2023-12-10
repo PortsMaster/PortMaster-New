@@ -1,0 +1,178 @@
+//----------------Sonic CD Lose Ring Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.XVelocity
+#alias Object.Value1		:	Object.YVelocity
+#alias Object.Value2		:	Object.Timer
+#alias Object.PropertyValue	:	Object.CollisionPlane
+
+// Player Aliases
+#alias Player.Value0		:	Player.Rings
+
+// Panning
+#alias 0	:	PAN_RIGHT
+#alias 1	:	PAN_LEFT
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Property Values
+#alias 0	:	DRAWING_PLANE_A
+#alias 1	:	DRAWING_PLANE_B
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+
+sub ObjectMain
+	Object.YVelocity += 0x1800
+	Object.XPos += Object.XVelocity
+	Object.YPos += Object.YVelocity
+
+	if Object.YVelocity >= 0
+		ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+
+		if CheckResult == true
+			TempValue0   = Object.YVelocity
+			TempValue0 >>= 2
+			Object.YVelocity -= TempValue0
+			FlipSign(Object.YVelocity)
+			if Object.YVelocity > -0x10000
+				Object.YVelocity = -0x10000
+			end if
+		end if
+	end if
+
+	Object.Timer++
+	if Object.Timer == 256
+		Object.Type = TypeName[Blank Object]
+
+		Object.XVelocity = 0
+		Object.YVelocity = 0
+		Object.Timer	 = 0
+	else
+		Object.AnimationTimer += Object.AnimationSpeed
+		if Object.AnimationTimer > 255
+
+			Object.AnimationTimer -= 256
+			Object.Frame++
+			if Object.Frame == 8
+
+				Object.Frame = 0
+				if Object.AnimationSpeed > 16
+					Object.AnimationSpeed -= 16
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Player.State != Player_State_Hurt
+		if Player.CollisionPlane == Object.CollisionPlane
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				Object.Type = TypeName[Ring Sparkle]
+				if Object.CollisionPlane == DRAWING_PLANE_A
+					Object.DrawOrder = 4
+				else
+					Object.DrawOrder = 2
+				end if
+
+				Object.XVelocity = 0
+				Object.YVelocity = 0
+
+				Object.Timer = 0
+				Object.Frame = 0
+
+				Player.Rings++
+				if Player.Rings > 999
+					Player.Rings = 999
+				end if
+
+				if Player.Rings >= Ring.ExtraLife
+					if Options.GameMode != MODE_TIMEATTACK
+
+#platform: Use_Origins
+						if game.coinMode == false
+							Player.Lives++
+						else
+							game.callbackParam0 = 1	// Set the amount of coins to add
+							EngineCallback(NOTIFY_ADD_COIN)
+						end if
+#endplatform
+
+#platform: Use_Standalone
+						Player.Lives++
+#endplatform
+
+						Ring.ExtraLife += 100
+						if Ring.ExtraLife > 300
+							Ring.ExtraLife = 1000
+						end if
+					end if
+
+					// King of the Rings Unlock Criteria
+					if Player.Rings >= 200
+						if Stage.PlayerListPos == PLAYER_SONIC_A	// PLAYER_SONIC in origins
+							if Stage.DebugMode == false
+								SetAchievement(4, 100)
+							end if
+						end if
+					end if
+				end if
+
+				if Ring.Pan == PAN_RIGHT
+					SetSfxAttributes(1, -1, -100)
+					Ring.Pan = PAN_LEFT
+				else
+					SetSfxAttributes(2, -1, 100)
+					Ring.Pan = PAN_RIGHT
+				end if
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 1, 1)		// #0 - Ring Frame 0
+	SpriteFrame(-8, -8, 16, 16, 1, 18)		// #1 - Ring Frame 1
+	SpriteFrame(-8, -8, 16, 16, 1, 35)		// #2 - Ring Frame 2
+	SpriteFrame(-8, -8, 16, 16, 1, 52)		// #3 - Ring Frame 3
+	SpriteFrame(-8, -8, 16, 16, 1, 69)		// #4 - Ring Frame 4
+	SpriteFrame(-8, -8, 16, 16, 1, 86)		// #5 - Ring Frame 5
+	SpriteFrame(-8, -8, 16, 16, 1, 103)		// #6 - Ring Frame 6
+	SpriteFrame(-8, -8, 16, 16, 1, 120)		// #7 - Ring Frame 7
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)		// #0 - Ring Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

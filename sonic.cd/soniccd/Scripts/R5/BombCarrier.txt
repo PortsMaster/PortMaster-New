@@ -1,0 +1,275 @@
+//----------------Sonic CD Bomb Carrier Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// ========================
+// Aliases
+// ========================
+
+#alias Object.Value0 : Object.Timer
+#alias Object.Value1 : Object.Angle
+
+// States
+#alias 0 : BOMBCARRIER_IDLE
+#alias 1 : BOMBCARRIER_WAITFORBOSSFIGHT
+#alias 2 : BOMBCARRIER_GRABBOMB
+#alias 3 : BOMBCARRIER_SLIDERIGHT
+#alias 4 : BOMBCARRIER_SLIDELEFT
+#alias 5 : BOMBCARRIER_RELEASEBOMB
+#alias 6 : BOMBCARRIER_HOVER
+
+// Boss Platform Aliases
+#alias Object.Value5 : Object.Grind
+
+#alias 8 : BOSSPLATFORM_FALL_4
+#alias 9 : BOSSPLATFORM_FIGHT_4
+
+// Eggman Aliases
+#alias 0 : EGGMAN_IDLE
+#alias 1 : EGGMAN_CONTROL
+#alias 5 : EGGMAN_PANICK_CONTROL
+#alias 6 : EGGMAN_FLEE
+
+// Boss Bomb Aliases
+#alias 1 : BOSSBOMB_ACTIVE
+
+// Stage SFX Aliases
+#alias 5 : SFX_S_BOMBCARRIER
+
+// Fade Music Aliases
+#alias 0 : FADEMUSIC_TO_BOSS
+
+
+// ========================
+// Events
+// ========================
+
+sub ObjectMain
+	switch Object.State
+	case BOMBCARRIER_IDLE
+		TempValue0 = Object.XPos
+		TempValue0 += 0x200000
+		
+		// See if the Player's past 32 pixels away from this Bomb Carrier Object
+		if Player.XPos > TempValue0
+			CreateTempObject(TypeName[Fade Music], FADEMUSIC_TO_BOSS, 0, 0)
+			Object.State = BOMBCARRIER_WAITFORBOSSFIGHT
+		end if
+		break
+
+	case BOMBCARRIER_GRABBOMB
+		if Object[+3].State < EGGMAN_FLEE
+			if Object.Timer < 180
+				Object.Timer++
+			else
+				Object.State = BOMBCARRIER_SLIDELEFT
+				PlayStageSfx(SFX_S_BOMBCARRIER, false)
+				
+				if Object[+4].State < BOSSPLATFORM_FALL_4
+					// If the Boss Platform is still in its main phase, then make Robotnik resume his control animation
+					
+					Object[+3].State = EGGMAN_CONTROL
+				else
+					// If the Boss Platform is just about to die, then make Robotnik worried for himself too
+					
+					Object[+3].State = EGGMAN_PANICK_CONTROL
+					Object[+3].Timer = 0
+					Object[+3].Frame = 0
+				end if
+			end if
+		else
+			// Robotnik's Fleeing, so Unload this Object as well
+			
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+
+	case BOMBCARRIER_SLIDERIGHT
+		if Object.XPos < Object[+1].XPos
+			// If we haven't reached the Boss Top yet, then keep on moving
+			
+			Object.XPos += 0x1E000
+		else
+			Object.State = BOMBCARRIER_GRABBOMB
+			Object.XPos  = Object[+1].XPos
+			Object.Timer = 0
+			
+			if Object[+4].State > BOSSPLATFORM_FALL_4
+				
+				// If the Boss Platform is XXX
+				if Object[+4].State > BOSSPLATFORM_FIGHT_4
+					ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+				end if
+				
+				// If the Boss Platform is past a specific Grind point, then also unload
+				if Object[+4].Grind > 640
+					ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+				end if
+				
+			end if
+		end if
+		break
+
+	case BOMBCARRIER_SLIDELEFT
+		// If this Object is further to the right than the Player, then...
+		if Object.XPos > Player.XPos
+			
+			// Move the Carrier left by 0.75 pixels
+			Object.XPos -= 0xC000
+			
+			// Has this Object past the Player now?
+			if Object.XPos <= Player.XPos
+				// If it did, then start releasig the Bomb
+				
+				Object.State = BOMBCARRIER_RELEASEBOMB
+				
+				// Match the Player's Position
+				Object.XPos = Player.XPos
+				
+				// if the Boss Platform XXX, then make Robotnik go back to his Idle State
+				if Object[+4].State < BOSSPLATFORM_FALL_4
+					Object[+3].State = EGGMAN_IDLE
+				end if
+				
+				Object.Timer = 0
+			end if
+		else
+			// No need to move left anymore, start relasing the Bomb
+			Object.State = BOMBCARRIER_RELEASEBOMB
+			Object.XPos = Player.XPos
+			
+			// Put Robotnik in his normal pose, he doesn't need to be pushing the lever anymore either
+			Object[+3].State = EGGMAN_IDLE
+			
+			Object.Timer = 0
+		end if
+
+		TempValue0 = Object[+1].XPos
+		TempValue0 -= 0x300000
+		
+		if Object.XPos > TempValue0
+		
+			// If the Bomb Carrier is still within 48 pixels left of the Boss Top's Position,
+			// then keep the Bomb steady
+			Object.Angle = 384
+			
+		else
+			// Increase the Bomb's Angle
+			
+			Object.Angle += 8
+			Object.Angle &= 511
+		end if
+		
+		// Make the Bomb move with the Bomb Carrier
+		Object[-1].XPos = Object.XPos
+		
+		// Make the Bomb bounce a bit
+		Sin(Object[-1].YPos, Object.Angle)
+		Object[-1].YPos <<= 9
+		
+		// Bump it to 28 pixels beyond this Object's Y Position
+		Object[-1].YPos += Object.YPos
+		Object[-1].YPos += 0x1C0000
+		break
+
+	case BOMBCARRIER_RELEASEBOMB
+		if Object.Timer < 30
+			// Hold for half a second
+			Object.Timer++
+		else
+			// Go to the post-bomb-release pause state
+			Object.State = BOMBCARRIER_HOVER
+			Object.Timer = 0
+			
+			// And actually release the Bomb
+			Object[-1].State = BOSSBOMB_ACTIVE
+		end if
+		
+		// Increase the Bomb's hover angle
+		Object.Angle += 8
+		Object.Angle &= 511
+		
+		// And then actually make the Bomb hover
+		Sin(Object[-1].YPos, Object.Angle)
+		Object[-1].YPos <<= 9
+		
+		// Make it 28 pixels below this Bomb Carrier Object
+		Object[-1].YPos += Object.YPos
+		Object[-1].YPos += 0x1C0000
+		break
+
+	case BOMBCARRIER_HOVER
+		if Object.Timer < 90
+			// Pause for a second and a half
+			Object.Timer++
+		else
+			// Job complete, returning to HQ!
+			Object.State = BOMBCARRIER_SLIDERIGHT
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case BOMBCARRIER_IDLE
+	case BOMBCARRIER_WAITFORBOSSFIGHT
+	case BOMBCARRIER_GRABBOMB
+	case BOMBCARRIER_SLIDERIGHT
+	case BOMBCARRIER_HOVER
+		// The Carrier isn't holding a Bomb, so draw the inactive Frame
+		DrawSprite(0)
+		break
+		
+	case BOMBCARRIER_SLIDELEFT
+	case BOMBCARRIER_RELEASEBOMB
+		// The Carrier is holding a Bomb, so draw the active version of the Frame
+		DrawSprite(1)
+		
+		// And then draw the Gravitional Force Pull thing
+		TempValue0   = Object.Frame
+		TempValue0 >>= 2
+		TempValue0  += 2
+		
+		DrawSprite(TempValue0)
+		
+		Object.Frame++
+		Object.Frame &= 7
+		break
+		
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+
+	// Main Carrier Frame
+	SpriteFrame(-16, -12, 32, 24, 33, 215)
+	
+	// Active Carrier Frame
+	SpriteFrame(-16, -12, 32, 24, 100, 113)
+
+	// Levitation Effect Frames
+	SpriteFrame(-16, 12, 32, 16, 33, 239)
+	SpriteFrame(-16, 12, 32, 16, 1, 239)
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-16, -12, 32, 24, 33, 215)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

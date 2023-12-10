@@ -1,0 +1,362 @@
+//-----------------Sonic CD Sign Post Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.FrameTimer
+
+// Player Aliases
+#alias Player.Value4		:	Player.InvincibleTimer
+
+// ActFinish Aliases
+#alias Object[30].DrawOrder	:	ActFinish.DrawOrder
+#alias Object[30].Priority	:	ActFinish.Priority
+
+// States
+#alias 0	:	SIGNPOST_IDLE
+#alias 1	:	SIGNPOST_FLIP
+#alias 2	:	SIGNPOST_MOVE_PLAYER
+#alias 3	:	SIGNPOST_STOP_PLAYER
+#alias 4	:	SIGNPOST_BLANK
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Global SFX
+#alias 15	:	SFX_G_SIGNPOST
+
+// Property Values
+#alias 0	:	UPDATE_TILELAYER_1
+#alias 1	:	UPDATE_TILELAYER_2
+#alias 2	:	COMMON_SIGN
+#alias 3	:	HANDLE_MULTIPLE_SIGNS
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+#alias 3	:	PRIORITY_XBOUNDS
+
+
+sub ObjectMain
+	switch Object.State
+	case SIGNPOST_IDLE
+		Object.Frame = 1
+
+		TempValue0  = Object.YPos
+		TempValue0 += 0x600000
+		if Player.YPos < TempValue0	// Makes sure the player triggers the signpost no matter the height
+			Stage.NewXBoundary1   = Object.XPos
+			Stage.NewXBoundary1 >>= 16
+			Stage.NewXBoundary1  -= Screen.CenterX
+			Stage.NewXBoundary1  -= Screen.CenterX
+
+			Stage.NewXBoundary2   = Object.XPos
+			Stage.NewXBoundary2 >>= 16
+			Stage.NewXBoundary2  += Screen.CenterX
+
+			if Player.XPos > Object.XPos	// Check that the player crossed the sign post
+				Stage.NewXBoundary1   = Object.XPos
+				Stage.NewXBoundary1 >>= 16
+				Stage.NewXBoundary1  -= Screen.CenterX
+#platform: Use_Origins
+				EngineCallback(NOTIFY_TOUCH_SIGNPOST)
+#endplatform
+				Stage.TimeEnabled = false
+
+				Object.State = SIGNPOST_FLIP
+				Object.Timer = 8
+
+				PlaySfx(SFX_G_SIGNPOST, false)
+				
+#platform: Use_Haptics
+				HapticEffect(50, 0, 0, 0)
+#endplatform
+
+			end if
+		end if
+		break
+
+	case SIGNPOST_FLIP
+		Music.Volume--
+		Object.FrameTimer++
+		if Object.FrameTimer == 2
+
+			Object.FrameTimer = 0
+			Object.Frame++
+			if Object.Frame == 5
+				// Spawn a ring sparkle at random location close to the sign post
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x1C0000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+
+				Object.Timer--
+				if Object.Timer == 0
+
+					if Object[0].Type == TypeName[Blank Object]	// Check if the player already leave by itself
+						Object.State = SIGNPOST_BLANK
+						if Object.PropertyValue < 3
+							PlayMusic(1)
+						else
+							if Object.OutOfBounds == false
+								PlayMusic(1)
+							end if
+						end if
+
+						Object[30].Type = TypeName[ActFinish]
+						ActFinish.DrawOrder = 6
+						ActFinish.Priority	= PRIORITY_ACTIVE
+					else	// Otherwise the signpost will do it itself.
+						Player.ControlMode 	= CONTROLMODE_NONE
+						Player.Up 			= false
+						Player.Down 		= false
+						Player.Left 		= false
+						Player.JumpPress 	= false
+						Player.JumpHold 	= false
+						Object.State = SIGNPOST_MOVE_PLAYER
+					end if
+
+				end if
+
+			end if
+
+			if Object.Frame == 9
+				// Spawn a ring sparkle at random location close to the sign post
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+				
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x1C0000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+				// Resets the animation cycle
+				Object.Frame = 1
+			end if
+
+		end if
+		// Freezes the player after leaving the screen
+		TempValue0   = 40
+		TempValue0  += Screen.CenterX
+		TempValue0 <<= 16
+		TempValue0  += Object.XPos
+		if Player.XPos > TempValue0
+			Player.XPos		 = TempValue0
+			Player.Speed	 = 0
+			Player.XVelocity = 0
+		end if
+		break
+
+	case SIGNPOST_MOVE_PLAYER
+		if Object[0].Type == TypeName[Blank Object]
+			Object.State = SIGNPOST_BLANK
+			if Object.PropertyValue < 3
+				PlayMusic(1)
+			else
+				if Object.OutOfBounds == false
+					PlayMusic(1)
+				end if
+			end if
+			Object[30].Type		= TypeName[ActFinish]
+			ActFinish.DrawOrder = 6
+			ActFinish.Priority	= PRIORITY_ACTIVE
+		end if
+
+		if Player.ControlMode == CONTROLMODE_NONE
+			Player.Right = true
+		end if
+
+		TempValue0   = Screen.CenterX
+		TempValue0 <<= 16
+		TempValue0  += Object.XPos
+
+		if Player.XPos > TempValue0
+			if Object.PropertyValue < 3
+				PlayMusic(1)
+			else
+				if Object.OutOfBounds == false
+					PlayMusic(1)
+				end if
+			end if
+			Object.State = SIGNPOST_STOP_PLAYER
+
+			Object[30].Type		= TypeName[ActFinish]
+			ActFinish.DrawOrder = 6
+			ActFinish.Priority	= PRIORITY_ACTIVE
+		else
+#platform: Use_Origins
+			// Some Mission Mode stuff
+			if Player.Animation == ANI_PUSHING
+				PlayMusic(1)
+				Object.State = SIGNPOST_BLANK
+				Object[30].Type = TypeName[ActFinish]
+				Object[30].DrawOrder = 6
+				Object[30].Priority = PRIORITY_ACTIVE
+			end if
+#endplatform
+		end if
+		break
+
+	case SIGNPOST_STOP_PLAYER
+		if Player.ControlMode == CONTROLMODE_NONE
+			Player.Right = true
+		end if
+		TempValue0   = 40
+		TempValue0  += Screen.CenterX
+		TempValue0 <<= 16
+		TempValue0  += Object.XPos
+		if Player.XPos > TempValue0
+			Player.XPos		 = TempValue0
+			Player.Speed	 = 0
+			Player.XVelocity = 0
+		end if
+		break
+
+	case SIGNPOST_BLANK
+		break
+	end switch
+
+#platform: Use_Origins
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if Object.State > SIGNPOST_IDLE
+			// Origins gives the player invincibility, in case the game stops you close to a hazard
+			Player.InvincibleTimer = 80
+		end if
+	end if
+#endplatform
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+	DrawSprite(Object.Frame)
+end sub
+
+
+sub ObjectStartup
+	if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+		LoadSpriteSheet("Global/Items2.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		LoadSpriteSheet("Global/Items2_t.gif")
+	end if
+#platform: Use_Origins
+	// the file name suffixes are lowercase in every other script, but for some reason they're uppercase here in this script only? sure ig..?
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("Global/Items2_K.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("Global/Items2_A.gif")
+	end if
+#endplatform
+
+	SpriteFrame(-12, -12, 24, 24, 0, 150)		// #0 - Sign Post
+	SpriteFrame(-24, -44, 48, 32, 34, 99)		// #1 - Sign Post Head (Eggman)
+	SpriteFrame(-16, -44, 32, 32, 1, 183)		// #2 - Sign Post Head (Flip 1)
+	SpriteFrame(-4, -44, 8, 32, 25, 150)		// #3 - Sign Post Head (Flip 2)
+	SpriteFrame(-16, -44, 32, 32, 1, 216)		// #4 - Sign Post Head (Flip 3)
+	SpriteFrame(-24, -44, 48, 32, 34, 132)		// #5 - Sign Post Head (Player)
+	SpriteFrame(-16, -44, 32, 32, 1, 183)		// #6 - Sign Post Head (Flip 1)
+	SpriteFrame(-4, -44, 8, 32, 25, 150)		// #7 - Sign Post Head (Flip 2)
+	SpriteFrame(-16, -44, 32, 32, 1, 216)		// #8 - Sign Post Head (Flip 3)
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Sign Post]
+			Object[ArrayPos0].Priority = PRIORITY_XBOUNDS
+
+			// If needed, let's extend the stage a bit by repeating the last column of chunks
+			if Object[ArrayPos0].PropertyValue < 2
+				TempValue0  = TileLayer[0].XSize
+				TempValue0 -= 2
+
+				TempValue1   = TileLayer[0].XSize
+				TempValue2   = Object[ArrayPos0].iYPos
+				TempValue2  += 64
+				TempValue2 >>= 7
+
+				GetTileLayerEntry(TempValue3, 0, TempValue0, TempValue2)
+				SetTileLayerEntry(TempValue3, 0, TempValue1, TempValue2)
+
+				TempValue0++
+				TempValue1++
+				GetTileLayerEntry(TempValue3, 0, TempValue0, TempValue2)
+				SetTileLayerEntry(TempValue3, 0, TempValue1, TempValue2)
+
+				if Object[ArrayPos0].PropertyValue == UPDATE_TILELAYER_2
+					TempValue0--
+					TempValue1--
+					TempValue2--
+					GetTileLayerEntry(TempValue3, 0, TempValue0, TempValue2)
+					SetTileLayerEntry(TempValue3, 0, TempValue1, TempValue2)
+
+					TempValue0++
+					TempValue1++
+					GetTileLayerEntry(TempValue3, 0, TempValue0, TempValue2)
+					SetTileLayerEntry(TempValue3, 0, TempValue1, TempValue2)
+				end if
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-12, -12, 24, 24, 0, 150)		// #0 - Sign Post
+	SpriteFrame(-24, -44, 48, 32, 34, 99)		// #1 - Sign Post Head (Eggman)
+
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Updates TileLayer (1)", 0)
+	AddEnumVariable("Updates TileLayer (2)", 1)
+	AddEnumVariable("Normal", 2)
+	AddEnumVariable("Normal (Handles Multiple SignPosts)", 3)
+end sub

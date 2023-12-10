@@ -1,0 +1,355 @@
+//------------Sonic CD Conveyor Platforms Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Angle
+#alias Object.Value1	:	Object.AngleOriginPos
+#alias Object.Value2	:	Object.PlatformXPos
+#alias Object.Value3	:	Object.PlatformYPos
+#alias Object.Value4	:	Object.XCollisionOffset
+#alias Object.Value5	:	Object.YCollisionOffset
+#alias Object.Value6	:	Object.CanBeStepped
+
+// Property Values
+#alias 0	:	GIMMICK_PARENT
+#alias 1	:	GIMMICK_CHILD
+
+
+sub ObjectMain
+	if Object.PropertyValue == GIMMICK_PARENT
+		TempValue2 = 0
+		ArrayPos0 = Object.EntityNo
+		ArrayPos0++
+		while TempValue2 < 5
+			Object[ArrayPos0].Angle  = Object[ArrayPos0].AngleOriginPos
+			Object[ArrayPos0].Angle += Object.Angle
+			Object[ArrayPos0].Angle %= 448
+			if Object[ArrayPos0].Angle < 160
+				Object[ArrayPos0].XCollisionOffset  = Object.XPos
+				Object[ArrayPos0].XCollisionOffset -= 0x400000
+
+				TempValue0   = Object[ArrayPos0].Angle
+				TempValue0 <<= 16
+				Object[ArrayPos0].XCollisionOffset += TempValue0
+				Object[ArrayPos0].YCollisionOffset  = Object.YPos
+				Object[ArrayPos0].YCollisionOffset -= 0x3A0000
+				
+				TempValue0 = Object[ArrayPos0].Angle
+				TempValue0 <<= 15
+				Object[ArrayPos0].YCollisionOffset += TempValue0
+			else
+				if Object[ArrayPos0].Angle < 224
+					TempValue0   = Object[ArrayPos0].Angle
+					TempValue0  -= 144
+					TempValue0 <<= 2
+					if TempValue0 > 144
+						Object[ArrayPos0].Rotation++
+						Object[ArrayPos0].Rotation %= 24
+						Object[ArrayPos0].CanBeStepped = false
+					end if
+					Sin(Object[ArrayPos0].XCollisionOffset, TempValue0)
+					Object[ArrayPos0].XCollisionOffset *= 0xC00
+					Object[ArrayPos0].XCollisionOffset += Object.XPos
+					Object[ArrayPos0].XCollisionOffset += 0x500000
+
+					Cos(Object[ArrayPos0].YCollisionOffset, TempValue0)
+					Object[ArrayPos0].YCollisionOffset *= -0xC00
+					Object[ArrayPos0].YCollisionOffset +=  Object.YPos
+					Object[ArrayPos0].YCollisionOffset +=  0x280000
+				else
+					if Object[ArrayPos0].Angle < 384
+						Object[ArrayPos0].Rotation++
+						Object[ArrayPos0].Rotation %= 24
+						Object[ArrayPos0].CanBeStepped = false
+
+						TempValue0  = Object[ArrayPos0].Angle
+						TempValue0 -= 224
+
+						Object[ArrayPos0].XCollisionOffset  = Object.XPos
+						Object[ArrayPos0].XCollisionOffset += 0x3E0000
+						TempValue1   = TempValue0
+						TempValue1 <<= 16
+						Object[ArrayPos0].XCollisionOffset -= TempValue1
+
+						Object[ArrayPos0].YCollisionOffset  = Object.YPos
+						Object[ArrayPos0].YCollisionOffset += 0x390000
+						TempValue1  = TempValue0
+						TempValue1 <<= 15
+						Object[ArrayPos0].YCollisionOffset -= TempValue1
+					else
+						TempValue0   = Object[ArrayPos0].Angle
+						TempValue0  -= 368
+						TempValue0 <<= 2
+						if TempValue0 > 144
+							Object[ArrayPos0].Rotation = 0
+							Object[ArrayPos0].CanBeStepped = true
+						else
+							Object[ArrayPos0].Rotation++
+							Object[ArrayPos0].Rotation %= 24
+							Object[ArrayPos0].CanBeStepped = false
+						end if
+
+						Sin(Object[ArrayPos0].XCollisionOffset, TempValue0)
+						Object[ArrayPos0].XCollisionOffset *= -0xC00
+						Object[ArrayPos0].XCollisionOffset +=  Object.XPos
+						Object[ArrayPos0].XCollisionOffset -=  0x500000
+
+						Cos(Object[ArrayPos0].YCollisionOffset, TempValue0)
+						Object[ArrayPos0].YCollisionOffset *= 0xC00
+						Object[ArrayPos0].YCollisionOffset += Object.YPos
+						Object[ArrayPos0].YCollisionOffset -= 0x280000
+					end if
+				end if
+			end if
+			Object[ArrayPos0].XCollisionOffset &= 0xFFFF0000 // Truncate the value
+			Object[ArrayPos0].PlatformXPos		= Object[ArrayPos0].XCollisionOffset
+			Object[ArrayPos0].XCollisionOffset -= Object[ArrayPos0].XPos
+
+			Object[ArrayPos0].YCollisionOffset &= 0xFFFF0000 // Truncate the value
+			Object[ArrayPos0].PlatformYPos		= Object[ArrayPos0].YCollisionOffset
+			Object[ArrayPos0].YCollisionOffset -= Object[ArrayPos0].YPos
+
+			TempValue2++
+			ArrayPos0++
+		loop
+
+		Object.Angle++
+		Object.Angle %= 448
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.PropertyValue == GIMMICK_CHILD
+		if Object.CanBeStepped == true
+			PlayerObjectCollision(C_PLATFORM, -16, -5, 16, 11)
+			if CheckResult == true
+				Player.XPos += Object.XCollisionOffset
+				Player.YPos += Object.YCollisionOffset
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.PropertyValue == GIMMICK_CHILD
+		Object.XPos = Object.PlatformXPos
+		Object.YPos = Object.PlatformYPos
+
+		TempValue0   = Object.Rotation
+		TempValue0 >>= 1
+		switch TempValue0
+		case 0
+		case 6
+			DrawSprite(0)
+			break
+		case 1
+		case 7
+			DrawSprite(1)
+			break
+		case 2
+		case 8
+			DrawSprite(2)
+			break
+		case 3
+		case 9
+			DrawSprite(3)
+			break
+		case 4
+		case 10
+			Object.Direction = FACING_LEFT
+			DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+			break
+		case 5
+		case 11
+			Object.Direction = FACING_LEFT
+			DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+			break
+		end switch
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-16, -8, 32, 16, 107, 98)	// #0 - Platform Horizontal
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #1 - Platform Tilted frame 0
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #2 - Platform Tilted frame 1
+
+	SpriteFrame(-8, -16, 16, 32, 239, 212)	// #3 - Platform Vertical
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #4 - Platform Tilted frame 0
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #5 - Platform Tilted frame 1
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[CPlatforms]
+			if Object[ArrayPos0].PropertyValue == GIMMICK_PARENT
+				ArrayPos0++
+				Object[ArrayPos0].AngleOriginPos = 0
+				Object[ArrayPos0].CanBeStepped = true
+				Object[ArrayPos0].PlatformXPos = Object[ArrayPos0].XPos
+				Object[ArrayPos0].PlatformYPos = Object[ArrayPos0].YPos
+				ArrayPos0++
+				Object[ArrayPos0].AngleOriginPos = 90
+				Object[ArrayPos0].CanBeStepped = true
+				Object[ArrayPos0].PlatformXPos = Object[ArrayPos0].XPos
+				Object[ArrayPos0].PlatformYPos = Object[ArrayPos0].YPos
+				ArrayPos0++
+				Object[ArrayPos0].AngleOriginPos = 180
+				Object[ArrayPos0].CanBeStepped = true
+				Object[ArrayPos0].PlatformXPos = Object[ArrayPos0].XPos
+				Object[ArrayPos0].PlatformYPos = Object[ArrayPos0].YPos
+				ArrayPos0++
+				Object[ArrayPos0].AngleOriginPos = 268
+				Object[ArrayPos0].CanBeStepped = true
+				Object[ArrayPos0].PlatformXPos = Object[ArrayPos0].XPos
+				Object[ArrayPos0].PlatformYPos = Object[ArrayPos0].YPos
+				ArrayPos0++
+				Object[ArrayPos0].AngleOriginPos = 358
+				Object[ArrayPos0].CanBeStepped = true
+				Object[ArrayPos0].PlatformXPos = Object[ArrayPos0].XPos
+				Object[ArrayPos0].PlatformYPos = Object[ArrayPos0].YPos
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+
+	if Object.PropertyValue == GIMMICK_CHILD
+		ArrayPos0  = Object.EntityNo
+		TempValue0 = 0
+		TempValue1 = 0
+		while TempValue1 == false
+			if TempValue0 == 5
+				TempValue1 = true
+			end if
+			ArrayPos0--
+			TempValue0++
+			CheckEqual(Object[ArrayPos0].Type, TypeName[CPlatforms])
+			TempValue1  = CheckResult
+			CheckNotEqual(Object[ArrayPos0].PropertyValue, GIMMICK_CHILD)
+			TempValue1 &= CheckResult
+		loop
+		DrawLine(Object.XPos, Object.YPos, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos, 255, 255, 0)
+		ArrayPos1  = Object.EntityNo
+		ArrayPos1 -= Object[ArrayPos0].EntityNo
+		switch ArrayPos1
+		case 1
+			TempValue7 = 0
+			break
+		case 2
+			TempValue7 = 90
+			break
+		case 3
+			TempValue7 = 180
+			break
+		case 4
+			TempValue7 = 268
+			break
+		case 5
+			TempValue7 = 358
+			break
+		end switch
+
+		if TempValue7 < 160
+			TempValue4  = Object.XPos
+			TempValue4 -= 0x400000
+
+			TempValue0   = TempValue7
+			TempValue0 <<= 16
+			TempValue4  += TempValue0
+			TempValue5   = Object.YPos
+			TempValue5  -= 0x3A0000
+			
+			TempValue0 = TempValue7
+			TempValue0 <<= 15
+			TempValue5 += TempValue0
+		else
+			if TempValue7 < 224
+				TempValue0   = TempValue7
+				TempValue0  -= 144
+				TempValue0 <<= 2
+				Sin(TempValue4, TempValue0)
+				TempValue4 *= 0xC00
+				TempValue4 += Object.XPos
+				TempValue4 += 0x500000
+
+				Cos(TempValue5, TempValue0)
+				TempValue5 *= -0xC00
+				TempValue5 +=  Object.YPos
+				TempValue5 +=  0x280000
+			else
+				if TempValue7 < 384
+					TempValue0  = TempValue7
+					TempValue0 -= 224
+
+					TempValue4  = Object.XPos
+					TempValue4 += 0x3E0000
+					TempValue1   = TempValue0
+					TempValue1 <<= 16
+					TempValue4 -= TempValue1
+
+					TempValue5  = Object.YPos
+					TempValue5 += 0x390000
+					TempValue1  = TempValue0
+					TempValue1 <<= 15
+					TempValue5 -= TempValue1
+				else
+					TempValue0   = TempValue7
+					TempValue0  -= 368
+					TempValue0 <<= 2
+
+					Sin(TempValue4, TempValue0)
+					TempValue4 *= -0xC00
+					TempValue4 +=  Object.XPos
+					TempValue4 -=  0x500000
+
+					Cos(TempValue5, TempValue0)
+					TempValue5 *= 0xC00
+					TempValue5 += Object.YPos
+					TempValue5 -= 0x280000
+				end if
+			end if
+		end if
+		TempValue4 &= 0xFFFF0000 // Truncate the value
+		TempValue2	= TempValue4
+		TempValue4 = Object.XPos
+
+		TempValue5 &= 0xFFFF0000 // Truncate the value
+		TempValue3	= TempValue5
+		TempValue5 = Object.YPos
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			Object.InkEffect = 1
+			DrawSpriteFX(0, FX_INK,TempValue2,TempValue3)
+			DrawLine(Object.XPos, Object.YPos, TempValue2, TempValue3, 255, 255, 0)
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-16, -8, 32, 16, 107, 98)	// #0 - Platform Horizontal
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #1 - Platform Tilted frame 0
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #2 - Platform Tilted frame 1
+
+	SpriteFrame(-8, -16, 16, 32, 239, 212)	// #3 - Platform Vertical
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #4 - Platform Tilted frame 0
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #5 - Platform Tilted frame 1
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,190 @@
+//----------------Sonic CD Dragonfly Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Angle
+#alias Object.Value1		:	Object.YVelocity
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0		:	DRAGONFLY_MOVE_LEFT
+#alias 1		:	DRAGONFLY_MOVE_RIGHT
+
+// Badnik Quality / Property Values
+#alias 0		:	GOOD_QUALITY
+#alias 1		:	BAD_QUALITY
+
+
+sub ObjectMain
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case DRAGONFLY_MOVE_LEFT
+			Sin(Object.YPos, Object.Angle)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YVelocity
+
+			Object.XPos  -= 0x10000
+
+			Object.Angle -= 8
+			if Object.Angle == 0
+				Object.State = DRAGONFLY_MOVE_RIGHT
+				Object.Direction = FACING_LEFT
+			end if
+			break
+
+		case DRAGONFLY_MOVE_RIGHT
+			Sin(Object.YPos, Object.Angle)
+			FlipSign(Object.YPos)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YVelocity
+
+			Object.XPos  += 0x10000
+
+			Object.Angle += 8
+			if Object.Angle == 2048
+				Object.State = DRAGONFLY_MOVE_LEFT
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+
+		end switch
+
+	else
+		switch Object.State
+		case DRAGONFLY_MOVE_LEFT
+			Sin(Object.YPos, Object.Angle)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YVelocity
+
+			Object.XPos  -= 0x8000
+			
+			Object.Angle -= 2
+			if Object.Angle == 0
+				Object.State = DRAGONFLY_MOVE_RIGHT
+				Object.Direction = FACING_LEFT
+			end if
+			break
+
+		case DRAGONFLY_MOVE_RIGHT
+			Sin(Object.YPos, Object.Angle)
+			FlipSign(Object.YPos)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YVelocity
+
+			Object.XPos  += 0x8000
+
+			Object.Angle += 2
+			if Object.Angle == 1024
+				Object.State = DRAGONFLY_MOVE_LEFT
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+
+		end switch
+	end if
+
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -20, -10, 20, 10)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -20, -10, 20, 10)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0  = Object.Frame
+	TempValue0 /= 3
+
+	if Object.Quality == GOOD_QUALITY
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		TempValue0 += 2
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+
+	Object.Frame++
+	Object.Frame %= 6
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects.gif")
+
+	SpriteFrame(-29, -20, 64, 32, 18, 119)	// #0 - Dragon Fly frame 0
+	SpriteFrame(-29, -16, 64, 28, 83, 152)	// #1 - Dragon Fly frame 1
+	SpriteFrame(-29, -20, 64, 32, 18, 86)	// #2 - Dragon Fly frame 2
+	SpriteFrame(-29, -16, 64, 28, 18, 152)	// #3 - Dragon Fly frame 3
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Dragonfly]
+			Object[ArrayPos0].YVelocity = Object[ArrayPos0].YPos
+			Object[ArrayPos0].Angle   = 1024
+			Object[ArrayPos0].Angle >>= Object[ArrayPos0].Quality
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects.gif")
+
+	// Good Dragonfly
+	SpriteFrame(-29, -20, 64, 32, 18, 119)	// #0 - Dragon Fly
+	// Bad Dragonfly
+	SpriteFrame(-29, -20, 64, 32, 18, 86)	// #1 - Dragon Fly
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

@@ -1,0 +1,252 @@
+//-----------------Sonic CD Mecha Bu 2 Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-------Used on Mission "M110 - Extreme! Gotta Go Fast"------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+
+#alias Object.Value2		:	Object.XOriginPos
+#alias Object.Value3		:	Object.YOriginPos
+#alias Object.Value4		:	Object.HornTimer
+#alias Object.Value5		:	Object.SFXTimer
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	MECHABU2_FINDGROUND
+#alias 1	:	MECHABU2_BACKTRACK
+#alias 2	:	MECHABU2_ADVANCE
+
+// SFX Aliases
+#alias 1	:	SFX_S_BUZZSAW
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	switch Object.State
+	case MECHABU2_FINDGROUND
+		// See if there's any ground to be found at the Bu's current position
+		ObjectTileCollision(CSIDE_FLOOR, 0, 15, 0)
+		
+		if CheckResult == true
+			// Floor detected, go to the normal movement states now
+			
+			Object.State = MECHABU2_BACKTRACK
+		else
+			// The Bu's still in the air, so move a pixel down
+			
+			Object.YPos += 0x10000
+		end if
+
+		if Object.State == MECHABU2_FINDGROUND	// But you're already there...
+
+			ArrayPos0 = 32
+			while ArrayPos0 < 1056
+				if Object[ArrayPos0].PropertyValue <= 1
+					TempValue3  = -16
+				else
+					TempValue3  = -32
+					TempValue3 *= Object[ArrayPos0].PropertyValue
+					TempValue3 += 16
+				end if
+				
+				TempValue4  = 16
+
+				TempValue0  = Object[ArrayPos0].iXPos
+				TempValue0 -= Object.iXPos
+
+				CheckGreater(TempValue0, TempValue3)
+				TempValue1  = CheckResult
+				CheckLower(TempValue0, TempValue4)
+				TempValue1 &= CheckResult
+				if TempValue1 == true
+					TempValue2  = Object[ArrayPos0].iYPos
+					TempValue1  = Object.iYPos
+					TempValue1 += 16
+					TempValue2 -= TempValue1
+					CheckGreater(TempValue2, -16)
+					TempValue1  = CheckResult
+					CheckLower(TempValue2, 15)
+					TempValue1 &= CheckResult
+					if TempValue1 == true
+						Object.iYPos  = Object[ArrayPos0].iYPos
+						Object.iYPos -= 32
+						Object.State  = MECHABU2_BACKTRACK
+						ArrayPos0     = 2000
+					end if
+				end if
+				ArrayPos0++
+			loop
+		end if
+		break
+
+	case MECHABU2_BACKTRACK
+		if Object.Timer < 416
+			Object.Timer++
+			
+			// Move 0.3125 pixels right (opposite of the direction the Bu's currently towards)
+			Object.XPos += 0x5000
+		else
+			// Change direction, start going ahead now
+			
+			Object.Timer = 0
+			Object.State = MECHABU2_ADVANCE
+		end if
+		
+		// Stay with the ground even when going backwards, quite the fancy moonwalk!
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		break
+		
+	case MECHABU2_ADVANCE
+		if Object.Timer < 416
+			Object.Timer++
+			
+			// Move 0.3125 pixels to the left (in the direction the Bu is facing)
+			Object.XPos -= 0x5000
+		else
+			// Change direction once again, start going backwards
+			
+			Object.Timer = 0
+			Object.State = MECHABU2_BACKTRACK
+		end if
+		
+		// Track the ground, the Bu should always be grounded
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		break
+		
+	end switch
+
+	// See if the Bu should become a Flower instead
+	CallFunction(StageSetup_CheckGoodFuture)
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// Huh, it doesn't seem like the Mecha Bu ever reaches state 3, so this check
+	// is effectivly useless
+	if Object.State < 3
+		
+		// Check collision with the main Mecha Bu
+		PlayerObjectCollision(C_ENEMY,-16,-14,16,14)
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+
+		// Make sure the Bu hasn't become a Flower (destroyed) before checking for other parts
+		if Object.Type == TypeName[MechaBu2]
+			if Object.HornTimer > 59
+				if Object.Direction == FACING_RIGHT
+					PlayerObjectCollision(C_TOUCH, -30, -32, -8, 0)
+				else
+					PlayerObjectCollision(C_TOUCH, 8, -32, 30, 0)
+				end if
+				if CheckResult == true
+					CallFunction(Player_Hit)
+				end if
+			else
+				if Object.Direction == FACING_RIGHT
+					PlayerObjectCollision(C_TOUCH, -36, -16, -14, 16)
+				else
+					PlayerObjectCollision(C_TOUCH, 14, -16, 36, 16)
+				end if
+				if CheckResult == true
+					CallFunction(Player_Hit)
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	
+	Object.SFXTimer++
+	if Object.SFXTimer == 48
+		Object.SFXTimer = 0
+		PlayStageSfx(SFX_S_BUZZSAW, false)
+	end if
+	
+	TempValue0  = Object.AnimationTimer
+	TempValue0 /= 3
+	
+	Object.AnimationTimer++
+	Object.AnimationTimer %= 6
+	
+	if Object.HornTimer > 59
+		TempValue0 += 5
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		TempValue0 += 2
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+	
+	Object.HornTimer++
+	Object.HornTimer %= 120
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+
+	SpriteFrame(-23, -17, 16, 24, 156, 177)	// #1 - Mecha Bu Horn frame 0
+	SpriteFrame(-31, -32, 24, 32, 230, 1)	// #2 - Mecha Bu Saw frame 0
+	SpriteFrame(-31, -32, 24, 32, 173, 173)	// #3 - Mecha Bu Saw frame 1
+
+	SpriteFrame(-33, -8, 24, 16, 131, 177)	// #4 - Mecha Bu Horn frame 1
+	SpriteFrame(-37, -16, 24, 32, 230, 1)	// #5 - Mecha Bu Saw frame 0
+	SpriteFrame(-37, -16, 24, 32, 173, 173)	// #6 - Mecha Bu Saw frame 1
+	
+	// Cycle through all Objects in the level and find all Mecha Bu's
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Mecha Bu2]
+		
+			// Store their its starting position
+			// (These don't ever seem to be used, though?)
+			
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+
+			if Object[ArrayPos0].Quality == BAD_QUALITY
+				Object[ArrayPos0].Direction = FACING_LEFT
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
+
+

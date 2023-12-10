@@ -1,0 +1,341 @@
+//-----------------Sonic CD Drop Rock Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.XVelocity
+#alias Object.Value1	:	Object.YVelocity
+#alias Object.Value2	:	Object.OriginsPosY
+
+#alias 0	:	DROPROCK_IDLE
+#alias 1	:	DROPROCK_FALLING
+#alias 2	:	DROPROCK_WAITFORRESPAWN
+#alias 3	:	DROPROCK_FRAGMENT
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Box Collision
+#alias 4	:	PLAYER_COL_ROOF
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Property Values
+#alias 1	:	ROCK_DEBRIS_1
+#alias 2	:	ROCK_DEBRIS_2
+#alias 3	:	ROCK_DEBRIS_3
+#alias 4	:	ROCK_DEBRIS_4
+
+
+
+sub ObjectMain
+	
+	switch Object.State
+	
+	// state DROPROCK_IDLE doesn't have anything
+	// It's handled over in ObjectPlayerInteraction instead
+	
+	case DROPROCK_FALLING
+		
+		// If not yet falling at a speed of 8 px/frame, accelerate a rate of 0.25 per frame
+		if Object.YVelocity < 0x80000
+			Object.YVelocity += 0x4000
+		end if
+		
+		Object.YPos += Object.YVelocity
+		
+		// Only check for Collision if the Object is falling at a rate faster than 2px per frame
+		if Object.YVelocity > 0x20000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 12, 0)
+			if CheckResult == true
+				PlaySfx(SFX_G_EXPLOSION, 0)
+				
+				// Make the Rock invisible and make it wait for respawning
+				Object.State = DROPROCK_WAITFORRESPAWN
+				
+				// Create all the Rock Fragments now
+				// The appropriate info for each Fragment is listed as needed, in the format of
+				// X: X offset from the Rock's base position
+				// Y: Y offset from the Rock's base position
+				// XVel: Starting X Velocity of the Fragment
+				// YVel: Starting Y Velocity of the Fragment
+				
+				// Top left Fragment!
+				// - X: 8 pixels left
+				// - Y: 8 pixels up
+				// - XVel: 1 pixel per frame left
+				// - YVel: 4 pixels per frame up
+				CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_1, Object.XPos, Object.YPos)
+				Object[TempObjectPos].State = DROPROCK_FRAGMENT
+				Object[TempObjectPos].XPos -= 0x80000
+				Object[TempObjectPos].YPos -= 0x80000
+				Object[TempObjectPos].XVelocity = -0x10000
+				Object[TempObjectPos].YVelocity = -0x40000
+				Object[TempObjectPos].DrawOrder = 5
+				
+				// Top right Fragment:
+				// - X: 8 pixels right
+				// - Y: 8 pixels up
+				// - XVel: 1 pixel per frame right
+				// - YVel: 4 pixels per frame up
+				CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_2, Object.XPos, Object.YPos)
+				Object[TempObjectPos].State = DROPROCK_FRAGMENT
+				Object[TempObjectPos].XPos += 0x80000
+				Object[TempObjectPos].YPos -= 0x80000
+				Object[TempObjectPos].XVelocity =  0x10000
+				Object[TempObjectPos].YVelocity = -0x40000
+				Object[TempObjectPos].DrawOrder = 5
+				
+				// Bottom left Fragment:
+				// - X: 8 pixels right
+				// - Y: 8 pixels up
+				// - XVel: 2 pixels per frame left
+				// - YVel: 2 pixels per frame up
+				CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_3, Object.XPos, Object.YPos)
+				Object[TempObjectPos].State = DROPROCK_FRAGMENT
+				Object[TempObjectPos].XPos -= 0x80000
+				Object[TempObjectPos].YPos += 0x80000
+				Object[TempObjectPos].XVelocity = -0x20000
+				Object[TempObjectPos].YVelocity = -0x20000
+				Object[TempObjectPos].DrawOrder = 5
+				
+				// Bottom right Fragment:
+				// - X: 8 pixels right
+				// - Y: 8 pixels down
+				// - XVel: 2 pixels per frame right
+				// - YVel: 2 pixels per frame up
+				CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_4, Object.XPos, Object.YPos)
+				Object[TempObjectPos].State = DROPROCK_FRAGMENT
+				Object[TempObjectPos].XPos += 0x80000
+				Object[TempObjectPos].YPos += 0x80000
+				Object[TempObjectPos].XVelocity =  0x20000
+				Object[TempObjectPos].YVelocity = -0x20000
+				Object[TempObjectPos].DrawOrder = 5
+				
+				// And then carrying on from the Explosion SFX from a while ago, create an Explosion effect too now
+				CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+				Object[TempObjectPos].DrawOrder = 5
+				
+			end if
+		end if
+		break
+		
+	case DROPROCK_WAITFORRESPAWN
+		// This state is given to the Rock after it explodes,
+		// in order to make sure it doesn't warp back to its
+		// starting position right in front of the Player
+		
+		if Object.OutOfBounds == true
+			Object.YPos = Object.OriginsPosY
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State = DROPROCK_IDLE
+		end if
+		break
+		
+	case DROPROCK_FRAGMENT
+		
+		// Update horizontal movements
+		Object.XPos += Object.XVelocity
+		
+		// Make the Fragment accelerate vertically at a rate of 0.25px/frame
+		Object.YVelocity += 0x4000
+		
+		// And then update vertical movements
+		Object.YPos += Object.YVelocity
+		
+		if Object.OutOfBounds == true
+			// Unload when no longer needed
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	switch Object.State
+	case DROPROCK_IDLE
+		// First, act as a Box for the Player
+		PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+		
+		// Then, see if the Player has walked below the Rock
+		PlayerObjectCollision(C_TOUCH, -4, 0, 4, 96)
+		
+		if CheckResult == true
+			// If they have, then start Falling
+			
+			Object.OriginsPosY = Object.YPos
+			Object.Priority = PRIORITY_ACTIVE
+			Object.YVelocity = 0
+			Object.State = DROPROCK_FALLING
+		end if
+		
+		// [Fallthrough, to check if the Player has actually touched the rock]
+		
+	case DROPROCK_FALLING
+		
+		// Check Collision with Player
+		PlayerObjectCollision(C_BOX, -16, -16, 12, 16)
+		
+		// Did the Player hit their head on the bottom of this rock?
+		if CheckResult == PLAYER_COL_ROOF
+			// Explode!
+			
+			PlaySfx(SFX_G_EXPLOSION, 0)
+			
+			Object.State = DROPROCK_WAITFORRESPAWN
+			
+			CallFunction(Player_Hit)
+
+			// Create all the Rock Fragments, since the Rock's been exploded
+			
+			// The initial info for each Fragment is listed as needed, in the following format:
+			// X: X offset from the Rock's base position
+			// Y: Y offset from the Rock's base position
+			// XVel: Starting X Velocity of the Fragment
+			// YVel: Starting Y Velocity of the Fragment
+			
+			// Top left Fragment:
+			// - X: 8 pixels left
+			// - Y: 8 pixels up
+			// - XVel: 1 pixel per frame right
+			// - YVel: 4 pixels per frame up
+			CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_1, Object.XPos, Object.YPos)
+			Object[TempObjectPos].State = DROPROCK_FRAGMENT
+			Object[TempObjectPos].XPos -= 0x80000
+			Object[TempObjectPos].YPos -= 0x80000
+			Object[TempObjectPos].XVelocity = -0x10000
+			Object[TempObjectPos].YVelocity = -0x40000
+			Object[TempObjectPos].DrawOrder = 5
+			
+			// Top right Fragment:
+			// - X: 8 pixels right
+			// - Y: 8 pixels up
+			// - XVel: 1 pixel per frame right
+			// - YVel: 4 pixels per frame up
+			CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_2, Object.XPos, Object.YPos)
+			Object[TempObjectPos].State = DROPROCK_FRAGMENT
+			Object[TempObjectPos].XPos += 0x80000
+			Object[TempObjectPos].YPos -= 0x80000
+			Object[TempObjectPos].XVelocity = 0x10000
+			Object[TempObjectPos].YVelocity = -0x40000
+			Object[TempObjectPos].DrawOrder = 5
+			
+			// Bottom left Fragment:
+			// - X: 8 pixels left
+			// - Y: 8 pixels down
+			// - XVel: 2 pixels per frame left
+			// - YVel: 3 pixels per frame up
+			CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_3, Object.XPos, Object.YPos)
+			Object[TempObjectPos].State = DROPROCK_FRAGMENT
+			Object[TempObjectPos].XPos -= 0x80000
+			Object[TempObjectPos].YPos += 0x80000
+			Object[TempObjectPos].XVelocity = -0x20000
+			Object[TempObjectPos].YVelocity = -0x30000
+			Object[TempObjectPos].DrawOrder = 5
+			
+			// Bottom right Fragment:
+			// - X: 8 pixels right
+			// - Y: 8 pixels down
+			// - XVel: 2 pixels per frame right
+			// - YVel: 3 pixels per frame up
+			CreateTempObject(TypeName[Drop Rock], ROCK_DEBRIS_4, Object.XPos, Object.YPos)
+			Object[TempObjectPos].State = DROPROCK_FRAGMENT
+			Object[TempObjectPos].XPos += 0x80000
+			Object[TempObjectPos].YPos += 0x80000
+			Object[TempObjectPos].XVelocity = 0x20000
+			Object[TempObjectPos].YVelocity = -0x30000
+			Object[TempObjectPos].DrawOrder = 5
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 5
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	
+	switch Object.State
+	case DROPROCK_IDLE
+	case DROPROCK_FALLING
+		// Draw the Rock Sprite
+		DrawSprite(0)
+		break
+		
+	// DROPROCK_WAITFORRESPAWN shouldn't draw anything,
+	// the Rock's meant to be invisible at that point
+	
+	case DROPROCK_FRAGMENT
+		// Draw the Fragment's given Frame
+		DrawSprite(Object.PropertyValue)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Main Rock Frame
+	SpriteFrame(-16, -16, 32, 32, 92, 18)
+	
+	// The rest here are Rock Fragment Frames
+	
+	// Top Left Frame
+	SpriteFrame(-8, -8, 16, 16, 92, 18)
+	
+	// Top Right Frame
+	SpriteFrame(-8, -8, 16, 16, 108, 18)
+	
+	// Bottom Left Frame
+	SpriteFrame(-8, -8, 16, 16, 92, 34)
+	
+	// Bottom Right Frame
+	SpriteFrame(-8, -8, 16, 16, 108, 34)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	if Editor.ShowGizmos == true
+		// Draw a downwards arrow to show that this Rock is of the falling variety
+		
+		TempValue0 = Object.YPos
+		TempValue0 += 0x300000
+		
+		Editor.DrawingOverlay = true
+		
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+	end if
+	
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 92, 18)
+
+	// Although used by the Object, it's not to be set from the Editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,250 @@
+//---------------Sonic CD Moving Spikes Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.OffSet
+
+// Player Aliases
+#alias Player.Value4	:	Player.InvincibleTimer
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// States
+#alias 0	:	MOVINGSPIKES_IDLE
+#alias 1	:	MOVINGSPIKES_RETRIEVE
+#alias 2	:	MOVINGSPIKES_HIDE
+#alias 3	:	MOVINGSPIKES_REVEAL
+
+// Property Values
+#alias 0	:	MOVINGSPIKES_DIRECTION_UP
+#alias 1	:	MOVINGSPIKES_DIRECTION_RIGHT
+#alias 2	:	MOVINGSPIKES_DIRECTION_LEFT
+#alias 3	:	MOVINGSPIKES_DIRECTION_DOWN
+
+// Stage SFX
+#alias 4	:	SFX_S_SPIKES
+
+
+sub ObjectMain
+	switch Object.State
+	case MOVINGSPIKES_IDLE
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.State = MOVINGSPIKES_RETRIEVE
+			Object.Timer = 0
+			PlayStageSfx(SFX_S_SPIKES, false)
+		end if
+		break
+
+	case MOVINGSPIKES_RETRIEVE
+		if Object.OffSet < 0x200000
+			Object.OffSet += 0x80000
+		else
+			Object.State = MOVINGSPIKES_HIDE
+		end if
+		break
+
+	case MOVINGSPIKES_HIDE
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.State = MOVINGSPIKES_REVEAL
+			Object.Timer = 0
+			
+			PlayStageSfx(SFX_S_SPIKES, false)
+		end if
+		break
+
+	case MOVINGSPIKES_REVEAL
+		if Object.OffSet > 0
+			Object.OffSet -= 0x80000
+		else
+			Object.State = MOVINGSPIKES_IDLE
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0   = Object.OffSet
+	TempValue0 >>= 16
+	TempValue0  -= 16
+	TempValue1   = TempValue0
+	TempValue1  += 32
+	
+	switch Object.PropertyValue
+	case MOVINGSPIKES_DIRECTION_UP
+		if Player.State != Player_State_Hurt
+			PlayerObjectCollision(C_BOX, -16, TempValue0, 16, TempValue1)
+		end if
+		
+		if Object.State != MOVINGSPIKES_HIDE
+			if Player.YVelocity > -1
+				if Player.InvincibleTimer == 0
+					PlayerObjectCollision(C_TOUCH, -15, -18, 15, -12)
+					if CheckResult == true
+						Player.State	 = Player_State_GotHit
+						Player.Gravity	 = GRAVITY_AIR
+
+						Player.YPos		-= 0x10000
+						if Player.XPos > Object.XPos
+							Player.Speed =  0x20000
+						else
+							Player.Speed = -0x20000
+						end if
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case MOVINGSPIKES_DIRECTION_RIGHT
+		FlipSign(TempValue0)
+		FlipSign(TempValue1)
+
+		PlayerObjectCollision(C_BOX, TempValue1, -16, TempValue0, 16)
+		if Object.State != MOVINGSPIKES_HIDE
+			if Player.InvincibleTimer == 0
+
+				PlayerObjectCollision(C_TOUCH, 8, -15, 18, 15)
+				if CheckResult == true
+					Player.State = Player_State_GotHit
+
+					Player.Speed = 0x20000
+				end if
+			end if
+		end if
+		break
+
+	case MOVINGSPIKES_DIRECTION_LEFT
+		PlayerObjectCollision(C_BOX, TempValue0, -16, TempValue1, 16)
+		if Object.State != MOVINGSPIKES_HIDE
+			if Player.InvincibleTimer == 0
+
+				PlayerObjectCollision(C_TOUCH, -18, -15, -8, 15)
+				if CheckResult == true
+					Player.State = Player_State_GotHit
+
+					Player.Speed = -0x20000
+				end if
+			end if
+		end if
+		break
+
+	case MOVINGSPIKES_DIRECTION_DOWN
+		FlipSign(TempValue0)
+		FlipSign(TempValue1)
+		PlayerObjectCollision(C_BOX, -16, TempValue1, 16, TempValue0)
+		if Object.State != MOVINGSPIKES_HIDE
+			if Player.YVelocity < 1
+				if Player.InvincibleTimer == 0
+
+					PlayerObjectCollision(C_TOUCH, -14, 12, 14, 18)
+					if CheckResult == true
+						Player.State = Player_State_GotHit
+						if Player.XPos > Object.XPos
+							Player.Speed =  0x20000
+						else
+							Player.Speed = -0x20000
+						end if
+					end if
+				end if
+			end if
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.PropertyValue
+	case MOVINGSPIKES_DIRECTION_UP
+		TempValue0  = Object.YPos
+		TempValue0 += Object.OffSet
+		DrawSpriteXY(Object.PropertyValue, Object.XPos, TempValue0)
+		break
+
+	case MOVINGSPIKES_DIRECTION_RIGHT
+		TempValue0  = Object.XPos
+		TempValue0 -= Object.OffSet
+		DrawSpriteXY(Object.PropertyValue, TempValue0, Object.YPos)
+		break
+
+	case MOVINGSPIKES_DIRECTION_LEFT
+		TempValue0  = Object.XPos
+		TempValue0 += Object.OffSet
+		DrawSpriteXY(Object.PropertyValue, TempValue0, Object.YPos)
+		break
+
+	case MOVINGSPIKES_DIRECTION_DOWN
+		TempValue0  = Object.YPos
+		TempValue0 -= Object.OffSet
+		DrawSpriteXY(Object.PropertyValue, Object.XPos, TempValue0)
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	SpriteFrame(-16, -16, 32, 32, 50, 1)	// #0 - Spikes facing up
+	SpriteFrame(-16, -16, 32, 32, 50, 34)	// #1 - Spikes facing right
+	SpriteFrame(-16, -16, 32, 32, 50, 67)	// #2 - Spikes facing left
+	SpriteFrame(-16, -16, 32, 32, 50, 100)	// #3 - Spikes facing down
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Orientation
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Orientation
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-16, -16, 32, 32, 50, 1)	// #0 - Spikes facing up
+	SpriteFrame(-16, -16, 32, 32, 50, 34)	// #1 - Spikes facing right
+	SpriteFrame(-16, -16, 32, 32, 50, 67)	// #2 - Spikes facing left
+	SpriteFrame(-16, -16, 32, 32, 50, 100)	// #3 - Spikes facing down
+
+	AddEditorVariable("Orientation")
+	SetActiveVariable("Orientation")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Down", 3)
+end sub

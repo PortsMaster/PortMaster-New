@@ -1,0 +1,176 @@
+//------------Sonic CD Glass Bumper Particles Script----------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	GLASSBUMPER_IDLE
+#alias 1	:	GLASSBUMPER_DESTROYED
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 8	:	SFX_S_CRUMBLE
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Tile Info
+#alias 0	:	TILEINFO_INDEX
+
+
+sub ObjectMain
+	if Object.State == GLASSBUMPER_DESTROYED
+	
+		Object.Timer++
+		if Object.Timer > 15
+			Object.Type = TypeName[Blank Object]
+		end if
+
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Player.Animation != ANI_HURT
+		if Object.State == GLASSBUMPER_IDLE
+			PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+			if CheckResult == true
+#platform: Use_Origins
+				if Player.Animation == ANI_CLIMBING
+					// Before bouncing him away, let's make sure Knuckles is in his normal air state, first
+					CallFunction(Player_CancelClimb)
+				end if
+#endplatform
+
+				PlayStageSfx(SFX_S_CRUMBLE, false)
+
+#platform: Use_Haptics
+				HapticEffect(10, 0, 0, 0)
+#endplatform
+
+				CreateTempObject(TypeName[Object Score], 0, Object.XPos, Object.YPos)
+				Player.Score += 100
+
+				Object.State = GLASSBUMPER_DESTROYED
+
+				Object.Priority = PRIORITY_ACTIVE
+
+				TempValue0  = Player.XPos
+				TempValue0 -= Object.XPos
+
+				TempValue1  = Player.YPos
+				TempValue1 -= Object.YPos
+
+				ATan2(TempValue2, TempValue0, TempValue1)
+				Cos256(TempValue0, TempValue2)
+				Sin256(TempValue1, TempValue2)
+
+				TempValue0 *= 0x700
+				TempValue1 *= 0x700
+
+				Player.XVelocity = TempValue0
+				Player.YVelocity = TempValue1
+				Player.Speed = Player.XVelocity
+
+				Player.Gravity = GRAVITY_AIR
+
+				Player.Timer = 0
+
+				TempValue0  = Object.iXPos
+				TempValue1  = Object.iYPos
+
+				// Replace the bumper tiles with blank tiles
+				TempValue0 -= 8
+				TempValue1 -= 8
+				Set16x16TileInfo(0, TempValue0, TempValue1, TILEINFO_INDEX)
+
+				TempValue0 += 16
+				Set16x16TileInfo(0, TempValue0, TempValue1, TILEINFO_INDEX)
+				
+				TempValue0 -= 16
+				TempValue1 += 16
+				Set16x16TileInfo(0, TempValue0, TempValue1, TILEINFO_INDEX)
+
+				TempValue0 += 16
+				Set16x16TileInfo(0, TempValue0, TempValue1, TILEINFO_INDEX)
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State == GLASSBUMPER_DESTROYED
+		TempValue0   = Object.Timer
+		TempValue0 >>= 3
+		DrawSprite(TempValue0)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects3.gif")
+	
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-16, -16, 32, 32, 66, 1)
+		SpriteFrame(-16, -16, 32, 32, 99, 1)
+		break
+	case TIME_PAST
+		SpriteFrame(-16, -16, 32, 32, 66, 34)
+		SpriteFrame(-16, -16, 32, 32, 99, 34)
+		break
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 66, 67)
+		SpriteFrame(-16, -16, 32, 32, 99, 67)
+		break
+	case TIME_BAD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 66, 100)
+		SpriteFrame(-16, -16, 32, 32, 99, 100)
+		break
+	end switch
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.InkEffect = 1
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects3.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+	switch CheckResult
+	case TIME_PRESENT
+		SpriteFrame(-16, -16, 32, 32, 66, 1)
+		break
+	case TIME_PAST
+		SpriteFrame(-16, -16, 32, 32, 66, 34)
+		break
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 66, 67)
+		break
+	case TIME_BAD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 66, 100)
+		break
+	end switch
+end sub

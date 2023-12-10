@@ -1,0 +1,197 @@
+//-------------------Sonic CD Moth Script---------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.XVelocity
+#alias Object.Value2		:	Object.YVelocity
+#alias Object.Value3		:	Object.FrameTimer
+#alias Object.Value4		:	Object.XOriginPos
+#alias Object.Value5		:	Object.YOriginPos
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	MOTH_IDLE
+#alias 1	:	MOTH_RESPAWN
+#alias 2	:	MOTH_REVEAL
+#alias 3	:	MOTH_FLY
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case MOTH_IDLE
+		PlayerObjectCollision(C_TOUCH, -96, -256, 96, 256)
+		if CheckResult == true
+			Object.DrawOrder = 5
+			
+			Object.State = MOTH_REVEAL
+
+			Object.FrameTimer = 0
+			Object.Frame = 0
+			
+			Object.Priority = PRIORITY_ACTIVE
+
+			Object.XOriginPos = Object.XPos
+			Object.YOriginPos = Object.YPos
+		end if
+		break
+
+	case MOTH_RESPAWN
+		if Object.OutOfBounds == true
+			Object.State = MOTH_IDLE
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case MOTH_REVEAL
+		if Object.Timer < 110
+			Object.Timer++
+
+			if Object.Timer == 30
+				Object.Frame++
+			end if
+
+			if Object.Timer == 60
+				Object.Frame++
+			end if
+
+		else
+			if Object.XPos > Player.XPos
+				Object.XVelocity = -0x8000
+				Object.Direction = FACING_RIGHT
+			else
+				Object.XVelocity = 0x8000
+				Object.Direction = FACING_LEFT
+			end if
+
+			Object.State = MOTH_FLY
+
+			Object.Timer = 0
+
+			if Object.Quality > GOOD_QUALITY
+				Object.XVelocity >>= 1
+			end if
+
+			Object.YVelocity = 0x8000
+		end if
+
+		if Object.OutOfBounds == true
+			Object.State = MOTH_RESPAWN
+
+			Object.Timer = 0
+
+			Object.XPos = Object.XOriginPos
+			Object.YPos = Object.YOriginPos
+		end if
+		break
+
+	case MOTH_FLY
+		Object.XPos += Object.XVelocity
+		Object.YPos += Object.YVelocity
+
+		if Object.Timer < 65
+			Object.Timer++
+		else
+			Object.Timer = 0
+			FlipSign(Object.YVelocity)
+			if Object.Quality == GOOD_QUALITY	// Only good quality moths drop sparkles
+				CreateTempObject(TypeName[Moth Sparkle], 0, Object.XPos, Object.YPos)
+				Object[TempObjectPos].DrawOrder = 5
+			end if
+		end if
+
+		Object.FrameTimer++
+		Object.FrameTimer %= 20
+
+		Object.Frame  = Object.FrameTimer
+		Object.Frame /= 5
+
+		if Object.Quality == GOOD_QUALITY
+			Object.Frame += 3
+		else
+			Object.Frame += 7
+		end if
+
+		if Object.OutOfBounds == true
+			Object.State = MOTH_RESPAWN
+			Object.Timer = 0
+
+			Object.XPos  = Object.XOriginPos
+			Object.YPos  = Object.YOriginPos
+		end if
+		break
+
+	end switch
+
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State > MOTH_REVEAL
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -16, -8, 16, 8)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -16, -8, 16, 8)
+#endplatform
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State > MOTH_RESPAWN
+		DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-12, -16, 24, 16, 1, 216)	// #0  - Moth Reveal Frame 0
+	SpriteFrame(-12, -16, 24, 24, 26, 216)	// #1  - Moth Reveal Frame 1
+	SpriteFrame(-12, -20, 24, 32, 231, 170)	// #2  - Moth Reveal Frame 2
+	// New Moth
+	SpriteFrame(-12, -12, 32, 24, 34, 191)	// #3  - Moth Fly Frame 0
+	SpriteFrame(-12, -8, 32, 16, 165, 183)	// #4  - Moth Fly Frame 1
+	SpriteFrame(-12, -8, 32, 16, 166, 233)	// #5  - Moth Fly Frame 2
+	SpriteFrame(-12, -8, 32, 16, 165, 183)	// #6  - Moth Fly Frame 3
+	// Old Moth
+	SpriteFrame(-12, -12, 32, 24, 1, 157)	// #7  - Moth Fly Frame 0
+	SpriteFrame(-12, -8, 32, 16, 1, 182)	// #8  - Moth Fly Frame 1
+	SpriteFrame(-12, -8, 32, 16, 1, 199)	// #9  - Moth Fly Frame 2
+	SpriteFrame(-12, -8, 32, 16, 1, 182)	// #10 - Moth Fly Frame 3
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.InkEffect = 2
+	Object.Alpha = 196
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+	SpriteFrame(-12, -20, 24, 32, 231, 170)	// #0  - Moth Reveal
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

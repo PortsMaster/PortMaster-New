@@ -1,0 +1,267 @@
+//----------------Sonic CD Trophies Menu Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-----This Object is normally only used by WP7 Data files----//
+
+// Aliases
+#alias Object.Value0 	:	Object.Fade
+#alias Object.Value1 	:	Object.TrophyTimer
+#alias Object.Value2 	:	Object.SelectionPos
+#alias Object.Value3	:	Object.DragEnabled
+#alias Object.Value4	:	Object.TouchYPos
+#alias Object.Value5	:	Object.DragYOffset
+
+// Object[1] is a blank object only used to share values across the menu objects
+#alias Object[1].Value0	:	Object.DragPos
+#alias Object[1].Value4	:	Object.YOffSet1	//in other scripts this is used to check inputs
+#alias Object[1].Value5	:	Object.YOffSet2
+#alias Object[1].Value6	:	Object.YOffSet3
+
+// States
+#alias 0	:	TROPHIES_SETUP
+#alias 1	:	TROPHIES_FADEIN
+#alias 2	:	TROPHIES_CONTROLS
+#alias 5	:	TROPHIES_EXIT
+
+// Presentation Stage
+#alias 1	:	STAGE_P_MENU
+
+//Engine & CallBacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// SFX
+#alias 26	:	SFX_G_OUTTAHERE
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Callbacks & Engine States
+#alias 0	:	CALLBACK_DISPLAYLOGOS
+#alias 7	:	CALLBACK_EXIT_SELECTED
+
+#alias 5	:	ENGINE_ENTER_HIRESMODE
+#alias 6	:	ENGINE_EXIT_HIRESMODE
+
+
+sub ObjectMain
+	switch Object.State
+	case TROPHIES_SETUP
+		TempValue0  = 256
+		TempValue0 -= Screen.CenterX
+		Screen.XOffset = TempValue0
+		PlayMusic(1)
+		Object.Fade = 384
+		Object.State++
+		SetScreenFade(0, 0, 0, 255)
+		break
+
+	case TROPHIES_FADEIN
+		if Object.Fade > 0
+			Object.Fade -= 8
+		else
+			Object.State++
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	case TROPHIES_CONTROLS
+		if Options.PhysicalControls == true
+			if KeyDown[0].Down == true
+				Object.SelectionPos += 0x40000
+				if Object.SelectionPos > 0x1800000
+					Object.SelectionPos = 0x1800000
+				end if
+			end if
+
+			if KeyDown[0].Up == true
+				Object.SelectionPos -= 0x40000
+				if Object.SelectionPos < 0
+					Object.SelectionPos = 0
+				end if
+			end if
+
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				Options.PhysicalControls = false
+			end if
+		else
+			CheckTouchRect(0, 48, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				ArrayPos0 = CheckResult
+				if Object.DragEnabled == false
+					Object.DragEnabled = true
+					Object.DragPos     = Object.SelectionPos
+					Object.DragPos   >>= 16
+
+					Object.TouchYPos = TouchScreen[ArrayPos0].YPos
+				else
+					TempValue0  = Object.TouchYPos
+					TempValue0 -= TouchScreen[ArrayPos0].YPos
+					TempValue0 += Object.DragPos
+
+					Object.YOffSet3 = Object.YOffSet2
+					Object.YOffSet2 = Object.YOffSet1
+					Object.YOffSet1 = Object.DragYOffset
+
+					Object.DragYOffset  = TempValue0
+					TempValue1  		= Object.SelectionPos
+					TempValue1 		  >>= 16
+					Object.DragYOffset -= TempValue1
+
+					Object.SelectionPos   = TempValue0
+					Object.SelectionPos <<= 16
+				end if
+			else
+				if Object.DragEnabled == true
+					Object.DragEnabled   = false
+					Object.DragYOffset  += Object.YOffSet1
+					Object.DragYOffset  += Object.YOffSet2
+					Object.DragYOffset  += Object.YOffSet3
+					Object.DragYOffset >>= 2
+					Object.DragYOffset <<= 16
+				end if
+
+				if Object.DragYOffset != 0
+					Object.SelectionPos += Object.DragYOffset
+					if Object.SelectionPos < 0
+						Object.DragYOffset = 0
+					end if
+
+					if Object.SelectionPos > 0x1800000
+						Object.DragYOffset = 0
+					end if
+
+					if Object.DragYOffset > 0
+						Object.DragYOffset -= 0x2000
+						if Object.DragYOffset < 0
+							Object.DragYOffset = 0
+						end if
+					else
+						Object.DragYOffset += 0x2000
+						if Object.DragYOffset > 0
+							Object.DragYOffset = 0
+						end if
+					end if
+				else
+					if Object.SelectionPos < 0
+						Object.SelectionPos  *= 224
+						Object.SelectionPos >>= 8
+					end if
+
+					if Object.SelectionPos > 0x1800000
+						Object.SelectionPos  -= 0x1800000
+						Object.SelectionPos  *= 224
+						Object.SelectionPos >>= 8
+						Object.SelectionPos  += 0x1800000
+					end if
+				end if
+			end if
+			if KeyPress[0].Up == true
+				Options.PhysicalControls = true
+			end if
+
+			if KeyPress[0].Down == true
+				Options.PhysicalControls = true
+			end if
+		end if
+
+		if KeyPress[0].ButtonB == true
+			PlaySfx(SFX_G_OUTTAHERE, false)
+			StopMusic()
+			Object.State = TROPHIES_EXIT
+		end if
+		break
+		
+	case TROPHIES_EXIT
+		if Object.Fade < 348
+			Object.Fade += 8
+		else
+			Stage.ListPos = STAGE_P_MENU
+			Engine.State = ENGINE_EXIT_HIRESMODE
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	end switch
+end sub
+
+
+sub ObjectDraw
+	Object.TrophyTimer--
+	if Object.TrophyTimer < -31
+		Object.TrophyTimer += 32
+	end if
+	TempValue1   = Object.TrophyTimer
+	TempValue1 >>= 1
+	while TempValue1 < Screen.YSize
+		TempValue0   = Object.TrophyTimer
+		TempValue0 >>= 1
+		while TempValue0 < Screen.XSize
+			DrawSpriteScreenXY(0, TempValue0, TempValue1)
+			TempValue0 += 64
+		loop
+		TempValue1 += 64
+	loop
+	TempValue0  = Screen.XSize
+	TempValue0 -= 16
+	DrawRect(TempValue0, 56, 4, 176, 128, 128, 128, 128)
+	
+	TempValue1   = Object.SelectionPos
+	TempValue1 >>= 16
+	if TempValue1 < 0
+		TempValue1 = 0
+	end if
+	if TempValue1 > 384
+		TempValue1 = 384
+	end if
+	TempValue1 *= 160
+	TempValue1 /= 384
+	TempValue1 += 56
+	DrawRect(TempValue0, TempValue1, 4, 16, 0, 0, 0, 255)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Menu/Trophies.gif")
+	SpriteFrame(0, 0, 64, 64, 385, 385)		// #0 - White Space
+
+	LoadPalette("Trophies.act", 0, 0, 0, 256)
+	LoadPalette("HelpPal1.act", 0, 0, 0, 32)
+	LoadTextFont("Data/Game/HelpText.bin")
+
+	if Options.Soundtrack == OST_JP
+		SetMusicTrack("JP/DAGarden.ogg", 1, 1)
+	else
+		SetMusicTrack("US/DAGarden.ogg", 1, 117382)
+	end if
+	
+	Engine.State		 = ENGINE_ENTER_HIRESMODE
+	Screen.CameraEnabled = false
+
+	Object[0].Type		= TypeName[Trophies Menu]
+	Object[0].Priority  = PRIORITY_ACTIVE
+	Object[0].DrawOrder = 0
+
+	LoadTextFile(MENU_1, "Data/Game/Trophies.txt", 1)
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+	SpriteFrame(16, 0, 63, 30, 1, 513)	// Options
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

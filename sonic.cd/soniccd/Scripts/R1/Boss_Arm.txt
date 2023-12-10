@@ -1,0 +1,185 @@
+//----------------Sonic CD Boss Arm Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// ========================
+// Aliases
+// ========================
+
+#alias Object.Value0 : Object.ArmJointEntity // Set by [Boss Face]
+#alias Object.Value2 : Object.XOffSet
+#alias Object.Value3 : Object.Timer
+#alias Object.Value4 : Object.Charging
+#alias Object.Value5 : Object.YOffSet
+#alias Object.Value6 : Object.XVelocity
+#alias Object.Value7 : Object.YVelocity
+
+// States
+#alias 0 : BOSSARM_SETUP
+#alias 1 : BOSSARM_IDLE
+#alias 2 : BOSSARM_DESTROYED
+#alias 3 : BOSSARM_MOVE_TO_FRONT
+#alias 4 : BOSSARM_MOVE_TO_BACK
+#alias 5 : BOSSARM_START_CHARGE
+
+// Arm Joint Aliases
+#alias Object.XPos : ArmJoint.XPos
+#alias Object.YPos : ArmJoint.YPos
+
+// Priority Aliases
+#alias 0 : PRIORITY_BOUNDS
+
+// Global SFX Aliases
+#alias 22 : SFX_G_EXPLOSION
+
+
+// ========================
+// Fuction Declarations
+// ========================
+
+#function BossArm_HandleArmMovement
+
+
+// ========================
+// Fucntion Definitions
+// ========================
+
+function BossArm_HandleArmMovement
+	ArrayPos0 = Object.ArmJointEntity
+
+	Object.XPos  = ArmJoint[ArrayPos0].XPos
+	Object.XPos -= 0x240000
+	Object.XPos += Object.XVelocity
+
+	Object.YPos = ArmJoint[ArrayPos0].YPos
+	
+	TempValue1 = true
+	GetBit(TempValue0, Object.Charging, 7)	// Check if the HVC is charging agaisnt Sonic
+	if TempValue0 == false	// If not, adjust the arms height to defend from the player
+		if Player.YPos < Object.YPos
+			if Object.YVelocity > -0x80000
+				Object.YVelocity -= 0x10000
+			end if
+			
+			TempValue1 = false
+		end if
+	end if
+
+	if TempValue1 == true	// If it's charging, then the arm's height is set in stone
+		if Object.YVelocity < 0x80000
+			Object.YVelocity += 0x10000
+		end if
+	end if
+	Object.YPos += Object.YVelocity
+end function
+
+
+// ========================
+// Events
+// ========================
+
+sub ObjectMain
+	switch Object.State
+	case BOSSARM_SETUP
+		Object.State = BOSSARM_IDLE
+		// [Fallthrough]
+	case BOSSARM_IDLE
+		CallFunction(BossArm_HandleArmMovement)
+		break
+
+	case BOSSARM_DESTROYED
+		Object.XOffSet -= 0x620
+		Object.XPos += Object.XOffSet
+
+		Object.YOffSet += 0x1220
+		Object.YPos += Object.YOffSet
+
+		Object.Timer++
+		if Object.Timer == 7
+			Object.Timer = 0
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			PlaySfx(SFX_G_EXPLOSION, false)
+		end if
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case BOSSARM_MOVE_TO_FRONT
+		if Object.XVelocity > 0
+			Object.XVelocity -= 0x8000
+		end if
+		CallFunction(BossArm_HandleArmMovement)
+		break
+
+	case BOSSARM_MOVE_TO_BACK
+		if Object.XVelocity < 0x100000
+			Object.XVelocity += 0x8000
+		end if
+		CallFunction(BossArm_HandleArmMovement)
+		break
+
+	case BOSSARM_START_CHARGE
+		if Object.XVelocity < 0x80000
+			Object.XVelocity += 0x8000
+		else
+			// Set the arm to its retracted frame
+			// -> However, because of an oversight when drawing, this change can't be seen anyway so this has no effect
+			Object.Frame = 1
+		end if
+		
+		ArrayPos0 = Object.ArmJointEntity
+		
+		Object.XPos  = ArmJoint[ArrayPos0].XPos
+		Object.XPos -= 0x240000
+		Object.XPos += Object.XVelocity
+
+		if Object.YVelocity <0x80000
+			Object.YVelocity += 0x10000
+		end if
+		Object.YPos  = ArmJoint[ArrayPos0].YPos
+		Object.YPos += Object.YVelocity
+		break
+		
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(3)
+		
+	// See above - this should actually be Object.Frame
+	// However, since it isn't, the arm just shows as extended all the time
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+
+	SpriteFrame(-15, -8, 32, 16, 141, 34)	// #0 - Arm Extend
+	SpriteFrame(-6, -8, 24, 16, 174, 34)	// #1 - Arm Retract Frame 0	(Unused, though meant to be used)
+	SpriteFrame(2, -8, 16, 16, 124, 51)		// #2 - Arm Retract Frame 1	(Unused)
+	SpriteFrame(9, -8, 24, 16, 141, 51)		// #3 - Arm Elbow
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-15, -8, 32, 16, 141, 34) // Arm Extend
+	SpriteFrame(9, -8, 24, 16, 141, 51)   // Elbow
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

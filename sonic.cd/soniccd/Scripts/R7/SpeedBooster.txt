@@ -1,0 +1,184 @@
+//---------------Sonic CD Speed Booster Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.DrawOffsetX
+
+// Booster Cartridge Aliases
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+
+// Base State
+#alias 0	:	SPEEDBOOSTER_IDLE
+
+// Pair of States for when the player is shot right
+#alias 1	:	SPEEDBOOSTER_RECOIL_R
+#alias 2	:	SPEEDBOOSTER_RECOVER_R
+
+// Pair of States for when the player is shot left
+#alias 3	:	SPEEDBOOSTER_RECOIL_L
+#alias 4	:	SPEEDBOOSTER_RECOVER_L
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Stage SFX
+#alias 0	:	SFX_S_LARGEBOOSTER	// In origins, this SFX is Launcher
+#alias 1	:	SFX_S_SWITCH
+
+
+sub ObjectMain
+	switch Object.State
+	case SPEEDBOOSTER_RECOIL_R
+		if Object.Timer < 6
+			Object.DrawOffsetX -= 0x80000
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOVER_R
+		if Object.Timer < 6
+			Object.DrawOffsetX += 0x80000
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State = SPEEDBOOSTER_IDLE
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOIL_L
+		if Object.Timer < 6
+			Object.DrawOffsetX += 0x80000
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOVER_L
+		if Object.Timer < 6
+			Object.DrawOffsetX -= 0x80000
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State = SPEEDBOOSTER_IDLE
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	if Object.State == SPEEDBOOSTER_IDLE
+		if Player.State != Player_State_Air
+			PlayerObjectCollision(C_TOUCH, -32, -12, 32, 4)
+			if CheckResult == true
+				
+				// Make the Speed Boster always active for the next few frames
+				Object.Priority = PRIORITY_ACTIVE
+
+				PlayStageSfx(SFX_S_LARGEBOOSTER, false)
+
+#platform: Use_Haptics
+				HapticEffect(30, 0, 0, 0)
+#endplatform
+
+				// Different actions for the different directions the player will be sent
+				if Player.Speed > 0
+					Object.State = SPEEDBOOSTER_RECOIL_R
+					Player.Speed = 0x100000
+					Player.Direction = FACING_RIGHT
+
+					CreateTempObject(TypeName[Fire Trail], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos -= 0x180000
+					Object[TempObjectPos].YPos -= 0x60000
+
+					CreateTempObject(TypeName[BoosterCartridge], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XVelocity = -0x20000
+					Object[TempObjectPos].YVelocity = -0x70000
+				else
+					Object.State = SPEEDBOOSTER_RECOIL_L
+					Player.Speed = -0x100000
+					Player.Direction = FACING_LEFT
+
+					CreateTempObject(TypeName[Fire Trail], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XPos += 0x180000
+					Object[TempObjectPos].YPos -= 0x60000
+					Object[TempObjectPos].Direction = FACING_LEFT
+
+					CreateTempObject(TypeName[BoosterCartridge], 0, Object.XPos, Object.YPos)
+					Object[TempObjectPos].XVelocity = 0x20000
+					Object[TempObjectPos].YVelocity = -0x70000
+					Object[TempObjectPos].Direction = FACING_LEFT
+				end if
+			end if
+		end if
+	end if
+
+end sub
+
+
+sub ObjectDraw
+
+	TempValue0 = Object.DrawOffsetX
+	TempValue0 += Object.XPos
+	DrawSpriteXY(0, TempValue0, Object.YPos)
+
+end sub
+
+
+sub ObjectStartup
+
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Booster Frame
+	SpriteFrame(-32, -12, 64, 24, 34, 96)
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Speed Booster]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+
+		ArrayPos0++
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	
+	if Editor.ShowGizmos == true
+		// Draw the Booster's activation box
+		
+		TempValue0 = Object.iXPos
+		TempValue0 -= 32
+		TempValue1 = Object.iYPos
+		TempValue1 -= 12
+		DrawRectOutline(TempValue0, TempValue1, 64, 16, 255, 255, 255, 255)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 34, 96)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

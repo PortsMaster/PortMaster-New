@@ -1,0 +1,207 @@
+//------------------Sonic CD PataBata Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Oscillation
+#alias Object.Value1		:	Object.YOriginPos
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	PATABATA_FLY_DOWN
+#alias 1	:	PATABATA_FLY_UP
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	if Object.Quality == GOOD_QUALITY
+		Object.Frame++
+		if Object.Frame > 39
+			Object.Frame = 0
+		end if
+
+		switch Object.State
+		case PATABATA_FLY_DOWN
+			Sin(Object.YPos, Object.Oscillation)
+			Object.YPos <<= 12
+			Object.YPos  += Object.YOriginPos
+
+			Object.XPos  -= 0x8000
+
+			Object.Oscillation -= 4
+			if Object.Oscillation == 0
+				Object.State = PATABATA_FLY_UP
+				Object.Direction = FACING_LEFT
+			end if
+			break
+
+		case PATABATA_FLY_UP
+			Sin(Object.YPos, Object.Oscillation)
+			FlipSign(Object.YPos)
+			Object.YPos <<= 12
+			Object.YPos  += Object.YOriginPos
+
+			Object.XPos  += 0x8000
+
+			Object.Oscillation += 4
+			if Object.Oscillation == 2048
+				Object.State = PATABATA_FLY_DOWN
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+
+		end switch
+	else
+		Object.Frame++
+		if Object.Frame > 39
+			Object.Frame = 20
+		end if
+
+		switch Object.State
+		case PATABATA_FLY_DOWN
+			Sin(Object.YPos, Object.Oscillation)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YOriginPos
+			
+			Object.XPos  -= 0x4000
+
+			Object.Oscillation -= 2
+			if Object.Oscillation == 0
+				Object.State = PATABATA_FLY_UP
+				Object.Direction = FACING_LEFT
+			end if
+			break
+
+		case PATABATA_FLY_UP
+			Sin(Object.YPos, Object.Oscillation)
+			FlipSign(Object.YPos)
+			Object.YPos <<= 11
+			Object.YPos  += Object.YOriginPos
+
+			Object.XPos  += 0x4000
+
+			Object.Oscillation += 2
+			if Object.Oscillation == 2048
+				Object.State = PATABATA_FLY_DOWN
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+
+		end switch
+	end if
+
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -14, -14, 14, 14)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.Quality == GOOD_QUALITY
+		TempValue0   = Object.Frame
+		TempValue0 >>= 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		TempValue0   = Object.Frame
+		TempValue0 >>= 2
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	
+	// Good PataBata
+	SpriteFrame(-16, -16, 32, 32, 1, 51)	// #0 - PataBata Fly Frame 0
+	SpriteFrame(-16, -8, 32, 16, 1, 84)		// #1 - PataBata Fly Frame 1
+	SpriteFrame(-16, -16, 32, 32, 117, 1)	// #2 - PataBata Fly Frame 2
+	SpriteFrame(-16, -8, 32, 16, 1, 84)		// #3 - PataBata Fly Frame 3
+	SpriteFrame(-16, -16, 32, 32, 1, 51)	// #4 - PataBata Fly Frame 4
+
+	// Bad PataBata
+	SpriteFrame(-16, -16, 32, 32, 150, 1)	// #5 - PataBata Fly Frame 0
+	SpriteFrame(-16, -8, 32, 16, 1, 84)		// #6 - PataBata Fly Frame 1
+	SpriteFrame(-16, -16, 32, 32, 183, 1)	// #7 - PataBata Fly Frame 2
+	SpriteFrame(-16, -8, 32, 16, 1, 84)		// #8 - PataBata Fly Frame 3
+	SpriteFrame(-16, -16, 32, 32, 150, 1)	// #9 - PataBata Fly Frame 4
+	
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[PataBata]
+			Object[ArrayPos0].YOriginPos  = Object[ArrayPos0].YPos
+			Object[ArrayPos0].Oscillation = 1024
+			Object[ArrayPos0].Frame  = Object[ArrayPos0].Quality
+			Object[ArrayPos0].Frame *= 20
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // type
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	
+	// Good PataBata
+	SpriteFrame(-16, -16, 32, 32, 1, 51)	// #0 - PataBata Fly Frame 0
+	
+	// Bad PataBata
+	SpriteFrame(-16, -16, 32, 32, 150, 1)	// #5 - PataBata Fly Frame 0
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

@@ -1,0 +1,160 @@
+//-------------Sonic CD Vertical Platform Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.OffSetYPos
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.Angle
+
+// Property Values
+// This property values only cover the starting position
+#alias 0	:	START_MOVING_DOWN
+#alias 1	:	START_MOVING_UP
+
+
+sub ObjectMain
+	Object.Angle   = Oscillation
+	Object.Angle <<= 1
+	if Object.PropertyValue == START_MOVING_DOWN
+		Object.Angle += 256
+	end if
+
+	Sin(Object.YVelocity, Object.Angle)
+	Object.YVelocity <<= 13
+	Object.YVelocity  += Object.YPos
+	Object.YVelocity  &= 0xFFFF0000 // Truncate the value
+	Object.YVelocity  -= Object.OffSetYPos
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0  = Object.YPos
+	Object.YPos = Object.OffSetYPos
+
+	PlayerObjectCollision(C_PLATFORM, -24, -12, 24, 8)
+	if CheckResult == true
+		Player.YPos += Object.YVelocity
+		if Player.State == Player_State_SpinningTop
+			Player.State = Player_State_Ground
+		end if
+	end if
+	Object.YPos = TempValue0
+end sub
+
+
+sub ObjectDraw
+	Sin(Object.OffSetYPos, Object.Angle)
+	Object.OffSetYPos <<= 13
+	Object.OffSetYPos  += Object.YPos
+	Object.OffSetYPos  &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(0, Object.XPos, Object.OffSetYPos)
+	DrawSpriteXY(1, Object.XPos, Object.OffSetYPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 1, 84)	// #0 - Vertical Platform
+	SpriteFrame(-8, 16, 16, 16, 35, 117)	// #1 - Platform Light
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[V Platform]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // startDir
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // startDir
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+
+	switch Object.PropertyValue
+	case START_MOVING_DOWN
+		TempValue1 = 255
+		TempValue2 = 255
+		TempValue3 = 128
+		TempValue4 = 0
+		break
+	case START_MOVING_UP
+		TempValue1 = 128
+		TempValue2 = 0
+		TempValue3 = 255
+		TempValue4 = 255
+		break
+	end switch
+
+	TempValue5   = Object.XPos
+	TempValue5  -= 0x180000
+	if object.PropertyValue == START_MOVING_DOWN
+		TempValue0   = Object.YPos
+		TempValue0  += 0x490000
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue3, TempValue4, 0)
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			TempValue0   = Object.YPos
+			TempValue0  -= 0x490000
+			DrawRectOutline(TempValue5, TempValue0, 0x30, 0x92, 255, 255, 255, 255)
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue1, TempValue2, 0)
+			Editor.DrawingOverlay = false
+		end if
+	else
+		TempValue0   = Object.YPos
+		TempValue0  -= 0x490000
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue1, TempValue2, 0)
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue5, TempValue0, 0x30, 0x92, 255, 255, 255, 255)
+			TempValue0   = Object.YPos
+			TempValue0  += 0x490000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue3, TempValue4, 0)
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-24, -16, 48, 32, 1, 84)	// #0 - Vertical Platform frame 0
+	SpriteFrame(-8, 16, 16, 16, 35, 117)	// #1 - Platform Light
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Down", START_MOVING_DOWN)
+	AddEnumVariable("Up", START_MOVING_UP)
+end sub

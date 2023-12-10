@@ -1,0 +1,237 @@
+//----------------Sonic CD Help Buttons Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object[0].State 	:	Object.HelpState
+#alias Object[0].Value0	:	Object.HelpFade
+#alias Object[0].Value1	:	Object.ButtonPressed
+#alias Object[0].Value3	:	Object.CurrentPage
+
+// Global SFX
+#alias 26	:	SFX_G_OUTTAHERE
+#alias 27	:	SFX_G_SELECT
+
+//Engine & CallBacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Device Type
+#alias 1	:	RETRO_MOBILE
+
+// Help Menu States
+#alias 2	:	HELPMENU_CONTROLS
+#alias 3	:	HELPMENU_PAGEDOWN
+#alias 4	:	HELPMENU_PAGEUP
+#alias 5	:	HELPMENU_LEAVE
+
+// Property Values
+#alias 0	:	BUTTON_DOWN
+#alias 1	:	BUTTON_UP
+#alias 2	:	BUTTON_BACK
+
+
+sub ObjectMain
+	if Object.HelpState == HELPMENU_CONTROLS
+		if Engine.Message == MESSAGE_LOSTFOCUS
+			Object.ButtonPressed = 0
+		end if
+
+		TempValue0   = Object.XPos
+		TempValue0 >>= 16
+		TempValue1   = TempValue0
+
+		TempValue0 -= 18
+		TempValue0 -= Screen.XOffset
+		
+		TempValue1 += 18
+		TempValue1 -= Screen.XOffset
+		CheckTouchRect(TempValue0, 0, TempValue1, 48)
+		if CheckResult > -1
+			Object.ButtonPressed = Object.PropertyValue
+			Object.ButtonPressed++
+		else
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult < 0
+				switch Object.PropertyValue
+				case BUTTON_DOWN
+					if Object.ButtonPressed == true
+						Object.ButtonPressed = 0
+						if Object.CurrentPage < 8
+							PlaySfx(SFX_G_SELECT, false)
+							Object.HelpFade = 256
+							Object.HelpState = HELPMENU_PAGEDOWN
+						end if
+					end if
+					break
+
+				case BUTTON_UP
+					if Object.ButtonPressed == 2
+						Object.ButtonPressed = 0
+						if Object.CurrentPage > 0
+							PlaySfx(SFX_G_SELECT, false)
+							Object.HelpState = HELPMENU_PAGEUP
+						end if
+					end if
+					break
+
+				case BUTTON_BACK
+					if Object.ButtonPressed == 3
+						Object.ButtonPressed = 0
+						PlaySfx(SFX_G_OUTTAHERE, false)
+						StopMusic()
+						Object.HelpState = HELPMENU_LEAVE
+					end if
+					break
+
+				end switch
+			else
+				switch Object.PropertyValue
+				case BUTTON_DOWN
+					if Object.ButtonPressed == 1
+						Object.ButtonPressed = 0
+					end if
+					break
+
+				case BUTTON_UP
+					if Object.ButtonPressed == 2
+						Object.ButtonPressed = 0
+					end if
+					break
+
+				case BUTTON_BACK
+					if Object.ButtonPressed == 3
+						Object.ButtonPressed = 0
+					end if
+					break
+
+				end switch
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	Object.Scale = 128
+	switch Object.PropertyValue
+	case BUTTON_DOWN
+		if Object.ButtonPressed == 1
+			DrawSpriteFX(1, FX_SCALE, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(0, FX_SCALE, Object.XPos, Object.YPos)
+		end if
+		break
+	case BUTTON_UP
+		if Object.ButtonPressed == 2
+			DrawSpriteFX(3, FX_SCALE, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(2, FX_SCALE, Object.XPos, Object.YPos)
+		end if
+		break
+	case BUTTON_BACK
+		if Object.ButtonPressed == 3
+			DrawSpriteFX(5, FX_SCALE, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(4, FX_SCALE, Object.XPos, Object.YPos)
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Menu/Buttons.gif")
+
+	SpriteFrame(-63, -39, 126, 78, 1, 1)		// #0 - Down Button
+	SpriteFrame(-60, -37, 120, 74, 132, 3)		// #1 - Down Button Highlight
+	SpriteFrame(-63, -39, 126, 78, 1, 81)		// #2 - Up Button
+	SpriteFrame(-60, -37, 120, 74, 132, 83)		// #3 - Up Button Highlight
+	
+#platform: Use_Origins
+	if Engine.DeviceType == RETRO_MOBILE
+		SpriteFrame(-63, -39, 126, 78, 1, 161)	// #4 - Back Button
+		SpriteFrame(-60, -37, 120, 74, 132, 163)// #5 - Back Button Highlight
+	else
+		SpriteFrame(-63, -39, 0, 0, 0, 0)
+		SpriteFrame(-60, -37, 0, 0, 0, 0)
+	end if
+#endplatform
+
+#platform: Use_Standalone
+	SpriteFrame(-63, -39, 126, 78, 1, 161)		// #4 - Back Button
+	SpriteFrame(-60, -37, 120, 74, 132, 163)	// #5 - Back Button Highlight
+#endplatform
+
+	TempValue0   = Screen.CenterX
+	TempValue0  -= 160
+	TempValue0 <<= 16
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Help Buttons]
+			Object[ArrayPos0].XPos += TempValue0
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	switch Object.PropertyValue
+	case 0
+		DrawSprite(0)
+		break
+
+	case 1
+		DrawSprite(2)
+		break
+		
+	case 2
+		DrawSprite(4)
+		break
+	end switch
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/Buttons.gif")
+	SpriteFrame(-63, -39, 126, 78, 1, 1)		// #0 - Down Button
+	SpriteFrame(-60, -37, 120, 74, 132, 3)		// #1 - Down Button Highlight
+	SpriteFrame(-63, -39, 126, 78, 1, 81)		// #2 - Up Button
+	SpriteFrame(-60, -37, 120, 74, 132, 83)		// #3 - Up Button Highlight
+	SpriteFrame(-63, -39, 126, 78, 1, 161)		// #4 - Back Button
+	SpriteFrame(-60, -37, 120, 74, 132, 163)	// #5 - Back Button Highlight
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Down Button", 0)
+	AddEnumVariable("Up Button", 1)
+	AddEnumVariable("Back Button", 2)
+end sub

@@ -1,0 +1,146 @@
+//-------------------Sonic CD Rabbit Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.YVelocity
+#alias Object.Value1			:	Object.Hops
+
+// HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	RABBIT_HOPRIGHT
+#alias 1	:	RABBIT_HOPLEFT
+
+// Collision Side Aliases
+#alias 0	:	CSIDE_FLOOR
+
+// Time Period Aliases
+#alias 2	:	TIME_GOOD_FUTURE
+
+
+sub ObjectMain
+	Object.YPos += Object.YVelocity
+	
+	// Apply a Gravity of about 0.17px per frame
+	Object.YVelocity += 0x2C00
+	
+	switch Object.State
+	case RABBIT_HOPRIGHT
+		
+		// Move the Rabbit right by a pixel
+		Object.XPos += 0x10000
+		
+		// Only check for the floor if the Rabbit's falling at a rate faster than 4px per frame
+		if Object.YVelocity > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			
+			if CheckResult == true
+				// Bounce back up, at a rate of 5px upwards per frame
+				Object.YVelocity = -0x50000
+				
+				Object.Hops++
+				
+				// Upon landing from the third hop, the Rabbit should turn around
+				if Object.Hops == 2
+					Object.Hops = 0
+					Object.State = RABBIT_HOPLEFT
+					Object.Direction = FACING_LEFT
+				end if
+			end if
+		end if
+		break
+		
+	case RABBIT_HOPLEFT
+		
+		// Move the Rabbit a pixel left
+		Object.XPos -= 0x10000
+		
+		// Only check for ground collision if falling faster than 4px a frame
+		if Object.YVelocity > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			
+			if CheckResult == true
+				// Bounce back up!
+				
+				// Starting YVel of 5px per frame
+				Object.YVelocity = -0x50000
+				
+				// After hopping thrice, turn right around
+				Object.Hops++
+				if Object.Hops == 2
+					Object.Hops = 0
+					Object.State = RABBIT_HOPRIGHT
+					Object.Direction = FACING_RIGHT
+				end if
+			end if
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	if MetalSonic_Destroyed == true
+		if Object.YVelocity < 0
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+	else
+		if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+			if Object.YVelocity < 0
+				DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+			else
+				DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects3.gif")
+
+	SpriteFrame(-8, -12, 16, 24, 149, 1)
+	SpriteFrame(-8, -12, 16, 24, 166, 1)
+	
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	// Loop through all Objects in the stage and setup all Rabbits
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rabbit]
+			
+			// Make the Rabbit start at a rising rate of 5px per frame
+			Object[ArrayPos0].YVelocity = -0x50000
+			
+			// Start facing right
+			Object[ArrayPos0].Direction = FACING_RIGHT
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects3.gif")
+	SpriteFrame(-8, -12, 16, 24, 149, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

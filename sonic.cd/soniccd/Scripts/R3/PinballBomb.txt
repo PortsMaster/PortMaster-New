@@ -1,0 +1,128 @@
+//---------------Sonic CD Pinball Bomb Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.FrameTimer
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.Bounces
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+#alias 1	:	CSIDE_LWALL
+#alias 2	:	CSIDE_RWALL
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	Object.YVelocity += 0x2000
+	// if the bomb goes fast enough, get to the background
+	if Object.YVelocity > 0x40000
+		Object.DrawOrder = 3
+	end if
+	Object.XPos += Object.XVelocity
+	Object.YPos += Object.YVelocity
+
+	Object.FrameTimer++
+	Object.FrameTimer &= 3
+
+	if Object.XVelocity > 0
+		ObjectTileCollision(CSIDE_LWALL, 8, 0, 0)
+	else
+		ObjectTileCollision(CSIDE_RWALL, -8, 0, 0)
+	end if
+	if CheckResult == true
+		FlipSign(Object.XVelocity)
+	end if
+
+	ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+	if CheckResult == true
+		FlipSign(Object.YVelocity)
+		Object.YVelocity >>= 1
+
+		if Object.Bounces < 1
+			Object.Bounces++
+		else
+			PlaySfx(SFX_G_EXPLOSION, false)
+			ResetObjectEntity(Object.EntityNo, TypeName[Explosion], 0, Object.XPos, Object.YPos)
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+	if CheckResult == true
+		PlaySfx(SFX_G_EXPLOSION, false)
+
+#platform: Use_Haptics
+		HapticEffect(96, 0, 0, 0)
+#endplatform
+
+		ResetObjectEntity(Object.EntityNo, TypeName[Explosion], 0, Object.XPos, Object.YPos)
+		Object.Priority = PRIORITY_ACTIVE
+
+		TempValue0  = Player.XPos
+		TempValue0 -= Object.XPos
+
+		TempValue1  = Player.YPos
+		TempValue1 -= Object.YPos
+		ATan2(TempValue2, TempValue0, TempValue1)
+
+		Cos256(TempValue0, TempValue2)
+		Sin256(TempValue1, TempValue2)
+		TempValue0 *= 0x700
+		TempValue1 *= 0x700
+
+		Player.XVelocity = TempValue0
+		Player.YVelocity = TempValue1
+		Player.Speed = Player.XVelocity
+
+		Player.Gravity = GRAVITY_AIR
+		Player.Timer = 0
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.FrameTimer == 0
+		DrawSprite(0)
+	else
+		DrawSprite(1)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	SpriteFrame(-12, -12, 24, 24, 232, 0)	// #0 - Pinball Bomb Frame 0
+	SpriteFrame(-8, -8, 16, 16, 130, 67)	// #1 - Pinball Bomb Frame 1
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	SpriteFrame(-12, -12, 24, 24, 232, 0)	// #0 - Pinball Bomb
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

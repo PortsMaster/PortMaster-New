@@ -1,0 +1,374 @@
+//--------------Sonic CD Falling Platform Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Stood
+#alias Object.Value1			:	Object.DipTimer
+#alias Object.Value2			:	Object.MoveY
+#alias Object.Value3			:	Object.Timer
+#alias Object.Value4			:	Object.YVelocity
+#alias Object.Value5			:	Object.StartPosY
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	FALLPLATFORM_FLOAT
+#alias 1	:	FALLPLATFORM_SUSPEND
+#alias 2	:	FALLPLATFORM_FALLING
+#alias 3	:	FALLPLATFORM_OFFSCREEN
+
+// Time Period Aliases
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	
+	// Object.Stood is supposed to be set from last frame, by ObjectPlayerInteraction
+	
+	if Object.Stood == true
+		if Object.State == FALLPLATFORM_FLOAT
+			Object.State = FALLPLATFORM_SUSPEND
+		end if
+		
+		if Object.DipTimer < 16
+			// Sink down
+			
+			Object.DipTimer++
+			
+			TempValue0 = Object.DipTimer
+			TempValue0 &= 3
+			
+			if TempValue0 == 3
+				// Dip a pixel down
+				Object.MoveY = 0x10000
+			else
+				Object.MoveY = 0
+			end if
+		else
+			Object.MoveY = 0
+		end if
+	else
+		if Object.DipTimer > 0
+			// Move back up
+			
+			Object.DipTimer--
+			
+			TempValue0 = Object.DipTimer
+			TempValue0 &= 3
+			
+			if TempValue0 == 3
+				// Recover a pixel upwards again
+				Object.MoveY = -0x10000
+			else
+				Object.MoveY = 0
+			end if
+		else
+			Object.MoveY = 0
+		end if
+	end if
+	
+	// Reset it, to be set in ObjectPlayerInteraction again later this frame
+	Object.Stood = false
+	
+	switch Object.State
+	case FALLPLATFORM_SUSPEND
+		if Object.Timer < 30
+			// Hold for a moment before starting to fall
+			Object.Timer++
+		else
+			// Fall away!
+			
+			Object.YVelocity = 0
+			Object.Timer = 0
+			Object.State = FALLPLATFORM_FALLING
+			
+			// Make this Object always active, needed for its respawn process
+			Object.Priority = PRIORITY_ACTIVE
+		end if
+		break
+		
+	case FALLPLATFORM_FALLING
+		// If the Object yet hasn't reached a Y Velocity of 4 pixels per frame,
+		// then accelerate at a rate of 0.125 pixels per frame
+		if Object.YVelocity < 0x40000
+			Object.YVelocity += 0x2000
+		end if
+		
+		// Move the Platform
+		// (Via increasing its move value)
+		Object.MoveY += Object.YVelocity
+		
+		// Has the Object fallen out of range now?
+		if Object.OutOfBounds == true
+			
+			// Move the Platform back to its base Position
+			Object.YPos = Object.StartPosY
+			
+			// Reset to the Buffer State
+			Object.State = FALLPLATFORM_OFFSCREEN
+			Object.YVelocity = 0
+			
+		end if
+		break
+		
+	case FALLPLATFORM_OFFSCREEN
+		if Object.OutOfBounds == true
+			// Now that the Platform is out of the Player's view, reset all the way back to normal
+			Object.State = FALLPLATFORM_FLOAT
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.State < FALLPLATFORM_OFFSCREEN
+		
+		// Support for different Platform sizes
+		// This also supports Conveyor Platforms, in a way, but the Player isn't moved along the Conveyor
+		switch Object.PropertyValue
+		case 0
+			// Small Platform
+			PlayerObjectCollision(C_PLATFORM, -16, -16, 16, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		case 1
+			// Medium-sized Platform
+			PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		case 2
+			// Large Platform
+			PlayerObjectCollision(C_PLATFORM, -48, -16, 48, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		case 3
+			// Small Conveyor Platform
+			PlayerObjectCollision(C_PLATFORM, -16, -16, 16, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		case 4
+			// Medium-sized Conveyor Platform
+			PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		case 5
+			// Large Conveyor Platform
+			PlayerObjectCollision(C_PLATFORM, -48, -16, 48, 12)
+			if CheckResult == true
+				Object.Stood = true
+				Player.YPos += Object.MoveY
+			end if
+			break
+			
+		end switch
+		
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	
+	Object.YPos += Object.MoveY
+	
+	if Object.State < FALLPLATFORM_OFFSCREEN
+		switch Object.PropertyValue
+		case 0
+		case 1
+		case 2
+			// Normal Platform
+			DrawSprite(Object.PropertyValue)
+			break
+			
+		case 3
+			// Small Conveyor Platform
+			DrawSprite(0)
+			DrawSprite(3)
+			break
+			
+		case 4
+			// Medium-sized Coneyor Platform
+			DrawSprite(1)
+			DrawSprite(4)
+			break
+			
+		case 5
+			// Large Conveyor Platform
+			DrawSprite(2)
+			DrawSprite(5)
+			break
+			
+		end switch
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// All the Time Periods get unique platform sprites
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 51)
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-48, -16, 96, 32, 1, 84)
+		SpriteFrame(-16, -16, 32, 16, 65, 208)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		SpriteFrame(-48, -16, 96, 16, 1, 191)
+		break
+		
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 148)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		SpriteFrame(-48, -16, 96, 16, 159, 131)
+		break
+		
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 182)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		SpriteFrame(-48, -16, 96, 16, 159, 165)
+		break
+		
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 216)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		SpriteFrame(-48, -16, 96, 16, 159, 199)
+		break
+		
+	end switch
+	
+	// Loop through all Objects in the Stage and find all Falling Platforms
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Falling Platform]
+			
+			// Store the Falling Platform's starting Position, needed for when it'll respawn
+			Object[ArrayPos0].StartPosY = Object[ArrayPos0].YPos
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	if Object.PropertyValue >= 3
+		TempValue0 = -3
+		TempValue0 += Object.PropertyValue
+		DrawSprite(TempValue0)
+	end if
+	
+	DrawSprite(Object.PropertyValue)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		// Draw an arrow pointing down to show that this Platform is of the falling type
+		
+		TempValue0 = Object.YPos
+		TempValue0 += 0x300000
+		
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	// sticking with the R5A version of the sprites here...
+	// TODO: support for other time periods
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 51)
+	SpriteFrame(-32, -16, 64, 32, 34, 51)
+	SpriteFrame(-48, -16, 96, 32, 1, 84)
+	SpriteFrame(-16, -16, 32, 16, 65, 208)
+	SpriteFrame(-32, -16, 64, 16, 1, 208)
+	SpriteFrame(-48, -16, 96, 16, 1, 191)
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Small", 0)
+	AddEnumVariable("Medium", 1)
+	AddEnumVariable("Large", 2)
+	AddEnumVariable("Small Conveyor", 3)
+	AddEnumVariable("Medium Conveyor", 4)
+	AddEnumVariable("Large Conveyor", 5)
+end sub

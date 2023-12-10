@@ -1,0 +1,220 @@
+//------------Sonic CD Background Animation Script------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.AngleFull
+#alias Object.Value1	:	Object.AngleRounded
+#alias Object.Value2	:	Object.BackBGSonicXPos
+#alias Object.Value3	:	Object.FrontBGSonicXPos
+#alias Object.Value4	:	Object.ZPos
+
+// Ink Effects
+#alias 1	:	INK_BLEND
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Face Buffer Flags
+#alias 2	:	FACE_FLAG_COLOURED_3D
+
+
+sub ObjectDraw
+	// The "Full" value ranges from 0 to 1023, using 10 bits
+	Object.AngleFull++
+	Object.AngleFull &= 1023
+	
+	// The "Rounded" value, however, ranges from 0 to 511, using 9 bits, as RSDK's anlges are 512-based rather than 1024-based
+	Object.AngleRounded   = Object.AngleFull
+	Object.AngleRounded >>= 1
+	
+	// From this rounded value, now we actually do stuff
+	
+	// First, manage the depth of the BG
+	Sin(Object.ZPos, Object.AngleRounded)
+	Object.ZPos += 0x5000
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, Object.ZPos)
+	
+	// Now, handle the rotating of the BG
+	TempValue0 = Object.AngleRounded
+	MatrixRotateXYZ(MAT_VIEW, 0, 0, TempValue0)
+	
+	// Draw the rectangles here, notably before we draw the Sonic sprites
+	Draw3DScene()
+	
+	// Now after we've drawn the 3d stuff, draw Sonic himself
+	
+	Object.BackBGSonicXPos  = Screen.CenterX
+	Object.BackBGSonicXPos -= 4
+	DrawSpriteScreenFX(0, FX_INK, Object.BackBGSonicXPos, Screen.CenterY)
+	
+	Object.FrontBGSonicXPos  = Screen.CenterX
+	Object.FrontBGSonicXPos += 4
+	DrawSpriteScreenFX(0, FX_INK, Object.FrontBGSonicXPos, Screen.CenterY)
+end sub
+
+
+sub ObjectStartup
+	// So this is removing the stage's FG layer but,
+	// the stage's configuration in the act file already has it set up like that anyway...
+	Stage[0].ActiveLayer = 9
+	
+	LoadSpriteSheet("Menu/MenuGfx1_EN.gif")
+	
+	SpriteFrame(-160, -104, 320, 224, 0, 0)	// #0 - Sonic Background
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BG Animation]
+			Object[ArrayPos0].Priority  = PRIORITY_ACTIVE
+			Object[ArrayPos0].DrawOrder = 2
+			Object[ArrayPos0].InkEffect = INK_BLEND
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	// The three rotating rectanlges in the background are actually 3d elements, let's setup them up here
+	
+	// First, reset all the matrix values
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixRotateXYZ(MAT_VIEW, 0, 0, 0)
+	
+	// Three rectanlges, four edges per rectanlge, yup that makes 12 corners in total!
+	3DScene.NoVertices = 12
+	3DScene.NoFaces = 3
+	
+	// Set the vertex coordinates for the first rectangle
+	
+	// 0 - Top left
+	VertexBuffer[0].x = -0xC800
+	VertexBuffer[0].y =  0xC800
+	VertexBuffer[0].z =  256
+	
+	// 1 - Top right
+	VertexBuffer[1].x = 0xC00
+	VertexBuffer[1].y = 0xC800
+	VertexBuffer[1].z = 256
+	
+	// 2 - Bottom left
+	VertexBuffer[2].x = -0xC800
+	VertexBuffer[2].y =  0x3000
+	VertexBuffer[2].z =  256
+	
+	// 3 - Bottom right
+	VertexBuffer[3].x = 0xC00
+	VertexBuffer[3].y = 0x3000
+	VertexBuffer[3].z = 256
+	
+	// Set the faces of the first rectangle
+	FaceBuffer[0].a = 0
+	FaceBuffer[0].b = 1
+	FaceBuffer[0].c = 2
+	FaceBuffer[0].d = 3
+	
+	FaceBuffer[0].Flag = FACE_FLAG_COLOURED_3D
+	
+	// Setting the color of the first rectangle, giving it a green of sorts (0x80E040)
+	FaceBuffer[0].Color   = 128
+	FaceBuffer[0].Color <<= 16
+	TempValue0   = 224
+	TempValue0 <<= 8
+	FaceBuffer[0].Color += TempValue0
+	FaceBuffer[0].Color += 64
+	FaceBuffer[0].Color += 0x7F000000 // Half transparency
+	
+	// Now, set up the second rectanlge
+	
+	// 4 - Top left
+	VertexBuffer[4].x = -0xC800
+	VertexBuffer[4].y =  0x3000
+	VertexBuffer[4].z =  256
+	
+	// 5 - Top right
+	VertexBuffer[5].x = 0xC00
+	VertexBuffer[5].y = 0x3000
+	VertexBuffer[5].z = 256
+	
+	// 6 - Bottom left
+	VertexBuffer[6].x = -0xC800
+	VertexBuffer[6].y = -0xC800
+	VertexBuffer[6].z =  256
+	
+	// 7 - Bottom right
+	VertexBuffer[7].x =  0xC00
+	VertexBuffer[7].y = -0xC800
+	VertexBuffer[7].z =  256
+	
+	// Set the faces of the second rectangle
+	FaceBuffer[1].a = 4
+	FaceBuffer[1].b = 5
+	FaceBuffer[1].c = 6
+	FaceBuffer[1].d = 7
+
+	FaceBuffer[1].Flag = FACE_FLAG_COLOURED_3D
+	
+	// Setting the color of the second rectangle, this one gets a cool orange (0xE0A060)
+	FaceBuffer[1].Color   = 224
+	FaceBuffer[1].Color <<= 16
+	TempValue0   = 160
+	TempValue0 <<= 8
+	FaceBuffer[1].Color += TempValue0
+	FaceBuffer[1].Color += 96
+	FaceBuffer[1].Color += 0x7F000000 // Once again, half transparency
+	
+	// And last but not least, set up the third rectangle
+	
+	// 8 - Top left
+	VertexBuffer[8].x = 0xB00
+	VertexBuffer[8].y = 0xC800
+	VertexBuffer[8].z = 256
+	
+	// 9 - Top right
+	VertexBuffer[9].x = 0xC800
+	VertexBuffer[9].y = 0xC800
+	VertexBuffer[9].z = 256
+	
+	// 10 - Bottom left
+	VertexBuffer[10].x =  0xB00
+	VertexBuffer[10].y = -0xC800
+	VertexBuffer[10].z =  256
+	
+	// 11 - Bottom right
+	VertexBuffer[11].x =  0xC800
+	VertexBuffer[11].y = -0xC800
+	VertexBuffer[11].z =  256
+	
+	// Set the faces of the third rectangle
+	FaceBuffer[2].a = 8
+	FaceBuffer[2].b = 9
+	FaceBuffer[2].c = 10
+	FaceBuffer[2].d = 11
+	
+	FaceBuffer[2].Flag = FACE_FLAG_COLOURED_3D
+	
+	// Setting the color of the a rectangle one last time, the third one gets a nice blue (0x8080E0)
+	FaceBuffer[2].Color   = 128
+	FaceBuffer[2].Color <<= 16
+	TempValue0   = 128
+	TempValue0 <<= 8
+	FaceBuffer[2].Color += TempValue0
+	FaceBuffer[2].Color += 224
+	FaceBuffer[2].Color += 0x7F000000
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/MenuGfx1_EN.gif")
+	SpriteFrame(-160, -104, 320, 224, 0, 0)	// Sonic Background
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,187 @@
+//----------------Sonic CD Boss Arm 2 Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//---------Used on Mission "M099 - Eggman: Speed Up"----------//
+
+// Aliases
+#alias Object.Value0	:	Object.ArmJointEntity
+#alias Object.Value2	:	Object.XOffSet
+#alias Object.Value3	:	Object.Timer
+#alias Object.Value4	:	Object.Charging
+#alias Object.Value5	:	Object.YOffSet
+#alias Object.Value6	:	Object.XVelocity
+#alias Object.Value7	:	Object.YVelocity
+
+// Arm Joint Aliases
+#alias Object.Xpos		:	ArmJoint.XPos
+#alias Object.YPos		:	ArmJoint.YPos
+
+// States
+#alias 0	:	BOSSARM2_SETUP
+#alias 1	:	BOSSARM2_IDLE
+#alias 2	:	BOSSARM2_DESTROYED
+#alias 3	:	BOSSARM2_MOVE_TO_FRONT
+#alias 4	:	BOSSARM2_MOVE_TO_BACK
+#alias 5	:	BOSSARM2_START_CHARGE
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+
+
+// Function declarations
+#function BossArm2_HandleArmMovement
+
+
+function BossArm2_HandleArmMovement
+	ArrayPos0 = Object.ArmJointEntity
+
+	Object.XPos  = ArmJoint[ArrayPos0].XPos
+	Object.XPos -= 0x240000
+	Object.XPos += Object.XVelocity
+
+	Object.YPos  = ArmJoint[ArrayPos0].YPos
+
+	TempValue1 = true
+	GetBit(TempValue0, Object.Charging, 7)
+
+	if TempValue0 == false
+		if Player.YPos < Object.YPos
+			if Object.YVelocity > -0x80000
+				Object.YVelocity -= 0x10000
+			end if
+			TempValue1 = false
+		end if
+	end if
+
+	if TempValue1 == true
+		if Object.YVelocity < 0x80000
+			Object.YVelocity += 0x10000
+		end if
+	end if
+	Object.YPos += Object.YVelocity
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSARM2_SETUP
+		Object.State=BOSSARM2_IDLE
+		// Fall Through
+	case BOSSARM2_IDLE
+		CallFunction(BossArm2_HandleArmMovement)
+		break
+
+	case BOSSARM2_DESTROYED
+		Object.XOffSet -= 0x620
+		Object.YOffSet += 0x1220
+		
+		Object.XPos += Object.XOffSet
+		Object.YPos += Object.YOffSet
+
+		Object.Timer++
+		if Object.Timer == 7
+			Object.Timer = 0
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			PlaySfx(SFX_G_EXPLOSION, false)
+		end if
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case BOSSARM2_MOVE_TO_FRONT
+		if Object.XVelocity > 0
+			TempValue0  = 0x8000
+			TempValue0 *= Object.PropertyValue	// Set the XVelocity decrease value based on it's property value
+			TempValue0 /= 10
+			Object.XVelocity -= TempValue0
+		end if
+		CallFunction(BossArm2_HandleArmMovement)
+		break
+
+	case BOSSARM2_MOVE_TO_BACK
+		if Object.XVelocity < 0x100000
+			TempValue0  = 0x8000
+			TempValue0 *= Object.PropertyValue
+			TempValue0 /= 10
+			Object.XVelocity += TempValue0
+		end if
+		CallFunction(BossArm2_HandleArmMovement)
+		break
+
+	case BOSSARM2_START_CHARGE
+		if Object.XVelocity < 0x80000
+			TempValue0		  =	0x8000
+			TempValue0 		 *= Object.PropertyValue	// Set the XVelocity increase value based on it's property value
+			TempValue0 		 /= 10
+			Object.XVelocity += TempValue0
+		else
+			// Set the arm to its retracted frame
+			// -> However, because of an oversight when drawing, this change can't be seen anyway so it's unused
+			Object.Frame = 1
+		end if
+
+		ArrayPos0 = Object.ArmJointEntity
+
+		Object.XPos  = ArmJoint[ArrayPos0].XPos
+		Object.XPos -= 0x240000
+		Object.XPos += Object.XVelocity
+
+		if Object.YVelocity  < 0x80000
+			TempValue0  = 0x10000
+			TempValue0 *= Object.PropertyValue
+			TempValue0 /= 10
+			Object.YVelocity += TempValue0
+		end if
+
+		Object.YPos  = ArmJoint[ArrayPos0].YPos
+		Object.YPos += Object.YVelocity
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(3)
+		
+	// This should actually be Object.Frame
+	// Since it isn't, the arm just shows as extended all the time
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+
+	SpriteFrame(-15, -8, 32, 16, 141, 34)	// #0 - Arm Extend
+	SpriteFrame(-6, -8, 24, 16, 174, 34)	// #1 - Arm Retract Frame 0	(Unused by code mistake)
+	SpriteFrame(2, -8, 16, 16, 124, 51)		// #2 - Arm Retract Frame 1	(Unused)
+	SpriteFrame(9, -8, 24, 16, 141, 51)		// #3 - Arm Elbow
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-15, -8, 32, 16, 141, 34) // Arm Extend
+	SpriteFrame(9, -8, 24, 16, 141, 51)   // Elbow
+
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
+
+

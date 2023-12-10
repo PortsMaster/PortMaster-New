@@ -1,0 +1,289 @@
+//----------------Sonic CD Tube Switch Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.InTube
+#alias Object.Value1	:	Object.LedgeStop
+
+// Player Aliases
+#alias Player.Value2	:	Player.RollAnimationSpeed
+#alias Player.Value6	:	Player.MinRollSpeed
+
+// Warp Star Aliases
+#alias Object.Value0   	:	Object.Timer
+
+// Global SFX
+#alias 6	:	SFX_G_CHARGE
+#alias 7	:	SFX_G_RELEASE
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+#alias 1	:	GRAVITY_AIR
+
+// Collision Modes
+#alias 0	:	CMODE_FLOOR
+#alias 3	:	CMODE_RWALL
+
+// Warp Destination
+#alias 0	:	WARPDEST_NONE
+
+
+// 0 - standard (biased towards right)
+// 1 - standard (biased towards left)
+// 2 - downards sender
+// 3 - downards conveyer tube
+// 4 - upwards conveyer tube
+// 5 - XXXXXX
+// 7 - vertical tunnel, middle
+// 8 - vertical tunnel, endpoints
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+
+#platform: Use_Origins
+	if CheckResult == true
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			if Player.State == Player_State_LedgePullUp
+				CheckResult	     = false
+				Object.LedgeStop = true
+			end if
+		end if
+	end if
+#endplatform
+
+	if CheckResult == true
+		switch Object.PropertyValue
+		case 0
+#platform: Use_Origins
+			if Object.LedgeStop == true
+				Player.Speed     = 1
+				Object.LedgeStop = false
+			end if
+#endplatform
+
+			if Player.Speed >= 0
+				if Player.State != Player_State_TubeRoll
+					PlaySfx(SFX_G_CHARGE, false)
+				end if
+				Player.Direction = FACING_RIGHT
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.MinRollSpeed = 0x20000
+				if Player.Speed < 0x20000
+					Player.Speed = 0x20000
+				end if
+			else
+				if Player.Speed > -0x20000
+					Player.Speed = -0x20000
+				end if
+				Player.State = Player_State_Roll
+				Player.Animation = ANI_JUMPING
+			end if
+			break
+
+		case 1
+			if Player.Speed <= 0
+				if Player.State != Player_State_TubeRoll
+					PlaySfx(SFX_G_CHARGE, false)
+				end if
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.MinRollSpeed = 0x80000
+				if Player.Speed > -0x20000
+					Player.Speed = -0x20000
+				end if
+			else
+				if Player.Speed < 0x20000
+					Player.Speed = 0x20000
+				end if
+				Player.State = Player_State_Roll
+				Player.Animation = ANI_JUMPING
+			end if
+			break
+
+		case 2
+			Player.Gravity = GRAVITY_AIR
+			Player.CollisionMode = CMODE_FLOOR
+			Player.XVelocity = 0
+			Player.Speed = 0
+			break
+
+		case 3
+			if ConveyorBelt_Flag == 0
+				if Player.YPos < Object.YPos
+					if Player.State != Player_State_Static
+						PlaySfx(SFX_G_RELEASE, false)
+					end if
+					Player.State = Player_State_Static
+					if Player.Animation != ANI_JUMPING
+						Player.Animation = ANI_JUMPING
+					end if
+					Player.RollAnimationSpeed = 240
+					Player.Speed = 0
+					Player.Timer = 0
+					Player.XPos = Object.XPos
+					Player.XVelocity = 0
+					Player.YVelocity = 0xA0000
+				end if
+			else
+				if Player.State == Player_State_Static
+#platform: Use_Origins
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+					
+#platform: Use_Standalone
+					Player.State = Player_State_Air
+#endplatform
+				end if
+			end if
+			break
+
+		case 4
+			if ConveyorBelt_Flag == 3
+				if Player.YPos > Object.YPos
+					// Hold the Player's Warp, if needed
+					// -> This section of code wasn't in the initial version of the game (Steam)
+					//    and is only present in updated versions (mobile & Origins)
+					if Warp.Destination > WARPDEST_NONE
+						if Warp.Timer == 0
+							Warp.Timer = 1
+							
+							ResetObjectEntity(3, TypeName[Warp Star], 0, Player.XPos, Player.YPos)
+							Object[3].Timer = 7
+							Object[3].DrawOrder = 4
+						end if
+					end if
+
+					if Player.State != Player_State_Static
+						PlaySfx(SFX_G_RELEASE, false)
+					end if
+					
+					Player.State = Player_State_Static
+					if Player.Animation != ANI_JUMPING
+						Player.Animation = ANI_JUMPING
+					end if
+					Player.RollAnimationSpeed = 240
+					Player.Speed = 0
+					Player.Timer = 0
+					Player.XPos = Object.XPos
+					Player.XVelocity = 0
+					Player.YVelocity = -0x80000
+				end if
+			else
+				if Player.State == Player_State_Static
+#platform: Use_Origins
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+					
+#platform: Use_Standalone
+					Player.State = Player_State_Air
+#endplatform
+				end if
+			end if
+			break
+
+		case 5
+			if Player.YVelocity < 0
+				Player.Gravity = GRAVITY_GROUND
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.CollisionMode = CMODE_RWALL
+				Player.Angle = 64
+				Player.Speed = -0xA0000
+				Player.MinRollSpeed = 0xA0000
+			end if
+			break
+
+		case 6
+			if Player.YVelocity > 0
+				Player.Gravity = GRAVITY_GROUND
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.CollisionMode = CMODE_RWALL
+				Player.Angle = 64
+				Player.Speed = Player.YVelocity
+				Player.MinRollSpeed = 0xA0000
+			end if
+			break
+
+		case 7
+			Player.Gravity = GRAVITY_GROUND
+			Player.State = Player_State_TubeRoll
+			Player.Animation = ANI_JUMPING
+			if Player.CollisionMode != CMODE_RWALL
+				Player.CollisionMode = CMODE_RWALL
+				Player.Angle = 64
+			end if
+
+			if ConveyorBelt_Flag == 3
+				Player.Speed = -0xD0000
+				Player.MinRollSpeed = 0xD0000
+			else
+				Player.Speed = 0xA0000
+				Player.MinRollSpeed = 0xA0000
+			end if
+			break
+
+		case 8
+			if ConveyorBelt_Flag == 3
+				Player.Gravity = GRAVITY_GROUND
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.CollisionMode = CMODE_RWALL
+				Player.Angle = 64
+				Player.Speed = -0xD0000
+				Player.MinRollSpeed = 0xD0000
+				if Object.InTube == false
+					PlaySfx(SFX_G_RELEASE, false)
+				end if
+			end if
+			break
+		end switch
+
+		Object.InTube = true
+	else
+		Object.InTube = false
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+// TODO: gonna hold off on doing editor stuff for this one, wanna wait 'til i can actually see everything before i start doing stuff
+// basic notes are labelled up above through if someone else wants to do it
+
+sub RSDKDraw
+	// Draw a square out of Tube Switch icons
+
+	TempValue0 = Object.XPos
+	TempValue0 -= 0x80000
+	TempValue1 = Object.YPos
+	TempValue1 -= 0x80000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue0 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue1 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue0 -= 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	
+	if Editor.ShowGizmos == true
+		TempValue0 = Object.XPos
+		TempValue0 -= 8
+		TempValue1 = Object.YPos
+		TempValue1 -= 8
+		DrawRectOutline(TempValue0, TempValue1, 16, 16, 255, 255, 255, 255)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // "T" (ubeswitch) icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

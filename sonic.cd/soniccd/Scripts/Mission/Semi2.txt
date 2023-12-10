@@ -1,0 +1,224 @@
+//------------------Sonic CD Semi 2 Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-----------Used on Mission "M086 - Gotta Go Fast"-----------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.XVelocity
+#alias Object.Value2		:	Object.YVelocity
+#alias Object.Value3 		:	Object.XOriginPos
+#alias Object.Value4 		:	Object.YOriginPos
+#alias Object.PropertyValue :	Object.Quality
+
+// States
+#alias 0	:	SEMI_IDLE
+#alias 1	:	SEMI_START_FLY
+#alias 2	:	SEMI_BOMB_THROW
+#alias 3	:	SEMI_RESET
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State = SEMI_RESET
+		Object.Timer = 0
+		Object.XPos = Object.XOriginPos
+		Object.YPos = Object.YOriginPos
+	end if
+	
+	switch Object.State
+	case SEMI_START_FLY
+		Object.Priority = PRIORITY_ACTIVE
+		Object.XPos += Object.XVelocity
+		Object.YPos += Object.YVelocity
+		if Object.Timer < 48
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case SEMI_BOMB_THROW
+		Object.XPos += Object.XVelocity
+		if Object.Quality == GOOD_QUALITY
+			if Object.Timer == 0
+				Object.Timer = 30
+				CreateTempObject(TypeName[SemiBomb2], 0, Object.XPos, Object.YPos)
+				Object[TempObjectPos].YPos += 0xC0000
+			else
+				Object.Timer--
+			end if
+		end if
+		break
+
+	case SEMI_RESET
+		if Object.OutOfBounds == true
+			Object.State = SEMI_IDLE
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+	// Check if this badnik should be a flower
+	CallFunction(StageSetup_CheckGoodFuture)
+end sub
+
+
+sub ObjectPlayerInteraction
+	switch Object.State
+	case SEMI_IDLE
+		PlayerObjectCollision(C_TOUCH, -96, -128, 96, 128)
+		if CheckResult == true
+			Object.State = SEMI_START_FLY
+			if Object.XPos > Player.XPos
+				if Object.Quality == GOOD_QUALITY
+					Object.XVelocity =  0x20000
+					Object.YVelocity = -0x10000
+				else
+					Object.XVelocity = 0x18000
+					Object.YVelocity = 0xC000
+				end if
+			else
+				if Object.Quality == GOOD_QUALITY
+					Object.XVelocity = -0x20000
+					Object.YVelocity = -0x10000
+				else
+					Object.XVelocity = -0x18000
+					Object.YVelocity =  0xC000
+				end if
+			end if
+		end if
+		break
+
+	case SEMI_START_FLY
+	case SEMI_BOMB_THROW
+		PlayerObjectCollision(C_ENEMY, -14, -12, 14, 12)
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case SEMI_IDLE
+		DrawSprite(Object.Quality)
+		break
+
+	case SEMI_START_FLY
+	case SEMI_BOMB_THROW
+		TempValue0 = Object.Frame
+		TempValue0 >>= 2
+
+		if Object.Quality == GOOD_QUALITY
+			TempValue0 += 2
+		else
+			TempValue0 += 6
+		end if
+
+		if Object.Frame > 7
+			Object.Direction = FACING_LEFT
+		else
+			Object.Direction = FACING_RIGHT
+		end if
+
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		Object.Frame++
+		Object.Frame &= 15
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	// Good
+	SpriteFrame(-16, -16, 32, 32, 1, 224)	// #0 - Semi
+	// Bad
+	SpriteFrame(-16, -16, 32, 32, 158, 166)	// #1 - Semi
+	// Good
+	SpriteFrame(-16, -16, 32, 32, 34, 224)	// #2 - Semi Good
+	SpriteFrame(-20, -16, 40, 32, 67, 224)
+	SpriteFrame(-16, -16, 32, 32, 34, 224)
+	SpriteFrame(-20, -16, 40, 32, 67, 224)
+	// Bad
+	SpriteFrame(-16, -16, 32, 32, 108, 224)
+	SpriteFrame(-20, -16, 40, 32, 141, 224)
+	SpriteFrame(-16, -16, 32, 32, 108, 224)
+	SpriteFrame(-20, -16, 40, 32, 141, 224)
+
+	ArrayPos0=32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Semi]
+			Object[ArrayPos0].Type=TypeName[Semi2]
+		end if
+		if Object[ArrayPos0].Type == TypeName[Semi2]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+			Object[ArrayPos0].DrawOrder  = 5
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	// Good
+	SpriteFrame(-16, -16, 32, 32, 1, 224)	// #0  - Semi
+	// Bad
+	SpriteFrame(-16, -16, 32, 32, 158, 166)	// #1  - Semi
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub
+
+
+

@@ -1,0 +1,159 @@
+//--------------Sonic CD Metal Sonic Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.YOffSet
+#alias Object.Value2	:	Object.Wobble
+#alias Object.Value3	:	Object.XOffSet
+#alias Object.Value4	:	Object.Speed
+
+// States
+#alias 0	:	METALSONIC_SETUP
+#alias 1	:	METALSONIC_GOTO_CENTER
+#alias 2	:	METALSONIC_SET_DIRECTION
+#alias 3	:	METALSONIC_START_CHARGE
+#alias 4	:	METALSONIC_LEAVE
+
+
+sub ObjectMain
+	switch Object.State
+	case METALSONIC_SETUP
+		Object.XOffSet   = Screen.CenterX
+		Object.XOffSet <<= 16
+		if Object.XPos < Object.XOffSet
+			Object.Direction = FACING_RIGHT
+		else
+			Object.Direction = FACING_LEFT
+		end if
+		Object.State++
+		break
+		
+	case METALSONIC_GOTO_CENTER
+		TempValue0   = Object.XOffSet
+		TempValue0  -= Object.XPos
+		TempValue0 >>= 5
+
+		TempValue1   = 0x780000
+		TempValue1  -= Object.YPos
+		TempValue1 >>= 5
+
+		Object.XPos += TempValue0
+		Object.YPos += TempValue1
+
+		Object.Timer++
+		if Object.Timer == 120
+			Object.Timer = 0
+			Object.YOffSet = Object.YPos
+			Object.State++
+		end if
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 7
+		break
+
+	case METALSONIC_SET_DIRECTION
+		Object.Wobble += 8
+		Object.Wobble &= 511
+		Sin(Object.YPos, Object.Wobble)
+		Object.YPos <<= 9
+		Object.YPos  += Object.YOffSet
+
+		Object.Timer++
+		if Object.Timer == 100
+			Object.Timer	= 0
+			Object.YOffSet	= Object.YPos
+
+			Object.Direction++
+			Object.Direction &= FACING_LEFT
+			Object.State++
+		end if
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 7
+		break
+
+	case METALSONIC_START_CHARGE
+		Object.Wobble += 64
+		Object.Wobble &= 511
+		Sin(Object.YPos, Object.Wobble)
+		Object.YPos  <<= 7
+		Object.YPos   += Object.YOffSet
+
+		if Object.Direction == FACING_LEFT
+			Object.XPos += 0x8000
+		else
+			Object.XPos -= 0x8000
+		end if
+
+		Object.Timer++
+		if Object.Timer == 90
+			Object.Timer = 0
+			Object.Speed = 0x10000
+			Object.State++
+		end if
+
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 7
+		break
+
+	case METALSONIC_LEAVE
+		if Object.Direction == FACING_RIGHT
+			Object.XPos += Object.Speed
+		else
+			Object.XPos -= Object.Speed
+		end if
+		Object.Speed += 0x3000
+
+		Object.AnimationTimer += 2
+		Object.AnimationTimer %= 5
+		break
+
+	end switch
+
+	if Object.OutOfBounds == true
+		Object.Type = TypeName[Blank Object]
+	end if
+end sub
+
+
+sub ObjectDraw
+	// Jet Flame
+	TempValue0   = Object.AnimationTimer
+	TempValue0 >>= 1
+	TempValue0++
+	DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+	// Metal
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	// 0 - Metal Sonic
+	SpriteFrame(-16, -24, 32, 48, 429, 804)
+
+	// 1-4 - Jet Flame Animation Frames
+	SpriteFrame(-24, -12, 24, 24, 462, 804)
+	SpriteFrame(-24, -12, 24, 24, 487, 804)
+	SpriteFrame(-24, -12, 0, 0, 462, 804)
+	SpriteFrame(-24, -12, 0, 0, 487, 804)
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-16, -24, 32, 48, 429, 804)		// #0 - Metal Sonic
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

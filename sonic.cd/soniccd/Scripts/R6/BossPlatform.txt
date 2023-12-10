@@ -1,0 +1,158 @@
+//---------------Sonic CD Boss Platform Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.YOriginPos
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.FallSpeed
+#alias Object.Value4	:	Object.FloorYPos
+#alias Object.Value5	:	Object.FCEntityNo
+#alias Object.Value6	:	Object.IntangibleTime
+
+#alias Object.State		:	FloorControl.State
+#alias Object.Value0	:	FloorControl.Timer
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Floor Control aliases
+#alias 4	:	FLOORCONTROL_TILE_SWAP
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Player Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 4	:	PLAYER_COL_ROOF
+
+// Stage SFX
+#alias 3	:	SFX_S_IMPACT1
+
+// Time Periods
+#alias 2	:	TIME_GOOD_FUTURE
+
+
+sub ObjectMain
+	Object.YOriginPos = Object.YPos
+
+	if Object.FallSpeed > 0
+		Object.YVelocity += Object.FallSpeed
+		Object.YPos += Object.YVelocity
+
+		ObjectTileCollision(CSIDE_FLOOR, -16, 16, 0)
+		TempValue0  = CheckResult
+		ObjectTileCollision(CSIDE_FLOOR, 16, 16, 0)
+		TempValue0 |= CheckResult
+		if TempValue0 == true
+			PlayStageSfx(SFX_S_IMPACT1, false)
+			Object.FallSpeed = 0
+			Object.YVelocity = 0
+
+#platform: Use_Haptics
+			HapticEffect(96, 0, 0, 0)
+#endplatform
+
+		end if
+	else
+		ArrayPos0 = Object.FCEntityNo
+		if FloorControl[ArrayPos0].State == FLOORCONTROL_TILE_SWAP
+			if FloorControl[ArrayPos0].Timer > 29
+				PlayerObjectCollision(C_TOUCH, -16, -512, 16, 512)
+				if CheckResult == true
+					Object.FallSpeed = 3584
+					
+#platform: Use_Haptics
+					HapticEffect(44, 0, 0, 0)
+#endplatform
+
+				else
+					Object.FallSpeed = 2816
+				end if
+				Object.YVelocity = -0x60000
+			end if
+		end if
+
+	end if
+
+	Object.FloorYPos  = Object.YPos
+	Object.FloorYPos -= Object.YOriginPos
+	
+	if Object.IntangibleTime > 0
+		Object.IntangibleTime--
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.IntangibleTime == 0
+		TempValue0  = Object.YPos
+		Object.YPos = Object.YOriginPos
+
+		PlayerObjectCollision(C_BOX, -16, -18, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += Object.FloorYPos
+			Player.YPos += 0x20000
+		else
+			if Object.FallSpeed > 0
+				if CheckResult == PLAYER_COL_ROOF
+					CallFunction(Player_Hit)
+					if Player.State == Player_State_GotHit
+						Object.IntangibleTime = 20
+					end if
+				end if
+			end if
+
+			PlayerObjectCollision(C_TOUCH, -16, -32, 16, 16)
+			if CheckResult == true
+				if Player.YVelocity < -0x40000
+					if Player.JumpPress == true
+						TempValue1 		  = Object.YVelocity
+						TempValue1		>>= 1
+						Player.YVelocity += TempValue1
+					end if
+				end if
+			end if
+		end if
+		Object.YPos = TempValue0
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects3.gif")
+
+	if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 223, 200)	// #0 - Boss Platform
+	else
+		SpriteFrame(-16, -16, 32, 32, 141, 220)	// #0 - Boss Platform
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects3.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+	// #0 - Boss Platform
+	if CheckResult == TIME_GOOD_FUTURE
+		SpriteFrame(-16, -16, 32, 32, 223, 200)
+	else
+		SpriteFrame(-16, -16, 32, 32, 141, 220)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

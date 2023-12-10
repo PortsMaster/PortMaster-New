@@ -1,0 +1,149 @@
+//---------------Sonic CD Eggman Platform Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.HitboxLeft
+#alias Object.Value1	:	Object.HitboxRight
+#alias Object.Value2	:	Object.Length
+#alias Object.Value3	:	Object.MusicFade
+
+// States
+#alias 0	:	EPLATFORM_IDLE
+#alias 1	:	EPLATFORM_EXTEND_LARGE
+#alias 2	:	EPLATFORM_EXTEND_SHORT
+#alias 3	:	EPLATFORM_BLANK
+
+// Property Values
+#alias 6	:	EPLATFORM_SHORT
+#alias 8	:	EPLATFORM_LARGE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case EPLATFORM_IDLE
+		if Object.PropertyValue == EPLATFORM_LARGE	// check if it's the platform used by Eggman
+			
+			PlayerObjectCollision(C_TOUCH, -64, -64, 64, -48)
+			if CheckResult == true
+				Object.State = EPLATFORM_EXTEND_LARGE
+				Stage.NewYBoundary2 = Object.iYPos
+				Stage.NewYBoundary2 += 24
+			end if
+
+		else
+
+			TempValue0   = Object.HitboxRight
+			TempValue0  += 32
+			TempValue0 <<= 16
+			TempValue0  += Object.XPos
+			if Player.XPos > TempValue0
+				Object.State = EPLATFORM_EXTEND_SHORT
+				Object.Priority = PRIORITY_ACTIVE
+			end if
+
+		end if
+		break
+
+	case EPLATFORM_EXTEND_LARGE
+		if Object.Length < Object.PropertyValue
+			Object.Length++
+			Object.HitboxLeft -= 16
+		else
+			Object.State = EPLATFORM_BLANK
+		end if
+		break
+
+	case EPLATFORM_EXTEND_SHORT
+		if Object.Length < Object.PropertyValue
+			Object.Length++
+			Object.HitboxLeft -= 16
+		end if
+		// Start the boss music
+		if Object.MusicFade < 100
+			Object.MusicFade++
+			Music.Volume--
+		else
+			PlayMusic(4)
+			Object.State = EPLATFORM_BLANK
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case EPLATFORM_BLANK
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_PLATFORM, Object.HitboxLeft, -16, Object.HitBoxRight, 16)
+end sub
+
+
+sub ObjectDraw
+	TempValue0   = 0
+	TempValue1   = Object.HitBoxRight
+	TempValue1 <<= 16
+	TempValue1  -= 0x80000
+	TempValue1  += Object.XPos
+	while TempValue0 < Object.Length
+		DrawSpriteXY(0, TempValue1, Object.YPos)
+		TempValue0++
+		TempValue1 -= 0x100000
+	loop
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	SpriteFrame(-8, -16, 16, 32, 117, 0)	// #0 - Eggman Platform
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[EPlatform]
+			Object[ArrayPos0].HitBoxRight   = Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].HitBoxRight <<= 3
+			Object[ArrayPos0].HitboxLeft    = Object[ArrayPos0].HitBoxRight
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	TempValue0   = Object.PropertyValue
+	TempValue0 <<= 3
+	TempValue1    = TempValue0
+
+	TempValue2   = 0
+	TempValue3   = TempValue0
+	TempValue3 <<= 16
+	TempValue3  -= 0x80000
+	TempValue3  += Object.XPos
+	while TempValue2 < Object.PropertyValue
+		DrawSpriteXY(0, TempValue3, Object.YPos)
+		TempValue2++
+		TempValue3 -= 0x100000
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	SpriteFrame(-8, -16, 16, 32, 117, 0)	// #0 - Eggman Platform
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "Length")
+end sub
