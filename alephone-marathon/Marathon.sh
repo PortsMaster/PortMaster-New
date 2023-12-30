@@ -12,7 +12,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR="/$directory/ports/alephone"
+GAMEDIR="/$directory/ports/alephone-marathon"
 
 cd $GAMEDIR
 
