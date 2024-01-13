@@ -14,7 +14,7 @@ from pathlib import Path
 
 #############################################################################
 ## Change these to point to your PortMaster repo
-PORTMASTER_DIR = Path("../PortMaster")
+PORTMASTER_DIR = Path("../PortMaster-Hosting")
 
 
 #############################################################################

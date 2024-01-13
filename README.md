@@ -9,22 +9,25 @@ To learn more visit [portmaster.games](https://portmaster.games/).
 
 ## Nitty gritty details
 
-PortMaster used to be a collection of zips inside of a git repo, this got unwieldy, especially now that we have 300 ports. It was impossible to tell from one release to the next what files were actually changed. It made checking scripts incredibly hard, and even harder to learn from other ports.
+PortMaster used to be a collection of zips inside of a git repo, this got unwieldy, especially now that we have 300+ ports. It was impossible to tell from one release to the next what files were actually changed. It made checking scripts incredibly hard, and even harder to learn from other ports.
 
 The PortMaster-New repo now has all the ports unzipped, this makes the repo slightly larger initally, however changes will no longer greatly increase the size. Upon release we download the previous release and only create a new zip when the ports files actually change.
 
 ### Portname requirements
 
 The portname must start with either a lowercase letter (a-z) or a number (0-9).
+
 You can then have a combination of lowercase letters (a-z), numbers (0-9), periods (.), or underscores (\_).
+
 There is no limit on the length of the name, but keep it short.
+
 This name must not clash with any other existing ports.
 
 ### New Port Structure:
 
 Ports are now contained within a top level directory, the directory `<portname>`, using the rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `port.spec` and `cover.{jpg,png}`.
 
-The script should be uppercase and must end in `.sh`, the port directory should ideally be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
+The script should have capital letters (like `Port Name.sh`) and must end in `.sh`, the port directory should be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
 
 Scripts and port directories must be unique across the whole project, checks will be run to ensure this is right.
 

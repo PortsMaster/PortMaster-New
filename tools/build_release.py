@@ -88,19 +88,21 @@ def warning(port_name, message):
     MESSAGES[port_name]['warnings'].append(message)
 
 
-def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
-    if port_log is None:
-        port_log = []
-
+def port_info_load(raw_info, source_name=None, do_default=False):
     if isinstance(raw_info, pathlib.PurePath):
-        source_name = str(raw_info)
+        if source_name is None:
+            source_name = str(raw_info)
 
         with raw_info.open('r') as fh:
             try:
                 info = json.load(fh)
 
+                if not isinstance(info, dict):
+                    error(source_name, f"Unable to load {str(raw_info)}: bad json file")
+                    info = None
+
             except json.decoder.JSONDecodeError as err:
-                port_log.append(f"- Unable to load {source_name}: {err}")
+                error(source_name, f"Unable to load {str(raw_info)}: {err}")
                 info = None
 
             if info is None or not isinstance(info, dict):
@@ -117,30 +119,41 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
             try:
                 info = json.loads(raw_info)
 
+                if not isinstance(info, dict):
+                    error(source_name, f"Unable to load port.json: bad json file")
+                    info = None
+
             except json.decoder.JSONDecodeError as err:
-                port_log.append(f"- Unable to load {source_name}: {err}")
+                error(source_name, f"Unable to load port.json: {err}")
                 info = None
 
-            if info is None or not isinstance(info, dict):
+            if info is None:
                 if do_default:
                     info = {}
+
                 else:
                     return None
 
         elif Path(raw_info).is_file():
-            source_name = raw_info
+            if source_name is None:
+                source_name = raw_info
 
             with open(raw_info, 'r') as fh:
                 try:
                     info = json.load(fh)
 
+                    if not isinstance(info, dict):
+                        error(source_name, f"Unable to load {raw_info}: bad json file")
+                        info = None
+
                 except json.decoder.JSONDecodeError as err:
-                    port_log.append(f"- Unable to load {source_name}: {err}")
+                    error(source_name, f"Unable to load {raw_info}: {err}")
                     info = None
 
-                if info is None or not isinstance(info, dict):
+                if info is None:
                     if do_default:
                         info = {}
+
                     else:
                         return None
 
@@ -148,10 +161,11 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
             if source_name is None:
                 source_name = "<str>"
 
-            port_log.append(f'- Unable to load port_info from {source_name!r}: {raw_info!r}')
             if do_default:
                 info = {}
+
             else:
+                error(source_name, f'Unable to load port_info: {raw_info!r}')
                 return None
 
     elif isinstance(raw_info, dict):
@@ -161,10 +175,11 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
         info = raw_info
 
     else:
-        port_log.append(f'- Unable to load port_info from {source_name!r}: {raw_info!r}')
         if do_default:
             info = {}
+
         else:
+            error(source_name, f'Unable to load port_info: {raw_info!r}')
             return None
 
     if info.get('version', None) == 1 or 'source' in info:
@@ -220,22 +235,22 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
         while i < len(port_info['items']):
             item = port_info['items'][i]
             if item.startswith('/'):
-                port_log.append(f"- port_info['items'] contains bad name {item!r}")
+                warning(source_name, f"port_info['items'] contains bad name {item!r}")
                 del port_info['items'][i]
                 continue
 
             if item.startswith('../'):
-                port_log.append(f"- port_info['items'] contains bad name {item!r}")
+                warning(source_name, f"port_info['items'] contains bad name {item!r}")
                 del port_info['items'][i]
                 continue
 
             if '/../' in item:
-                port_log.append(f"- port_info['items'] contains bad name {item!r}")
+                warning(source_name, f"port_info['items'] contains bad name {item!r}")
                 del port_info['items'][i]
                 continue
 
             if item == "":
-                port_log.append(f"- port_info['items'] contains bad name {item!r}")
+                warning(source_name, f"port_info['items'] contains bad name {item!r}")
                 del port_info['items'][i]
 
             i += 1
@@ -245,22 +260,22 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
         while i < len(port_info['items_opt']):
             item = port_info['items_opt'][i]
             if item.startswith('/'):
-                port_log.append(f"- port_info['items_opt'] contains bad name {item}")
+                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
                 del port_info['items_opt'][i]
                 continue
 
             if item.startswith('../'):
-                port_log.append(f"- port_info['items_opt'] contains bad name {item}")
+                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
                 del port_info['items_opt'][i]
                 continue
 
             if '/../' in item:
-                port_log.append(f"- port_info['items_opt'] contains bad name {item}")
+                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
                 del port_info['items_opt'][i]
                 continue
 
             if item == "":
-                port_log.append(f"- port_info['items'] contains bad name {item!r}")
+                warning(source_name, f"port_info['items'] contains bad name {item!r}")
                 del port_info['items_opt'][i]
 
             i += 1
@@ -275,6 +290,9 @@ def port_info_load(raw_info, source_name=None, do_default=False, port_log=None):
         for genre in genres:
             if genre.casefold() in PORT_INFO_GENRES:
                 port_info['attr']['genres'].append(genre.casefold())
+
+            else:
+                warning(source_name, f"port_info['attr']['genres'] contains bad genre {genre}")
 
     if port_info['attr']['image'] == None:
         port_info['attr']['image'] = {}
@@ -371,7 +389,7 @@ def load_port(port_dir, manifest, registered):
         port_file_type = file_type(port_file)
 
         if port_file_type == UNKNOWN_FILE:
-            print(f"{port_dir.name}: Unknown file: {port_file.name}")
+            warning(port_dir.name, "Unknown file: {port_file.name}")
             continue
 
         elif port_file_type == PORT_SCRIPT:
@@ -438,7 +456,7 @@ def load_port(port_dir, manifest, registered):
 
                 continue
 
-            print(f"{port_dir.name}: Unknown file: {file_name}")
+            warning(port_dir.name, f"Unknown file: {file_name}")
 
     port_manifest.sort(key=lambda x: x[0].casefold())
 
@@ -459,17 +477,9 @@ def change_dir(new_path):
         os.chdir(old_cwd)
 
 
-def build_port_zip(root_dir, port_dir, port_data, new_manifest):
+def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
     port_name = port_data['name'].rsplit('.', 1)[0]
     zip_name = root_dir / port_data['name']
-
-    spec_file = port_dir / 'port.spec'
-
-    # If a port.spec file exists, we run it.
-    if spec_file.is_file():
-        with change_dir(port_dir):
-            os.chmod('port.spec', 0o755)
-            subprocess.call("./port.spec", shell=True)
 
     paths = collections.deque([port_dir])
     zip_files = []
@@ -715,11 +725,11 @@ def load_manifest(manifest_file):
 
 
 def main(argv):
-    RESTORE_DIR = Path().cwd()
     ROOT_DIR = Path('.')
 
     MANIFEST_FILE = ROOT_DIR / 'manifest.json'
     STATUS_FILE = ROOT_DIR / 'ports_status.json'
+    DATA_DIR = ROOT_DIR / 'data'
 
     all_ports = {}
     updated_ports = []
@@ -745,7 +755,8 @@ def main(argv):
         if not port_dir.is_dir():
             continue
 
-        if port_dir.name.lower() in ('.git', 'tools'):
+        if port_dir.name.lower() in ('.git', 'tools', 'data'):
+            # Ignore th
             continue
 
         port_data = load_port(port_dir, new_manifest, registered)
@@ -775,7 +786,7 @@ def main(argv):
 
         build_markdown_zip(old_manifest, new_manifest)
 
-        generate_ports_json(ports)
+        # generate_ports_json(ports)
 
     errors = 0
     warnings = 0
