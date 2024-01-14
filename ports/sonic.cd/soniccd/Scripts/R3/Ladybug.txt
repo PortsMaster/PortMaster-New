@@ -1,0 +1,194 @@
+//------------------Sonic CD Ladybug Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Oscillation
+#alias Object.Value1		:	Object.XVelocity
+#alias Object.Value2		:	Object.BombTimer
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0		:	LADYBUG_GUARD
+#alias 1		:	LADYBUG_FLEE
+#alias 2		:	LADYBUG_FLY
+
+// Badnik Quality / Property Values
+#alias 0		:	GOOD_QUALITY
+#alias 1		:	BAD_QUALITY
+
+// Collision Sides
+#alias 0		:	CSIDE_FLOOR
+
+
+sub ObjectMain
+	switch Object.State
+	case LADYBUG_GUARD
+		if Object.XPos > Player.XPos
+			Object.Direction = FACING_RIGHT
+		else
+			Object.Direction = FACING_LEFT
+		end if
+
+		TempValue0   = Object.Oscillation
+		TempValue0 <<= 4
+
+		Sin(TempValue1, TempValue0)
+		TempValue1 >>= 8
+		TempValue1  += 24
+		ObjectTileGrip(CSIDE_FLOOR, 0, TempValue1, 0)
+
+		PlayerObjectCollision(C_TOUCH, -64, -256, 64, 256)
+		if CheckResult == true	// If the player gets close enough, start fleeing
+			Object.State = LADYBUG_FLEE
+
+			Object.DrawOrder = 4
+
+			if Object.XPos > Player.XPos
+				Object.XVelocity =  0x10000
+				Object.Direction =  FACING_LEFT
+			else
+				Object.XVelocity = -0x10000
+				Object.Direction =  FACING_RIGHT
+			end if
+
+		end if
+		break
+
+	case LADYBUG_FLEE
+		TempValue0  = Object.Oscillation
+		TempValue0 &= 3
+		if TempValue0 < 3
+			Object.XPos += Object.XVelocity
+		end if
+
+		if Object.Oscillation < 16
+			ObjectTileGrip(CSIDE_FLOOR, 0, 24, 0)
+		else
+			ObjectTileGrip(CSIDE_FLOOR, 0, 23, 0)
+		end if
+		if CheckResult == false
+			Object.State = LADYBUG_FLY	// Once the ladybug runs out of floor, start flying up
+		end if
+
+		if Object.Quality == GOOD_QUALITY	// if the ladybug is a good quality one, set bombs while escaping
+			if Object.BombTimer < 128
+				Object.BombTimer++
+			else
+				Object.BombTimer = 0
+				CreateTempObject(TypeName[Ladybug Bomb], 0, Object.XPos, Object.YPos)
+				Object[TempObjectPos].YPos += 0x140000
+			end if
+		end if
+		break
+
+	case LADYBUG_FLY
+		Object.YPos -= 0x8000
+		break
+
+	end switch
+
+	Object.Oscillation++
+	Object.Oscillation &= 31
+
+	Object.Frame++
+	Object.Frame %= 12
+
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -16, -16, 16, 20)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -16, -16, 16, 20)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0   = Object.Frame
+	TempValue0 >>= 2
+	if Object.Quality == BAD_QUALITY
+		TempValue0 += 3
+	end if
+	DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	// New Ladybug
+	SpriteFrame(-16, -16, 32, 32, 67, 134)	// #0 - LadyBug Frame 0
+	SpriteFrame(-16, -16, 32, 32, 100, 134)	// #1 - LadyBug Frame 1
+	SpriteFrame(-16, -16, 32, 32, 133, 134)	// #2 - LadyBug Frame 2
+	// Old Ladybug
+	SpriteFrame(-16, -16, 32, 32, 67, 101)	// #3 - LadyBug Frame 0
+	SpriteFrame(-16, -16, 32, 32, 100, 101)	// #4 - LadyBug Frame 1
+	SpriteFrame(-16, -16, 32, 32, 133, 101)	// #5 - LadyBug Frame 2
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	switch Object.Quality
+	case GOOD_QUALITY
+		DrawSprite(0)
+		break
+	case BAD_QUALITY
+		DrawSprite(1)
+		break
+	end switch
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	// New Ladybug
+	SpriteFrame(-16, -16, 32, 32, 67, 134)	// #0 - LadyBug
+	// Old Ladybug
+	SpriteFrame(-16, -16, 32, 32, 67, 101)	// #1 - LadyBug
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

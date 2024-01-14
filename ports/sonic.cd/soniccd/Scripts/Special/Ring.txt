@@ -1,0 +1,150 @@
+//--------------------Sonic CD Ring Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.ZPos
+#alias Object.Value1 : Object.XVelocity
+#alias Object.Value2 : Object.YVelocity
+#alias Object.Value3 : Object.ZVelocity
+#alias Object.Value4 : Object.Timer
+#alias Object.Value5 : Object.ScreenDepth
+#alias Object.Value6 : Object.ScreenXPos
+
+
+sub ObjectMain
+	// Update movements
+	Object.XPos += Object.XVelocity
+	Object.YPos += Object.YVelocity
+	Object.ZPos += Object.ZVelocity
+	
+	// Apply a gravity of an eight of a pixel per frame
+	Object.YVelocity -= 0x2000
+	
+	if Object.YPos < 0
+		// If the ring has hit the floor, then bounce back up
+		
+		Object.YPos = 0
+		FlipSign(Object.YVelocity)
+	end if
+	
+	TempValue0 = Object.XPos
+	TempValue0 -= TileLayer[0].XPos
+	TempValue0 >>= 8
+	
+	TempValue1 = Object.ZPos
+	TempValue1 -= TileLayer[0].ZPos
+	TempValue1 >>= 8
+	
+	Sin(TempValue2, TileLayer[0].Angle)
+	TempValue2 *= TempValue1
+	Cos(TempValue3, TileLayer[0].Angle)
+	TempValue3 *= TempValue0
+	
+	Object.ScreenXPos = TempValue2
+	Object.ScreenXPos -= TempValue3
+	Object.ScreenXPos >>= 9
+	
+	Cos(TempValue2, TileLayer[0].Angle)
+	TempValue2 *= TempValue1
+	Sin(TempValue3, TileLayer[0].Angle)
+	TempValue3 *= TempValue0
+	
+	Object.ScreenDepth = TempValue2
+	Object.ScreenDepth += TempValue3
+	Object.ScreenDepth >>= 9
+	
+	// Make the ring despawn after a little bit
+	Object.Timer++
+	if Object.Timer == 160
+		Object.Type = TypeName[Blank Object]
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.ScreenDepth > 256 // Don't draw if the Ring is too close to the screen
+		
+		// Do some maths to find the position & scale the Ring should be at
+		
+		Object.Scale = 0xC00000
+		Object.Scale /= Object.ScreenDepth
+		
+		TempValue0 = 768
+		TempValue0 -= Object.Scale
+		TempValue0 /= 6
+		
+		TempValue1 = Object.ScreenDepth
+		TempValue1 >>= 12
+		
+		if TempValue0 > 0
+			Object.Scale += TempValue0
+			Object.Scale -= TempValue1
+		end if
+		
+		TempValue0 = Object.ScreenXPos
+		TempValue0 *= 192
+		TempValue0 /= Object.ScreenDepth
+		TempValue0 += Screen.CenterX
+		
+		TempValue1 = TileLayer[0].YPos
+		TempValue1 -= Object.YPos
+		TempValue1 >>= 8
+		TempValue1 *= 96
+		TempValue1 /= Object.ScreenDepth
+		TempValue1 += 128
+		
+		// Find the sprite to draw the Ring with
+		TempValue2 = Object.Timer
+		TempValue2 &= 31
+		TempValue2 >>= 3
+		
+		DrawSpriteScreenFX(TempValue2, FX_SCALE, TempValue0, TempValue1)
+		
+		// Find the position of the ground where the ring is
+		TempValue1 = TileLayer[0].YPos
+		TempValue1 >>= 8
+		TempValue1 *= 96
+		TempValue1 /= Object.ScreenDepth
+		TempValue1 += 128
+		
+		// Draw a shadow there
+		DrawSpriteScreenFX(4, FX_SCALE, TempValue0, TempValue1)
+		
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Special/Objects.gif")
+	
+	// Ring Frames
+	SpriteFrame(-10, -24, 20, 24, 52, 59)
+	SpriteFrame(-7, -24, 15, 24, 73, 59)
+	SpriteFrame(-4, -24, 9, 24, 89, 59)
+	SpriteFrame(-7, -24, 15, 24, 99, 59)
+	
+	// Shadow Frame
+	SpriteFrame(-9, -4, 18, 8, 83, 117)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-10, -24, 20, 24, 52, 59)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

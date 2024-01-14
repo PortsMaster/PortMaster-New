@@ -1,0 +1,203 @@
+//-----------------Sonic CD Path Swap Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Do note, these are not the same genre of "Path Swappers" as used in loops!
+// Although in Sonic 1/Sonic 2 they're dedicated objects that can be placed, in Sonic CD the chunks are instead swapped in real-time, just like the original game
+// And, the system used in R7's loops is handled in the stage's respective [R7X Setup] script, not here
+// This object is just the little Sonic sign that you can jump at
+
+// Aliases
+#alias 0 : PATHSWAP_IDLE
+#alias 1 : PATHSWAP_SPINNING
+
+#alias Object.Value0 : Object.Timer
+
+// If the Player has touched this Path Swapper last frame, used to distinguish new touches from old touches
+#alias Object.Value7 : Object.PrevTouch
+
+#alias Object.Value1 : Object.ChunkX1
+#alias Object.Value3 : Object.ChunkX2
+#alias Object.Value2 : Object.ChunkY1
+#alias Object.Value4 : Object.ChunkY2
+
+// Holds the chunk ID of what's already there on the level map, New holds what it should be replaced with
+#alias Object.Value5 : Object.ChunkIDOld
+#alias Object.Value6 : Object.ChunkIDNew
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.State == PATHSWAP_SPINNING
+		if Object.Timer < 39
+			Object.Timer++
+		else
+			Object.State = PATHSWAP_IDLE
+			Object.Timer = 0
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		
+		PathSwap_Frame = Object.Timer
+		PathSwap_Frame /= 5
+	end if
+	
+	if PathSwap_Flag == false
+		TempValue0 = Object.ChunkIDOld
+	else
+		TempValue0 = Object.ChunkIDNew
+	end if
+	
+	if Object.PropertyValue != 1
+		SetTileLayerEntry(TempValue0, 0, Object.ChunkX1, Object.ChunkY1)
+		TempValue0++
+		SetTileLayerEntry(TempValue0, 0, Object.ChunkX2, Object.ChunkY1)
+		TempValue0++
+		SetTileLayerEntry(TempValue0, 0, Object.ChunkX1, Object.ChunkY2)
+		TempValue0++
+		SetTileLayerEntry(TempValue0, 0, Object.ChunkX2, Object.ChunkY2)
+	end if
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.PropertyValue < 2
+		if Object.State == PATHSWAP_IDLE
+			if PathSwap_Frame == 0
+				PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+				if CheckResult == true
+					if Object.PrevTouch == false
+						Object.State = PATHSWAP_SPINNING
+						Object.Priority = PRIORITY_ACTIVE
+						Object.PrevTouch = true
+						
+						// This is a weird way to do it... but sure
+						// A `^= true` would work just as well here too, though you don't see those all too often in CD
+						PathSwap_Flag++
+						PathSwap_Flag &= true
+						
+#platform: Use_Haptics
+						// Give the player a bit of a shake to really convey the feeling that they've hit a sign, y'know?
+						
+						HapticEffect(19, 0, 0, 0)
+#endplatform
+						
+					end if
+				else
+					Object.PrevTouch = false
+				end if
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.PropertyValue < 2
+		DrawSprite(PathSwap_Frame)
+	end if
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Path Swapper Frames
+	SpriteFrame(-24, -15, 48, 40, 109, 18)
+	SpriteFrame(-24, -11, 48, 36, 158, 22)
+	SpriteFrame(-24, -7, 48, 32, 207, 26)
+	SpriteFrame(-24, -11, 48, 36, 158, 63)
+	SpriteFrame(-24, -15, 48, 40, 109, 59)
+	SpriteFrame(-24, -11, 48, 36, 158, 63)
+	SpriteFrame(-24, -7, 48, 32, 207, 26)
+	SpriteFrame(-24, -11, 48, 36, 158, 22)
+	
+	PathSwap_Flag = false
+	PathSwap_Frame = 0
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Path Swap]
+			
+			// Setup chunk positions
+			
+			Object[ArrayPos0].ChunkX1 = Object[ArrayPos0].iXPos
+			Object[ArrayPos0].ChunkX1 >>= 8
+			Object[ArrayPos0].ChunkX1 <<= 1
+			
+			Object[ArrayPos0].ChunkX2 = Object[ArrayPos0].ChunkX1
+			Object[ArrayPos0].ChunkX2++
+			
+			Object[ArrayPos0].ChunkY1 = Object[ArrayPos0].iYPos
+			Object[ArrayPos0].ChunkY1 >>= 8
+			Object[ArrayPos0].ChunkY1 <<= 1
+			
+			Object[ArrayPos0].ChunkY2 = Object[ArrayPos0].ChunkY1
+			Object[ArrayPos0].ChunkY2++
+			
+			// Setup chunk IDs
+			
+			// Get the base chunk ID
+			GetTileLayerEntry(Object[ArrayPos0].ChunkIDOld, 0, Object[ArrayPos0].ChunkX1, Object[ArrayPos0].ChunkY1)
+			
+			// The chunk's B replacement is always 4 chunks immediately after it
+			Object[ArrayPos0].ChunkIDNew = Object[ArrayPos0].ChunkIDOld
+			Object[ArrayPos0].ChunkIDNew += 4
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	GetBit(Object.InkEffect, Object.PropertyValue, 1) // Invis types get to be blended
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-24, -15, 48, 40, 109, 18)
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+
+	// Bit of a guess here -
+	// Subtype 0 is used just about everywhere, 2 is used in SSZ1B once, and then 2 is completely unused it seems?
+
+	AddEnumVariable("Normal", 0)
+	AddEnumVariable("Decoration", 1)
+	AddEnumVariable("Invisible", 2) // Used to update chunks but without the sign being visible there
+end sub

@@ -1,1 +1,0 @@
-Art assets in this plugin were developed by Freeverse Software for "Marathon 2: Durandal", released for Xbox Live Arcade. The content is copyright Bungie. Please contact Bungie before using these assets for any commercial purpose, or any purpose not directly connected with the Marathon community.

@@ -1,0 +1,294 @@
+//---------------Sonic CD Special Setup Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+
+// Universal
+#alias Object.Value5 : Object.ScreenDepth
+
+// HUD Alias
+#alias Object.Value0 : HUD.UFOsCount
+#alias Object.Value1 : HUD.TimeSeconds
+#alias Object.Value2 : HUD.TimeFrames
+#alias Object.Value6 : HUD.BonusUFONo // "No" akin to Entity No, not as in "is there no UFO?"
+#alias Object.Value7 : HUD.WaterTimer
+
+// UFO Alias
+#alias Object.YPos : Object.ZPos
+
+// SSSonic Aliases
+#alias Player.ControlMode : SSSonic.ControlMode
+
+// ControlMode Aliases
+#alias -1 : CONTROLMODE_NONE
+
+// Stage Finish State Aliases
+#alias 9 : STAGEFINISH_LOADLEVELSELECT
+
+// Game Mode Aliases
+#alias 2 : MODE_TIMEATTACK
+
+// Stage SFX
+#alias 5 : SFX_S_TIMEUFO
+#alias 7 : SFX_S_DROWNALERT
+
+// Soundtrack
+#alias 0 : OST_JP
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+// Tile Layer Types
+#alias 4 : LAYER_3DSKY
+
+
+sub ObjectMain
+	3DScene.NoVertices = 0
+	3DScene.NoFaces = 0
+	
+	// Update the oscillation value
+	// Although it's normally used for synced movements throughout a stage, the Oscillation value is never actually used within the Special Stage
+	Oscillation++
+	if Oscillation == 512
+		Oscillation = 0
+	end if
+	
+	// Time is managed here
+	
+	if HUD[4].UFOsCount > 0
+		
+		// This used to be checking if it was false, but Origins changed it up a bit
+		if Stage.TimeEnabled == true
+			// However, this is a bit faulty and results on a time ufo sometimes appearing in time attack, so let's exclude any of this from time attack for decomp
+#platform: Use_Decomp
+			if Options.GameMode != MODE_TIMEATTACK
+#endplatform
+				// Progress the timer
+				HUD[4].TimeFrames++
+				if HUD[4].TimeFrames == 60
+					HUD[4].TimeFrames = 0
+
+					if HUD[4].TimeSeconds > 0
+						if HUD[4].TimeSeconds < 6
+							// Time's almost up, play a jingle to alert the player
+							PlayStageSfx(SFX_S_DROWNALERT, false)
+						end if
+						
+						HUD[4].TimeSeconds--
+						if HUD[4].TimeSeconds < 20
+							// Less than 20 seconds left, quickly, spawn a time UFO to help the player!
+							ArrayPos0 = HUD[4].BonusUFONo
+							
+							// Make sure the bonus UFO doesn't exist already
+							if Object[ArrayPos0].Type != TypeName[UFO]
+								PlayStageSfx(SFX_S_TIMEUFO, false)
+								
+								ArrayPos1 = ArrayPos0
+								ArrayPos1++
+								
+								Object[ArrayPos0].Type = TypeName[UFO]
+								Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+								Object[ArrayPos0].PropertyValue = 2
+								Object[ArrayPos0].XPos = Object[ArrayPos1].XPos
+								Object[ArrayPos0].ZPos = Object[ArrayPos1].ZPos
+							end if
+						end if
+					else
+						// This will never happen on Time Attack
+						if Options.GameMode != MODE_TIMEATTACK
+							// Time's over, so start the stage results
+							Object[30].Type = TypeName[Stage Finish]
+							if Stage.ActNo == 8
+								// If in the Robotnik Special Stage, then go to the Level Select
+								Object[30].State = STAGEFINISH_LOADLEVELSELECT
+								Object[30].DrawOrder = 7
+							else
+								// Nope, we can just do normal results
+								Object[30].DrawOrder = 6
+							end if
+							SSSonic.ControlMode = CONTROLMODE_NONE
+						end if
+					end if
+				end if
+				
+				if HUD[4].WaterTimer > 0
+					if HUD[4].WaterTimer > 1
+						if HUD[4].WaterTimer > 20
+							TempValue0 = HUD[4].TimeFrames
+							TempValue0 &= 1
+							
+							if HUD[4].TimeSeconds > 0
+								HUD[4].TimeSeconds -= TempValue0
+							else
+								// In Time Attack, you can't run out of time
+								if Options.GameMode != MODE_TIMEATTACK
+									// No more time left, end the stage by spawning the results
+									Object[30].Type = TypeName[Stage Finish]
+									
+									if Stage.ActNo == 8
+										// If in the Robotnik Special Stage, then go back to the Level Select rather than the normal SS results
+										
+										Object[30].State = STAGEFINISH_LOADLEVELSELECT
+										Object[30].DrawOrder = 7
+									else
+										// We're in a normal stage, so show the results as normal
+										
+										Object[30].DrawOrder = 6
+									end if
+									
+									SSSonic.ControlMode = CONTROLMODE_NONE
+								end if
+							end if
+						else
+							if Object[3].Type != TypeName[WaterSplash]
+								HUD[4].WaterTimer = 0
+							end if
+						end if
+						
+						HUD[4].WaterTimer--
+					else
+						if Object[3].Type != TypeName[WaterSplash]
+							HUD[4].WaterTimer = 0
+						else
+							TempValue0 = HUD[4].TimeFrames
+							TempValue0 &= 1
+							
+							if HUD[4].TimeSeconds > 0
+								HUD[4].TimeSeconds -= TempValue0
+							else
+								
+								// In Time Attack, you can't muddle your time up and time out
+								if Options.GameMode != MODE_TIMEATTACK
+									
+									// Player wasted too much time puddling around and now time's up, end the stage
+									Object[30].Type=TypeName[Stage Finish]
+									
+									if Stage.ActNo == 8
+										
+										// If we're in Robotnik's secret Special Stage, then return to the level select
+										
+										Object[30].State = STAGEFINISH_LOADLEVELSELECT
+										Object[30].DrawOrder = 7
+										
+									else
+										
+										// We're in a normal stage, so show the normal results
+										
+										Object[30].DrawOrder = 6
+										
+									end if
+									
+									SSSonic.ControlMode = CONTROLMODE_NONE
+								end if
+								
+							end if
+						end if
+					end if
+				end if
+#platform: Use_Decomp
+			end if
+#endplatform
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	// Sort the drawing orders of all entities
+	// (Things further away from the camera should be drawn first and things closest should be last, etc.)
+	
+	TempValue0 = 0
+	TempValue1 = Screen.DrawListSize[3]
+	while TempValue0 < TempValue1
+		TempValue2 = TempValue1
+		TempValue2--
+		
+		while TempValue2 > TempValue0
+			TempValue3 = TempValue2
+			TempValue2--
+			
+			// Get the object slots of the two objects
+			GetDrawListEntityRef(ArrayPos0, 3, TempValue3)
+			GetDrawListEntityRef(ArrayPos1, 3, TempValue2)
+			
+			// Compare their sorted draw orders
+			if Object[ArrayPos0].ScreenDepth > Object[ArrayPos1].ScreenDepth
+				// Swap them around if needed
+				SetDrawListEntityRef(ArrayPos0, 3, TempValue2)
+				SetDrawListEntityRef(ArrayPos1, 3, TempValue3)
+			end if
+		loop
+		
+		TempValue0++
+	loop
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Despite not having any SpriteFrames to draw with, go ahead and load the Special Stage objects sheet anyway
+	// (It doesn't make much of a difference but hey, may as well anyway!)
+	LoadSpriteSheet("Special/Objects.gif")
+	
+	// Set the ground to the "3d Sky" layer type
+	// -> This way, it'll render in high-quality mode if possible, as opposed to the "3d Floor" type
+	TileLayer[0].Type = LAYER_3DSKY
+	
+	if Options.Soundtrack == OST_JP
+		SetMusicTrack("JP/SpecialStage.ogg", 0, true)
+		SetMusicTrack("JP/ZoneComplete.ogg", 1, false)
+	else
+		SetMusicTrack("US/SpecialStage.ogg", 0, 270972)
+		SetMusicTrack("US/ZoneComplete.ogg", 1, false)
+	end if
+	
+	Stage.PauseEnabled = false
+	
+	// Origins changed this up a bit - before, Time would always be disabled, but Origins makes it enabled for standard play
+	if Options.GameMode == MODE_TIMEATTACK
+		Stage.TimeEnabled = false
+	else
+		Stage.TimeEnabled = true
+	end if
+	
+	Object[23].Type = TypeName[Special Setup]
+	Object[23].Priority = PRIORITY_ACTIVE
+	
+	// Give it a draw order lower right before the primary one, to make sure it can sort all the upcoming 3d entities correctly
+	Object[23].DrawOrder = 2
+	
+	// Cycle through all Blank Objects?
+	// There was likely a proper name here in the original source,
+	// but it was an invalid name so upon compiling, it got resolved as 0
+	// What this original name was though, we have no idea...
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Blank Object]
+			// If the object is blank... then blank it again...
+			ResetObjectEntity(ArrayPos0, TypeName[Blank Object], 0, 0, 0)
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Box
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

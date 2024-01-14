@@ -1,0 +1,150 @@
+//----------------Sonic CD Grab Pole Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.BreakTimer
+
+// HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	GRABPOLE_IDLE
+#alias 1	:	GRABPOLE_HANGING
+#alias 2	:	GRABPOLE_BROKEN
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+
+sub ObjectMain
+	if Object.State == GRABPOLE_HANGING
+		if Player.State == Player_State_Death
+			Object.State = GRABPOLE_IDLE
+		end if
+		if Player.State == Player_State_Drown
+			Object.State = GRABPOLE_IDLE
+		end if
+
+		if Object.State > GRABPOLE_IDLE
+			if Object.BreakTimer < 180
+				Object.BreakTimer++
+				Player.XPos = Object.XPos
+				Player.Direction = FACING_RIGHT
+				if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+					Player.XPos += 0x140000
+				else
+					Player.XPos += 0x100000
+				end if
+			else
+				Object.Frame = 1
+				Object.State = GRABPOLE_BROKEN
+				
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	switch Object.State
+	case GRABPOLE_IDLE
+		PlayerObjectCollision(C_TOUCH, 16, -28, 32, 28)
+		if CheckResult == true
+			Object.State = GRABPOLE_HANGING
+			Player.State = Player_State_Static
+
+			Player.Animation = ANI_CLINGING
+			Player.Direction = FACING_RIGHT
+			
+			Player.Speed	 = 0
+			Player.XVelocity = 0
+			Player.YVelocity = 0
+		end if
+		break
+
+	case GRABPOLE_HANGING
+		if Player.Up == true
+			Player.YPos -= 0x10000
+		end if
+
+		if Player.Down == true
+			Player.YPos += 0x10000
+		end if
+
+		if Player.JumpPress == true
+			Object.Frame = 1
+			Object.State = GRABPOLE_BROKEN
+			
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+
+		end if
+
+		PlayerObjectCollision(C_BOX, 0, -64, 32, -46)
+		PlayerObjectCollision(C_BOX, 0, 46, 32, 64)
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects3.gif")
+
+	if HUD.CurrentTimePeriod < 3 // Present Past or Good Future
+		SpriteFrame(-4, -46, 8, 92, 134, 46)	// #0 - Pole
+		SpriteFrame(-4, -46, 16, 92, 117, 46)	// #1 - Broken Pole
+	else
+		SpriteFrame(-4, -46, 8, 92, 51, 163)	// #0 - Pole
+		SpriteFrame(-4, -46, 16, 92, 34, 163)	// #1 - Broken Pole
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects3.gif")
+
+	CallFunction(EditorHelpers_FindTimePeriod)
+	if CheckResult < 3 // Present Past or Good Future
+		SpriteFrame(-4, -46, 8, 92, 134, 46)	// #0 - Pole
+		SpriteFrame(-4, -46, 16, 92, 117, 46)	// #1 - Broken Pole
+	else
+		SpriteFrame(-4, -46, 8, 92, 51, 163)	// #0 - Pole
+		SpriteFrame(-4, -46, 16, 92, 34, 163)	// #1 - Broken Pole
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

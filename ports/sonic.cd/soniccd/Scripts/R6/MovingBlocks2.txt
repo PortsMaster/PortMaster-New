@@ -1,0 +1,258 @@
+//--------------Sonic CD Moving Blocks 2 Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.BlockXPos_1
+#alias Object.Value1	:	Object.BlockYPos_1
+#alias Object.Value2	:	Object.BlockXPos_2
+#alias Object.Value3	:	Object.BlockYPos_2
+#alias Object.Value4	:	Object.BlockXPos_3
+#alias Object.Value5	:	Object.BlockYPos_3
+#alias Object.Value6	:	Object.CurrentBlock
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 4	:	PLAYER_COL_ROOF
+
+// Global SFX
+#alias 5	:	SFX_G_HURT
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+
+// Function declarations
+#function MovingBlocks_HandleMovement
+
+function MovingBlocks_HandleMovement
+	switch Object.CurrentBlock
+	case 0
+		Object.BlockYPos_1 -= 0x8000
+		if Object.AnimationTimer == 64
+			Object.BlockYPos_2 = Object.BlockYPos_1
+		end if
+		break
+
+	case 1
+		Object.BlockYPos_1 -= 0x8000
+		break
+
+	case 2
+		Object.BlockYPos_1 += 0x8000
+		Object.BlockYPos_3 += 0x8000
+		if Object.AnimationTimer == 64
+			Object.BlockYPos_1 = Object.BlockYPos_3
+		end if
+		break
+
+	case 3
+		Object.BlockYPos_1 += 0x8000
+		Object.BlockYPos_2 += 0x8000
+		break
+
+	case 4
+		Object.BlockYPos_1 -= 0x8000
+		Object.BlockYPos_2 -= 0x8000
+		if Object.AnimationTimer == 64
+			Object.BlockYPos_1 = Object.BlockYPos_2
+		end if
+		break
+
+	case 5
+		Object.BlockYPos_1 -= 0x8000
+		Object.BlockYPos_3 -= 0x8000
+		break
+	end switch
+end function
+
+
+sub ObjectMain
+	Object.Rotation -= 2
+	if Object.Rotation < 0
+		Object.Rotation += 512
+	end if
+	Object.AnimationTimer++
+	CallFunction(MovingBlocks_HandleMovement)
+	if Object.AnimationTimer == 64
+		Object.AnimationTimer = 0
+		Object.CurrentBlock++
+		if Object.CurrentBlock > 5
+			Object.CurrentBlock = 2
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = Object.XPos
+	TempValue1 = Object.YPos
+	switch Object.CurrentBlock
+	case 0
+	case 1
+		Object.XPos = Object.BlockXPos_2
+		Object.YPos = Object.BlockYPos_2
+		PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		break
+		// This exist in mobile and origins versions of the game, for some reason
+		// Object.XPos = Object.Value0
+		// Object.YPos = Object.Value1
+		// PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		// if CheckResult == 1
+		// 	Player.YPos += 0x10000
+		// end if
+		// break
+
+	case 2
+		Object.XPos = Object.BlockXPos_2
+		Object.YPos = Object.BlockYPos_2
+
+		PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+
+		Object.XPos = Object.BlockXPos_3
+		Object.YPos = Object.BlockYPos_3
+		PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+		if CheckResult == PLAYER_COL_ROOF
+			if Player.Gravity == GRAVITY_GROUND
+				PlaySfx(SFX_G_HURT, false)
+				Player.DrawOrder = 5
+				Player.Speed	 = 0
+				Player.XVelocity = 0
+				Player.YVelocity = -0x68000
+
+				Player.State	 = Player_State_Death
+				Player.Animation = ANI_DYING
+				
+				Player.TileCollisions		= false
+				Player.ObjectInteraction	= false
+				Screen.CameraEnabled		= false
+			end if
+		end if
+		break
+
+	case 3
+	case 4
+		Object.XPos = Object.BlockXPos_2
+		Object.YPos = Object.BlockYPos_2
+
+		PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		
+		Object.XPos = Object.BlockXPos_3
+		Object.YPos = Object.BlockYPos_3
+		PlayerObjectCollision(C_TOUCH, -12, -16, 12, 32)
+		if CheckResult == true
+			PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+
+			Object.XPos = Object.BlockXPos_1
+			Object.YPos = Object.BlockYPos_1
+
+			PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+			if CheckResult == PLAYER_COL_ROOF
+				if Player.Gravity == GRAVITY_GROUND
+					PlaySfx(SFX_G_HURT, false)
+					Player.DrawOrder = 5
+
+					Player.Speed	 = 0
+					Player.XVelocity = 0
+					Player.YVelocity = -0x68000
+
+					Player.State	 = Player_State_Death
+					Player.Animation = ANI_DYING
+
+					Player.TileCollisions		= false
+					Player.ObjectInteraction	= false
+					Screen.CameraEnabled		= false
+				end if
+			end if
+		else
+			PlayerObjectCollision(C_BOX, -16, -16, 16, 32)
+		end if
+		break
+	case 5
+		Object.XPos = Object.BlockXPos_2
+		Object.YPos = Object.BlockYPos_2
+		PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		Object.XPos = Object.BlockXPos_1
+		Object.YPos = Object.BlockYPos_1
+		PlayerObjectCollision(C_BOX, -16, -17, 16, 16)
+		if CheckResult == PLAYER_COL_FLOOR
+			Player.YPos += 0x10000
+		end if
+		break
+	end switch
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+	PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+end sub
+
+
+sub ObjectDraw
+	DrawSpriteXY(0, Object.BlockXPos_1, Object.BlockYPos_1)
+	DrawSpriteXY(0, Object.BlockXPos_2, Object.BlockYPos_2)
+	DrawSpriteXY(0, Object.BlockXPos_3, Object.BlockYPos_3)
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-16, -16, 32, 32, 173, 1)	// #0 - Block
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Moving Blocks]
+			Object[ArrayPos0].BlockXPos_1 = Object[ArrayPos0].XPos
+			Object[ArrayPos0].BlockYPos_1 = Object[ArrayPos0].YPos
+			Object[ArrayPos0].BlockXPos_2 = Object[ArrayPos0].XPos
+			Object[ArrayPos0].BlockYPos_2 = Object[ArrayPos0].YPos
+			Object[ArrayPos0].BlockXPos_3 = Object[ArrayPos0].XPos
+			Object[ArrayPos0].BlockYPos_3 = Object[ArrayPos0].YPos
+			Object[ArrayPos0].Rotation = 480
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	TempValue0  = Object.YPos
+	TempValue0 -= 0x100000
+	TempValue1  = Object.XPos
+	TempValue1 -= 0x100000
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		TempValue0 -= 0x200000
+		DrawRectOutline(TempValue1,TempValue0, 0x20, 0x20, 255, 255, 0, 255)
+		DrawArrow(Object.XPos,Object.YPos,Object.XPos,TempValue0, 255, 0, 0)
+		TempValue0 -= 0x200000
+		DrawRectOutline(TempValue1,TempValue0, 0x20, 0x20, 255, 255, 0, 255)
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-16, -16, 32, 32, 173, 1)	// #0 - Block
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

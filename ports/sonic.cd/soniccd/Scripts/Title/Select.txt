@@ -1,0 +1,720 @@
+//-------------------Sonic CD Select Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Note - this script is new to Sonic Origins, so previous versions of the game
+// (ie Steam or mobile releases) won't use this script
+
+// Aliases
+
+// The current Selection, front and centre!
+// It ranges from 0-6, see right down below
+#alias Object.Value0 : Object.CurrentSelection
+
+// Current Selection Aliases, to be paired with Object.CurrentSelection
+#alias 0 : SELECTION_GAMESTART
+#alias 1 : SELECTION_CONTINUE
+#alias 2 : SELECTION_TIMEATTACK
+#alias 3 : SELECTION_SETTINGS
+#alias 4 : SELECTION_SOUNDTRACK
+#alias 5 : SELECTION_EXTRAS
+#alias 6 : SELECTION_EXIT
+
+#alias 8 : SELECTION_MAX
+
+// A value that holds the direction of change in Selection, used when swapping selections
+#alias Object.Value1 : Object.SelectionChange
+
+// Selection Change Aliases, to be paired with Object.SelectionChange from right up above
+#alias 0 : SELECTIONCHANGE_LEFT
+#alias 1 : SELECTIONCHANGE_RIGHT
+
+// The position of the arrows, goes from 0 to 63, and then wraps around to 0
+#alias Object.Value2 : Object.ArrowsPos
+
+// Timer used for fading out
+#alias Object.Value3 : Object.Timer
+
+// A bitfield for all the selections allowed currently
+// Normally 0b01111101, where all selections except SELECTION_CONTINUE are enabled
+#alias Object.Value5 : Object.ActiveSelections
+
+// The position of the currently displayed Selection's text
+#alias Object.Value6 : Object.SelectionPos
+
+// Not to be confused with CurrentSelection, which holds the actual Selection value,
+// this value is used to store what Selection should be *displayed*
+// It normally matches CurrentSelection, with the exception of switching Selections where one goes off screen and another slides on in
+#alias Object.Value7 : Object.DisplaySelection
+
+// States
+
+#alias 0  : SELECT_INIT
+#alias 1  : SELECT_MAIN
+#alias 2  : SELECT_FADEOUT
+
+// Each Selection has its own load State to correspond with it, to tell the game what each Selection does
+#alias 3  : SELECT_GAMESTART
+#alias 4  : SELECT_CONTINUE
+#alias 5  : SELECT_TIMETTACK
+#alias 6  : SELECT_SETTINGS
+#alias 7  : SELECT_SOUNDTRACK
+#alias 8  : SELECT_EXTRAS
+#alias 9  : SELECT_EXIT
+
+#alias 10 : SELECT_CHARSELECT
+#alias 11 : SELECT_RECIEVERESULT
+
+// Selection changing is split into two states
+// - The first half, where the previous option is moving offscreen
+// - And then the second half, where the new option is moving onto the screen
+
+#alias 12 : SELECT_LEFT_START
+#alias 13 : SELECT_LEFT_END
+
+#alias 14 : SELECT_RIGHT_START
+#alias 15 : SELECT_RIGHT_END
+
+// Exiting states, no idea why it gets its own unique fade to be honest
+#alias 16 : SELECT_FADEOUT_E
+#alias 17 : SELECT_EXITGAME
+
+// Start Aliases
+#alias 0 : START_SETUP
+
+// Global SFX
+#alias 27 : SFX_G_SELECT
+
+// Presentation Stages
+#alias 1 : STAGE_P_MENU
+#alias 2 : STAGE_P_TIMEATTACK
+
+// Regular Stage
+#alias 0 : STAGE_R_R11A
+
+// Engine State Aliases
+#alias 8 : ENGINE_WAIT
+
+// game.mainMenuMode Aliases
+#alias -1 : MAINMENUMODE_NULL		// Starts with this, but gets swapped on MenuButton
+
+// Game Mode Aliases
+#alias 1 : MODE_SAVEGAME
+
+// Player List Pos Aliases
+#alias 0 : PLAYER_SONIC_A
+
+
+sub ObjectMain
+	switch Object.State
+	case SELECT_INIT
+		Object.SelectionPos = Screen.CenterX
+		
+		// Game Start is the default option
+		Object.DisplaySelection = SELECTION_GAMESTART
+		Object.CurrentSelection = SELECTION_GAMESTART
+		Object.State = SELECT_MAIN
+		
+		// Reset all the active selections
+		Object.ActiveSelections = 0
+		
+		SetBit(Object.ActiveSelections, SELECTION_GAMESTART, true)
+		// Nope, no SELECTION_CONTINUE!
+		SetBit(Object.ActiveSelections, SELECTION_TIMEATTACK, true)
+		SetBit(Object.ActiveSelections, SELECTION_SETTINGS, true)
+		SetBit(Object.ActiveSelections, SELECTION_SOUNDTRACK, true)
+		SetBit(Object.ActiveSelections, SELECTION_EXTRAS, true)
+		SetBit(Object.ActiveSelections, SELECTION_EXIT, true)
+		
+		// We probably could fall-through here, but we don't want the player to be able to switch their Selection on the first frame
+		break
+		
+	case SELECT_MAIN
+		
+		// First, backup the current selection
+		TempValue0 = Object.CurrentSelection
+		
+		if KeyPress[0].Left == true
+			if TempValue0 > SELECTION_GAMESTART
+				Object.SelectionChange = SELECTIONCHANGE_LEFT
+				
+				// Find the closest active selection in the left direction
+				TempValue1 = false
+				while TempValue1 == false
+					if TempValue0 == SELECTION_GAMESTART
+						// Hit the minimum, just break with the Game Start Selection
+						TempValue1 = true
+					else
+						TempValue0--
+						
+						// Grab the bit of the current index and see if it's allowed or not
+						GetBit(TempValue1, Object.ActiveSelections, TempValue0)
+					end if
+				loop
+			end if
+		end if
+		
+		if KeyPress[0].Right == true
+			Object.SelectionChange = SELECTIONCHANGE_RIGHT
+			
+			// Find the closest active selection in the right direction
+			TempValue1 = false
+			while TempValue1 == false
+				if TempValue0 >= SELECTION_MAX
+					// Hit the maximum, just break with whatever the current Selection is
+					TempValue1 = true
+					TempValue0 = Object.CurrentSelection
+				else
+					TempValue0++
+					
+					// Get the bit to see if this selection's allowed or not
+					GetBit(TempValue1, Object.ActiveSelections, TempValue0)
+				end if
+			loop
+		end if
+		
+		// Has the selection been updated?
+		if Object.CurrentSelection != TempValue0
+			Object.CurrentSelection = TempValue0
+			
+			if Object.SelectionChange == SELECTIONCHANGE_LEFT
+				Object.State = SELECT_LEFT_START
+			else
+				Object.State = SELECT_RIGHT_START
+			end if
+		else
+			
+			// Touch Controls, in my Origins?
+			CheckTouchRect(0, 0, Screen.XSize, 240)
+			
+			if KeyPress[0].Start == true
+				CheckResult = 0
+			end if
+			
+			if KeyPress[0].ButtonA == true
+				CheckResult = 0
+			end if
+			
+			if KeyPress[0].ButtonC == true
+				CheckResult = 0
+			end if
+			
+			if CheckResult > -1
+				if Object.CurrentSelection == SELECTION_GAMESTART
+					Object.State = SELECT_CHARSELECT
+				else
+					Object.State = SELECT_FADEOUT
+					
+					StopMusic()
+					PlaySfx(SFX_G_SELECT, false)
+					
+					HapticEffect(31, 0, 0, 0)
+				end if
+			else
+				if KeyPress[0].ButtonB == true
+					
+					// Go back a step, return to the Touch Start Object
+					Object[-1].State = START_SETUP
+					
+					Object.Type = TypeName[Blank Object]
+				end if
+			end if
+			
+			// Update Arrow movement
+			Object.ArrowsPos++
+			Object.ArrowsPos &= 63
+		end if
+		break
+		
+	case SELECT_FADEOUT
+		Object.Timer += 4
+		if Object.Timer == 384
+			Object.State = Object.CurrentSelection
+			Object.State += 3
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+		
+	case SELECT_GAMESTART
+		ArrayPos1 = 0 // Create a new save, with properties of such:
+		SaveRAM[ArrayPos1] = Stage.PlayerListPos // Make the character who the player just chose
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 3 // Start with 3 lives
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 0 // Default score of 0
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = STAGE_R_R11A // The game starts at Palmtree Present Act 1, of course!
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 0 // No Time Stones
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 0 // And if you have no Time Stones, then that means no Special Stages have been done yet either!
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 50000 // To get an extra life, the first benchmark will be 50000
+		ArrayPos1++
+		SaveRAM[ArrayPos1] = 0 // Since it's a new save, there haven't been any Good Futures yet too
+		
+		// And now, write all those initial values
+		WriteSaveRAM()
+		
+		// Now, go to the next stage where we load into the game
+		Object.State++
+		
+		SetScreenFade(0, 0, 0, 255)
+		LoadVideo("Opening")
+		break
+		
+	case SELECT_CONTINUE
+		ArrayPos1 = 0
+		
+		Options.GameMode = MODE_SAVEGAME
+		Options.SaveSlot = 0
+		
+		Stage.ActiveList = REGULAR_STAGE
+		
+		Stage.PlayerListPos		= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Player.Lives			= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Player.Score			= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Stage.ListPos			= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		SpecialStage.TimeStones	= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		SpecialStage.ListPos	= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Player.ScoreBonus		= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Good_Future_List		= SaveRAM[ArrayPos1]
+		ArrayPos1++
+		
+		Good_Future_List &= 0xFFFF
+		Good_Future_Count = 0
+		Good_Future = false
+		
+		MetalSonic_List = Good_Future_List
+		MetalSonic_List >>= 16
+		
+		LampPost.Check = 0
+		
+		Stage.ListPos--
+		
+		if Stage.ListPos < STAGE_R_R11A
+			// If in the negatives somehow, then go back to 0 - STAGE_R_R11A
+			Stage.ListPos = STAGE_R_R11A
+			Player.Lives  = 3
+			Player.Score  = 0
+		end if
+		
+		// If it's beyond the normal stage length, then that means the save is
+		//   in a Special Stage
+		if Stage.ListPos >= 80
+			// Let's bring that back down, to the actual Stage List Pos
+			SpecialStage.NextZone  = Stage.ListPos
+			SpecialStage.NextZone -= 80
+			
+			// Check down below, this doesn't really work
+			Stage.ActiveList = SPECIAL_STAGE
+			
+#platform: Use_Origins
+			// You may be thinking like "hey wait this script is already for Origins, why is this here?" and you'd be right, but
+			// Origins accidentally messed up the stage list order
+			// This makes "SPECIAL_STAGE" actually point to the Bonus Stage list instead, which isn't ideal
+			// Because of that, we have to set the Special Stage list ID based on a numeric value here instead, since the alias doesn't match
+			
+			Stage.ActiveList = 3
+			
+			// (also the reverse is true too;
+			//  BONUS_STAGE points to the Special Stage list as well)
+#endplatform
+			
+			Stage.ListPos = SpecialStage.ListPos
+			
+			// This is essentially a fancy way of checking if the Player's on the second act of a zone or not
+			TempValue0 = SpecialStage.NextZone
+			TempValue0 %= 10
+			TempValue0 >>= 2
+			
+			if TempValue0 == 1
+				
+				// Setup the Good Future count if needed
+				
+				TempValue1 = SpecialStage.NextZone
+				TempValue1 /= 10
+				TempValue1 <<= 1
+				
+				GetBit(TempValue0, Good_Future_List, TempValue1)
+				
+				Good_Future_Count += TempValue0
+				
+			end if
+		else
+			
+			// See if the Player's on Act 2 of their level
+			TempValue0 = Stage.ListPos
+			TempValue0 %= 10
+			TempValue0 >>= 2
+			
+			if TempValue0 == 1
+				
+				// Setup the Good Future count as needed
+				
+				TempValue1 = Stage.ListPos
+				TempValue1 /= 10
+				TempValue1 <<= 1
+				
+				GetBit(TempValue0, Good_Future_List, TempValue1)
+				
+				Good_Future_Count += TempValue0
+			end if
+		end if
+		
+		// Select a save slot now
+		// Don't mind that all the save-related stuff happened already
+		game.callbackParam0 = 0
+		EngineCallback(NOTIFY_SAVESLOT_SELECT)
+		
+		LoadStage()
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_TIMETTACK
+		game.mainMenuMode = MAINMENUMODE_NULL
+		
+		// Unless this is explicitly set, the game will default to Touch Controls on the menu and we don't want that
+		Options.PhysicalControls = true
+		
+		// Load the Time Attack Menu
+		Stage.ActiveList = PRESENTATION_STAGE
+		Stage.ListPos	 = STAGE_P_TIMEATTACK
+		
+		LoadStage()
+		
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_SETTINGS
+		// Load the Menu, specifically the "Settings" part
+		// -> Despite its general name, it's really only the Spindash option...
+		
+		game.mainMenuMode = MAINMENUMODE_SETTINGS
+		Stage.ActiveList  = PRESENTATION_STAGE
+		Stage.ListPos	  = STAGE_P_MENU
+		
+		LoadStage()
+		
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_SOUNDTRACK
+		// Load the Menu, but this time for the Soundtrack menu
+		game.mainMenuMode = MAINMENUMODE_SOUNDTRACK
+		Stage.ActiveList  = PRESENTATION_STAGE
+		Stage.ListPos	  = STAGE_P_MENU
+		
+		LoadStage()
+		
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_EXTRAS
+		// Force Sonic's SaveRAM Data to load
+		// (In Origins, each character has their own dedicated SaveRAM data, but we want to make sure Extras unlocks are applied regardless of character)
+		game.callbackParam0 = PLAYER_SONIC_A
+		EngineCallback(NOTIFY_PLAYER_SET)
+		
+		// Yup it's your favourite Menu again, but now the Extras tab!
+		game.mainMenuMode = MAINMENUMODE_EXTRAS
+		Stage.ActiveList  = PRESENTATION_STAGE
+		Stage.ListPos	  = STAGE_P_MENU
+		
+		LoadStage()
+		
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_EXIT
+		// Not much here...
+		Engine.State = ENGINE_WAIT
+		
+		SetScreenFade(0, 0, 0, 255)
+		break
+		
+	case SELECT_CHARSELECT
+		// Prompt the HE2 side of things to bring up the character menu
+		game.continueFlag	= false
+		game.callbackResult = -1	// Reset Callback result
+		game.callbackParam0 =  0	// 0 - Character Select, anything else defaults to load the current player
+		EngineCallback(NOTIFY_CHARACTER_SELECT)
+		
+		Object.State = SELECT_RECIEVERESULT
+		break
+		
+	case SELECT_RECIEVERESULT
+		if game.callbackResult > 0
+			// Based on the result, either exit or actually follow the selected option
+			if game.continueFlag != false
+				// There used to be a Object.CurrentSelection = SELECTION_CONTINUE line here, but it was removed in Origins Plus
+				// Not sure what this really fixed?
+				Object.State = SELECT_FADEOUT_E
+			else
+				ReadSaveRAM()
+				Object.CurrentSelection = SELECTION_GAMESTART
+				Object.State = SELECT_FADEOUT
+			end if
+			
+			StopMusic()
+			
+			// ...what? a Haptic effect in new Origins code?
+			// isn't that strange...
+			HapticEffect(31, 0, 0, 0)
+		else
+			if game.callbackResult == 0
+				// Go back to the Selection phase
+				
+				Object.State = SELECT_MAIN
+			end if
+		end if
+		break
+		
+	case SELECT_LEFT_START
+		// Slide the current selection off to the right
+		Object.SelectionPos += 30
+		
+		if Object.SelectionPos >= Screen.XSize
+			// If it's beyond screen bounds, then move to the other half of this state
+			
+			// Make the next text start at the left of the screen
+			Object.SelectionPos = 0
+			
+			// Shift the shown selection to be what the actual new selection is now
+			Object.DisplaySelection = Object.CurrentSelection
+			
+			Object.State = SELECT_LEFT_END
+		end if
+		break
+		
+	case SELECT_LEFT_END
+		// Slide the text in from the left 'till it's centre screen
+		Object.SelectionPos += 30
+		
+		if Object.SelectionPos >= Screen.CenterX
+			// Just to make sure that it's in the middle
+			Object.SelectionPos = Screen.CenterX
+			
+			// And now, go back to the Main Selection phase
+			Object.State = SELECT_MAIN
+			Object.ArrowsPos = 0
+		end if
+		break
+		
+	case SELECT_RIGHT_START
+		// Move the current select off to the left
+		Object.SelectionPos -= 30
+		
+		if Object.SelectionPos <= 0
+			// Now that the selection isn't visible anymore, transition to the latter half of this state
+			
+			// Make the new Selection start at the right edge of the screen
+			Object.SelectionPos = Screen.XSize
+			
+			// And make the shown selection match the true current Selection
+			Object.DisplaySelection = Object.CurrentSelection
+			
+			Object.State = SELECT_RIGHT_END
+		end if
+		break
+		
+	case SELECT_RIGHT_END
+		// Move the new selection from the right side of the screen to reach the middle
+		Object.SelectionPos -= 30
+		
+		if Object.SelectionPos <= Screen.CenterX
+			// Just to make sure it's where it should be
+			Object.SelectionPos = Screen.CenterX
+			
+			// Now, back to the Main selection state!
+			Object.State = SELECT_MAIN
+			Object.ArrowsPos = 0
+		end if
+		break
+		
+	case SELECT_FADEOUT_E
+		// This state is for fading out, exclusively for Exiting
+		// I have no idea why it has its own unique state, to be honest
+		
+		Object.Timer += 4
+		if Object.Timer >= 384
+			Object.State++
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+		
+	case SELECT_EXITGAME
+		// And now, just exit the game
+		
+		Engine.State = RESET_GAME
+		SetScreenFade(0, 0, 0, 255)
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	// Base Frame ID
+	TempValue0 = Object.DisplaySelection
+	
+	if Object.SelectionPos == Screen.CenterX
+		// If the Selection is in the middle of the screen, then bump up the
+		//   frame ID to use the yellow, selected frame
+		TempValue0 += 7
+	end if
+	
+	// Huh, why are they assigned these values to temps when they could just be used directly?
+	TempValue1 = Object.SelectionPos
+	TempValue2 = 198
+	
+	// And even stranger, why exactly is this drawing with FX_INK?
+	// This Object doesn't use any effects like that at all...
+	DrawSpriteScreenFX(TempValue0, FX_INK, TempValue1, TempValue2)
+	
+	// If the Selection is in the middle of the screen, then draw arrows around it too
+	if Object.SelectionPos == Screen.CenterX
+		
+		// First, do the left arrow
+		if Object.CurrentSelection != SELECTION_GAMESTART
+			
+			// First, get the base offset for the Arrow
+			TempValue3 = Object.ArrowsPos
+			TempValue3 &= 48
+			TempValue3 >>= 3
+			
+			// Now, apply that offset to the middle of the screen
+			TempValue4 = Screen.CenterX
+			TempValue4 -= TempValue3
+			
+			// Similarly to before, there's not much of a reason to use FX_INK here...
+			DrawSpriteScreenFX(16, FX_INK, TempValue4, TempValue2)
+		end if
+		
+		// Now, the right arrow!
+		if Object.CurrentSelection < SELECTION_EXIT
+			
+			// Get the base Arrow offset
+			TempValue3 = Object.ArrowsPos
+			TempValue3 &= 48
+			TempValue3 >>= 3
+			
+			// And apply that in relation to centre screen
+			TempValue4 = Screen.CenterX
+			TempValue4 += TempValue3
+			
+			// And again, another use of FX_INK for no reason at all...
+			DrawSpriteScreenFX(17, FX_INK, TempValue4, TempValue2)
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	// Do note, this sprite is new to Origins so it doesn't exist in previous Steam or mobile data files
+	LoadSpriteSheet("Title/Select.gif")
+	
+	// 0-6 - Select Frames
+	
+	// White, unselected Frames
+	
+	// Game Start
+	SpriteFrame(-39, 2, 128, 16, 1,   171)
+	
+	// Continue
+	SpriteFrame(-31, 2, 128, 16, 1,   18)
+	
+	// Time Attack
+	SpriteFrame(-42, 2, 128, 16, 1,   35)
+	
+	// Settings
+	SpriteFrame(-31, 2, 128, 16, 1,   154)
+	
+	// Sound track (why are they two separate words...)
+	SpriteFrame(-43, 2, 128, 16, 1,   86)
+	
+	// Extras
+	SpriteFrame(-24, 2, 128, 16, 1,   137)
+	
+	// Exit
+	SpriteFrame(-15, 2, 128, 16, 1,   103)
+	
+	// 7-13 - Yellow, selected frames
+	
+	// Game Start
+	SpriteFrame(-39, 2, 128, 16, 130, 171)
+	
+	// Continue
+	SpriteFrame(-31, 2, 128, 16, 130, 18)
+	
+	// Time Attack
+	SpriteFrame(-42, 2, 128, 16, 130, 35)
+	
+	// Settings
+	SpriteFrame(-31, 2, 128, 16, 130, 154)
+	
+	// Sound track (is there supposed to be a space?)
+	SpriteFrame(-43, 2, 128, 16, 130, 86)
+	
+	// Extras
+	SpriteFrame(-24, 2, 128, 16, 130, 137)
+	
+	// Exit
+	SpriteFrame(-15, 2, 128, 16, 130, 103)
+	
+	// 14-15 - White Arrows
+	// These are unused
+	
+	// Left Arrow
+	SpriteFrame(-66, 0, 9, 16, 259, 1)
+	
+	// Right Arrow
+	SpriteFrame( 56, 0, 9, 16, 269, 1)
+	
+	// 16-17 - Yellow Arrows
+	
+	// Left Arrow
+	SpriteFrame(-66, 0, 9, 16, 279, 1)
+	
+	// Right Arrow
+	SpriteFrame( 56, 0, 9, 16, 289, 1)
+	
+	// Yup, all the remaining sprites on the sheet are unused!
+	// That makes a nearly half unused sheet!
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Title/Select.gif")
+	SpriteFrame(-39, 2, 128, 16, 1, 171)
+	SpriteFrame(-66, 0, 9, 16, 259, 1)
+	SpriteFrame( 56, 0, 9, 16, 269, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

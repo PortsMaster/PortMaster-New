@@ -1,0 +1,1149 @@
+//---------------Sonic CD Stage Finish Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Timer
+#alias Object.Value5 : Object.TimeBonus
+#alias Object.Value6 : Object.RingBonus
+
+// This can be Coins bonus too, depending on the current mode
+// For simplicity's sake, we're just going to continue calling it ExtraLives
+#alias Object.Value7 : Object.ExtraLives
+
+// All texts have their own X position values
+#alias Object.XPos   : Object.LineXPos0
+#alias Object.Value1 : Object.LineXPos1
+#alias Object.Value2 : Object.LineXPos2
+#alias Object.Value3 : Object.LineXPos3
+#alias Object.Value4 : Object.LineXPos4
+
+// HUD Alias
+#alias Object.Value1 : HUD.TimeSeconds
+#alias Object.Value3 : HUD.Rings
+
+// States
+#alias 0 : STAGEFINISH_INIT
+#alias 1 : STAGEFINISH_FADEOUT
+#alias 2 : STAGEFINISH_FADEIN
+#alias 3 : STAGEFINISH_SCROLLTEXT
+#alias 4 : STAGEFINISH_DISPLAYTALLY
+#alias 5 : STAGEFINISH_TALLYDOWN
+#alias 6 : STAGEFINISH_DISPLAYFINAL
+#alias 7 : STAGEFINISH_LOADNORMAL
+#alias 8 : STAGEFINISH_LOADTIMEATTACK
+#alias 9 : STAGEFINISH_LOADLEVELSELECT
+#alias 10: STAGEFINISH_CHECKRETRYCOND
+#alias 11: STAGEFINISH_SAVE
+
+// Property Value - Results Type
+// Changed by this object, as well as the things that may spawn it
+#alias Object.PropertyValue : Object.ResultsType
+
+// Character limit is rearing its head here, which is why we can only stick in a "T" to distinguish it from states
+// Not what was planned, but not much we can do...
+#alias 0 : STAGEFINISH_T_FAILURE
+#alias 1 : STAGEFINISH_T_STONEOBTAINED
+#alias 2 : STAGEFINISH_T_ALLSTONESOBTAINED
+
+// Player Aliases
+#alias 0 : PLAYER_SONIC_A
+#alias 1 : PLAYER_TAILS_A
+
+// Game Mode Aliases
+#alias 2 : MODE_TIMEATTACK
+
+// Language Aliases
+#alias 0 : LANG_ENGLISH
+#alias 1 : LANG_FRENCH
+#alias 2 : LANG_ITALIAN
+#alias 3 : LANG_DEUTSCH
+#alias 4 : LANG_SPANISH
+#alias 5 : LANG_JAPANESE
+
+// Global SFX
+#alias 16 : SFX_G_SCOREADD
+#alias 17 : SFX_G_SCORETOTAL
+#alias 19 : SFX_G_SPECIALWARP
+#alias 20 : SFX_G_1UP
+#alias 21 : SFX_G_ACHIEVEMENT
+
+// Ink Effect Aliases
+#alias 2 : INK_ALPHA
+
+// Soundtrack
+#alias 0 : OST_JP
+
+// Stage Aliases
+#alias 0 : STAGE_P_TITLESCREEN
+#alias 2 : STAGE_P_TIMEATTACK
+#alias 4 : STAGE_P_SOUNDTEST
+#alias 7 : STAGE_P_CREDITS
+
+// Game Mode Aliases
+#alias 1 : MODE_SAVEGAME
+
+// Control Mode
+#alias 0 : CONTROLMODE_NORMAL
+
+
+sub ObjectMain
+	switch Object.State
+	case STAGEFINISH_INIT
+		// Setup the initial text line positions
+		Object.LineXPos0 = -799
+		Object.LineXPos1 = 1255
+		Object.LineXPos2 = 1319
+		Object.LineXPos3 = 1402
+		Object.LineXPos4 = 1466
+		
+		Object.State = STAGEFINISH_FADEOUT
+		Object.Timer = 0
+		
+		// Setup alpha, used for fading in the Time Stones
+		Object.Alpha = 0
+		Object.InkEffect = INK_ALPHA
+		
+#platform: Use_Origins
+		// Some stuff for Origins, where we back up some cool values
+		BackupSpecialStageListPos = SpecialStage.ListPos
+		BackupTimeStones = SpecialStage.TimeStones
+#endplatform
+		
+		// Don't wanna reward the Player if they just lost!
+		if Object.ResultsType > STAGEFINISH_T_FAILURE
+			
+			// Setup the Time Bonus
+			Object.TimeBonus = HUD[4].TimeSeconds
+			Object.TimeBonus *= 200
+			
+			// Set the corresponding Time Stone bit for this stage
+			TempValue0 = Stage.ActNo
+			TempValue0--
+			
+#platform: Use_Origins
+			// Origins changed it up a bit
+			SetBit(BackupTimeStones, TempValue0, true)
+#endplatform
+			
+#platform: Use_Standalone
+			SetBit(SpecialStage.TimeStones, TempValue0, true)
+#endplatform
+		else
+			Object.TimeBonus = 0
+		end if
+		
+#platform: Use_Origins
+		// Backup the Player's Rings
+		StageStatsUsabilityParam5 = HUD[4].Rings
+		
+		// Setup the Ring Bonus
+		Object.RingBonus = HUD[4].Rings
+		Object.RingBonus *= 200
+		
+		if BackupTimeStones < 127
+			TempValue0 = false
+			while TempValue0 == false
+				BackupSpecialStageListPos++
+				if BackupSpecialStageListPos > 6
+					BackupSpecialStageListPos = 0
+				end if
+				
+				// Carrying through...
+				GetBit(TempValue1, BackupTimeStones, BackupSpecialStageListPos)
+				
+				if TempValue1 == false
+					TempValue0 = true
+				end if
+			loop
+		else
+			TempValue0 = Stage.ListPos
+			TempValue0 %= 10
+			if TempValue0 == 9
+				Stage.ListPos--
+			end if
+			
+			Good_Future_Count = 2
+			
+			if Stage.PlayerListPos == PLAYER_SONIC
+				// If all Stones are collected, unlock the "Treasure Hunter" achievement
+				SetAchievement(8, 100)
+			end if
+		end if
+		
+		// There used to be duplicate saving here, but Origins actually optimised that! How nice of them
+		
+		// As a replacement for all that, let's just back up the Score instead
+		recScore = Player.Score
+		
+#endplatform
+		
+#platform: Use_Standalone
+		// Setup the Ring Bonus
+		Object.RingBonus = HUD[4].Rings
+		Object.RingBonus *= 200
+		
+		Stage.ListPos = SpecialStage.NextZone
+		Stage.ActiveList = REGULAR_STAGE
+		
+		if SpecialStage.TimeStones < 127
+			TempValue0 = false
+			while TempValue0 == false
+				SpecialStage.ListPos++
+				if SpecialStage.ListPos > 6
+					SpecialStage.ListPos = 0
+				end if
+				
+				GetBit(TempValue1, SpecialStage.TimeStones, SpecialStage.ListPos)
+				if TempValue1 == false
+					TempValue0 = true
+				end if
+			loop
+		else
+			TempValue0 = Stage.ListPos
+			TempValue0 %= 10
+			if TempValue0 == 9
+				Stage.ListPos--
+			end if
+			
+			Good_Future_Count = 2
+			
+			if Stage.PlayerListPos == PLAYER_SONIC_A
+				// If all Stones are collected, unlock the "Treasure Hunter" achievement
+				SetAchievement(8, 100)
+			end if
+		end if
+#endplatform
+		break
+		
+	case STAGEFINISH_FADEOUT
+		if Object.Timer == 120
+			
+			// More Origins changes
+#platform: Use_Origins
+			Object.State = STAGEFINISH_CHECKRETRYCOND
+#endplatform
+			
+#platform: Use_Standalone
+			Object.State = STAGEFINISH_FADEIN
+			Object.Timer = 256
+			
+			if SpecialStage.TimeStones > 126	// 0b01111110, each '1' bit represents an obtained time stone
+				// If the player has all Stones, then turn this object into the "Got 'em all!!" variant
+				
+				Object.ResultsType = STAGEFINISH_T_ALLSTONESOBTAINED
+			end if
+			
+			PlayMusic(1)
+#endplatform
+		else
+			Object.Timer++
+			Music.Volume--
+			
+			if Object.Timer == 24
+				// Clear all game objects (aside from this one)
+				
+				// First do all the reserved object slots
+				TempValue0 = 0
+				while TempValue0 < 30
+					ResetObjectEntity(TempValue0, TypeName[Blank Object], 0, 0, 0)
+					TempValue0++
+				loop
+				
+				// Then do all the game object slots
+				TempValue0++
+				while TempValue0 < 1184
+					ResetObjectEntity(TempValue0, TypeName[Blank Object], 0, 0, 0)
+					TempValue0++
+				loop
+				
+				// Set all layers to not draw
+				Stage.ActiveLayer[0] = 9
+				Stage.ActiveLayer[1] = 9
+				Stage.ActiveLayer[2] = 9
+				Stage.ActiveLayer[3] = 9
+				
+				// Lock the player from doing stuff too
+				Player.ControlMode = CONTROLMODE_NORMAL
+				KeyDown[1].Left  = false
+				KeyDown[1].Right = false
+				Player.Direction = FACING_RIGHT
+				
+			end if
+		end if
+		
+		TempValue0 = Object.Timer
+		TempValue0 <<= 4
+		if TempValue0 > 255
+			TempValue0 = 255
+		end if
+		SetScreenFade(208, 255, 224, TempValue0)
+		break
+		
+	case STAGEFINISH_FADEIN
+		Object.Timer -= 16
+		if Object.Timer == 0
+			Object.State = STAGEFINISH_SCROLLTEXT
+			
+#platform: Use_Origins
+			// We can actually set the stage now
+			Stage.ActiveList = REGULAR_STAGE
+			Stage.ListPos = SpecialStage.NextZone
+#endplatform
+		end if
+		
+		SetScreenFade(208, 255, 224, Object.Timer)
+		
+		// Move in all the texts
+		
+		TempValue0 = Screen.CenterX
+		TempValue0 -= 88
+		if Object.LineXPos0 < TempValue0
+			Object.LineXPos0 += 16
+			if Object.LineXPos0 > TempValue0
+				Object.LineXPos0 = TempValue0
+			end if
+		else
+			Object.LineXPos0 = TempValue0
+		end if
+		
+		TempValue0++
+		if Object.LineXPos1 > TempValue0
+			Object.LineXPos1 -= 16
+			if Object.LineXPos1 < TempValue0
+				Object.LineXPos1 = TempValue0
+			end if
+		else
+			Object.LineXPos1 = TempValue0
+		end if
+		
+		if Object.LineXPos2 > TempValue0
+			Object.LineXPos2 -= 16
+			if Object.LineXPos2 < TempValue0
+				Object.LineXPos2 = TempValue0
+			end if
+		else
+			Object.LineXPos2 = TempValue0
+		end if
+		
+		if Object.LineXPos3 > TempValue0
+			Object.LineXPos3 -= 16
+			if Object.LineXPos3 < TempValue0
+				Object.LineXPos3 = TempValue0
+			end if
+		else
+			Object.LineXPos3 = TempValue0
+		end if
+		
+		if Object.LineXPos4 > TempValue0
+			Object.LineXPos4 -= 16
+			if Object.LineXPos4 < TempValue0
+				Object.LineXPos4 = TempValue0
+			end if
+		else
+			Object.LineXPos4 = TempValue0
+			
+			// All the texts are in place, proceed
+			// It should never happen, but if this is reached before the screen is fully faded in (see start of this state) then
+			//  the screen will stay faded the entire durration of the results screen
+			
+			Object.State = STAGEFINISH_DISPLAYTALLY
+			Object.Timer = 0
+		end if
+		break
+		
+	case STAGEFINISH_SCROLLTEXT
+		// Moving the text in
+		
+		TempValue0 = Screen.CenterX
+		TempValue0 -= 88
+		
+		if Object.LineXPos0 < TempValue0
+			Object.LineXPos0 += 16
+			if Object.LineXPos0 > TempValue0
+				Object.LineXPos0 = TempValue0
+			end if
+		else
+			Object.LineXPos0 = TempValue0
+		end if
+		
+		TempValue0++
+		if Object.LineXPos1 > TempValue0
+			Object.LineXPos1 -= 16
+			if Object.LineXPos1 < TempValue0
+				Object.LineXPos1 = TempValue0
+			end if
+		else
+			Object.LineXPos1 = TempValue0
+		end if
+		
+		if Object.LineXPos2 > TempValue0
+			Object.LineXPos2 -= 16
+			if Object.LineXPos2 < TempValue0
+				Object.LineXPos2 = TempValue0
+			end if
+		else
+			Object.LineXPos2 = TempValue0
+		end if
+		
+		if Object.LineXPos3 > TempValue0
+			Object.LineXPos3 -= 16
+			if Object.LineXPos3 < TempValue0
+				Object.LineXPos3 = TempValue0
+			end if
+		else
+			Object.LineXPos3 = TempValue0
+		end if
+		
+		if Object.LineXPos4 > TempValue0
+			Object.LineXPos4 -= 16
+			if Object.LineXPos4 < TempValue0
+				Object.LineXPos4 = TempValue0
+			end if
+		else
+			Object.LineXPos4 = TempValue0
+			Object.State = STAGEFINISH_DISPLAYTALLY
+			Object.Timer = 0
+		end if
+		break
+		
+	case STAGEFINISH_DISPLAYTALLY
+		// Waiting for a bit, to let the player see what they got
+		
+		// Fade in the Stones
+		if Object.Alpha < 255
+			// TempValue0 is used to hold the target value since Object.Alpha is a byte, and therefore prone to overflowing if too much is added
+			
+			TempValue0 = Object.Alpha
+			TempValue0 += 8
+			if TempValue0 > 255
+				TempValue0 = 255
+			end if
+			
+			Object.Alpha = TempValue0
+		end if
+		
+		// The different soundtrack jingles have different lenghts, so account for that
+		if Options.Soundtrack == OST_JP
+			Object.Timer++
+			if Object.Timer > 299
+				Object.Timer = 0
+				Object.State = STAGEFINISH_TALLYDOWN
+			end if
+		else
+			Object.Timer++
+			if Object.Timer > 429
+				Object.Timer = 0
+				Object.State = STAGEFINISH_TALLYDOWN
+			end if
+		end if
+		break
+		
+	case STAGEFINISH_TALLYDOWN
+		// Tally up the bonuses, rings first then time
+		
+		if Object.RingBonus > 0
+			Object.RingBonus -= 200
+			Player.Score += 200
+			
+			if Object.RingBonus < 0
+				Player.Score += Object.RingBonus
+				Object.RingBonus = 0
+			end if
+		else
+			if Object.TimeBonus > 0
+				Object.TimeBonus -= 200
+				Player.Score += 200
+				
+				if Object.TimeBonus < 0
+					Player.Score += Object.TimeBonus
+					Object.TimeBonus = 0
+				end if
+			end if
+		end if
+		
+		if Player.Score >= Player.ScoreBonus
+			Object.ExtraLives++
+			
+#platform: Use_Origins
+			// In Origins, give either Coins or Lives based on the current mode
+			if game.coinMode == false
+				Player.Lives++
+			else
+				game.callbackParam0 = 1	// Set the amount of coins to add
+				EngineCallback(NOTIFY_ADD_COIN)
+			end if
+#endplatform
+			
+#platform: Use_Standalone
+			Player.Lives++ // In Standalone, we only have lives
+#endplatform
+			
+			Player.ScoreBonus += 50000
+			
+			if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+				PlaySfx(SFX_G_1UP, false)
+			else
+				PlaySfx(SFX_G_ACHIEVEMENT, false)
+			end if
+		end if
+		
+		CheckGreater(Object.RingBonus, 0)
+		TempValue0 = CheckResult
+		CheckGreater(Object.TimeBonus, 0)
+		TempValue0 |= CheckResult
+		
+		if TempValue0 == true
+			Object.Timer++
+			
+			if Object.Timer == 2
+				PlaySfx(SFX_G_SCOREADD, false)
+				Object.Timer = 0
+			end if
+		else
+			// The tally's done, proceed
+			
+			Object.State = STAGEFINISH_DISPLAYFINAL
+			Object.Timer = 0
+			
+			// And of course, the signature ka-ching!
+			PlaySfx(SFX_G_SCORETOTAL, false)
+		end if
+		break
+		
+	case STAGEFINISH_DISPLAYFINAL
+		// Wait some more, letting the player see what they *really* got
+		Object.Timer++
+		
+		if Object.Timer == 160
+			Object.Timer = 0
+			Object.State = STAGEFINISH_LOADNORMAL
+			if Object[0].Type == TypeName[Blank Object]
+				PlaySfx(SFX_G_SPECIALWARP, false)
+			end if
+		end if
+		break
+		
+	case STAGEFINISH_LOADNORMAL
+		if Object[0].Type == TypeName[Blank Object]
+			Object.Timer += 8
+			SetScreenFade(208, 255, 224, Object.Timer)
+			
+			if Object.Timer == 1024
+				if Options.GameMode == MODE_SAVEGAME
+					
+					// Save the Player's progress
+					// This used to be useless, because the Player's progress was already saved previously in the Object,
+					// but Origins removed that duplicate, and now this whole section actually serves a purpose now
+					
+					ArrayPos1 = Options.SaveSlot
+					ArrayPos1 <<= 3
+					
+					SaveRAM[ArrayPos1] = Stage.PlayerListPos
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = Player.Lives
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = Player.Score
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = Stage.ListPos
+					SaveRAM[ArrayPos1]++
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = SpecialStage.TimeStones
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = SpecialStage.ListPos
+					
+					ArrayPos1++
+					SaveRAM[ArrayPos1] = Player.ScoreBonus
+					
+					// This bump in particular, it doesn't do anything, does it?
+					ArrayPos1++
+					
+					WriteSaveRAM()
+				end if
+				
+#platform: Use_Origins
+				// A small Origins tweak - backup the Player's score (again)
+				// So I guess in return for one redundancy loss, we got another one in return...
+				recScore = Player.Score
+#endplatform
+				
+				// Write the correct colors to Fade_Colour so that the maingame fades back in with the same white
+				// (This is setting Fade_Colout to 0xD0FFE0, in hex form)
+				Fade_Colour = 208
+				Fade_Colour <<= 16
+				TempValue0 = 255
+				TempValue0 <<= 8
+				Fade_Colour += TempValue0
+				Fade_Colour += 224
+				
+#platform: Use_Origins
+				// Now, let the game know how many Rings we got
+				game.callbackParam0 = StageStatsUsabilityParam5
+				EngineCallback(NOTIFY_STATS_RING)
+				
+				// Reset the variable for future use
+				StageStatsUsabilityParam5 = 0
+#endplatform
+				
+				if Stage.ListPos < Stage.ListSize
+					LoadStage()
+				else
+					// This should never happen, but you're somehow supposed to go to a stage that doesn't exist, so
+					// just go back to the title screen instead
+					Stage.ActiveList = PRESENTATION_STAGE
+					Stage.ListPos = STAGE_P_TITLESCREEN
+					LoadStage()
+				end if
+			end if
+		end if
+		break
+		
+	case STAGEFINISH_LOADTIMEATTACK
+		if Object.Timer < 480
+			Object.Timer += 4
+			Music.Volume--
+		else
+			StopMusic()
+			
+			// Save the Time Attack results
+			TimeAttack.Result = Stage.Seconds
+			TimeAttack.Result *= 100
+			
+			TempValue0 = Stage.Minutes
+			TempValue0 *= 6000
+			
+			TimeAttack.Result += TempValue0
+			TimeAttack.Result += Stage.MilliSeconds
+			
+			// Load the Time Attack Menu
+			// This is an extremely minor change, but Origins changed this part to be more in line with
+			//  other stage setting code, where active list is set first and then list pos comes after
+			// Before that, this part had list pos first and then active list, which was quite odd...
+			Stage.ActiveList = PRESENTATION_STAGE
+			Stage.ListPos = STAGE_P_TIMEATTACK
+			
+			LoadStage()
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+		
+	case STAGEFINISH_LOADLEVELSELECT
+		// Used when exiting the hidden Robotnik stage
+#platform: Use_Standalone
+		if Object.Timer < 480
+#endplatform
+#platform: Use_Origins
+		if Object.Timer < 240
+#endplatform
+			// Fade out the screen and the music
+			
+			Object.Timer += 4
+			Music.Volume--
+		else
+			// Load the credits scene
+			
+			StopMusic()
+			
+			// Similarly to the above, this spot used to be out-of-order until Origins came and fixed it
+			// One strange thing through, it changed it from the Credits to be the Sound Test instead?
+			// I have no idea if that was an intentional change or not, but it's strange...
+			
+			Stage.ActiveList = PRESENTATION_STAGE
+			
+#platform: Use_Origins
+			Stage.ListPos = STAGE_P_SOUNDTEST
+#endplatform
+			
+#platform: Use_Standalone
+			Stage.ListPos = STAGE_P_CREDITS
+#endplatform
+			LoadStage()
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+		
+#platform: Use_Origins
+		// The Origins folks put an extra break in here LOL
+		// This code never hits anyway, so I guess it's fine?
+		break
+		
+	case STAGEFINISH_CHECKRETRYCOND
+		
+		game.callbackResult = -1	// Reset the Callback result
+		
+		if Object.ResultsType == STAGEFINISH_T_FAILURE
+			// We've failed getting the Stone, so we're able to retry the Special Stage
+			
+			game.callbackParam0 = false
+		else
+			// We got the Stone, so we don't need to retry
+			
+			game.callbackParam0 = true
+		end if
+		
+		// Offer to restart the Special Stage, if the Player failed it
+		game.callbackParam1 = BackupSpecialStageListPos
+		game.callbackParam2 = BackupTimeStones
+		EngineCallback(NOTIFY_SPECIAL_RETRY)
+		
+		Object.State = STAGEFINISH_SAVE
+		
+		SetScreenFade(208, 255, 224, 255)
+		break
+		
+	case STAGEFINISH_SAVE
+		if game.callbackResult >= false
+			SpecialStage.ListPos = BackupSpecialStageListPos
+			SpecialStage.TimeStones = BackupTimeStones
+			
+			if Options.GameMode == MODE_SAVEGAME
+				ArrayPos1 = Options.SaveSlot
+				ArrayPos1 <<= 3
+				
+				SaveRAM[ArrayPos1] = Stage.PlayerListPos
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = Player.Lives
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = Player.Score
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = Stage.ListPos
+				SaveRAM[ArrayPos1]++
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = SpecialStage.TimeStones
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = SpecialStage.ListPos
+				
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = Player.ScoreBonus
+				
+				ArrayPos1++
+				
+				WriteSaveRAM()
+			end if
+			
+			if Options.GameMode == MODE_TIMEATTACK
+				
+				// Save up the Time Attack results
+				
+				TimeAttack.Result = Stage.Seconds
+				TimeAttack.Result *= 100
+				
+				TempValue0 = Stage.Minutes
+				TempValue0 *= 6000
+				
+				TimeAttack.Result += TempValue0
+				TimeAttack.Result += Stage.MilliSeconds
+				
+				// Load the Time Attack menu
+				Stage.ActiveList = PRESENTATION_STAGE
+				Stage.ListPos = STAGE_P_TIMEATTACK
+				
+				LoadStage()
+			else
+				Object.State = STAGEFINISH_FADEIN
+				Object.Timer = 256
+				if SpecialStage.TimeStones > 126	// 0b1111110, each '1' bit represents an obtained time stone
+					// Got 'em all!
+					Object.ResultsType = STAGEFINISH_T_ALLSTONESOBTAINED
+					EngineCallback(NOTIFY_STATS_PARAM_2)
+				end if
+				
+				PlayMusic(1)
+			end if
+		end if
+		
+		SetScreenFade(208, 255, 224, 255)
+		break
+#endplatform
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.State != STAGEFINISH_LOADLEVELSELECT
+		if Object.State > STAGEFINISH_FADEOUT
+			
+			// Draw the Background
+			TempValue0 = 0
+			while TempValue0 < 240
+				TempValue1 = 0
+				while TempValue1 < 360
+					DrawSpriteScreenXY(0, TempValue1, TempValue0)
+					TempValue1 += 224
+				loop
+				
+				TempValue0 += 48
+			loop
+
+#platform: Use_Decomp
+			// Only on decomp, extend the bg past 448
+			TempValue0 = 0
+			while TempValue0 < 240
+				TempValue1 = 448
+				while TempValue1 < 720
+					DrawSpriteScreenXY(0, TempValue1, TempValue0)
+					TempValue1 += 224
+				loop
+				
+				TempValue0 += 48
+			loop
+
+#endplatform
+			
+			// Draw all the Time Stones the player has so far
+			// - TempValue0 is the current Stone
+			// - TempValue1 is the starting Sprite Frame ID for the Stones
+			// - TempValue2 is the draw position for the Stones
+			// - TempValue3 is either true or false based if the current Time Stone is obtained
+			TempValue0 = 0
+			TempValue1 = 20
+			TempValue2 = Screen.CenterX
+			TempValue2 -= 79
+			
+			while TempValue0 < 7
+				
+				// See if the Player has the current Time Stone
+				GetBit(TempValue3, SpecialStage.TimeStones, TempValue0)
+				
+				// Bump up the index, for next loop around
+				TempValue0++
+				
+				// If the Player has the Time Stone, then draw it
+				if TempValue3 == true
+					DrawSpriteScreenFX(TempValue1, FX_INK, TempValue2, 81)
+				end if
+				
+				TempValue1++
+				
+				// Each Stone is drawn 24 px apart from each other's center
+				TempValue2 += 24
+			loop
+		end if
+		
+		// Draw the main text, depending on what the current results type is
+		switch Object.ResultsType
+		case STAGEFINISH_T_FAILURE
+			// "SPECIAL ZONE"
+			DrawSpriteScreenXY(1, Object.XPos, 50)
+			break
+			
+		case STAGEFINISH_T_STONEOBTAINED
+			// "TIME STONES"
+			DrawSpriteScreenXY(2, Object.XPos, 50)
+			break
+			
+		case STAGEFINISH_T_ALLSTONESOBTAINED
+			// "GOT THEM ALL!!"
+			DrawSpriteScreenXY(3, Object.XPos, 50)
+			break
+			
+		end switch
+		
+		// Draw the Score text
+		DrawSpriteScreenXY(4, Object.LineXPos1, 105)
+		
+		// Draw the Player's Score
+		TempValue0 = Object.LineXPos1
+		TempValue0 += 176
+		DrawNumbers(10, TempValue0, 105, Player.Score, 6, 8, false)
+		
+		// Then, the Ring Bonus line
+		
+		// First, draw the "RING" sprite
+		DrawSpriteScreenXY(5, Object.LineXPos2, 129)
+		
+		TempValue0 = Object.LineXPos2
+		TempValue0 += 40
+		
+		// Then, 40 pixels to the right of that, draw the "BONUS" sprite
+		DrawSpriteScreenXY(7, TempValue0, 129)
+		
+		// And at the end of the line, draw the Ring Bonus count
+		TempValue0 += 136
+		DrawNumbers(10, TempValue0, 129, Object.RingBonus, 5, 8, false)
+		
+		// Line 3, holds the Time Bonus text
+		
+		// First, the "TIME" sprite
+		DrawSpriteScreenXY(6, Object.LineXPos3, 153)
+		
+		TempValue0 = Object.LineXPos3
+		TempValue0 += 40
+		
+		// Then, 40 pixels to the right, the "BONUS" frame
+		DrawSpriteScreenXY(7, TempValue0, 153)
+		
+		// And at the end of this line too, draw the Time Bonus numbers
+		TempValue0 += 136
+		DrawNumbers(10, TempValue0, 153, Object.TimeBonus, 5, 8, false)
+		
+		// Line 4, holds either Continues or Coins based on the current mode
+#platform: Use_Origins
+		if game.coinMode == false
+			
+			// Draw the "EXTRA LIVES" text
+			
+			// First, is "EXTRA"
+			DrawSpriteScreenXY(8, Object.LineXPos4, 177)
+			
+			TempValue0 = Object.LineXPos4
+			TempValue0 += 49
+			
+			// Then after than of course, comes "LIVES"
+			DrawSpriteScreenXY(9, TempValue0, 177)
+			
+		else
+			
+			// Draw the "COINS BONUS" text
+			
+			// First, comes "COINS"
+			DrawSpriteScreenXY(35, Object.LineXPos4, 177)
+			
+			TempValue0 = Object.LineXPos4
+			TempValue0 += 40
+			
+			// Then to the right of that, is "BONUS"
+			DrawSpriteScreenXY(7, TempValue0, 177)
+			
+			// And then bump up the position for the icons to be drawn at
+			TempValue0 += 9
+			
+		end if
+#endplatform
+		
+#platform: Use_Standalone
+		// Draw the "EXTRA LIVES" text
+		
+		// First, is "EXTRA"
+		DrawSpriteScreenXY(8, Object.LineXPos4, 177)
+		
+		TempValue0 = Object.LineXPos4
+		TempValue0 += 49
+		
+		// Then after than of course, comes "LIVES"
+		DrawSpriteScreenXY(9, TempValue0, 177)
+#endplatform
+		
+		// Move to the end of the line
+		TempValue0 += 86
+		
+		// Animate the mini-character
+		Object.Frame++
+		Object.Frame &= 15
+		
+		// Get the base frame the mini-character should use
+		TempValue1 = Object.Frame
+		TempValue1 >>= 3
+		
+		// Bump it up to match its corresponding Sprite Frame ID
+		TempValue1 += 27
+		
+		TempValue2 = Object.ExtraLives
+		
+#platform: Use_Origins
+		// Now, draw either Continues or Coins
+		
+		if game.coinMode == false
+			
+			// Draw Continues
+			
+			while TempValue2 > 0
+				DrawSpriteScreenXY(TempValue1, TempValue0, 177)
+				TempValue2--
+				
+				TempValue0 += 24
+			loop
+			
+		else
+			
+			if TempValue2 > 0
+				TempValue0 += 12
+				
+				// This TempValue1, it isn't used anywhere, is it?
+				// It corresponds with the following Sprite Frame ID, perhaps it was used for that before...
+				TempValue1 = 29
+				
+				// Draw the Coins icon
+				DrawSpriteScreenXY(29, TempValue0, 177)
+				
+				// And then an x1 next to it
+				DrawSpriteScreenXY(30, TempValue0, 177)
+				
+				// And then make the Coin sparkle
+				TempValue1 = Object.Frame
+				TempValue1 >>= 2
+				
+				// From that sparkle frame, but it up by 31 to match the Sprite Frame IDs
+				TempValue1 += 31
+				
+				// And now, draw the sparkle on top of the Coin
+				DrawSpriteScreenXY(TempValue1, TempValue0, 177)
+			end if
+			
+		end if
+#endplatform
+		
+#platform: Use_Standalone
+		// Just draw Continues, we don't use Coins in Standalone
+		
+		while TempValue2 > 0
+			DrawSpriteScreenXY(TempValue1, TempValue0, 177)
+			TempValue2--
+			TempValue0 += 24
+		loop
+#endplatform
+		
+	end if
+end sub
+
+
+sub ObjectStartup
+	
+	// Load the correct sheet based on the current language
+	switch Engine.Language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+		// LANG_ENGLISH and LANG_JAPANESE use the same sheet (the LANG_ENGLISH sheet)
+		LoadSpriteSheet("Special/ScoreScreen.gif")
+		break
+		
+	case LANG_FRENCH
+		LoadSpriteSheet("Special/ScoreScreen_FR.gif")
+		break
+		
+	case LANG_ITALIAN
+		LoadSpriteSheet("Special/ScoreScreen_IT.gif")
+		break
+		
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Special/ScoreScreen_DE.gif")
+		break
+		
+	case LANG_SPANISH
+		LoadSpriteSheet("Special/ScoreScreen_ES.gif")
+		break
+		
+	end switch
+	
+	// 0 - Background
+	SpriteFrame(0, 0, 224, 48, 0, 63)
+	
+	// 1 - "SPECIAL ZONE" Text
+	SpriteFrame(0, 0, 184, 14, 1, 1)
+	
+	// 2 - "TIME STONES" Text
+	SpriteFrame(9, 0, 167, 14, 1, 16)
+	
+	// 3 - "GOT THEM ALL!!" Text
+	SpriteFrame(-16, 0, 205, 14, 1, 48)
+	
+	// 4 - "SCORE" Text
+	SpriteFrame(0, 0, 39, 11, 1, 112)
+	
+	// 5 - "RING" Text
+	SpriteFrame(0, 0, 31, 11, 41, 112)
+	
+	// 6 - "TIME" Text
+	SpriteFrame(0, 0, 31, 11, 73, 112)
+	
+	// 7 - "BONUS" Text
+	SpriteFrame(0, 0, 41, 11, 105, 112)
+	
+	// 8 - "EXTRA" Text
+	SpriteFrame(0, 0, 40, 11, 147, 112)
+	
+	// 9 - "LIVES" Text
+	SpriteFrame(0, 0, 36, 11, 188, 112)
+	
+	// 10-19 - Numbers 0-9
+	SpriteFrame(0, 0, 8, 11, 220, 1)
+	SpriteFrame(0, 0, 8, 11, 229, 1)
+	SpriteFrame(0, 0, 8, 11, 238, 1)
+	SpriteFrame(0, 0, 8, 11, 247, 1)
+	SpriteFrame(0, 0, 8, 11, 220, 13)
+	SpriteFrame(0, 0, 8, 11, 229, 13)
+	SpriteFrame(0, 0, 8, 11, 238, 13)
+	SpriteFrame(0, 0, 8, 11, 247, 13)
+	SpriteFrame(0, 0, 8, 11, 238, 25)
+	SpriteFrame(0, 0, 8, 11, 247, 25)
+	
+	// 20-26 - Time Stones
+	SpriteFrame(0, 0, 16, 16, 1, 31)
+	SpriteFrame(0, 0, 16, 16, 18, 31)
+	SpriteFrame(0, 0, 16, 16, 35, 31)
+	SpriteFrame(0, 0, 16, 16, 52, 31)
+	SpriteFrame(0, 0, 16, 16, 69, 31)
+	SpriteFrame(0, 0, 16, 16, 86, 31)
+	SpriteFrame(0, 0, 16, 16, 103, 31)
+	
+	// 27-28 - Small Foot-Tapping Player Icons
+	if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+		// Do note, these are separate from the ones used in the Pause Menu
+		// These ones are bluer, as well as having a hole in Sonic's head...
+		SpriteFrame(0, 0, 16, 23, 169, 24)
+		SpriteFrame(0, 0, 16, 23, 186, 24)
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		SpriteFrame(0, 0, 16, 23, 139, 203)
+		SpriteFrame(0, 0, 16, 23, 156, 203)
+	end if
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		SpriteFrame(0, 0, 16, 22, 18, 256)
+		SpriteFrame(0, 0, 16, 22, 35, 256)
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		SpriteFrame(0, 0, 17, 22, 70, 256)
+		SpriteFrame(0, 0, 17, 22, 88, 256)
+	end if
+	
+	// These below ones are new to Origins
+	
+	// 29 - Coins icon
+	SpriteFrame(0, -4, 18, 16, 204, 29)
+	
+	// 30 - "x1"
+	SpriteFrame(18, -4, 32, 16, 187, 1)
+	
+	// 31-34 - Sparkle Frames
+	SpriteFrame(-4, -8, 24, 24, 130, 125)
+	SpriteFrame(-4, -8, 24, 24, 155, 125)
+	SpriteFrame(-4, -8, 24, 24, 130, 150)
+	SpriteFrame(-4, -8, 24, 24, 155, 150)
+	
+	// 35 - "COIN" text, in the context of "Coin Bonus"
+	SpriteFrame(0, 0, 31, 11, 130, 175)
+#endplatform
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/ScoreScreen.gif")
+	SpriteFrame(0, 0, 184, 14, 1, 1)
+	
+	// Although used, it's not to be set from editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

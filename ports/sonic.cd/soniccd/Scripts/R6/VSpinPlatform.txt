@@ -1,0 +1,273 @@
+//--------------Sonic CD V Spin Platform Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.PlayerOffSetAngle
+#alias Object.Value1	:	Object.OffSetYPos
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.Angle
+#alias Object.Value4	:	Object.KickPlayer
+#alias Object.Value5	:	Object.PlatAnimFrame
+#alias Object.Value6	:	Object.LightAnimFrame
+
+// Player Aliases
+#alias Player.Value6	:	Player.MinRollSpeed
+
+// Global SFX
+#alias 0	:	SFX_G_JUMP
+
+// Property Values
+// This property values only cover the starting position
+#alias 0	:	START_MOVING_DOWN
+#alias 1	:	START_MOVING_UP
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+
+sub ObjectMain
+
+	Object.Angle   = Oscillation
+	Object.Angle <<= 1
+	if Object.PropertyValue == START_MOVING_DOWN
+		Object.Angle += 256
+	end if
+
+	Sin(Object.YVelocity, Object.Angle)
+	Object.YVelocity <<= 13
+	Object.YVelocity  += Object.YPos
+	Object.YVelocity  &= 0xFFFF0000 // Truncate the value
+	Object.YVelocity  -= Object.OffSetYPos
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue1  = Object.YPos
+	Object.YPos = Object.OffSetYPos
+	PlayerObjectCollision(C_PLATFORM, -24, -12, 24, 8)
+	if CheckResult == true
+		Player.YPos += Object.YVelocity
+
+		if Player.State != Player_State_SpinningTop
+			Player.Speed = 0
+
+			Object.KickPlayer	= true
+			Player.MinRollSpeed = 0xC00
+			if Player.XPos > Object.XPos
+				Player.Timer  = Player.XPos
+				Player.Timer -= Object.XPos
+				Object.PlayerOffSetAngle = 128
+			else
+				Player.Timer  = Object.XPos
+				Player.Timer -= Player.XPos
+				Object.PlayerOffSetAngle = 384
+			end if
+		end if
+
+		if Player.XPos > Object.XPos
+			if Player.Left == true
+				Player.Timer -= 2048
+			end if
+			if Player.Right == true
+				Player.Timer += 2048
+			end if
+		else
+			if Player.Left == true
+				Player.Timer += 2048
+			end if
+			if Player.Right == true
+				Player.Timer -= 2048
+			end if
+		end if
+
+		Player.State	 = Player_State_SpinningTop
+		Player.Animation = ANI_SPINNING_TOP
+
+		Sin(Player.XPos, Object.PlayerOffSetAngle)
+		Player.XPos  *= Player.Timer
+		Player.XPos >>= 9
+		Player.XPos  += Object.XPos
+
+		TempValue0   = Object.PlayerOffSetAngle
+		TempValue0  -= 128
+		TempValue0  /= 86
+		Player.Frame = TempValue0
+
+		Object.PlayerOffSetAngle += 8
+		if Object.PlayerOffSetAngle > 639
+			Object.PlayerOffSetAngle -= 512
+		end if
+
+		if Player.JumpPress == true
+			CallFunction(Player_Action_Jump)
+
+			Player.Speed   = Player.XPos
+			Player.Speed  -= Object.XPos
+			Player.Speed >>= 3
+
+#platform: Use_Origins
+			Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+			Player.State = Player_State_Air
+#endplatform
+
+			Player.Timer = 0
+
+			PlaySfx(SFX_G_JUMP, false)
+		end if
+	else
+		if Object.KickPlayer == true
+			if Player.State == Player_State_SpinningTop
+				if Player.Gravity == GRAVITY_GROUND
+					Player.State	  = Player_State_Ground
+					Object.KickPlayer = false
+					Player.Timer	  = 0
+				end if
+			end if
+		end if
+	end if
+	Object.YPos = TempValue1
+end sub
+
+
+sub ObjectDraw
+	Sin(Object.OffSetYPos, Object.Angle)
+	Object.OffSetYPos <<= 13
+	Object.OffSetYPos  += Object.YPos
+	Object.OffSetYPos  &= 0xFFFF0000 // Truncate the value
+
+	TempValue0  = Object.PlatAnimFrame
+	TempValue0 /= 10
+
+	Object.PlatAnimFrame++
+	Object.PlatAnimFrame %= 20
+
+	DrawSpriteXY(TempValue0, Object.XPos, Object.OffSetYPos)
+
+	TempValue0  = Object.LightAnimFrame
+	TempValue0 /= 10
+	TempValue0 += 2
+
+	Object.LightAnimFrame++
+	Object.LightAnimFrame %= 60
+
+	DrawSpriteXY(TempValue0, Object.XPos, Object.OffSetYPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-24, -16, 48, 32, 1, 84)	// #0 - Vertical Spin Platform frame 0
+	SpriteFrame(-24, -16, 48, 32, 50, 84)	// #1 - Vertical Spin Platform frame 1
+
+	SpriteFrame(-8, 16, 16, 16, 1, 117)		// #2 - Spin Platform Light frame 0
+	SpriteFrame(-8, 16, 16, 16, 18, 117)	// #3 - Spin Platform Light frame 1
+	SpriteFrame(-8, 16, 16, 16, 35, 117)	// #4 - Spin Platform Light frame 2
+	SpriteFrame(-8, 16, 16, 16, 35, 117)	// #5 - Spin Platform Light frame 3
+	SpriteFrame(-8, 16, 16, 16, 35, 117)	// #6 - Spin Platform Light frame 4
+	SpriteFrame(-8, 16, 16, 16, 52, 117)	// #7 - Spin Platform Light frame 5
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[V Spin Platform]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+
+	switch Object.PropertyValue
+	case START_MOVING_DOWN
+		TempValue1 = 255
+		TempValue2 = 255
+		TempValue3 = 128
+		TempValue4 = 0
+		break
+	case START_MOVING_UP
+		TempValue1 = 128
+		TempValue2 = 0
+		TempValue3 = 255
+		TempValue4 = 255
+		break
+	end switch
+
+	TempValue5   = Object.XPos
+	TempValue5  -= 0x180000
+	if object.PropertyValue == START_MOVING_DOWN
+		TempValue0   = Object.YPos
+		TempValue0  += 0x490000
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue3, TempValue4, 0)
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			TempValue0   = Object.YPos
+			TempValue0  -= 0x490000
+			DrawRectOutline(TempValue5, TempValue0, 0x30, 0x92, 255, 255, 255, 255)
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue1, TempValue2, 0)
+			Editor.DrawingOverlay = false
+		end if
+	else
+		TempValue0   = Object.YPos
+		TempValue0  -= 0x490000
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue1, TempValue2, 0)
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue5, TempValue0, 0x30, 0x92, 255, 255, 255, 255)
+			TempValue0   = Object.YPos
+			TempValue0  += 0x490000
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, TempValue3, TempValue4, 0)
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-24, -16, 48, 32, 1, 84)	// #0 - Vertical Spin Platform frame 0
+	SpriteFrame(-8, 16, 16, 16, 18, 117)	// #1 - Spin Platform Light frame 1
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Down", START_MOVING_DOWN)
+	AddEnumVariable("Up", START_MOVING_UP)
+end sub

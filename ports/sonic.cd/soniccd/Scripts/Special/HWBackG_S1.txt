@@ -1,0 +1,476 @@
+//---------------Sonic CD HW Background Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Do note, even if the Object's name implies that it's only to be used in HW mode,
+// it always gets used, even in SW mode!
+
+// Aliases
+#alias Object.Value0 : Object.Timer
+
+// These pair of values correspond to X coordinates on the sprite sheet
+#alias Object.Value1 : Object.SpriteL
+#alias Object.Value2 : Object.SpriteR
+
+// These pair of values correspond to Y coodinates on the sprite sheet
+// Value4 - SpriteB - is unused
+#alias Object.Value3 : Object.SpriteT
+#alias Object.Value4 : Object.SpriteB
+
+// Oscillating value from 0 to 1023, used to determine the base X position/angle for the background
+#alias Object.Value5 : Object.Oscillation
+
+// The following values were changed between initial release and the current release
+// -> The gist of it is, an extra face was added to smooth things out so some other
+//    stuff had to be adjusted accordingly too
+
+// How many Faces & Vertexes there are in the Object
+// Originally 5 and 20, respectivly, though one update changed it to make it a bit larger instead
+#alias 6  : HWBACK_FACECOUNT
+#alias 24 : HWBACK_VERTEXCOUNT
+
+// The Offset used when wrapping around from the upper half to lower half Vertexes
+// Similarly to the above, this was 15 before this object got updated
+#alias 19 : HWBACK_VERTEXOFFSET
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+// Face Buffer Flags
+#alias 1 : FACE_FLAG_TEXTURED_2D
+
+
+sub ObjectDraw
+	Object.Timer++
+	if Object.Timer > 5
+		Object.Timer = 0
+		
+		Object.Frame++
+		Object.Frame &= 31
+		
+		// As needed, switch the current Palette to another one if needed
+		// Palette banks 0 and 1 are inverse of each other, for the background aspects, where
+		// red becomes blue and vise-versa
+		if Object.Frame > 15
+			SetActivePalette(1, 0, Screen.YSize)
+		else
+			SetActivePalette(0, 0, Screen.YSize)
+		end if
+		
+		// Update the left bounds for the sprite to use
+		Object.SpriteL = Object.Frame
+		Object.SpriteL &= 3
+		Object.SpriteL <<= 7
+		
+		// Each sprite is 128 pixels wide, so just take the left bounds and
+		// add 127 to that to get to the other side
+		Object.SpriteR = Object.SpriteL
+		Object.SpriteR += 127
+		
+		// Also find the top bounds for the sprite to use
+		Object.SpriteT = Object.Frame
+		Object.SpriteT &= 15
+		Object.SpriteT >>= 2
+		Object.SpriteT <<= 7
+		
+		// And then similarly, since the sprite is 128 pixels tall,
+		// just add 127 to the top bounds to get the bottom bounds
+		Object.SpriteB = Object.SpriteT
+		Object.SpriteB += 127
+	end if
+	
+	// Update the Oscillation value, over a range of 1024
+	Object.Oscillation++
+	Object.Oscillation &= 1023
+	
+	// Round down the Oscillation value to range from an angle of 0 through 511
+	TempValue4 = Object.Oscillation
+	TempValue4 >>= 1
+	
+	// Get the base sprite Top for the following vertexes to use
+	TempValue1 = Object.SpriteT
+	
+	// Starat from Vertex 0, in accordance to what was set to the Faces in ObjectStartup
+	ArrayPos0 = 0
+	
+	// Get the value for the top of the vertexes to follow
+	Sin(TempValue3, TempValue4)
+	TempValue3 >>= 2
+	TempValue3 -= 128
+	
+	// Inverse that value for the bottom of the vertexes to use
+	TempValue4 += 256
+	TempValue4 &= 511
+	
+	// And now, update all the vertexes
+	
+	// Vertex 0, top left of the first (top left rectangle)
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	// Move the X
+	TempValue3 += 128
+	
+	// Vertex 1, top right of the first face (top left rectangle)
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 4, top left of the second face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 5, top right of the second face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 8, top left of the third face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 9, top right of the third face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 12, top left of the fourth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 13, top right of the foruth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 16, top left of the fifth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 17, top right of the fifth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	
+	// The following is for the sixth face, which isn't in the Steam version
+	
+	ArrayPos0 += 3
+	
+	// Vertex 20, top left of the sixth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 21, top right of the sixth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	
+	// And now, go back as needed to reach the vertexes for the bottom of the faces
+	ArrayPos0 -= HWBACK_VERTEXOFFSET
+	
+	// Move the sprite Y position to now be at the actual bottom of the sprite
+	// (This is gonna make it SpriteB, essentially)
+	TempValue1 += 128
+	
+	// Get the new, inverted x position
+	// -> TempValue4 was inverted above already
+	Sin(TempValue3, TempValue4)
+	TempValue3 >>= 2
+	TempValue3 -= 128
+	
+	// Vertex 2, bottom left of the first face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 3, bottom right of the first face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 6, bottom left of the second face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 7, bottom right of the second face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 10, bottom left of the third face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 11, bottom right of the third face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 14, bottom left of the fourth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 15, bottom right of the fourth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0 += 3
+	
+	// Vertex 18, bottom left of the fifth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 19, bottom right of the fifth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	
+	// Extra sixth face, not in the original Steam release
+	
+	ArrayPos0 += 3
+	
+	// Vertex 22, bottom left of the sixth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteL
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	ArrayPos0++
+	
+	TempValue3 += 128
+	
+	// Vertex 23, bottom right of the sixth face
+	VertexBuffer[ArrayPos0].u = Object.SpriteR
+	VertexBuffer[ArrayPos0].v = TempValue1
+	VertexBuffer[ArrayPos0].x = TempValue3
+	
+	// And now, set the number of faces and vertexes as needed, so that
+	// the 3d Scene draw function will know how many things to draw
+	3DScene.NoVertices = HWBACK_VERTEXCOUNT
+	3DScene.NoFaces = HWBACK_FACECOUNT
+	
+	Draw3DScene()
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Reset the 3d stuff to be normal
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixTranslateXYZ(MAT_VIEW, 0, 0, 0)
+	
+	// Turn the background into the version with only the water, without the wave background
+	Stage.ActiveLayer[0] = 3
+	
+	LoadSpriteSheet("Special/SSBG1.gif")
+	
+	// Place an HW Background Object into the scene, in the last of the Reserved Object Slots
+	// This happens, regardless of if the game is in SW or HW render mode, despite the Object's name
+	Object[31].Type = TypeName[HW Background]
+	
+	// Make it always active, so that it constantly runs
+	Object[31].Priority = PRIORITY_ACTIVE
+	
+	// This is a Background, so make it draw as one of course
+	Object[31].DrawOrder = 0
+	
+	// Set initial sprite bounds
+	// SpriteB is never referenced much, but set it here anyway
+	Object[31].SpriteL = 0
+	Object[31].SpriteR = 128
+	Object[31].SpriteT = 0
+	Object[31].SpriteB = 128
+	
+	ArrayPos0  = 0
+	TempValue0 = 0
+	
+	// Setup all the Faces for the background
+	while ArrayPos0 < HWBACK_FACECOUNT
+		
+		// Set the Face's corners
+		// TempValue0 corresponds to a VertexBuffer ID
+		FaceBuffer[ArrayPos0].a = TempValue0
+		TempValue0++
+		FaceBuffer[ArrayPos0].b = TempValue0
+		TempValue0++
+		FaceBuffer[ArrayPos0].c = TempValue0
+		TempValue0++
+		FaceBuffer[ArrayPos0].d = TempValue0
+		TempValue0++
+		
+		FaceBuffer[ArrayPos0].Flag = FACE_FLAG_TEXTURED_2D
+		
+		// Move onto the next Face
+		
+		ArrayPos0++
+	loop
+	
+	// Set all Vertexes to have a z value of 1
+	// -> This doesn't matter too much really, as 2D Faces don't use the z value
+	ArrayPos0 = 0
+	while ArrayPos0 < HWBACK_VERTEXCOUNT
+		VertexBuffer[ArrayPos0].z = 1
+		ArrayPos0++
+	loop
+	
+	// Set all the y positions for all the vertexes
+	
+	TempValue0 = 0
+	ArrayPos0 = 0
+	while TempValue0 < 128
+		
+		// First, set up all the upper vertexes, with a y value of 0
+		
+		// First face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Second face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Third face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Fourth face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Fifth face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		
+		// Extra Sixth face
+		ArrayPos0 += 3
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		
+		// Loop back to the lower half vertexes
+		ArrayPos0 -= HWBACK_VERTEXOFFSET
+		
+		// Each vertex should be 128 pixels tall
+		TempValue0 += 128
+		
+		// First face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Second face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Third face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Fourth face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0 += 3
+		
+		// Fifth face
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		
+		// Extra, sixth face
+		ArrayPos0 += 3
+		VertexBuffer[ArrayPos0].y = TempValue0
+		ArrayPos0++
+		VertexBuffer[ArrayPos0].y = TempValue0
+		
+		ArrayPos0++
+		
+		// Setup the alternate palette
+		
+		// First, copy the current entire palette bank 0 over to palette bank 1
+		CopyPalette(0, 1)
+		
+		// And now, load 32 colors from the external palette cycle file into
+		// palette bank 1, starting from slot 208
+		LoadPalette("SS1H_PalCycle.act", 1, 208, 0, 32)
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/SSBG1.gif")
+	SpriteFrame(-32, -32, 64, 64, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

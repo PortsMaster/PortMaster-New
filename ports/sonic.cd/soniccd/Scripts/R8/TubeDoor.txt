@@ -1,0 +1,172 @@
+//-----------------Sonic CD Tube Door Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1			:	Object.XOffset
+#alias Object.PropertyValue		:	PushButton.Pressed
+
+// States
+#alias 0	:	TUBEDOOR_CLOSED
+#alias 1	:	TUBEDOOR_OPEN
+#alias 2	:	TUBEDOOR_CLOSE
+#alias 3	:	TUBEDOOR_CHECK_HEIGHT
+
+// Property Values
+#alias 0	:	TRIGGER_BY_BUTTON
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State    = TUBEDOOR_CLOSED
+		Object.XOffset  = 0
+		Object.Priority = PRIORITY_BOUNDS
+	end if
+
+	switch Object.State
+	case TUBEDOOR_CLOSED
+		Object.Priority = PRIORITY_ACTIVE
+		if PushButton[-1].Pressed == true
+			if Object.PropertyValue == TRIGGER_BY_BUTTON
+				Object.State = TUBEDOOR_OPEN
+			end if
+		else
+			if Player.State == Player_State_Static
+				if Player.Animation == ANI_JUMPING
+					Object.State   = TUBEDOOR_CHECK_HEIGHT
+					Object.XOffset = 0x100000
+				end if
+			end if
+		end if
+		break
+
+	case TUBEDOOR_OPEN
+		if Object.XOffset < 0x100000
+			Object.XOffset += 0x20000
+		end if
+		if Player.State == Player_State_Static
+			if Player.Animation == ANI_JUMPING
+				if Player.YPos > Object.YPos
+					Object.State = TUBEDOOR_CHECK_HEIGHT
+				end if
+			end if
+		end if
+		break
+		
+	case TUBEDOOR_CLOSE
+		if Object.XOffset > 0
+			Object.XOffset -= 0x20000
+		else
+			Object.State = TUBEDOOR_CLOSED
+		end if
+		break
+
+	case TUBEDOOR_CHECK_HEIGHT
+		TempValue0  = Object.YPos
+		TempValue0 -= Player.YPos
+		if TempValue0 > 0x100000
+			Object.State = TUBEDOOR_CLOSE
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == TUBEDOOR_CLOSED
+		PlayerObjectCollision(C_PLATFORM, -8, -4, 56, 32)
+	else
+		PlayerObjectCollision(C_PLATFORM, -8, -4, 4, 32)
+		PlayerObjectCollision(C_PLATFORM, 44, -4, 56, 32)
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0  = Object.XOffset
+	FlipSign(TempValue0)
+	TempValue0 += Object.XPos
+	DrawSpriteXY(2, TempValue0, Object.YPos)
+
+	TempValue0  = Object.XOffset
+	TempValue0 += Object.XPos
+	DrawSpriteXY(3, TempValue0, Object.YPos)
+
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-8, -4, 16, 8, 19, 75)	// #0 - Tube Door left side
+	SpriteFrame(40, -4, 16, 8, 133, 26)	// #1 - Tube Door right side
+	SpriteFrame(8, -4, 16, 8, 100, 26)	// #2 - Tube Door first half
+	SpriteFrame(24, -4, 16, 8, 116, 26)	// #3 - Tube Door second half
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // type
+			if Object.PropertyValue != 0
+				CheckResult = 1
+			else
+				CheckResult = 0
+			end if
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // type
+			if Editor.VariableValue != 0
+				Object.PropertyValue = 1
+			else
+				Object.PropertyValue = 0
+			end if
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(2)
+	DrawSprite(3)
+	DrawSprite(0)
+	DrawSprite(1)
+
+	if Object.PropertyValue == TRIGGER_BY_BUTTON
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawLine(Object.XPos, Object.YPos, Object[-1].XPos, Object[-1].YPos, 255, 255, 0)
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-8, -4, 16, 8, 19, 75)	// #0 - Tube Door left side
+	SpriteFrame(40, -4, 16, 8, 133, 26)	// #1 - Tube Door right side
+	SpriteFrame(8, -4, 16, 8, 100, 26)	// #2 - Tube Door first half
+	SpriteFrame(24, -4, 16, 8, 116, 26)	// #3 - Tube Door second half
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Trigger by button", TRIGGER_BY_BUTTON)
+	AddEnumVariable("No trigger", 1)
+end sub

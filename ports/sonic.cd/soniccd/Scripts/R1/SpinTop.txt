@@ -1,0 +1,150 @@
+//----------------Sonic CD Spinning Top Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Rotation
+#alias Object.Value1	:	Object.OnObject
+
+// Player Alias
+#alias Player.Value6   	:	Player.MinRollSpeed
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 1	:	SFX_S_SHOT
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_BOX, -16, -8, 16, 24)
+	TempValue1 = Object.Rotation	// This doesn't do anything...
+	if CheckResult == true
+		if Player.State != Player_State_SpinningTop
+			Player.Speed = 0
+			Object.OnObject = true
+			Player.MinRollSpeed = 0x1000
+
+			if Player.XPos > Object.XPos
+				Player.Timer  = Player.XPos
+				Player.Timer -= Object.XPos
+
+				Object.Rotation = 128
+			else
+				Player.Timer  = Object.XPos
+				Player.Timer -= Player.XPos
+
+				Object.Rotation = 384
+			end if
+			
+		end if
+
+		if Player.XPos > Object.XPos
+			if Player.Left == true
+				Player.Timer -= 0x1000
+			end if
+
+			if Player.Right == true
+				Player.Timer += 0x1000
+			end if
+		else
+			if Player.Left == true
+				Player.Timer += 0x1000
+			end if
+
+			if Player.Right == true
+				Player.Timer -= 0x1000
+			end if
+		end if
+
+		Player.State = Player_State_SpinningTop
+
+		Player.Animation = ANI_SPINNING_TOP
+
+		Sin(Player.XPos, Object.Rotation)
+		Player.XPos  *= Player.Timer
+		Player.XPos >>= 9
+		Player.XPos  += Object.XPos
+
+		TempValue0   = Object.Rotation
+		TempValue0  -= 128
+		TempValue0  /= 86
+		Player.Frame = TempValue0
+
+		Object.Rotation += 16
+		if Object.Rotation > 639
+			Object.Rotation -= 512
+		end if
+
+		if Player.JumpPress == true
+			CallFunction(Player_Action_Jump)
+			Player.Speed   = Player.XPos
+			Player.Speed  -= Object.XPos
+			Player.Speed >>= 2
+
+#platform: Use_Origins
+			Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+			Player.State = Player_State_Air
+#endplatform
+
+			Player.Timer = 0
+			PlayStageSfx(SFX_S_SHOT, false)
+		end if
+	else
+		if Object.OnObject == true
+			if Player.State == Player_State_SpinningTop
+				if Player.Gravity == GRAVITY_GROUND
+					Player.State = Player_State_Ground
+					Object.OnObject = false
+					Player.Timer = 0
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+
+	TempValue0  = Ring.AniCount
+	TempValue0 &= 1
+
+	if TempValue0 == 0
+		Object.Frame++
+		if Object.Frame > 2
+			Object.Frame = 0
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 101, 76)	// #0 - Spin Top Frame 0
+	SpriteFrame(-16, -8, 32, 16, 101, 76)	// #1 - Spin Top Frame 1
+	SpriteFrame(-16, -8, 32, 16, 134, 76)	// #2 - Spin Top Frame 2
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 101, 76)	// #0 - Spin Top Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

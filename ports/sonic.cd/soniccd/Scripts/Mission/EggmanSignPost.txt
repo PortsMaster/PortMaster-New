@@ -1,0 +1,251 @@
+//--------------Sonic CD Eggman Sign Post Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-------Intended for Mission "M099 - Eggman: Speed Up"-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.FrameTimer
+#alias Object.Value2		:	Object.YVelocity
+#alias Object.Value3		:	Object.JetpackEntity
+
+// States
+#alias 0	:	EGGSIGNPOST_CHECK_JETPACK
+#alias 1	:	EGGSIGNPOST_CHECK_BOSS_LEAVE
+#alias 2	:	EGGSIGNPOST_SET_SPAWN
+#alias 3	:	EGGSIGNPOST_AIR_FLIP
+#alias 4	:	EGGSIGNPOST_FLIP
+#alias 5	:	EGGSIGNPOST_RESET
+#alias 6	:	EGGSIGNPOST_TRIGGER_ACTFINISH
+#alias 7	:	EGGSIGNPOST_STOP_PLAYER
+
+// Eggman Jetpack States
+#alias 2	:	R1_EGGMAN_ESCAPE
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+#alias 3	:	PRIORITY_XBOUNDS
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+
+
+sub ObjectMain
+	
+	switch Object.State
+	case EGGSIGNPOST_CHECK_JETPACK
+		ArrayPos0 = 32
+		while ArrayPos0 < 1056
+			if Object[ArrayPos0].Type == TypeName[Eggman Jetpack]
+				Object.JetpackEntity = ArrayPos0
+				Object.State		 = EGGSIGNPOST_CHECK_BOSS_LEAVE
+
+				ArrayPos0 = 2000
+			end if
+			
+			ArrayPos0++
+		loop
+		break
+		
+	case EGGSIGNPOST_CHECK_BOSS_LEAVE
+		ArrayPos0 = Object.JetpackEntity
+		if Object[ArrayPos0].Type == TypeName[Blank Object]
+			Object.Frame	 = 1
+			Object.Timer	 = 16
+			Object.State	 = EGGSIGNPOST_SET_SPAWN
+			Object.Priority	 = PRIORITY_XBOUNDS
+		end if
+		break
+		
+	case EGGSIGNPOST_SET_SPAWN
+		Object.XPos   = Screen.XOffset
+		Object.XPos  += Screen.CenterX
+		Object.XPos <<= 16
+		Object.YPos   = Screen.YOffset
+		Object.YPos <<= 16
+		Object.State  = EGGSIGNPOST_AIR_FLIP
+		break
+		
+	case EGGSIGNPOST_AIR_FLIP
+		Object.YPos		 += Object.YVelocity
+		Object.YVelocity += 0xC00
+		ObjectTileCollision(CSIDE_FLOOR,0,8,0)
+		if CheckResult == true
+			Object.Timer = 4
+			Object.State = EGGSIGNPOST_FLIP
+		end if
+		
+		Object.FrameTimer++
+		if Object.FrameTimer == 2
+			Object.FrameTimer = 0
+			Object.Frame++
+			if Object.Frame == 5
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+			end if
+			
+			if Object.Frame == 9
+				Object.Frame = 1
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+			end if
+		end if
+		break
+		
+	case EGGSIGNPOST_FLIP
+		Music.Volume -= 2
+		Object.FrameTimer++
+		if Object.FrameTimer == 2
+			Object.FrameTimer = 0
+			Object.Frame++
+			if Object.Frame == 5
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+			end if
+			
+			if Object.Frame == 9
+				Rand(TempValue0, 48)
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				TempValue0  -= 0x180000
+				Rand(TempValue1, 32)
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+				TempValue1  -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, TempValue0, TempValue1)
+				Object.Timer--
+				if Object.Timer == 0
+					Object.Frame = 5
+					Object.State = EGGSIGNPOST_RESET
+				else
+					Object.Frame = 1
+				end if
+			end if
+		end if
+		break
+		
+	case EGGSIGNPOST_RESET
+		ResetObjectEntity(Object.JetpackEntity,TypeName[Sign Post], 0, Object.XPos, Object.YPos)
+		Object.YVelocity = 1
+		Object.Frame	 = 1
+		Object.Timer	 = 16
+		Object.Priority	 = PRIORITY_XBOUNDS
+		Object.State	 = EGGSIGNPOST_TRIGGER_ACTFINISH
+		break
+		
+	case EGGSIGNPOST_TRIGGER_ACTFINISH
+		if Object[ArrayPos0].State == R1_EGGMAN_ESCAPE
+			PlayMusic(1)
+			Object.State		 = EGGSIGNPOST_FLIP
+			Object[30].Type		 = TypeName[ActFinish]
+			Object[30].DrawOrder = 6
+			Object[30].Priority	 = PRIORITY_ACTIVE
+			Object.State		 = EGGSIGNPOST_STOP_PLAYER
+		end if
+		break
+		
+	case EGGSIGNPOST_STOP_PLAYER
+		CheckEqual(Player.State, Player_State_Ground)
+		TempValue0 = CheckResult
+		CheckEqual(Player.OutOfBounds, true)
+		TempValue0 |= CheckResult
+
+		TempValue1  = Screen.XOffset
+		TempValue1 += Screen.XSize
+		TempValue1 += 32
+		CheckGreater(Player.iXPos, TempValue1)
+		TempValue0 |= CheckResult
+		if TempValue0 == true
+			Player.ControlMode 	= CONTROLMODE_NONE
+			Player.JumpHold 	= false
+			Player.Right		= false
+			Player.Left			= false
+			Player.Up			= false
+			Player.Down			= false
+
+			if Player.State == Player_State_Ground
+				Player.XVelocity = 0
+				Player.YVelocity = 0
+			end if
+			Player.Speed		= 0
+			
+			Screen.CameraEnabled = false
+		end if
+		break
+		
+	end switch
+end sub
+
+
+sub ObjectDraw
+	if Object.State > EGGSIGNPOST_SET_SPAWN
+		if Object.State < EGGSIGNPOST_RESET
+			DrawSprite(0)
+			DrawSprite(Object.Frame)
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Global/Items2.gif")
+
+	SpriteFrame(-12, -12, 24, 24, 0, 150)		// #0 - Sign Post
+	SpriteFrame(-24, -44, 48, 32, 34, 99)		// #1 - Sign Post Head (Eggman)
+	SpriteFrame(-16, -44, 32, 32, 1, 183)		// #2 - Sign Post Head (Flip 1)
+	SpriteFrame(-4, -44, 8, 32, 25, 150)		// #3 - Sign Post Head (Flip 2)
+	SpriteFrame(-16, -44, 32, 32, 1, 216)		// #4 - Sign Post Head (Flip 3)
+	SpriteFrame(-24, -44, 48, 32, 34, 132)		// #5 - Sign Post Head (Player)
+	SpriteFrame(-16, -44, 32, 32, 1, 183)		// #6 - Sign Post Head (Flip 1)
+	SpriteFrame(-4, -44, 8, 32, 25, 150)		// #7 - Sign Post Head (Flip 2)
+	SpriteFrame(-16, -44, 32, 32, 1, 216)		// #8 - Sign Post Head (Flip 3)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	
+	LoadSpriteSheet("Global/Items2.gif")
+
+	SpriteFrame(-12, -12, 24, 24, 0, 150)		// #0 - Sign Post
+	SpriteFrame(-24, -44, 48, 32, 34, 99)		// #1 - Sign Post Head (Eggman)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
+
+

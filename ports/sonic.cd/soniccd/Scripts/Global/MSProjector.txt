@@ -1,0 +1,382 @@
+//---------------Sonic CD MS Projector Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.Flicker
+#alias Object.Value2	:	Object.Angle
+#alias Object.Value3	:	Object.CurrentFrame
+#alias Object.Value4	:	Object.ProjectorSheet
+#alias Object.Value5	:	Object.AnimalSheet
+#alias Object.Value6	:	Object.Speed // "speed" as in angle increase, not as in movement speed or anything
+
+// States
+#alias 0	:	MSPROJECTOR_ANIM_1
+#alias 1	:	MSPROJECTOR_ANIM_2
+#alias 2	:	MSPROJECTOR_DESTROYED
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+
+sub ObjectMain
+	switch Object.State
+	case MSPROJECTOR_ANIM_1
+		Object.Timer++
+		if Object.Timer == 16
+			Object.Timer = 0
+			Object.State = MSPROJECTOR_ANIM_2
+		end if
+
+		Object.Flicker = Object.Timer
+		Object.Flicker &= 3
+
+		Object.Frame++
+		if Object.Frame == 56
+			Object.Frame = 0
+		end if
+		break
+
+	case MSPROJECTOR_ANIM_2
+		Object.Timer++
+		if Object.Timer == 12
+			Object.Timer = 0
+			Object.State = MSPROJECTOR_ANIM_1
+		end if
+
+		Object.Flicker = Object.Timer
+		Object.Flicker %= 3
+
+		Object.Frame++
+		if Object.Frame == 56
+			Object.Frame = 0
+		end if
+		break
+
+	case MSPROJECTOR_DESTROYED
+		TempValue0  = Object.Timer
+		TempValue0 &= 3
+		if TempValue0 == 0
+			Rand(TempValue0, 32)
+			TempValue0  -= 16
+			TempValue0 <<= 16
+			TempValue0  += Object.XPos
+
+			Rand(TempValue1, 32)
+			TempValue1  -= 16
+			TempValue1 <<= 16
+			TempValue1  += Object.YPos
+
+			CreateTempObject(TypeName[Explosion], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].DrawOrder = 4
+			PlaySfx(SFX_G_EXPLOSION, false)
+		end if
+
+		Object.Timer++
+		if Object.Timer == 60
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, Object.XPos, Object.YPos)
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < MSPROJECTOR_DESTROYED
+//		if Player.Animation == ANI_JUMPING // Standalone original check
+		CheckEqual(Player.Animation, ANI_JUMPING)
+		TempValue0 = CheckResult
+		
+#platform: Use_Origins
+		CheckEqual(Player.Animation, ANI_GLIDING)
+		TempValue0 |= CheckResult
+		if Stage.PlayerListPos == PLAYER_AMY
+			if Player.Animation == ANI_HAMMER_JUMP
+				TempValue0 = true
+			end if
+			if Player.Animation == ANI_HAMMER_DASH
+				TempValue0 = true
+			end if
+		end if
+#endplatform
+
+		if TempValue0 == true
+#platform: Use_Standalone
+			PlayerObjectCollision(C_TOUCH, -13, -13, 13, 13)
+#endplatform
+#platform: Use_Origins
+			PlayerObjectCollision(C_ENEMY, -13, -13, 13, 13)
+#endplatform
+			if CheckResult == true
+				Object.Timer		 = 0
+				MetalSonic_Destroyed = true
+				Object.Priority		 = PRIORITY_ACTIVE
+				Object.State		 = MSPROJECTOR_DESTROYED
+				MetalSonic_List++
+
+#platform: Use_Origins
+				if Stage.PlayerListPos == PLAYER_AMY
+					game.callbackParam0 = 0
+					game.callbackParam1 = 3
+					EngineCallback(NOTIFY_STATS_BREAK_OBJECT)
+				end if
+#endplatform
+				// Saviour of the Planet Unlock Criteria
+				if Stage.PlayerListPos == PLAYER_SONIC_A	// PLAYER_SONIC in origins
+					if Stage.DebugMode == false
+						if Good_Future_List > 16382	// 0b11111111111110
+							if MetalSonic_List > 11
+								SetAchievement(11, 100)
+							end if
+						end if
+					end if
+				end if
+				
+#platform: Use_Haptics
+				HapticEffect(90, 0, 0, 0)
+#endplatform
+
+			end if
+			if Player.Gravity == GRAVITY_AIR
+				PlayerObjectCollision(C_BOX, -12, -12, 12, 12)
+			end if
+		else
+			PlayerObjectCollision(C_BOX, -12, -12, 12, 12)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	Object.SpriteSheet = Object.ProjectorSheet
+	DrawSprite(0)
+
+	if Object.State < MSPROJECTOR_DESTROYED
+		Object.CurrentFrame++
+		Object.CurrentFrame &= 31
+		TempValue2   = Object.CurrentFrame
+		TempValue2 >>= 4
+		TempValue2  += 7
+
+		Object.Angle += Object.Speed
+		Object.Angle &= 511
+		Cos(TempValue0, Object.Angle)
+		Sin(TempValue1, Object.Angle)
+		if TempValue1 < 0
+			Object.Direction = FACING_RIGHT
+		else
+			Object.Direction = FACING_LEFT
+		end if
+		
+		TempValue0 <<= 12
+		TempValue1 <<= 11
+
+		TempValue0  += Object.XPos
+		TempValue1  += Object.YPos
+
+		TempValue0  -= 0x580000
+		TempValue1  -= 0x180000
+		
+		// Projector Particles
+		TempValue3  = Object.Timer
+		TempValue3 &= 1
+		if TempValue3 == 0
+			TempValue3   = Object.Timer
+			TempValue3  &= 3
+			TempValue3 >>= 1
+			TempValue3++
+			DrawSprite(TempValue3)
+		end if
+
+		if Object.Flicker < 2
+			if Object.Speed == 8	// This is true for every animal except the TTZ Fishes
+				// Metal and stomped animal
+				if Object.Frame < 28
+					Object.SpriteSheet = Object.AnimalSheet
+					DrawSprite(5)
+					Object.SpriteSheet = Object.ProjectorSheet
+					DrawSprite(3)
+				else
+					Object.SpriteSheet = Object.AnimalSheet
+					DrawSprite(6)
+					Object.SpriteSheet = Object.ProjectorSheet
+					DrawSprite(4)
+				end if
+
+				// Free animal
+				Object.SpriteSheet = Object.AnimalSheet
+				DrawSpriteFX(TempValue2, FX_FLIP, TempValue0, TempValue1)
+			else
+				// Metal
+				Object.SpriteSheet = Object.ProjectorSheet
+				if Object.Frame < 28
+					DrawSprite(3)
+				else
+					DrawSprite(4)
+				end if
+				
+				// Fishes
+				Object.SpriteSheet = Object.AnimalSheet
+				DrawSpriteFX(TempValue2, FX_FLIP, TempValue0, TempValue1)
+				TempValue4  = Object.Angle
+				TempValue4 += 320
+				TempValue4 &= 511
+				Cos(TempValue0, TempValue4)
+				Sin(TempValue1, TempValue4)
+
+				if TempValue1 < 0
+					Object.Direction = FACING_RIGHT
+				else
+					Object.Direction = FACING_LEFT
+				end if
+				TempValue0 <<= 12
+				TempValue1 <<= 11
+				TempValue0  += Object.XPos
+				TempValue1  += Object.YPos
+				TempValue0  -= 0x600000
+				TempValue1  -= 0x180000
+				TempValue2  -= 2
+				DrawSpriteFX(TempValue2, FX_FLIP, TempValue0, TempValue1)
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+	TempValue0 = Object.SpriteSheet
+
+	SpriteFrame(-12, -12, 24, 24, 150, 86)		// #0 - Projector
+	SpriteFrame(-29, -10, 16, 8, 158, 111)		// #1 - Projector Particles 1
+	SpriteFrame(-29, -10, 16, 8, 158, 120)		// #2 - Projector Particles 2
+	SpriteFrame(-108, -28, 40, 40, 175, 136)	// #3 - Metal Hologram Frame 0
+	SpriteFrame(-108, -28, 40, 40, 216, 136)	// #4 - Metal Hologram Frame 1
+
+	TempValue2  = Stage.ListPos
+#platform: Use_Decomp
+	// Origins Plus uses a hacky engine edit to work around the Anniversary Mode layouts not properly loading SpriteFrames
+	// Rather than implement that in the decomp, let's just correct the stage pos here instead
+	if TempValue2 >= 70 // If past the regular layouts and in the Anniversary Mode ones
+		// R11A - R12D
+		if TempValue2 <= 77
+			TempValue2 -= 70
+		else
+			// R31A - R42D
+			if TempValue2 <= 95
+				TempValue2 -= 68
+			else
+				// R61A - R82D
+				if TempValue2 <= 133
+					TempValue2 -= 56
+				end if
+			end if
+		end if
+	end if
+#endplatform
+	TempValue2 /= 10
+	switch TempValue2
+	case 0
+	case 3
+		TempValue3 = 8
+		SpriteFrame(-112, -3, 24, 16, 150, 52)	// #5 - Ricky Frame 0
+		SpriteFrame(-112, -3, 24, 16, 150, 69)	// #6 - Ricky Frame 1
+		SpriteFrame(-8, -8, 16, 16, 240, 199)	// #7 - Flicky Frame 0
+		SpriteFrame(-8, -8, 16, 16, 240, 216)	// #8 - Flicky Frame 1
+		break
+
+	case 1
+		TempValue3 = 8
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-108, -11, 16, 24, 132, 35)	// #5 - Pocky Frame 0
+		SpriteFrame(-112, -3, 24, 16, 149, 26)	// #6 - Pocky Frame 1
+		SpriteFrame(-8, -8, 16, 16, 132, 1)		// #7 - Canary Frame 0
+		SpriteFrame(-8, -8, 16, 16, 132, 18)	// #8 - Canary Frame 1
+		break
+
+	case 2
+		TempValue3 = 4
+		LoadSpriteSheet("R4/Objects3.gif")
+		SpriteFrame(-8, -12, 16, 24, 1, 92)		// #5 - Green Fish Frame 0
+		SpriteFrame(-8, -12, 16, 24, 18, 92)	// #6 - Green Fish Frame 1
+		SpriteFrame(-8, -12, 16, 24, 1, 67)		// #7 - Red Fish Frame 0
+		SpriteFrame(-8, -12, 16, 24, 18, 67)	// #8 - Red Fish Frame 1
+		break
+
+	case 4
+		TempValue3 = 8
+		LoadSpriteSheet("R6/Objects3.gif")
+		SpriteFrame(-112, -3, 24, 16, 1, 201)	// #5 - Pecky Frame 0
+		SpriteFrame(-112, -3, 24, 16, 26, 201)	// #6 - Pecky Frame 1
+		SpriteFrame(-12, -8, 24, 16, 1, 218)	// #7 - Swallow Frame 0
+		SpriteFrame(-12, -8, 24, 16, 26, 218)	// #8 - Swallow Frame 1
+		break
+
+	case 5
+		TempValue3 = 8
+		LoadSpriteSheet("R7/Objects3.gif")
+		SpriteFrame(-108, -11, 16, 24, 1, 192)	// #5 - Pocky Frame 0
+		SpriteFrame(-112, -3, 24, 16, 18, 158)	// #6 - Pocky Frame 1
+		SpriteFrame(-8, -8, 16, 16, 1, 158)		// #7 - Canary Frame 0
+		SpriteFrame(-8, -8, 16, 16, 1, 175)		// #8 - Canary Frame 1
+		break
+
+	case 6
+		TempValue3 = 8
+		LoadSpriteSheet("R8/Objects2.gif")
+		SpriteFrame(-112, -3, 24, 16, 1, 234)	// #5 - Sheep Frame 0
+		SpriteFrame(-112, -3, 24, 16, 26, 234)	// #6 - Sheep Frame 1
+		SpriteFrame(-8, -8, 16, 16, 143, 110)	// #7 - Dove Frame 0
+		SpriteFrame(-8, -8, 16, 16, 143, 127)	// #8 - Dove Frame 1
+		break
+
+	end switch
+	TempValue1 = Object.SpriteSheet
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[MSProjector]
+			Object[ArrayPos0].ProjectorSheet = TempValue0
+			Object[ArrayPos0].AnimalSheet	 = TempValue1
+			Object[ArrayPos0].Speed			 = TempValue3
+			if MetalSonic_Destroyed == true
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(3)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-12, -12, 24, 24, 150, 86)		// #0 - Projector
+	SpriteFrame(-29, -10, 16, 8, 158, 111)		// #1 - Projector Particles 1
+	SpriteFrame(-29, -10, 16, 8, 158, 120)		// #2 - Projector Particles 2
+	SpriteFrame(-108, -28, 40, 40, 175, 136)	// #3 - Metal Hologram Frame 0
+	SpriteFrame(-108, -28, 40, 40, 216, 136)	// #4 - Metal Hologram Frame 1
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

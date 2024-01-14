@@ -1,0 +1,247 @@
+//----------------Sonic CD Tails Object Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1		:	Object.TailAnimation
+#alias Object[1].DrawOrder	:	TailsObject.DrawOrder
+#alias Object[1].Priority	:	TailsObject.Priority
+
+#alias 1	:	PRIORITY_ACTIVE
+
+// Animation Aliases
+// Because the ANI_* variables are, well, variables, we can't use them as cases in a switch-case statement, so let's make our own version of them here so that we can do that
+#alias 0	:	TAILS_STOPPED
+#alias 1	:	TAILS_WAITING
+#alias 3	:	TAILS_LOOKING_UP
+#alias 4	:	TAILS_LOOKING_DOWN
+#alias 7	:	TAILS_SKIDDING
+#alias 9	:	TAILS_SPIN_DASH
+#alias 10	:	TAILS_JUMPING
+#alias 17	:	TAILS_PUSHING
+#alias 43	:	TAILS_ROLL3D
+
+// Player aliases
+#alias 1	:	PLAYER_TAILS_A
+
+
+sub ObjectMain
+	ArrayPos0 = Player.DrawOrder
+	Screen[ArrayPos0].DrawListSize = 2
+	GetDrawListEntityRef(TempValue0, ArrayPos0, 0)
+	SetDrawListEntityRef(Object.EntityNo, ArrayPos0, 0)
+	SetDrawListEntityRef(TempValue0, ArrayPos0, 1)
+end sub
+
+
+sub ObjectDraw
+	if Object.TailAnimation != Player.Animation
+		if Player.Animation > 4
+			Object.Frame = 0
+		end if
+
+		if Object.TailAnimation > 4
+			Object.Frame = 0
+		end if
+
+		Object.TailAnimation = Player.Animation
+	end if
+
+	Object.Direction = Player.Direction
+	switch Object.TailAnimation
+	case TAILS_STOPPED
+		if Player.Frame == 0
+			TempValue0   = Object.Frame
+			TempValue0 >>= 3
+
+			if Player.Visible == true
+				DrawSpriteFX(TempValue0, FX_FLIP, Player.XPos, Player.YPos)
+			end if
+
+			Object.Frame++
+			Object.Frame %= 40
+		end if
+		break
+
+	case TAILS_WAITING
+	case TAILS_LOOKING_UP
+	case TAILS_LOOKING_DOWN
+		TempValue0   = Object.Frame
+		TempValue0 >>= 3
+
+		if Player.Visible == true
+			DrawSpriteFX(TempValue0, FX_FLIP, Player.XPos, Player.YPos)
+		end if
+
+		Object.Frame++
+		Object.Frame %= 40
+		break
+
+	case TAILS_SKIDDING
+	case TAILS_SPIN_DASH
+		TempValue0   = Object.Frame
+		TempValue0 >>= 2
+		TempValue0  += 11
+
+		if Player.Visible == true
+			DrawSpriteFX(TempValue0, FX_FLIP, Player.XPos, Player.YPos)
+		end if
+
+		Object.Frame++
+		Object.Frame %= 12
+		break
+
+	case TAILS_JUMPING
+	case TAILS_ROLL3D
+		TempValue0   = Object.Frame
+		TempValue0 >>= 2
+
+		CheckEqual(Player.XVelocity, 0)
+		TempValue1  = CheckResult
+		CheckEqual(Player.YVelocity, 0)
+		TempValue1 &= CheckResult
+		if TempValue1 == false
+			ATan2(Object.Rotation, Player.XVelocity, Player.YVelocity)
+			Object.Rotation  += 16
+			Object.Rotation  &= 255
+			Object.Rotation >>= 5
+			// Rotates the tails according to Tails's rotation
+			switch Object.Rotation
+			case 0
+			case 8
+				TempValue0 += 5
+				Object.Rotation = 0
+				break
+
+			case 1
+				TempValue0 += 8
+				if Object.Direction == FACING_RIGHT
+					Object.Rotation = 64
+				else
+					Object.Rotation = 0
+				end if
+				break
+
+			case 2
+				TempValue0 += 5
+				Object.Rotation = 64
+				break
+
+			case 3
+				TempValue0 += 8
+				if Object.Direction == FACING_RIGHT
+					Object.Rotation = 128
+				else
+					Object.Rotation = 64
+				end if
+				break
+
+			case 4
+				TempValue0 += 5
+				Object.Rotation = 128
+				break
+
+			case 5
+				TempValue0 += 8
+				if Object.Direction == FACING_RIGHT
+					Object.Rotation = 192
+				else
+					Object.Rotation = 128
+				end if
+				break
+
+			case 6
+				TempValue0 += 5
+				Object.Rotation = 192
+				break
+
+			case 7
+				TempValue0 += 8
+				if Object.Direction == FACING_RIGHT
+					Object.Rotation = 0
+				else
+					Object.Rotation = 192
+				end if
+				break
+			end switch
+
+			if Object.Direction == FACING_LEFT
+				Object.Rotation += 128
+			end if
+		else
+			TempValue0 += 5
+			Object.Rotation = 0
+		end if
+
+		Object.Rotation <<= 1
+
+		if Player.Visible == true
+			DrawSpriteFX(TempValue0, FX_ROTATE, Player.XPos, Player.YPos)
+		end if
+
+		Object.Frame++
+		Object.Frame %= 12
+		break
+
+	case TAILS_PUSHING
+		TempValue0  = Object.Frame
+		TempValue0 /= 10
+		TempValue0 += 11
+
+		if Player.Visible == true
+			DrawSpriteFX(TempValue0, FX_FLIP, Player.XPos, Player.YPos)
+		end if
+		
+		Object.Frame++
+		Object.Frame %= 30
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		LoadSpriteSheet("Players/Tails1.gif")
+
+		Object[1].Type = TypeName[Tails Object]
+		TailsObject.DrawOrder = 8
+		TailsObject.Priority  = PRIORITY_ACTIVE
+
+		// Idle Frames
+		SpriteFrame(-22, -8, 16, 24, 82, 199)	// #0  - Tail Idle Frame 0
+		SpriteFrame(-26, -8, 20, 24, 99, 199)	// #1  - Tail Idle Frame 1
+		SpriteFrame(-26, -8, 20, 24, 120, 199)	// #2  - Tail Idle Frame 2
+		SpriteFrame(-26, -8, 20, 24, 141, 199)	// #3  - Tail Idle Frame 3
+		SpriteFrame(-26, -8, 20, 24, 162, 199)	// #4  - Tail Idle Frame 4
+		
+		// Rolling Frames
+		SpriteFrame(-35, -8, 24, 16, 231, 166)	// #5  - Tail Rolling Frame 0
+		SpriteFrame(-35, -8, 24, 16, 231, 183)	// #6  - Tail Rolling Frame 1
+		SpriteFrame(-35, -8, 24, 16, 231, 200)	// #7  - Tail Rolling Frame 2
+		
+		// Jumping Frames
+		SpriteFrame(-25, 9, 20, 16, 235, 217)	// #8  - Tail Jumping Frame 0
+		SpriteFrame(-25, 9, 18, 16, 237, 234)	// #9  - Tail Jumping Frame 1
+		SpriteFrame(-25, 9, 20, 16, 216, 234)	// #10 - Tail Jumping Frame 2
+		SpriteFrame(-30, -6, 24, 16, 231, 166)	// #11 - Tail Jumping Frame 3
+		SpriteFrame(-30, -6, 24, 16, 231, 183)	// #12 - Tail Jumping Frame 4
+		SpriteFrame(-30, -6, 24, 16, 231, 200)	// #13 - Tail Jumping Frame 5
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Players/Tails1.gif")
+	SpriteFrame(-22, -8, 16, 24, 82, 199)	// Tail Idle Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

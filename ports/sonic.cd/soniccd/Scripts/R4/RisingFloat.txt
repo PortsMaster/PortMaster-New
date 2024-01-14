@@ -1,0 +1,132 @@
+//----------------Sonic CD Rising Float Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.XOriginPos
+#alias Object.Value2	:	Object.YOriginPos
+
+// States
+#alias 0	:	RISINGFLOAT_INACTIVE
+#alias 1	:	RISINGFLOAT_RISE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Collision Sides
+#alias 1	:	CSIDE_LWALL
+#alias 2	:	CSIDE_RWALL
+
+
+sub ObjectMain
+	Object.YPos   = Stage.WaterLevel
+	Object.YPos <<= 16
+
+	if Object.State == RISINGFLOAT_RISE
+		Object.XPos = Player.XPos
+
+		if Object.XPos < 0x10100000
+			Object.XPos = 0x10100000
+		end if
+
+		if Object.XPos > 0x10F20000
+			Object.XPos = 0x10F20000
+		else
+			if Player.YPos > 0x5BE0000
+				if Player.YPos < Object.YPos
+					ObjectTileCollision(CSIDE_LWALL, 16, 6, 0)
+					if CheckResult == true
+						if Player.Speed > 0x10000
+							Player.Speed = 0x10000
+							Player.XVelocity = 0x10000
+						end if
+					end if
+					ObjectTileCollision(CSIDE_RWALL, -16, 6, 0)
+					if CheckResult == true
+						if Player.Speed < -0x10000
+							Player.Speed = -0x10000
+							Player.XVelocity = -0x10000
+						end if
+					end if
+					Player.XPos = Object.XPos
+				end if
+			else
+				ObjectTileCollision(CSIDE_LWALL, 16, 0, 0)
+				ObjectTileCollision(CSIDE_RWALL, -16, 0, 0)
+			end if
+		end if
+	end if
+
+	if Object.OutOfBounds == true
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+
+		Object.XPos = Object.XOriginPos
+		Object.YPos = Object.YOriginPos
+
+		if Object.OutOfBounds == true
+			Object.State	= RISINGFLOAT_INACTIVE
+			Object.Priority = PRIORITY_BOUNDS
+		else
+			Object.XPos = TempValue0
+			Object.YPos = TempValue1
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_PLATFORM, -16, -10, 16, 8)
+	if CheckResult == true
+		Player.YPos += 0x20000
+		if Object.State == RISINGFLOAT_INACTIVE
+			Player.Speed	 = 0
+			Player.XVelocity = 0
+
+			Stage.NewWaterLevel = 0x5E40000	// Y - 1508 in map coords
+
+			Object.State	= RISINGFLOAT_RISE
+			Object.Priority = PRIORITY_ACTIVE
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects2.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 67, 235)	// Wood Log
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rising Float]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects2.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 67, 235)	// Wood Log
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

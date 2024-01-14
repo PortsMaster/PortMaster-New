@@ -1,0 +1,540 @@
+//---------------Sonic CD Stage Setup Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object[23].Priority		:	StageSetup.Priority
+#alias Object[24].Priority		:	HUD.Priority
+#alias Object[24].DrawOrder		:	HUD.DrawOrder
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Badnik Alias
+#alias Object.PropertyValue		:	Badnik.Quality
+
+// Player Aliases
+#alias Player.Value0			:	Player.Rings
+#alias Player.Value6			:	Player.MinRollSpeed
+
+// Flower States
+#alias 1	:	FLOWER_SEED_FALL
+
+// Future post State
+#alias 2	:	FUTUREPOST_USED
+
+// Past Post State
+#alias 2	:	PASTPOST_USED
+
+// Monitor States
+#alias 2	:	BROKENMONITOR_BLANK
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Warp Destination
+#alias 0	:	WARP_NONE
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// Global SFX
+#alias 20	:	SFX_G_1UP
+#alias 21	:	SFX_G_ACHIEVEMENT
+
+// Track List
+#alias 0	:	TRACK_STAGE
+#alias 1	:	TRACK_ACTFINISH
+#alias 2	:	TRACK_INVINCIBILITY
+#alias 3	:	TRACK_SPEEDSHOES
+#alias 4	:	TRACK_BOSS
+#alias 5	:	TRACK_GAMEOVER
+
+
+// Time Period Aliases
+#alias 0 : TIME_PRESENT
+#alias 1 : TIME_PAST
+#alias 2 : TIME_GOOD_FUTURE
+#alias 3 : TIME_BAD_FUTURE
+
+// Function declarations
+#function StageSetup_CheckGoodFuture
+#function StageSetup_SaveStageState
+#function StageSetup_LoadStageState
+
+
+function StageSetup_CheckGoodFuture
+	if Good_Future == true
+		// Destroying the transporters in the past will get rid of any badnik with bad condition in the present
+		if Badnik.Quality > 0
+			ResetObjectEntity(Object.EntityNo, Flower_TypeNo, 0, Object.XPos, Object.YPos)
+			Object.DrawOrder = 4
+			Object.State	 = FLOWER_SEED_FALL
+		else
+			// And get rid entirely of them in the past and good future
+			if HUD.CurrentTimePeriod > 0
+				ResetObjectEntity(Object.EntityNo, Flower_TypeNo, 0, Object.XPos, Object.YPos)
+				Object.DrawOrder = 4
+				Object.State	 = FLOWER_SEED_FALL
+			end if
+		end if
+	end if
+end function
+
+
+function StageSetup_SaveStageState
+	ArrayPos0 = 32
+	ArrayPos1 = 7168
+
+	TempValue1  = HUD.CurrentTimePeriod
+	TempValue1 += 4
+	// Checks and saves:
+	// Anything that doesn't exist anymore
+	// Broken Monitors
+	// Used Warp Signs
+	// Anything that transformed into a flower
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Blank Object]
+			SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, true)
+		else
+			if Object[ArrayPos0].Type == TypeName[Broken Monitor]
+				SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, true)
+			else
+				if Object[ArrayPos0].Type == TypeName[Future Post]
+					if Object[ArrayPos0].State == FUTUREPOST_USED
+						SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, true)
+					else
+						SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, false)
+					end if
+				else
+					if Object[ArrayPos0].Type == TypeName[Past Post]
+						if Object[ArrayPos0].State == PASTPOST_USED
+							SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, true)
+						else
+							SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, false)
+						end if
+					else
+						SetBit(SaveRAM[ArrayPos1], HUD.CurrentTimePeriod, false)
+						if Object[ArrayPos0].Type == Flower_TypeNo
+							SetBit(SaveRAM[ArrayPos1], TempValue1, true)
+						else
+							SetBit(SaveRAM[ArrayPos1], TempValue1, false)
+						end if
+					end if
+				end if
+			end if
+		end if
+		ArrayPos0++
+		ArrayPos1++
+	loop
+end function
+
+
+function StageSetup_LoadStageState
+	ArrayPos0 = 32
+	ArrayPos1 = 7168
+
+	TempValue1  = HUD.CurrentTimePeriod
+	TempValue1 += 4
+	// Checks and loads:
+	// Anything that doesn't exist anymore
+	// Broken Monitors
+	// Used Warp Signs
+	// Anything that transformed into a flower
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Ring]
+			GetBit(TempValue0, SaveRAM[ArrayPos1], HUD.CurrentTimePeriod)
+			if TempValue0 == true
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			end if
+		else
+			if Object[ArrayPos0].Type == TypeName[Monitor]
+				GetBit(TempValue0, SaveRAM[ArrayPos1], HUD.CurrentTimePeriod)
+				if TempValue0 == true
+					Object[ArrayPos0].Type = TypeName[Broken Monitor]
+					Object[ArrayPos0].State = BROKENMONITOR_BLANK
+				end if
+			else
+				if Object[ArrayPos0].Type == TypeName[Future Post]
+					GetBit(TempValue0, SaveRAM[ArrayPos1], HUD.CurrentTimePeriod)
+					if TempValue0 == true
+						Object[ArrayPos0].State = FUTUREPOST_USED
+					end if
+				else
+					if Object[ArrayPos0].Type == TypeName[Past Post]
+						GetBit(TempValue0, SaveRAM[ArrayPos1], HUD.CurrentTimePeriod)
+						if TempValue0 == true
+							Object[ArrayPos0].State = PASTPOST_USED
+						end if
+					else
+						GetBit(TempValue0, SaveRAM[ArrayPos1], TempValue1)
+						if TempValue0 == true
+							Object[ArrayPos0].Type = TypeName[Blank Object]
+						end if
+					end if
+				end if
+			end if
+		end if
+		ArrayPos0++
+		ArrayPos1++
+	loop
+end function
+
+
+sub ObjectMain
+	Ring.AniCount++
+	if Ring.AniCount == 4
+		Ring.AniCount = 0
+		Ring.Frame++
+		Ring.Frame &= 7
+	end if
+
+	if Options.GameMode != MODE_TIMEATTACK
+		if Player.Score >= Player.ScoreBonus
+
+#platform: Use_Origins
+			if game.coinMode == false
+				Player.Lives++
+			else
+				game.callbackParam0 = 1	// Set the amount of coins to add
+				EngineCallback(NOTIFY_ADD_COIN)
+			end if
+#endplatform
+
+#platform: Use_Standalone
+			Player.Lives++
+#endplatform
+
+			Player.ScoreBonus += 50000
+			if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+				PlaySfx(SFX_G_1UP, false)
+			else
+				PlaySfx(SFX_G_ACHIEVEMENT, false)
+			end if
+		end if
+	end if
+
+	Oscillation++
+	Oscillation &= 511
+
+#platform: Use_Origins
+	if Stage.TimeEnabled == true
+		if game.coinMode == false
+			CheckEqual(game.timeOver, false)
+			TempValue0  = CheckResult
+			CheckEqual(Stage.Minutes, 10)
+			TempValue0 &= CheckResult
+			if TempValue0 != false
+				if game.playMode == BOOT_PLAYMODE_CLASSIC
+					Stage.Minutes		 = 9
+					Stage.Seconds		 = 59
+					Stage.MilliSeconds	 = 99
+					Stage.TimeEnabled	 = false
+				end if
+
+				if game.playMode != BOOT_PLAYMODE_BOSSRUSH
+					Object[0].Type = TypeName[Player Object]
+					CallFunction(Player_Kill)
+				end if
+			end if
+		end if
+	end if
+
+	if game.forceKillPlayer == true
+		game.forceKillPlayer = false
+		CheckEqual(Player.State, Player_State_Death)
+		TempValue0   = CheckResult
+		CheckEqual(Player.State, Player_State_Drown)
+		CheckResult |= TempValue0
+		if CheckResult == false
+			Object[0].Type = TypeName[Player Object]
+			CallFunction(Player_Kill)
+		end if
+	end if
+#endplatform
+
+#platform: Use_Standalone
+	if Stage.TimeEnabled == true
+		if Stage.Minutes == 10
+			Stage.Minutes		 = 9
+			Stage.Seconds		 = 59
+			Stage.MilliSeconds	 = 99
+			Stage.TimeEnabled	 = false
+			Object[0].Type		 = TypeName[Player Object]
+			CallFunction(Player_Kill)
+		end if
+	end if
+#endplatform
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0   = Player.CollisionLeft
+	TempValue0 <<= 16
+	TempValue0  += Player.XPos
+	
+	TempValue1   = Stage.XBoundary1
+	TempValue1 <<= 16
+	if TempValue0 < TempValue1
+		if Player.Right == true
+			Player.XVelocity = 0x10000
+			Player.Speed	 = 0x10000
+		else
+			Player.XVelocity = 0
+			Player.Speed	 = 0
+		end if
+		Player.XPos  = TempValue1
+		TempValue0   = Player.CollisionLeft
+		TempValue0 <<= 16
+		Player.XPos -= TempValue0
+	end if
+	// Death Boundary
+	TempValue0   = Player.CollisionBottom
+	TempValue0 <<= 16
+	TempValue0  += Player.YPos
+	if TempValue0 > Stage.DeathBoundary
+		CallFunction(Player_Kill)
+	end if
+end sub
+
+
+sub ObjectStartup
+	if Options.Soundtrack == OST_JP
+		SetMusicTrack("JP/ZoneComplete.ogg", TRACK_ACTFINISH, 0)
+		SetMusicTrack("JP/Invincibility.ogg", TRACK_INVINCIBILITY, 0)
+		SetMusicTrack("JP/SpeedShoes.ogg", TRACK_SPEEDSHOES, 0)
+		SetMusicTrack("JP/Boss.ogg", TRACK_BOSS, 1)
+		SetMusicTrack("JP/GameOver.ogg", TRACK_GAMEOVER, 0)
+	else
+		SetMusicTrack("US/ZoneComplete.ogg", TRACK_ACTFINISH, 0)
+		SetMusicTrack("US/Invincibility.ogg", TRACK_INVINCIBILITY, 0)
+		SetMusicTrack("US/SpeedShoes.ogg", TRACK_SPEEDSHOES, 0)
+		SetMusicTrack("US/Boss.ogg", TRACK_BOSS, 196526)
+		SetMusicTrack("US/GameOver.ogg", TRACK_GAMEOVER, 0)
+	end if
+	
+	Stage.PauseEnabled  = false
+	Screen.CameraStyle  = Options.OriginalControls
+	Screen.CameraTarget = 0
+
+	Stage.DeathBoundary   = Stage.YBoundary2
+	Stage.DeathBoundary <<= 16
+	Object[23].Type = TypeName[Stage Setup]
+	StageSetup.Priority = PRIORITY_ACTIVE
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Stage Setup]
+			ResetObjectEntity(ArrayPos0, TypeName[Blank Object], 0, 0, 0)
+		end if
+		ArrayPos0++
+	loop
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[HUD]	// Delete extra HUD objects and set the correct one
+			Object[ArrayPos0].Type = TypeName[Blank Object]
+			Object[24].Type	= TypeName[HUD]
+			HUD.Priority	= PRIORITY_ACTIVE
+			HUD.DrawOrder	= 6
+			HUD.CurrentTimePeriod	= Object[ArrayPos0].PropertyValue
+		end if
+		ArrayPos0++
+	loop
+	
+// In origins this is reset by player object so, goodbye!
+#platform: Use_Standalone
+	Warp.Timer = 0
+#endplatform
+	if Warp.XPos > 0	// if the player comes from a time travel, load the warp values
+		// Reload the previous player stats
+		Player.XPos			 = Warp.XPos
+		Player.YPos			 = Warp.YPos
+		Player.XVelocity 	 = Warp.XVelocity
+		Player.YVelocity 	 = Warp.YVelocity
+		Player.Speed	 	 = Warp.Speed
+		Player.CollisionMode = Warp.CollisionMode
+		Player.Gravity		 = Warp.Gravity
+		Player.State 		 = Warp.State
+		Player.Animation 	 = Warp.Animation
+		Player.Frame	 	 = Warp.PlayerFrame
+		Player.Angle	 	 = Warp.Angle
+		Player.Rings	 	 = Warp.Rings
+		Player.MinRollSpeed  = Warp.MinRollSpeed
+
+		// Reload the previous stage time
+		Stage.MilliSeconds	= Rec_Milliseconds
+		Stage.Seconds		= Rec_Seconds
+		Stage.Minutes		= Rec_Minutes
+
+		CallFunction(StageSetup_LoadStageState)
+	else
+		ArrayPos0 = 7168
+		while ArrayPos0 < 8192
+			SaveRAM[ArrayPos0] = 0
+			ArrayPos0++
+		loop
+		Player.Direction	= FACING_RIGHT
+		Player.Left			= false
+		Player.Right		= true
+		Player.ControlMode	= CONTROLMODE_NONE
+		Player.Speed		= 0
+		Player.Animation	= ANI_STOPPED
+	end if
+
+	if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+		Good_Future				= true
+		Transporter_Destroyed	= true
+	end if
+
+	if SpecialStage.TimeStones == 127 // 0b1111111, each '1' bit represents an obtained time stone
+		Good_Future				= true
+		Transporter_Destroyed	= true
+	end if
+
+	Warp.Destination 	= WARP_NONE
+	Ring.ExtraLife		= 100
+	Player.RoofBarrier	= false
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
+
+
+// ========================
+// Editor Helpers
+// ========================
+
+// All the following are only to be used from Editor subs, using these in the actual game itself won't do much
+// None of these exist in the original game, they're all custom to the decomp
+
+#function EditorHelpers_DrawHitbox
+#function EditorHelpers_DrawX
+#function EditorHelpers_FindTimePeriod
+
+
+function EditorHelpers_DrawHitbox
+	
+#platform: Editor
+	
+	// This function is called in order to draw an object's hitbox, as a white
+	// Editor.DrawingOverlay isn't set here
+	
+	// Preconditions:
+	// - Object.XPos and Object.YPos are the position for the hitbox to be centered around
+	// - TempValue0 is the left hitbox size
+	// - TempValue1 is the top hitbox size
+	// - TempValue2 is the right hitbox size
+	// - TempValue3 is the bottom hitbox size
+	//   - All these values are to be positive
+	
+	// Get the base 1:1 position of the object
+	TempValue4 = Object.iXPos
+	TempValue5 = Object.iYPos
+	
+	// Move to its top left corner
+	TempValue4 -= TempValue0
+	TempValue5 -= TempValue1
+	
+	// Get the hitbox's total width and height
+	TempValue2 += TempValue0
+	TempValue3 += TempValue1
+	
+	// Turning iPos into normal Pos
+	TempValue4 <<= 16
+	TempValue5 <<= 16
+	
+	DrawRectOutline(TempValue4, TempValue5, TempValue2, TempValue3, 255, 255, 0, 255)
+	
+#endplatform
+	
+end function
+
+
+function EditorHelpers_DrawX
+	
+#platform: Editor
+	
+	// This function is called to draw a red X, just for when you wanna show something's *really* wrong
+	// Editor.DrawingOverlay isn't set here, it's expected to be set (or ignored) by the Object calling this function
+	
+	// Preconditions:
+	// - TempValue0 and TempValue1 are the position for the X to be centered around, in world-space
+	
+	// Left
+	TempValue2 = TempValue0
+	TempValue2 -= 0x100000
+	
+	// Right
+	TempValue3 = TempValue0
+	TempValue3 += 0x100000
+	
+	// Top
+	TempValue4 = TempValue1
+	TempValue4 -= 0x100000
+	
+	// Bottom
+	TempValue5 = TempValue1
+	TempValue5 += 0x100000
+	
+	// TL-BR
+	DrawLine(TempValue2, TempValue4, TempValue3, TempValue5, 255, 0, 0)
+	
+	// TR-BL
+	DrawLine(TempValue3, TempValue4, TempValue2, TempValue5, 255, 0, 0)
+	
+#endplatform
+	
+end function
+
+
+function EditorHelpers_FindTimePeriod
+	
+#platform: Editor
+	
+	// This function is called in order to get the current Time Period
+	// Do note that this is inaccurate to how the game actually handles it, but since
+	//  we can't look at the HUD's property value instead we have to estimate based on the current stage's folder
+	
+	// Postconditions:
+	// - CheckResult holds the current time period
+	//   - If the current folder's name doesn't end in ABCD then Present time period will be assumed
+	
+	TempValue0 = TIME_PRESENT
+	
+	CheckCurrentStageFolder("B")
+	SetBit(TempValue0, 0, CheckResult)
+	
+	CheckCurrentStageFolder("C")
+	SetBit(TempValue0, 1, CheckResult)
+	
+	CheckCurrentStageFolder("D")
+	CheckResult *= TIME_BAD_FUTURE
+	TempValue0 += CheckResult
+	
+	CheckResult = TempValue0
+	
+#endplatform
+	
+end function

@@ -1,0 +1,254 @@
+//------------Sonic CD Collapsing Platform Script-------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.HitboxLeft
+#alias Object.Value1	:	Object.HitboxRight
+#alias Object.Value2	:	Object.CollapseDelay
+#alias Object.Value3	:	Object.BridgeLength
+#alias Object.Value4	:	Object.YVelocity
+
+// States
+#alias 0	:	CPLATFORM_CHECK_COLLISION
+#alias 1	:	CPLATFORM_CRUMBLE_RIGHT
+#alias 2	:	CPLATFORM_CRUMBLE_LEFT
+#alias 3	:	CPLATFORM_COLLAPSE_LEFT
+#alias 4	:	CPLATFORM_COLLAPSE_RIGHT
+#alias 5	:	CPLATFORM_RESTORE	// Sonic Nexus leftover
+#alias 6	:	CPLATFORM_FALLING_DEBRIS
+
+// Stage SFX
+#alias 3	:	SFX_S_CRUMBLE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case CPLATFORM_CRUMBLE_RIGHT
+		if Object.CollapseDelay > 0
+			Object.CollapseDelay--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			Object.State = CPLATFORM_COLLAPSE_RIGHT
+		end if
+		break
+
+	case CPLATFORM_CRUMBLE_LEFT
+		if Object.CollapseDelay > 0
+			Object.CollapseDelay--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			Object.State = CPLATFORM_COLLAPSE_LEFT
+		end if
+		break
+
+	case CPLATFORM_COLLAPSE_LEFT
+		Object.CollapseDelay++
+		if Object.CollapseDelay == 12
+			Object.CollapseDelay = 0
+			if Object.HitboxLeft < Object.HitboxRight
+				Object.BridgeLength--
+				Object.HitboxLeft += 16
+
+				TempValue0   = Object.HitboxLeft
+				TempValue0  -= 8
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+
+				TempValue1   = Object.YPos
+				TempValue1  -= 0x80000
+
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLING_DEBRIS
+				Object[TempObjectPos].YVelocity = -0x10000
+				TempValue1 += 0x100000
+
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLING_DEBRIS
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		break
+
+	case CPLATFORM_COLLAPSE_RIGHT
+		Object.CollapseDelay++
+		if Object.CollapseDelay == 12
+			Object.CollapseDelay = 0
+			if Object.HitboxRight > Object.HitboxLeft
+				Object.BridgeLength--
+				Object.HitboxRight -= 16
+
+				TempValue0   = Object.HitboxRight
+				TempValue0  += 8
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+
+				TempValue1   = Object.YPos
+				TempValue1  -= 0x80000
+
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLING_DEBRIS
+				Object[TempObjectPos].YVelocity = -0x10000
+				TempValue1 += 0x100000
+
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLING_DEBRIS
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		break
+
+	case CPLATFORM_RESTORE
+		if Object.OutOfBounds == true
+			Object.State = CPLATFORM_CHECK_COLLISION
+
+			Object.BridgeLength = Object.PropertyValue
+
+			Object.HitboxLeft   = Object.PropertyValue
+			Object.HitboxLeft <<= 3
+
+			Object.HitboxRight  = Object.HitboxLeft
+			FlipSign(Object.HitboxLeft)
+
+			Object.Priority = PRIORITY_BOUNDS
+			Object.CollapseDelay = 0
+		end if
+		break
+
+	case CPLATFORM_FALLING_DEBRIS
+		Object.YVelocity += 0x4000
+
+		if Object.YVelocity > 0
+			Object.YPos += Object.YVelocity
+		end if
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == CPLATFORM_CHECK_COLLISION
+		PlayerObjectCollision(C_PLATFORM, Object.HitboxLeft, -16, Object.HitboxRight, 16)
+		if CheckResult == true
+			Object.CollapseDelay = 1
+			Object.Priority = PRIORITY_ACTIVE
+
+			if Player.XPos > Object.XPos
+				Object.State = CPLATFORM_CRUMBLE_RIGHT
+			else
+				Object.State = CPLATFORM_CRUMBLE_LEFT
+			end if
+		end if
+	else
+		PlayerObjectCollision(C_PLATFORM, Object.HitboxLeft, -16, Object.HitboxRight, 16)
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case CPLATFORM_CHECK_COLLISION
+	case CPLATFORM_CRUMBLE_RIGHT
+	case CPLATFORM_CRUMBLE_LEFT
+	case CPLATFORM_COLLAPSE_RIGHT
+		TempValue0   = 0
+
+		TempValue1   = Object.HitboxLeft
+		TempValue1 <<= 16
+		TempValue1  += 0x80000
+		TempValue1  += Object.XPos
+		
+		while TempValue0 < Object.BridgeLength
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 += 0x100000
+		loop
+		break
+
+	case CPLATFORM_COLLAPSE_LEFT
+		TempValue0   = 0
+
+		TempValue1   = Object.HitboxRight
+		TempValue1 <<= 16
+		TempValue1  -= 0x80000
+		TempValue1  += Object.XPos
+
+		while TempValue0 < Object.BridgeLength
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 -= 0x100000
+		loop
+		break
+
+	case CPLATFORM_FALLING_DEBRIS
+		DrawSprite(1)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects.gif")
+
+	SpriteFrame(-8, -16, 16, 32, 1, 198)	// #0 - Collapsing Platform
+	SpriteFrame(-8, -8, 16, 16, 1, 198)		// #1 - Collapsing Platform debris
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[CPlatform]
+			Object[ArrayPos0].BridgeLength = Object[ArrayPos0].PropertyValue
+
+			Object[ArrayPos0].HitboxLeft   = Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].HitboxLeft <<= 3
+
+			Object[ArrayPos0].HitboxRight  = Object[ArrayPos0].HitboxLeft
+			FlipSign(Object[ArrayPos0].HitboxLeft)
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0   = 0
+
+	TempValue1   = Object.PropertyValue
+	TempValue1 <<= 3
+	FlipSign(TempValue1)
+
+	TempValue2   = TempValue1
+	TempValue2 <<= 16
+	TempValue2  += 0x80000
+	TempValue2  += Object.XPos
+	
+	while TempValue0 < Object.PropertyValue
+		DrawSpriteXY(0, TempValue2, Object.YPos)
+		TempValue0++
+		TempValue2 += 0x100000
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects.gif")
+
+	SpriteFrame(-8, -16, 16, 32, 1, 198)	// #0 - Collapsing Platform
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

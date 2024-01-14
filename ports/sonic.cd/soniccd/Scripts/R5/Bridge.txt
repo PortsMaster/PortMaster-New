@@ -1,0 +1,325 @@
+//-------------------Sonic CD Bridge Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.PropertyValue : Object.Length
+
+#alias Object.Value0 : Object.WalkedOn
+#alias Object.Value1 : Object.Depress
+#alias Object.Value2 : Object.MidPoint
+#alias Object.Value3 : Object.MidHeight
+#alias Object.Value4 : Object.MidYPos
+#alias Object.Value5 : Object.PlayerNo
+#alias Object.Value6 : Object.Left
+#alias Object.Value7 : Object.Right
+
+// Time Period Aliases
+#alias Object[24].PropertyValue : HUD.CurrentTimePeriod
+
+// Flailing states, v4 names explains this much better
+#alias Player.Flailing[0]	:	Player.FloorSensorL
+#alias Player.Flailing[1]	:	Player.FloorSensorC
+#alias Player.Flailing[2]	:	Player.FloorSensorR
+
+// Gravity
+#alias 0 : GRAVITY_GROUND
+
+// Time Periods
+#alias 0 : TIME_PRESENT
+#alias 1 : TIME_PAST
+#alias 2 : TIME_GOOD_FUTURE
+#alias 3 : TIME_BAD_FUTURE
+
+
+// Note: This Object supports multiple players, but CD's locked to 1 Player anyway so all that logic goes unused in a way
+
+
+sub ObjectPlayerInteraction
+
+	if Player.XPos > Object.Left
+		if Player.XPos < Object.Right
+			if Stage.ActivePlayer == Object.PlayerNo
+
+				Object.MidPoint  = Player.XPos
+				Object.MidPoint -= Object.Left
+				
+				TempValue0   = Object.MidPoint
+				TempValue0 >>= 8
+
+				TempValue1   = Object.Right
+				TempValue1  -= Object.Left
+
+				TempValue2   = TempValue1
+				TempValue2 >>= 16
+
+				TempValue0 /= TempValue2
+				
+				Sin(Object.MidHeight, TempValue0)
+				TempValue1 >>= 13
+				Object.MidHeight *= TempValue1
+				
+				TempValue0  = Object.YPos
+				TempValue0 -= 0x300000
+				if Player.YPos > TempValue0
+					if Player.YVelocity >= 0
+						TempValue2 = Player.CollisionBottom
+						FlipSign(TempValue2)
+						TempValue2 <<= 16
+						TempValue2  += Object.MidYPos
+						TempValue2  -= 0x80000
+
+						Object.WalkedOn++
+						Player.YPos  = Object.YPos
+						Player.YPos += TempValue2
+						Player.Gravity   = 0
+						Player.YVelocity = 0
+
+						Player.FloorSensorL = true
+						Player.FloorSensorR = true
+						Player.FloorSensorC = true
+					end if
+				end if
+
+			else
+
+				if Player.YVelocity >= 0
+
+					TempValue0 = Player.XPos
+					TempValue0 -= Object.Left
+				
+					if TempValue0 > Object.MidPoint
+						TempValue0 = Object.Right
+						TempValue0 -= Player.XPos
+
+						TempValue3 = Object.Right
+						TempValue3 -= Object.Left
+						TempValue3 -= Object.MidPoint
+
+						TempValue1 = TempValue0
+						TempValue1 <<= 7
+						TempValue1 /= TempValue3
+					else
+						TempValue1 = TempValue0
+						TempValue1 <<= 7
+						TempValue1 /= Object.MidPoint
+					end if
+
+					Sin(TempValue2, TempValue1)
+					TempValue2 *= Object.MidYPos
+					TempValue2 >>= 9
+					TempValue2 -= 0x80000
+
+					if Player.YVelocity < 0x8000
+						TempValue3 = TempValue2
+						TempValue3 >>= 16
+						TempValue4 = TempValue3
+						TempValue3 -= 8
+					else
+						TempValue3 = TempValue2
+						TempValue3 >>= 16
+						TempValue4 = TempValue3
+						TempValue4 += 8
+					end if
+
+					PlayerObjectCollision(C_TOUCH, -1024, TempValue3, 1024, TempValue4)
+					
+					if CheckResult == true
+						Object.WalkedOn++
+						Player.YPos = Player.CollisionBottom
+						FlipSign(Player.YPos)
+						Player.YPos <<= 16
+						Player.YPos  += Object.YPos
+						Player.YPos  += TempValue2
+
+						Player.FloorSensorL = true
+						Player.FloorSensorR = true
+						Player.FloorSensorC = true
+						
+						if Player.YVelocity < 256
+							Object.Depress = 128
+						end if
+
+						Player.Gravity = GRAVITY_GROUND
+						Player.YVelocity = 0
+						
+						// This check is always gonna be true, since CD only has P1 active ever
+						if Stage.ActivePlayer == 0
+							Object.PlayerNo = 0
+						end if
+					end if
+
+				end if
+
+			end if
+		end if
+	end if
+
+end sub
+
+
+sub ObjectDraw
+
+	TempValue0 = 0
+
+	TempValue1  = Object.Left
+	TempValue1 += 0x80000
+
+	TempValue4 = 0x80000
+	
+	TempValue5   = Object.MidPoint
+	TempValue5 >>= 20
+	
+	while TempValue0 < TempValue5
+
+		TempValue3   = TempValue4
+		TempValue3 <<= 7
+		TempValue3  /= Object.MidPoint
+	
+		Sin(TempValue2, TempValue3)
+		TempValue2  *= Object.MidYPos
+		TempValue2 >>= 9
+	
+		TempValue2 += Object.YPos
+	
+		DrawSpriteXY(0, TempValue1, TempValue2)
+		TempValue1 += 0x100000
+		TempValue4 += 0x100000
+		TempValue0++
+
+	loop
+
+	TempValue2  = Object.MidYPos
+	TempValue2 += Object.YPos
+	DrawSpriteXY(0, TempValue1, TempValue2)
+	TempValue1 += 0x100000
+	TempValue0++
+	
+	TempValue5  = Object.Right
+	TempValue5 -= Object.Left
+	TempValue5 -= Object.MidPoint
+	
+	TempValue1  = Object.Right
+	TempValue1 -= 0x80000
+	
+	TempValue4  = 0x80000
+	
+	while TempValue0 < Object.Length
+
+		TempValue3   = TempValue4
+		TempValue3 <<= 7
+		TempValue3  /= TempValue5
+
+		Sin(TempValue2, TempValue3)
+		TempValue2  *= Object.MidYPos
+		TempValue2 >>= 9
+		
+		TempValue2 += Object.YPos
+		
+		DrawSpriteXY(0, TempValue1, TempValue2)
+		TempValue1 -= 0x100000
+		TempValue4 += 0x100000
+		TempValue0++
+
+	loop
+
+	if Object.WalkedOn > 0
+		if Object.Depress < 128
+			Object.Depress += 8
+		end if
+	else
+		if Object.Depress > 0
+			Object.Depress -= 8
+			Object.PlayerNo = -1
+		else
+			Object.MidHeight = 0
+		end if
+	end if
+
+	Object.MidYPos   = Object.MidHeight
+	Object.MidYPos  *= Object.Depress
+	Object.MidYPos >>= 7
+
+	Object.WalkedOn = 0
+
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Load different Sprite Frames for the different Time Periods
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+		
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+		
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+		
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+		
+	end switch
+	
+	// Setup the Bridge Sizes for all Bridge Objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Bridge]
+			Object[ArrayPos0].Left = Object[ArrayPos0].Length
+			Object[ArrayPos0].Left <<= 19
+			Object[ArrayPos0].Right = Object[ArrayPos0].Left
+			
+			FlipSign(Object[ArrayPos0].Left)
+			Object[ArrayPos0].Left += Object[ArrayPos0].XPos
+			Object[ArrayPos0].Right += Object[ArrayPos0].XPos
+			
+			Object[ArrayPos0].PlayerNo = -1
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0 = Object.Length
+	TempValue2 = TempValue0
+	TempValue0 <<= 19
+	FlipSign(TempValue0)
+	TempValue0 += Object.XPos
+	TempValue0 += 0x80000
+	
+	TempValue1 = 0
+	while TempValue1 < TempValue2
+		DrawSpriteXY(0, TempValue0, Object.YPos)
+		TempValue0 += 0x100000
+		TempValue1++
+	loop
+	
+	if TempValue1 == 0
+		DrawSprite(0)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// TODO: support other time periods
+	// Surely there's a better way to do it than 10 separate checkCurrentStageFolder checks?
+	SpriteFrame(-8, -8, 16, 16, 35, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end sub

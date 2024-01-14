@@ -1,0 +1,377 @@
+//-----------------Sonic CD Kama Kama Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.FrameTimer
+#alias Object.Value2		:	Object.XVelocity
+#alias Object.Value3		:	Object.XOriginPos
+#alias Object.Value4		:	Object.YOriginPos
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// Blade Aliases
+#alias Object.Value2		:	Object.KamaKamaEntityNo
+
+// States
+#alias 0	:	KAMAKAMA_GUARD
+#alias 1	:	KAMAKAMA_LAUNCH_BLADE
+#alias 2	:	KAMAKAMA_PREPARE_CHARGE
+#alias 3	:	KAMAKAMA_CHARGE
+#alias 4	:	KAMAKAMA_SWITCH_DIRECTION
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	Object.FrameTimer++
+	Object.FrameTimer &= 15
+	switch Object.State
+	case KAMAKAMA_GUARD
+		ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0)
+		if Object.XPos > Player.XPos
+			Object.Direction = FACING_RIGHT
+		else
+			Object.Direction = FACING_LEFT
+		end if
+
+		PlayerObjectCollision(C_TOUCH, -96, -48, 96, 48)
+		if CheckResult == true
+			Object.State = KAMAKAMA_LAUNCH_BLADE
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.Quality == GOOD_QUALITY	// Only badniks in a good state still have blades to throw
+				CreateTempObject(TypeName[Kama Kama Blade], 24, Object.XPos, Object.YPos)
+				Object[TempObjectPos].Direction = Object.Direction
+				Object[TempObjectPos].iYPos -= 6
+				Object[TempObjectPos].KamaKamaEntityNo = Object.EntityNo
+
+				if Object.Direction == FACING_RIGHT
+					Object[TempObjectPos].iXPos -= 8
+				else
+					Object[TempObjectPos].iXPos += 8
+				end if
+				CreateTempObject(TypeName[Kama Kama Blade], 56, Object.XPos, Object.YPos)
+				Object[TempObjectPos].Direction = Object.Direction
+				Object[TempObjectPos].iYPos -= 4
+				Object[TempObjectPos].KamaKamaEntityNo = Object.EntityNo
+
+				if Object.Direction == FACING_RIGHT
+					Object[TempObjectPos].iXPos -= 16
+				else
+					Object[TempObjectPos].iXPos += 16
+				end if
+
+			end if
+
+		end if
+		break
+
+	case KAMAKAMA_LAUNCH_BLADE
+		if Object.Timer < 110
+			Object.Timer++
+		else
+			Object.State = KAMAKAMA_PREPARE_CHARGE
+			Object.Timer = 0
+		end if
+		break
+
+	case KAMAKAMA_PREPARE_CHARGE
+		if Object.Timer < 48
+			Object.Timer++
+		else
+			Object.State = KAMAKAMA_CHARGE
+			Object.Timer = 0
+			Object.Frame = 0
+			if Object.Direction == FACING_RIGHT
+				Object.XVelocity = -0x10000
+			else
+				Object.XVelocity = 0x10000
+			end if
+			if Object.Quality > 0
+				Object.XVelocity >>= 1
+			end if
+		end if
+		break
+
+	case KAMAKAMA_CHARGE
+		Object.Frame++
+		Object.Frame &= 31
+
+		Object.XPos  += Object.XVelocity
+		ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0)	// Check if it's reaching a ledge
+		if CheckResult == false
+			Object.State = KAMAKAMA_SWITCH_DIRECTION
+			Object.Timer = 60
+		end if
+		break
+
+	case KAMAKAMA_SWITCH_DIRECTION
+		Object.Frame++
+		Object.Frame &= 31
+		if Object.Timer > 0
+			Object.Timer--
+		else
+			Object.State = KAMAKAMA_CHARGE
+			FlipSign(Object.XVelocity)
+			if Object.Direction == FACING_RIGHT
+				Object.Direction = FACING_LEFT
+			else
+				Object.Direction = FACING_RIGHT
+			end if
+
+		end if
+		break
+
+	end switch
+
+	// Reset object when out of bounds
+	if Object.OutOfBounds == true
+		Object.Priority = PRIORITY_BOUNDS
+
+		Object.State = KAMAKAMA_GUARD
+
+		Object.Timer = 0
+		Object.FrameTimer = 0
+		Object.Frame = 0
+
+		Object.XPos = Object.XOriginPos
+		Object.YPos = Object.YOriginPos
+	end if
+
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -16, -16, 16, 20)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -16, -16, 16, 20)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case KAMAKAMA_GUARD
+		TempValue0   = Object.FrameTimer
+		TempValue0 >>= 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+		if Object.Quality == GOOD_QUALITY
+			TempValue1  = TempValue0
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 12
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 -= 10
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			TempValue1  = TempValue0
+			TempValue1 += 10
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 2
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		break
+
+	case KAMAKAMA_LAUNCH_BLADE
+		TempValue0   = Object.FrameTimer
+		TempValue0 >>= 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+		if Object.Quality == GOOD_QUALITY
+			TempValue1  = TempValue0
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 2
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			TempValue1  = TempValue0
+			TempValue1 += 10
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 2
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		break
+
+	case KAMAKAMA_PREPARE_CHARGE
+		TempValue0   = Object.FrameTimer
+		TempValue0 >>= 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+		if Object.Quality == GOOD_QUALITY
+			TempValue1  = TempValue0
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			TempValue1  = TempValue0
+			TempValue1 += 10
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		break
+
+	case KAMAKAMA_CHARGE
+	case KAMAKAMA_SWITCH_DIRECTION
+		TempValue0   = Object.Frame
+		TempValue0 >>= 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+		TempValue0   = Object.FrameTimer
+		TempValue0 >>= 3
+
+		if Object.Quality == GOOD_QUALITY
+			TempValue1  = TempValue0
+			TempValue1 += 4
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 2
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			TempValue1  = TempValue0
+			TempValue1 += 10
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+
+			TempValue1 += 2
+			DrawSpriteFX(TempValue1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(0, 4, 16, 16, 198, 119)		// #0  - Wheel Frame 0
+	SpriteFrame(0, 4, 16, 16, 215, 119)		// #1  - Wheel Frame 1
+	SpriteFrame(0, 4, 16, 16, 232, 119)		// #2  - Wheel Frame 2
+	SpriteFrame(0, 4, 16, 16, 215, 119)		// #3  - Wheel Frame 3
+	
+	// Good Kama Kama
+	SpriteFrame(-10, -4, 24, 16, 215, 102)	// #4  - Body Frame 0
+	SpriteFrame(-10, -3, 24, 16, 215, 102)	// #5  - Body Frame 1
+
+	SpriteFrame(-16, -20, 16, 16, 198, 102)	// #6  - Head Frame 0
+	SpriteFrame(-16, -19, 16, 16, 198, 102)	// #7  - Head Frame 1
+	SpriteFrame(-16, -20, 16, 16, 198, 136)	// #8  - Head Frame 2
+	SpriteFrame(-16, -19, 16, 16, 198, 102)	// #9  - Head Frame 3
+
+	// Bad Kama Kama
+	SpriteFrame(-10, -4, 24, 16, 232, 136)	// #10 - Body Frame 0
+	SpriteFrame(-10, -3, 24, 16, 198, 153)	// #11 - Body Frame 1
+
+	SpriteFrame(-16, -20, 16, 16, 215, 136)	// #12 - Head Frame 0
+	SpriteFrame(-16, -19, 16, 16, 240, 102)	// #13 - Head Frame 0
+	SpriteFrame(-16, -20, 16, 16, 198, 136)	// #14 - Head Frame 0
+	SpriteFrame(-16, -19, 16, 16, 240, 102)	// #15 - Head Frame 0
+
+	SpriteFrame(-22, -14, 24, 20, 173, 101)	// #16 - Claws Frame 0
+	SpriteFrame(-22, -14, 24, 20, 173, 122)	// #17 - Claws Frame 1
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Kama Kama]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	
+	switch Object.Quality
+	case GOOD_QUALITY
+		DrawSprite(1)
+		DrawSprite(2)
+		DrawSprite(3)
+		break
+	case BAD_QUALITY
+		DrawSprite(4)
+		DrawSprite(5)
+		break
+	end switch
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(0, 4, 16, 16, 198, 119)		// #0 - Wheel
+
+	// Good Kama Kama
+	SpriteFrame(-10, -4, 24, 16, 215, 102)	// #1 - Body
+	SpriteFrame(-16, -20, 16, 16, 198, 102)	// #2 - Head
+	SpriteFrame(-22, -14, 24, 20, 173, 101)	// #3 - Claws
+
+	// Bad Kama Kama
+	SpriteFrame(-10, -4, 24, 16, 232, 136)	// #4 - Body
+	SpriteFrame(-16, -20, 16, 16, 215, 136)	// #5 - Head
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

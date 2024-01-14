@@ -1,0 +1,467 @@
+//-------------------Sonic CD Sasuri Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.MoveTimer
+#alias Object.Value1		:	Object.CannonTimer
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// Sasuri Bullet (SBullet) Aliases
+#alias Object.Value1		:	Object.XVelocity
+
+// States
+#alias 0	:	SASURI_FINDGROUND
+#alias 1	:	SASURI_CRAWLLEFT
+#alias 2	:	SASURI_CRAWLRIGHT
+#alias 3	:	SASURI_SPOTPLAYER
+#alias 4	:	SASURI_SHOOT
+#alias 5	:	SASURI_RETRACTCANNON
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Stage SFX
+#alias 2	:	SFX_S_SHOT
+
+sub ObjectMain
+	
+	// Animate the Sasuri
+	Object.Frame++
+	Object.Frame %= 60
+	
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case SASURI_FINDGROUND
+			// See if there's any ground for the Sasuri to stand on
+			// Note - is this an error? Should it be ObjectTileGrip instead? That's what all the other stuff around here uses...
+			ObjectTileCollision(CSIDE_FLOOR, 0, 13, 0)
+			
+			if CheckResult == true
+				// If there is, then start crawling
+				Object.State = SASURI_CRAWLLEFT
+			else
+				// If there isn't, then move a pixel down and try again next frame
+				Object.YPos += 0x10000
+			end if
+			break
+			
+		case SASURI_CRAWLLEFT
+			
+			// Move the Sasuri left by one pixel
+			Object.XPos -= 0x10000
+			
+			// Increment its movement timer, and see if it's time to turn around now
+			Object.MoveTimer--
+			if Object.MoveTimer <= -80
+				Object.State = SASURI_CRAWLRIGHT
+				Object.Direction = FACING_LEFT
+			end if
+			
+			// Also, see if the Sasuri is still on ground
+			// -> If it isn't, then turn around
+			ObjectTileGrip(CSIDE_FLOOR, 0, 13, 0)
+			if CheckResult == false
+				Object.State = SASURI_CRAWLRIGHT
+				Object.MoveTimer = 0
+				Object.Direction = FACING_LEFT
+			end if
+			break
+			
+		case SASURI_CRAWLRIGHT
+			
+			// Move the Sasuri one pixel right
+			Object.XPos += 0x10000
+			
+			// As with above, do timer stuff and see if the Sasuri should turn around now
+			Object.MoveTimer++
+			if Object.MoveTimer >= 80
+				Object.State = SASURI_CRAWLLEFT
+				Object.Direction = FACING_RIGHT
+			end if
+			
+			// Also like above, see if the Sasuri's still on ground and if it isn't, then turn around
+			ObjectTileGrip(CSIDE_FLOOR, 0, 13, 0)
+			if CheckResult == false
+				Object.State = SASURI_CRAWLLEFT
+				Object.MoveTimer = 0
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+			
+		case SASURI_SPOTPLAYER
+			// This state's set in ObjectPlayerInteraction if the Player is within shooting range
+			
+			if Object.CannonTimer < 30
+				Object.CannonTimer++
+			else
+				Object.State = SASURI_SHOOT
+				Object.CannonTimer = 0
+			end if
+			break
+			
+		case SASURI_SHOOT
+			if Object.CannonTimer < 40
+				if Object.CannonTimer == 10
+					PlayStageSfx(SFX_S_SHOT, false)
+					
+					// Create the Bullet that the Sasuri shot
+					CreateTempObject(TypeName[Sasuri Bullet], 0, Object.XPos, Object.YPos)
+					
+					// Move the Bullet 24 pixels up, to match where the Sasuri's cannon is drawn
+					Object[TempObjectPos].YPos -= 0x180000
+					
+					// Move it 24 pixels in the Sasuri's direction, as well as giving it a velocity of 3px per frame in that very same direction too
+					if Object.Direction == FACING_RIGHT
+						Object[TempObjectPos].XPos -= 0x70000
+						Object[TempObjectPos].XVelocity = -0x30000
+					else
+						Object[TempObjectPos].XPos += 0x70000
+						Object[TempObjectPos].XVelocity = 0x30000
+					end if
+					
+					// Move the Sasuri up a Draw Order in order to make it drawn on top of the shot Bullet
+					Object.DrawOrder = 4
+				end if
+				
+				Object.CannonTimer++
+			else
+				// Pull the cannon back in
+				Object.State = SASURI_RETRACTCANNON
+				Object.CannonTimer = 0
+				
+				// Move the Sasuri back to its original Draw Order as well, as at this point,
+				// the Bullet's definitely beyond the Sasuri now
+				Object.DrawOrder = 3
+			end if
+			break
+			
+		case SASURI_RETRACTCANNON
+			if Object.CannonTimer < 30
+				Object.CannonTimer++
+			else
+			
+				// ...what?
+				// Why make it shoot again? The State's set proper in a couple of lines after anyway...
+				Object.State = SASURI_SHOOT
+				
+				if Object.Direction == FACING_RIGHT
+					Object.State = SASURI_CRAWLLEFT
+				else
+					Object.State = SASURI_CRAWLRIGHT
+				end if
+			end if
+			break
+			
+		end switch
+	else
+		switch Object.State
+		case SASURI_FINDGROUND
+			// See if there's any ground for the Sasuri to stand on
+			// (Interestingly, the Good version of this state uses ObjectTileCollision instead,
+			//  but I believe the error lies in the Good version rather than here)
+			ObjectTileGrip(CSIDE_FLOOR, 0, 13, 0)
+			
+			if CheckResult == true
+				// If the Sasuri foung ground collision, then start prowling around
+				Object.State = SASURI_CRAWLLEFT
+			else
+				// If collision wasn't found, however, then move a pixel down and wait 'till next frame
+				Object.YPos += 0x10000
+			end if
+			break
+			
+		case SASURI_CRAWLLEFT
+			
+			// Move at a rate of half a pixel left per frame
+			Object.XPos -= 0x8000
+			
+			// Allow the Sasuri to advance for 2 and two-thirds seconds before turning around
+			Object.MoveTimer--
+			if Object.MoveTimer <= -160
+				Object.State = SASURI_CRAWLRIGHT
+				Object.Direction = FACING_LEFT
+			end if
+			
+			// In addition to the timer condition, the Sasuri can also run out of ground as another condition for turning around
+			ObjectTileGrip(CSIDE_FLOOR, 0, 13, 0)
+			if CheckResult == false
+				Object.State = SASURI_CRAWLRIGHT
+				Object.MoveTimer = 0
+				Object.Direction = FACING_LEFT
+			end if
+			break
+			
+		case SASURI_CRAWLRIGHT
+			
+			// Just like before, move the Sasuri at a 0.5px rate, but this time to the right
+			Object.XPos += 0x8000
+			
+			// Same timing of 2 and two-thirds seconds, though do note that the Move Timer will likely be -160 when entering this state
+			// so the time is doubled
+			Object.MoveTimer++
+			if Object.MoveTimer >= 160
+				Object.State = SASURI_CRAWLLEFT
+				Object.Direction = FACING_RIGHT
+			end if
+			
+			// And like before, another condition for turning around is reached at the end of the ground
+			ObjectTileGrip(CSIDE_FLOOR, 0, 13, 0)
+			if CheckResult == false
+				Object.State = SASURI_CRAWLLEFT
+				Object.MoveTimer = 0
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+			
+		case SASURI_SPOTPLAYER
+			if Object.CannonTimer < 30
+				Object.CannonTimer++
+			else
+				Object.State = SASURI_SHOOT
+				Object.CannonTimer = 0
+			end if
+			break
+			
+		case SASURI_SHOOT
+			// Poor Bad Sasuri... it can't even shoot, yet it tries anyway...
+			
+			if Object.CannonTimer < 40
+				Object.CannonTimer++
+			else
+				Object.State = SASURI_RETRACTCANNON
+				Object.CannonTimer = 0
+			end if
+			break
+			
+		case SASURI_RETRACTCANNON
+			if Object.CannonTimer < 30
+				Object.CannonTimer++
+			else
+				// huh? why is this here?
+				// it gets changed again a line later anyway...
+				Object.State = SASURI_SHOOT
+				
+				if Object.Direction == FACING_RIGHT
+					Object.State = SASURI_CRAWLLEFT
+				else
+					Object.State = SASURI_CRAWLRIGHT
+				end if
+			end if
+			break
+			
+		end switch
+	end if
+	
+	// See if the Sasuri should become a Flower instead
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -22, -14, 22, 14)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -22, -14, 22, 14)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+	
+	switch Object.State
+	case SASURI_CRAWLLEFT
+	case SASURI_CRAWLRIGHT
+		// If in a movement state, then see if the Sasuri
+		if Object.CannonTimer == 0
+			PlayerObjectCollision(C_TOUCH, -64, -24, 64, 24)
+			if CheckResult == true
+				Object.State = SASURI_SPOTPLAYER
+				
+				if Player.XPos < Object.XPos
+					Object.Direction = FACING_RIGHT
+				else
+					Object.Direction = FACING_LEFT
+				end if
+			end if
+		else
+			Object.CannonTimer = 0
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	
+	if Object.Quality == GOOD_QUALITY
+		if Object.Frame < 30
+			// In this order, draw the:
+			// - back paw
+			// - main body
+			// - front paw
+			
+			DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			// These are the same order as detailed above, just with different frames for the paws
+			
+			DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		
+		switch Object.State
+		case SASURI_CRAWLLEFT
+		case SASURI_CRAWLRIGHT
+		case SASURI_SPOTPLAYER
+		case SASURI_RETRACTCANNON
+			// Draw the pulled back cannon frame
+			DrawSpriteFX(10, FX_FLIP, Object.XPos, Object.YPos)
+			break
+			
+		case SASURI_SHOOT
+			// The Sasuri's shooting, so draw the extended cannon frame
+			DrawSpriteFX(11, FX_FLIP, Object.XPos, Object.YPos)
+			break
+		
+		end switch
+	else
+		// Bad Sasuri version, use the broken versions of the Sasuri's sprites
+		
+		if Object.Frame < 30
+			DrawSpriteFX(6, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(7, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(8, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+			DrawSpriteFX(9, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+		
+		switch Object.State
+		case SASURI_CRAWLLEFT
+		case SASURI_CRAWLRIGHT
+		case SASURI_SPOTPLAYER
+		case SASURI_RETRACTCANNON
+			// Draw the Sasuri's broken retracted cannon frame
+			DrawSpriteFX(12, FX_FLIP, Object.XPos, Object.YPos)
+			break
+			
+		case SASURI_SHOOT
+			// The cannon's broken but the Sasuri's gonna try and use it anyway,
+			// draw the extended cannon frame
+			DrawSpriteFX(13, FX_FLIP, Object.XPos, Object.YPos)
+			break
+			
+		end switch
+	end if
+
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Sasuri Frames
+	
+	// Good Main Sasuri Frame
+	SpriteFrame(-24, -16, 48, 32, 174, 141)
+	
+	// Bad Main Sasuri Frame
+	SpriteFrame(-24, -16, 48, 32, 174, 174)
+	
+	// Good Sasuri Paw Frames
+	SpriteFrame(-32, -4, 32, 16, 100, 110)
+	SpriteFrame(-21, -3, 32, 16, 100, 110)
+	SpriteFrame(-28, -4, 32, 16, 100, 110)
+	SpriteFrame(-25, -3, 32, 16, 100, 110)
+	
+	// Bad Sasuri Paw Frames
+	SpriteFrame(-32, -4, 32, 16, 100, 127)
+	SpriteFrame(-21, -3, 32, 16, 100, 127)
+	SpriteFrame(-28, -4, 32, 16, 100, 127)
+	SpriteFrame(-25, -3, 32, 16, 100, 127)
+	
+	// Good Sasuri Cannon Frames
+	SpriteFrame(-9, -24, 24, 16, 100, 93)
+	SpriteFrame(-5, -29, 24, 16, 100, 93)
+	
+	// Bad Sasuri Cannon Frames
+	SpriteFrame(-1, -24, 16, 16, 133, 110)
+	SpriteFrame(3, -29, 16, 16, 133, 110)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	if Object.PropertyValue == GOOD_QUALITY
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(6, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(7, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 174, 141)
+	SpriteFrame(-24, -16, 48, 32, 174, 174)
+	
+	SpriteFrame(-32, -4, 32, 16, 100, 110)
+	SpriteFrame(-21, -3, 32, 16, 100, 110)
+	
+	SpriteFrame(-32, -4, 32, 16, 100, 127)
+	SpriteFrame(-21, -3, 32, 16, 100, 127)
+	
+	SpriteFrame(-9, -24, 24, 16, 100, 93)
+	SpriteFrame(-1, -24, 16, 16, 133, 110)
+
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad",  BAD_QUALITY)
+end sub

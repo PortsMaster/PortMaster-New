@@ -1,0 +1,295 @@
+//------------------Sonic CD Flipper Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// States
+#alias 0	:	FLIPPER_IDLE
+#alias 1	:	FLIPPER_ACTIVE
+#alias 2	:	FLIPPER_RETURN_POSITION
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+
+// Collision Mode
+#alias 0	:	CMODE_FLOOR
+
+#alias 0	:	GRAVITY_GROUND
+
+// Global SFX
+#alias 0	:	SFX_G_JUMP
+
+// Stage SFX
+#alias 7	:	SFX_S_FLIPPER
+
+
+sub ObjectMain
+	switch Object.State
+	case FLIPPER_ACTIVE
+		Object.Frame   = Object.Timer
+		Object.Frame >>= 1
+
+		Object.Timer++
+		if Object.Timer > 3
+			Object.Timer = 6
+			Object.State = FLIPPER_RETURN_POSITION
+		end if
+		break
+
+	case FLIPPER_RETURN_POSITION
+		Object.Frame  = Object.Timer
+		Object.Frame /= 3
+
+		Object.Timer++
+		if Object.Timer > 12
+			Object.Timer = 0
+			Object.Frame = 0
+			Object.State = FLIPPER_IDLE
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = 0
+	if Object.Direction == FACING_RIGHT
+		if Player.YPos > Object.YPos
+			if Player.YVelocity < 0
+				PlayerObjectCollision(C_BOX, -32, -12, 28, 12)
+			end if
+		end if
+#platform: Use_Origins
+		PlayerObjectCollision(C_PLATFORM, 15, -16, 32, 16)
+#endplatform
+
+#platform:Use_Standalone
+		PlayerObjectCollision(C_PLATFORM, 20, -16, 32, 16)
+#endplatform
+		TempValue0 = CheckResult
+
+		TempValue1   = Player.XPos
+		TempValue1  -= Object.XPos
+		TempValue1 >>= 16
+		TempValue1  += 32
+		TempValue1  += Player.CollisionRight
+
+		if TempValue1 >= 0
+			if TempValue1 < 54
+				TempValue2 = TempValue1
+				TempValue2 /= -2
+				TempValue2 += 10
+				PlayerObjectCollision(C_PLATFORM, -32, TempValue2, 32, 16)
+				TempValue0 |= CheckResult
+			end if
+		end if
+
+		if TempValue0 == PLAYER_COL_FLOOR
+			Player.CollisionMode = CMODE_FLOOR
+
+			Player.YPos += 0x40000
+			Player.XPos -= 0x10000
+
+			if Player.Speed < 0x4000
+				if Player.Speed > -0x4000
+					Player.Speed = -0x4000
+				end if
+			end if
+#platform: Use_Origins
+			if Stage.PlayerListPos == PLAYER_KNUCKLES
+				if Player.Animation == ANI_GLIDING_STOP
+					Player.State     = Player_State_Roll
+					Player.Animation = ANI_JUMPING
+
+					Player.Gravity = GRAVITY_GROUND
+					Player.Speed   = 0x4000
+				end if
+			end if
+#endplatform
+		else
+			PlayerObjectCollision(C_TOUCH, -32, -24, 32, 16)
+			if CheckResult == true
+				if Player.YVelocity < -0x40000
+					if Player.JumpPress == true
+						Player.Speed   = Player.XPos
+						Player.Speed  -= Object.XPos
+						Player.Speed >>= 2
+
+						Player.YVelocity = -0xE0000
+						TempValue2   = Player.Speed
+						TempValue2 >>= 2
+						if TempValue2 < 0
+							Player.YVelocity += TempValue2
+						else
+							Player.YVelocity -= TempValue2
+						end if
+						Object.State = FLIPPER_ACTIVE
+						StopSfx(SFX_G_JUMP)
+						PlayStageSfx(SFX_S_FLIPPER, false)
+						
+#platform: Use_Haptics
+						HapticEffect(88, 0, 0, 0)
+#endplatform
+					end if
+				end if
+			end if
+		end if
+
+	else
+		if Player.YPos > Object.YPos
+			if Player.YVelocity < 0
+				PlayerObjectCollision(C_BOX, -28, -12, 32, 12)
+			end if
+		end if
+
+#platform: Use_Origins
+		PlayerObjectCollision(C_PLATFORM, -32, -16, -15, 16)
+#endplatform
+
+#platform:Use_Standalone
+		PlayerObjectCollision(C_PLATFORM, -32, -16, -20, 16)
+#endplatform
+		TempValue0 = CheckResult
+
+		TempValue1   = Player.XPos
+		TempValue1  -= Object.XPos
+		TempValue1 >>= 16
+		TempValue1  += 32
+		TempValue1  += Player.CollisionLeft
+		if TempValue1 >= 12
+			if TempValue1 < 64
+				TempValue2  = TempValue1
+				TempValue2 /= 2
+				TempValue2 -= 21
+				PlayerObjectCollision(C_PLATFORM, -32, TempValue2, 32, 16)
+				TempValue0 |= CheckResult
+			end if
+		end if
+
+		if TempValue0 == PLAYER_COL_FLOOR
+			Player.CollisionMode = CMODE_FLOOR
+			Player.YPos += 0x40000
+			Player.XPos += 0x10000
+			if Player.Speed > -0x4000
+				if Player.Speed < 0x4000
+					Player.Speed = 0x4000
+				end if
+			end if
+
+#platform: Use_Origins
+			if Stage.PlayerListPos == PLAYER_KNUCKLES
+				if Player.Animation == ANI_GLIDING_STOP
+					Player.State     = Player_State_Roll
+					Player.Animation = ANI_JUMPING
+
+					Player.Gravity = GRAVITY_GROUND
+					Player.Speed   = 0x4000
+				end if
+			end if
+#endplatform
+		else
+			PlayerObjectCollision(C_TOUCH, -32, -24, 32, 16)
+			if CheckResult == true
+				if Player.YVelocity < -0x40000
+					if Player.JumpPress == true
+						Player.Speed   = Player.XPos
+						Player.Speed  -= Object.XPos
+						Player.Speed >>= 2
+
+						Player.YVelocity = -0xE0000
+
+						TempValue2   = Player.Speed
+						TempValue2 >>= 2
+						if TempValue2 < 0
+							Player.YVelocity += TempValue2
+						else
+							Player.YVelocity -= TempValue2
+						end if
+
+						Object.State = FLIPPER_ACTIVE
+
+						StopSfx(SFX_G_JUMP)
+						PlayStageSfx(SFX_S_FLIPPER, false)
+					end if
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-32, -12, 64, 32, 100, 167)	// #0 - Flipper idle
+	SpriteFrame(-32, -12, 64, 24, 67, 200)	// #1 - Flipper active frame 0
+	SpriteFrame(-32, -20, 64, 32, 132, 200)	// #2 - Flipper active frame 1
+	SpriteFrame(-32, -12, 64, 24, 67, 200)	// #3 - Flipper active frame 2
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Flipper]
+			Object[ArrayPos0].Direction = Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	Object.Direction = Object.PropertyValue
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-32, -12, 64, 32, 100, 167)	// #0 - Flipper idle
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Facing Left", 0)
+	AddEnumVariable("Facing Right", 1)
+end sub

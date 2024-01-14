@@ -1,0 +1,152 @@
+//----------------Sonic CD Big Platform Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1			:	Object.YDrawPos
+#alias Object.Value2			:	Object.YOffSet
+#alias Object.Value3			:	Object.Oscillation
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	BIGPLATFORM_INACTIVE
+#alias 1	:	BIGPLATFORM_OPEN
+#alias 2	:	BIGPLATFORM_CLOSE
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+
+
+sub ObjectMain
+	switch Object.State
+	case BIGPLATFORM_INACTIVE
+		PlayerObjectCollision(C_TOUCH, -96, -160, 128, 160)
+		if CheckResult == true
+			TempValue0  = Player.XPos
+			TempValue0 -= Object.XPos
+			// Check that the player is 128 pixels away to the right from this
+			if TempValue0 > 0x800000
+				Object.State = BIGPLATFORM_CLOSE
+				Object.Priority = PRIORITY_ACTIVE
+			else
+				Object.State = BIGPLATFORM_OPEN
+				Object.Priority = PRIORITY_ACTIVE
+			end if
+		end if
+		break
+
+	case BIGPLATFORM_OPEN
+		TempValue0 = Player.XPos
+		TempValue0 -= Object.XPos
+		// Check that the player is 128 pixels away to the right from this
+		if TempValue0 > 0x800000
+			Object.State = BIGPLATFORM_CLOSE
+		end if
+
+		if Object.Oscillation > 0
+			Object.Oscillation -= 2
+		end if
+		break
+
+	case BIGPLATFORM_CLOSE
+		if Player.XPos < Object.XPos
+			Object.State = BIGPLATFORM_OPEN
+		end if
+		if Object.Oscillation < 256
+			Object.Oscillation += 2
+		end if
+		break
+
+	end switch
+
+	Cos(Object.YOffSet, Object.Oscillation)
+	Object.YOffSet <<= 13
+	Object.YOffSet  += 0x400000
+	Object.YOffSet  += Object.YPos
+	Object.YOffSet  &= 0xFFFF0000 // Truncate the value
+	Object.YOffSet  -= Object.YDrawPos
+
+	PlayerObjectCollision(C_TOUCH, -328, -256, 328, 256)
+	if CheckResult == false
+		Object.State = BIGPLATFORM_INACTIVE
+		Object.Priority = PRIORITY_BOUNDS
+		Object.Oscillation = 256
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0  = Object.YPos
+	Object.YPos = Object.YDrawPos
+	PlayerObjectCollision(C_BOX, -48, -81, 48, 80)
+	if CheckResult == PLAYER_COL_FLOOR
+		Player.YPos += Object.YOffSet
+		Player.YPos += 0x10000
+	end if
+	Object.YPos = TempValue0
+end sub
+
+
+sub ObjectDraw
+	Cos(Object.YDrawPos, Object.Oscillation)
+	Object.YDrawPos <<= 13
+	Object.YDrawPos  += 0x400000
+	Object.YDrawPos  += Object.YPos
+	Object.YDrawPos  &= 0xFFFF0000 // Truncate the value
+	DrawSpriteXY(0, Object.XPos, Object.YDrawPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects4.gif")
+	
+	if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+		SpriteFrame(-48, -80, 96, 192, 98, 1)	// #0 - Big Platform
+	else
+		SpriteFrame(-48, -80, 96, 192, 1, 1)	// #0 - Big Platform
+	end if
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Big Platform]
+			Object[ArrayPos0].Oscillation = 256
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects4.gif")
+
+	CallFunction(EditorHelpers_FindTimePeriod)
+	if CheckResult == TIME_GOOD_FUTURE
+		SpriteFrame(-48, -80, 96, 192, 98, 1)	// #0 - Big Platform
+	else
+		SpriteFrame(-48, -80, 96, 192, 1, 1)	// #0 - Big Platform
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

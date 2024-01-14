@@ -1,0 +1,659 @@
+//----------Sonic CD R4 Eggman Chase Sequence Script----------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Unused
+#alias Object.Value1		:	Object.Speed
+#alias Object.Value2		:	Object.Angle
+#alias Object.Value3		:	Object.YOffset
+#alias Object.Value4		:	Object.FlameAnimation
+#alias Object.Value5		:	Object.Hits
+#alias Object.Value6		:	Object.FrameTimer
+#alias Object.Value7		:	Object.ExplosionTimer
+#alias Object.PropertyValue	:	SolidBarrier.PropertyValue
+
+// Player Alias
+#alias Player.Value4		:	Player.InvincibleTimer
+
+// States
+#alias 0	:	R4_EGG_CHASE_PLAYER_APPROACH
+#alias 1	:	R4_EGG_CHASE_MOVE_DOWN_1
+#alias 2	:	R4_EGG_CHASE_SHIFT_RIGHT_1
+#alias 3	:	R4_EGG_CHASE_SHIFT_DOWN_1
+#alias 4	:	R4_EGG_CHASE_MOVE_RIGHT_1
+#alias 5	:	R4_EGG_CHASE_MOVE_DOWN_2
+#alias 6	:	R4_EGG_CHASE_MOVE_LEFT_1
+#alias 7	:	R4_EGG_CHASE_MOVE_DOWN_3
+#alias 8	:	R4_EGG_CHASE_MOVE_DR_1
+#alias 9	:	R4_EGG_CHASE_VERTICAL_LOOP
+#alias 10	:	R4_EGG_CHASE_MOVE_DOWN_4
+#alias 11	:	R4_EGG_CHASE_MOVE_DR_2
+#alias 12	:	R4_EGG_CHASE_MOVE_RIGHT_2
+#alias 13	:	R4_EGG_CHASE_MOVE_DR_3
+#alias 14	:	R4_EGG_CHASE_MOVE_DOWN_5
+#alias 15	:	R4_EGG_CHASE_MOVE_DR_4
+#alias 16	:	R4_EGG_CHASE_MOVE_DOWN_6
+#alias 17	:	R4_EGG_CHASE_MOVE_DL_1
+#alias 18	:	R4_EGG_CHASE_MOVE_LEFT_2
+#alias 19	:	R4_EGG_FLEE_TOP_DOOR
+#alias 20	:	R4_EGG_FLEE_MOVE_DR
+#alias 21	:	R4_EGG_FLEE_MOVE_RIGHT_1
+#alias 22	:	R4_EGG_FLEE_MOVE_DOWN_1
+#alias 23	:	R4_EGG_FLEE_BOTTOM_DOOR
+#alias 24	:	R4_EGG_FLEE_MOVE_RIGHT_2
+#alias 25	:	R4_EGG_FLEE_MOVE_UR
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Stage SFX
+#alias 5	:	SFX_S_BOSSHIT
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Solid Barrier Property Values
+#alias 3	:	OPEN_EGGMAN
+
+// Function declarations
+#function ChaseEggman_Oscillation
+
+function ChaseEggman_Oscillation
+	Sin(Object.YPos, Object.Angle)
+	Object.YPos <<= 10
+	Object.Angle += 4
+	Object.Angle &= 511
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case R4_EGG_CHASE_PLAYER_APPROACH
+		PlayerObjectCollision(C_TOUCH, -64, -256, 64, 256)
+		if CheckResult == true
+			Object.State = R4_EGG_CHASE_MOVE_DOWN_1
+			Object.Priority = PRIORITY_ACTIVE
+			Object.Speed = 0x1C000
+		end if
+		break
+		
+	case R4_EGG_CHASE_MOVE_DOWN_1
+		Object.YPos += Object.Speed
+		// Y - 1054 in map coords
+		if Object.YPos > 0x41E0000
+			Object.State++
+			Object.Direction = FACING_RIGHT
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_CHASE_SHIFT_RIGHT_1
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// X - 1248 in map coords
+		if Object.XPos > 0x4E00000
+			Object.XPos = 0x4E00000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+		
+	case R4_EGG_CHASE_SHIFT_DOWN_1
+		Object.YPos += Object.Speed
+		// Y - 1120 in map coords
+		if Object.YPos > 0x4600000
+			Object.YPos = 0x4600000
+			Object.State++
+			Object.Angle   = 0
+			Object.YOffset = Object.YPos
+			Object.FlameAnimation = 1
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_RIGHT_1
+		Object.XPos += Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		Object.YPos += Object.YOffset
+		// X - 1596 in map coords
+		if Object.XPos > 0x63C0000
+			Object.XPos = 0x63C0000
+			Object.FlameAnimation = 0
+			if Object.Hits < 4
+				Object.State++
+			else
+				Object.State = R4_EGG_FLEE_BOTTOM_DOOR
+				SolidBarrier[+2].PropertyValue = OPEN_EGGMAN
+			end if
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DOWN_2
+		Object.YPos += Object.Speed
+		// Y - 1312 in map coords
+		if Object.YPos > 0x5200000
+			Object.YPos = 0x5200000
+			Object.State++
+			Object.Direction = FACING_LEFT
+			Object.Angle   = 0
+			Object.YOffset = Object.YPos
+			Object.FlameAnimation = 1
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_LEFT_1
+		Object.XPos -= Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		FlipSign(Object.YPos)
+		Object.YPos += Object.YOffset
+		// Y - 1376 in map coords
+		if Object.XPos < 0x5600000
+			Object.XPos = 0x5600000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DOWN_3
+		Object.YPos += Object.Speed
+		// Y - 1498 in map coords
+		if Object.YPos > 0x5DA0000
+			Object.State++
+			Object.Direction = FACING_RIGHT
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DR_1
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// X - 1396 in map coords
+		if Object.XPos > 0x5740000
+			Object.XPos = 0x5740000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_CHASE_VERTICAL_LOOP
+		Object.YPos += Object.Speed
+		// Y - 2272 in map coords
+		if Object.YPos > 0x8E00000
+			Object.YPos -= 0x8000000	 // Y - -2048 in map coords
+			Object.State++
+		else
+			// Y - 320 in map coords
+			if Player.YPos < 0x1400000
+				Object.YPos -= 0x8000000   // Y - -2048 in map coords
+				Object.State++
+			end if
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DOWN_4
+		Object.YPos += Object.Speed
+		// Y - 300 in map coords
+		if Object.YPos > 0x12C0000
+			Object.YPos = 0x12C0000
+			Object.State++
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DR_2
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// X - 1532 in map coords
+		if Object.XPos > 0x5FC0000
+			Object.XPos = 0x5FC0000
+			Object.State++
+			Object.Angle = 0
+			Object.YOffset = Object.YPos
+			Object.FlameAnimation = 1
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_RIGHT_2
+		Object.XPos += Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		Object.YPos += Object.YOffset
+		// X - 1654 in map coords
+		if Object.XPos > 0x6760000
+			Object.State++
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DR_3
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// X - 1732 in map coords
+		if Object.XPos > 0x6C40000
+			Object.XPos = 0x6C40000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DOWN_5
+		Object.YPos += Object.Speed
+		// Y - 626 in map coords
+		if Object.YPos > 0x2720000
+			Object.State++
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DR_4
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// X - 1764 in map coords
+		if Object.XPos > 0x6E40000
+			Object.XPos = 0x6E40000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DOWN_6
+		Object.YPos += Object.Speed
+		if Object.Hits < 4
+			// Y - 626 in map coords
+			if Object.YPos > 0x2EC0000
+				Object.State++
+				Object.Direction = FACING_LEFT
+				Object.FlameAnimation = 2
+			end if
+		else
+			// Y - 688 in map coords
+			if Object.YPos > 0x2B00000
+				Object.State = R4_EGG_FLEE_TOP_DOOR
+				Object.FlameAnimation = 1
+				Object.Angle = 0
+				Object.YOffset = Object.YPos
+				SolidBarrier[+1].PropertyValue = OPEN_EGGMAN
+			end if
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_DL_1
+		Object.XPos -= Object.Speed
+		Object.YPos += Object.Speed
+		// Y - 816 in map coords
+		if Object.YPos > 0x3300000
+			Object.YPos = 0x3300000
+			Object.State++
+			Object.Angle = 0
+			Object.YOffset = Object.YPos
+			Object.FlameAnimation = 1
+		end if
+		break
+
+	case R4_EGG_CHASE_MOVE_LEFT_2
+		Object.XPos -= Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		FlipSign(Object.YPos)
+		Object.YPos += Object.YOffset
+		// X - 1232 in map coords
+		if Object.XPos < 0x4D00000
+			Object.XPos = 0x4D00000
+			Object.State = R4_EGG_CHASE_MOVE_DOWN_1
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_FLEE_TOP_DOOR
+		Object.XPos += Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		Object.YPos += Object.YOffset
+		// X - 1956 in map coords
+		if Object.XPos > 0x7A40000
+			Object.State++
+			Object.FlameAnimation = 2
+		end if
+		break
+
+	case R4_EGG_FLEE_MOVE_DR
+		Object.XPos += Object.Speed
+		Object.YPos += Object.Speed
+		// Y - 736 in map coords
+		if Object.YPos > 0x2E00000
+			Object.YPos = 0x2E00000
+			Object.State++
+			Object.FlameAnimation = 1
+			Object.Angle = 0
+			Object.YOffset = Object.YPos
+		end if
+		break
+
+	case R4_EGG_FLEE_MOVE_RIGHT_1
+		Object.XPos += Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		Object.YPos += Object.YOffset
+		// X - 2168 in map coords
+		if Object.XPos > 0x8780000
+			Object.XPos = 0x8780000
+			Object.State++
+			Object.FlameAnimation = 0
+		end if
+		break
+
+	case R4_EGG_FLEE_MOVE_DOWN_1
+		if Object.Speed < 0x40000
+			Object.YPos += 0x40000
+		else
+			Object.YPos += Object.Speed
+		end if
+
+		TempValue0   = Screen.YOffset
+		TempValue0  += 288
+		TempValue0 <<= 16
+
+		if Object.YPos > TempValue0
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+		
+	case R4_EGG_FLEE_BOTTOM_DOOR
+		Object.YPos -= Object.Speed
+		// Y - 1088 in map coords
+		if Object.YPos < 0x4400000
+			Object.YPos = 0x4400000
+			Object.State++
+			Object.FlameAnimation = 1
+			Object.Angle = 0
+			Object.YOffset = Object.YPos
+		end if
+		break
+
+	case R4_EGG_FLEE_MOVE_RIGHT_2
+		Object.XPos += Object.Speed
+		CallFunction(ChaseEggman_Oscillation)
+		Object.YPos += Object.YOffset
+		// X - 1856 in map coords
+		if Object.XPos > 0x7400000
+			Object.State++
+			Object.FlameAnimation = 2
+		end if
+		break
+		
+	case R4_EGG_FLEE_MOVE_UR
+		Object.XPos += Object.Speed
+		Object.YPos -= Object.Speed
+		// Y - 988 in map coords
+		if Object.YPos < 0x3DC0000
+			Object.YPos = 0x3DC0000
+			Object.State = R4_EGG_FLEE_MOVE_RIGHT_1
+			Object.FlameAnimation = 1
+			Object.Angle = 0
+			Object.YOffset = Object.YPos
+		end if
+		break
+
+	end switch
+
+	if Object.ExplosionTimer == 1
+		CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+		if Object.Direction == FACING_RIGHT
+			Object[TempObjectPos].XPos -= 0x80000
+		else
+			Object[TempObjectPos].XPos += 0x80000
+		end if
+		PlaySfx(SFX_G_EXPLOSION, false)
+		Object.ExplosionTimer = 34
+	else
+		if Object.ExplosionTimer > 0
+			Object.ExplosionTimer--
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.FrameTimer == 0
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -32, -24, 32, 24)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -32, -24, 32, 24)
+#endplatform
+		if CheckResult == true
+			CheckEqual(Player.Animation, ANI_JUMPING)
+			TempValue0  = CheckResult
+			CheckEqual(Player.Animation, ANI_SPINDASH)
+			TempValue0 |= CheckResult
+#platform: Use_Origins
+			// making really sure you're the one character that can glide or the one character that has a hammer
+			if Stage.PlayerListPos == PLAYER_KNUCKLES
+				CheckEqual(Player.Animation, ANI_GLIDING)
+				TempValue0 |= CheckResult
+				CheckEqual(Player.Animation, ANI_GLIDING_STOP)
+				TempValue0 |= CheckResult
+			end if
+			if Stage.PlayerListPos == PLAYER_AMY
+				CheckEqual(Player.Animation, ANI_HAMMER_JUMP)
+				TempValue0 |= CheckResult
+				CheckEqual(Player.Animation, ANI_HAMMER_DASH)
+				TempValue0 |= CheckResult
+			end if
+#endplatform
+			if Player.Animation == ANI_FLYING
+				CheckGreater(Player.YPos, Object.YPos)
+				TempValue0 |= CheckResult
+			end if
+
+			ArrayPos0  = Player.EntityNo
+			ArrayPos0 += 2
+			if Object[ArrayPos0].Type == TypeName[Invincibility]
+				TempValue0 = true
+			end if
+
+			if TempValue0 == true
+				FlipSign(Player.XVelocity)
+				FlipSign(Player.Speed)
+				Player.XVelocity >>= 1
+				Player.Speed	 >>= 1
+				
+				Player.YVelocity   = Player.YPos
+				Player.YVelocity  -= Object.YPos
+				Player.YVelocity >>= 3
+
+#platform: Use_Origins
+				if Stage.PlayerListPos == PLAYER_KNUCKLES
+					if Player.Animation == ANI_GLIDING
+						Player.Animation = ANI_GLIDING_DROP
+						Player.State	 = Player_State_GlideDrop
+					end if
+				end if
+#endplatform
+
+				Object.Hits++
+				if Object.Hits == 4
+					Object.FrameTimer = 16
+					Object.ExplosionTimer = 1
+				else
+					Object.FrameTimer = 1
+					PlayStageSfx(SFX_S_BOSSHIT, false)
+					Object.Speed = 0x48000
+				end if
+			else
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.XPos > Object.XPos
+						Player.Speed =  0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+	else
+		if Object.Hits == 4
+			PlayerObjectCollision(C_TOUCH, -64, -80, 64, 80)
+			if CheckResult == true
+				switch Object.FlameAnimation
+				case 0
+					Object.Speed += 0x8000
+					break
+					
+				case 1
+					Object.Speed += 0x8000
+					if Object.Speed > 0x60000
+						Object.Speed = 0x60000
+					end if
+					break
+
+				case 2
+					Object.Speed -= 0x2000
+					if Object.Speed > 0x60000
+						Object.Speed = 0x60000
+					end if
+					if Object.Speed < 0x20000
+						Object.Speed = 0x20000
+					end if
+					break
+
+				end switch
+			else
+				Object.Speed -= 0x2000
+				if Object.Speed < 0x1C000
+					Object.Speed = 0x1C000
+				end if
+			end if
+
+			PlayerObjectCollision(C_TOUCH, -320, -240, 320, 240)
+			if CheckResult == false
+				Object.Speed = 0
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.FrameTimer == 0
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		if Object.FrameTimer < 16
+			TempValue0  = Object.FrameTimer
+			TempValue0 &= 1
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+			if TempValue0 == 0
+				DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+			end if
+
+			TempValue0   = Object.FrameTimer
+			TempValue0  &= 15
+			TempValue0 >>= 2
+			TempValue0  += 8
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			if Object.Unused < 32
+				DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+				DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)	// Nervous face
+			else
+				DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+				DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)	// Normal face
+			end if
+			TempValue0   = Object.FrameTimer
+			TempValue0  &= 15
+			TempValue0 >>= 2
+			TempValue0  += 8
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+
+		Object.FrameTimer++
+		if Object.Hits < 4
+			if Object.FrameTimer == 80
+				Object.FrameTimer = 0
+				Object.Speed = 0x1C000
+			end if
+		else
+			if Object.FrameTimer == 32
+				Object.FrameTimer = 16
+			end if
+		end if
+	end if
+	
+	TempValue0   = Object.Frame
+	TempValue0 >>= 2
+	switch Object.FlameAnimation
+	case 0
+		TempValue0 += 4
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 1
+		TempValue0 += 6
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 2
+		TempValue0 += 4
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		TempValue0 += 2
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	end switch
+
+	Object.Frame++
+	Object.Frame &= 7
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects2.gif")
+
+	// Egg Mobile
+	SpriteFrame(-36, -28, 72, 56, 61, 1)	// #0  - Egg Bubble Chase
+	SpriteFrame(-36, -28, 72, 56, 134, 1)	// #1  - Egg Bubble Chase damage
+
+	// Eggman
+	SpriteFrame(-12, -28, 32, 16, 207, 1)	// #2  - Eggman face
+	SpriteFrame(-12, -28, 32, 16, 207, 18)	// #3  - Eggman nervous face
+
+	// Thruster
+	SpriteFrame(-36, 28, 72, 16, 116, 58)	// #4  - Thruster vertical big flame
+	SpriteFrame(-36, 28, 72, 16, 116, 75)	// #5  - Thruster vertical small flame
+	SpriteFrame(-36, 20, 72, 16, 116, 92)	// #6  - Thruster angle big flame
+	SpriteFrame(-36, 20, 72, 16, 116, 109)	// #7  - Thruster angle small flame
+	
+	// Sweat
+	SpriteFrame(-12, -44, 16, 16, 1, 135)	// #8  - Sweat drop frame 0
+	SpriteFrame(-12, -44, 1, 1, 1, 135)		// #9  - Sweat drop frame 1
+	SpriteFrame(-12, -44, 16, 16, 18, 135)	// #10 - Sweat drop frame 2
+	SpriteFrame(-12, -44, 1, 1, 1, 135)		// #11 - Sweat drop frame 3
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Eggman Part 1]
+			Object[ArrayPos0].Direction = FACING_LEFT
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects2.gif")
+
+	// Egg Mobile
+	SpriteFrame(-36, -28, 72, 56, 61, 1)	// #0  - Egg Bubble Chase
+	// Eggman
+	SpriteFrame(-12, -28, 32, 16, 207, 1)	// #2  - Eggman face
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

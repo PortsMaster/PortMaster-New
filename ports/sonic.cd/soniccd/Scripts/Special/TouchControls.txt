@@ -1,0 +1,269 @@
+//---------------Sonic CD Touch Controls Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias 8: TYPE_TOUCHCONTROLS
+
+#alias Object.Value0 : Object.MainAlpha
+#alias Object.Value1 : Object.PauseAlpha
+#alias Object.Value2 : Object.PausePos
+#alias Object.Value3 : Object.JumpButtonPos
+#alias Object.Value4 : Object.DPadPos
+
+// Not used in this Script, but the Sonic Object uses it to store if the Jump button was held last frame
+#alias Object.Value7 : TouchControls.TouchJump
+
+// The primary alpha for the input display to use
+#alias 160: TOUCHCONTROLS_TARGETALPHA
+
+// Sonic Aliases
+#alias Player.ControlMode : SSSonic.ControlMode
+
+// ControlMode Aliases
+#alias -1 : CONTROLMODE_NONE
+#alias  0 : CONTROLMODE_NORMAL
+
+// Ink Effects
+#alias 2 : INK_ALPHA
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectDraw
+#platform: Mobile
+	if Options.TouchControls == false
+		TempValue0 = CONTROLMODE_NONE
+	else
+		TempValue0 = Player.ControlMode
+	end if
+
+	if TempValue0 == CONTROLMODE_NORMAL
+		// The Player's up and ready to control, so let's show their inputs!
+		
+		// Wait for the stage to be active too, before doing anything
+		if Stage.State != STAGE_PAUSED
+			
+			// Fade the controls in, if they're not already yet
+			if Object.MainAlpha < TOUCHCONTROLS_TARGETALPHA
+				Object.MainAlpha += 4
+				
+				// Make Pause Alpha double of the Main Alpha
+				Object.PauseAlpha = Object.MainAlpha
+				Object.PauseAlpha <<= 1
+			end if
+			
+			// For here, we're drawing all the main features - DPad, and the Jump button - so let's pull from the main alpha for now
+			Object.Alpha = Object.MainAlpha
+			
+			// First, draw the base DPad frame
+			DrawSpriteScreenFX(0, FX_INK, Object.DPadPos, 160)
+			
+			// Now, all the directions
+			
+			if Player.Left == true
+				Object.Alpha = TOUCHCONTROLS_TARGETALPHA
+				DrawSpriteScreenFX(7, FX_INK, Object.DPadPos, 160)
+			else
+				Object.Alpha = Object.MainAlpha
+				DrawSpriteScreenFX(3, FX_INK, Object.DPadPos, 160)
+			end if
+			
+			if Player.Down == true
+				Object.Alpha = TOUCHCONTROLS_TARGETALPHA
+				DrawSpriteScreenFX(6, FX_INK, Object.DPadPos, 160)
+			else
+				Object.Alpha = Object.MainAlpha
+				DrawSpriteScreenFX(2, FX_INK, Object.DPadPos, 160)
+			end if
+			
+			if Player.Right == true
+				Object.Alpha = TOUCHCONTROLS_TARGETALPHA
+				DrawSpriteScreenFX(8, FX_INK, Object.DPadPos, 160)
+			else
+				Object.Alpha = Object.MainAlpha
+				DrawSpriteScreenFX(4, FX_INK, Object.DPadPos, 160)
+			end if
+			
+			if Player.Up == true
+				Object.Alpha = TOUCHCONTROLS_TARGETALPHA
+				DrawSpriteScreenFX(5, FX_INK, Object.DPadPos, 160)
+			else
+				Object.Alpha = Object.MainAlpha
+				DrawSpriteScreenFX(1, FX_INK, Object.DPadPos, 160)
+			end if
+			
+			// After the directions comes the Jump Button, same song and dance here
+			if Player.JumpHold == true
+				Object.Alpha = TOUCHCONTROLS_TARGETALPHA
+				DrawSpriteScreenFX(10, FX_INK, Object.JumpButtonPos, 176)
+			else
+				Object.Alpha = Object.MainAlpha
+				DrawSpriteScreenFX(9, FX_INK, Object.JumpButtonPos, 176)
+			end if
+			
+		else
+			Object.MainAlpha = 0 // Not yet, hold 'till needed...
+		end if
+		
+		// Draw the Pause Button, enforcing a maximum alpha of 255
+		// -> Even if the Pause Button is seemingly drawn regardless of the stage's current state,
+		//    do note that its alpha very well could be 0 when the stage is paused, effectively drawing nothing
+		if Object.PauseAlpha < 256
+			Object.Alpha = Object.PauseAlpha
+			DrawSpriteScreenFX(11, FX_INK, Object.PausePos, 8)
+		else
+			DrawSpriteScreenXY(11, Object.PausePos, 8)
+		end if
+		
+	else
+		
+		// The Player's not able to control anything yet, let's fade out controls
+		if Object.MainAlpha > 0
+			Object.MainAlpha -= 4
+			
+			// Since Pause Alpha is always double Main Alpha, decrease it by twice as much here too
+			Object.PauseAlpha -= 8
+		end if
+		
+		// Draw the unpressed versions of everything
+		Object.Alpha = Object.MainAlpha
+		if Object.Alpha > 0
+			DrawSpriteScreenFX(0, FX_INK, Object.DPadPos, 160)
+			DrawSpriteScreenFX(1, FX_INK, Object.DPadPos, 160)
+			DrawSpriteScreenFX(4, FX_INK, Object.DPadPos, 160)
+			DrawSpriteScreenFX(2, FX_INK, Object.DPadPos, 160)
+			DrawSpriteScreenFX(3, FX_INK, Object.DPadPos, 160)
+			
+			DrawSpriteScreenFX(9, FX_INK, Object.JumpButtonPos, 176)
+		end if
+		
+		// Keep a minimum of zero, Alpha shouldn't go into the negatives
+		if Object.PauseAlpha < 0
+			Object.Alpha = 0
+		else
+			Object.Alpha = Object.PauseAlpha
+		end if
+		
+		// Similarly, keep a maximum alpha of 255, which is full opacity
+		if Object.PauseAlpha < 256
+			Object.Alpha = Object.PauseAlpha
+			DrawSpriteScreenFX(11, FX_INK, Object.PausePos, 8)
+		else
+			DrawSpriteScreenXY(11, Object.PausePos, 8)
+		end if
+	end if
+#endplatform
+end sub
+
+
+sub ObjectStartup
+#platform: Mobile
+	if Options.AttractMode == false
+		// All the Touch Control sprites are (rather lazily) already on the main SS Objects sheet, so let's load that
+		LoadSpriteSheet("Special/Objects.gif")
+		
+		// Place a Touch Controls Object into the scene
+		Object[25].Type = TypeName[Touch Controls]
+		
+		// Make sure it's always active, and give it a high draw order since it should be above everything else
+		Object[25].Priority = PRIORITY_ACTIVE
+		Object[25].DrawOrder = 6
+		
+		// The Controls are to fade in, so set up use of Alpha
+		Object[25].InkEffect = INK_ALPHA
+		Object[25].MainAlpha = 0
+		Object[25].PauseAlpha = 0
+		
+		// The Pause button should be at the top right corner of the screen
+		Object[25].PausePos = Screen.XSize
+		Object[25].PausePos -= 68
+		
+		// First, fetch the base Jump Button Position, and then handling differs between platforms...
+		Object[25].JumpButtonPos = Screen.XSize
+		
+		// On the Windows Phone, move everything over a bit
+		if Engine.PlatformID == RETRO_WP7
+			Object[25].JumpButtonPos -= 69
+			Object[25].DPadPos = 24
+			
+			Options.DPadX = 56
+		else
+			Object[25].JumpButtonPos -= 61
+			Object[25].DPadPos = 16
+			
+			Options.DPadX = 48
+		end if
+		
+		// While not used here, Options.DPadX is used for actual understanding of the inputs, over in the Sonic Object
+		
+		// So there's this check for being in a Special Stage... but this script is only ever used in Special Stages anyway so it always returns true
+		// It's worth noting, this check is in the standard TouchControls script too,
+		// where it's the opposite situation and it always returns false
+
+		if Stage.ActiveList == SPECIAL_STAGE
+			Object[25].PausePos += 42
+		end if
+		
+		// 0 - Main DPad Frame
+		SpriteFrame(0, 0, 64, 64, 128, 192)
+		
+		// 1 - Up, Unpressed
+		SpriteFrame(26, 0, 12, 25, 154, 128)
+		
+		// 2 - Down, Unpressed
+		SpriteFrame(26, 38, 12, 26, 154, 166)
+		
+		// 3 - Left, Unpressed
+		SpriteFrame(0, 25, 26, 13, 128, 153)
+		
+		// 4 - Right, Unpressed
+		SpriteFrame(38, 25, 26, 13, 166, 153)
+		
+		// 5 - Up, Pressed
+		SpriteFrame(26, 0, 12, 25, 244, 192)
+		
+		// 6- Down, Pressed
+		SpriteFrame(26, 38, 12, 26, 244, 230)
+		
+		// 7 - Left, Pressed
+		SpriteFrame(0, 25, 26, 13, 217, 229)
+		
+		// 8 - Right, Pressed
+		SpriteFrame(38, 25, 26, 13, 217, 243)
+		
+		// 9 - Jump, Unpressed
+		SpriteFrame(0, 0, 48, 48, 193, 128)
+		
+		// 10 - Jump, Pressed
+		SpriteFrame(0, 0, 48, 48, 193, 177)
+		
+		// 11 - Pause Button, offset differently if on the Windows Phone
+		if Engine.PlatformID == RETRO_WP7
+			SpriteFrame(-20, 0, 16, 16, 200, 239)
+		else
+			SpriteFrame(0, 0, 16, 16, 200, 239)
+		end if
+	end if
+#endplatform
+	
+	// On Standard Platforms, this event is just empty
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

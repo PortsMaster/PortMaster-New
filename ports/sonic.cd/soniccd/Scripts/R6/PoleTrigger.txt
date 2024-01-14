@@ -1,0 +1,162 @@
+//---------------Sonic CD Pole Trigger Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.CollisionTop
+#alias Object.Value1	:	Object.CollisionBottom
+#alias Object.Value2	:	Object.Angle
+#alias Object.Value3	:	Object.JumpCheck
+
+// States
+#alias 0	:	POLETRIGGER_IDLE
+#alias 1	:	POLETRIGGER_PLAYER_ROT
+
+
+sub ObjectPlayerInteraction
+	if Object.State == POLETRIGGER_IDLE
+		PlayerObjectCollision(C_TOUCH, -4, Object.CollisionTop, 4, Object.CollisionBottom)
+		if CheckResult == true
+			if Player.State != Player_State_Hurt
+				Object.State = POLETRIGGER_PLAYER_ROT
+				Object.JumpCheck = false
+
+				Player.State	 = Player_State_Static
+				Player.Animation = ANI_JUMPING
+				Player.XPos		 = Object.XPos
+				Player.XVelocity = 0
+				Player.Speed 	 = 0
+				Player.DrawOrder = 5
+
+				if Player.YVelocity > 0
+					Player.YVelocity = 0x20000
+				else
+					Player.YVelocity = -0x20000
+				end if
+			end if
+		end if
+	else
+		if Player.State == Player_State_Static
+			if Player.JumpPress == true
+				Object.JumpCheck = true
+			end if
+
+			Object.Angle += 16
+			Object.Angle &= 511
+			Sin(Player.XPos, Object.Angle)
+			Player.XPos *= -0xC00
+			Player.XPos += Object.XPos
+
+			Player.DrawOrder = 4
+			if Object.Angle < 129
+				Player.DrawOrder = 5
+			end if
+			if Object.Angle > 383
+				Player.DrawOrder = 5
+			end if
+
+			TempValue0   = Player.YPos
+			TempValue0  -= Object.YPos
+			TempValue0 >>= 16
+			if TempValue0 < 0
+				if TempValue0 < Object.CollisionTop
+					Player.YVelocity = 0x20000
+				end if
+			else
+				if TempValue0 > Object.CollisionBottom
+					Player.YVelocity = -0x20000
+				end if
+			end if
+
+			if Object.JumpCheck == true
+				if Object.Angle == 128
+					Player.DrawOrder = 4
+
+#platform: Use_Origins
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+					Player.State = Player_State_Air
+#endplatform
+
+					Player.Speed	 = -0xC0000
+					Player.XVelocity = -0xC0000
+					Object.State = POLETRIGGER_IDLE
+				end if
+				
+				if Object.Angle == 384
+					Player.DrawOrder = 4
+
+#platform: Use_Origins
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+					Player.State = Player_State_Air
+#endplatform
+
+					Player.Speed	 = 0xC0000
+					Player.XVelocity = 0xC0000
+					Object.State = POLETRIGGER_IDLE
+				end if
+			end if
+		else
+			if Player.DrawOrder == 5
+				Player.DrawOrder = 4
+			end if
+			Object.State = POLETRIGGER_IDLE
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Pole Trigger]
+			ArrayPos1 = ArrayPos0
+			ArrayPos1++
+			Object[ArrayPos0].CollisionTop     = Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].CollisionTop   <<= 3
+			Object[ArrayPos0].CollisionBottom  = Object[ArrayPos0].CollisionTop
+			FlipSign(Object[ArrayPos0].CollisionTop)
+			Object[ArrayPos0].CollisionTop	  -= 8
+			Object[ArrayPos0].CollisionBottom += 8
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		TempValue0   = Object.XPos
+		TempValue0  -= 0x40000
+		TempValue1   = Object.PropertyValue
+		TempValue1 <<= 3
+		TempValue2   = TempValue1
+		FlipSign(TempValue1)
+		TempValue1  -= 8
+		TempValue2  += 8
+		TempValue2  *= 2
+		TempValue1 <<= 16
+		TempValue1 += Object.YPos
+		DrawRectOutline(TempValue0, TempValue1, 8, TempValue2, 255, 255, 0, 255)
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Players/Sonic1.gif")
+	SpriteFrame(-16, -16, 32, 32, 75, 118)		// #0 - Sonic spin
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "verticalLength")
+end sub

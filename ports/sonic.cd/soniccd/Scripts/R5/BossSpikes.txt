@@ -1,0 +1,167 @@
+//----------------Sonic CD Boss Spikes Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+
+// Boss Top Aliases
+#alias Object.Value1			:	Object.BoundsR
+#alias Object.Value2			:	Object.OldBoundsR
+
+#alias Object[24].PropertyValue : HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	BOSSSPIKES_AWAITPLAYER
+#alias 1	:	BOSSSPIKES_AWAITARENAENTER
+#alias 2	:	BOSSSPIKES_RAISE
+#alias 3	:	BOSSSPIKES_ADVANCE
+#alias 4	:	BOSSSPIKES_STAND
+
+// Time Periods
+#alias 3	:	TIME_BAD_FUTURE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+
+	switch Object.State
+	case BOSSSPIKES_AWAITPLAYER
+		if Player.XPos > Object.XPos
+			
+			// Initalise the arena
+			
+			// Backup the Stage's normal right bounds into the Boss Top's Values
+			Object[+3].OldBoundsR = Stage.XBoundary2
+			
+			// Set left bounds
+			Stage.NewXBoundary1 = Object.iXPos
+			Stage.NewXBoundary1 += 328
+			Stage.NewXBoundary1 -= Screen.CenterX
+			
+			// And right bounds
+			Stage.NewXBoundary2 = Stage.NewXBoundary1
+			Stage.NewXBoundary2 += Screen.CenterX
+			
+			// Set the Boss Top's
+			Object[+3].BoundsR   = Stage.NewXBoundary2
+			Object[+3].BoundsR  += 160
+			Object[+3].BoundsR <<= 16
+			
+			Stage.NewXBoundary2 += Screen.CenterX
+			Stage.NewYBoundary2  = Object.iYPos
+			Object.State = BOSSSPIKES_AWAITARENAENTER
+			Object.Priority = PRIORITY_ACTIVE
+			
+			// Remove the Conveyer Belts controller Object
+			ResetObjectEntity(19, TypeName[Blank Object], 0, 0, 0)
+			
+			// And make the default palette be used too, rather than whatever the Conveyer Belt's current palette frame was
+			SetActivePalette(0, 0, Screen.YSize)
+		end if
+		break
+		
+	case BOSSSPIKES_AWAITARENAENTER
+		TempValue0 = Object.XPos
+		TempValue0 += 0x300000
+		if Player.XPos > TempValue0
+			Object.State = BOSSSPIKES_RAISE
+		end if
+		break
+		
+	case BOSSSPIKES_RAISE
+		if Object.Timer < 64
+			Object.Timer += 2
+			Object.YPos -= 0x20000
+		else
+			Object.Timer = 0
+			Object.State = BOSSSPIKES_ADVANCE
+		end if
+		break
+		
+	case BOSSSPIKES_ADVANCE
+		if Object.Timer < 192
+			Object.Timer += 2
+			Object.XPos += 0x20000
+		else
+			Object.Timer = 0
+			Object.State = BOSSSPIKES_STAND
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	if Object.State < BOSSSPIKES_RAISE
+
+		// Just act as a box for the player
+		PlayerObjectCollision(C_BOX, -24, -32, 0, 32)
+
+	else
+	
+		// See if the player is within range of behind the Spike Wall
+		PlayerObjectCollision(C_TOUCH, -64, -32, 0, 32)
+		
+		if CheckResult == true
+		
+			// If they are, then move them to be in front instead
+			Player.XPos = Player.CollisionRight
+			Player.XPos <<= 16
+			Player.XPos += Object.XPos
+			
+		end if
+	end if
+	
+	// Check collision for the Spikes side of things
+	PlayerObjectCollision(C_TOUCH, 0, -32, 24, 32)
+	
+	if CheckResult == true
+		CallFunction(Player_Hit)
+		
+		if Player.State == Player_State_GotHit
+			// If Sonic's been hurt, then set the Boss Platform's
+			Object[+6].Value3 = 0xC000
+		end if
+		
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+	if HUD.CurrentTimePeriod < 3 // Present Past or Future
+		SpriteFrame(-24, -32, 48, 64, 125, 191)
+	else
+		SpriteFrame(-24, -32, 48, 64, 76, 191)
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-24, -32, 48, 64, 125, 191)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

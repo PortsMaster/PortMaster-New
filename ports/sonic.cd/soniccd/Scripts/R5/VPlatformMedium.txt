@@ -1,0 +1,364 @@
+//--------------Sonic CD VPlatform Medium Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Oscillation
+#alias Object.Value1	:	Object.PlatformY
+#alias Object.Value2	:	Object.ChangeY
+#alias Object.Value3	:	Object.Angle
+
+// Time Period Aliases
+#alias Object[24].PropertyValue : HUD.CurrentTimePeriod
+
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Priority
+#alias 3	:	PRIORITY_XBOUNDS
+
+// Property Values
+#alias 0	:	DOWNWARDS_PLAT
+#alias 1	:	DOWNWARDS_PLAT_UNUSED // Unused
+#alias 2	:	DOWNWARDS_PLAT_CONV
+#alias 3	:	UPWARDS_PLAT
+#alias 4	:	UPWARDS_PLAT_UNUSED	// Unused
+#alias 5	:	UPWARDS_PLAT_CONV
+
+
+sub ObjectMain
+	
+	// Update the Platform's Oscillation used for its movement
+	// Do note, that because this Oscillation is stored as a local Object Value,
+	// all the platforms across the stage won't have their movements synced
+	Object.Oscillation++
+	if Object.Oscillation == 312
+		Object.Oscillation = 0
+	end if
+	
+	// Get the Platform's Angle
+	// It'll range from 0 to 510
+	Object.Angle = Object.Oscillation
+	Object.Angle <<= 6
+	Object.Angle /= 39
+	
+	// Use that Andle to get the base Y change for the Platform
+	Sin(Object.ChangeY, Object.Angle)
+	
+	// And then invert that
+	FlipSign(Object.ChangeY)
+	
+	switch Object.PropertyValue
+	case DOWNWARDS_PLAT
+	case DOWNWARDS_PLAT_CONV
+		// Upwards moving platform
+		Object.ChangeY *= 0x1800
+		Object.ChangeY += 0x300000
+		Object.ChangeY += Object.YPos
+		Object.ChangeY &= 0xFFFF0000 // Truncate the value
+		Object.ChangeY -= Object.PlatformY
+		break
+		
+	case UPWARDS_PLAT
+	case UPWARDS_PLAT_CONV
+		// Downwards moving platform
+		Object.ChangeY *= -0x1800
+		Object.ChangeY -= 0x300000
+		Object.ChangeY += Object.YPos
+		Object.ChangeY &= 0xFFFF0000 // Truncate the value
+		Object.ChangeY -= Object.PlatformY
+		break
+		
+	case DOWNWARDS_PLAT_UNUSED
+		// Unused duplicate of upwards version
+		Object.ChangeY *= 0x1800
+		Object.ChangeY += 0x300000
+		Object.ChangeY += Object.YPos
+		Object.ChangeY &= 0xFFFF0000 // Truncate the value
+		Object.ChangeY -= Object.PlatformY
+		break
+		
+	case UPWARDS_PLAT_UNUSED
+		// Unused duplicate of downwards version
+		Object.ChangeY *= -0x1800
+		Object.ChangeY -= 0x300000
+		Object.ChangeY += Object.YPos
+		Object.ChangeY &= 0xFFFF0000 // Truncate the value
+		Object.ChangeY -= Object.PlatformY
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// Backup the Object's current position
+	TempValue0 = Object.YPos
+	
+	// Move the Object to where the Platform is
+	Object.YPos = Object.PlatformY
+	
+	switch Object.PropertyValue
+	case DOWNWARDS_PLAT
+	case UPWARDS_PLAT
+		// Standard Platform
+		PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+		if CheckResult == true
+			// Move the Player vertically along with the Platform
+			Player.YPos += Object.ChangeY
+		end if
+		break
+		
+	case DOWNWARDS_PLAT_CONV
+	case UPWARDS_PLAT_CONV
+		// Conveyor Platform
+		PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+		if CheckResult == true
+			
+			// Move the Player up or down with the Platform as needed to keep them on
+			Player.YPos += Object.ChangeY
+			
+			// And them adjust them as needed with the Conveyor too
+			if ConveyorBelt_Flag == 0
+				Player.XPos += ConveyorBelt_Speed
+			else
+				Player.XPos -= ConveyorBelt_Speed
+			end if
+			
+		end if
+		break
+		
+	end switch
+	
+	// Now restore the Object back to its base Position
+	Object.YPos = TempValue0
+	
+end sub
+
+
+sub ObjectDraw
+	
+	Sin(Object.PlatformY, Object.Angle)
+	FlipSign(Object.PlatformY)
+	
+	switch Object.PropertyValue
+	case DOWNWARDS_PLAT
+	case DOWNWARDS_PLAT_UNUSED
+		// Standard, upwards Platform
+		Object.PlatformY *= 0x1800
+		Object.PlatformY += 0x300000
+		Object.PlatformY += Object.YPos
+		Object.PlatformY &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.XPos, Object.PlatformY)
+		break
+
+	case DOWNWARDS_PLAT_CONV
+		// Upwards Conveyor Platform
+		Object.PlatformY *= 0x1800
+		Object.PlatformY += 0x300000
+		Object.PlatformY += Object.YPos
+		Object.PlatformY &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.XPos, Object.PlatformY)
+		DrawSpriteXY(1, Object.XPos, Object.PlatformY)
+		break
+
+	case UPWARDS_PLAT
+	case UPWARDS_PLAT_UNUSED
+		// Standard, downwards Platform
+		Object.PlatformY *= -0x1800
+		Object.PlatformY -= 0x300000
+		Object.PlatformY += Object.YPos
+		Object.PlatformY &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.XPos, Object.PlatformY)
+		break
+
+	case UPWARDS_PLAT_CONV
+		// Downwards conveyor Platform
+		Object.PlatformY *= -0x1800
+		Object.PlatformY -= 0x300000
+		Object.PlatformY += Object.YPos
+		Object.PlatformY &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.XPos, Object.PlatformY)
+		DrawSpriteXY(1, Object.XPos, Object.PlatformY)
+		break
+		
+	end switch
+
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Use different sprites based on the current Time Periods
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		break
+		
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		break
+		
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		break
+		
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		break
+		
+	end switch
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[VPlatform Medium]
+		
+			// Is the Platform's Property Value 6 or above?
+			if Object[ArrayPos0].PropertyValue > 5
+				
+				// Bring it back down a bit
+				Object[ArrayPos0].PropertyValue -= 6
+				
+				// It's a vertical platform type, so it should be updated regardless how far vertically it may be,
+				// since it may still be within rnage of the player in its cycle
+				Object[ArrayPos0].Priority = PRIORITY_XBOUNDS
+				
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+// TODO: please test this, I think this may be a bit broken...
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Direction
+			CheckResult = Object.PropertyValue
+			CheckResult %= 6
+			break
+		case 1 // Priority
+			CheckGreater(Object.PropertyValue, 5)
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Direction
+			// this is kinda shoddily-coded, very well could be improved...
+			if Object.PropertyValue > 5
+				Object.PropertyValue = Editor.VariableValue
+				Object.PropertyValue += 6
+			else
+				Object.PropertyValue = Editor.VariableValue
+			end if
+			break
+		case 1 // Priority
+			Object.PropertyValue %= 6
+			CheckNotEqual(Editor.VariableValue, false)
+			Editor.VariableValue *= 6
+			Object.PropertyValue += Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	TempValue2 = false
+	
+	TempValue0 = Object.PropertyValue
+	TempValue0 %= 6
+	
+	switch TempValue0
+	case 2
+		TempValue2 = true
+	case 0
+		TempValue0 = 0x1800
+		TempValue1 = 0x300000
+		break
+		
+	case 5
+		TempValue2 = true
+	case 3
+		TempValue0 = -0x1800
+		TempValue1 = -0x300000
+		break
+		
+	end switch
+	
+	TempValue3 = Object.YPos
+	TempValue3 &= 0xFFFF0000 // Truncate the value
+	DrawSpriteXY(0, Object.XPos, TempValue3)
+	
+	if TempValue2 == true
+		DrawSpriteXY(1, Object.XPos, TempValue3)
+	end if
+	
+	if Editor.ShowGizmos == true
+		
+		// Draw the path the Platform will follow
+		
+		Sin(TempValue4, 128)
+		TempValue4 *= TempValue0
+		TempValue4 += TempValue1
+		TempValue4 += Object.YPos
+		TempValue4 &= 0xFFFF0000 // Truncate the value
+		
+		Editor.DrawingOverlay = true
+		
+		DrawLine(Object.XPos, TempValue3, Object.XPos, TempValue4, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+		
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	// TODO: using the present version here, but do other time periods
+	SpriteFrame(-32, -16, 64, 32, 34, 51)
+	SpriteFrame(-32, -16, 64, 16, 1, 208)
+	
+	AddEditorVariable("Direction")
+	SetActiveVariable("Direction")
+	AddEnumVariable("Upwards", 0)
+	// 1 is unused
+	AddEnumVariable("Upwards (Conveyor)", 2)
+	AddEnumVariable("Downwards", 3)
+	// 4 is unused
+	AddEnumVariable("Downwards (Conveyor)", 5)
+	
+	AddEditorVariable("Priority")
+	SetActiveVariable("Priority")
+	AddEnumVariable("Normal",  0)
+	AddEnumVariable("XBounds", 1)
+end sub

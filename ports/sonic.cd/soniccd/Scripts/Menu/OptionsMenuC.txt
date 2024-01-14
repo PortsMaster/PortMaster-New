@@ -1,0 +1,756 @@
+//------------Sonic CD Options Menu Console Script------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 				:	Object.Timer
+#alias Object.Value1 				:	Object.CurrentSelection
+#alias Object.Value3 				:	Object.BGMDecreaseTimer
+#alias Object.Value4 				:	Object.BGMIncreaseTimer
+#alias Object.Value5 				:	Object.SFXDecreaseTimer
+#alias Object.Value6 				:	Object.SFXIncreaseTimer
+
+//Object[+ArrayPos0] can be the BlankObjects 63, 64, 65 and 66. Depending of the CurrentSelection value
+#alias Object[+ArrayPos0].Value2	:	Object.FlickerText
+
+//Object[+4] is Empty, only used to set the Maximum amount of options for the controls
+#alias Object[+4].Value1			:	Object.OptionCount
+
+//Object[33] is MenuHeading
+#alias Object[33].State				:	MenuHeading.State
+#alias Object[33].PropertyValue		:	MenuHeading.Header
+
+//Object[-1] is MenuWindow
+#alias Object[-1].State				:	MenuWindow.State
+
+// States
+#alias 0 	:	OPTIONS_SETUP
+#alias 1 	:	OPTIONS_CONTROLS
+#alias 2 	:	OPTIONS_SELECTED
+#alias 3 	:	OPTIONS_STAGE_LOAD
+#alias 4 	:	OPTIONS_SETTINGS_SETUP
+#alias 5 	:	OPTIONS_SETTINGS_POPIN
+#alias 6 	:	OPTIONS_SETTINGS_CONTROLS
+#alias 7 	:	OPTIONS_UNUSED
+#alias 8 	:	OPTIONS_UNUSED2
+#alias 9 	:	OPTIONS_EXIT_SETTINGS
+#alias 10	:	OPTIONS_LEAVE_SUBMENU
+#alias 11	:	OPTIONS_EXIT
+#alias 12	:	OPTIONS_ENTER_ABOUT_MENU
+#alias 13	:	OPTIONS_ENTER_ABOUTMENU
+#alias 14	:	OPTIONS_ABOUTMENU_CONTROLS
+#alias 15	:	OPTIONS_EXIT_ABOUTMENU
+
+// Menu Window States
+#alias 3	:	MENUWINDOW_SHRINK
+
+// Menu Button States
+#alias 1	:	MENUBUTTON_BUTTONS_IN
+
+// Menu Heading States
+#alias 1	:	MENUHEADING_LEAVE_SCREEN
+
+// Menu Heading Property Values
+#alias 5	:	MAINMENU_HEADER
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+// Global SFX
+#alias 23	:	SFX_G_MENUBUTTON
+#alias 27	:	SFX_G_SELECT
+
+// Stage SFX
+#alias 1	:	SFX_S_BACKBUTTON
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+
+// Engine & Callbacks
+#alias 9 	:	CALLBACK_HOW_TO_PLAY
+#alias 10	:	CALLBACK_CONTROLS
+#alias 12	:	CALLBACK_SETTINGS
+#alias 15	:	CALLBACK_STAFF_CREDITS
+
+// SaveRAM Values
+// 32	:	SavedSettings
+// 33	:	BGM
+// 34	:	SFX
+// 35	:	Control Type
+
+#function OptionsMenuC_DrawOptions
+
+function OptionsMenuC_DrawOptions
+	switch Object.FlickerText
+	case false
+		if ArrayPos0 == Object.CurrentSelection
+			DrawSpriteScreenFX(9, FX_INK, Object.XPos, Object.YPos)
+			TempValue0  = ArrayPos0
+			TempValue0 += 14
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		else
+			TempValue0  = ArrayPos0
+			TempValue0 += 10
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		end if
+		break
+	case true
+		TempValue0   = Object.Timer
+		TempValue0  &= 3
+		TempValue0 >>= 1
+		DrawSpriteScreenFX(9, FX_INK, Object.XPos, Object.YPos)
+		if TempValue0 == 0
+			TempValue0  = ArrayPos0
+			TempValue0 += 14
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		end if
+		break
+	end switch
+
+	DrawSpriteScreenFX(8, FX_INK, Object.XPos, Object.YPos)
+	DrawSpriteScreenFX(ArrayPos0, FX_INK, Object.XPos, Object.YPos)
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case OPTIONS_SETUP
+
+#platform: Mobile
+		Object.CurrentSelection = -1
+#endplatform
+
+		Object.XPos  = Screen.CenterX
+		Object.XPos -= 126
+		if Object.Timer < 256
+			Object.Alpha  = Object.Timer
+			Object.Timer += 6
+		else
+			Object.Timer = 0
+			Object.Alpha = 255
+			Object.State++
+		end if
+		break
+
+	case OPTIONS_CONTROLS
+		if KeyPress[0].Up == true
+			Object.CurrentSelection--
+			if Object.CurrentSelection < 0
+				Object.CurrentSelection = 3
+			end if
+			PlaySfx(SFX_G_MENUBUTTON, false)
+		end if
+
+		if KeyPress[0].Down == true
+			Object.CurrentSelection++
+			if Object.CurrentSelection > 3
+				Object.CurrentSelection = 0
+			end if
+			PlaySfx(SFX_G_MENUBUTTON, false)
+		end if
+
+		CheckResult = false
+		if KeyPress[0].Start == true
+			CheckResult = true
+		end if
+
+		if KeyPress[0].ButtonA == true
+			CheckResult = true
+		end if
+
+		if CheckResult == true
+			if Object.CurrentSelection < 4
+				ArrayPos0 = Object.CurrentSelection
+				Object.FlickerText = 1
+				Object.State++
+				PlaySfx(SFX_G_SELECT, false)
+				switch Object.CurrentSelection
+				case 0
+				case 3
+					Music.Volume = 0
+					break
+
+				end switch
+			end if
+		end if
+		
+		if KeyPress[0].ButtonB == true
+			Object.Timer = 248
+			Object.State = OPTIONS_EXIT
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+
+	case OPTIONS_SELECTED
+		if Object.Timer < 30
+			Object.Timer++
+		else
+			Object.Timer = 0
+			ArrayPos0 = Object.CurrentSelection
+			Object.FlickerText	= 0
+			Object.State		= OPTIONS_STAGE_LOAD
+		end if
+		break
+
+	case OPTIONS_STAGE_LOAD
+		if Object.Timer < 320
+			Object.Timer += 8
+		else
+			Object.State = OPTIONS_UNUSED2
+			switch Object.CurrentSelection
+			case 0
+				EngineCallback(CALLBACK_HOW_TO_PLAY)
+				break
+			case 1
+				EngineCallback(CALLBACK_CONTROLS)
+				break
+			case 2
+				EngineCallback(CALLBACK_SETTINGS)
+				break
+			case 3
+				EngineCallback(CALLBACK_STAFF_CREDITS)
+				break
+			end switch
+		end if
+
+		TempValue0 = Object.Timer
+		if TempValue0 > 255
+			TempValue0 = 255
+		end if
+		SetScreenFade(0, 0, 0, TempValue0)
+		break
+
+	case OPTIONS_SETTINGS_SETUP
+		TempValue0  = Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos > TempValue0
+			Object.YPos -= 8
+			if Object.YPos < TempValue0
+				Object.YPos = TempValue0
+			end if
+		else
+			Object.State++
+			Object.Alpha = 0
+			Object.OptionCount = 0
+
+#platform: Mobile
+			ArrayPos0 = Object.CurrentSelection
+			Object.OptionCount = -1
+#endplatform
+
+		end if
+		break
+
+	case OPTIONS_SETTINGS_POPIN
+		if Object.Timer < 256
+			Object.Alpha  = Object.Timer
+			Object.Timer += 8
+		else
+			Object.Timer = 0
+			Object.Alpha = 255
+			Object.State++
+		end if
+		break
+
+	case OPTIONS_SETTINGS_CONTROLS
+		ArrayPos0 = Object.CurrentSelection
+#platform: Standard
+		if KeyPress[0].Up == true
+			Object.OptionCount--
+			PlaySfx(SFX_G_MENUBUTTON, false)
+			if Object.OptionCount < 0
+				Object.OptionCount = 2
+			end if
+		end if
+
+		if KeyPress[0].Down == true
+			Object.OptionCount++
+			PlaySfx(SFX_G_MENUBUTTON, false)
+			if Object.OptionCount > 2
+				Object.OptionCount = 0
+			end if
+		end if
+
+		switch Object.OptionCount
+		case 0	// BGM
+			if KeyPress[0].Left == true
+				Object.BGMDecreaseTimer = 10
+				SaveRAM[33] -= 10
+				if SaveRAM[33] < 0
+					SaveRAM[33] = 0
+					Engine.BGMVolume = SaveRAM[33]
+				else
+					Engine.BGMVolume = SaveRAM[33]
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+			end if
+
+			if KeyPress[0].Right == true
+				Object.BGMIncreaseTimer = 10
+				SaveRAM[33] += 10
+				if SaveRAM[33] > 100
+					SaveRAM[33] = 100
+					Engine.BGMVolume = SaveRAM[33]
+				else
+					Engine.BGMVolume = SaveRAM[33]
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+			end if
+			break
+
+		case 1	// SFX
+			if KeyPress[0].Left == true
+				Object.SFXDecreaseTimer = 10
+				SaveRAM[34] -= 10
+				if SaveRAM[34] < 0
+					SaveRAM[34] = 0
+					Engine.SFXVolume = SaveRAM[34]
+				else
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					Engine.SFXVolume = SaveRAM[34]
+				end if
+			end if
+
+			if KeyPress[0].Right == true
+				Object.SFXIncreaseTimer = 10
+				SaveRAM[34] += 10
+				if SaveRAM[34] > 100
+					SaveRAM[34] = 100
+				else
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					Engine.SFXVolume = SaveRAM[34]
+				end if
+			end if
+			break
+
+		case 2	// Control Type
+			if KeyPress[0].Left == true
+				SaveRAM[35]--
+				if SaveRAM[35] < 0
+					SaveRAM[35] = 1
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+
+			if KeyPress[0].Right == true
+				SaveRAM[35]++
+				if SaveRAM[35] > 1
+					SaveRAM[35] = 0
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+			break
+
+		end switch
+#endplatform
+
+		if KeyPress[0].ButtonB == true
+			Object.State = OPTIONS_EXIT_SETTINGS
+			Object.Timer = 248
+			Options.OriginalControls = SaveRAM[35]
+			SaveRAM[32] = true
+			WriteSaveRAM()
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+
+	case OPTIONS_UNUSED
+		if Object.Timer < 30
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+
+	case OPTIONS_UNUSED2
+		Music.Volume = 100
+		if Object.Timer > 0
+			Object.Timer -= 8
+		else
+			Object.State = OPTIONS_CONTROLS
+		end if
+
+		TempValue0 = Object.Timer
+		if TempValue0 > 255
+			TempValue0 = 255
+		end if
+		SetScreenFade(0, 0, 0, TempValue0)
+		break
+
+	case OPTIONS_EXIT_SETTINGS
+		if Object.Timer > 0
+			Object.Alpha  = Object.Timer
+			Object.Timer -= 8
+		else
+			Object.Alpha = 0
+			Object.State++
+		end if
+		break
+
+	case OPTIONS_LEAVE_SUBMENU
+		TempValue0  = Object.CurrentSelection
+		TempValue0 *= 40
+		TempValue0 += Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos < TempValue0
+			Object.YPos += 8
+			if Object.YPos > TempValue0
+				Object.YPos = TempValue0
+			end if
+			Object.Alpha = 0
+		else
+#platform: Mobile
+			Object.CurrentSelection = -1
+#endplatform
+			Object.State = OPTIONS_CONTROLS
+			Object.Alpha = 255
+		end if
+		break
+
+	case OPTIONS_EXIT
+		if Object.Timer > 0
+			Object.Alpha  = Object.Timer
+			Object.Timer -= 8
+		else
+			Object.Type = TypeName[Blank Object]
+			MenuWindow.State = MENUWINDOW_SHRINK
+			//All of this is MenuButton Objects
+			Object[34].State = MENUBUTTON_BUTTONS_IN
+			Object[35].State = MENUBUTTON_BUTTONS_IN
+			Object[36].State = MENUBUTTON_BUTTONS_IN
+			Object[37].State = MENUBUTTON_BUTTONS_IN
+			Object[38].State = MENUBUTTON_BUTTONS_IN
+			Object[39].State = MENUBUTTON_BUTTONS_IN
+			Object[40].State = MENUBUTTON_BUTTONS_IN
+			Object[41].State = MENUBUTTON_BUTTONS_IN
+			Object[42].State = MENUBUTTON_BUTTONS_IN
+			//End
+			MenuHeading.State  = MENUHEADING_LEAVE_SCREEN
+			MenuHeading.Header = MAINMENU_HEADER
+		end if
+		break
+
+	case OPTIONS_ENTER_ABOUT_MENU
+		TempValue0  = Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos > TempValue0
+			Object.YPos -= 8
+			if Object.YPos < TempValue0
+				Object.YPos = TempValue0
+			end if
+		else
+			TempValue0 = Object.EntityNo
+			TempValue0 += 10
+			ResetObjectEntity(TempValue0, TypeName[About Menu], 0, 0, 0)
+			SetupMenu(MENU_1, 0, 3, 1)
+			GetVersionNumber(MENU_1, 1)
+			Object[+10].InkEffect = INK_ALPHA
+			Object.State++
+			Object.Alpha = 0
+			Object.OptionCount = 0
+#platform: Mobile
+			ArrayPos0 = Object.CurrentSelection
+			Object.OptionCount = -1
+#endplatform
+		end if
+
+		break
+
+	case OPTIONS_ENTER_ABOUTMENU
+		if Object.Timer < 256
+			Object.Alpha  = Object.Timer
+			Object.Timer += 8
+		else
+			Object.Timer = 0
+			Object.Alpha = 255
+			Object.State++
+		end if
+		break
+
+	case OPTIONS_ABOUTMENU_CONTROLS
+#platform: Mobile
+		CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+		TempValue3  = CheckResult
+		TempValue0  = Screen.XSize
+		TempValue0 -= 96
+		CheckTouchRect(TempValue0, 192, Screen.XSize, Screen.YSize)
+		if CheckResult > -1
+			Object.OptionCount = 9
+		else
+			if TempValue3 < 0
+				if Object.OptionCount == 9
+					KeyPress[0].ButtonB = true
+				end if
+			else
+				if Object.OptionCount == 9
+					Object.OptionCount = -1
+				end if
+			end if
+		end if
+#endplatform
+
+		if KeyPress[0].ButtonB == true
+			Object.State = OPTIONS_EXIT_ABOUTMENU
+			Object.Timer = 248
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+
+	case OPTIONS_EXIT_ABOUTMENU
+		if Object.Timer > 0
+			Object.Alpha  = Object.Timer
+			Object.Timer -= 8
+		else
+			Object.Alpha = 0
+			Object.State = OPTIONS_LEAVE_SUBMENU
+			Object[+10].Type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case OPTIONS_SETUP
+	case OPTIONS_CONTROLS
+	case OPTIONS_SELECTED
+	case OPTIONS_STAGE_LOAD
+	case OPTIONS_UNUSED2
+	case OPTIONS_EXIT
+		Object.YPos  = Screen.CenterY
+		Object.YPos -= 87
+		ArrayPos0 = 0
+		CallFunction(OptionsMenuC_DrawOptions)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(OptionsMenuC_DrawOptions)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(OptionsMenuC_DrawOptions)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(OptionsMenuC_DrawOptions)
+		break
+	case OPTIONS_SETTINGS_SETUP
+	case OPTIONS_ENTER_ABOUT_MENU
+		ArrayPos0 = Object.CurrentSelection
+		CallFunction(OptionsMenuC_DrawOptions)
+		break
+	case OPTIONS_SETTINGS_POPIN
+	case OPTIONS_SETTINGS_CONTROLS
+	case OPTIONS_EXIT_SETTINGS
+	case OPTIONS_LEAVE_SUBMENU
+		ArrayPos0 = Object.CurrentSelection
+		TempValue0  = Screen.CenterX
+		TempValue0 += 15
+		if Object.OptionCount == 7
+			DrawSpriteScreenFX(40, FX_INK, TempValue0, 134)
+		else
+			DrawSpriteScreenFX(29, FX_INK, TempValue0, 134)
+		end if
+		TempValue0 += 52
+		if Object.OptionCount == 8
+			DrawSpriteScreenFX(41, FX_INK, TempValue0, 134)
+		else
+			DrawSpriteScreenFX(30, FX_INK, TempValue0, 134)
+		end if
+		TempValue0  = Screen.CenterX
+		TempValue0 -= 117
+#platform: Standard
+		switch Object.OptionCount
+		case 0
+			DrawSpriteScreenFX(32, FX_INK, TempValue0, 81)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 110)
+			DrawSpriteScreenFX(35, FX_INK, TempValue0, 151)
+			break
+		case 1
+			DrawSpriteScreenFX(31, FX_INK, TempValue0, 81)
+			DrawSpriteScreenFX(34, FX_INK, TempValue0, 110)
+			DrawSpriteScreenFX(35, FX_INK, TempValue0, 151)
+			break
+		case 2
+			DrawSpriteScreenFX(31, FX_INK, TempValue0, 81)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 110)
+			DrawSpriteScreenFX(36, FX_INK, TempValue0, 151)
+			break
+		end switch
+#endplatform
+
+#platform: Mobile
+		DrawSpriteScreenFX(31, FX_INK, TempValue0, 81)
+		DrawSpriteScreenFX(33, FX_INK, TempValue0, 110)
+		DrawSpriteScreenFX(35, FX_INK, TempValue0, 151)
+#endplatform
+		if SaveRAM[35] == 0
+			DrawSpriteScreenFX(37, FX_INK, TempValue0, 169)
+			TempValue0 += 132
+			DrawSpriteScreenFX(39, FX_INK, TempValue0, 134)
+		else
+			DrawSpriteScreenFX(38, FX_INK, TempValue0, 169)
+			TempValue0 += 184
+			DrawSpriteScreenFX(39, FX_INK, TempValue0, 134)
+		end if
+
+		TempValue1  = Screen.CenterX
+		TempValue1 += 23
+		if Object.BGMDecreaseTimer > 0
+			Object.BGMDecreaseTimer--
+			DrawSpriteScreenFX(5, FX_INK, TempValue1, 76)
+		else
+			DrawSpriteScreenFX(4, FX_INK, TempValue1, 76)
+		end if
+
+		TempValue1 += 66
+		if Object.BGMIncreaseTimer > 0
+			Object.BGMIncreaseTimer--
+			DrawSpriteScreenFX(7, FX_INK, TempValue1, 76)
+		else
+			DrawSpriteScreenFX(6, FX_INK, TempValue1, 76)
+		end if
+
+		TempValue1 -= 42
+		DrawSpriteScreenFX(18, FX_INK, TempValue1, 76)
+
+		TempValue0  = SaveRAM[33]
+		TempValue0 /= 10
+		TempValue0 += 18
+		DrawSpriteScreenFX(TempValue0, FX_INK, TempValue1, 76)
+
+		TempValue1  = Screen.CenterX
+		TempValue1 += 23
+		if Object.SFXDecreaseTimer > 0
+			Object.SFXDecreaseTimer--
+			DrawSpriteScreenFX(5, FX_INK, TempValue1, 105)
+		else
+			DrawSpriteScreenFX(4, FX_INK, TempValue1, 105)
+		end if
+
+		TempValue1 += 66
+		if Object.SFXIncreaseTimer > 0
+			Object.SFXIncreaseTimer--
+			DrawSpriteScreenFX(7, FX_INK, TempValue1, 105)
+		else
+			DrawSpriteScreenFX(6, FX_INK, TempValue1, 105)
+		end if
+
+		TempValue1 -= 42
+		DrawSpriteScreenFX(18, FX_INK, TempValue1, 105)
+
+		TempValue0  = SaveRAM[34]
+		TempValue0 /= 10
+		TempValue0 += 18
+		DrawSpriteScreenFX(TempValue0, FX_INK, TempValue1, 105)
+
+		Object.Alpha = 255
+		CallFunction(OptionsMenuC_DrawOptions)
+		break
+
+	case OPTIONS_ENTER_ABOUTMENU
+	case OPTIONS_ABOUTMENU_CONTROLS
+	case OPTIONS_EXIT_ABOUTMENU
+		ArrayPos0 = Object.CurrentSelection
+		Object.Alpha = 255
+		CallFunction(OptionsMenuC_DrawOptions)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	switch Engine.Language
+	case LANG_ENGLISH
+		LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+		break
+	case LANG_FRENCH
+		LoadSpriteSheet("Menu/MenuGfx2_FR.gif")
+		break
+	case LANG_ITALIAN
+		LoadSpriteSheet("Menu/MenuGfx2_IT.gif")
+		break
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Menu/MenuGfx2_DE.gif")
+		break
+	case LANG_SPANISH
+		LoadSpriteSheet("Menu/MenuGfx2_ES.gif")
+		break
+	case LANG_JAPANESE
+		LoadSpriteSheet("Menu/MenuGfx2_JP.gif")
+		break
+	end switch
+
+	if SaveRAM[32] == false
+		SaveRAM[33] = 100
+		SaveRAM[34] = 100
+		SaveRAM[35] = 0
+	end if
+	Options.OriginalControls = SaveRAM[35]
+
+	SpriteFrame(4, 2, 32, 32, 479, 34)				// #0  - Gear
+	SpriteFrame(4, 2, 32, 32, 479, 34)				// #1  - Gear Again
+	SpriteFrame(4, 2, 32, 32, 479, 34)				// #2  - Why is this a Gear again
+	SpriteFrame(4, 2, 32, 32, 479, 34)				// #3  - Please Stop.
+	SpriteFrame(0, 0, 20, 20, 168, 366)				// #4  - Decrease button
+	SpriteFrame(0, 0, 20, 20, 168, 387)				// #5  - Decrease button Highlight
+	SpriteFrame(0, 0, 20, 20, 189, 366)				// #6  - Increase button
+	SpriteFrame(0, 0, 20, 20, 189, 387)				// #7  - Increase button Highlight
+	SpriteFrame(45, 12, 13, 13, 488, 1)				// #8  - Triangle detail
+	SpriteFrame(0, 0, 250, 37, 259, 421)			// #9  - Selection Border
+	SpriteFrame(64, 12, 128, 16, 1, 530)			// #10 - How to Play
+	SpriteFrame(64, 12, 128, 16, 1, 290)			// #11 - Controls
+	SpriteFrame(64, 12, 128, 16, 1, 205)			// #12 - Settings
+	SpriteFrame(64, 12, 128, 16, 1, 222)			// #13 - Staff Credits
+	SpriteFrame(64, 12, 128, 16, 130, 530)			// #14 - How to Play Highlight
+	SpriteFrame(64, 12, 128, 16, 130, 290)			// #15 - Controls Highlight
+	SpriteFrame(64, 12, 128, 16, 130, 205)			// #15 - Settings Highlight
+	SpriteFrame(64, 12, 128, 16, 130, 222)			// #16 - Staff Credits Highlight
+	SpriteFrame(0, 0, 38, 20, 171, 324)				// #18 - Minimal Volume
+	SpriteFrame(0, 0, 4, 20, 171, 345)				// #19 - Volume Bar 1
+	SpriteFrame(0, 0, 8, 20, 171, 345)				// #20 - Volume Bar 2
+	SpriteFrame(0, 0, 12, 20, 171, 345)				// #21 - Volume Bar 3
+	SpriteFrame(0, 0, 16, 20, 171, 345)				// #22 - Volume Bar 4
+	SpriteFrame(0, 0, 20, 20, 171, 345)				// #23 - Volume Bar 5
+	SpriteFrame(0, 0, 24, 20, 171, 345)				// #24 - Volume Bar 6
+	SpriteFrame(0, 0, 28, 20, 171, 345)				// #25 - Volume Bar 7
+	SpriteFrame(0, 0, 32, 20, 171, 345)				// #26 - Volume Bar 8
+	SpriteFrame(0, 0, 36, 20, 171, 345)				// #27 - Volume Bar 9
+	SpriteFrame(0, 0, 38, 20, 171, 345)				// #28 - Volume Bar 10
+	SpriteFrame(0, 0, 48, 48, 210, 324)				// #29 - S2 Spin Dash
+	SpriteFrame(0, 0, 48, 48, 210, 373)				// #30 - CD Spin Dash
+	SpriteFrame(0, 0, 128, 16, 1, 256)				// #31 - Music
+	SpriteFrame(0, 0, 128, 16, 130, 256)			// #32 - Music Highlight
+	SpriteFrame(0, 0, 128, 16, 1, 273)				// #32 - SFX
+	SpriteFrame(0, 0, 128, 16, 130, 273)			// #33 - SFX Highlight
+	SpriteFrame(0, 0, 128, 16, 1, 307)				// #34 - Spin Dash
+	SpriteFrame(0, 0, 128, 16, 130, 307)			// #35 - Spin Dash Highlight
+	SpriteFrame(0, 0, 88, 8, 259, 44)				// #36 - Genesis
+	SpriteFrame(0, 0, 88, 8, 259, 35)				// #37 - Original
+	SpriteFrame(0, 0, 48, 48, 405, 88)				// #38 - Icon Border
+	SpriteFrame(0, 0, 48, 48, 119, 324)				// #39 - S2 Spin Dash Highlight
+	SpriteFrame(0, 0, 48, 48, 119, 373)				// #40 - CD Spin Dash Highlight
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+	SpriteFrame(16, 0, 90, 30, 71, 677)	// Options
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

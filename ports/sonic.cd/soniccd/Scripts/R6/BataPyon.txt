@@ -1,0 +1,290 @@
+//----------------Sonic CD Bata Pyon Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 		:	Object.Timer
+#alias Object.Value1 		:	Object.XVelocity
+#alias Object.Value2 		:	Object.YVelocity
+#alias Object.Value3 		:	Object.XOriginPos
+#alias Object.Value4 		:	Object.YOriginPos
+#alias Object.Value5 		:	Object.TurnTimer
+
+#alias Object.PropertyValue :	Object.Quality
+
+// States
+#alias 0	:	BATAPYON_JUMP
+#alias 1	:	BATAPYON_BOUNCE
+#alias 2	:	BATAPYON_BAD_RECOIL_1
+#alias 3	:	BATAPYON_BAD_RECOIL_2
+#alias 4	:	BATAPYON_BAD_RECOIL_3
+#alias 5	:	BATAPYON_BAD_RECOIL_4
+#alias 6	:	BATAPYON_BAD_BOUNCE
+#alias 7	:	BATAPYON_RESET
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+#alias 1	:	CSIDE_LWALL
+#alias 2	:	CSIDE_RWALL
+#alias 3	:	CSIDE_ROOF
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State	 = BATAPYON_RESET
+		Object.Direction = FACING_RIGHT
+		Object.XPos		 = Object.XOriginPos
+		Object.YPos		 = Object.YOriginPos
+		Object.XVelocity = -0xA000
+		Object.YVelocity =  0x80000
+		Object.TurnTimer =  0
+	end if
+
+	switch Object.State
+	case BATAPYON_JUMP
+		Object.XPos		 += Object.XVelocity
+
+		Object.YPos		 += Object.YVelocity
+		Object.YVelocity += 0x2000
+
+		ObjectTileCollision(CSIDE_ROOF, 0, -18, 0)
+		if CheckResult == true
+			Object.YVelocity = 0
+		end if
+
+		if Object.YVelocity > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+			if CheckResult == true
+				if Object.Quality == GOOD_QUALITY
+					Object.State	= BATAPYON_BOUNCE
+					Object.Priority = PRIORITY_ACTIVE
+					Object.TurnTimer++
+					if Object.TurnTimer == 8
+						Object.TurnTimer = 0
+						Object.Direction++
+						Object.Direction &= FACING_LEFT
+						FlipSign(Object.XVelocity)
+					end if
+				else
+					Object.State	= BATAPYON_BAD_RECOIL_1
+					Object.Priority = PRIORITY_ACTIVE
+					Object.TurnTimer++
+					if Object.TurnTimer == 4
+						Object.TurnTimer = 0
+						Object.Direction++
+						Object.Direction &= FACING_LEFT
+						FlipSign(Object.XVelocity)
+					end if
+				end if
+			end if
+		end if
+
+		if Object.XVelocity > 0
+			ObjectTileCollision(CSIDE_LWALL, 16, 0, 0)
+			if CheckResult == true
+				Object.TurnTimer = 0
+				Object.Direction = FACING_RIGHT
+				FlipSign(Object.XVelocity)
+			end if
+		else
+			ObjectTileCollision(CSIDE_RWALL, -16, 0, 0)
+			if CheckResult == true
+				Object.TurnTimer = 0
+				Object.Direction = FACING_LEFT
+				FlipSign(Object.XVelocity)
+			end if
+		end if
+		
+		Object.Frame   = Object.Quality
+		Object.Frame <<= 1
+
+		if Object.YVelocity < 0
+			Object.Frame++
+		end if
+		break
+
+	case BATAPYON_BOUNCE
+		Object.XPos		+= Object.XVelocity
+		Object.YPos		-= 0x120000
+
+		Object.YVelocity = -0x60000
+
+		Object.State	 = BATAPYON_JUMP
+
+		Object.Frame	 = Object.Quality
+		Object.Frame   <<= 1
+
+		if Object.YVelocity < 0
+			Object.Frame++
+		end if
+		break
+
+	case BATAPYON_BAD_RECOIL_1
+		if Object.Timer < 3
+			Object.Timer++
+		else
+			Object.State++
+			Object.Frame = 3
+			Object.YPos -= 0x120000
+		end if
+		break
+
+	case BATAPYON_BAD_RECOIL_2
+		if Object.Timer < 6
+			Object.Timer++
+		else
+			Object.State++
+			Object.Frame = 2
+			Object.YPos += 0x120000
+		end if
+		break
+
+	case BATAPYON_BAD_RECOIL_3
+		if Object.Timer < 10
+			Object.Timer++
+		else
+			Object.State++
+			Object.Frame = 3
+			Object.YPos -= 0x120000
+		end if
+		break
+
+	case BATAPYON_BAD_RECOIL_4
+		if Object.Timer < 15
+			Object.Timer++
+		else
+			Object.State++
+			Object.Frame = 2
+			Object.YPos += 0x120000
+		end if
+		break
+
+	case BATAPYON_BAD_BOUNCE
+		if Object.Timer < 20
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.Frame = 3
+
+			Object.YPos		-=  0x120000
+			Object.YVelocity = -0x50000
+
+			Object.State = BATAPYON_JUMP
+		end if
+		break
+
+	case BATAPYON_RESET
+		if Object.OutOfBounds == true
+			Object.State = BATAPYON_JUMP
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+
+	// Check if this badnik should be a flower
+	CallFunction(StageSetup_CheckGoodFuture)
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < BATAPYON_RESET
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -14, -12, 14, 12)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -14, -12, 14, 12)
+#endplatform
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State < BATAPYON_RESET
+		DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	// Good
+	SpriteFrame(-16, -18, 32, 40, 34, 134)	// #0 - Pata Byon
+	SpriteFrame(-16, -18, 32, 56, 67, 167)	// #1 - Pata Byon Jump
+	// Bad
+	SpriteFrame(-16, -18, 32, 40, 34, 175)	// #2 - Pata Byon
+	SpriteFrame(-16, -18, 32, 56, 100, 167)	// #3 - Pata Byon Jump
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Bata Pyon]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+
+			Object[ArrayPos0].XVelocity  = -0xA000
+			Object[ArrayPos0].YVelocity  =  0x80000
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	// Good
+	SpriteFrame(-16, -18, 32, 40, 34, 134)	// #0 - Pata Byon
+	// Bad
+	SpriteFrame(-16, -18, 32, 40, 34, 175)	// #1 - Pata Byon
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

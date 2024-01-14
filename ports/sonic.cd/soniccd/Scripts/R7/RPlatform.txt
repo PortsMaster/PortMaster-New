@@ -1,0 +1,416 @@
+//-----------------Sonic CD R Platform Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Angle
+#alias Object.Value1 : Object.PlatformX
+#alias Object.Value2 : Object.PlatformY
+#alias Object.Value3 : Object.ChangeX
+#alias Object.Value4 : Object.ChangeY
+#alias Object.Value5 : Object.SwingAngle
+#alias Object.Value6 : Object.ChainsNo
+
+// States
+#alias 0 : RPLATFORM_FULL_CW_SLOWAPEX
+#alias 1 : RPLATFORM_FULL_CW
+#alias 2 : RPLATFORM_FULL_CCW
+#alias 3 : RPLATFORM_TOP180
+#alias 4 : RPLATFORM_RIGHT180
+#alias 5 : RPLATFORM_BOTTOM180
+
+// Collision
+#alias 1 : PLAYER_COL_FLOOR
+#alias 2 : PLAYER_COL_LWALL
+#alias 3 : PLAYER_COL_RWALL
+#alias 4 : PLAYER_COL_ROOF
+
+// Property Values
+#alias 19 : HALF_CW_BOTTOM
+#alias 35 : HALF_CW_TOP
+#alias 54 : FULL_CW_SLOW
+#alias 67 : HALF_CW_RIGHT
+#alias 99 : FULL_CW
+#alias 115: FULL_CCW
+
+// Gravity
+#alias 0 : GRAVITY_GROUND
+
+
+sub ObjectMain
+	// Each state directly corresponds to a subtype of the platform
+	switch Object.State
+	case RPLATFORM_FULL_CW_SLOWAPEX
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		Sin(Object.Angle, Object.SwingAngle)
+		Object.Angle /= 3
+		Object.Angle += 640
+		break
+		
+	case RPLATFORM_FULL_CW
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		TempValue0   = Object.SwingAngle
+		TempValue0 >>= 1
+		Cos(TempValue1, TempValue0)
+		TempValue1 >>= 1
+		Object.Angle  = 640
+		Object.Angle -= TempValue1
+		break
+		
+	case RPLATFORM_FULL_CCW
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		TempValue0   = Object.SwingAngle
+		TempValue0 >>= 1
+		Cos(Object.Angle, TempValue0)
+		Object.Angle >>= 1
+		Object.Angle  += 640
+		break
+		
+	case RPLATFORM_TOP180
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		Sin(Object.Angle, Object.SwingAngle)
+		Object.Angle >>= 2
+		Object.Angle  += 896
+		break
+		
+	case RPLATFORM_RIGHT180
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		Sin(Object.Angle, Object.SwingAngle)
+		Object.Angle >>= 2
+		Object.Angle  += 512
+		break
+		
+	case RPLATFORM_BOTTOM180
+		Object.SwingAngle++
+		Object.SwingAngle &= 511
+		Sin(Object.Angle, Object.SwingAngle)
+		Object.Angle >>= 2
+		Object.Angle  += 640
+		break
+		
+	end switch
+	
+	TempValue1 = Object.ChainsNo
+	TempValue1++
+	TempValue1 <<= 4
+	
+	Cos(Object.ChangeX, Object.Angle)
+	Object.ChangeX  *= TempValue1
+	Object.ChangeX <<= 7
+	Object.ChangeX  += Object.XPos
+	Object.ChangeX  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeX  -= Object.PlatformX
+	
+	Sin(Object.ChangeY, Object.Angle)
+	Object.ChangeY  *= TempValue1
+	Object.ChangeY <<= 7
+	Object.ChangeY  += Object.YPos
+	Object.ChangeY  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeY  -= Object.PlatformY
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	// First backup the object's position
+	TempValue0 = Object.XPos
+	TempValue1 = Object.YPos
+	
+	TempValue2  = Player.YPos
+	Object.XPos = Object.PlatformX
+	Object.YPos = Object.PlatformY
+	
+	if Player.State == Player_State_Hurt
+		PlayerObjectCollision(C_BOX, -32, -8, 32, 8)
+	else
+		PlayerObjectCollision(C_BOX, -24, -8, 24, 8)
+	end if
+	
+	switch CheckResult
+	case PLAYER_COL_FLOOR
+		// The player's on top of the platform, just move them with it for now
+		Player.XPos += Object.ChangeX
+		Player.YPos += Object.ChangeY
+		break
+		
+	case PLAYER_COL_LWALL
+	case PLAYER_COL_RWALL
+		CallFunction(Player_Hit)
+		
+		// [Fallthrough to below, for more collision checks]
+		
+	case PLAYER_COL_ROOF
+		PlayerObjectCollision(C_TOUCH, -16, -8, 16, 9)
+		
+		if CheckResult == true
+			if Player.State != Player_State_Hurt
+				TempValue3 = Player.XVelocity
+				if TempValue3 < 0
+					FlipSign(TempValue3)
+				end if
+				
+				if TempValue3 < 0x60000
+					if Player.Gravity == GRAVITY_GROUND
+						CallFunction(Player_Kill)
+					end if
+				else
+					if Player.Gravity == GRAVITY_GROUND
+						CallFunction(Player_Hit)
+					end if
+				end if
+			else
+				Player.YPos = TempValue2
+			end if
+		else
+			Player.YPos = TempValue2
+			
+			if Player.Gravity == GRAVITY_GROUND
+				CallFunction(Player_Hit)
+			end if
+		end if
+		break
+		
+	end switch
+	
+	// Now we can restore the Object back to its normal position
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+	
+end sub
+
+
+sub ObjectDraw
+	// Draw the platform post frame
+	DrawSprite(0)
+	
+	// Draw all the chains
+	TempValue0 = 0
+	TempValue1 = 16
+	while TempValue0 < Object.ChainsNo
+		Cos(TempValue2, Object.Angle)
+		TempValue2  *= TempValue1
+		TempValue2 <<= 7
+		TempValue2  += Object.XPos
+		
+		Sin(TempValue3, Object.Angle)
+		TempValue3  *= TempValue1
+		TempValue3 <<= 7
+		TempValue3  += Object.YPos
+		
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		
+		TempValue0++
+		TempValue1 += 16
+	loop
+	
+	// Draw the main platform sprite
+	
+	// Find the X component
+	Cos(Object.PlatformX, Object.Angle)
+	Object.PlatformX  *= TempValue1
+	Object.PlatformX <<= 7
+	Object.PlatformX  += Object.XPos
+	Object.PlatformX  &= 0xFFFF0000 // Truncate the value
+	
+	// And then find the Y
+	Sin(Object.PlatformY, Object.Angle)
+	Object.PlatformY  *= TempValue1
+	Object.PlatformY <<= 7
+	Object.PlatformY  += Object.YPos
+	Object.PlatformY  &= 0xFFFF0000 // Truncate the value
+	
+	DrawSpriteXY(2, Object.PlatformX, Object.PlatformY)
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Pivot Ball Frame
+	SpriteFrame(-8, -8, 16, 16, 34, 1)
+	
+	// Chain Frame
+	SpriteFrame(-8, -8, 16, 16, 51, 1)
+	
+	// Platform Frame
+	SpriteFrame(-32, -8, 64, 16, 68, 1)
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[R Platform]
+			if Object[ArrayPos0].PropertyValue == HALF_CW_BOTTOM
+				Object[ArrayPos0].State = RPLATFORM_BOTTOM180
+				Object[ArrayPos0].ChainsNo = 2
+			end if
+			
+			if Object[ArrayPos0].PropertyValue == HALF_CW_TOP
+				Object[ArrayPos0].State = RPLATFORM_TOP180
+				Object[ArrayPos0].ChainsNo = 2
+			end if
+			
+			if Object[ArrayPos0].PropertyValue == FULL_CW_SLOW
+				Object[ArrayPos0].State = RPLATFORM_FULL_CW_SLOWAPEX
+				Object[ArrayPos0].ChainsNo = 5
+			end if
+			
+			if Object[ArrayPos0].PropertyValue == HALF_CW_RIGHT
+				Object[ArrayPos0].State = RPLATFORM_RIGHT180
+				Object[ArrayPos0].ChainsNo = 2
+			end if
+			
+			if Object[ArrayPos0].PropertyValue == FULL_CW
+				Object[ArrayPos0].State = RPLATFORM_FULL_CW
+				Object[ArrayPos0].ChainsNo = 2
+			end if
+			
+			if Object[ArrayPos0].PropertyValue == FULL_CCW
+				Object[ArrayPos0].State = RPLATFORM_FULL_CCW
+				Object[ArrayPos0].ChainsNo = 2
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+// the property value format seems to be
+// lowest three bits - chain length
+// above - multiplier idk
+// but thanks to the way the object's set up, it doesn't truly work like that
+// it is worth noting though, that while rsdk uses this rigid and kinda fake system, cd 93 seems to *actually* follow the format so that's interesting
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+// TODO: probably best to rearrange the temps used here, at the moment it's quite the mess...
+
+sub RSDKDraw
+
+	TempValue4 = 0 // chainsNo
+	TempValue1 = 0 // behaviour
+
+	switch Object.PropertyValue
+	case 19
+	default
+		TempValue4 = 2
+		TempValue1 = 5
+		break
+	case 35
+		TempValue4 = 2
+		TempValue1 = 3
+		break
+	case 54
+		TempValue4 = 5
+		TempValue1 = 0
+		break
+	case 67
+		TempValue4 = 2
+		TempValue1 = 4
+		break
+	case 99
+		TempValue4 = 2
+		TempValue1 = 1
+		break
+	case 115
+		TempValue4 = 2
+		TempValue1 = 2
+		break
+	end switch
+	
+	switch TempValue1
+	case 0
+	case 1
+	case 2
+	case 5
+		Object.Angle = 640; break
+	case 3
+		Object.Angle = 896; break
+	case 4
+		Object.Angle = 512; break
+	end switch
+
+	DrawSprite(0)
+
+	TempValue0 = 0
+	TempValue1 = 16
+	while TempValue0 < TempValue4
+		Cos(TempValue2, Object.Angle)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+
+		Sin(TempValue3, Object.Angle)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.YPos
+
+		DrawSpriteXY(1, TempValue2, TempValue3)
+
+		TempValue0++
+		TempValue1 += 16
+	loop
+
+	Cos(TempValue0, Object.Angle)
+	TempValue0 *= TempValue1
+	TempValue0 <<= 7
+	TempValue0 += Object.XPos
+	TempValue0 &= 0xFFFF0000 // Truncate the value
+
+	Sin(TempValue2, Object.Angle)
+	TempValue2 *= TempValue1
+	TempValue2 <<= 7
+	TempValue2 += Object.YPos
+	TempValue2 &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(2, TempValue0, TempValue2)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 34, 1)  // Pivot Ball
+	SpriteFrame(-8, -8, 16, 16, 51, 1)  // Chain
+	SpriteFrame(-32, -8, 64, 16, 68, 1) // Platform
+
+	// TODO: actual names lol
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("why do", 19)
+	AddEnumVariable("the values", 35)
+	AddEnumVariable("jump around", 54)
+	AddEnumVariable("its so", 67)
+	AddEnumVariable("wierd", 99)
+	AddEnumVariable("ratio", 115)
+end sub

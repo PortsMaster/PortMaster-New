@@ -1,0 +1,317 @@
+//---------------Sonic CD Rotating Spikes Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Angle
+#alias Object.Value1			:	Object.Increment
+#alias Object.Value2			:	Object.SpawnedSpikes
+
+#alias Object[-1].Rotation		:	MovingBlocks.Rotation
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Property Values
+#alias 0	:	ROTATION_CLOCKWISE
+#alias 1	:	ROTATION_COUNTERCLOCKWISE
+#alias 2	:	ROTATION_CCW_LINK_MOVINGBLOCKS
+#alias 3	:	ROTATION_CCW_TWO_SPIKES
+#alias 4	:	ROTATION_CW_SIX_SPIKES
+
+
+sub ObjectMain
+	if Object.PropertyValue == ROTATION_CCW_LINK_MOVINGBLOCKS
+		Object.Angle = MovingBlocks.Rotation
+	else
+		Object.Angle += Object.Increment
+	end if
+	
+	if Object.Angle < 0
+		Object.Angle += 512
+	end if
+	Object.Angle &= 511
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = 0
+	TempValue1 = 16
+	TempValue2 = Object.XPos
+	TempValue3 = Object.YPos
+
+	while TempValue0 < Object.SpawnedSpikes
+	
+		Cos(Object.XPos, Object.Angle)
+		Object.XPos *= TempValue1
+		Object.XPos <<= 7
+		Object.XPos += TempValue2
+
+		Sin(Object.YPos, Object.Angle)
+		Object.YPos *= TempValue1
+		Object.YPos <<= 7
+		Object.YPos += TempValue3
+
+		PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+
+		TempValue0++
+		TempValue1 += 16
+	loop
+	Object.XPos = TempValue2
+	Object.YPos = TempValue3
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+	TempValue0 = 0
+	TempValue1 = 16
+	
+	while TempValue0 < Object.SpawnedSpikes
+		Cos(TempValue2, Object.Angle)
+		TempValue2  *= TempValue1
+		TempValue2 <<= 7
+		TempValue2  += Object.XPos
+
+		Sin(TempValue3, Object.Angle)
+		TempValue3  *= TempValue1
+		TempValue3 <<= 7
+		TempValue3  += Object.YPos
+
+		DrawSpriteXY(1, TempValue2, TempValue3)
+
+		TempValue0++
+		TempValue1 += 16
+	loop
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 133, 199)	// #0 - Rotating Spikes Center
+	SpriteFrame(-8, -8, 16, 16, 150, 199)	// #1 - Spikes
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rotating Spikes]
+			switch Object[ArrayPos0].PropertyValue
+			case ROTATION_CLOCKWISE
+				Object[ArrayPos0].Increment = 2
+				switch HUD.CurrentTimePeriod
+				case TIME_PRESENT
+					Object[ArrayPos0].SpawnedSpikes = 5
+					break
+
+				case TIME_PAST
+					Object[ArrayPos0].SpawnedSpikes = 4
+					break
+
+				case TIME_GOOD_FUTURE
+				case TIME_BAD_FUTURE
+					Object[ArrayPos0].SpawnedSpikes = 6
+					break
+				end switch
+
+				break
+
+			case ROTATION_COUNTERCLOCKWISE
+				Object[ArrayPos0].Increment = -2
+				switch HUD.CurrentTimePeriod
+				case TIME_PRESENT
+					Object[ArrayPos0].SpawnedSpikes = 5
+					break
+
+				case TIME_PAST
+					Object[ArrayPos0].SpawnedSpikes = 4
+					break
+
+				case TIME_GOOD_FUTURE
+				case TIME_BAD_FUTURE
+					Object[ArrayPos0].SpawnedSpikes = 6
+					break
+				end switch
+				
+				Object[ArrayPos0].Angle = 384
+				break
+
+			case ROTATION_CCW_LINK_MOVINGBLOCKS
+				Object[ArrayPos0].Increment = -2
+				switch HUD.CurrentTimePeriod
+				case TIME_PRESENT
+					Object[ArrayPos0].SpawnedSpikes = 5
+					break
+
+				case TIME_PAST
+					Object[ArrayPos0].SpawnedSpikes = 4
+					break
+
+				case TIME_GOOD_FUTURE
+				case TIME_BAD_FUTURE
+					Object[ArrayPos0].SpawnedSpikes = 6
+					break
+				end switch
+
+				break
+
+			case ROTATION_CCW_TWO_SPIKES
+				Object[ArrayPos0].Increment		= -2
+				Object[ArrayPos0].SpawnedSpikes =  2
+				break
+
+			case ROTATION_CW_SIX_SPIKES
+				Object[ArrayPos0].Increment		= 2
+				Object[ArrayPos0].SpawnedSpikes = 6
+				break
+			end switch
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult %= 5
+			break
+		case 0 // spikeType
+			CheckResult  = Object.PropertyValue
+			CheckResult %= 5
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue %= 5
+			break
+		case 0 // spikeType
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue %= 5
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+
+	TempValue0 = 0
+
+	switch Object.PropertyValue
+	case ROTATION_CLOCKWISE
+	case ROTATION_COUNTERCLOCKWISE
+	case ROTATION_CCW_LINK_MOVINGBLOCKS
+		CallFunction(EditorHelpers_FindTimePeriod)
+		switch CheckResult
+		case TIME_PRESENT
+			TempValue1 = 5
+			break
+		case TIME_PAST
+			TempValue1 = 4
+			break
+		case TIME_GOOD_FUTURE
+		case TIME_BAD_FUTURE
+			TempValue1 = 6
+			break
+		end switch
+		break
+	case ROTATION_CCW_TWO_SPIKES
+		TempValue1 = 2
+		break
+	case ROTATION_CW_SIX_SPIKES
+		TempValue1 = 6
+		break
+	end switch
+
+	TempValue2 = Object.XPos
+	TempValue3 = Object.YPos
+	while TempValue0 < TempValue1
+		TempValue2 += 0x100000
+		TempValue3 += 0x100000
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		TempValue0++
+	loop
+
+	if Editor.ShowGizmos == true
+		switch Object.PropertyValue
+		case ROTATION_CLOCKWISE
+		case ROTATION_CW_SIX_SPIKES
+			TempValue0   = Object.iXPos
+			TempValue0  += 32
+			TempValue0 <<= 16
+
+			TempValue1   = Object.iYPos
+			TempValue1  += 32
+			TempValue1 <<= 16
+			DrawArrow(TempValue0, Object.YPos, Object.XPos, TempValue1, 255, 255, 255, 0)
+			break
+		case ROTATION_COUNTERCLOCKWISE
+		case ROTATION_CCW_LINK_MOVINGBLOCKS
+		case ROTATION_CCW_TWO_SPIKES
+			TempValue0   = Object.iXPos
+			TempValue0  += 32
+			TempValue0 <<= 16
+
+			TempValue1   = Object.iYPos
+			TempValue1  += 32
+			TempValue1 <<= 16
+			DrawArrow(Object.XPos, TempValue1, TempValue0, Object.YPos, 255, 255, 255, 0)
+			break
+		end switch
+
+		if Object.PropertyValue == ROTATION_CCW_LINK_MOVINGBLOCKS
+			DrawLine(Object.XPos, Object.YPos, Object[-1].XPos, Object[-1].YPos, 0, 255, 255)
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 181, 143)	// #0 - Spike Joint
+	SpriteFrame(-8, -8, 16, 16, 181, 160)	// #1 - Spike
+
+	CallFunction(EditorHelpers_FindTimePeriod)
+	AddEditorVariable("spikeType")
+	SetActiveVariable("spikeType")
+	switch CheckResult
+	default
+	case TIME_PRESENT
+		AddEnumVariable("5 Spikes Clock-wise", ROTATION_CLOCKWISE)
+		AddEnumVariable("5 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+		AddEnumVariable("5 Spikes Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+		break
+	case TIME_PAST
+		AddEnumVariable("4 Spikes Clock-wise", ROTATION_CLOCKWISE)
+		AddEnumVariable("4 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+		AddEnumVariable("4 Spikes Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+		break
+	case TIME_GOOD_FUTURE
+	case TIME_BAD_FUTURE
+		AddEnumVariable("6 Spikes Clock-wise", ROTATION_CLOCKWISE)
+		AddEnumVariable("6 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+		AddEnumVariable("6 Spikes Counter Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+		break
+	end switch
+	AddEnumVariable("2 Spikes Counter Clock-wise", ROTATION_CCW_TWO_SPIKES)
+	AddEnumVariable("6 Spikes Clock-wise", ROTATION_CW_SIX_SPIKES)
+end sub

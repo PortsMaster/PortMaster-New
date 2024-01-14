@@ -1,0 +1,328 @@
+//----------------Sonic CD Transporter Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.FrameTimer
+#alias Object.Value1	:	Object.YOriginPos
+#alias Object.Value2	:	Object.Timer
+#alias Object.Value3	:	Object.Oscillation
+
+// States
+#alias 0	:	TRANSPORTER_HOVER_DOWN
+#alias 1	:	TRANSPORTER_HOVER_UP
+#alias 2	:	TRANSPORTER_EXPLODE
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Property Values
+#alias 0	:	OPERATIVE
+#alias 1	:	OLD
+#alias 2	:	DESTROYED
+#alias 3	:	OLD_DESTROYED
+
+// Global SFX
+#alias 21	:	SFX_G_ACHIEVEMENT
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Directions
+#alias 2	:	FLIP_Y
+
+
+sub ObjectMain
+	if Object.PropertyValue == OPERATIVE
+		switch Object.State
+		case TRANSPORTER_HOVER_DOWN
+			Object.Timer++
+			if Object.Timer == 32
+				Object.Oscillation = 0x2000
+				Object.Timer = 0
+				Object.State = TRANSPORTER_HOVER_UP
+			end if
+			break
+
+		case TRANSPORTER_HOVER_UP
+			Object.Timer++
+			if Object.Timer == 32
+				Object.Oscillation = -0x2000
+				Object.Timer = 0
+				Object.State = TRANSPORTER_HOVER_DOWN
+			end if
+			break
+
+		case TRANSPORTER_EXPLODE
+			// Explosion code
+			Rand(TempValue0, 80)
+			TempValue0  -= 40
+			TempValue0 <<= 16
+			TempValue0  += Object.XPos
+
+			Rand(TempValue1, 64)
+			TempValue1  -= 32
+			TempValue1 <<= 16
+			TempValue1  += Object.YPos
+
+			CreateTempObject(TypeName[Explosion], 0, TempValue0, TempValue1)
+
+			TempValue0  = Object.Timer
+			TempValue0 &= 3
+			if TempValue0 == 0
+				PlaySfx(SFX_G_EXPLOSION, false)
+			end if
+
+			Object.Timer++
+			if Object.Timer == 60
+				Object.Priority		 = PRIORITY_BOUNDS
+				Object.Timer		 = 0
+				Object.State		 = TRANSPORTER_HOVER_DOWN
+				Object.PropertyValue = DESTROYED
+
+				Object.iYPos += 16
+				PlaySfx(SFX_G_ACHIEVEMENT, false)
+			end if
+			break
+		end switch
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.PropertyValue == OPERATIVE
+		if Object.State < TRANSPORTER_EXPLODE
+//			if Player.Animation == ANI_JUMPING // Original check
+
+			CheckEqual(Player.Animation, ANI_JUMPING)
+			TempValue0 = CheckResult
+#platform: Use_Origins
+			CheckEqual(Player.Animation, ANI_GLIDING)
+			TempValue0 |= CheckResult
+			if Stage.PlayerListPos == PLAYER_AMY
+				if Player.Animation == ANI_HAMMER_JUMP
+					TempValue0 = true
+				end if
+				if Player.Animation == ANI_HAMMER_DASH
+					TempValue0 = true
+				end if
+			end if
+#endplatform
+			if TempValue0 == true
+				PlayerObjectCollision(C_TOUCH, -38, -32, 38, 32)
+				if CheckResult == true
+					Object.State = TRANSPORTER_EXPLODE
+
+					Object.YPos	= Object.YOriginPos
+
+					Transporter_Destroyed = true
+					Good_Future			  = true
+
+					Object.Priority = PRIORITY_ACTIVE
+
+					Player.Score += 1500
+					if Stage.ActNo < 3
+						TempValue0   = Stage.ListPos
+						TempValue0  /= 10
+						TempValue0 <<= 1
+						TempValue0  += Stage.ActNo
+						TempValue0--
+						SetBit(Good_Future_List, TempValue0, 1)
+					end if
+
+					// Saviour of the Planet unlock criteria
+					if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+						if Stage.DebugMode == false
+							if Good_Future_List > 16382	// 0b11111111111110
+								if MetalSonic_List > 11
+									SetAchievement(11, 100)
+								end if
+							end if
+						end if
+					end if
+				
+#platform: Use_Haptics
+					HapticEffect(90, 0, 0, 0)
+#endplatform
+
+				end if
+			else
+				PlayerObjectCollision(C_BOX, -38, -32, 38, 36)
+				if CheckResult == true
+					Player.YPos += Object.Oscillation
+				end if
+				
+			end if
+
+		end if
+
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.PropertyValue
+	case OPERATIVE
+		if Object.State < TRANSPORTER_EXPLODE
+			Object.YPos += Object.Oscillation
+			DrawSprite(Object.Frame)
+			DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+
+			// Electricity
+			TempValue0  = Object.Frame
+			TempValue0 += 4
+			DrawSprite(TempValue0)
+			TempValue0 += 4
+			DrawSprite(TempValue0)
+			TempValue0 += 4
+			DrawSprite(TempValue0)
+
+			Object.FrameTimer++
+			if Object.FrameTimer > 3
+				Object.FrameTimer = 0
+				Object.Frame++
+				if Object.Frame > 3
+					Object.Frame = 0
+				end if
+			end if
+			
+		end if
+		break
+
+	case OLD
+		DrawSprite(17)
+		DrawSpriteFX(17, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case DESTROYED
+		DrawSprite(16)
+		break
+
+	case OLD_DESTROYED
+		DrawSprite(18)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-40, -32, 80, 24, 175, 61)	// #0  - Transporter Frame 0
+	SpriteFrame(-40, -32, 80, 24, 175, 86)	// #1  - Transporter Frame 1
+	SpriteFrame(-40, -32, 80, 24, 175, 111)	// #2  - Transporter Frame 2
+	SpriteFrame(-40, -32, 80, 24, 175, 86)	// #3  - Transporter Frame 3
+	SpriteFrame(-6, -8, 12, 16, 149, 1)		// #4  - Electricity Frame 0
+	SpriteFrame(-6, -8, 12, 16, 162, 1)		// #5  - Electricity Frame 1
+	SpriteFrame(-6, -8, 12, 16, 149, 18)	// #6  - Electricity Frame 2
+	SpriteFrame(-6, -8, 12, 16, 162, 18)	// #7  - Electricity Frame 3
+	SpriteFrame(-22, -8, 12, 16, 149, 1)	// #8  - Electricity Frame 4
+	SpriteFrame(-22, -8, 12, 16, 162, 1)	// #9  - Electricity Frame 5
+	SpriteFrame(-22, -8, 12, 16, 149, 18)	// #10 - Electricity Frame 6
+	SpriteFrame(-22, -8, 12, 16, 162, 18)	// #11 - Electricity Frame 7
+	SpriteFrame(10, -8, 12, 16, 149, 1)		// #12 - Electricity Frame 8
+	SpriteFrame(10, -8, 12, 16, 162, 1)		// #13 - Electricity Frame 9
+	SpriteFrame(10, -8, 12, 16, 149, 18)	// #14 - Electricity Frame 10
+	SpriteFrame(10, -8, 12, 16, 162, 18)	// #15 - Electricity Frame 11
+	SpriteFrame(-40, 16, 80, 16, 175, 44)	// #16 - Transporter Destroyed
+	SpriteFrame(-40, -32, 80, 25, 175, 18)	// #17 - Transporter Old
+	SpriteFrame(-40, 16, 80, 16, 175, 1)	// #18 - Transporter Old Destroyed
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Transporter]
+			Object[ArrayPos0].Direction = FLIP_Y
+			
+			if Transporter_Destroyed == true
+				switch Object[ArrayPos0].PropertyValue
+				case OPERATIVE
+					Object[ArrayPos0].PropertyValue = DESTROYED
+					break
+				case OLD
+					Object[ArrayPos0].PropertyValue = OLD_DESTROYED
+					break
+				end switch
+			else
+				if Object[ArrayPos0].PropertyValue == OPERATIVE
+					Object[ArrayPos0].iYPos -= 16
+				end if
+
+				Object[ArrayPos0].YOriginPos  = Object[ArrayPos0].YPos
+				Object[ArrayPos0].Oscillation = -0x2000
+			end if
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // inactive
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // inactive
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	Object.Direction = FLIP_Y
+	
+	if Object.PropertyValue == OPERATIVE
+		// Machine
+		DrawSprite(0)
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+
+		// Electricity
+		DrawSprite(4)
+		DrawSprite(8)
+		DrawSprite(12)
+	else
+		DrawSprite(17)
+		DrawSpriteFX(17, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-40, -32, 80, 24, 175, 61)	// #0  - Transporter Frame 0
+	SpriteFrame(-40, -32, 80, 24, 175, 86)	// #1  - Transporter Frame 1
+	SpriteFrame(-40, -32, 80, 24, 175, 111)	// #2  - Transporter Frame 2
+	SpriteFrame(-40, -32, 80, 24, 175, 86)	// #3  - Transporter Frame 3
+	SpriteFrame(-6, -8, 12, 16, 149, 1)		// #4  - Electricity Frame 0
+	SpriteFrame(-6, -8, 12, 16, 162, 1)		// #5  - Electricity Frame 1
+	SpriteFrame(-6, -8, 12, 16, 149, 18)	// #6  - Electricity Frame 2
+	SpriteFrame(-6, -8, 12, 16, 162, 18)	// #7  - Electricity Frame 3
+	SpriteFrame(-22, -8, 12, 16, 149, 1)	// #8  - Electricity Frame 4
+	SpriteFrame(-22, -8, 12, 16, 162, 1)	// #9  - Electricity Frame 5
+	SpriteFrame(-22, -8, 12, 16, 149, 18)	// #10 - Electricity Frame 6
+	SpriteFrame(-22, -8, 12, 16, 162, 18)	// #11 - Electricity Frame 7
+	SpriteFrame(10, -8, 12, 16, 149, 1)		// #12 - Electricity Frame 8
+	SpriteFrame(10, -8, 12, 16, 162, 1)		// #13 - Electricity Frame 9
+	SpriteFrame(10, -8, 12, 16, 149, 18)	// #14 - Electricity Frame 10
+	SpriteFrame(10, -8, 12, 16, 162, 18)	// #15 - Electricity Frame 11
+	SpriteFrame(-40, 16, 80, 16, 175, 44)	// #16 - Transporter Destroyed
+	SpriteFrame(-40, -32, 80, 25, 175, 18)	// #17 - Transporter Old
+	SpriteFrame(-40, 16, 80, 16, 175, 1)	// #18 - Transporter Old Destroyed
+
+	AddEditorVariable("inactive")
+	SetActiveVariable("inactive")
+	AddEnumVariable("False", false)
+	AddEnumVariable("True", true)
+end sub

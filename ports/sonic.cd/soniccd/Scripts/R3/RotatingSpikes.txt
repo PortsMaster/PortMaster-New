@@ -1,0 +1,235 @@
+//--------------Sonic CD Rotating Spikes Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Angle
+#alias Object.Value1			:	Object.Speed
+#alias Object.Value2			:	Object.SpawnedSpikes
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Property Values
+#alias 0	:	MAXSPIKES_RIGHT
+#alias 1	:	MAXSPIKES_LEFT
+#alias 2	:	TWO_SPIKES_RIGHT
+#alias 3	:	TWO_SPIKES_LEFT
+
+// Time Periods
+#alias 1	:	TIME_PAST
+
+
+sub ObjectMain
+	Object.Angle += Object.Speed
+	if Object.Angle < 0
+		Object.Angle += 512
+	end if
+	Object.Angle &= 511
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = 0
+	TempValue1 = 16
+	TempValue2 = Object.XPos
+	TempValue3 = Object.YPos
+
+	while TempValue0 < Object.SpawnedSpikes
+	
+		Cos(Object.XPos, Object.Angle)
+		Object.XPos  *= TempValue1
+		Object.XPos <<= 7
+		Object.XPos  += TempValue2
+
+		Sin(Object.YPos, Object.Angle)
+		Object.YPos  *= TempValue1
+		Object.YPos <<= 7
+		Object.YPos  += TempValue3
+
+		PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+
+		TempValue0++
+		TempValue1 += 16
+	loop
+	Object.XPos = TempValue2
+	Object.YPos = TempValue3
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+
+	TempValue0 = 0
+	TempValue1 = 16
+	while TempValue0 < Object.SpawnedSpikes
+
+		Cos(TempValue2, Object.Angle)
+		TempValue2  *= TempValue1
+		TempValue2 <<= 7
+		TempValue2  += Object.XPos
+		
+		Sin(TempValue3, Object.Angle)
+		TempValue3  *= TempValue1
+		TempValue3 <<= 7
+		TempValue3  += Object.YPos
+
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		
+		TempValue0++
+		TempValue1 += 16
+	loop
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 181, 143)	// #0 - Spike Joint
+	SpriteFrame(-8, -8, 16, 16, 181, 160)	// #1 - Spike
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rotating Spikes]
+			switch Object[ArrayPos0].PropertyValue
+			case MAXSPIKES_RIGHT
+				Object[ArrayPos0].Speed = 2
+				if HUD.CurrentTimePeriod > 1	// In the future it has 4 spikes
+					Object[ArrayPos0].SpawnedSpikes = 4
+				else
+					Object[ArrayPos0].SpawnedSpikes = 3
+				end if
+				break
+
+			case MAXSPIKES_LEFT
+				Object[ArrayPos0].Speed = -2
+				if HUD.CurrentTimePeriod > 1	// In the future it has 4 spikes
+					Object[ArrayPos0].SpawnedSpikes = 4
+				else
+					Object[ArrayPos0].SpawnedSpikes = 3
+				end if
+				break
+
+			case TWO_SPIKES_RIGHT
+				Object[ArrayPos0].Speed = 2
+				Object[ArrayPos0].SpawnedSpikes = 2
+				break
+
+			case TWO_SPIKES_LEFT
+				Object[ArrayPos0].Speed = -2
+				Object[ArrayPos0].SpawnedSpikes = 2
+				break
+
+			end switch
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 3
+			break
+		case 0 // spikeType
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 3
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 3
+			break
+		case 0 // spikeType
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 3
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+
+	TempValue0 = 0
+	if Object.PropertyValue > 1
+		TempValue1 = 2
+	else
+		CheckCurrentStageFolder("B")
+		if CheckResult == true
+			TempValue1 = 3
+		else
+			TempValue1 = 4
+		end if
+	end if
+
+	TempValue2 = Object.XPos
+	TempValue3 = Object.YPos
+	while TempValue0 < TempValue1
+		TempValue2 += 0x100000
+		TempValue3 += 0x100000
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		TempValue0++
+	loop
+
+	if Editor.ShowGizmos == true
+		switch Object.PropertyValue
+		case 0
+		case 2
+			TempValue0   = Object.iXPos
+			TempValue0  += 32
+			TempValue0 <<= 16
+
+			TempValue1   = Object.iYPos
+			TempValue1  += 32
+			TempValue1 <<= 16
+			DrawArrow(TempValue0, Object.YPos, Object.XPos, TempValue1, 255, 255, 255, 0)
+			break
+		case 1
+		case 3
+			TempValue0   = Object.iXPos
+			TempValue0  += 32
+			TempValue0 <<= 16
+
+			TempValue1   = Object.iYPos
+			TempValue1  += 32
+			TempValue1 <<= 16
+			DrawArrow(Object.XPos, TempValue1, TempValue0, Object.YPos, 255, 255, 255, 0)
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 181, 143)	// #0 - Spike Joint
+	SpriteFrame(-8, -8, 16, 16, 181, 160)	// #1 - Spike
+
+	CheckCurrentStageFolder("B")
+	AddEditorVariable("spikeType")
+	SetActiveVariable("spikeType")
+	if CheckResult == true
+		AddEnumVariable("3 Spikes Clock-wise", 0)
+		AddEnumVariable("3 Spikes Counter Clock-wise", 1)
+	else
+		AddEnumVariable("4 Spikes Clock-wise", 0)
+		AddEnumVariable("4 Spikes Counter Clock-wise", 1)
+	end if
+	AddEnumVariable("2 Spikes Clock-wise", 2)
+	AddEnumVariable("2 Spikes Counter Clock-wise", 3)
+end sub

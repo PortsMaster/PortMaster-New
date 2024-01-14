@@ -1,0 +1,265 @@
+//-----------------Sonic CD Mecha Bu Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+
+#alias Object.Value2		:	Object.XOriginPos
+#alias Object.Value3		:	Object.YOriginPos
+#alias Object.Value4		:	Object.HornTimer
+#alias Object.Value5		:	Object.SFXTimer
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	MECHABU_FINDGROUND
+#alias 1	:	MECHABU_BACKTRACK
+#alias 2	:	MECHABU_ADVANCE
+
+// Stage SFX
+#alias 1	:	SFX_S_BUZZSAW
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+
+sub ObjectMain
+	switch Object.State
+	case MECHABU_FINDGROUND
+		// See if there's any ground to be found at the Bu's current position
+		ObjectTileCollision(CSIDE_FLOOR, 0, 15, 0)
+		
+		if CheckResult == true
+			// Floor detected, go to the normal movement states now
+			
+			Object.State = MECHABU_BACKTRACK
+		else
+			// The Bu's still in the air, so move a pixel down
+			
+			Object.YPos += 0x10000
+		end if
+		break
+		
+	case MECHABU_BACKTRACK
+		if Object.Timer < 416
+			Object.Timer++
+			
+			// Move 0.3125 pixels right (opposite of the direction the Bu's currently towards)
+			Object.XPos += 0x5000
+		else
+			// Change direction, start going ahead now
+			
+			Object.Timer = 0
+			Object.State = MECHABU_ADVANCE
+		end if
+		
+		// Stay with the ground even when going backwards, quite the fancy moonwalk!
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		break
+		
+	case MECHABU_ADVANCE
+		if Object.Timer < 416
+			Object.Timer++
+			
+			// Move 0.3125 pixels to the left (in the direction the Bu is facing)
+			Object.XPos -= 0x5000
+		else
+			// Change direction once again, start going backwards
+			
+			Object.Timer = 0
+			Object.State = MECHABU_BACKTRACK
+		end if
+		
+		// Track the ground, the Bu should always be grounded
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		break
+		
+	end switch
+	
+	// See if the Bu should become a Flower instead
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	// Huh, it doesn't seem like the Mecha Bu ever reaches state 3, so this check
+	// is effectivly useless
+	if Object.State < 3
+		
+		// Check collision with the main Mecha Bu
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -16, -14, 16, 14)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -16, -14, 16, 14)
+#endplatform
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+		
+		// Make sure the Bu hasn't become a Flower (destroyed) before checking for other parts
+		if Object.Type == TypeName[Mecha Bu]
+		
+			// Bug Details:
+			// The PlayerObjectCollision boxes here for MechaBu are swapped for both positions of its horn.
+			// As to how this happened is unclear, most likely a programming oversight.
+			if Object.HornTimer > 59
+				PlayerObjectCollision(C_TOUCH, -30, -32, -8, 0) // Timer is over 59 frames, use "Lower" Hitbox
+				if CheckResult == true
+					CallFunction(Player_Hit)
+				end if
+			else
+				PlayerObjectCollision(C_TOUCH, -36, -16, -14, 16) // Timer is under 59 frames, use "Raised" Hitbox
+				if CheckResult == true
+					CallFunction(Player_Hit)
+				end if
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	Object.SFXTimer++
+	if Object.SFXTimer == 48
+		Object.SFXTimer = 0
+		PlayStageSfx(SFX_S_BUZZSAW, false)
+	end if
+	
+	TempValue0  = Object.AnimationTimer
+	TempValue0 /= 3
+	
+	Object.AnimationTimer++
+	Object.AnimationTimer %= 6
+
+	if Object.Quality == GOOD_QUALITY
+	
+		// Bug Details:
+		// MechaBu has it's saw rendering behind its body. Another programming oversight...?
+		if Object.HornTimer > 59
+			TempValue0 += 5
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Saw Sprite
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos) // Draw Body Sprite
+			DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Arm Sprite
+		else
+			TempValue0 += 2
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos) // Draw Lower Saw Sprite
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos) // Draw Body Sprite
+			DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos) // Draw Lower Arm Sprite
+		end if
+		
+		// Start the HornTimer, reset every 120 frames
+		Object.HornTimer++
+		Object.HornTimer %= 120
+	else
+		TempValue0 += 5
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Saw Sprite
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos) // Draw Body Sprite
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Arm Sprite
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+
+	SpriteFrame(-23, -17, 16, 24, 156, 177)	// #1 - Mecha Bu Horn frame 0
+	SpriteFrame(-31, -32, 24, 32, 230, 1)	// #2 - Mecha Bu Saw frame 0
+	SpriteFrame(-31, -32, 24, 32, 173, 173)	// #3 - Mecha Bu Saw frame 1
+
+	SpriteFrame(-33, -8, 24, 16, 131, 177)	// #4 - Mecha Bu Horn frame 1
+	SpriteFrame(-37, -16, 24, 32, 230, 1)	// #5 - Mecha Bu Saw frame 0
+	SpriteFrame(-37, -16, 24, 32, 173, 173)	// #6 - Mecha Bu Saw frame 1
+	
+	// Cycle through all Objects in the level and find all Mecha Bu's
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Mecha Bu]
+		
+			// Store their its starting position
+			// (These don't ever seem to be used, though?)
+			
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // condition
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	if Object.PropertyValue == GOOD_QUALITY
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos) // Draw Body Sprite
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos) // Draw Lower Saw Sprite
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos) // Draw Lower Arm Sprite
+	else
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos) // Draw Body Sprite
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Saw Sprite
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos) // Draw Raised Arm Sprite
+	end if
+end sub
+
+
+sub RSDKLoad
+	
+	LoadSpriteSheet("R8/Objects.gif")
+	
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+
+	SpriteFrame(-23, -17, 16, 24, 156, 177)	// #1 - Mecha Bu Horn frame 0
+	SpriteFrame(-31, -32, 24, 32, 230, 1)	// #2 - Mecha Bu Saw frame 0
+	SpriteFrame(-31, -32, 24, 32, 173, 173)	// #3 - Mecha Bu Saw frame 1
+
+	SpriteFrame(-33, -8, 24, 16, 131, 177)	// #4 - Mecha Bu Horn frame 1
+	SpriteFrame(-37, -16, 24, 32, 230, 1)	// #5 - Mecha Bu Saw frame 0
+	SpriteFrame(-37, -16, 24, 32, 173, 173)	// #6 - Mecha Bu Saw frame 1
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

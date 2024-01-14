@@ -1,0 +1,140 @@
+//------------------Sonic CD DustPuff Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Timer
+
+// Property Values
+#alias 0 : DUSTPUFF_SPAWNER
+#alias 1 : DUSTPUFF_CHILD
+
+// Player aliases
+#alias Player.XPos   : SSSonic.XPos
+#alias Player.YPos   : SSSonic.YPos
+#alias Object.Value0 : SSSonic.ZPos
+
+// Stage SFX
+#alias 0 : SFX_S_GRITTYGROUND
+
+// Tile Info
+#alias 6 : TILEINFO_ANGLEA
+
+
+sub ObjectMain
+	if Object.PropertyValue == DUSTPUFF_SPAWNER
+		// The Spawner is, well, spawned by the [Sonic] object in order to spawn more Dust Puffs
+		// Sure is a lot of spawning, huh?
+		
+		if SSSonic.YPos > 0
+			// If the player is in the air, then unload
+			ResetObjectEntity(3, TypeName[Blank Object], 0, 0, 0)
+		else
+			
+			// Get Sonic's truncated X and Z Positions
+			TempValue0 = SSSonic.XPos
+			TempValue0 >>= 16
+			
+			TempValue1 = SSSonic[-1].ZPos
+			TempValue1 >>= 16
+			
+			// Get what type of tile it is
+			Get16x16TileInfo(CheckResult, TempValue0, TempValue1, TILEINFO_ANGLEA)
+			
+			// Is it a non-standard tile?
+			if CheckResult > 0
+				Object.Timer++
+				
+				if Object.Timer > 2
+					Object.Timer = 0
+					
+					PlayStageSfx(SFX_S_GRITTYGROUND, false)
+					
+					// Randomise the dust position a little
+					Rand(TempValue0, 40)
+					TempValue0 -= 20
+					Rand(TempValue1, 8)
+					TempValue1 -= 8
+					
+					TempValue0 += Screen.CenterX
+					TempValue1 += 224
+					
+					TempValue0 <<= 16
+					TempValue1 <<= 16
+					
+					// Create the Dust Puff child object, no need to setup any ZPos stuff since it's a purely 2d object
+					CreateTempObject(TypeName[Dust Puff], DUSTPUFF_CHILD, TempValue0, TempValue1)
+					Object[TempObjectPos].DrawOrder = 4
+				end if
+			else
+				Object.Type = TypeName[Blank Object]
+				Object.Timer = 0
+			end if
+		end if
+	else
+		// Child Dust Puff object
+		
+		Object.Timer++
+		if Object.Timer == 9
+			Object.Type = TypeName[Blank Object]
+		end if
+		
+		// If the Player's moving, then we gotta follow along too!
+		
+		if Player.Left == true
+			Object.XPos += 0x10000
+		end if
+		
+		if Player.Right == true
+			Object.XPos -= 0x10000
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.PropertyValue == DUSTPUFF_CHILD
+		// Find the Frame to display based on how much time the object has left
+		Object.Frame = Object.Timer
+		Object.Frame /= 3
+		
+		// Draw the Sprite, note the use of standard DrawSprite rather than anything fancy like the other SS objects
+		// This is because the object should only ever exist on a 2d plane anyway
+		DrawSprite(Object.Frame)
+	end if
+	
+	// DUSTPUFF_SPAWNER doesn't draw, it spawns other Dust Puff objects to draw instead
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Special/Objects.gif")
+	
+	// Dust Puff Frames
+	SpriteFrame(-5, -4, 10, 8, 27, 58)
+	SpriteFrame(-5, -4, 11, 8, 10, 58)
+	SpriteFrame(-4, -4, 8, 8, 1, 58)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-5, -4, 10, 8, 27, 58)
+	
+	// Although it's used by the Object, it's not to be set from the editor
+	// (This Object shouldn't be placed into a scene directly at all, really...)
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

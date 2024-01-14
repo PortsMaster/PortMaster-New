@@ -1,0 +1,293 @@
+//----------------Sonic CD Boss Leg Script 2------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//---------Used on Mission "M099 - Eggman: Speed Up"----------//
+
+// Aliases
+#alias Object.Value0		:	Object.LegJointEntity
+#alias Object.Value1		:	Object.FootEntity
+#alias Object.Value2		:	Object.XOffSet
+#alias Object.Value4		:	Object.LegSide
+#alias Object.Value5		:	Object.YOffSet
+#alias Object.Value6		:	Object.XVelocity
+#alias Object.Value7		:	Object.YVelocity
+
+// Foot Aliases
+#alias Object.Value4		:	Foot.LegSide
+
+// Leg Joint Aliases
+#alias Object.XPos			:	LegJoint.XPos
+#alias Object.YPos			:	LegJoint.YPos
+#alias Object.Value0		:	LegJoint.BodyEntity
+
+#alias Object.Value1		:	LegJointR.LegREntity
+
+// Leg Aliases
+#alias Object.XPos			:	LegR.XPos
+#alias Object.YPos			:	LegR.YPos
+
+// Body Aliases
+#alias Object.Value0		:	Body.FaceEntity
+#alias Object.Value1		:	Body.LegJointREntity
+#alias Object.XPos			:	Body.XPos
+#alias Object.YPos			:	Body.YPos
+
+// Face Aliases
+#alias Object.XPos			:	Face.XPos
+#alias Object.YPos			:	Face.YPos
+#alias Object.Animation		:	Face.Animation
+#alias Object.Direction		:	Face.FaceTimer
+
+// Player Aliases
+#alias Player.Value4		:	Player.InvincibleTimer
+
+// States
+#alias 0	:	BOSSLEG2_SETUP
+#alias 1	:	BOSSLEG2_LANDING
+#alias 2	:	BOSSLEG2_L_MIMIC_R
+#alias 3	:	BOSSLEG2_MOVE
+#alias 4	:	BOSSLEG2_MOVE_OPPOSITE
+#alias 5	:	BOSSLEG2_MOVE_C			// Charged version
+#alias 6	:	BOSSLEG2_MOVE_OPPOSITE_C	// Charged version
+#alias 7	:	BOSSLEG2_DESTROYED
+
+// Eggman Animations
+#alias 1	:	EGGANI_LAUGH
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+
+// Function declarations
+#function BossLeg2_SaveLegPosition
+#function BossLeg2_HandleMovement
+
+function BossLeg2_SaveLegPosition
+	GetBit(TempValue0, Object.LegSide, 5)
+	if TempValue0 == true
+		ArrayPos0 = Object.LegJointEntity
+		LegJoint[ArrayPos0].XPos += TempValue1
+		LegJoint[ArrayPos0].YPos += TempValue2
+
+		ArrayPos1 = LegJoint[ArrayPos0].BodyEntity
+		Body[ArrayPos1].XPos += TempValue1
+		Body[ArrayPos1].YPos += TempValue2
+
+		ArrayPos0 = Body[ArrayPos1].FaceEntity
+		Face[ArrayPos0].XPos += TempValue1
+		Face[ArrayPos0].YPos += TempValue2
+	end if
+end function
+
+
+function BossLeg2_HandleMovement
+	ArrayPos0 = Object.LegJointEntity
+	Object.XPos  = LegJoint[ArrayPos0].XPos
+	Object.XPos += 0x40000
+	Object.XPos += Object.XVelocity
+	
+	Object.YPos  = LegJoint[ArrayPos0].YPos
+	Object.YPos += 0x100000
+	Object.YPos += Object.YVelocity
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSLEG2_SETUP
+		TempValue0  = 0x4000
+		TempValue0 *= Object.PropertyValue	// Set the XOffset value based on it's property value
+		TempValue0 /= 10
+
+		Object.XOffSet   = TempValue0
+		Object.XOffSet <<= 1
+		Object.YOffSet   = TempValue0
+
+		Object.State = BOSSLEG2_LANDING
+		break
+
+	case BOSSLEG2_LANDING
+		ArrayPos0 = Object.LegJointEntity
+
+		Object.XPos  = LegJoint[ArrayPos0].XPos
+		Object.XPos += 0x40000
+
+		Object.YPos  = LegJoint[ArrayPos0].YPos
+		Object.YPos += 0x100000
+		break
+
+	case BOSSLEG2_L_MIMIC_R
+		// No matter the leg, it will end up picking the right leg here
+		ArrayPos0 = Object.LegJointEntity
+		ArrayPos1 = LegJoint[ArrayPos0].BodyEntity
+		ArrayPos0 = Body[ArrayPos1].LegJointREntity
+		ArrayPos1 = LegJointR[ArrayPos0].LegREntity
+
+		Object.XPos  = LegR[ArrayPos1].XPos
+		Object.XPos -= 0xA0000
+		Object.YPos  = LegR[ArrayPos1].YPos
+		break
+
+	case BOSSLEG2_MOVE
+		// Whatever leg this is, it will move
+		ArrayPos0 = Object.FootEntity
+		if Object.XVelocity < 0x80000
+			TempValue1 = Object.XOffSet
+			Object.XVelocity += TempValue1
+
+			GetBit(TempValue0, Object.LegSide, 4)
+			if TempValue0 == true
+				FlipSign(TempValue1)
+				TempValue2 = false
+				CallFunction(BossLeg2_SaveLegPosition)
+			else
+				CallFunction(BossLeg2_HandleMovement)
+			end if
+
+		else
+			CallFunction(BossLeg2_HandleMovement)
+		end if
+		break
+
+	case BOSSLEG2_MOVE_OPPOSITE
+		// Whatever leg this is, it will wait for the opposite to move
+		ArrayPos0 = Object.FootEntity
+		if Object.XVelocity > -0x80000
+			TempValue1 = Object.XOffSet
+			Object.XVelocity -= TempValue1
+
+			GetBit(TempValue0, Object.LegSide, 4)
+			if TempValue0 == true
+				TempValue2 = false
+				CallFunction(BossLeg2_SaveLegPosition)
+			else
+				CallFunction(BossLeg2_HandleMovement)
+			end if
+			
+		else
+			CallFunction(BossLeg2_HandleMovement)
+		end if
+		break
+
+	case BOSSLEG2_MOVE_C
+		// whatever leg this is, it will move
+		if Object.XVelocity > -0x80000
+			TempValue1 = Object.XOffSet
+			Object.XVelocity -= TempValue1
+		else
+			TempValue1 = 0
+		end if
+
+		if Object.YVelocity > -0x40000
+			TempValue2 = Object.YOffSet
+			Object.YVelocity -= TempValue2
+		else
+			TempValue2 = 0
+		end if
+
+		GetBit(TempValue0, Object.LegSide, 4)
+		if TempValue0 == true
+			CallFunction(BossLeg2_SaveLegPosition)
+		else
+			CallFunction(BossLeg2_HandleMovement)
+		end if
+		break
+
+	case BOSSLEG2_MOVE_OPPOSITE_C
+		// whatever leg this is, it will wait for it's opposite to move
+		if Object.XVelocity > -0x80000
+			TempValue1 = Object.XOffSet
+			Object.XVelocity -= TempValue1
+		else
+			TempValue1 = 0
+		end if
+
+		if Object.YVelocity <  0x40000
+			TempValue2 = Object.YOffSet
+			Object.YVelocity += TempValue2
+		else
+			TempValue2 = 0
+		end if
+
+		GetBit(TempValue0, Object.LegSide, 4)
+		if TempValue0 == true
+			FlipSign(TempValue2)
+			CallFunction(BossLeg2_SaveLegPosition)
+		else
+			CallFunction(BossLeg2_HandleMovement)
+		end if
+		break
+
+	case BOSSLEG2_DESTROYED
+		GetBit(TempValue0, Object.LegSide, 4)
+		if TempValue0 == false
+			Object.XOffSet -= 0x600
+		else
+			Object.XOffSet += 0x600
+		end if
+		Object.YOffSet += 0x1A60
+
+		Object.XPos += Object.XOffSet
+		Object.YPos += Object.YOffSet
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < BOSSLEG2_DESTROYED
+		if Player.InvincibleTimer == 0
+			PlayerObjectCollision(C_TOUCH, -12, -20, 12, -20)
+			if CheckResult == true
+
+				Player.State = Player_State_GotHit
+
+				ArrayPos0 = Object.LegJointEntity
+				ArrayPos1 = LegJoint[ArrayPos0].BodyEntity
+				ArrayPos0 = Body[ArrayPos1].FaceEntity
+
+				Face[ArrayPos0].Animation = EGGANI_LAUGH
+				Face[ArrayPos0].FaceTimer = 180
+
+				if Player.XPos > Object.XPos
+					Player.Speed =  0x20000
+				else
+					Player.Speed = -0x20000
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+
+	SpriteFrame(-12, -20, 24, 40, 74, 1)	// #0 - EGG-HVC-001 Leg
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-12, -20, 24, 40, 74, 1)	// #0 - EGG-HVC-001 Leg
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

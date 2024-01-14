@@ -1,0 +1,265 @@
+//----------------Sonic CD Boss Wing Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.RotDrawXPos
+#alias Object.Value4	:	Object.RotDrawYPos
+#alias Object.Value5	:	Object.Attached	// Used by Egg Mobile
+#alias Object.Value6	:	Object.VisibleFrame
+#alias Object.Value7	:	Object.EggMobileEntity
+
+// States
+#alias 0	:	BOSSWING_BLANK	// State used while attached on the Egg Mobile
+#alias 1	:	BOSSWING_DETACH
+#alias 2	:	BOSSWING_FALL_VERTICAL
+#alias 3	:	BOSSWING_DROP_GROUNDED
+#alias 4	:	BOSSWING_VANISH
+#alias 5	:	BOSSWING_FALL_DIAGONAL
+
+// Eggman Animations
+#alias 2	:	EGGANI_LAUGH
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Stage SFX
+#alias 8	:	SFX_S_IMPACT1
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSWING_DETACH
+		Object.YPos -= Object.YVelocity
+		break
+
+	case BOSSWING_FALL_VERTICAL
+		Object.YPos += Object.YVelocity
+		if Object.Timer < 30
+			Object.Timer++
+			Object.XPos += Object.XVelocity
+		else
+			if Object.Rotation == 0
+				ObjectTileCollision(CSIDE_FLOOR, 0, 32, 0)
+			else
+				ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+			end if
+			if CheckResult == true
+				Object.State = BOSSWING_DROP_GROUNDED
+				Object.Timer = 0
+				PlayStageSfx(SFX_S_IMPACT1, false)
+
+#platform: Use_Haptics
+				HapticEffect(100, 0, 0, 0)
+#endplatform
+
+			else
+				Object.XPos += Object.XVelocity
+			end if
+		end if
+		break
+
+	case BOSSWING_DROP_GROUNDED
+		if Object.Timer < 30
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.VisibleFrame = Object.Frame
+			Object.State++
+		end if
+		break
+
+	case BOSSWING_VANISH
+		if Object.Timer < 60
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State = BOSSWING_BLANK
+			Object.Type  = TypeName[Blank Object]
+		end if
+		TempValue0  = Object.Timer
+		TempValue0 &= 1
+		if TempValue0 == 0
+			Object.Frame = 5
+		else
+			Object.Frame = Object.VisibleFrame
+		end if
+		break
+
+	case BOSSWING_FALL_DIAGONAL
+		Object.XPos += Object.XVelocity
+		Object.YPos += Object.YVelocity
+
+		Object.Rotation += 508
+		Object.Rotation &= 511
+
+		Object.YVelocity += 0x3000
+
+		if Object.Timer < 120
+			Object.Timer++
+		else
+			Object.Priority = PRIORITY_BOUNDS
+			Object.Timer    = 0
+			Object.State    = BOSSWING_BLANK
+			Object.Type     = TypeName[Blank Object]
+		end if
+
+		TempValue0  = Object.Timer
+		TempValue0 &= 1
+		if TempValue0 == 0
+			Object.Frame = 5
+		else
+			Object.Frame = 0
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < BOSSWING_VANISH
+		TempValue0 = 0
+		TempValue1 = Object.XPos
+		TempValue2 = Object.YPos
+		PlayerObjectCollision(C_TOUCH, -12, -12, 12, 12)
+		TempValue0 = CheckResult
+
+		Sin(Object.XPos, Object.Rotation)
+		Object.XPos  *= -0x100000
+		Object.XPos >>= 9
+		Object.XPos  += TempValue1
+
+		Cos(Object.YPos, Object.Rotation)
+		Object.YPos  *= 0x100000
+		Object.YPos >>= 9
+		Object.YPos  += TempValue2
+
+		PlayerObjectCollision(C_TOUCH, -10, -10, 10, 10)
+		TempValue0 |= CheckResult
+		
+		Sin(Object.XPos, Object.Rotation)
+		Object.XPos  *= 0x100000
+		Object.XPos >>= 9
+		Object.XPos  += TempValue1
+
+		Cos(Object.YPos, Object.Rotation)
+		Object.YPos  *= -0x100000
+		Object.YPos >>= 9
+		Object.YPos  += TempValue2
+
+		PlayerObjectCollision(C_TOUCH, -15, -15, 15, 15)
+		TempValue0 |= CheckResult
+
+		Object.XPos = TempValue1
+		Object.YPos = TempValue2
+
+		if TempValue0 == true
+			CallFunction(Player_Hit)
+			if Player.State == Player_State_GotHit
+				ArrayPos0 = Object.EggMobileEntity
+				Object[ArrayPos0].Animation = EGGANI_LAUGH
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue6 = Object.XPos
+	TempValue7 = Object.YPos
+
+	if Object.Rotation == 256
+		TempValue6 -= 0x10000
+	end if
+
+	if Object.Rotation == 384
+		TempValue7 -= 0x10000
+	end if
+
+	switch Object.Frame
+	case 0
+	case 1
+	case 2
+		DrawSpriteFX(Object.Frame, FX_ROTATE, TempValue6, TempValue7)
+
+		Sin(Object.RotDrawXPos, Object.Rotation)
+		Object.RotDrawXPos  *= -0x200000
+		Object.RotDrawXPos >>=  9
+		Object.RotDrawXPos  +=  Object.XPos
+
+		Cos(Object.RotDrawYPos, Object.Rotation)
+		Object.RotDrawYPos  *=  0x200000
+		Object.RotDrawYPos >>=  9
+		Object.RotDrawYPos  +=  Object.YPos
+		
+		DrawSpriteXY(3, Object.RotDrawXPos, Object.RotDrawYPos)
+		break
+
+	case 3	// Set by EggMobile
+		DrawSpriteFX(0, FX_ROTATE, TempValue6, TempValue7)
+		break
+
+	case 4	// Set by EggMobile
+		DrawSpriteFX(2, FX_ROTATE, TempValue6, TempValue7)
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects3.gif")
+
+	SpriteFrame(-24, -32, 48, 64, 156, 1)	// #0 - Boss Wing facing front
+	SpriteFrame(-16, -32, 32, 64, 205, 1)	// #1 - Boss Wing facing 45°
+	SpriteFrame(-8, -32, 16, 64, 238, 1)	// #2 - Boss Wing facing side
+
+	SpriteFrame(-8, -8, 16, 16, 90, 18)		// #3 - Boss Wing body attachment
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue6 = Object.XPos
+	TempValue7 = Object.YPos
+
+	if Object.Rotation == 256
+		TempValue6 -= 0x10000
+	end if
+
+	if Object.Rotation == 384
+		TempValue7 -= 0x10000
+	end if
+	DrawSpriteXY(0, Object.XPos, Object.YPos)
+
+	Sin(TempValue0, 0)
+	TempValue0  *= -0x200000
+	TempValue0 >>=  9
+	TempValue0 +=  Object.XPos
+
+	Cos(TempValue1, 0)
+	TempValue1  *=  0x200000
+	TempValue1 >>=  9
+	TempValue1  +=  Object.YPos
+	
+	DrawSpriteXY(1, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects3.gif")
+
+	SpriteFrame(-24, -32, 48, 64, 156, 1)	// #0 - Boss Wing facing front
+	SpriteFrame(-8, -8, 16, 16, 90, 18)		// #1 - Boss Wing body attachment
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub
