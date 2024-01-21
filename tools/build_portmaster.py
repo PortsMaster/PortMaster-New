@@ -14,8 +14,7 @@ from pathlib import Path
 
 #############################################################################
 ## Change these to point to your PortMaster repo
-PORTMASTER_DIR = Path("../PortMaster-Hosting")
-
+PORTMASTER_DIR = Path("../PortMaster")
 
 #############################################################################
 
@@ -332,7 +331,7 @@ class ZipPort():
 
         self.port_name = name_cleaner(zip_file.stem)
 
-        self.port_dir = Path("./") / self.port_name
+        self.port_dir = Path("ports/") / self.port_name
         self.file_structure = {}
 
         self.file_structure[self.port_dir] = None
@@ -432,15 +431,21 @@ def load_ports(port_dir):
         ports.append(ZipPort(file_name))
 
     return ports
-    
+
 
 def main(argv):
+    if '--yes-run-please' not in argv:
+        print("Only run this if you know what you're doing.")
+        return 255
+
     ports = load_ports(PORTMASTER_DIR)
 
     for port in ports:
         print(f"- {port.port_name}")
         port.extract()
 
+    return 0
+
 
 if __name__ == '__main__':
-    main(sys.argv)
+    exit(main(sys.argv))

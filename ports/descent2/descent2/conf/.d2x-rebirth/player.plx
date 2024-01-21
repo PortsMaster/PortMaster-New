@@ -25,12 +25,12 @@ speed2=16
 speed3=16
 speed4=16
 speed5=16
-deadzone0=0
-deadzone1=0
-deadzone2=0
-deadzone3=0
-deadzone4=0
-deadzone5=0
+deadzone0=2
+deadzone1=2
+deadzone2=2
+deadzone3=2
+deadzone4=2
+deadzone5=2
 [end]
 [mouse]
 flightsim=0
@@ -84,6 +84,7 @@ cycleautoselectonly=0
 cloakinvultimer=0
 respawnkey=0
 mouselook=0
+pitchlock=0
 [end]
 [graphics]
 alphaeffects=1
