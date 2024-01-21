@@ -25,7 +25,7 @@ This name must not clash with any other existing ports.
 
 ### New Port Structure:
 
-Ports are now contained within a top level directory, the directory `<portname>`, using the rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `port.spec` and `cover.{jpg,png}`.
+Ports are now contained within a top level directory, the directory `<portname>`, using the rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}`.
 
 The script should have capital letters (like `Port Name.sh`) and must end in `.sh`, the port directory should be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
 
@@ -35,7 +35,6 @@ A port directory might look like the following:
 
 ```
 - portname/
-  - port.spec
   - port.json
   - README.md
   - screenshot.jpg
@@ -46,27 +45,6 @@ A port directory might look like the following:
 ```
 
 The above file structure would create a `portname.zip` file.
-
-#### port.spec
-
-In the future ports will not be accepted with zipped up files, but sometimes its easier to deal with files zipped inside the port. So to allow this you can create a `port.spec`, this will be run before the port is zipped up. It can be used to zip up files.
-
-Some legacy ports contain zipped up files, they won't be accepted in the future, and from this point forwards ports will not be accepted which include zipped up files in the git repo, unless there are specialised circumstances.
-
-This is a simple bash script that will be run in the ports directory before it is zipped up.
-
-```bash
-#!/bin/bash
-
-# CD into the portname directory
-cd portname/
-
-# Create a data.tar.gz file
-tar -cjf data.tar.gz data/
-
-# Remove the data/ directory
-rm -fR data/
-```
 
 #### README.md
 

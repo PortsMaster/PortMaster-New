@@ -24,9 +24,10 @@ from util import *
 
 #############################################################################
 ## Constants
-README_FILE, SCREENSHOT_FILE, COVER_FILE, SPEC_FILE, PORT_JSON, PORT_SCRIPT, PORT_DIR, UNKNOWN_FILE = range(8)
+README_FILE, SCREENSHOT_FILE, COVER_FILE, SPEC_FILE, PORT_JSON, PORT_SCRIPT, PORT_DIR, GITIGNORE_FILE, UNKNOWN_FILE = range(9)
 
 FILE_TYPE_RE = {
+    r"^\.gitignore$": GITIGNORE_FILE,
     r"^readme\.md$": README_FILE,
     r"^screenshot\.(png|jpg)$": SCREENSHOT_FILE,
     r"^cover\.(png|jpg)$": COVER_FILE,
@@ -41,6 +42,10 @@ ROOT_DIR = Path('.')
 MANIFEST_FILE = ROOT_DIR / 'manifest.json'
 STATUS_FILE = ROOT_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
+RELEASE_DIR = ROOT_DIR / 'releases'
+
+LARGEST_FILE = (1024 * 1024 * 90)
+
 #############################################################################
 
 
@@ -91,10 +96,13 @@ def load_port(port_dir, manifest, registered):
         return None
 
     for port_file in port_dir.iterdir():
+        if port_file.name in ('.', '..', '.git', '.DS_Store'):
+            continue
+
         port_file_type = file_type(port_file)
 
         if port_file_type == UNKNOWN_FILE:
-            warning(port_dir.name, "Unknown file: {port_file.name}")
+            warning(port_dir.name, f"Unknown file: {port_file.name}")
             continue
 
         elif port_file_type == PORT_SCRIPT:
@@ -139,12 +147,13 @@ def load_port(port_dir, manifest, registered):
     temp = []
     paths = collections.deque([port_dir])
     port_manifest = []
+    large_files = {}
 
     while len(paths) > 0:
         path = paths.popleft()
 
         for file_name in path.iterdir():
-            if file_name.name in ('.', '..', '.git', '.DS_Store'):
+            if file_name.name in ('.', '..', '.git', '.DS_Store', '.gitignore', '.gitkeep'):
                 continue
 
             if file_name.name.startswith('._'):
@@ -154,22 +163,26 @@ def load_port(port_dir, manifest, registered):
                 paths.append(file_name)
                 continue
 
-            if file_name.is_file():
-                temp = hash_file(file_name)
-                manifest[str(file_name)] = temp
-                port_manifest.append((str(file_name), temp))
-
+            if not file_name.is_file():
+                warning(port_dir.name, f"Unknown file: {file_name}")
                 continue
 
-            warning(port_dir.name, f"Unknown file: {file_name}")
+            if file_name.name[-9:-3] == '.part.' and file_name.name[-3:].isdigit():
+                large_files.setdefault(str(file_name)[:-9], False)
+                continue
 
-    data_zip_file = DATA_DIR / port_data['port_name'].replace('.zip', '.data.zip')
-    data_zip_manifest = DATA_DIR / port_data['port_name'].replace('.zip', '.data.zip')
-    
+            port_file_name = '/'.join(file_name.parts[1:])
 
-    if data_zip.is_file()
+            large_files[str(file_name)] = True
 
-    port_data['name'].name
+            temp = hash_file(file_name)
+            manifest[port_file_name] = temp
+            port_manifest.append((port_file_name, temp))
+
+    for large_file, large_file_status in large_files.items():
+        if not large_file_status:
+            error(port_dir.name, f"Missinge large_file: {large_file}, run python data/build_data.py first.")
+            return None
 
     port_manifest.sort(key=lambda x: x[0].casefold())
 
@@ -201,7 +214,7 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
         path = paths.popleft()
 
         for file_name in path.iterdir():
-            if file_name.name in ('.', '..', '.git', '.DS_Store'):
+            if file_name.name in ('.', '..', '.git', '.DS_Store', '.gitignore'):
                 continue
 
             if file_name.name.startswith('._'):
@@ -211,7 +224,10 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
                 paths.append(file_name)
                 continue
 
-            new_name = '/'.join(file_name.parts[1:])
+            if not file_name.is_file():
+                continue
+
+            new_name = '/'.join(file_name.parts[2:])
 
             if '/' not in new_name:
                 file_name_type = file_type(file_name)
@@ -232,9 +248,15 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
                 if new_name.lower().endswith('.sh'):
                     warning(port_dir.name, f"Script {new_name} found in port directories, this can cause issues.")
 
+            if file_name.name[-9:-3] == '.part.' and file_name.name[-3:].isdigit():
+                continue
+
             zip_files.append((file_name, new_name))
 
     zip_files.sort(key=lambda x: x[1].casefold())
+
+    # from pprint import pprint
+    # pprint(zip_files)
 
     with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_pair in zip_files:
@@ -303,11 +325,11 @@ def build_images_zip(old_manifest, new_manifest):
         print(f" - {mode} {name}")
 
     zip_files = [
-        (Path(file), f"{file.replace('/', '.')}")
+        ((PORTS_DIR / file), f"{file.replace('/', '.')}")
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == SCREENSHOT_FILE]
+        if file.count('/') == 1 and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
 
-    with zipfile.ZipFile('images.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(RELEASE_DIR / 'images.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_pair in zip_files:
             zf.write(file_pair[0], file_pair[1])
 
@@ -405,7 +427,7 @@ def port_diff(port_name, old_manifest, new_manifest):
 
 def load_manifest(manifest_file, registered=None):
     with open(manifest_file, 'r') as fh:
-        manifests = [json.load(fh)]
+        manifest = json.load(fh)
 
     if registered is None:
         registered = {
@@ -452,21 +474,9 @@ def main(argv):
         'scripts': {},
         }
 
-    data_manifests = {}
-
-    if not (DATA_DIR / 'config.json').is_file():
-        print("ERROR: please run build_data.py first.")
-        return 255
-
     # Load global manifest
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
-
-    # Load data (large file) manifests
-    for data_manifest_file in sorted(DATA_DIR.glob('*.data.json')):
-        port_name = data_manifest_file.name.rsplit('.', 2)
-        data_manifest = load_manifest(data_manifest_file, registered)
-        data_manifests[port_name] = data_manifest
 
     if STATUS_FILE.is_file():
         with open(STATUS_FILE, 'r') as fh:
@@ -476,12 +486,12 @@ def main(argv):
         if not port_dir.is_dir():
             continue
 
-        port_data = load_port(port_dir, new_manifest, data_manifest, registered)
+        port_data = load_port(port_dir, new_manifest, registered)
 
         if port_data is None:
             continue
 
-        # print(f"{port_dir.name}: {old_manifest.get(port_dir.name)} vs {new_manifest[port_dir.name]}")
+        print(f"{port_dir.name}: {old_manifest.get(port_dir.name)} vs {new_manifest[port_dir.name]}")
         if old_manifest.get(port_dir.name) != new_manifest[port_dir.name]:
             updated_ports.append(port_dir)
 
@@ -496,7 +506,7 @@ def main(argv):
         print("")
 
         if '--do-check' not in argv:
-            build_port_zip(ROOT_DIR, port_dir, port_data, new_manifest, port_status)
+            build_port_zip(RELEASE_DIR, port_dir, port_data, new_manifest, port_status)
 
     if '--do-check' not in argv:
         build_images_zip(old_manifest, new_manifest)

@@ -54,7 +54,7 @@ PORT_INFO_GENRES = [
 
 
 MESSAGES = {}
-def error(port_name, string):
+def error(port_name, message):
     MESSAGES.setdefault(port_name, {'errors': [], 'warnings': []})
     MESSAGES[port_name]['errors'].append(message)
 
