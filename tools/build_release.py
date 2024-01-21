@@ -17,6 +17,11 @@ import zipfile
 from difflib import Differ
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent / 'libs'))
+
+from util import *
+
+
 #############################################################################
 ## Constants
 README_FILE, SCREENSHOT_FILE, COVER_FILE, SPEC_FILE, PORT_JSON, PORT_SCRIPT, PORT_DIR, UNKNOWN_FILE = range(8)
@@ -30,280 +35,13 @@ FILE_TYPE_RE = {
     }
 
 TODAY = str(datetime.datetime.today().date())
+
+ROOT_DIR = Path('.')
+
+MANIFEST_FILE = ROOT_DIR / 'manifest.json'
+STATUS_FILE = ROOT_DIR / 'ports_status.json'
+PORTS_DIR = ROOT_DIR / 'ports'
 #############################################################################
-
-
-################################################################################
-## Port Information
-
-PORT_INFO_ROOT_ATTRS = {
-    'version': 2,
-    'name': None,
-    'items': None,
-    'items_opt': None,
-    'attr': {},
-    }
-
-PORT_INFO_ATTR_ATTRS = {
-    'title': "",
-    'desc': "",
-    'inst': "",
-    'genres': [],
-    'porter': [],
-    'image': None,
-    'rtr': False,
-    'exp': False,
-    'runtime': None,
-    'reqs': [],
-    }
-
-
-PORT_INFO_GENRES = [
-    "action",
-    "adventure",
-    "arcade",
-    "casino/card",
-    "fps",
-    "platformer",
-    "puzzle",
-    "racing",
-    "rhythm",
-    "rpg",
-    "simulation",
-    "sports",
-    "strategy",
-    "visual novel",
-    "other",
-    ]
-
-
-MESSAGES = {}
-def error(port_name, string):
-    MESSAGES.setdefault(port_name, {'errors': [], 'warnings': []})
-    MESSAGES[port_name]['errors'].append(message)
-
-
-def warning(port_name, message):
-    MESSAGES.setdefault(port_name, {'errors': [], 'warnings': []})
-    MESSAGES[port_name]['warnings'].append(message)
-
-
-def port_info_load(raw_info, source_name=None, do_default=False):
-    if isinstance(raw_info, pathlib.PurePath):
-        if source_name is None:
-            source_name = str(raw_info)
-
-        with raw_info.open('r') as fh:
-            try:
-                info = json.load(fh)
-
-                if not isinstance(info, dict):
-                    error(source_name, f"Unable to load {str(raw_info)}: bad json file")
-                    info = None
-
-            except json.decoder.JSONDecodeError as err:
-                error(source_name, f"Unable to load {str(raw_info)}: {err}")
-                info = None
-
-            if info is None or not isinstance(info, dict):
-                if do_default:
-                    info = {}
-                else:
-                    return None
-
-    elif isinstance(raw_info, str):
-        if raw_info.strip().startswith('{') and raw_info.strip().endswith('}'):
-            if source_name is None:
-                source_name = "<str>"
-
-            try:
-                info = json.loads(raw_info)
-
-                if not isinstance(info, dict):
-                    error(source_name, f"Unable to load port.json: bad json file")
-                    info = None
-
-            except json.decoder.JSONDecodeError as err:
-                error(source_name, f"Unable to load port.json: {err}")
-                info = None
-
-            if info is None:
-                if do_default:
-                    info = {}
-
-                else:
-                    return None
-
-        elif Path(raw_info).is_file():
-            if source_name is None:
-                source_name = raw_info
-
-            with open(raw_info, 'r') as fh:
-                try:
-                    info = json.load(fh)
-
-                    if not isinstance(info, dict):
-                        error(source_name, f"Unable to load {raw_info}: bad json file")
-                        info = None
-
-                except json.decoder.JSONDecodeError as err:
-                    error(source_name, f"Unable to load {raw_info}: {err}")
-                    info = None
-
-                if info is None:
-                    if do_default:
-                        info = {}
-
-                    else:
-                        return None
-
-        else:
-            if source_name is None:
-                source_name = "<str>"
-
-            if do_default:
-                info = {}
-
-            else:
-                error(source_name, f'Unable to load port_info: {raw_info!r}')
-                return None
-
-    elif isinstance(raw_info, dict):
-        if source_name is None:
-            source_name = "<dict>"
-
-        info = raw_info
-
-    else:
-        if do_default:
-            info = {}
-
-        else:
-            error(source_name, f'Unable to load port_info: {raw_info!r}')
-            return None
-
-    if info.get('version', None) == 1 or 'source' in info:
-        # Update older json version to the newer one.
-        info = info.copy()
-        info['name'] = info['source'].rsplit('/', 1)[-1]
-        del info['source']
-        info['version'] = 2
-
-        if info.get('md5', None) is not None:
-            info['status'] = {
-                'source': "Unknown",
-                'md5': info['md5'],
-                'status': "Unknown",
-                }
-            del info['md5']
-
-        # WHOOPS! :O
-        if info.get('attr', {}).get('runtime', None) == "blank":
-            info['attr']['runtime'] = None
-
-    if isinstance(info.get('attr', {}).get('porter'), str):
-        info['attr']['porter'] = [info['attr']['porter']]
-
-    if isinstance(info.get('attr', {}).get('reqs', None), dict):
-        info['attr']['reqs'] = [
-            key
-            for key in info['attr']['reqs']]
-
-    if isinstance(info.get("version", None), str):
-        info["version"] = int(info["version"])
-
-    # This strips out extra stuff
-    port_info = {}
-
-    for attr, attr_default in PORT_INFO_ROOT_ATTRS.items():
-        if isinstance(attr_default, (dict, list)):
-            attr_default = attr_default.copy()
-
-        port_info[attr] = info.get(attr, attr_default)
-
-    for attr, attr_default in PORT_INFO_ATTR_ATTRS.items():
-        if isinstance(attr_default, (dict, list)):
-            attr_default = attr_default.copy()
-
-        port_info['attr'][attr] = info.get('attr', {}).get(attr, attr_default)
-
-    if port_info['attr']['image'] == None:
-        port_info['attr']['image'] = {}
-
-    if isinstance(port_info['items'], list):
-        i = 0
-        while i < len(port_info['items']):
-            item = port_info['items'][i]
-            if item.startswith('/'):
-                warning(source_name, f"port_info['items'] contains bad name {item!r}")
-                del port_info['items'][i]
-                continue
-
-            if item.startswith('../'):
-                warning(source_name, f"port_info['items'] contains bad name {item!r}")
-                del port_info['items'][i]
-                continue
-
-            if '/../' in item:
-                warning(source_name, f"port_info['items'] contains bad name {item!r}")
-                del port_info['items'][i]
-                continue
-
-            if item == "":
-                warning(source_name, f"port_info['items'] contains bad name {item!r}")
-                del port_info['items'][i]
-
-            i += 1
-
-    if isinstance(port_info['items_opt'], list):
-        i = 0
-        while i < len(port_info['items_opt']):
-            item = port_info['items_opt'][i]
-            if item.startswith('/'):
-                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
-                del port_info['items_opt'][i]
-                continue
-
-            if item.startswith('../'):
-                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
-                del port_info['items_opt'][i]
-                continue
-
-            if '/../' in item:
-                warning(source_name, f"port_info['items_opt'] contains bad name {item}")
-                del port_info['items_opt'][i]
-                continue
-
-            if item == "":
-                warning(source_name, f"port_info['items'] contains bad name {item!r}")
-                del port_info['items_opt'][i]
-
-            i += 1
-
-        if port_info['items_opt'] == []:
-            port_info['items_opt'] = None
-
-    if isinstance(port_info['attr'].get('genres', None), list):
-        genres = port_info['attr']['genres']
-        port_info['attr']['genres'] = []
-
-        for genre in genres:
-            if genre.casefold() in PORT_INFO_GENRES:
-                port_info['attr']['genres'].append(genre.casefold())
-
-            else:
-                warning(source_name, f"port_info['attr']['genres'] contains bad genre {genre}")
-
-    if port_info['attr']['image'] == None:
-        port_info['attr']['image'] = {}
-
-    if port_info['attr']['runtime'] == "blank":
-        port_info['attr']['runtime'] = None
-
-    if port_info['attr']['rtr'] is not False and port_info['attr']['inst'] in ("", None):
-        port_info['attr']['inst'] = "Ready to run."
-
-    return port_info
 
 
 def runtime_nicename(runtime):
@@ -317,39 +55,6 @@ def runtime_nicename(runtime):
         return ("JDK {version}").format(version=runtime.split('-')[2][3:])
 
     return runtime
-
-
-def name_cleaner(text):
-    temp = re.sub(r'[^a-zA-Z0-9 _\-\.]+', '', text.strip().lower())
-    return re.sub(r'[ \.]+', '.', temp)
-
-
-def hash_items(items):
-    md5 = hashlib.md5()
-
-    for item in items:
-        # print(f">{item}")
-        md5.update(f"{item}\n".encode('utf-8'))
-
-    # print(f"<{md5.hexdigest()}")
-    return md5.hexdigest()
-
-
-def hash_file(file_name):
-    if isinstance(file_name, str):
-        file_name = pathlib.Path(file_name)
-
-    elif not isinstance(file_name, pathlib.PurePath):
-        raise ValueError(file_name)
-
-    if not file_name.is_file():
-        return None
-
-    md5 = hashlib.md5()
-    with file_name.open('rb') as fh:
-        md5.update(fh.read())
-
-    return md5.hexdigest()
 
 
 def file_type(port_file):
@@ -457,6 +162,14 @@ def load_port(port_dir, manifest, registered):
                 continue
 
             warning(port_dir.name, f"Unknown file: {file_name}")
+
+    data_zip_file = DATA_DIR / port_data['port_name'].replace('.zip', '.data.zip')
+    data_zip_manifest = DATA_DIR / port_data['port_name'].replace('.zip', '.data.zip')
+    
+
+    if data_zip.is_file()
+
+    port_data['name'].name
 
     port_manifest.sort(key=lambda x: x[0].casefold())
 
@@ -690,14 +403,15 @@ def port_diff(port_name, old_manifest, new_manifest):
         print(f" - {mode} {name}")
 
 
-def load_manifest(manifest_file):
+def load_manifest(manifest_file, registered=None):
     with open(manifest_file, 'r') as fh:
-        manifest = json.load(fh)
+        manifests = [json.load(fh)]
 
-    registered = {
-        'dirs': {},
-        'scripts': {},
-        }
+    if registered is None:
+        registered = {
+            'dirs': {},
+            'scripts': {},
+            }
 
     for port_file in manifest:
         if '/' not in port_file:
@@ -721,16 +435,10 @@ def load_manifest(manifest_file):
 
     # print(json.dumps(registered, indent=4))
 
-    return manifest, registered
+    return manifest
 
 
 def main(argv):
-    ROOT_DIR = Path('.')
-
-    MANIFEST_FILE = ROOT_DIR / 'manifest.json'
-    STATUS_FILE = ROOT_DIR / 'ports_status.json'
-    DATA_DIR = ROOT_DIR / 'data'
-
     all_ports = {}
     updated_ports = []
 
@@ -744,22 +452,31 @@ def main(argv):
         'scripts': {},
         }
 
+    data_manifests = {}
+
+    if not (DATA_DIR / 'config.json').is_file():
+        print("ERROR: please run build_data.py first.")
+        return 255
+
+    # Load global manifest
     if MANIFEST_FILE.is_file():
-        old_manifest, registered = load_manifest(MANIFEST_FILE)
+        old_manifest = load_manifest(MANIFEST_FILE, registered)
+
+    # Load data (large file) manifests
+    for data_manifest_file in sorted(DATA_DIR.glob('*.data.json')):
+        port_name = data_manifest_file.name.rsplit('.', 2)
+        data_manifest = load_manifest(data_manifest_file, registered)
+        data_manifests[port_name] = data_manifest
 
     if STATUS_FILE.is_file():
         with open(STATUS_FILE, 'r') as fh:
             port_status = json.load(fh)
 
-    for port_dir in sorted(ROOT_DIR.iterdir(), key=lambda x: str(x).casefold()):
+    for port_dir in sorted(PORTS_DIR.iterdir(), key=lambda x: str(x).casefold()):
         if not port_dir.is_dir():
             continue
 
-        if port_dir.name.lower() in ('.git', 'tools', 'data'):
-            # Ignore th
-            continue
-
-        port_data = load_port(port_dir, new_manifest, registered)
+        port_data = load_port(port_dir, new_manifest, data_manifest, registered)
 
         if port_data is None:
             continue
@@ -784,7 +501,7 @@ def main(argv):
     if '--do-check' not in argv:
         build_images_zip(old_manifest, new_manifest)
 
-        build_markdown_zip(old_manifest, new_manifest)
+        # build_markdown_zip(old_manifest, new_manifest)
 
         # generate_ports_json(ports)
 
