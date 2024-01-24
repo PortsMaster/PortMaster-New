@@ -103,7 +103,7 @@ def load_port(port_dir):
         print("large_files = ", json.dumps(large_files, indent=4))
 
         with open(git_ignore_file, 'w') as fh:
-            fh.write(GITIGNORE_HEADER)
+            print(GITIGNORE_HEADER, file=fh)
             for file_name in git_ignores:
                 print(file_name, file=fh)
 

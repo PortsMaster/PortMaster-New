@@ -46,6 +46,13 @@ RELEASE_DIR = ROOT_DIR / 'releases'
 
 LARGEST_FILE = (1024 * 1024 * 90)
 
+BASE_RELEASE_URL = "https://github.com/PortsMaster/PortMaster-New/releases/latest/download/"
+
+if len(sys.argv) > 1 and sys.argv[1] != '--do-check':
+    CURRENT_RELEASE_URL = f"https://github.com/PortsMaster/PortMaster-New/releases/download/{sys.argv[1]}/"
+else:
+    CURRENT_RELEASE_URL = BASE_RELEASE_URL
+
 #############################################################################
 
 
@@ -388,6 +395,53 @@ def build_markdown_zip(old_manifest, new_manifest):
             zf.write(file_pair[0], file_pair[1])
 
 
+def port_info(file_name, ports_json, ports_status):
+    clean_name = name_cleaner(file_name.name)
+
+    file_md5 = hash_file(file_name)
+
+    default_status = {
+        'md5': file_md5,
+        'date_added': TODAY,
+        'date_updated': TODAY,
+        }
+
+    if clean_name not in ports_status:
+        ports_status[clean_name] = default_status
+
+    elif ports_status[clean_name]['md5'] is None:
+        ports_status[clean_name]['md5'] = file_md5
+
+    elif ports_status[clean_name]['md5'] != file_md5:
+        ports_status[clean_name]['md5'] = file_md5
+        ports_status[clean_name]['date_updated'] = TODAY
+
+    if clean_name in ports_json:
+        ports_json[clean_name]['source'] = ports_status[clean_name].copy()
+
+        ports_json[clean_name]['source']['size'] = file_name.stat().st_size
+        ports_json[clean_name]['source']['url'] = CURRENT_RELEASE_URL + (file_name.name.replace(" ", ".").replace("..", "."))
+
+
+def util_info(file_name, util_json):
+    clean_name = name_cleaner(file_name.name)
+
+    file_md5 = hash_file(file_name)
+
+    if file_name.name.lower().endswith('.squashfs'):
+        name = runtime_nicename(file_name.name)
+
+    else:
+        name = file_name.name
+
+    util_json[clean_name] = {
+        "name": name,
+        'md5': file_md5,
+        'size': file_name.stat().st_size,
+        'url': CURRENT_RELEASE_URL + (file_name.name.replace(" ", ".").replace("..", ".")),
+        }
+
+
 def port_diff(port_name, old_manifest, new_manifest):
     """
     Print file changes
@@ -423,6 +477,24 @@ def port_diff(port_name, old_manifest, new_manifest):
 
     for name, mode in changes.items():
         print(f" - {mode} {name}")
+
+
+def generate_ports_json(all_ports, port_status):
+    ports_json_output = {
+        "ports": {},
+        "utils": {},
+        }
+
+    for port_dir, port_data in sorted(all_ports.items(), key=lambda k: (k[1]['port_json']['attr']['title'].casefold())):
+        ports_json_output['ports'][port_data['name']] = port_data['port_json']
+        port_info(
+            RELEASE_DIR / port_data['name'],
+            ports_json_output['ports'],
+            port_status
+            )
+
+    with open('ports.json', 'w') as fh:
+        json.dump(ports_json_output, fh, indent=4)
 
 
 def load_manifest(manifest_file, registered=None):
@@ -495,7 +567,7 @@ def main(argv):
         if old_manifest.get(port_dir.name) != new_manifest[port_dir.name]:
             updated_ports.append(port_dir)
 
-        all_ports[port_dir] = port_data
+        all_ports[port_dir.name] = port_data
 
     for port_dir in updated_ports:
         port_data = all_ports[port_dir]
@@ -513,7 +585,7 @@ def main(argv):
 
         # build_markdown_zip(old_manifest, new_manifest)
 
-        # generate_ports_json(ports)
+        generate_ports_json(all_ports, port_status)
 
     errors = 0
     warnings = 0
