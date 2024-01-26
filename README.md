@@ -15,7 +15,7 @@ The PortMaster-New repo now has all the ports unzipped, this makes the repo slig
 
 ### Portname requirements
 
-The portname must start with either a lowercase letter (a-z) or a number (0-9).
+The **portname** must start with either a lowercase letter (a-z) or a number (0-9).
 
 You can then have a combination of lowercase letters (a-z), numbers (0-9), periods (.), or underscores (\_).
 
@@ -48,7 +48,7 @@ The above file structure would create a `portname.zip` file.
 
 #### README.md
 
-This adds additional info for the port on the wiki.
+This adds additional info for the port on the wiki, [we have a handy README.md generator here](http://portmaster.games/port-markdown.html).
 
 ```markdown
 ## Notes
@@ -61,7 +61,7 @@ Thanks to {THANKS INFO HERE} for the source code. Also thanks to {PORTER NAME} f
 
 #### port.json
 
-This is used by portmaster, this should include all the pertinent info for the port, [we have a handy port.json generator here](LINK HERE).
+This is used by portmaster, this should include all the pertinent info for the port, [we have a handy port.json generator here](http://portmaster.games/port-json.html).
 
 Example from 2048.
 

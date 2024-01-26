@@ -39,10 +39,10 @@ TODAY = str(datetime.datetime.today().date())
 
 ROOT_DIR = Path('.')
 
-MANIFEST_FILE = ROOT_DIR / 'manifest.json'
-STATUS_FILE = ROOT_DIR / 'ports_status.json'
-PORTS_DIR = ROOT_DIR / 'ports'
 RELEASE_DIR = ROOT_DIR / 'releases'
+MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
+STATUS_FILE = RELEASE_DIR / 'ports_status.json'
+PORTS_DIR = ROOT_DIR / 'ports'
 
 LARGEST_FILE = (1024 * 1024 * 90)
 
@@ -539,7 +539,7 @@ def generate_ports_json(all_ports, port_status):
             ports_json_output['utils']
             )
 
-    with open('ports.json', 'w') as fh:
+    with open(RELEASE_DIR / 'ports.json', 'w') as fh:
         json.dump(ports_json_output, fh, indent=4)
 
 
@@ -592,6 +592,13 @@ def main(argv):
         'scripts': {},
         }
 
+    status = {
+        "new": 0,
+        "unchanged": 0,
+        "updated": 0,
+        "total": 0,
+        }
+
     # Load global manifest
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
@@ -609,14 +616,22 @@ def main(argv):
         if port_data is None:
             continue
 
-        print(f"{port_dir.name}: {old_manifest.get(port_dir.name)} vs {new_manifest[port_dir.name]}")
         if old_manifest.get(port_dir.name) != new_manifest[port_dir.name]:
-            updated_ports.append(port_dir)
+            if old_manifest.get(port_dir.name) is None:
+                status['new'] += 1
+            else:
+                status['updated'] += 1
 
+            print(f"{port_dir.name}: {old_manifest.get(port_dir.name)} vs {new_manifest[port_dir.name]}")
+            updated_ports.append(port_dir)
+        else:
+            status['unchanged'] += 1
+
+        status['total'] += 1
         all_ports[port_dir.name] = port_data
 
     for port_dir in updated_ports:
-        port_data = all_ports[port_dir]
+        port_data = all_ports[port_dir.name]
 
         print("-" * 40)
         print(f"- Creating {port_data['name']}")
@@ -649,6 +664,13 @@ def main(argv):
             print("- Errors:")
             print("  " + "\n  ".join(messages['errors']) + "\n")
             errors += 1
+
+    print(f"Changes:")
+    print(f"  New:       {status['new']}")
+    print(f"  Updated:   {status['updated']}")
+    print(f"  Unchanged: {status['unchanged']}")
+    print("")
+    print(f"Total Ports: {status['total']}")
 
     if '--do-check' in argv:
         if errors > 0:
