@@ -1,0 +1,49 @@
+name: Pull Request Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false #only 1 build at a time per PR
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: env - better defaulting of env vars;
+        id: env
+        run: |
+            source SOURCE_SETUP.txt
+
+            if [[ -z "$RELEASE_ORG" ]]; then
+              echo "::error file=SOURCE_SETUP.txt,line=2::Missing RELEASE_ORG, please configure"
+              exit 255
+            fi
+            echo "RELEASE_ORG=$RELEASE_ORG" >> $GITHUB_OUTPUT
+
+            if [[ -z "$RELEASE_REPO" ]]; then
+              echo "::error file=SOURCE_SETUP.txt,line=5::Missing RELEASE_REPO, please configure"
+              exit 255
+            fi
+            echo "RELEASE_REPO=$RELEASE_REPO" >> $GITHUB_OUTPUT
+
+            echo "PMGUI_RELEASE=$PMGUI_RELEASE" >> $GITHUB_OUTPUT
+
+      - uses: hmarr/debug-action@v2
+        name: "debug: ${{github.event_name}}"
+
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Generate Port Files.
+        id: ports-info
+        run: |
+          python3 tools/build_release.py --do-check
