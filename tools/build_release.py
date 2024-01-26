@@ -25,6 +25,24 @@ from util import *
 #############################################################################
 ## Constants
 README_FILE, SCREENSHOT_FILE, COVER_FILE, SPEC_FILE, PORT_JSON, PORT_SCRIPT, PORT_DIR, GITIGNORE_FILE, UNKNOWN_FILE = range(9)
+REQUIRED_FILES = (
+    (1<<README_FILE)     |
+    (1<<SCREENSHOT_FILE) |
+    (1<<PORT_JSON)       |
+    (1<<PORT_SCRIPT)     |
+    (1<<PORT_DIR)        )
+
+FILE_TYPE_DESC = {
+    README_FILE: "README.md",
+    SCREENSHOT_FILE: "screenshot.{png|jpg}",
+    COVER_FILE:  "cover.{png|jpg}",
+    SPEC_FILE:   "port.spec",
+    PORT_JSON:   "port.json",
+    PORT_SCRIPT: "Port Script",
+    PORT_DIR:    "Port Directory",
+    GITIGNORE_FILE: ".gitginore",
+    UNKNOWN_FILE: "Unknown file",
+    }
 
 FILE_TYPE_RE = {
     r"^\.gitignore$": GITIGNORE_FILE,
@@ -32,7 +50,7 @@ FILE_TYPE_RE = {
     r"^screenshot\.(png|jpg)$": SCREENSHOT_FILE,
     r"^cover\.(png|jpg)$": COVER_FILE,
     r"^port\.json$": PORT_JSON,
-    r"^port\.spec$": SPEC_FILE,
+    # r"^port\.spec$": SPEC_FILE,
     }
 
 TODAY = str(datetime.datetime.today().date())
@@ -134,11 +152,15 @@ def load_port(port_dir, manifest, registered):
         error(port_dir.name, "Bad port directory name")
         return None
 
+    port_check_bf = 0
+
     for port_file in port_dir.iterdir():
         if port_file.name in ('.', '..', '.git', '.DS_Store'):
             continue
 
         port_file_type = file_type(port_file)
+
+        port_check_bf |= (1 << port_file_type)
 
         if port_file_type == UNKNOWN_FILE:
             warning(port_dir.name, f"Unknown file: {port_file.name}")
@@ -181,6 +203,16 @@ def load_port(port_dir, manifest, registered):
     if port_data['port_json'] == None:
         error(port_file.name, "Port has no port.json")
         return None
+
+    port_check_bf &= REQUIRED_FILES
+    if port_check_bf != REQUIRED_FILES:
+        for i in range(UNKNOWN_FILE):
+            CHECKER = (1 << i)
+            if (CHECKER & REQUIRED_FILES) == 0:
+                continue
+
+            if (port_check_bf & CHECKER) == 0:
+                error(port_dir.name, f"Missing {FILE_TYPE_DESC[i]}.")
 
     # Create the manifest (an md5sum of all the files in the port, and an md5sum of those md5sums).
     temp = []
@@ -651,7 +683,7 @@ def main(argv):
     errors = 0
     warnings = 0
     for port_name, messages in MESSAGES.items():
-        if port_name in updated_ports:
+        if '--do-check' not in argv and port_name not in updated_ports:
             continue
 
         print(f"Bad port {port_name}")
@@ -685,6 +717,11 @@ def main(argv):
 
         with open(MANIFEST_FILE, 'w') as fh:
             json.dump(new_manifest, fh, indent=2)
+
+    if '--do-check' not in argv and len(argv) > 0:
+        if status['unchanged'] == status['total']:
+            print("::error file=tools/build_release.py::No new ports, aborting.")
+            return 255
 
     return 0
 

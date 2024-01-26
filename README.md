@@ -13,6 +13,25 @@ PortMaster used to be a collection of zips inside of a git repo, this got unwiel
 
 The PortMaster-New repo now has all the ports unzipped, this makes the repo slightly larger initally, however changes will no longer greatly increase the size. Upon release we download the previous release and only create a new zip when the ports files actually change.
 
+## Submitting a PR
+
+To submit a PR you will have to fork the repo. After forking the repo, go into the settings for the fork and disable github actions for your fork. After cloning the repo you should run the `tools/build_data.py` from the root of repo.
+
+For example:
+```bash
+python3 tools/build_data.py
+```
+
+If you add a file that is larger than 90+ MB, you will have to run the above script. It will split the file into 50mb chunks suitable for commiting to github. If you edit the large-file just rerun the above script and it will update the chunks.
+
+Before you commit changes it is recommended you run the `tools/build_release.py` script in checking mode.
+
+```bash
+python3 tools/build_release.py --do-check
+```
+
+This will make sure all ports have the appropriate files, and will save everyone a lot of time.
+
 ### Portname requirements
 
 The **portname** must start with either a lowercase letter (a-z) or a number (0-9).
@@ -101,7 +120,7 @@ Example from 2048.
 - [x] Check if port clashes with other ports
 - [x] Run port.spec before zipping port
 - [x] Create portname.zip only if port is changed
-- [ ] Run in `--do-check` for PR pre-check
-- [ ] Create ports.json
+- [x] Run in `--do-check` for PR pre-check
+- [x] Create ports.json
 - [x] Create markdown.zip
 - [x] Create images.zip
