@@ -440,7 +440,13 @@ def main(argv):
 
     ports = load_ports(PORTMASTER_DIR)
 
+    low_argv = list(map(str.lower, argv))
+
     for port in ports:
+        if port.zip_file.name.lower() not in low_argv:
+            print(f"- {port.port_name} skipping.")
+            continue
+
         print(f"- {port.port_name}")
         port.extract()
 

@@ -46,10 +46,42 @@ RELEASE_DIR = ROOT_DIR / 'releases'
 
 LARGEST_FILE = (1024 * 1024 * 90)
 
-BASE_RELEASE_URL = "https://github.com/PortsMaster/PortMaster-New/releases/latest/download/"
+#############################################################################
+## Read CONFIG file.
+REPO_CONFIG = {
+    'RELEASE_ORG': None,
+    'RELEASE_REPO': None,
+    'REPO_NAME': None,
+    'REPO_PREFIX': None,
+    }
+
+with open('SOURCE_SETUP.txt', 'r') as fh:
+    for line in fh:
+        line = line.strip()
+        if line.startswith('#'):
+            continue
+
+        if '=' in line and '"' in line:
+            CFG_NAME, CFG_DATA = line.split('=', 1)
+            if CFG_NAME in REPO_CONFIG:
+                REPO_CONFIG[CFG_NAME] = CFG_DATA.split('"')[1].strip()
+
+failed = False
+for CFG_NAME, CFG_DATA in REPO_CONFIG.items():
+    if CFG_DATA is None or CFG_DATA == "":
+        print(f"::error file=SOURCE_SETUP.txt::{CFG_NAME} is not set.")
+        failed = True
+
+if failed is True:
+    exit(255)
+
+#############################################################################
+## Stuff.
+BASE_RELEASE_URL = f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/latest/download/"
 
 if len(sys.argv) > 1 and sys.argv[1] != '--do-check':
-    CURRENT_RELEASE_URL = f"https://github.com/PortsMaster/PortMaster-New/releases/download/{sys.argv[1]}/"
+    CURRENT_RELEASE_URL = f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/download/{sys.argv[1]}/"
+
 else:
     CURRENT_RELEASE_URL = BASE_RELEASE_URL
 
@@ -491,6 +523,20 @@ def generate_ports_json(all_ports, port_status):
             RELEASE_DIR / port_data['name'],
             ports_json_output['ports'],
             port_status
+            )
+
+    utils = []
+
+    if (RELEASE_DIR / 'PortMaster.zip').is_file():
+        utils.append(RELEASE_DIR / 'PortMaster.zip')
+
+    utils.append(RELEASE_DIR / 'images.zip')
+    utils.extend(RELEASE_DIR.glob('*.squashfs'))
+
+    for file_name in sorted(utils, key=lambda x: str(x).casefold()):
+        util_info(
+            file_name,
+            ports_json_output['utils']
             )
 
     with open('ports.json', 'w') as fh:
