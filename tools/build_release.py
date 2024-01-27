@@ -493,7 +493,7 @@ def port_info(file_name, ports_json, ports_status):
     elif ports_status[clean_name]['md5'] != file_md5:
         ports_status[clean_name]['md5'] = file_md5
         ports_status[clean_name]['size'] = file_size
-        ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID,
+        ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID
         ports_status[clean_name]['date_updated'] = TODAY
 
     if clean_name in ports_json:
