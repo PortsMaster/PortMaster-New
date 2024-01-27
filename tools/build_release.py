@@ -95,15 +95,20 @@ if failed is True:
 
 #############################################################################
 ## Stuff.
-BASE_RELEASE_URL = f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/latest/download/"
 
 if len(sys.argv) > 1 and sys.argv[1] != '--do-check':
-    CURRENT_RELEASE_URL = f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/download/{sys.argv[1]}/"
-
+    CURRENT_RELEASE_ID = sys.argv[1]
 else:
-    CURRENT_RELEASE_URL = BASE_RELEASE_URL
+    CURRENT_RELEASE_ID = "latest"
 
 #############################################################################
+
+
+def current_release_url(release_id):
+    if release_id == 'latest':
+        return f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/latest/download/"
+
+    return f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/download/{release_id}/"
 
 
 def runtime_nicename(runtime):
@@ -333,19 +338,20 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
         for file_pair in zip_files:
             zf.write(file_pair[0], file_pair[1])
 
-    port_name = port_data['name']
-    port_hash = hash_file(zip_name)
+    # port_name = port_data['name']
+    # port_hash = hash_file(zip_name)
 
-    if port_name in port_status:
-        port_status[port_name]['date_updated'] = TODAY
-        port_status[port_name]['md5'] = port_hash
-
-    else:
-        port_status[port_name] = {
-            'date_added': TODAY,
-            'date_updated': TODAY,
-            'md5': port_hash,
-            }
+    # if port_name in port_status:
+    #     port_status[port_name]['date_updated'] = TODAY
+    #     port_status[port_name]['md5'] = port_hash
+    #     port_status[port_name]
+    # else:
+    #     port_status[port_name] = {
+    #         'date_added': TODAY,
+    #         'date_updated': TODAY,
+    #         'release_id': CURRENT_RELEASE_ID,
+    #         'md5': port_hash,
+    #         }
 
 
 def build_images_zip(old_manifest, new_manifest):
@@ -462,29 +468,37 @@ def build_markdown_zip(old_manifest, new_manifest):
 def port_info(file_name, ports_json, ports_status):
     clean_name = name_cleaner(file_name.name)
 
-    file_md5 = hash_file(file_name)
+    if file_name.is_file():
+        file_md5 = hash_file(file_name)
+        file_size = file_name.stat().st_size
+    else:
+        if clean_name not in ports_status:
+            # HRMMmmmmm o_o;;;;
+            return
+
+        file_md5 = ports_status[clean_name]['md5']
+        file_size = ports_status[clean_name]['size']
 
     default_status = {
-        'md5': file_md5,
         'date_added': TODAY,
         'date_updated': TODAY,
+        'md5': file_md5,
+        'size': file_size,
+        'release_id': CURRENT_RELEASE_ID,
         }
 
     if clean_name not in ports_status:
         ports_status[clean_name] = default_status
 
-    elif ports_status[clean_name]['md5'] is None:
-        ports_status[clean_name]['md5'] = file_md5
-
     elif ports_status[clean_name]['md5'] != file_md5:
         ports_status[clean_name]['md5'] = file_md5
+        ports_status[clean_name]['size'] = file_size
+        ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID,
         ports_status[clean_name]['date_updated'] = TODAY
 
     if clean_name in ports_json:
         ports_json[clean_name]['source'] = ports_status[clean_name].copy()
-
-        ports_json[clean_name]['source']['size'] = file_name.stat().st_size
-        ports_json[clean_name]['source']['url'] = CURRENT_RELEASE_URL + (file_name.name.replace(" ", ".").replace("..", "."))
+        ports_json[clean_name]['source']['url'] = current_release_url(ports_status[clean_name]['release_id']) + (file_name.name.replace(" ", ".").replace("..", "."))
 
 
 def util_info(file_name, util_json):
@@ -494,15 +508,17 @@ def util_info(file_name, util_json):
 
     if file_name.name.lower().endswith('.squashfs'):
         name = runtime_nicename(file_name.name)
+        url = "https://github.com/PortsMaster/PortMaster-Runtime/releases/download/runtimes/" + (file_name.name.replace(" ", ".").replace("..", "."))
 
     else:
         name = file_name.name
+        url = current_release_url(CURRENT_RELEASE_ID) + (file_name.name.replace(" ", ".").replace("..", "."))
 
     util_json[clean_name] = {
         "name": name,
         'md5': file_md5,
         'size': file_name.stat().st_size,
-        'url': CURRENT_RELEASE_URL + (file_name.name.replace(" ", ".").replace("..", ".")),
+        'url': url,
         }
 
 
