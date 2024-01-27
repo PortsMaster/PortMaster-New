@@ -344,7 +344,7 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
 
             zip_files.append((file_name, new_name))
 
-    zip_files.sort(key=lambda x: x[1].casefold())
+    zip_files.sort(key=lambda x: x[1].lower())
 
     # from pprint import pprint
     # pprint(zip_files)
@@ -545,33 +545,41 @@ def port_diff(port_name, old_manifest, new_manifest):
     changes = {}
     differ = Differ()
 
-    new_files = [
-        f"{file.split('/', 1)[-1]}:{digest}"
+    new_files = {
+        file.split('/', 1)[-1]: digest
         for file, digest in new_manifest.items()
-        if file.startswith(port_name + '/')]
+        if file.startswith(port_name + '/')}
 
-    old_files = [
-        f"{file.split('/', 1)[-1]}:{digest}"
+    old_files = {
+        file.split('/', 1)[-1]: digest
         for file, digest in old_manifest.items()
-        if file.startswith(port_name + '/')]
+        if file.startswith(port_name + '/')}
 
-    for line in differ.compare(old_files, new_files):
-        # line = "  <FILENAME>:<md5SUM>"
-        mode = line[:2]
-        name = line[2:].split(":", 1)[0]
-        if mode == '- ':
-            # File is removed.
-            changes[name] = 'Removed'
-        elif mode == '+ ':
-            if name in changes:
-                # If the file was already seen, its been removed, and readded, which means modified.
-                changes[name] = 'Modified'
-            else:
-                # File is just added.
-                changes[name] = 'Added'
+    removed_files = set(old_files) - set(new_files) 
+    same_files = set(old_files) & set(new_files)
+    added_files = set(new_files) - set(old_files)
 
-    for name, mode in changes.items():
-        print(f" - {mode} {name}")
+    renamed_files = []
+    for removed_file in list(removed_files):
+        for added_file in added_files:
+            if new_files[added_file] == old_files[removed_file]:
+                renamed_files.append((removed_file, added_file))
+                removed_files.remove(removed_file)
+                added_files.remove(added_file)
+                break
+
+    for file_name in same_files:
+        if new_files[file_name] != old_files[file_name]:
+            print(f" - Modified {file_name}")
+
+    for before_name, after_name in renamed_files:
+        print(f" - Renamed {before_name} to {after_name}")
+
+    for file_name in removed_files:
+        print(f" - Removed {file_name}")
+
+    for file_name in added_files:
+        print(f" - Added {file_name}")
 
 
 def generate_ports_json(all_ports, port_status):
