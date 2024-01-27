@@ -138,7 +138,7 @@ def file_type(port_file):
     return UNKNOWN_FILE
 
 
-def load_port(port_dir, manifest, registered):
+def load_port(port_dir, manifest, registered, port_status):
     port_data = {
         'name': None,
         'port_json': None,
@@ -208,6 +208,21 @@ def load_port(port_dir, manifest, registered):
     if port_data['port_json'] == None:
         error(port_file.name, "Port has no port.json")
         return None
+
+    if port_data['name'] not in port_status:
+        port_date = TODAY
+    else:
+        port_date = port_status[port_data['name']]['date_added']
+
+    ## Check if the port is an older port, newer ports have stricter name requirements.
+    if port_date > '2024-01-26':
+        ## Check for weird names.
+        if port_data['name'] != port_data['port_json']['name']:
+            error(port_name.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
+
+        for port_dir in port_data['dirs']:
+            if name_cleaner(port_dir[:-1]) != port_dir[:-1]:
+                error(port_name.name, f"Bad port directory {port_dir[:-1]!r}, recommended name is {name_cleaner(port_dir[:-1])!r}")
 
     port_check_bf &= REQUIRED_FILES
     if port_check_bf != REQUIRED_FILES:
@@ -659,7 +674,7 @@ def main(argv):
         if not port_dir.is_dir():
             continue
 
-        port_data = load_port(port_dir, new_manifest, registered)
+        port_data = load_port(port_dir, new_manifest, registered, port_status)
 
         if port_data is None:
             continue
