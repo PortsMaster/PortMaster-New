@@ -11,26 +11,31 @@ To learn more visit [portmaster.games](https://portmaster.games/).
 
 PortMaster used to be a collection of zips inside of a git repo, this got unwieldy, especially now that we have 300+ ports. It was impossible to tell from one release to the next what files were actually changed. It made checking scripts incredibly hard, and even harder to learn from other ports.
 
-The PortMaster-New repo now has all the ports unzipped, this makes the repo slightly larger initally, however changes will no longer greatly increase the size. Upon release we download the previous release and only create a new zip when the ports files actually change.
+The PortMaster-New repo now has all the ports unzipped, this makes the repo slightly larger initially, however changes will no longer greatly increase the size. The release system intelligently 
 
 ## Submitting a PR
 
-To submit a PR you will have to fork the repo. After forking the repo, go into the settings for the fork and disable github actions for your fork. After cloning the repo you should run the `tools/build_data.py` from the root of repo.
+To submit a PR you will have to fork the repo. After forking the repo, go into the settings for the fork and disable github actions for your fork.
 
-For example:
+Afterwards you can clone the repo, and you should run the newly made `tools/prepare_repo.sh` from the root of repo. This will download the latest files from the release system.
+
 ```bash
-python3 tools/build_data.py
+tools/prepare_repo.sh
 ```
 
-If you add a file that is larger than 90+ MB, you will have to run the above script. It will split the file into 50mb chunks suitable for commiting to github. If you edit the large-file just rerun the above script and it will update the chunks.
+From there you can create a new directory in `ports/` for your new port, be sure to check the below `New Port Structure` section to make sure your port has all the required files.
 
-Before you commit changes it is recommended you run the `tools/build_release.py` script in checking mode.
+After your port has been added and you are ready to submit it, you can run the `build_release.py` script to check if your port adheres to the port standards.
 
 ```bash
 python3 tools/build_release.py --do-check
 ```
 
-This will make sure all ports have the appropriate files, and will save everyone a lot of time.
+This will check your port to make sure it has all the required files, and will warn of any issues.
+
+If you add a file that is larger than 90+ MB, you will have to run the script `tools/build_data.py`. It will split the file into 50mb chunks suitable for committing to github. If you edit the large-file just rerun the above script and it will update the chunks. This also adds the file to `.gitginore` in the ports directory so that the large file will not be committed to the repo.
+
+From there you can do a PR and it will be checked again, portmaster crew members will double check it once again.
 
 ### Portname requirements
 
@@ -44,7 +49,7 @@ This name must not clash with any other existing ports.
 
 ### New Port Structure:
 
-Ports are now contained within a top level directory, the directory `<portname>`, using the rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}`.
+Ports are now contained within the `port` top level directory, each port has its own sub-directory named after the port itself. Each port must adhere to the `portname` rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}`.
 
 The script should have capital letters (like `Port Name.sh`) and must end in `.sh`, the port directory should be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
 

@@ -154,7 +154,7 @@ def load_port(port_dir, manifest, registered, port_status):
         }
 
     if port_dir.name != name_cleaner(port_dir.name):
-        error(port_dir.name, "Bad port directory name")
+        error(port_dir.name, f"Bad port directory name, recommended name: {name_cleaner(port_dir.name)}, please rename to continue.")
         return None
 
     port_check_bf = 0
@@ -218,12 +218,16 @@ def load_port(port_dir, manifest, registered, port_status):
     if port_date > '2024-01-26':
         ## Check for weird names.
         if port_data['name'] != port_data['port_json']['name']:
-            error(port_name.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
+            error(port_dir.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
 
-        for port_dir in port_data['dirs']:
-            if name_cleaner(port_dir[:-1]) != port_dir[:-1]:
-                error(port_name.name, f"Bad port directory {port_dir[:-1]!r}, recommended name is {name_cleaner(port_dir[:-1])!r}")
+        if (port_dir.name + '/') not in port_data['dirs']:
+            error(port_dir.name, f"No port directory named {port_dir.name}. Main port directory needs to be named {port_dir.name}")
 
+        for dir_name in port_data['dirs']:
+            if name_cleaner(dir_name[:-1]) != dir_name[:-1]:
+                error(port_dir.name, f"Bad port directory {dir_name[:-1]!r}, recommended name is {name_cleaner(dir_name[:-1])!r}")
+
+    # This is an abomination. :D
     port_check_bf &= REQUIRED_FILES
     if port_check_bf != REQUIRED_FILES:
         for i in range(UNKNOWN_FILE):
