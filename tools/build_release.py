@@ -726,7 +726,16 @@ def main(argv):
     errors = 0
     warnings = 0
     for port_name, messages in MESSAGES.items():
-        if '--do-check' not in argv and port_name not in updated_ports:
+        if '--do-check' in argv and port_name not in updated_ports:
+            continue
+
+        if Path('.github_check').is_file():
+            for warning in messages['warnings']:
+                print(f"::warning file=ports/{port_name}::{warning}")
+
+            for error in messages['errors']:
+                print(f"::error file=ports/{port_name}::{error}")
+
             continue
 
         print(f"Bad port {port_name}")

@@ -37,6 +37,16 @@ If you add a file that is larger than 90+ MB, you will have to run the script `t
 
 From there you can do a PR and it will be checked again, portmaster crew members will double check it once again.
 
+You can use the build_release.py to build the zips of any ports that have changed.
+
+```bash
+python3 tools/build_release.py
+```
+
+Your port zips will then be in `releases/`, these are suitable for posting to discord for testing.
+
+---------------------------------------------
+
 ### Portname requirements
 
 The **portname** must start with either a lowercase letter (a-z) or a number (0-9).
