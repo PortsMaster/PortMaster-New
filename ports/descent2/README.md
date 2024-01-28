@@ -34,8 +34,7 @@ Descent I & II: Definitive Edition came with some extra content not available on
 This extra content can be placed in the data/missions folder for both Descent and Descent 2. If done correctly you'll see a new submenu when selecting New Game.
 
 ## Configuration
-Ini files `d1x.ini` and `d2x.ini` are configurable. The port features KBM emulation and native SDL joystick controls. To switch between them, tick the option `-nojoystick` in the ini file. Joystick controls only affect the analog sticks and is meant for those who
-prefer a more "authentic" experience.  
+Ini files `d1x.ini` and `d2x.ini` are configurable. The port features keyboard emulation and native SDL joystick controls.
 
 You may rename `Player.plr` and `Player.plx` in the conf folder for a different multiplayer display name. If you do so, please modify the `d1x.ini` or `d2x.ini` file to reflect this change.
 
@@ -82,6 +81,16 @@ Add-Ons (.dxa files) such as different soundtracks from various soundcards and g
 |SELECT + X|8|
 |SELECT + Y|9|
 |D-PAD Left|Backspace|
+
+## Secret Levels
+|Origin Level|Leads To|
+|--|--|
+|Level 3 & 4|Secret Level 1|
+|Level 5 & 8|Secret Level 2|
+|Level 12|Secret Level 3| 
+|Level 14|Secret Level 4|
+|Level 17 & 20|Secret Level 5|
+|Level 21 & 24|Secret Level 6|
 
 ## Thanks
 Cebion  
