@@ -1,3 +1,9 @@
+---
+name: Create a new port
+about: Create a new port in PortMaster.
+title: 'New Port: '
+---
+
 # New Port for { Game Title }
 
 ## Game Information
