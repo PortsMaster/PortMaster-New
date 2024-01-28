@@ -25,7 +25,7 @@ ln -sfv $GAMEDIR/conf/.$GAME ~/
 export LIBGL_FB=4
 export LD_LIBRARY_PATH=$GAMEDIR/libs:/usr/lib
 export SDL_FORCE_SOUNDFONTS=1
-export SDL_SOUNDFONTS="$GAMEDIR/lib/soundfont.sf2"
+export SDL_SOUNDFONTS="$GAMEDIR/libs/soundfont.sf2"
 
 # Add some cheats
 if [ ! -f "./cheats.txt" ]; then
