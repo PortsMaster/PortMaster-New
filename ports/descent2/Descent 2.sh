@@ -47,7 +47,7 @@ $GPTOKEYB "$GAME" -c "conf/joy.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Run the game
-./$GAME -hogdir data 2>&1
+./$GAME -hogdir data
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events & 
 printf "\033c" >> /dev/tty1
