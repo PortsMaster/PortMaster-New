@@ -197,37 +197,61 @@ def load_port(port_dir, manifest, registered, port_status):
 
         port_data['files'][port_file.name] = port_file_type
 
-    if len(port_data['dirs']) == 0:
-        error(port_file.name, "Port has no directories")
-        return None
-
-    if len(port_data['scripts']) == 0:
-        error(port_file.name, "Port has no scripts")
-        return None
-
-    if port_data['port_json'] == None:
-        error(port_file.name, "Port has no port.json")
-        return None
-
     if port_data['name'] not in port_status:
         port_date = TODAY
     else:
         port_date = port_status[port_data['name']]['date_added']
 
+    broken = False
     ## Check if the port is an older port, newer ports have stricter name requirements.
     if port_date > '2024-01-26':
         ## Check for weird names.
-        if port_data['name'] != port_data['port_json']['name']:
-            error(port_dir.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
+        if port_data['port_json'] is not None:
+            if port_data['name'] != port_data['port_json']['name']:
+                error(port_dir.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
+                broken = True
 
         if (port_dir.name + '/') not in port_data['dirs']:
             error(port_dir.name, f"No port directory named {port_dir.name}. Main port directory needs to be named {port_dir.name}")
+            broken = True
 
         for dir_name in port_data['dirs']:
             if name_cleaner(dir_name[:-1]) != dir_name[:-1]:
                 error(port_dir.name, f"Bad port directory {dir_name[:-1]!r}, recommended name is {name_cleaner(dir_name[:-1])!r}")
+                broken = True
 
     # This is an abomination. :D
+    if (port_check_bf & (1<<PORT_JSON)) == 0:
+        port_json_files = list(port_dir.glob('**/*.port.json'))
+        if len(port_json_files) > 0:
+            error(port_dir.name, f"No {port_dir}/port.json file found, found {port_json_files[0]} as a possible candidate.")
+            port_check_bf |= (1<<PORT_JSON)
+            broken = True
+
+    if (port_check_bf & (1<<README_FILE)) == 0:
+        best_match = None
+        match_score = 0
+        for readme_file in port_dir.glob('**/*.md'):
+            if name_cleaner(port_dir.name) in name_cleaner(readme_file.name):
+                if match_score < 100:
+                    best_match = readme_file
+                    match_score = 100
+
+            if readme_file.name.lower() == 'readme.md':
+                if match_score < 50:
+                    best_match = readme_file
+                    match_score = 50
+
+        if best_match is not None:
+            error(port_dir.name, f"No {port_dir}/README.md file found, found {best_match} as a possible candidate.")
+            port_check_bf |= (1<<README_FILE)
+
+    if (port_check_bf & (1<<SCREENSHOT_FILE)) == 0:
+        screenshot_files = list(port_dir.glob('**/*.screenshot.png')) + list(port_dir.glob('**/*.screenshot.jpg'))
+        if len(screenshot_files) > 0:
+            error(port_dir.name, f"No {port_dir}/screnshot.{{png|jpg}} file found, found {screenshot_files[0]} as a possible candidate.")
+            port_check_bf |= (1<<SCREENSHOT_FILE)
+
     port_check_bf &= REQUIRED_FILES
     if port_check_bf != REQUIRED_FILES:
         for i in range(UNKNOWN_FILE):
@@ -237,6 +261,12 @@ def load_port(port_dir, manifest, registered, port_status):
 
             if (port_check_bf & CHECKER) == 0:
                 error(port_dir.name, f"Missing {FILE_TYPE_DESC[i]}.")
+
+                if i in (PORT_JSON, PORT_DIR, PORT_SCRIPT):
+                    broken = True
+
+    if broken:
+        return None
 
     # Create the manifest (an md5sum of all the files in the port, and an md5sum of those md5sums).
     temp = []
@@ -656,6 +686,7 @@ def load_manifest(manifest_file, registered=None):
 def main(argv):
     all_ports = {}
     updated_ports = []
+    bad_ports = []
 
     new_manifest = {}
     old_manifest = {}
@@ -671,6 +702,7 @@ def main(argv):
         "new": 0,
         "unchanged": 0,
         "updated": 0,
+        "broken": 0,
         "total": 0,
         }
 
@@ -689,6 +721,9 @@ def main(argv):
         port_data = load_port(port_dir, new_manifest, registered, port_status)
 
         if port_data is None:
+            status['broken'] += 1
+            status['total'] += 1
+            bad_ports.append(port_dir)
             continue
 
         if old_manifest.get(port_dir.name) != new_manifest[port_dir.name]:
@@ -725,8 +760,11 @@ def main(argv):
 
     errors = 0
     warnings = 0
+
     for port_name, messages in MESSAGES.items():
-        if '--do-check' in argv and port_name not in updated_ports:
+        if '--do-check' in argv and (
+                (PORTS_DIR / port_name) not in updated_ports and
+                (PORTS_DIR / port_name) not in bad_ports):
             continue
 
         if Path('.github_check').is_file():
@@ -751,6 +789,7 @@ def main(argv):
 
     print(f"Changes:")
     print(f"  New:       {status['new']}")
+    print(f"  Broken:    {status['broken']}")
     print(f"  Updated:   {status['updated']}")
     print(f"  Unchanged: {status['unchanged']}")
     print("")
@@ -772,8 +811,9 @@ def main(argv):
 
     if '--do-check' not in argv and len(argv) > 0:
         if status['unchanged'] == status['total']:
-            print("::error file=tools/build_release.py::No new ports, aborting.")
-            return 255
+            if Path('.github_check').is_file():
+                print("::error file=tools/build_release.py::No new ports, aborting.")
+                return 255
 
     return 0
 
