@@ -138,7 +138,7 @@ def file_type(port_file):
     return UNKNOWN_FILE
 
 
-def load_port(port_dir, manifest, registered, port_status):
+def load_port(port_dir, manifest, registered, port_status, quick_build=False):
     port_data = {
         'name': None,
         'port_json': None,
@@ -300,16 +300,18 @@ def load_port(port_dir, manifest, registered, port_status):
 
             large_files[str(file_name)] = True
 
-            temp = hash_file(file_name)
-            manifest[port_file_name] = temp
-            port_manifest.append((port_file_name, temp))
+            if not quick_build:
+                temp = hash_file(file_name)
+                manifest[port_file_name] = temp
+                port_manifest.append((port_file_name, temp))
 
     for large_file, large_file_status in large_files.items():
         if not large_file_status:
             error(port_dir.name, f"Missinge large_file: {large_file}, run python data/build_data.py first.")
             return None
 
-    port_manifest.sort(key=lambda x: x[0].casefold())
+    if not quick_build:
+        port_manifest.sort(key=lambda x: x[0].casefold())
 
     manifest[port_dir.name] = hash_items(port_manifest)
 
@@ -706,6 +708,13 @@ def main(argv):
         "total": 0,
         }
 
+    if len(argv) > 1 and argv[1] == '--help':
+        print(f"Usage:")
+        print(f"   {argv[0]}                  builds any updated ports zip files, a full release cycle.   (SLOW)")
+        print(f"   {argv[0]} --do-check       checks updated ports for errors.                            (SLOW)")
+        print(f"   {argv[0]} --quick-build [portnames]   builds a port zip files without any extra stuff. (FAST)")
+        return 255
+
     # Load global manifest
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
@@ -713,6 +722,41 @@ def main(argv):
     if STATUS_FILE.is_file():
         with open(STATUS_FILE, 'r') as fh:
             port_status = json.load(fh)
+
+    if len(argv) > 1 and argv[1] == '--quick-build':
+        if len(argv) == 2:
+            print(f"Usage {argv[0]} --quick-build [portname] [... portnames]")
+
+        for name in argv[2:]:
+            name = name_cleaner(name)
+            if name.endswith('.zip'):
+                name = name[:-4]
+
+            port_dir = PORTS_DIR / name
+
+            if not port_dir.is_dir():
+                print(f"Unknown port {name!r}.zip")
+                continue
+
+            port_data = load_port(port_dir, new_manifest, registered, port_status, quick_build=True)
+            if port_data is None:
+                continue
+
+            print(f"Building {name}.zip")
+            build_port_zip(RELEASE_DIR, port_dir, port_data, new_manifest, port_status)
+
+        for port_name, messages in MESSAGES.items():
+            print(f"Bad port {port_name}")
+            if len(messages['warnings']) > 0:
+                print("- Warnings:")
+                print("  " + "\n  ".join(messages['warnings']) + "\n")
+
+            if len(messages['errors']) > 0:
+                print("- Errors:")
+                print("  " + "\n  ".join(messages['errors']) + "\n")
+
+        return 0
+
 
     for port_dir in sorted(PORTS_DIR.iterdir(), key=lambda x: str(x).casefold()):
         if not port_dir.is_dir():
