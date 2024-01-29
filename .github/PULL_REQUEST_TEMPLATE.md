@@ -16,6 +16,7 @@ Ensure your game has been tested on all major CFWs:
 Test all major resolutions:
 - [ ] 480x320
 - [ ] 640x480
+- [ ] 720x720 (RGB30)
 - [ ] Higher resolutions (e.g., 1280x720)
 
 ## File Structure
