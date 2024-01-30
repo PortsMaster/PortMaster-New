@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: nova_pinball.zip, Nova Pinball.sh
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -9,12 +10,17 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
 GAMEDIR=/$directory/ports/nova_pinball
 cd $GAMEDIR
 
+if [ "$DEVICE_NAME" = "RGB30" ]; then
+  sed -i 's/t.window.width = [0-9]*/t.window.width = '"$DISPLAY_WIDTH"'/' game/conf.lua
+  sed -i 's/t.window.height = [0-9]*/t.window.height = '"$DISPLAY_HEIGHT"'/' game/conf.lua
+fi
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "love" -c "./game.gptk" &
