@@ -20,7 +20,7 @@ GAMEDIR="/$directory/ports/anarch"
 
 cd $GAMEDIR
 
-#$GPTOKEYB "anarch" -c anarch.gptk &
+$GPTOKEYB "anarch" & #-c anarch.gptk &
 LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./anarch data/ 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)

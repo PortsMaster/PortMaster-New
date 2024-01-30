@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: megaman.zip, Megaman.sh
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -42,7 +43,7 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
 fi
 
 if [[ -f "data.pck.gz" ]]; then
-  $ESUDO rm -f "data.pck.gz"
+  $ESUDO rm -f "data.pck"
   gzip -d "data.pck.gz"
 fi
 
@@ -58,7 +59,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./a.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" -path "data.pck" 2>&1 | $ESUDO tee -a ./log.txt
+"$runtime" -path "data.pck" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)
