@@ -9,6 +9,7 @@ else
 fi
 
 source "$controlfolder/control.txt"
+[ -f "/etc/os-release" ] && source "/etc/os-release"
 
 get_controls
 
@@ -18,22 +19,21 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/puremetal"
-if [ -f "/etc/os-release" ]; then
-  source "/etc/os-release"
-fi 
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ "$OS_NAME" != "JELOS" ]; then
-  export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/puremetal/lib"
-fi
- 
 cd "$GAMEDIR"
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/puremetal/lib"
 
-mv gamedata/data.win gamedata/game.droid
-mv gamedata/game.win gamedata/game.droid
+if [ "$OS_NAME" == "JELOS" ]; then
+  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
+  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+fi
 
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "gmloader" textinput &
@@ -41,8 +41,7 @@ echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
-
-./gmloader puremetal.apk |& tee log.txt /dev/tty0
+./gmloader puremetal.apk
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &

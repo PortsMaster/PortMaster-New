@@ -23,9 +23,9 @@ $ESUDO rm -rf ~/.$GAME
 ln -sfv $GAMEDIR/conf/.$GAME ~/
 
 export LIBGL_FB=4
-export LD_LIBRARY_PATH=$GAMEDIR/lib:/usr/lib
+export LD_LIBRARY_PATH=$GAMEDIR/libs:/usr/lib
 export SDL_FORCE_SOUNDFONTS=1
-export SDL_SOUNDFONTS="$GAMEDIR/lib/soundfont.sf2"
+export SDL_SOUNDFONTS="$GAMEDIR/libs/soundfont.sf2"
 
 # Add some cheats
 if [ ! -f "./cheats.txt" ]; then
@@ -47,7 +47,7 @@ $GPTOKEYB "$GAME" -c "conf/joy.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Run the game
-./$GAME -hogdir data 2>&1 | tee -a ./log.txt
+./$GAME -hogdir data
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events & 
 printf "\033c" >> /dev/tty1
