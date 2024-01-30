@@ -12,7 +12,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Set variables
-GAMEDIR="/$directory/ports/tunics!"
+GAMEDIR="/$directory/ports/tunics"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:/usr/lib"
