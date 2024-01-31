@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: avp.zip, Alien vs Predator.sh
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -18,6 +19,17 @@ $ESUDO rm -rf ~/.avp
 ln -sfv /$directory/ports/avp/conf ~/.avp
 
 cd $GAMEDIR
+
+to_lower_case() {
+    for SRC in $(find "$1" -depth); do
+    DST=$(dirname "${SRC}")/$(basename "${SRC}" | tr '[A-Z]' '[a-z]')
+    if [ "${SRC}" != "${DST}" ]; then
+        [ ! -e "${DST}" ] && $ESUDO mv -vT "${SRC}" "${DST}" || echo "- ${SRC} was not renamed"
+    fi
+    done
+}
+
+to_lower_case .
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "avp" -c "./avp.gptk" &

@@ -37,8 +37,8 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
 fi
 
 if [[ -f "gamedata/data.pck.gz" ]]; then
-  $ESUDO rm -f "gamedata/data.pck.gz"
   gzip -d "gamedata/data.pck.gz"
+  $ESUDO rm -f "gamedata/data.pck.gz"
 fi
 
 # Setup Godot
