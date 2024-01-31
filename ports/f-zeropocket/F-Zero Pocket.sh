@@ -25,7 +25,7 @@ GAMEDIR="/$directory/ports/f-zeropocket"
 
 # Port specific additional libraries should be included within the port's directory in a separate subfolder named libs.
 # Prioritize the armhf libs to avoid conflicts with aarch64
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
