@@ -81,18 +81,18 @@ local DEFAULT_KEY_BINDS = {
 
 --command names as keys with joypad buttons as values
 local DEFAULT_BUTTON_BINDS = {
-  up = "",
-  down = "",
-  left = "",
-  right = "",
-  action = "",
-  attack = "",
-  pause = "",
-  item_1 = "",
-  item_2 = "",
+  up = nil,
+  down = nil,
+  left = nil,
+  right = nil,
+  action = nil,
+  attack = nil,
+  pause = nil,
+  item_1 = nil,
+  item_2 = nil,
   --custom_commands
-  prev_menu = "",
-  next_menu = "",
+  prev_menu = nil,
+  next_menu = nil,
 }
 
 --Do not allow binding to these keys
@@ -350,70 +350,9 @@ sol.main:register_event("on_key_pressed", function(self, key, modifiers)
   return handled
 end)
 
-sol.main:register_event("on_joypad_button_pressed", function(self, button)
-  local handled = false --tentative
-  if is_capturing_input then
-    --bind captured input
-    local joypad_string = string.format("button %d", button)
-    manager:set_command_joypad_binding(capture_command, joypad_string)
-
-    stop_capturing("joypad", joypad_string)
-    handled = true
-  end
-
-  return handled
-end)
-
-sol.main:register_event("on_joypad_axis_moved", function(self, axis, state)
-  local handled = false --tentative
-  if is_capturing_input and state ~= 0 then --not returning to center
-    --bind captured input
-    local joypad_string = string.format("axis %d %s", axis, state>0 and "+" or "-")
-    manager:set_command_joypad_binding(capture_command, joypad_string)
-
-    stop_capturing("joypad", joypad_string)
-    handled = true
-  end
-
-  return handled
-end)
-
-sol.main:register_event("on_joypad_hat_moved", function(self, hat, direction8)
-  local handled = false --tentative
-  if is_capturing_input and direction8 >= 0 then --not centered
-    --bind captured input
-    local dir_string = HAT_CONVERSIONS[direction8]
-    local joypad_string = string.format("hat %d %s", hat, dir_string)
-    manager:set_command_joypad_binding(capture_command, joypad_string)
-
-    stop_capturing("joypad", joypad_string)
-    handled = true
-  end
-
-  return handled
-end)
-
---// Copies bindings from settings.dat over to current game
-local function copy_to_game(game)
-  if not is_loaded then manager:init() end
-
-  --start by clearing any existing game commands
-  for i = 1,BUILTIN_COUNT do
-    local command = COMMAND_NAMES[i] --each built-in command
-    game:set_command_keyboard_binding(command, nil)
-    game:set_command_joypad_binding(command, nil)
-  end
-
-  --apply built-in commands from settings.dat to game
-  for str,command in pairs(binds_lookup) do --all commands assigned to button or key
-    if COMMAND_NAMES[command] then --only bind built-in commands for the game
-      local input_type = str:match"^(%S+)%s"
-      if input_type and JOYPAD_INPUTS[input_type] then --str is a joypad string
-        game:set_command_joypad_binding(command, str)
-      else game:set_command_keyboard_binding(command, str) end
-    end
-  end
-end
+sol.main:register_event("on_joypad_button_pressed")
+sol.main:register_event("on_joypad_axis_moved")
+sol.main:register_event("on_joypad_hat_moved")
 
 --// Resets all control bindings to defaults
 function manager:reset_defaults()
