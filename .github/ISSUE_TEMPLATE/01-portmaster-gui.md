@@ -12,7 +12,7 @@ The device(s) you were using when you encountered the problem. Check all that ap
 -->
 * [ ] RG351P/M
 * [ ] RG351V
-* [ ] RG353
+* [ ] RG351MP
 * [ ] RG353M/V/P
 * [ ] RG503
 * [ ] RG552
@@ -33,6 +33,7 @@ The firmware you were using when you encountered the problem. If known, add vers
 * [ ] JelOS
 * [ ] uOS
 * [ ] RetroOZ
+* [ ] TheRA
 
 ### GUI Track
 * [ ] Release
