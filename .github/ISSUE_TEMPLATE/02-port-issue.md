@@ -5,7 +5,9 @@ labels: 'port issue'
 title: 'Port Issue: '
 
 ---
-
+<!--
+Remember to upload any log.txt files you have!
+-->
 ### Device Type
 <!--
 The device(s) you were using when you encountered the problem. Check all that apply or if the problem occurs on all devices, check "all of the above".
