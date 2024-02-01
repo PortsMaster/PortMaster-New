@@ -23,6 +23,15 @@ The device(s) you were using when you encountered the problem. Check all that ap
 * [ ] Other device (unsupported/beta device)
 * [ ] All of the above
 
+### Firmware
+<!--
+The firmware you were using when you encountered the problem. If known, add version info.
+-->
+* [ ] ArkOS
+* [ ] ArkOS Wummle
+* [ ] AmberELEC
+* [ ] JelOS
+
 ### Description
 <!--
 Describe the problem you encountered.
