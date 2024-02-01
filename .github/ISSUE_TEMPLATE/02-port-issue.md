@@ -22,7 +22,7 @@ The device(s) you were using when you encountered the problem. Check all that ap
 * [ ] RGB30
 * [ ] RK2023
 * [ ] X55
-* [ ] Other device (unsupported/beta device)
+* [ ] Other device (device name here)
 * [ ] All of the above
 
 ### Firmware
