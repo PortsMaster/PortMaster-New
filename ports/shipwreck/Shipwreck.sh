@@ -4,12 +4,8 @@ if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
-elif [ -d "/roms/ports" ]; then
-  controlfolder="/roms/ports/PortMaster"
- elif [ -d "/roms2/ports" ]; then
-  controlfolder="/roms2/ports/PortMaster"
 else
-  controlfolder="/storage/roms/ports/PortMaster"
+  controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
@@ -17,6 +13,7 @@ source $controlfolder/tasksetter
 
 get_controls
 
+export ESUDO=$ESUDO
 GAMEDIR="/$directory/ports/shipwreck"
 cd "$GAMEDIR/gamedata"
 
@@ -44,23 +41,21 @@ rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 
 # Setup path and other environment variables
 export MONO_PATH="$GAMEDIR/dlls"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib32:/usr/lib32:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin:$PATH"
 
-export FNA3D_FORCE_MODES=800x480
 export FNA3D_FORCE_DRIVER=OpenGL
 export FNA3D_OPENGL_FORCE_ES3=1
+export FNA3D_OPENGL_FORCE_VBO_DISCARD=1
 
 isitarkos=$(grep "title=" /usr/share/plymouth/themes/text.plymouth)
 if [[ $isitarkos == *"ArkOS"* ]]; then
   $ESUDO perfnorm
 fi
-
-
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "mono" &
-$TASKSET mono Shipwreck.exe 2>&1 | tee $GAMEDIR/log.txt
+$TASKSET mono Shipwreck.exe 2>&1 | tee /dev/tty0 $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
