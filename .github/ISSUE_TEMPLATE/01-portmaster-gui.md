@@ -5,7 +5,9 @@ labels: 'portmaster-gui'
 title: 'PortMaster GUI: '
 
 ---
-
+<!--
+Please include your pugwash.txt file!
+-->
 ### Device Type
 <!--
 The device(s) you were using when you encountered the problem. Check all that apply or if the problem occurs on all devices, check "all of the above".
