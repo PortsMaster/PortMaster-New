@@ -150,7 +150,12 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
         'scripts': [],
 
         'zip_files': [],
-        'image_files': [],
+        'image_files': {
+            "screenshot": None,
+            "cover": None,
+            "thumbnail": None,
+            "video": None,
+            },
         }
 
     if port_dir.name != name_cleaner(port_dir.name):
@@ -170,6 +175,12 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
         if port_file_type == UNKNOWN_FILE:
             warning(port_dir.name, f"Unknown file: {port_file.name}")
             continue
+
+        elif port_file_type == COVER_FILE:
+            port_data['image_files']['cover'] = '.'.join((port_dir.name, port_file.name))
+
+        elif port_file_type == SCREENSHOT_FILE:
+            port_data['image_files']['screenshot'] = '.'.join((port_dir.name, port_file.name))
 
         elif port_file_type == PORT_SCRIPT:
             if registered['scripts'].setdefault(port_file.name, port_dir.name) != port_dir.name:
@@ -626,6 +637,9 @@ def generate_ports_json(all_ports, port_status):
 
     for port_dir, port_data in sorted(all_ports.items(), key=lambda k: (k[1]['port_json']['attr']['title'].casefold())):
         ports_json_output['ports'][port_data['name']] = port_data['port_json']
+
+        port_data['port_json']['attr']['image'] = port_data['image_files']
+
         port_info(
             RELEASE_DIR / port_data['name'],
             ports_json_output['ports'],
