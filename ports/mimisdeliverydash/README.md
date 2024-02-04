@@ -1,5 +1,5 @@
 ## Installation
-Download from:https://caffinate.itch.io/mimis-delivery-dash and extract data.win and both .ogg files to `/ports/mimisdeliverydash/gamedata`.
+Download from https://caffinate.itch.io/mimis-delivery-dash and extract data.win and both .ogg files to `/ports/mimisdeliverydash/gamedata`.
 
 ## Default Gameplay Controls
 | Button | Action |
