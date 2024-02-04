@@ -828,9 +828,11 @@ def main(argv):
         if Path('.github_check').is_file():
             for warning in messages['warnings']:
                 print(f"::warning file=ports/{port_name}::{warning}")
+                warnings += 1
 
             for error in messages['errors']:
                 print(f"::error file=ports/{port_name}::{error}")
+                errors += 1
 
             continue
 
