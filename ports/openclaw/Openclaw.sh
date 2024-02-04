@@ -19,8 +19,8 @@ yres="$(cat /sys/class/graphics/fb0/modes | grep -o -P '(?<=:).*(?=p-)' | cut -d
 
 if [[ -f "CLAW.REZ.gz" ]]; then
   # Extract the CLAW.REZ file.
-  $ESUDO rm -f CLAW.REZ
   gzip -d CLAW.REZ.gz
+  $ESUDO rm -f CLAW.REZ
 fi
 
 if [[ "$LOWRES" == "Y" ]]; then
