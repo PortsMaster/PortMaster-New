@@ -1,5 +1,7 @@
 ## Notes
 
+Thanks to Jamphibious for creating this game. This game is free but the developer accepts your support by letting you pay what you think is fair for the game https://jamphibious.itch.io/little-frog-game
+
 Tested using *Little Frog Game (Linux - FrogCon Update).zip* version, but Windows version will likely work fine, too.
 
 
