@@ -21,7 +21,7 @@ cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "apotris" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./apotris
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./Apotris
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
