@@ -1,5 +1,6 @@
 Doom 3 Portmaster ReadMe
-*Based on the work from: https://github.com/dhewm/dhewm3
+*Based on the work from: https://github.com/emileb/d3es-multithread
+*Built at commit ref: 4f35e6ad2acafb936b784a9d33c8383864ce91a8
 *This requires Portmaster to be installed to work
 *This will not run on rk3326 devices 
 *Place your pk4 files in base/
@@ -13,4 +14,5 @@ Doom 3 Portmaster ReadMe
 			pak005.pk4
 			pak006.pk4
 			pak007.pk4
+			pak008.pk4
 			
