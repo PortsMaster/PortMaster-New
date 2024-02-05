@@ -31,6 +31,7 @@ PORT_INFO_ATTR_ATTRS = {
     'exp': False,
     'runtime': None,
     'reqs': [],
+    'arch': [],
     }
 
 
