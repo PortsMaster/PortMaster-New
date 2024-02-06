@@ -13,22 +13,43 @@ get_controls
 
 # Set variables
 GAMEDIR="/$directory/ports/zelda-mysteryofsolarusxd"
+runtime="solarus-1.6.5"
+solarus_dir="$HOME/portmaster-solarus"
+solarus_file="$controlfolder/libs/${runtime}.squashfs"
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/lib"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
 
 cd $GAMEDIR
+
+# Check for runtime
+if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
+  # Check for runtime if not downloaded via PM
+  if [ ! -f "$controlfolder/harbourmaster" ]; then
+    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    sleep 5
+    exit 1
+  fi
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
+fi
+
+# Setup Solarus
+$ESUDO mkdir -p "$solarus_dir"
+$ESUDO umount "$solarus_file" || true
+$ESUDO mount "$solarus_file" "$solarus_dir"
+PATH="$solarus_dir:$PATH"
 
 # Setup controls
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "solarus-run" -c "zmosxd.gptk" & 
+$GPTOKEYB "$runtime" -c "zmosxd.gptk" & 
 
 # Run the game
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
-./solarus-run $GAMEDIR/game/*.solarus 2>&1 | tee -a ./"log.txt"
+"$runtime" $GAMEDIR/*.solarus 2>&1 | tee -a ./"log.txt"
 $ESUDO kill -9 $(pidof gptokeyb)
+$ESUDO umount "$solarus_file" || true
 $ESUDO systemctl restart oga_events & 
 printf "\033c" >> /dev/tty1
 printf "\033c" > /dev/tty0

@@ -12,7 +12,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Set variables
-GAMEDIR="/$directory/ports/zelda-bookofmudora"
+GAMEDIR="/$directory/ports/osanasrevenge"
 runtime="solarus-1.6.5"
 solarus_dir="$HOME/portmaster-solarus"
 solarus_file="$controlfolder/libs/${runtime}.squashfs"
@@ -43,7 +43,7 @@ PATH="$solarus_dir:$PATH"
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "$runtime" -c "zbom.gptk" & 
+$GPTOKEYB "$runtime" -c "osana.gptk" & 
 
 # Run the game
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
