@@ -348,6 +348,15 @@ def name_cleaner(text):
     return re.sub(r'[ \.]+', '.', temp)
 
 
+def hash_text(text):
+    md5 = hashlib.md5()
+
+    md5.update(text.encode('utf-8'))
+
+    # print(f"<{md5.hexdigest()}")
+    return md5.hexdigest()
+
+
 def hash_items(items):
     md5 = hashlib.md5()
 
@@ -422,6 +431,7 @@ __all__ = (
     'fetch_file',
     'fetch_json',
     'fetch_text',
+    'hash_text',
     'hash_file',
     'hash_files',
     'hash_file_handle',

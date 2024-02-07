@@ -142,6 +142,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
     port_data = {
         'name': None,
         'port_json': None,
+        'port_json_file': None,
 
         'files': {},
 
@@ -200,6 +201,10 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
 
         elif port_file_type == PORT_JSON:
             port_data['port_json'] = port_info_load(port_file)
+            if port_data['port_json'] is None:
+                return None
+
+            port_data['port_json_file'] = port_file
             port_data['name'] = name_cleaner(port_data['port_json']['name'])
 
             if not port_data['name'].endswith('.zip'):
@@ -217,6 +222,8 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
     ## Check if the port is an older port, newer ports have stricter name requirements.
     if port_date > '2024-01-26':
         ## Check for weird names.
+
+        port_data['name'] = name_cleaner(port_dir.name) + '.zip'
         if port_data['port_json'] is not None:
             if port_data['name'] != port_data['port_json']['name']:
                 error(port_dir.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
@@ -389,7 +396,11 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
             if file_name.name[-9:-3] == '.part.' and file_name.name[-3:].isdigit():
                 continue
 
-            zip_files.append((file_name, new_name))
+            if file_name == port_data['port_json_file']:
+                zip_files.append((file_name, new_name, json.dumps(port_data['port_json'], indent=4)))
+
+            else:
+                zip_files.append((file_name, new_name, None))
 
     zip_files.sort(key=lambda x: x[1].lower())
 
@@ -397,8 +408,12 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
     # pprint(zip_files)
 
     with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for file_pair in zip_files:
-            zf.write(file_pair[0], file_pair[1])
+        for file_triplet in zip_files:
+            if file_triplet[2] == None:
+                zf.write(file_triplet[0], file_triplet[1])
+
+            else:
+                zf.writestr(file_triplet[1], file_triplet[2])
 
     # port_name = port_data['name']
     # port_hash = hash_file(zip_name)
