@@ -1,4 +1,6 @@
 #!/bin/bash
+
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -8,9 +10,8 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
 get_controls
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 $ESUDO chmod 666 /dev/tty1
 
