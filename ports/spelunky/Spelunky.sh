@@ -46,8 +46,6 @@ $GPTOKEYB "box86" -c "spelunky.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $BINDIR/box86 $GAMEDIR/spelunky 2>&1 | tee $GAMEDIR/log.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO sudo kill -9 $(pidof oga_controls)
-$ESUDO sudo systemctl restart oga_events &
+$ESUDO kill -9 $(pidof gptokeyb) & 
 unset LD_LIBRARY_PATH
 printf "\033c" >> /dev/tty1
