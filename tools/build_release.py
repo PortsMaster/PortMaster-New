@@ -142,6 +142,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
     port_data = {
         'name': None,
         'port_json': None,
+        'port_json_file': None,
 
         'files': {},
 
@@ -150,7 +151,12 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
         'scripts': [],
 
         'zip_files': [],
-        'image_files': [],
+        'image_files': {
+            "screenshot": None,
+            "cover": None,
+            "thumbnail": None,
+            "video": None,
+            },
         }
 
     if port_dir.name != name_cleaner(port_dir.name):
@@ -171,6 +177,12 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
             warning(port_dir.name, f"Unknown file: {port_file.name}")
             continue
 
+        elif port_file_type == COVER_FILE:
+            port_data['image_files']['cover'] = '.'.join((port_dir.name, port_file.name))
+
+        elif port_file_type == SCREENSHOT_FILE:
+            port_data['image_files']['screenshot'] = '.'.join((port_dir.name, port_file.name))
+
         elif port_file_type == PORT_SCRIPT:
             if registered['scripts'].setdefault(port_file.name, port_dir.name) != port_dir.name:
                 error(port_file.name, f"Port has the script {port_file.name} which belongs to {registered['scripts'][port_file.name]}")
@@ -189,6 +201,10 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
 
         elif port_file_type == PORT_JSON:
             port_data['port_json'] = port_info_load(port_file)
+            if port_data['port_json'] is None:
+                return None
+
+            port_data['port_json_file'] = port_file
             port_data['name'] = name_cleaner(port_data['port_json']['name'])
 
             if not port_data['name'].endswith('.zip'):
@@ -206,6 +222,8 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
     ## Check if the port is an older port, newer ports have stricter name requirements.
     if port_date > '2024-01-26':
         ## Check for weird names.
+
+        port_data['name'] = name_cleaner(port_dir.name) + '.zip'
         if port_data['port_json'] is not None:
             if port_data['name'] != port_data['port_json']['name']:
                 error(port_dir.name, f"Bad port name {port_data['port_json']['name']!r}, recommended name is {port_data['name']!r}")
@@ -378,7 +396,11 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
             if file_name.name[-9:-3] == '.part.' and file_name.name[-3:].isdigit():
                 continue
 
-            zip_files.append((file_name, new_name))
+            if file_name == port_data['port_json_file']:
+                zip_files.append((file_name, new_name, json.dumps(port_data['port_json'], indent=4)))
+
+            else:
+                zip_files.append((file_name, new_name, None))
 
     zip_files.sort(key=lambda x: x[1].lower())
 
@@ -386,8 +408,12 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
     # pprint(zip_files)
 
     with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for file_pair in zip_files:
-            zf.write(file_pair[0], file_pair[1])
+        for file_triplet in zip_files:
+            if file_triplet[2] == None:
+                zf.write(file_triplet[0], file_triplet[1])
+
+            else:
+                zf.writestr(file_triplet[1], file_triplet[2])
 
     # port_name = port_data['name']
     # port_hash = hash_file(zip_name)
@@ -626,6 +652,9 @@ def generate_ports_json(all_ports, port_status):
 
     for port_dir, port_data in sorted(all_ports.items(), key=lambda k: (k[1]['port_json']['attr']['title'].casefold())):
         ports_json_output['ports'][port_data['name']] = port_data['port_json']
+
+        port_data['port_json']['attr']['image'] = port_data['image_files']
+
         port_info(
             RELEASE_DIR / port_data['name'],
             ports_json_output['ports'],
@@ -814,9 +843,11 @@ def main(argv):
         if Path('.github_check').is_file():
             for warning in messages['warnings']:
                 print(f"::warning file=ports/{port_name}::{warning}")
+                warnings += 1
 
             for error in messages['errors']:
                 print(f"::error file=ports/{port_name}::{error}")
+                errors += 1
 
             continue
 
