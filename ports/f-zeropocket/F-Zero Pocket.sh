@@ -8,18 +8,11 @@ else
 fi
 
 source $controlfolder/control.txt
-
+source $controlfolder/device_info.txt
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 $ESUDO chmod 666 /dev/tty0
-
-# We check on emuelec based CFWs the OS_NAME 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
 
 GAMEDIR="/$directory/ports/f-zeropocket"
 
