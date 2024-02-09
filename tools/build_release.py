@@ -296,7 +296,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
         path = paths.popleft()
 
         for file_name in path.iterdir():
-            if file_name.name in ('.', '..', '.git', '.DS_Store', '.gitignore', '.gitkeep'):
+            if file_name.name in ('.', '..', '.git', '.DS_Store', '.gitignore'):
                 continue
 
             if file_name.name.startswith('._'):
