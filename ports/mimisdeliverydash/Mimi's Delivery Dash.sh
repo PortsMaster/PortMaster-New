@@ -10,23 +10,15 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-if [ -f "/etc/os-release" ]; then
-  source "/etc/os-release"
-fi 
-
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 # Declare variables
 GAMEDIR="/$directory/ports/mimisdeliverydash"
 
 # Exports
-if [ "$OS_NAME" == "JELOS" ]; then
-export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
-
 export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"

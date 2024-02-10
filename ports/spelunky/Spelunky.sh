@@ -9,8 +9,16 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
+
+$ESUDO chmod 666 /dev/tty0
+$ESUDO chmod 666 /dev/tty1
+printf "\033c" > /dev/tty0
+printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/spelunky"
 LIBDIR="$GAMEDIR/lib32"
@@ -30,12 +38,14 @@ export BOX86_PATH="$BINDIR"
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/tty1
+$ESUDO chmod 666 /dev/uinput
 $ESUDO sudo rm -rf ~/.config/SpelunkyClassicHD
 ln -sfv $GAMEDIR/.config/SpelunkyClassicHD/ ~/.config
-$ESUDO $controlfolder/oga_controls box86 $param_device &
+$GPTOKEYB "box86" -c "spelunky.gptk" & 
+
+echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $BINDIR/box86 $GAMEDIR/spelunky 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO sudo kill -9 $(pidof oga_controls)
-$ESUDO sudo systemctl restart oga_events &
+
+$ESUDO kill -9 $(pidof gptokeyb) & 
 unset LD_LIBRARY_PATH
 printf "\033c" >> /dev/tty1
