@@ -238,6 +238,10 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
                 error(port_dir.name, f"Bad port directory {dir_name[:-1]!r}, recommended name is {name_cleaner(dir_name[:-1])!r}")
                 broken = True
 
+    else:
+        # Another bug :D
+        port_data['port_json']['name'] = name_cleaner(port_data['port_json']['name'])
+
     # This is an abomination. :D
     if (port_check_bf & (1<<PORT_JSON)) == 0:
         port_json_files = list(port_dir.glob('**/*.port.json'))
