@@ -283,6 +283,138 @@ def port_info_load(raw_info, source_name=None, do_default=False):
     return port_info
 
 
+class HashCache():
+    CACHE_ATTRS = ('st_size', 'st_mtime')
+    DEBUG_CACHE = False
+
+    def __init__(self, file_name):
+        self.file_name = file_name
+        self._cache = dict()
+        self._stats = {
+            'hits': 0,
+            'misses': 0,
+            'loaded': 0,
+            'new': 0,
+            }
+
+        if file_name.is_file():
+            self.load_cache()
+
+    def _stat_file(self, file_name):
+        file_name = Path(file_name)
+        if not file_name.is_file():
+            return None
+
+        stat = Path(file_name).stat()
+        return ':'.join([
+            str(getattr(stat, attr, None))
+            for attr in self.CACHE_ATTRS])
+
+    def load_cache(self):
+        self._cache.clear()
+        self._stats = {
+            'hits': 0,
+            'misses': 0,
+            'loaded': 0,
+            'new': 0,
+            }
+
+        with open(self.file_name, 'r') as fh:
+            data = json.load(fh)
+
+        invalidated = 0
+        cache_items = 0
+        total_items = 0
+
+        # This takes a few extra seconds, but can be worth it.
+        if self.DEBUG_CACHE:
+            print("Loading PM Cache:")
+
+        for file_name, file_data in data.items():
+            total_items += 1
+
+            stat = self._stat_file(file_name)
+            if stat is None:
+                invalidated += 1
+                continue
+
+            if stat != file_data[0]:
+                invalidated += 1
+                continue
+
+            cache_items += 1
+            self._cache[file_name] = file_data
+
+        if self.DEBUG_CACHE:
+            print(f"- invalidated: {invalidated}")
+            print(f"- loaded items: {cache_items}")
+            print(f"- total items: {total_items}")
+            print("")
+
+    def save_cache(self):
+        if self.DEBUG_CACHE:
+            print("Saving PM Cache:")
+            print(f"- cache hits: {self._stats['hits']}")
+            print(f"- cache misses: {self._stats['misses']}")
+            print(f"- new items: {self._stats['new']}")
+            print(f"- total cache size: {len(self._cache)}")
+
+        with open(self.file_name, 'w') as fh:
+            json.dump(self._cache, fh, indent=2)
+
+    def get_file_hash(self, file_name):
+        file_name = str(file_name)
+        stat = self._stat_file(file_name)
+
+        if file_name in self._cache:
+            if self._cache[file_name][0] == stat:
+                self._stats['hits'] += 1
+                return self._cache[file_name][1]
+
+            else:
+                self._stats['misses'] += 1
+
+        else:
+            self._stats['new'] += 1
+
+        file_hash = hash_file(file_name)
+        self._cache[file_name] = [stat, file_hash, None]
+
+        return file_hash
+
+    def get_files_hash(self, file_names):
+        all_result = None
+
+        for file_name in file_names:
+            stat = self._stat_file(file_name)
+
+            if file_name in self._cache:
+                if self._cache[file_name][0] == stat:
+                    if all_result is None:
+                        all_result = self._cache[file_name][2]
+
+                else:
+                    self._stats['misses'] += 1
+                    break
+
+            else:
+                self._stats['new'] += 1
+                break
+
+        else:
+            if all_result is not None:
+                self._stats['hits'] += 1
+                return all_result
+
+
+        all_md5, file_data = hash_files_2(file_names)
+        for file_name, file_md5 in file_data:
+            stat = self._stat_file(file_name)
+            self._cache[file_name] = [stat, file_md5, all_md5]
+
+        return all_md5
+
+
 def fetch_bytes(url):
     try:
         # Open the URL
@@ -395,6 +527,26 @@ def hash_files(file_list):
 
     return md5.hexdigest()
 
+def hash_files_2(file_list):
+    all_md5 = hashlib.md5()
+    results = []
+
+    for file_name in file_list:
+        file_md5 = hashlib.md5()
+
+        with open(file_name, 'rb') as fh:
+            while True:
+                data = fh.read(4096 * 10)
+                if len(data) == 0:
+                    break
+
+                file_md5.update(data)
+                all_md5.update(data)
+
+        results.append((file_name, file_md5.hexdigest()))
+
+    return all_md5.hexdigest(), results
+
 
 def hash_file_handle(fh):
     md5 = hashlib.md5()
@@ -425,6 +577,7 @@ __all__ = (
     'PORT_INFO_ATTR_ATTRS',
     'PORT_INFO_GENRES',
     'MESSAGES',
+    'HashCache',
     'datetime_compare',
     'error',
     'fetch_bytes',
