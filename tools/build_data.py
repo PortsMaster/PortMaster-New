@@ -27,6 +27,7 @@ ROOT_DIR = Path('.')
 MANIFEST_FILE = ROOT_DIR / 'manifest.json'
 STATUS_FILE = ROOT_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
+RUNTIMES_DIR = ROOT_DIR / 'runtimes'
 
 LARGEST_FILE = (1024 * 1024 * 90)
 CHUNK_SIZE = (1024 * 1024 * 50)
@@ -180,6 +181,10 @@ def main(argv):
 
         large_files = load_port(port_dir)
         check_large_files(port_dir, large_files)
+
+    # Build any large runtimes.
+    large_files = load_port(RUNTIMES_DIR)
+    check_large_files(RUNTIMES_DIR, large_files)
 
     errors = 0
     warnings = 0

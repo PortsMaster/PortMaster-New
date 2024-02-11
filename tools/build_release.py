@@ -58,6 +58,7 @@ TODAY = str(datetime.datetime.today().date())
 ROOT_DIR = Path('.')
 
 RELEASE_DIR = ROOT_DIR / 'releases'
+RUNTIMES_DIR = ROOT_DIR / 'runtimes'
 MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
 STATUS_FILE = RELEASE_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
@@ -109,19 +110,6 @@ def current_release_url(release_id):
         return f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/latest/download/"
 
     return f"https://github.com/{REPO_CONFIG['RELEASE_ORG']}/{REPO_CONFIG['RELEASE_REPO']}/releases/download/{release_id}/"
-
-
-def runtime_nicename(runtime):
-    if runtime.startswith("frt"):
-        return ("Godot/FRT {version}").format(version=runtime.split('_', 1)[1].rsplit('.', 1)[0])
-
-    if runtime.startswith("mono"):
-        return ("Mono {version}").format(version=runtime.split('-', 1)[1].rsplit('-', 1)[0])
-
-    if "jdk" in runtime and runtime.startswith("zulu11"):
-        return ("JDK {version}").format(version=runtime.split('-')[2][3:])
-
-    return runtime
 
 
 def file_type(port_file):
@@ -582,14 +570,35 @@ def port_info(file_name, ports_json, ports_status):
         ports_json[clean_name]['source']['url'] = current_release_url(ports_status[clean_name]['release_id']) + (file_name.name.replace(" ", ".").replace("..", "."))
 
 
-def util_info(file_name, util_json):
+def util_info(file_name, util_json, ports_status, runtimes_json):
     clean_name = name_cleaner(file_name.name)
 
     file_md5 = hash_file(file_name)
 
     if file_name.name.lower().endswith('.squashfs'):
-        name = runtime_nicename(file_name.name)
-        url = "https://github.com/PortsMaster/PortMaster-Runtime/releases/download/runtimes/" + (file_name.name.replace(" ", ".").replace("..", "."))
+        file_size = file_name.stat().st_size
+
+        default_status = {
+            'date_added': TODAY,
+            'date_updated': TODAY,
+            'md5': file_md5,
+            'size': file_size,
+            'release_id': CURRENT_RELEASE_ID,
+            }
+
+        if clean_name not in ports_status:
+            ports_status[clean_name] = default_status
+            shutil.copyfile(file_name, RELEASE_DIR / file_name.name)
+
+        elif ports_status[clean_name]['md5'] != file_md5:
+            ports_status[clean_name]['md5'] = file_md5
+            ports_status[clean_name]['size'] = file_size
+            ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID
+            ports_status[clean_name]['date_updated'] = TODAY
+            shutil.copyfile(file_name, RELEASE_DIR / file_name.name)
+
+        name = runtimes_json.get(clean_name, clean_name)
+        url = current_release_url(ports_status[clean_name]['release_id']) + (file_name.name.replace(" ", ".").replace("..", "."))
 
     else:
         name = file_name.name
@@ -671,12 +680,25 @@ def generate_ports_json(all_ports, port_status):
         utils.append(RELEASE_DIR / 'PortMaster.zip')
 
     utils.append(RELEASE_DIR / 'images.zip')
-    utils.extend(RELEASE_DIR.glob('*.squashfs'))
+    runtimes_json = {}
+
+    if RUNTIMES_DIR.is_dir():
+        if (RUNTIMES_DIR / 'runtimes.json').is_file():
+            print(f"Loading runtimes.json")
+
+            with open((RUNTIMES_DIR / 'runtimes.json'), 'r') as fh:
+                runtimes_json = json.load(fh)
+
+            print(json.dumps(runtimes_json, indent=4))
+
+        utils.extend(RUNTIMES_DIR.glob('*.squashfs'))
 
     for file_name in sorted(utils, key=lambda x: str(x).casefold()):
         util_info(
             file_name,
-            ports_json_output['utils']
+            ports_json_output['utils'],
+            port_status,
+            runtimes_json
             )
 
     with open(RELEASE_DIR / 'ports.json', 'w') as fh:
