@@ -1,5 +1,5 @@
 ## Installation
-Download the game from https://solarus-games.org/games/the-legend-of-zelda-xd2-mercuris-chess/ and put in the zeldaxd-mercurischess/game folder.
+Download the game from https://solarus-games.org/games/the-legend-of-zelda-xd2-mercuris-chess/ and put in the `ports/zeldaxd-mercurischess` folder.
 
 ## Default Gameplay Controls
 | Button | Action |

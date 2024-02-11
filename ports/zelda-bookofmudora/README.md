@@ -1,5 +1,5 @@
 ## Installation
-Download the game from https://solarus-games.org/games/the-legend-of-zelda-book-of-mudora/ and put in the zelda-bookofmudora/game folder.
+Download the game from https://solarus-games.org/games/the-legend-of-zelda-book-of-mudora/ and put in the `ports/zelda-bookofmudora` folder.
 
 ## Default Gameplay Controls
 | Button | Action |

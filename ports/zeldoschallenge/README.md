@@ -1,5 +1,5 @@
 ## Installation
-Download the game from https://solarus-games.org/games/defi-de-zeldo-ch-1/ and put in the zeldoschallenge/game folder.
+Download the game from https://solarus-games.org/games/defi-de-zeldo-ch-1/ and put in the `ports/zeldoschallenge` folder.
 
 ## Default Gameplay Controls
 | Button | Action |
@@ -13,6 +13,7 @@ Download the game from https://solarus-games.org/games/defi-de-zeldo-ch-1/ and p
 
 ## Thanks
 Cebion  
+Zeldo  
 Testers and Devs from the PortMaster Discord  
 
 
