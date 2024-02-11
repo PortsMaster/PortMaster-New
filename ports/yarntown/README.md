@@ -1,5 +1,5 @@
 ## Installation
-Download game from https://solarus-games.org/games/yarntown/ and put the .solarus file in yarntown/game.
+Download game from https://solarus-games.org/games/yarntown/ and put the .solarus file in `ports/yarntown`.
 
 ## Default Gameplay Controls
 | Button | Action |
@@ -11,9 +11,6 @@ Download game from https://solarus-games.org/games/yarntown/ and put the .solaru
 |X|Shoot pistol|
 |Y|Heal|
 |START|Pause & Save|
-
-## Notes
-This game will boot ok RK3326 chips, but performance will be low in Central Yarntown. It's still somewhat playable, but nowhere near smooth. Play at your own risk.
 
 ## Thanks
 Cebion  
