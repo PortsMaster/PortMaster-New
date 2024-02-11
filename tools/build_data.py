@@ -24,9 +24,13 @@ from util import *
 #############################################################################
 ROOT_DIR = Path('.')
 
+CACHE_FILE = ROOT_DIR / '.hash_cache'
 MANIFEST_FILE = ROOT_DIR / 'manifest.json'
 STATUS_FILE = ROOT_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
+RUNTIMES_DIR = ROOT_DIR / 'runtimes'
+
+GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE = (1024 * 1024 * 90)
 CHUNK_SIZE = (1024 * 1024 * 50)
@@ -147,8 +151,19 @@ def combine_large_files(port_dir, large_file_name, large_file_parts):
 
                     out_fh.write(data)
 
+            if GITHUB_RUN:
+                # Delete the part files to reduce file system usage.
+                Path(large_file_part).unlink()
 
-def check_large_files(port_dir, large_files):
+
+def check_large_files(port_dir, large_files, hash_cache=None):
+    if hash_cache is not None:
+        files_hash = hash_cache.get_files_hash
+        file_hash = hash_cache.get_file_hash
+    else:
+        files_hash = hash_files
+        file_hash = hash_file
+
     for large_file_name, large_file_parts in large_files.items():
         large_file_name = Path(large_file_name)
 
@@ -156,10 +171,10 @@ def check_large_files(port_dir, large_files):
         file_md5 = None
 
         if len(large_file_parts) > 0:
-            parts_md5 = hash_files(large_file_parts)
+            parts_md5 = files_hash(large_file_parts)
 
         if large_file_name.is_file():
-            file_md5 = hash_file(large_file_name)
+            file_md5 = file_hash(large_file_name)
 
         if file_md5 == None and parts_md5 == None:
             error(port_dir.name, "Wut?")
@@ -174,12 +189,21 @@ def check_large_files(port_dir, large_files):
 
 
 def main(argv):
+    hash_cache = None
+
+    if not GITHUB_RUN:
+        hash_cache = HashCache(CACHE_FILE)
+
     for port_dir in sorted(PORTS_DIR.iterdir(), key=lambda x: str(x).casefold()):
         if not port_dir.is_dir():
             continue
 
         large_files = load_port(port_dir)
-        check_large_files(port_dir, large_files)
+        check_large_files(port_dir, large_files, hash_cache)
+
+    # Build any large runtimes.
+    large_files = load_port(RUNTIMES_DIR)
+    check_large_files(RUNTIMES_DIR, large_files, hash_cache)
 
     errors = 0
     warnings = 0
@@ -197,6 +221,9 @@ def main(argv):
             print("- Errors:")
             print("  " + "\n  ".join(messages['errors']) + "\n")
             errors += 1
+
+    if hash_cache is not None:
+        hash_cache.save_cache()
 
     if '--do-check' in argv:
         if errors > 0:
