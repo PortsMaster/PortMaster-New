@@ -29,6 +29,8 @@ STATUS_FILE = ROOT_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
 RUNTIMES_DIR = ROOT_DIR / 'runtimes'
 
+GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
+
 LARGEST_FILE = (1024 * 1024 * 90)
 CHUNK_SIZE = (1024 * 1024 * 50)
 
@@ -147,6 +149,10 @@ def combine_large_files(port_dir, large_file_name, large_file_parts):
                         break
 
                     out_fh.write(data)
+
+            if GITHUB_RUN:
+                # Delete the part files to reduce file system usage.
+                large_file_part.unlink()
 
 
 def check_large_files(port_dir, large_files):

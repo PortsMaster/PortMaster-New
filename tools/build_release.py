@@ -63,6 +63,8 @@ MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
 STATUS_FILE = RELEASE_DIR / 'ports_status.json'
 PORTS_DIR = ROOT_DIR / 'ports'
 
+GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
+
 LARGEST_FILE = (1024 * 1024 * 90)
 
 #############################################################################
@@ -574,9 +576,9 @@ def util_info(file_name, util_json, ports_status, runtimes_json):
     clean_name = name_cleaner(file_name.name)
 
     file_md5 = hash_file(file_name)
+    file_size = file_name.stat().st_size
 
     if file_name.name.lower().endswith('.squashfs'):
-        file_size = file_name.stat().st_size
 
         default_status = {
             'date_added': TODAY,
@@ -588,14 +590,20 @@ def util_info(file_name, util_json, ports_status, runtimes_json):
 
         if clean_name not in ports_status:
             ports_status[clean_name] = default_status
-            shutil.copyfile(file_name, RELEASE_DIR / file_name.name)
+
+            if GITHUB_RUN:
+                file_name.rename(RELEASE_DIR / file_name.name)
+                file_name = RELEASE_DIR / file_name.name
 
         elif ports_status[clean_name]['md5'] != file_md5:
             ports_status[clean_name]['md5'] = file_md5
             ports_status[clean_name]['size'] = file_size
             ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID
             ports_status[clean_name]['date_updated'] = TODAY
-            shutil.copyfile(file_name, RELEASE_DIR / file_name.name)
+
+            if GITHUB_RUN:
+                file_name.rename(RELEASE_DIR / file_name.name)
+                file_name = RELEASE_DIR / file_name.name
 
         name = runtimes_json.get(clean_name, clean_name)
         url = current_release_url(ports_status[clean_name]['release_id']) + (file_name.name.replace(" ", ".").replace("..", "."))
@@ -607,7 +615,7 @@ def util_info(file_name, util_json, ports_status, runtimes_json):
     util_json[clean_name] = {
         "name": name,
         'md5': file_md5,
-        'size': file_name.stat().st_size,
+        'size': file_size,
         'url': url,
         }
 
@@ -866,7 +874,7 @@ def main(argv):
                 (PORTS_DIR / port_name) not in bad_ports):
             continue
 
-        if Path('.github_check').is_file():
+        if GITHUB_RUN:
             for warning in messages['warnings']:
                 print(f"::warning file=ports/{port_name}::{warning}")
                 warnings += 1
