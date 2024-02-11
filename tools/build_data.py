@@ -152,7 +152,7 @@ def combine_large_files(port_dir, large_file_name, large_file_parts):
 
             if GITHUB_RUN:
                 # Delete the part files to reduce file system usage.
-                large_file_part.unlink()
+                Path(large_file_part).unlink()
 
 
 def check_large_files(port_dir, large_files):
