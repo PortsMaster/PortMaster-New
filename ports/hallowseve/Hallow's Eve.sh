@@ -19,9 +19,6 @@ solarus_file="$controlfolder/libs/${runtime}.squashfs"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
 
 cd $GAMEDIR
 
