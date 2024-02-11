@@ -57,6 +57,7 @@ TODAY = str(datetime.datetime.today().date())
 
 ROOT_DIR = Path('.')
 
+CACHE_FILE = ROOT_DIR / '.hash_cache'
 RELEASE_DIR = ROOT_DIR / 'releases'
 RUNTIMES_DIR = ROOT_DIR / 'runtimes'
 MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
@@ -66,6 +67,7 @@ PORTS_DIR = ROOT_DIR / 'ports'
 GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE = (1024 * 1024 * 90)
+
 
 #############################################################################
 ## Read CONFIG file.
@@ -128,7 +130,13 @@ def file_type(port_file):
     return UNKNOWN_FILE
 
 
-def load_port(port_dir, manifest, registered, port_status, quick_build=False):
+def load_port(port_dir, manifest, registered, port_status, quick_build=False, hash_cache=None):
+    if hash_cache is not None:
+        hash_func = hash_cache.get_file_hash
+
+    else:
+        hash_func = hash_file
+
     port_data = {
         'name': None,
         'port_json': None,
@@ -313,9 +321,10 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False):
             large_files[str(file_name)] = True
 
             if not quick_build:
-                temp = hash_file(file_name)
-                manifest[port_file_name] = temp
-                port_manifest.append((port_file_name, temp))
+                file_hash = hash_func(file_name)
+
+                manifest[port_file_name] = file_hash
+                port_manifest.append((port_file_name, file_hash))
 
     for large_file, large_file_status in large_files.items():
         if not large_file_status:
@@ -692,12 +701,12 @@ def generate_ports_json(all_ports, port_status):
 
     if RUNTIMES_DIR.is_dir():
         if (RUNTIMES_DIR / 'runtimes.json').is_file():
-            print(f"Loading runtimes.json")
+            # print(f"Loading runtimes.json")
 
             with open((RUNTIMES_DIR / 'runtimes.json'), 'r') as fh:
                 runtimes_json = json.load(fh)
 
-            print(json.dumps(runtimes_json, indent=4))
+            # print(json.dumps(runtimes_json, indent=4))
 
         utils.extend(RUNTIMES_DIR.glob('*.squashfs'))
 
@@ -757,6 +766,10 @@ def main(argv):
     old_manifest = {}
 
     port_status = {}
+    file_cache = None
+
+    if not GITHUB_RUN:
+        file_cache = HashCache(CACHE_FILE)
 
     registered = {
         'dirs': {},
@@ -820,12 +833,11 @@ def main(argv):
 
         return 0
 
-
     for port_dir in sorted(PORTS_DIR.iterdir(), key=lambda x: str(x).casefold()):
         if not port_dir.is_dir():
             continue
 
-        port_data = load_port(port_dir, new_manifest, registered, port_status)
+        port_data = load_port(port_dir, new_manifest, registered, port_status, hash_cache=file_cache)
 
         if port_data is None:
             status['broken'] += 1
@@ -903,6 +915,9 @@ def main(argv):
     print(f"  Unchanged: {status['unchanged']}")
     print("")
     print(f"Total Ports: {status['total']}")
+
+    if file_cache is not None:
+        file_cache.save_cache()
 
     if '--do-check' in argv:
         if errors > 0:
