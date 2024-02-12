@@ -1,5 +1,5 @@
 ## Installation
-Download the game from https://solarus-games.org/games/the-legend-of-zelda-return-of-the-hylian-se/ and put in the zelda-roth-se/game folder.
+Download the game from https://solarus-games.org/games/the-legend-of-zelda-return-of-the-hylian-se/ and put in the `ports/zelda-roth-se` folder.
 
 ## Default Gameplay Controls
 | Button | Action |
