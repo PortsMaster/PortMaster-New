@@ -1,6 +1,6 @@
 ## Notes
 
-Special thanks to DYA Games [https://dyagames.com/] for making this wonderful game
+Special thanks to [DYA Games](https://dyagames.com/) for making this wonderful game
 
 Source: https://dyagames.itch.io/bot-vice
 
