@@ -134,7 +134,7 @@ def ask_string(question, default=""):
         return response
 
 
-def ask_path(question, default="/roms/ports/rvgl"):
+def ask_path(question, default="~/.rvgl"):
     """ Asks for a path and replaces ~ with the user path """
     response = ask_string(question, default)
     return os.path.expanduser(response)
