@@ -1,5 +1,5 @@
 ## Installation
-Download the game from https://solarus-games.org/games/the-legend-of-zelda-mystery-of-solarus-dx/ and put in the zelda-mysteryofsolarus/game folder.
+Download the game from https://solarus-games.org/games/the-legend-of-zelda-mystery-of-solarus-dx/ and put in the `ports/zelda-mysteryofsolarusdx` folder.
 
 ## Default Gameplay Controls
 | Button | Action |

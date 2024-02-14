@@ -1,5 +1,5 @@
 ## Installation
-Buy the game from https://maxatrillionator.itch.io/hallows-eve and place the .solarus file in the hallowseve/game folder.
+Buy the game from https://maxatrillionator.itch.io/hallows-eve and place the .solarus file in the `ports/hallowseve` folder.
 
 ## Default Gameplay Controls
 | Button | Action |

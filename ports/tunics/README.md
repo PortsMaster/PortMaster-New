@@ -1,5 +1,5 @@
 ## Installation
-Download game from https://solarus-games.org/games/tunics/ and put the .solarus file in tunics!/game.
+Download game from https://solarus-games.org/games/tunics/ and put the .solarus file in `ports/tunics`.
 
 ## Default Gameplay Controls
 | Button | Action |
