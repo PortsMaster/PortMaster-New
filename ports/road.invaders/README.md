@@ -5,6 +5,8 @@ https://blasin.itch.io/road-invaders
 
 Special thanks to: Blasin for making this game and allowing us to share it with you.
 
+Thanks to EvilLurker for the cover.png art.
+
 
 ## Controls
 
