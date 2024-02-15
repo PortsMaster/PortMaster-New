@@ -11,8 +11,8 @@ https://wizbane.itch.io/the-legend-of-lumina
 | Button | Action |
 |--|--| 
 |DPAD|Directional movement|
-|SELECT|Open menu|
+|SELECT/X|Open menu|
 |A|Interact|
-|B|Undo|
+|Y|Undo|
 
 
