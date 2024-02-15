@@ -36,7 +36,7 @@ $ESUDO chmod 666 /dev/uinput
 
 # System
 export LD_LIBRARY_PATH=$GAMEDIR/lib:$LD_LIBRARY_PATH
-$ESUDO rm -f $GAMEDIR/lib/libasound.so.2 $GAMEDIR/lib/libvorbis.so.0 $GAMEDIR/lib/libvorbisenc.so.2 $GAMEDIR/lib/libvorbisfile.so.3
+[ -f "$GAMEDIR/lib/libasound.so.2" ] && $ESUDO rm -f $GAMEDIR/lib/libasound.so.2 $GAMEDIR/lib/libvorbis.so.0 $GAMEDIR/lib/libvorbisenc.so.2 $GAMEDIR/lib/libvorbisfile.so.3
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # gl4es
