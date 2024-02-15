@@ -60,7 +60,6 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./thelegendoflumina.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/patched-$PCK"
-#"$runtime" --main-pack "gamedata/patched-$PCK"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

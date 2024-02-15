@@ -1,29 +1,18 @@
-The legend of Lumina (https://wizbane.itch.io/the-legend-of-lumina)
-===========
+## Notes
 
-Original version by:  
-https://wizbane.itch.io/the-legend-of-lumina (linux V1.2.3.zip)
+Thanks to Wizbane for creating this game. 
+https://wizbane.itch.io/the-legend-of-lumina
 
-Description
-===========
 
-Explore an ancient forest, push blocks to solve puzzles, and search for a way to end the curse on your land..
 
-To compile:
-===========
 
-wget https://downloads.tuxfamily.org/godotengine/3.5.2/godot-3.5.2-stable.tar.xz  
-tar xf godot-3.5.2-stable.tar.xz  
-cd godot-3.5.2-stable/platform  
-git clone https://github.com/Cebion/frt.git  
-cd ../  
-scons platform=frt tools=no target=release use_llvm=yes module_webm_enabled=no -j12  
-strip bin/godot.frt.opt.llvm
+## Controls
 
-Controls:
-===========
+| Button | Action |
+|--|--| 
+|DPAD|Directional movement|
+|SELECT|Open menu|
+|A|Interact|
+|B|Undo|
 
-DPAD    = Directional movement
-SELECT  = Open menu
-B       = Undo
-A       = Interact
+
