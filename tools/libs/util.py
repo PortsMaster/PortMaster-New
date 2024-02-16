@@ -353,11 +353,13 @@ class HashCache():
 
     def save_cache(self):
         if self.DEBUG_CACHE:
+            print("")
             print("Saving PM Cache:")
             print(f"- cache hits: {self._stats['hits']}")
             print(f"- cache misses: {self._stats['misses']}")
             print(f"- new items: {self._stats['new']}")
             print(f"- total cache size: {len(self._cache)}")
+            print("")
 
         with open(self.file_name, 'w') as fh:
             json.dump(self._cache, fh, indent=2)
