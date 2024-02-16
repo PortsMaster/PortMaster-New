@@ -54,7 +54,7 @@ fi
 cd $GAMEDIR
 
 # Check for file existence before trying to manipulate them:
-[ -f "./gamedata/game.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
