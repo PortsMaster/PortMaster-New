@@ -9,6 +9,7 @@
 |START|Menus|
 
 ## Thanks
+Solarus Team  
 Cebion  
 Testers and Devs from the PortMaster Discord  
 
