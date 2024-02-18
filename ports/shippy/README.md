@@ -4,6 +4,8 @@ The Earth is under attack. The only trained pilots, Sora and Fumiko, race to def
 
 Can play in one or two player mode.
 
+Thanks to [Dulsi](https://identicalsoftware.com/) for releasing this game.
+
 [Source code]( https://github.com/dulsi/shippy1984)
 
 
