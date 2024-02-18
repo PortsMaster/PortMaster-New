@@ -15,6 +15,12 @@ get_controls
 
 GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/hexen2"
 
+if [ $DEVICE_NAME == 'x55' ] || [ $DEVICE_NAME == 'RG353P' ]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/hexen2triggers.gptk"  
+else
+    GPTOKEYB_CONFIG="$GAMEDIR/hexen2.gptk"
+fi
+
 $ESUDO chmod 777 -R $GAMEDIR/*
 
 ADDLPARAMS="-conwidth 340 -lm_2 +viewsize 120 +gl_glows 1 +gl_extra_dynamic_lights 1 +gl_missile_glows 1 +gl_other_glows 1 +gl_colored_dynamic_lights 1 +gl_coloredlight 2 +r_waterwarp 0 +showfps 0"
@@ -29,8 +35,8 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
 # System (Also prepare runtime directories for User and Pulse Audio)
-export LD_LIBRARY_PATH=$GAMEDIR/sdl12-compat:$GAMEDIR/gl4es:$GAMEDIR/lib
-
+export LD_LIBRARY_PATH=$GAMEDIR/lib:$LD_LIBRARY_PATH
+[ -f "$GAMEDIR/lib/libasound.so.2" ] && $ESUDO rm -f $GAMEDIR/lib/libasound.so.2 $GAMEDIR/lib/libvorbis.so.0 $GAMEDIR/lib/libvorbisenc.so.2 $GAMEDIR/lib/libvorbisfile.so.3
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # gl4es
@@ -44,7 +50,7 @@ $ESUDO rm $GAMEDIR/log.txt
 $ESUDO rm -rf ~/.hexen2
 $ESUDO ln -s /$GAMEDIR/conf/.hexen2 ~/
 
-$GPTOKEYB "glhexen2" -c "$GAMEDIR/hexen2.gptk" &
+$GPTOKEYB "glhexen2" -c "$GPTOKEYB_CONFIG" &
 ./glhexen2 -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
