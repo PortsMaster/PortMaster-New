@@ -18,9 +18,10 @@ cd $GAMEDIR
 yres="$(cat /sys/class/graphics/fb0/modes | grep -o -P '(?<=:).*(?=p-)' | cut -dx -f2)"
 
 if [[ -f "CLAW.REZ.gz" ]]; then
+  # Delete the old CLAW.REZ if it already exists before extracting the new one.
+  $ESUDO rm -f CLAW.REZ
   # Extract the CLAW.REZ file.
   gzip -d CLAW.REZ.gz
-  $ESUDO rm -f CLAW.REZ
 fi
 
 if [[ "$LOWRES" == "Y" ]]; then
