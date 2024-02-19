@@ -16,7 +16,7 @@ get_controls
 
 $ESUDO chmod 666 /dev/tty0
 
-GAMEDIR="/$directory/ports/love"
+GAMEDIR="/$directory/ports/superstarpath"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs"
 export GMLOADER_DEPTH_DISABLE=1
