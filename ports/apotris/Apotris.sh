@@ -20,7 +20,7 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "apotris" &
+$GPTOKEYB "Apotris" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./Apotris
 
 $ESUDO kill -9 $(pidof gptokeyb)
