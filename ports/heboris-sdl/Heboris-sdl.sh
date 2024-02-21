@@ -20,6 +20,9 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/heboris-sdl"
+
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 $CUR_TTY
@@ -34,7 +37,7 @@ printf "\033c" > $CUR_TTY
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "HeborisC7EX-SDL2" -c "heboris-sdl.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" ./HeborisC7EX-SDL2 2>&1 | tee -a ./log.txt
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" LD_LIBRARY_PATH="$GAMEDIR/libs" ./HeborisC7EX-SDL2
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
