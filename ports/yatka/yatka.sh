@@ -20,25 +20,19 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/yatka"
+
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
-$ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
-export TERM=linux
-printf "\033c" > $CUR_TTY
-
-printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "yatka" -c yatka.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./yatka --scale2x 2>&1 | $ESUDO tee -a ./log.txt
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./yatka --scale2x
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console
