@@ -5,8 +5,6 @@ Thanks to [omf2097 team](https://github.com/omf2097/openomf) for creating this o
 <br/>
 
 ## Controls
-Control mappings are set up for the 'Left keyboard' control scheme. To set this up, from the main menu navigate to Configuration -> Player 1 Input -> Select 'Left Keyboard'.
-
 | Button | Action |
 |--|--| 
 |DPAD|Move|
