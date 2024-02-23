@@ -22,6 +22,17 @@ mkdir -p "$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
+# .check for patched .pck ...
+if [ -f "/$GAMEDIR/gamedata/pyk-patched.pck" ]; then
+  echo "found pyk-patched.pck"
+# ... or patched .pck if not found
+elif [ -f "/$GAMEDIR/gamedata/pyk.pck" ]; then
+  echo "patching pyk.pck"
+  export LD_LIBRARY_PATH=/$GAMEDIR/lib
+  cd /$GAMEDIR/gamedata/
+  $SUDO ../xdelta3 -d -s "pyk.pck" "pyk.xdelta" "pyk-patched.pck"
+fi
+
 cd $GAMEDIR
 
 runtime="frt_3.2.3"
@@ -48,7 +59,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./pyk.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/pyk.pck"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/pyk-patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)
