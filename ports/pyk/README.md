@@ -11,6 +11,7 @@ Tested using *Pyk_1.0.zip* (Windows) version.
 | ---------------- | -------------------- |
 | D-PAD/LEFT-STICK | Directional movement |
 | A/START          | Enter                |
+| SELECT           | M (for Menu)         |
 
 
 ## Compile
