@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to rafalkowalski for creating this game. This game is free at https://rafalkowalski.itch.io/pyk
+Thanks to rafalkowalski for creating this game. This game is available free at https://rafalkowalski.itch.io/pyk
 
 Tested using *Pyk_1.0.zip* (Windows) version.
 
