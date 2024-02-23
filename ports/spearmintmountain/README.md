@@ -1,6 +1,7 @@
 ## Notes
 
 Thanks to Baku [https://baku.itch.io/spearmint-mountain] for this game.
+Thanks to MadShmupper for preparing most of this port
 
 Source: https://baku.itch.io/spearmint-mountain
 
