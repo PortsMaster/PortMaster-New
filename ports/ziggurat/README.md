@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to nethead for creating this game. This game is free at https://nethead.itch.io/ziggurat
+Thanks to nethead for creating this game. This game is available free at https://nethead.itch.io/ziggurat
 
 Tested using *Ziggurat-Linux.zip* version, but Windows version will likely work fine, too.
 
