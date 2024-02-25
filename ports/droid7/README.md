@@ -1,6 +1,14 @@
 ## Notes
-<br/>
 
-Thanks to [Juan Colacelli](https://juancolacelli.itch.io/droid7) for creating this game.  Also thanks to tabreturn for the porting work for portmaster.
-<br/>
+Thanks to [Juan Colacelli](https://juancolacelli.itch.io/droid7) for creating this game.
+
+
+## Controls
+
+| Button      | Action              |
+| ------------| ------------------- |
+| LEFT/RIGHT  | Horizontal movement |
+| A/B         | Jump                |
+| LEFT ANALOG | Mouse position      |
+| R1          | Mouse click         |
 
