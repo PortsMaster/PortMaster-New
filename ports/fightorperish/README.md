@@ -1,5 +1,5 @@
 ## Notes
-Thanks to [Dennis Payne](https://gitlab.com/dulsi/fop) for creating Fight or Peris and making it available for free! 
+Thanks to [Dennis Payne](https://gitlab.com/dulsi/fop) for creating Fight or Perish and making it available for free! 
  
 ## Controls
 
