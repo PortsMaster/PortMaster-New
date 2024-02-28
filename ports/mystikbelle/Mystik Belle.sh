@@ -9,8 +9,8 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod${CFWNAME}.txt" ] && source "${controlfolder}/mod${CFWNAME}.txt"
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
@@ -28,26 +28,17 @@ BINDIR="$GAMEDIR/box86"
 export LIBGL_FB=4
 
 # system
-
 export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 
 # box86
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 export BOX86_LIBGL="$LIBDIR/libGL.so.1"
-#export BOX86_PATH="$BINDIR"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.config/MystikBelle
-$ESUDO ln -s /$GAMEDIR/conf/MystikBelle ~/.config/
-
-$ESUDO chmod 666 /dev/uinput
+$ESUDO rm -rf ~/.config/Mystik_Belle
+$ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle
 
 $GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
 #echo "Loading, please wait... (might take a while!)" > /dev/tty0
