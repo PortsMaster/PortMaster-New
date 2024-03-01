@@ -4,7 +4,7 @@ if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
-elif [ -d "/roms/roms/ports" ]; then
+elif [ -d "/roms/ports/PortMaster" ]; then
   controlfolder="/roms/ports/PortMaster"
 else
   controlfolder="/storage/roms/ports/PortMaster"
