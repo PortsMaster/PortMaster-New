@@ -10,7 +10,9 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
-[ -f "${controlfolder}/mod${CFWNAME}.txt" ] && source "${controlfolder}/mod${CFWNAME}.txt"
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
@@ -25,7 +27,11 @@ LIBDIR="$GAMEDIR/lib32"
 BINDIR="$GAMEDIR/box86"
 
 # gl4es
-export LIBGL_FB=4
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 # system
 export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"

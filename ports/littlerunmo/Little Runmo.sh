@@ -9,6 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -37,8 +40,8 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
 fi
 
 if [[ -f "gamedata/data.pck.gz" ]]; then
+  $ESUDO rm "gamedata/data.pck"
   gzip -d "gamedata/data.pck.gz"
-  $ESUDO rm -f "gamedata/data.pck.gz"
 fi
 
 # Setup Godot
@@ -53,8 +56,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS # By default FRT sets Select 
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./LittleRunmo.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-"$runtime" --main-pack "gamedata/data.pck"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/data.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

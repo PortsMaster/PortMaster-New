@@ -10,6 +10,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -25,8 +28,17 @@ export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
-# Check for runtime if not downloaded via PM
-$ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "frt_3.5.2.squashfs"
+runtime="frt_3.5.2"
+if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
+  # Check for runtime if not downloaded via PM
+  if [ ! -f "$controlfolder/harbourmaster" ]; then
+    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    sleep 5
+    exit 1
+  fi
+
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
+fi
 
 # Setup Godot
 godot_dir="$HOME/godot"
@@ -39,8 +51,8 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "frt_3.5.2" -c "./rota.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" frt_3.5.2 --main-pack rota.pck
+$GPTOKEYB "$runtime" -c "./rota.gptk" &
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack rota.pck
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
