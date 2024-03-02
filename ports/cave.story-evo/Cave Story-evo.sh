@@ -33,8 +33,6 @@ if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.960" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 1280 ] || [ "$DISPLAY_WIDTH" -eq 854 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.854" "$GAMEDIR/conf/nxengine/settings.dat"
-    elif [ "$DISPLAY_WIDTH" -eq 640 ]; then
-        mv -f "$GAMEDIR/conf/nxengine/settings.dat.640" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 480 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.480" "$GAMEDIR/conf/nxengine/settings.dat"
     else
