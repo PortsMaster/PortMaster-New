@@ -10,6 +10,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -38,7 +41,7 @@ if [ "$resolution_lower" = "640x480" ]; then
 else
   echo "Resolution is in 4:3 format."
   export LD_LIBRARY_PATH=/$GAMEDIR/lib
-  $SUDO ./xdelta3 -d -s "Hunt.pck" "Hunt.xdelta" "Hunts.pck"
+  $SUDO $controlfolder/xdelta3 -d -s "Hunt.pck" "Hunt.xdelta" "Hunts.pck"
   HUNT="Hunts.pck"
   rm Hunt.pck
 fi
@@ -69,7 +72,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./Hunt.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "$HUNT"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "$HUNT"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

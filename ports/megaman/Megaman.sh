@@ -14,6 +14,9 @@ if [ -f "/etc/os-release" ]; then
 fi 
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -59,7 +62,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./a.gptk" &
-"$runtime" -path "data.pck" 2>&1 | $ESUDO tee -a ./log.txt
+"$runtime" $GODOT2_OPTS -path "data.pck" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

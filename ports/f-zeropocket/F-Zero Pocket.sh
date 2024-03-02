@@ -9,8 +9,10 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
-get_controls
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+get_controls
 
 $ESUDO chmod 666 /dev/tty0
 

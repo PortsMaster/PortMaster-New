@@ -31,7 +31,7 @@ cd "$GAMEDIR"
 if [ -f "./gamedata/game.unx" ]; then
     file_size=$(ls -l "./gamedata/game.unx" | awk '{print $5}')
     if [ "$file_size" -eq 911688 ]; then
-        $ESUDO ./patch/xdelta3 -d -s gamedata/game.unx -f ./patch/game.xdelta gamedata/game.unx
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/game.xdelta gamedata/game.unx
     fi
 fi
 
@@ -39,7 +39,7 @@ fi
 if [ -f "./gamedata/audiogroup1.dat" ]; then
     file_size=$(ls -l "./gamedata/audiogroup1.dat" | awk '{print $5}')
     if [ "$file_size" -eq 3204899 ]; then
-        $ESUDO ./patch/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/audio1.xdelta gamedata/audiogroup1.dat
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/audio1.xdelta gamedata/audiogroup1.dat
     fi
 fi
 
@@ -47,7 +47,7 @@ fi
 if [ -f "./gamedata/audiogroup2.dat" ]; then
     file_size=$(ls -l "./gamedata/audiogroup2.dat" | awk '{print $5}')
     if [ "$file_size" -eq 9763779 ]; then
-        $ESUDO ./patch/xdelta3 -d -s gamedata/audiogroup2.dat -f ./patch/audio2.xdelta gamedata/audiogroup2.dat
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/audiogroup2.dat -f ./patch/audio2.xdelta gamedata/audiogroup2.dat
     fi
 fi
 

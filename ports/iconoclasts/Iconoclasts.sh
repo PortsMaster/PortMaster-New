@@ -11,18 +11,26 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
 GAMEDIR="/$directory/ports/iconoclasts"
 cd $GAMEDIR/gamedata
 
+# gl4es
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
 export CHOWDREN_FPS=30
 export LIBGL_FB_TEX_SCALE=0.5
 export LIBGL_SKIPTEXCOPIES=1
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
+
 export BOX86_LOG=1
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_DLSYM_ERROR=1

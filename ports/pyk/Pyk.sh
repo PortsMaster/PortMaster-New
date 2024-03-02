@@ -9,6 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -30,7 +33,7 @@ elif [ -f "/$GAMEDIR/gamedata/pyk.pck" ]; then
   echo "patching pyk.pck"
   export LD_LIBRARY_PATH=/$GAMEDIR/lib
   cd /$GAMEDIR/gamedata/
-  $SUDO ../xdelta3 -d -s "pyk.pck" "pyk.xdelta" "pyk-patched.pck"
+  $SUDO $controlfolder/xdelta3 -d -s "pyk.pck" "pyk.xdelta" "pyk-patched.pck"
 fi
 
 cd $GAMEDIR
@@ -59,7 +62,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./pyk.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/pyk-patched.pck"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/pyk-patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

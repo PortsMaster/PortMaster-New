@@ -26,7 +26,7 @@ cd "$GAMEDIR"
 
 if [ -e gamedata/data640.win ]; then
 
-./xdelta3 -d -s gamedata/data640.win gamedata/patch.xdelta gamedata/game.droid && rm -r gamedata/data640.win
+   $controlfolder/xdelta3 -d -s gamedata/data640.win gamedata/patch.xdelta gamedata/game.droid && rm -r gamedata/data640.win
 
 else
    echo Standard boot
