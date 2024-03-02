@@ -10,13 +10,10 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-if [ -f "/etc/os-release" ]; then
-  source "/etc/os-release"
-fi 
-
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 # Declare variables
 GAMEDIR="/$directory/ports/savant"
