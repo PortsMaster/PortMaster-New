@@ -32,9 +32,8 @@ export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/Hydorah/lib"
 
 
 if [ ! -f flagfile ]; then
-
-$SUDO ./xdelta3 -d -s gamedata/data.win gamedata/HYDORAH_STEAM.xdelta gamedata/game.droid
-   touch flagfile
+  $SUDO $controlfolder/xdelta3 -d -s gamedata/data.win gamedata/HYDORAH_STEAM.xdelta gamedata/game.droid
+  touch flagfile
 fi
 
 rm -r gamedata/data.win
