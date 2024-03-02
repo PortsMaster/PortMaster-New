@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: cave.story-evo.zip, Cave Story-evo.sh
 
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -10,10 +11,19 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-GAMEDIR="/$directory/ports/nxengine-evo"
+$ESUDO chmod 666 /dev/tty0
+$ESUDO chmod 666 /dev/tty1
+printf "\033c" > /dev/tty0
+printf "\033c" > /dev/tty1
+
+GAMEDIR=/$directory/ports/nxengine-evo
+
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [[ $LOWRES == "Y" ]]; then
   if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
@@ -50,9 +60,10 @@ fi
 $ESUDO rm -rf ~/.local/share/nxengine
 $ESUDO ln -s $GAMEDIR/conf/nxengine ~/.local/share/
 cd $GAMEDIR
-$ESUDO chmod 666 /dev/tty1
-$ESUDO $controlfolder/oga_controls nxengine-evo $param_device &
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./nxengine-evo 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof oga_controls)
-$ESUDO systemctl restart oga_events &
+
+$ESUDO chmod 666 /dev/uinput
+$GPTOKEYB "nxengine-evo" -c nxengine-evo.gptk &
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./nxengine-evo
+
+$ESUDO kill -9 $(pidof gptokeyb) & 
 printf "\033c" >> /dev/tty1
