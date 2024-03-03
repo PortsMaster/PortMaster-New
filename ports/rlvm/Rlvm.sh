@@ -9,9 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -172,9 +172,11 @@ fi
 #   export PORTMASTER_SCREEN_HEIGHT=480
 # fi
 
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 export SDL12COMPAT_OPENGL_SCALING=1
 export SDL12COMPAT_SCALE_METHOD=linear
@@ -182,8 +184,6 @@ export SDL12COMPAT_DEBUG_LOGGING=1
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH:/usr/lib32"
 
 export PORTMASTER_GAMEPATH="${GAMEDIR}"
 

@@ -44,7 +44,7 @@ echo "Loading, please wait... " > /dev/tty0
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 
-./gmloader HydorahWrapper.apk & tee log.txt /dev/tty0
+./gmloader HydorahWrapper.apk | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &
