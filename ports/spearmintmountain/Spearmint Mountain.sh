@@ -32,6 +32,17 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
+# Check if there are .ogg files in ./gamedata
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    # Move all .ogg files from ./gamedata to ./assets
+    mv ./gamedata/*.ogg ./assets/
+    echo "Moved .ogg files from ./gamedata to ./assets/"
+
+    # Zip the contents of ./sm.apk including the new .ogg files
+    zip -r ./sm.apk ./sm.apk ./assets/
+    echo "Zipped contents to ./sm.apk"
+fi
+
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
