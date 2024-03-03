@@ -168,8 +168,8 @@ fi
 #   export PORTMASTER_SCREEN_WIDTH=480
 #   export PORTMASTER_SCREEN_HEIGHT=320
 # else
-#   export PORTMASTER_SCREEN_WIDTH=640
-#   export PORTMASTER_SCREEN_HEIGHT=480
+  # export PORTMASTER_SCREEN_WIDTH=640
+  # export PORTMASTER_SCREEN_HEIGHT=480
 # fi
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -187,8 +187,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 export PORTMASTER_GAMEPATH="${GAMEDIR}"
 
-$GPTOKEYB "rlvm" -c "${GAMEDIR}/rlvm.gptk" &
-$TASKSET ./rlvm $MSGOTHIC "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
+$GPTOKEYB "rlvm.${DEVICE_ARCH}" -c "${GAMEDIR}/rlvm.gptk" &
+$TASKSET ./rlvm.${DEVICE_ARCH} $MSGOTHIC "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
