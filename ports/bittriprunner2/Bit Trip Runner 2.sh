@@ -10,6 +10,8 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 BINARY_NAME="runner2.patched"
@@ -27,10 +29,13 @@ mkdir -p "$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
-# Setup GL4ES
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
+# Setup gl4es
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
 export BOX86_DYNAREC=1
 export BOX86_FORCE_ES=31
 
@@ -45,14 +50,6 @@ export SDL_VIDEO_GL_DRIVER="$GAMEDIR/box86/native/libGL.so.1"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 export TEXTINPUTINTERACTIVE="Y"
-
-# special care for jelos
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
 
 $GPTOKEYB "$BINARY_NAME" -c "./runner2.gptk" &
 $GAMEDIR/box86/box86 $BINARY_NAME

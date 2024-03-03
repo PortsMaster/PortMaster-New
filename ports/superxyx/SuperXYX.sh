@@ -8,7 +8,10 @@ else
 fi
 
 source "$controlfolder/control.txt"
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 
 get_controls
 
@@ -22,22 +25,16 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd "$GAMEDIR"
 
-if [ ! -f flagfile ]; then
+if [ -f rebuild_wrapper ]; then
+    ./update_assets.txt "$directory" > asset_install.log 2>&1
 
-  ./update_assets.sh > asset_install.log 2>&1
-    
-   touch flagfile
+    rm -f rebuild_wrapper
 fi
 
 export GMLOADER_PLATFORM="os_windows"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/superxyx/lib"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
 
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid

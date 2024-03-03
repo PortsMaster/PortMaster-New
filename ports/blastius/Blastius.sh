@@ -43,7 +43,7 @@ cd $GAMEDIR
 if [ -f "./gamedata/data.win" ]; then
     file_size=$(ls -l "./gamedata/data.win" | awk '{print $5}')
     if [ "$file_size" -eq 3389976 ]; then
-        $ESUDO ./utils/xdelta3 -d -s gamedata/data.win -f ./patch.xdelta gamedata/data.win
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch.xdelta gamedata/data.win
     fi
 fi
 

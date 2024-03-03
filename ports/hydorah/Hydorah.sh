@@ -8,6 +8,9 @@ else
 fi
 
 source "$controlfolder/control.txt"
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -20,21 +23,17 @@ GAMEDIR="/$directory/ports/Hydorah"
 
  
 cd "$GAMEDIR"
+
 export GMLOADER_PLATFORM="os_windows" \
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-
-
 
 export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/Hydorah/lib"
 
 
 if [ ! -f flagfile ]; then
-
-$SUDO ./xdelta3 -d -s gamedata/data.win gamedata/HYDORAH_STEAM.xdelta gamedata/game.droid
-   touch flagfile
+  $SUDO $controlfolder/xdelta3 -d -s gamedata/data.win gamedata/HYDORAH_STEAM.xdelta gamedata/game.droid
+  touch flagfile
 fi
 
 rm -r gamedata/data.win
@@ -45,7 +44,7 @@ echo "Loading, please wait... " > /dev/tty0
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 
-./gmloader HydorahWrapper.apk |& tee log.txt /dev/tty0
+./gmloader HydorahWrapper.apk | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &

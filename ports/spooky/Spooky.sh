@@ -9,6 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -31,10 +34,10 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH=/$GAMEDIR/lib
 
 if [ -e "SpookyGhostsDotCom-Steam" ]; then
-  $ESUDO ./xdelta3 -d -s "SpookyGhostsDotCom-Steam" "SpookyConvertSteam.xdelta" "SpookyGhostsDotCom" && $ESUDO ./xdelta3 -d -s "SpookyGhostsDotCom" "Spooky.xdelta" "data.pck"
+  $ESUDO $controlfolder/xdelta3 -d -s "SpookyGhostsDotCom-Steam" "SpookyConvertSteam.xdelta" "SpookyGhostsDotCom" && $ESUDO ./xdelta3 -d -s "SpookyGhostsDotCom" "Spooky.xdelta" "data.pck"
 else
   echo "SpookyGhostsDotCom-Steam not found, patching Itch version."
-  $ESUDO ./xdelta3 -d -s "SpookyGhostsDotCom" "Spooky.xdelta" "data.pck"
+  $ESUDO $controlfolder/xdelta3 -d -s "SpookyGhostsDotCom" "Spooky.xdelta" "data.pck"
 fi
 
 
@@ -64,7 +67,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "spooky.gptk" &
-"$runtime" -path "data.pck"
+"$runtime" $GODOT2_OPT -path "data.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

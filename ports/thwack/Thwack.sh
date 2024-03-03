@@ -10,6 +10,9 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -27,7 +30,7 @@ elif [ -f "/$GAMEDIR/gamedata/Thwack.pck" ]; then
   echo "patching Thwack.pck"
   export LD_LIBRARY_PATH=/$GAMEDIR/lib
   cd /$GAMEDIR/gamedata/
-  $SUDO ../xdelta3 -d -s "Thwack.pck" "Thwack.xdelta" "Thwack-patched.pck"
+  $SUDO $controlfolder/xdelta3 -d -s "Thwack.pck" "Thwack.xdelta" "Thwack-patched.pck"
   THWACKPCK="Thwack-patched.pck"
 fi
 
@@ -64,7 +67,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./thwack.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/$THWACKPCK"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/$THWACKPCK"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)
