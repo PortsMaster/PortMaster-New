@@ -7,6 +7,6 @@
 |A|Shoot|
 
 ## Thanks
-AngusBeer  
+[AngusBeer](https://angusbeer.itch.io/sunset-witch-classic)  
 MadShmupper  
 Testers and Devs from the PortMaster Discord  
