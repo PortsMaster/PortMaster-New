@@ -69,6 +69,8 @@ GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE = (1024 * 1024 * 90)
 
+## This fixes stuff. >:(
+THIS_IS_ANNOYING = {}
 
 #############################################################################
 ## Read CONFIG file.
@@ -152,7 +154,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
         'zip_files': [],
         'image_files': {
             "screenshot": None,
-            "cover": None,
+            "covers": [],
             "thumbnail": None,
             "video": None,
             },
@@ -177,10 +179,10 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
             continue
 
         elif port_file_type == COVER_FILE:
-            port_data['image_files']['cover'] = '.'.join((port_dir.name, port_file.name))
+            port_data['image_files']['covers'].append(str(port_file.name))
 
         elif port_file_type == SCREENSHOT_FILE:
-            port_data['image_files']['screenshot'] = '.'.join((port_dir.name, port_file.name))
+            port_data['image_files']['screenshot'] = str(port_file.name)
 
         elif port_file_type == PORT_SCRIPT:
             if registered['scripts'].setdefault(port_file.name, port_dir.name) != port_dir.name:
@@ -288,6 +290,17 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
 
     if broken:
         return None
+
+    # LETS MAKE IT WORSE.
+    THIS_IS_ANNOYING['/'.join((port_dir.name, 'gameinfo.xml'))] = \
+        port_data['dirs'][0] + 'gameinfo.xml'
+
+    THIS_IS_ANNOYING['/'.join((port_dir.name, port_data['image_files']['screenshot']))] = \
+        port_data['dirs'][0] + port_data['image_files']['screenshot']
+
+    for cover_image in port_data['image_files']['covers']:
+        THIS_IS_ANNOYING['/'.join((port_dir.name, cover_image))] = \
+            port_data['dirs'][0] + cover_image
 
     # Create the manifest (an md5sum of all the files in the port, and an md5sum of those md5sums).
     temp = []
@@ -478,7 +491,7 @@ def build_gameinfo_zip(old_manifest, new_manifest):
                 changes[name] = 'Added'
 
     zip_files = [
-        ((PORTS_DIR / file), str(file))
+        ((PORTS_DIR / file), THIS_IS_ANNOYING[str(file)])
         for file, digest in new_manifest.items()
         if file.count('/') == 1 and (
             file_type(Path(file)) in (COVER_FILE, SCREENSHOT_FILE, GAMEINFO_XML))]
@@ -947,6 +960,9 @@ def main(argv):
 
         status['total'] += 1
         all_ports[port_dir.name] = port_data
+
+    # with open('annoying.json', 'w') as fh:
+    #     json.dump(THIS_IS_ANNOYING, fh, indent=4)
 
     for port_dir in updated_ports:
         port_data = all_ports[port_dir.name]
