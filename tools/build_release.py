@@ -69,8 +69,42 @@ GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE = (1024 * 1024 * 90)
 
-## This fixes stuff. >:(
+#############################################################################
+"""
+We have ports like:
+
+ports/banana.duck/
+├── Banana Duck.sh
+├── README.md
+├── bananaduck
+│   ├── LICENSE.bananaduck.txt
+│   ├── LICENSE.love2d.txt
+│   ├── README
+│   ├── bananaduck.gptk
+│   ├── game
+│   │   └── LOTS OF FILES
+│   ├── log.txt
+│   └── love
+├── cover.png
+├── gameinfo.xml
+├── port.json
+└── screenshot.png
+
+when i create the gameinfo.zip i am storing the gameinfo data as:
+- banana.duck/gameinfo.xml
+- banana.duck/cover.png
+- banana.duck/screenshot.png
+
+but i need to store it as:
+- bananaduck/gameinfo.xml
+- bananaduck/cover.png
+- bananaduck/screenshot.png
+
+THIS_IS_ANNOYING maps "banana.duck/gameinfo.xml" to "bananaduck/gameinfo.xml"
+
+"""
 THIS_IS_ANNOYING = {}
+
 
 #############################################################################
 ## Read CONFIG file.
@@ -651,12 +685,12 @@ def port_info(file_name, ports_json, ports_status):
 def util_info(file_name, util_json, ports_status, runtimes_map):
     clean_name = name_cleaner(file_name.name)
 
-    file_md5 = hash_file(file_name)
-    file_size = file_name.stat().st_size
-
     if file_name.name.lower().endswith('.squashfs'):
         clean_name = name_cleaner(runtimes_map[file_name.name]['export_name'])
         export_name = runtimes_map[file_name.name]['export_name']
+
+        file_md5 = hash_file(file_name)
+        file_size = file_name.stat().st_size
 
         nice_name = runtimes_map[file_name.name]['nice_name']
         runtime_name = runtimes_map[file_name.name]['runtime_name']
@@ -695,8 +729,37 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
             }
 
     else:
+        if file_name.is_file():
+            file_md5 = hash_file(file_name)
+            file_size = file_name.stat().st_size
+
+        else:
+            if clean_name not in ports_status:
+                # HRMMmmmmm o_o;;;;
+                return
+
+            file_md5 = ports_status[clean_name]['md5']
+            file_size = ports_status[clean_name]['size']
+
+        default_status = {
+            'date_added': TODAY,
+            'date_updated': TODAY,
+            'md5': file_md5,
+            'size': file_size,
+            'release_id': CURRENT_RELEASE_ID,
+            }
+
+        if clean_name not in ports_status:
+            ports_status[clean_name] = default_status
+
+        elif ports_status[clean_name]['md5'] != file_md5:
+            ports_status[clean_name]['md5'] = file_md5
+            ports_status[clean_name]['size'] = file_size
+            ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID
+            ports_status[clean_name]['date_updated'] = TODAY
+
         name = file_name.name
-        url = current_release_url(CURRENT_RELEASE_ID) + (file_name.name.replace(" ", ".").replace("..", "."))
+        url = current_release_url(ports_status[clean_name]['release_id']) + (file_name.name.replace(" ", ".").replace("..", "."))
 
         util_json[clean_name] = {
             "name": name,
@@ -773,10 +836,9 @@ def generate_ports_json(all_ports, port_status):
     if (RELEASE_DIR / 'PortMaster.zip').is_file():
         utils.append(RELEASE_DIR / 'PortMaster.zip')
 
-    if (RELEASE_DIR / 'gameinfo.zip').is_file():
-        utils.append(RELEASE_DIR / 'gameinfo.zip')
-
+    utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
+
     runtimes_map = {}
 
     if RUNTIMES_DIR.is_dir():
@@ -810,7 +872,7 @@ def generate_ports_json(all_ports, port_status):
 
                     utils.append(RUNTIMES_DIR / runtime_file_name)
 
-            print(json.dumps(runtimes_map, indent=4))
+            # print(json.dumps(runtimes_map, indent=4))
 
     for file_name in sorted(utils, key=lambda x: str(x).casefold()):
         util_info(
@@ -935,6 +997,11 @@ def main(argv):
 
         return 0
 
+    CHECK_FOR_SHIT = ('gameinfo.zip', )
+    for check_for in CHECK_FOR_SHIT:
+        if check_for in old_manifest and check_for not in port_status:
+            del old_manifest[check_for]
+
     for port_dir in sorted(PORTS_DIR.iterdir(), key=lambda x: str(x).casefold()):
         if not port_dir.is_dir():
             continue
@@ -1032,6 +1099,11 @@ def main(argv):
             return 127
 
     if '--do-check' not in argv:
+        CHECK_FOR_SHIT = ('images.zip', )
+        for check_for in CHECK_FOR_SHIT:
+            if check_for in port_status:
+                del port_status[check_for]
+
         with open(STATUS_FILE, 'w') as fh:
             json.dump(port_status, fh, indent=2)
 
