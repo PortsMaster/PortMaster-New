@@ -33,7 +33,7 @@ elif [ -f "/$GAMEDIR/gamedata/Ziggurat.pck" ]; then
   echo "patching Ziggurat.pck"
   export LD_LIBRARY_PATH=/$GAMEDIR/lib
   cd /$GAMEDIR/gamedata/
-  $SUDO $controlfolder/xdelta3 -d -s "Ziggurat.pck" "Ziggurat.xdelta" "Ziggurat-patched.pck"
+  $SUDO $GAMEDIR/xdelta3 -d -s "Ziggurat.pck" "Ziggurat.xdelta" "Ziggurat-patched.pck"
 fi
 
 cd $GAMEDIR
