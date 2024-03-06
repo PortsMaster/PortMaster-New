@@ -23,7 +23,7 @@ The number and type of planes can be varied, along with the airbases, as can 1/2
 ## Compile
 
 ```shell
- ./configure --prefix=/storage/.local/
+ ./configure --prefix=./
 
 apricots/apricots.h
 
