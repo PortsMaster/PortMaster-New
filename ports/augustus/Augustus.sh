@@ -12,6 +12,7 @@ source $controlfolder/control.txt
 if [ -z ${TASKSET+x} ]; then
   source $controlfolder/tasksetter
 fi
+source $controlfolder/device_info.txt
 
 get_controls
 
@@ -22,9 +23,9 @@ PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/augustus"
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 $ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
@@ -54,10 +55,18 @@ if [ -f "$GAMEDIR/assets.zip" ]; then
   $ESUDO rm -f "$GAMEDIR/assets.zip"
 fi
 
+if [ "$ANALOG_STICKS" = "0" ]; then
+  sed -i 's/up = up/up = mouse_movement_up/' augustus.gptk
+  sed -i 's/down = down/down = mouse_movement_down/' augustus.gptk
+  sed -i 's/left = left/left = mouse_movement_left/' augustus.gptk
+  sed -i 's/right = right/right = mouse_movement_right/' augustus.gptk
+fi
+
+
 echo "Starting game." > $CUR_TTY
 
-$GPTOKEYB "augustus" -c augustus.gptk &
-$TASKSET ./augustus data/ 2>&1 | $ESUDO tee -a ./log.txt
+$GPTOKEYB "augustus.${DEVICE_ARCH}" -c augustus.gptk &
+./augustus.${DEVICE_ARCH} data/
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
