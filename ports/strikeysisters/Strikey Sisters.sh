@@ -11,13 +11,6 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
-if [ -f "${controlfolder}/libgl${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 $ESUDO chmod 666 /dev/tty0
 
@@ -57,6 +50,13 @@ if [ -f "./gamedata/audiogroup2.dat" ]; then
 fi
 
 cd $GAMEDIR
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+if [ -f "${controlfolder}/libgl${CFWNAME}.txt" ]; then 
+  source "${controlfolder}/libgl${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
