@@ -1,6 +1,5 @@
 ## Notes
-
-Your son has been taken! Sling your eggs at foes and platform through three unique worlds in search of his captor. Though tread lightly, his henchmen will try to stop you at every turn.
+Thanks [Team Bugulon](https://team-bugulon.itch.io/stargrove-scramble) for creating this game and allowing us to distribute it!
 
 ## Controls
 
