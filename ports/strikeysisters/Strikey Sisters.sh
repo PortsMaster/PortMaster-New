@@ -11,6 +11,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 $ESUDO chmod 666 /dev/tty0
 
@@ -51,7 +52,7 @@ fi
 
 cd $GAMEDIR
 
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 if [ -f "${controlfolder}/libgl${CFWNAME}.txt" ]; then 
   source "${controlfolder}/libgl${CFW_NAME}.txt"
 else
