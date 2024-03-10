@@ -707,7 +707,7 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
         if clean_name not in ports_status:
             ports_status[clean_name] = default_status
 
-            shutil.copy(file_name, RELEASE_DIR / file_name.name)
+            shutil.copy(file_name, RELEASE_DIR / export_name)
 
         elif ports_status[clean_name]['md5'] != file_md5:
             ports_status[clean_name]['md5'] = file_md5
