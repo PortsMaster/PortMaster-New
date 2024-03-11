@@ -35,18 +35,14 @@ export HOME="$CONFDIR"
 # The other distros don't so the $ESUDO variable provides the sudo or not dependant on the OS this script is run from.
 $ESUDO chmod 666 /dev/uinput
 
+#for old portmaster installs where DEVICE_ARCH may not be defined or empty take the (previous) default
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-#required or select + start won't quit on arkos
-if [[ "$CFW_NAME" == *"ArkOS"* ]]; then
-   program="formula_1_playd"
-else
-   program="formula_1_playdate.${DEVICE_ARCH}"
-fi
-
-$GPTOKEYB "$program" -c "./formula_1_playdate.gptk" &
-./formula_1_playdate.${DEVICE_ARCH}
+$GPTOKEYB "game.${DEVICE_ARCH}" -c "./formula_1_playdate.gptk" &
+./game.${DEVICE_ARCH}
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
