@@ -19,10 +19,12 @@ cd $GAMEDIR
 $ESUDO rm -rf ~/.local/share/blockattack
 ln -sfv $GAMEDIR/ ~/.local/share
 
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
 
 $GPTOKEYB "blockattack.${DEVICE_ARCH}" -c "$GAMEDIR/blockattack.gptk" &
 ./blockattack.${DEVICE_ARCH}
