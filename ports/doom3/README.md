@@ -41,8 +41,8 @@ sudo apt install binfmt-support qemu-user-static
 
 Use multiarch/qemu-user-static to run an aarch64 Ubuntu Focal Docker container. Mount the d3es-multithread directory as a volume to `/data` - assumed to be `$(pwd)`.
 ```
-docker run --rm --privileged multiarch/qemu-user-static:register
-docker run -v /usr/bin/qemu-aarch64-static:/usr/bin/qemu-aarch64-static -it --platform linux/arm64 -v $(pwd):/data ubuntu:focal
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+docker run -it --platform linux/arm64 -v $(pwd):/data arm64v8/ubuntu:focal
 ```
 
 ### Compile d3es-multithread
@@ -63,7 +63,7 @@ cmake -LH ../neo/
 cmake ../neo/ -DONATIVE=ON
 
 // Compile - choose how many threads you want it to use
-make -j12
+make -j8
 ```
 
 ### Test
