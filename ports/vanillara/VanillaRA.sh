@@ -9,9 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 get_controls
 
@@ -73,7 +73,7 @@ else
 fi
 
 
-if [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]]; then
+if [[ "$DEVICE_NAME" == "RG552" ]]; then
   if [ ! -f "${GAMEDIR}/save/vanillara/redalert.ini" ]; then
     mkdir -p "${GAMEDIR}/save/vanillara"
     cat << __CONF__ > "${GAMEDIR}/save/vanillara/redalert.ini"
@@ -99,7 +99,6 @@ __CONF__
   fi
 fi
 
-
 ## RUN SCRIPT HERE
 
 export PORTMASTER_HOME="$GAMEDIR"
@@ -108,8 +107,8 @@ export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
 
-$GPTOKEYB "vanillara" -c vanillara.gptk textinput &
-$TASKSET ./vanillara 2>&1 | $ESUDO tee -a ./log.txt
+$GPTOKEYB "vanillara.$DEVICE_ARCH" -c vanillara.${ANALOG_STICKS}.gptk textinput &
+./vanillara.$DEVICE_ARCH 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
