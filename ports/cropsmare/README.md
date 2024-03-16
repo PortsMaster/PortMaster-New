@@ -1,6 +1,6 @@
 ## Notes
 
-Tested using *cropsmare-linux.zip* version 4 (Oct 28, 2023). Thanks to mrkdji (https://mrkdji.itch.io/) for creating this fantastic game, available for purchase at https://mrkdji.itch.io/cropsmare
+Tested using *cropsmare-linux.zip* version 4 (Oct 28, 2023). Thanks to mrkdji (https://mrkdji.itch.io/) for creating this fantastic game, which you can purchase at https://mrkdji.itch.io/cropsmare
 
 
 ## Controls
