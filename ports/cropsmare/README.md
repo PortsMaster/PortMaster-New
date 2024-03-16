@@ -11,7 +11,7 @@ Tested using *cropsmare-linux.zip* version 4 (Oct 28, 2023). Thanks to mrkdji (h
 | A        | Plast seed / use item     |
 | B        | Cancel selection          |
 | HOLD A+B | Restart level             |
-| Select   | Skip level                |
+| R1       | Skip level                |
 | Start    | Pause / open options menu |
 
 
