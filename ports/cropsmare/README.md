@@ -18,9 +18,9 @@ Tested using *cropsmare-linux.zip* version 4 (Oct 28, 2023). Thanks to mrkdji (h
 ## Compile
 
 ```shell
-wget https://downloads.tuxfamily.org/godotengine/3.5.3/godot-3.5.3-stable.tar.xz  
-tar xf godot-3.5.3-stable.tar.xz  
-cd godot-3.5.3-stable/platform  
+wget https://downloads.tuxfamily.org/godotengine/3.5.2/godot-3.5.2-stable.tar.xz  
+tar xf godot-3.5.2-stable.tar.xz  
+cd godot-3.5.2-stable/platform  
 git clone https://github.com/Cebion/frt.git  
 cd ../  
 scons platform=frt tools=no target=release use_llvm=yes module_webm_enabled=no -j12  
