@@ -10,7 +10,7 @@ Tested using *cropsmare-linux.zip* version 4 (Oct 28, 2023). Thanks to mrkdji (h
 | DPAD     | Directional movement      |
 | A        | Plast seed / use item     |
 | B        | Cancel selection          |
-| HOLD X+C | Restart level             |
+| HOLD A+B | Restart level             |
 | Select   | Skip level                |
 | Start    | Pause / open options menu |
 
