@@ -39,7 +39,11 @@ if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     if [ "$checksum" = "1247d59590da39ea0d0c39ef2591d0c9" ]; then
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/data.xdelta gamedata/data.win
+    else
+        echo "Error: MD5 checksum of data.win does not match the expected checksum."    
     fi
+else
+    echo "Error: Missing files in gamedata folder OR game has been patched"
 fi
 
 # Check for file existence before trying to manipulate them:
