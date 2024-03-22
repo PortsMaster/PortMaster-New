@@ -1,0 +1,50 @@
+#!/bin/bash
+get_label()
+{
+    LABEL=${1//\\/\\\\} # \ 
+    LABEL=${LABEL//\//\\\/} # / 
+    LABEL=${LABEL//\"/\\\"} # " 
+    LABEL=${LABEL//	/\\t} # \t (tab)
+    LABEL=${LABEL//
+/\\\n} # \n (newline)
+    LABEL=${LABEL//^M/\\\r} # \r (carriage return)
+    LABEL=${LABEL//^L/\\\f} # \f (form feed)
+    LABEL=${LABEL//^H/\\\b} # \b (backspace)
+    echo "$LABEL"
+}
+
+confirm() {
+	local TITLE=$(get_label "$1")
+	local LABEL=$(get_label "$2")
+	local JSON=$( echo '{"type":"confirm","title":"'${TITLE}'","message":"'${LABEL}'"}' | base64 -w0 - )
+	echo "\$<${JSON}>\$"
+	read RESULT
+}
+
+msgbox() {
+	local TITLE=$(get_label "$1")
+	local LABEL=$(get_label "$2")
+	local JSON=$( echo '{"type":"msgbox","title":"'${TITLE}'","message":"'${LABEL}'"}' | base64 -w0 - )
+    echo $1
+	echo "\$<${JSON}>\$"
+	read RESULT
+}
+
+settitle() {
+	local TITLE=$(get_label "$1")
+	local JSON=$( echo '{"type":"settitle","value":"'${TITLE}'"}' | base64 -w0 - )
+	echo "\$<${JSON}>\$"
+    # no reply needed
+}
+
+kill_recursive() {
+  local parent_pid="$1"
+  local child_pids=$(pgrep -P "$parent_pid")
+
+  for pid in $child_pids; do
+    kill_recursive "$pid" 1
+  done
+
+  # Kill the parent process if depth != 0
+  [[ "$2" == 1 ]] && kill -9 "$parent_pid"
+}
