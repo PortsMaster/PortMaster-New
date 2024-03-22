@@ -561,6 +561,9 @@ def port_info_id(port_status, max_info_count=100):
         if port_zip.lower().startswith('images.'):
             continue
 
+        if port_zip.lower() in ('images.zip', 'gameinfo.zip'):
+            continue
+
         current_date = port_status[port_zip]['date_added']
 
         if (port_info_ids[info_id] >= max_info_count) and (last_date != current_date):
@@ -574,6 +577,8 @@ def port_info_id(port_status, max_info_count=100):
         port_info_id_map[port_zip] = info_id
 
         last_date = current_date
+
+    # print(json.dumps(port_info_id_map, indent=2, sort_keys=True))
 
     return port_info_id_map
 
@@ -921,7 +926,7 @@ def port_diff(port_name, old_manifest, new_manifest):
         print(f" - Added {file_name}")
 
 
-def generate_ports_json(all_ports, port_status):
+def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
     ports_json_output = {
         "ports": {},
         "utils": {},
@@ -937,6 +942,9 @@ def generate_ports_json(all_ports, port_status):
             ports_json_output['ports'],
             port_status
             )
+
+    ## Jank :|
+    build_new_images_zip(old_manifest, new_manifest, port_status)
 
     utils = []
 
@@ -1153,11 +1161,9 @@ def main(argv):
     if '--do-check' not in argv:
         build_images_zip(old_manifest, new_manifest)
 
-        build_new_images_zip(old_manifest, new_manifest, port_status)
-
         build_gameinfo_zip(old_manifest, new_manifest)
 
-        generate_ports_json(all_ports, port_status)
+        generate_ports_json(all_ports, port_status, old_manifest, new_manifest)
 
     errors = 0
     warnings = 0
