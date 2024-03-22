@@ -1,6 +1,22 @@
 ## Notes
-<br/>
+Thanks to [Martin Donlon](http://akawaka.csn.ul.ie/abombniball.php3) creating this game and making it available for free.
 
-Thanks to Martin Donlon creating this game and making it available for free. Also thanks to Cebion for the packaging for portmaster.
-<br/>
+Portmaster Version: 	
+
+- Cebion https://github.com/Cebion
+
+## Controls
+
+| Button     | Action              |
+| ---------- | ------------------- |
+| DPAD | Move |
+
+## Compile
+
+```bash
+git clone git@github.com:Cebion/Abombniball.git
+cd Abombniball
+./configure
+make -j8
+```
 

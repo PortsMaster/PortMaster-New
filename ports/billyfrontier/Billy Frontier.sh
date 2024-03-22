@@ -8,21 +8,28 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
 GAMEDIR=/$directory/ports/billyfrontier
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/libs/libGL.so.1"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/libs.${DEVICE_ARCH}/libGL.so.1"
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "BillyFrontier" -c "./billyfrontier.gptk" &
-./BillyFrontier
+if [ "$ANALOG_STICKS" = "0" ]; then
+  sed -i 's/up = up/up = mouse_movement_up/' billyfrontier.gptk
+  sed -i 's/down = down/down = mouse_movement_down/' billyfrontier.gptk
+  sed -i 's/left = left/left = mouse_movement_left/' billyfrontier.gptk
+  sed -i 's/right = right/right = mouse_movement_right/' billyfrontier.gptk
+fi
+
+$GPTOKEYB "BillyFrontier.${DEVICE_ARCH}" -c "./billyfrontier.gptk" &
+./BillyFrontier.${DEVICE_ARCH}
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
