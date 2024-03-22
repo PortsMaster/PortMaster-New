@@ -1,93 +1,67 @@
 -- this file provides an intermediary layer between the very simplistic c++ lua api and the 
 -- lua bot api that can be used to program blobby volley 2 bots.
 
--- in these global variables, we save the ball info for each step
-__bx = 0
-__by = 0
-__bvx = 0
-__bvy = 0
--- these save the artificial errors used to reduce the bot strength
-__ebx = 0
-__eby = 0
-__ebvx = 0
-__ebvy = 0
-
--- debug data
-__LastBounces = {}
-__OppServe = false
-
-__OPPSIDE = opponent(__SIDE)
-
 -- legacy functions
--- these function definitions make lua functions for the old api functions, which are sometimes more conveniente to use 
+-- these function definitions make lua functions for the old api functions, which are sometimes more convenient to use
 -- than their c api equivalent.
 
 function posx()
-	local x, y = get_blob_pos( __SIDE )
-	if __SIDE == RIGHT_PLAYER then
-		return CONST_FIELD_WIDTH - x
-	else
-		return x
-	end
+	local x, y = get_blob_pos( LEFT_PLAYER )
+	return x
 end
 
 function posy()
-	local x, y = get_blob_pos( __SIDE )
+	local x, y = get_blob_pos( LEFT_PLAYER )
 	return y
 end
 
 function touches()
-	return get_touches( __SIDE )
+	return get_touches( LEFT_PLAYER )
 end
 
 -- redefine the ball coordinate functions to use the cached values
 function ballx()
-	return __bx
+	local bx, by, vx, vy = balldata()
+	return bx
 end
 
 function bally()
-	return __by
+	local bx, by, vx, vy = balldata()
+    return by
 end
 
 function bspeedx()
-	return __bvx
+	local bx, by, vx, vy = balldata()
+	return vx
 end
 
 function bspeedy()
-	return __bvy
+	local bx, by, vx, vy = balldata()
+	return vy
 end
 
 -- we need to save balldata somewhere to use it in here
-__balldata__ = balldata
+__balldata = balldata
 -- this is the internal function that does the side correction
-function __balldata()
-	local x, y, vx, vy = __balldata__()
-	if __SIDE == RIGHT_PLAYER then
-		x = CONST_FIELD_WIDTH - x
-		vx = -vx
-	end
+function balldata()
+	local x, y, vx, vy = __balldata()
 	return x, y, vx, vy
 end
 
--- this is the function to be used by bots, which includes the difficulty changes
-function balldata()
-	return __bx, __by, __bvx, __bvy
-end
-
--- redefine launched to refer to the __SIDE player
+-- redefine launched to refer to the own blobby
 __launched = launched
 function launched()
-	return __launched( __SIDE )
+	return __launched( LEFT_PLAYER )
 end
 
 function left()
-	__WANT_LEFT  = __SIDE == LEFT_PLAYER
-	__WANT_RIGHT = __SIDE ~= LEFT_PLAYER
+	__WANT_LEFT  = true
+	__WANT_RIGHT = false
 end
 
 function right()
-	__WANT_LEFT  = __SIDE ~= LEFT_PLAYER
-	__WANT_RIGHT = __SIDE == LEFT_PLAYER
+	__WANT_LEFT  = false
+	__WANT_RIGHT = true
 end
 
 function jump()
@@ -113,25 +87,21 @@ function moveto(target)
 end
 
 function oppx()
-	local x, y = get_blob_pos( __OPPSIDE )
-	if __SIDE == RIGHT_PLAYER then
-		return CONST_FIELD_WIDTH - x
-	else
-		return x
-	end
+	local x, y = get_blob_pos( RIGHT_PLAYER )
+	return x
 end
 
 function oppy()
-	local x, y = get_blob_pos( __OPPSIDE )
+	local x, y = get_blob_pos( RIGHT_PLAYER )
 	return y
 end
 
 function getScore()
-	return get_score( __SIDE )
+	return get_score( LEFT_PLAYER )
 end
 
 function getOppScore()
-	return get_score( __OPPSIDE )
+	return get_score( RIGHT_PLAYER )
 end
 
 -----------------------------------------------------------------------------------------
@@ -155,16 +125,21 @@ function blob_time_to_x (destination)
 	return math.abs(posx() - destination) / CONST_BLOBBY_SPEED
 end
 
-function blob_time_to_y (destination) 
+function blob_time_to_y(destination)
 	-- TODO allow specifying whether upward or downward!
 	-- TODO error handling
-	local blobbygroundpos = CONST_GROUND_HEIGHT + CONST_BLOBBY_HEIGHT / 2 
-	local y = posy()
-	grav = CONST_BLOBBY_GRAVITY / 2    -- half, because we use jump buffer
-	time1 = CONST_BLOBBY_JUMP/grav + math.sqrt(2*grav*(y-blobbygroundpos) + CONST_BLOBBY_JUMP*CONST_BLOBBY_JUMP) / grav
-	time2 = CONST_BLOBBY_JUMP/grav - math.sqrt(2*grav*(y-blobbygroundpos) + CONST_BLOBBY_JUMP*CONST_BLOBBY_JUMP) / grav
-	timemin = math.min(time1,time2)
-	return timemin
+	local blobby_pos = posy()
+	-- if we are standing on the ground, assume we start jumping right now, otherwise
+	-- use current vertical velocity
+	local blobby_vel = speedy(LEFT_PLAYER)
+	if blobby_pos == CONST_BLOBBY_GROUND_HEIGHT then
+		blobby_vel = CONST_BLOBBY_JUMP
+	end
+
+	-- solve the quadratic equation
+	local grav = CONST_BLOBBY_GRAVITY / 2    -- half, because we use jump buffer
+	local t1, _ = parabola_time_first(blobby_pos, blobby_vel, grav, destination)
+	return t1
 end
 
 -- checks whether a certain position can be reached by the blob in a certain time frame
@@ -172,8 +147,8 @@ end
 function can_blob_reach( time, blobx, posx, posy )
 	local minx = blobx - CONST_BLOBBY_SPEED * time
 	local maxx = blobx + CONST_BLOBBY_SPEED * time
-	local maxy = CONST_BLOBBY_GROUND_HEIGHT + CONST_BLOBBY_JUMP * time + CONST_BLOBBY_GRAVITY/2 * time^2
-	local vel = CONST_BLOBBY_JUMP + CONST_BLOBBY_GRAVITY * time
+	local maxy = -CONST_BLOBBY_GROUND_HEIGHT + CONST_BLOBBY_JUMP * time + CONST_BLOBBY_GRAVITY/2 * time^2
+	local vel = -CONST_BLOBBY_JUMP + CONST_BLOBBY_GRAVITY * time
 	if vel < 0 then
 		maxy = CONST_BLOBBY_MAX_JUMP
 	end
@@ -199,7 +174,6 @@ function estimate(time, posx, posy, velx, vely)
 	posy = posy or bally()
 	vely = vely or bspeedy()
 
-	__PERF_ESTIMATE_COUNTER = __PERF_ESTIMATE_COUNTER + 1
 	return simulate( time, posx, posy, velx, vely )
 end
 
@@ -251,40 +225,14 @@ __lastBallSpeed = nil
 function __OnStep()
 	ActiveMode = "game"
 
-	__PERF_ESTIMATE_COUNTER = 0 -- count the calls to estimate!
-	__bx, __by, __bvx, __bvy = __balldata()
-	local original_bvx = __bvx
-	-- add some random noise to the ball info, if we have difficulty enabled
-	if __DIFFICULTY > 0 then
-		__bx  = __bx + __ebx * __DIFFICULTY
-		__by  = __by + __eby * __DIFFICULTY
-		__bvx = __bvx + __ebvx * __DIFFICULTY
-		__bvy = __bvy + __ebvy * __DIFFICULTY
-	end
+	local bx, by, bvx, bvy = balldata()
+	local original_bvx = bvx
 	
 	if __lastBallSpeed == nil then __lastBallSpeed = original_bvx end
 	
 	-- if the x velocity of the ball changed, it bounced and we call the listener function
 	if __lastBallSpeed ~= original_bvx and is_ball_valid() then
 		__lastBallSpeed = original_bvx
-		-- update the error variables
-		local er = (math.random() + math.random()) * CONST_BALL_RADIUS
-		local phi = 2*math.pi * math.random()
-		__ebx = math.sin(phi) * er
-		__eby = math.cos(phi) * er
-		er = math.random() * 1.5 -- this would be about 10% error
-		phi = 2*math.pi * math.random()
-		__ebvx = math.sin(phi) * er
-		__ebvy = math.cos(phi) * er
-		
-		-- debug data.
-		if __DEBUG and is_game_running() and ballx() > CONST_FIELD_MIDDLE - CONST_BALL_RADIUS then
-			local bounce = capture_situation_data()
-			for i = 5, 2, -1 do
-				__LastBounces[i] = __LastBounces[i-1]
-			end
-			__LastBounces[1] = bounce
-		end
 		
 		if OnBounce then
 			OnBounce()
@@ -297,40 +245,20 @@ function __OnStep()
 		
 		-- get the serving player. if NO_PLAYER, the ball is on the left.
 		local server = get_serving_player()
-		if server == NO_PLAYER then 
-			server = LEFT_PLAYER
+		if server == NO_PLAYER then
+			if ballx() < CONST_FIELD_MIDDLE then
+				server = LEFT_PLAYER
+			end
 		end
 		
-		if __SIDE == server then
+		if server == LEFT_PLAYER then
 			OnServe( is_ball_valid() )
-		else
-			-- print last ball information when the opponent serves
-			if __DEBUG then
-				if not __OppServe then
-					for k=1, #__LastBounces do
-						print("step ", k)
-						for i, v in pairs(__LastBounces[k]) do
-							print(i, v)
-						end
-					end
-					__OppServe = true
-				end
-			end
-			
-			--set_ball_data(587.4,415,-12.62, 3.58)
-			--set_blob_data(0, 360, 360, 0, 0)
-			--print( estimx( ) )
-			
-			if OnOpponentServe then
-				OnOpponentServe()
-			end
+		elseif OnOpponentServe then
+			OnOpponentServe()
 		end
 	else
-		__OppServe = false
 		OnGame()
 	end
-	
-	--print(__PERF_ESTIMATE_COUNTER)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -377,16 +305,40 @@ function linear_time_first(pos, vel, destination)
 	end
 end
 
--- debug function: capture situational information
-function capture_situation_data()
-	local x, y, vx, vy = __balldata()
-	local data = {}
-	data['ballx'] = x
-	data['bally'] = y
-	data['bspeedx'] = vx
-	data['bspeedy'] = vy
-	data['posx'] = posx()
-	data['posy'] = posy()
-	data['touches'] = touches()
-	return data
+------------------------------------------------------------------------------------------------------------------------
+-- functions to emulate the old bot api
+-----------------------------------------
+--- Estimate ball position after `time`, ignoring any collisions
+function simple_estimx(time)
+	return ballx() + time * bspeedx()
+end
+
+--- Estimate ball position after `time`, ignoring any collisions
+function simple_estimy(time)
+	return bally() + time * bspeedy() + 0.5 * time^2 * CONST_BALL_GRAVITY
+end
+
+--- Estimate where the ball will hit the ground, ignoring any collisions.
+function simple_estimate()
+	local target = CONST_GROUND_HEIGHT + CONST_BALL_RADIUS
+	local x, y, vx, vy = balldata()
+	local d = vy * vy + 2.0 * CONST_BALL_GRAVITY * (target - y)
+	if d < 0 then
+		return x
+	end
+	local steps = (-vy - math.sqrt(d)) / CONST_BALL_GRAVITY
+	return vx * steps + x
+end
+
+--- Overwrite the `estimx`, `estimy`, and `estimate` functions with their simple counterparts,
+--- to restore old bot API behaviour. Also defines the old `debug` function, to just perform
+--- printing.
+function enable_legacy_functions()
+	estimx = simple_estimx
+    estimy = simple_estimy
+	estimate = simple_estimate
+
+	debug = function(x)
+		print(x)
+	end
 end

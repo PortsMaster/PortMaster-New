@@ -9,9 +9,9 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 get_controls
 
@@ -85,7 +85,7 @@ else
 fi
 
 
-if [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]]; then
+if [[ "$DEVICE_NAME" == "RG552" ]]; then
   if [ ! -f "${GAMEDIR}/save/vanillatd/conquer.ini" ]; then
     mkdir -p "${GAMEDIR}/save/vanillatd"
     cat << __CONF__ > "${GAMEDIR}/save/vanillatd/conquer.ini"
@@ -119,8 +119,8 @@ export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
 
-$GPTOKEYB "vanillatd" -c vanillatd.gptk textinput &
-$TASKSET ./vanillatd 2>&1 | $ESUDO tee -a ./log.txt
+$GPTOKEYB "vanillatd.$DEVICE_ARCH" -c vanillatd.${ANALOG_STICKS}.gptk textinput &
+./vanillatd.$DEVICE_ARCH 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
