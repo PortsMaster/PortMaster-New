@@ -6,9 +6,10 @@ Thanks to [Nik](https://gamejolt.com/@nik) for creating this great game!
 
 | Button | Action |
 |--|--| 
-|A|Jump|
+|B|Jump|
+|A|Slash|
 |R1|Block|
-|A+R1|Smash Down|
 |Dpad/L-Stick|Movement|
+|B+R1|Smash Down|
 
 
