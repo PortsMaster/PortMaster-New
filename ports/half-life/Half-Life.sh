@@ -10,6 +10,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
+source $controlfolder/device_info.txt
 
 get_controls
 CUR_TTY=/dev/tty0
@@ -76,13 +77,15 @@ if [[ -f "${GAMEDIR}/gearbox/OPFOR.WAD" ]] && [[ -f "${GAMEDIR}/binaries/gearbox
   $ESUDO rm -fv "${GAMEDIR}/binaries/gearbox_first_run"  | $ESUDO tee -a ./log.txt
 fi
 
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib32:$GAMEDIR/valve/dlls:$GAMEDIR/valve/cl_dlls"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH:/usr/lib32:$GAMEDIR/valve/dlls:$GAMEDIR/valve/cl_dlls"
 
-$GPTOKEYB "xash3d" &
-$TASKSET ./xash3d -ref gles2 -fullscreen -console $RUNMOD 2>&1 | tee -a ./log.txt
+$GPTOKEYB "xash3d.${DEVICE_ARCH}" &
+$TASKSET ./xash3d.${DEVICE_ARCH} -ref gles2 -fullscreen -console $RUNMOD 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
