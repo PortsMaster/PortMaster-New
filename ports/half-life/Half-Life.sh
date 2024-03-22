@@ -15,6 +15,7 @@ source $controlfolder/device_info.txt
 get_controls
 CUR_TTY=/dev/tty0
 
+SCRIPTDIR="$(dirname "$0")"
 PORTDIR="/$directory/ports/"
 GAMEDIR="${PORTDIR}/Half-Life"
 cd $GAMEDIR
@@ -55,8 +56,8 @@ if [[ -f "${GAMEDIR}/bshift/halflife.wad" ]] && [[ -f "${GAMEDIR}/binaries/bshif
   $ESUDO cp -rfv "${GAMEDIR}/binaries/bshift" "${GAMEDIR}/" | $ESUDO tee -a ./log.txt
 
   # Make mod run script
-  $ESUDO cp -v "${PORTDIR}/Half-Life.sh" "${PORTDIR}/Half-Life Blue Shift.sh" | $ESUDO tee -a ./log.txt
-  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game bshift"/' "${PORTDIR}/Half-Life Blue Shift.sh"
+  $ESUDO cp -v "${SCRIPTDIR}/Half-Life.sh" "${SCRIPTDIR}/Half-Life Blue Shift.sh" | $ESUDO tee -a ./log.txt
+  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game bshift"/' "${SCRIPTDIR}/Half-Life Blue Shift.sh"
 
   # Mark step as done
   $ESUDO rm -fv "${GAMEDIR}/binaries/bshift_first_run" | $ESUDO tee -a ./log.txt
@@ -70,8 +71,8 @@ if [[ -f "${GAMEDIR}/gearbox/OPFOR.WAD" ]] && [[ -f "${GAMEDIR}/binaries/gearbox
   $ESUDO cp -rfv "${GAMEDIR}/binaries/gearbox" "${GAMEDIR}/" | $ESUDO tee -a ./log.txt
 
   # Make mod run script
-  $ESUDO cp -v "${PORTDIR}/Half-Life.sh" "${PORTDIR}/Half-Life Opposing Forces.sh"  | $ESUDO tee -a ./log.txt
-  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game gearbox"/' "${PORTDIR}/Half-Life Opposing Forces.sh"
+  $ESUDO cp -v "${SCRIPTDIR}/Half-Life.sh" "${SCRIPTDIR}/Half-Life Opposing Force.sh"  | $ESUDO tee -a ./log.txt
+  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game gearbox"/' "${SCRIPTDIR}/Half-Life Opposing Force.sh"
 
   # Mark step as done
   $ESUDO rm -fv "${GAMEDIR}/binaries/gearbox_first_run"  | $ESUDO tee -a ./log.txt
