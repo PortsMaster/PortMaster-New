@@ -47,6 +47,8 @@ if [ $? -ne 0 ]; then
     sed -i "s/CONF_FONT_SIZE/5x8x/" $GAMEDIR/conf/.angband/Angband/sdl2init.txt
   elif [ "$DISPLAY_WIDTH" -lt "641" ] && [ "$DISPLAY_HEIGHT" -lt "481" ]; then
     sed -i "s/CONF_FONT_SIZE/7x13x/" $GAMEDIR/conf/.angband/Angband/sdl2init.txt
+  elif [ "$DISPLAY_WIDTH" -lt "900" ] && [ "$DISPLAY_HEIGHT" -lt "481" ]; then
+    sed -i "s/CONF_FONT_SIZE/8x12x/" $GAMEDIR/conf/.angband/Angband/sdl2init.txt
   elif [ "$DISPLAY_HEIGHT" -lt "721" ] && [ "$DISPLAY_WIDTH" -lt "721" ]; then
     sed -i "s/CONF_FONT_SIZE/8x16x/" $GAMEDIR/conf/.angband/Angband/sdl2init.txt
   else
