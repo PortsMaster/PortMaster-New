@@ -36,6 +36,10 @@ if [[ -f "gamedata/bananaguy2.zip" ]]; then
   fi
 fi
 
+
+
+
+
 runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
