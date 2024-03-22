@@ -9,7 +9,6 @@ Huge thanks to [bananamanhatguy](https://bananamanhatguy.itch.io/) for making th
 |A/B|Jump|
 |DPAD/L-Stick|Movement|
 |Select/Start|Reset|
-|||
-|||
+
 
 
