@@ -29,7 +29,7 @@ cd $GAMEDIR
 
 # Unpack bananaguy2.zip using unzip if it exists
 if [[ -f "gamedata/bananaguy2.zip" ]]; then
-  if "libs/7za" x "gamedata/bananaguy2.zip" -o"gamedata"; then
+  if "libs/7zzs" x "gamedata/bananaguy2.zip" -o"gamedata"; then
     if [[ -f "gamedata/Bananaguy2.pck" ]]; then
       $ESUDO rm "gamedata/bananaguy2.zip"
     fi
