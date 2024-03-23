@@ -24,11 +24,11 @@ from util import *
 #############################################################################
 ROOT_DIR = Path('.')
 
-CACHE_FILE = ROOT_DIR / '.hash_cache'
+CACHE_FILE    = ROOT_DIR / '.hash_cache'
 MANIFEST_FILE = ROOT_DIR / 'manifest.json'
-STATUS_FILE = ROOT_DIR / 'ports_status.json'
-PORTS_DIR = ROOT_DIR / 'ports'
-RUNTIMES_DIR = ROOT_DIR / 'runtimes'
+STATUS_FILE   = ROOT_DIR / 'ports_status.json'
+PORTS_DIR     = ROOT_DIR / 'ports'
+RUNTIMES_DIR  = ROOT_DIR / 'runtimes'
 
 GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
