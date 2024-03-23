@@ -28,8 +28,8 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl${CFW_NAME}.txt"
+if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
