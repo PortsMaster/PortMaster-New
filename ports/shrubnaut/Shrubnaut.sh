@@ -32,24 +32,27 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+# check if we have new engough version of PortMaster that contains xdelta3
+if [ ! -f "$controlfolder/xdelta3" ]; then
+  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+  sleep 5
+  exit 1
+fi
+
 # Patch game
 cd "$GAMEDIR"
 # If "gamedata/data.win" exists and its MD5 checksum matches the specified value, apply the xdelta3 patch
 if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     if [ "$checksum" = "1247d59590da39ea0d0c39ef2591d0c9" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/data.xdelta gamedata/data.win
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/data.xdelta gamedata/game.droid && \
+        rm gamedata/data.win
     else
         echo "Error: MD5 checksum of data.win does not match the expected checksum."    
     fi
 else
     echo "Error: Missing files in gamedata folder OR game has been patched"
 fi
-
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
