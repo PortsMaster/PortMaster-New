@@ -606,7 +606,7 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
 
         new_manifest[zip_name] = hash_items(new_files)
         if old_manifest.get(zip_name) == new_manifest[zip_name]:
-            return
+            continue
 
         changes = {}
         differ = Differ()
@@ -953,7 +953,14 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
 
     utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
-    utils.extend(RELEASE_DIR.glob('images.*.zip'))
+
+    for img_id in range(1000):
+        image_xxx_zip = f"images.{img_id:03d}.zip"
+
+        if image_xxx_zip not in new_manifest:
+            break
+
+        utils.append(RELEASE_DIR / image_xxx_zip)
 
     runtimes_map = {}
 
