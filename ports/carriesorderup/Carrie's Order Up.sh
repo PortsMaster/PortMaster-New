@@ -28,6 +28,13 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 # Patch Game
 cd "$GAMEDIR"
 
+# check if we have new engough version of PortMaster that contains xdelta3
+if [ ! -f "$controlfolder/xdelta3" ]; then
+  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+  sleep 5
+  exit 1
+fi
+
 # Check if CarriesOrderUp.exe exists in the /gamedata folder and delete it if it does
 if [ -f "./gamedata/CarriesOrderUp.exe" ]; then
     rm ./gamedata/CarriesOrderUp.exe
