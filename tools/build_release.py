@@ -535,6 +535,118 @@ def build_gameinfo_zip(old_manifest, new_manifest):
             zf.write(file_pair[0], file_pair[1])
 
 
+def port_info_id(port_status, max_info_count=100):
+    """
+    This sorts the ports by their date_added & name lower case.
+
+    We iterate through the ports keeping track of the total ports under an `info_id`.
+
+    Once we reach `max_info_count` ports in a single info_id, we increment the number.
+
+    To make it predictable we make sure that all ports with the same 'date_added'
+    stay in the same `info_id`, so we keep track of the last_date.
+    """
+    info_id = 0
+    port_info_ids = {
+        info_id: 0,
+        }
+
+    port_info_id_map = {}
+    last_date = ''
+
+    for port_zip in sorted(port_status.keys(), key=lambda port_zip: (port_status[port_zip]['date_added'], port_zip.casefold())):
+        if not port_zip.lower().endswith('.zip'):
+            continue
+
+        if port_zip.lower().startswith('images.'):
+            continue
+
+        if port_zip.lower() in ('images.zip', 'gameinfo.zip'):
+            continue
+
+        current_date = port_status[port_zip]['date_added']
+
+        if (port_info_ids[info_id] >= max_info_count) and (last_date != current_date):
+            info_id += 1
+            port_info_ids[info_id] = 0
+
+        port_info_ids[info_id] += 1
+
+        port_zip = port_zip.rsplit('.', 1)[0]
+
+        port_info_id_map[port_zip] = info_id
+
+        last_date = current_date
+
+    # print(json.dumps(port_info_id_map, indent=2, sort_keys=True))
+
+    return port_info_id_map
+
+
+def build_new_images_zip(old_manifest, new_manifest, port_status):
+    port_info_id_map = port_info_id(port_status)
+
+    max_info_id = max(port_info_id_map.values()) + 1
+
+    for info_id in range(max_info_id):
+        new_files = [
+            f"{file.replace('/', '.')}:{digest}"
+            for file, digest in new_manifest.items()
+            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
+
+        old_files = [
+            f"{file.replace('/', '.')}:{digest}"
+            for file, digest in old_manifest.items()
+            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
+
+        new_files.sort()
+        old_files.sort()
+
+        zip_name = f'images.{info_id:03d}.zip'
+
+        new_manifest[zip_name] = hash_items(new_files)
+        if old_manifest.get(zip_name) == new_manifest[zip_name]:
+            return
+
+        changes = {}
+        differ = Differ()
+
+        for line in differ.compare(old_files, new_files):
+            # line = "  <FILENAME>:<md5SUM>"
+            mode = line[:2]
+            name = line[2:].split(":", 1)[0]
+            if mode == '- ':
+                # File is removed.
+                changes[name] = 'Removed'
+
+            elif mode == '+ ':
+                if name in changes:
+                    # If the file was already seen, its been removed, and readded, which means modified.
+                    changes[name] = 'Modified'
+
+                else:
+                    # File is just added.
+                    changes[name] = 'Added'
+
+        if zip_name in old_manifest:
+            print(f"Adding {zip_name}")
+
+        else:
+            print(f"Updating {zip_name}")
+
+        for name, mode in changes.items():
+            print(f" - {mode} {name}")
+
+        zip_files = [
+            ((PORTS_DIR / file), f"{file.replace('/', '.')}")
+            for file, digest in new_manifest.items()
+            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
+
+        with zipfile.ZipFile(RELEASE_DIR / zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+            for file_pair in zip_files:
+                zf.write(file_pair[0], file_pair[1])
+
+
 def build_images_zip(old_manifest, new_manifest):
     new_files = [
         f"{file.replace('/', '.')}:{digest}"
@@ -814,7 +926,7 @@ def port_diff(port_name, old_manifest, new_manifest):
         print(f" - Added {file_name}")
 
 
-def generate_ports_json(all_ports, port_status):
+def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
     ports_json_output = {
         "ports": {},
         "utils": {},
@@ -831,6 +943,9 @@ def generate_ports_json(all_ports, port_status):
             port_status
             )
 
+    ## Jank :|
+    build_new_images_zip(old_manifest, new_manifest, port_status)
+
     utils = []
 
     if (RELEASE_DIR / 'PortMaster.zip').is_file():
@@ -838,6 +953,7 @@ def generate_ports_json(all_ports, port_status):
 
     utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
+    utils.extend(RELEASE_DIR.glob('images.*.zip'))
 
     runtimes_map = {}
 
@@ -1047,7 +1163,7 @@ def main(argv):
 
         build_gameinfo_zip(old_manifest, new_manifest)
 
-        generate_ports_json(all_ports, port_status)
+        generate_ports_json(all_ports, port_status, old_manifest, new_manifest)
 
     errors = 0
     warnings = 0
@@ -1105,10 +1221,10 @@ def main(argv):
                 del port_status[check_for]
 
         with open(STATUS_FILE, 'w') as fh:
-            json.dump(port_status, fh, indent=2)
+            json.dump(port_status, fh, sort_keys=True, indent=2)
 
         with open(MANIFEST_FILE, 'w') as fh:
-            json.dump(new_manifest, fh, indent=2)
+            json.dump(new_manifest, fh, sort_keys=True, indent=2)
 
     if '--do-check' not in argv and len(argv) > 0:
         if status['unchanged'] == status['total']:
