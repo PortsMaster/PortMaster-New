@@ -21,8 +21,14 @@ echo $directory
 GAMEDIR=/$directory/ports/balatro
 cd $GAMEDIR
 
+export XDG_DATA_HOME="$GAMEDIR/saves"
+export XDG_CONFIG_HOME="$GAMEDIR/saves"
+mkdir "$XDG_DATA_HOME"
+
 # Log the execution of the script
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+GAMEFILE="./Balatro.exe"
 
 # We launch gptokeyb using this $GPTOKEYB variable as it will take care of sourcing the executable from the central location,
 # assign the appropriate exit hotkey dependent on the device (ex. select + start for most devices and minus + start for the
