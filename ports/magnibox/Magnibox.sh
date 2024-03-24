@@ -33,13 +33,7 @@ else
 fi
 
 # check if we have new engough version of PortMaster that contains xdelta3
-if [ $DEVICE_ARCH = "armhf" ]; then
-  export XDELTA3="$controlfolder/xdelta3.armhf"
-else
-  export XDELTA3="$controlfolder/xdelta3"
-fi
-
-if [ ! -f "$XDELTA3" ]; then
+if [ ! -f "$controlfolder/xdelta3" ]; then
   echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
   sleep 5
   exit 1
@@ -51,10 +45,10 @@ cd "$GAMEDIR"
 if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     if [ "$checksum" = "ee45b1cde7b43538b73df84a29dfc6a0" ]; then # itch.io version
-        $ESUDO $XDELTA3 -d -s gamedata/data.win -f ./patch/magnibox.itch.patch gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/magnibox.itch.patch gamedata/game.droid && \
         rm gamedata/data.win
     elif [ "$checksum" = "30427fca0a9946d09a06e38aa2f4b41d" ]; then # steam version
-        $ESUDO $XDELTA3 -d -s gamedata/data.win -f ./patch/magnibox.steam.patch gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/magnibox.steam.patch gamedata/game.droid && \
         rm gamedata/data.win
     else
         echo "Error: MD5 checksum of data.win does not match one of the expected checksums."    
