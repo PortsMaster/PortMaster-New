@@ -13,22 +13,13 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 source $controlfolder/tasksetter
 
 get_controls
 
 gamedir="/$directory/ports/stardewvalley"
-cd "$gamedir/gamedata"
-
-# Check if it's the Windows or Linux version
-if [[ -f "Stardew Valley.exe" ]]; then
-	gameassembly="Stardew Valley.exe"
-
-	# Copy the Windows Stardew Valley WinAPI workarounds
-	cp "${gamedir}/dlls/Stardew Valley.exe.config" "${gamedir}/gamedata/Stardew Valley.exe.config"
-else
-	gameassembly="StardewValley.exe"
-fi
+cd "$gamedir/"
 
 # Grab text output...
 $ESUDO chmod 666 /dev/tty0
@@ -46,20 +37,42 @@ $ESUDO mount "$monofile" "$monodir"
 $ESUDO rm -rf ~/.config/StardewValley
 ln -sfv "$gamedir/savedata" ~/.config/StardewValley
 
-# Remove all the dependencies in favour of system libs - e.g. the included
-# newer version of MonoGame with fixes for SDL2
-rm -f System*.dll MonoGame*.dll mscorlib.dll
-
 # Setup path and other environment variables
 export MONOGAME_PATCH="$gamedir/dlls/StardewPatches.dll"
 export MONO_PATH="$gamedir/dlls":"$gamedir"
 export PATH="$monodir/bin":"$PATH"
 export LD_LIBRARY_PATH="$gamedir/libs"
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
-export SDL_VIDEO_GL_DRIVER="$gamedir/libs/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$gamedir/libs/libEGL.so.1"
+
+# Delete older GL4ES installs...
+rm -f $gamedir/libs/libGL.so.1 $gamedir/libs/libEGL.so.1
+
+# Request libGL from Portmaster
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+if [[ "$LIBGL_ES" != "" ]]; then
+	export SDL_VIDEO_GL_DRIVER="libGL.so.1"
+	export SDL_VIDEO_EGL_DRIVER="libEGL.so.1"
+fi
+
+# Jump into the gamedata dir now
+cd "$gamedir/gamedata"
+
+# Fix for the Linux builds, use mono-provided libraries instead.
+rm -f MonoGame.Framework.* System.dll
+
+# Check if it's the Windows or Linux version
+if [[ -f "Stardew Valley.exe" ]]; then
+	gameassembly="Stardew Valley.exe"
+
+	# Copy the Windows Stardew Valley WinAPI workarounds
+	cp "${gamedir}/dlls/Stardew Valley.exe.config" "${gamedir}/gamedata/Stardew Valley.exe.config"
+else
+	gameassembly="StardewValley.exe"
+fi
 
 $GPTOKEYB "mono" &
 $TASKSET mono ../SVLoader.exe "${gameassembly}" 2>&1 | tee "${gamedir}/log.txt"
