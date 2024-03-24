@@ -24,8 +24,6 @@ cd $GAMEDIR
 # Log the execution of the script
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-
-
 # We launch gptokeyb using this $GPTOKEYB variable as it will take care of sourcing the executable from the central location,
 # assign the appropriate exit hotkey dependent on the device (ex. select + start for most devices and minus + start for the
 # rgb10) and assign the appropriate method for killing an executable dependent on the OS the port is run from.
@@ -34,10 +32,7 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 # For a proper documentation how gptokeyb works: LINK
 $GPTOKEYB "love" -c "./balatro.gptk" &
 
-
-LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" ./love Balatro.love 2>&1 | tee -a ./log.txt
-
-
+LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" ./love Balatro.love 2>&1
 
 # Although you can kill most of the ports (if not all of the ports) via a hotkey, the user may choose to exit gracefully.
 # That's fine but let's make sure gptokeyb is killed so we don't get ghost inputs or worse yet, 

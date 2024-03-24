@@ -4,7 +4,6 @@ Port of the super popular and addictive [poker-inspired roguelike deck builder B
 
 The port requires you to own a version of Balatro on Steam (either macOS or Windows is fine).
 
-
 ## Installation instructions
 
 - Install the port from PortMaster
@@ -14,11 +13,11 @@ The port requires you to own a version of Balatro on Steam (either macOS or Wind
 
 #### on macOS
 
-The file is under `~/Library/Application Support/Steam/steamapps/common/Balatro/Balatro.app/Contents/Resources` (if you don't know how to navigate there, go to Steam > Right Click on Balatro > Manage > Browse Local File. Then in the `Balatro.app` package, right click > Show Package Contents > then go to Contents/Resources).
+The file is under `~/Library/Application Support/Steam/steamapps/common/Balatro/Balatro.app/Contents/Resources` (if you don't know how to navigate there, go to Steam > Right Click on Balatro > Manage > Browse Local File. Then in the `Balatro.app` package, right click > Show Package Contents > then go to Contents/Resources). You should see the file `Balatro.love` game file there.
 
 #### on Windows
 
-You need to find the game's .exe file (Steam > Right Click on Balatro > Manage > Browse Local File). Use [7-Zip](https://www.7-zip.org/), right click > extract the .exe file. Then inside the folder with a bunch of .lua file, re-zip the content of the folder (but not the root folder itself, just the content). Rename the output zip into `Balatro.love` (note the capital B since portmaster runs on Linux which is case sensitive).
+You need to find the game's .exe file (Steam > Right Click on Balatro > Manage > Browse Local File). Use [7-Zip](https://www.7-zip.org/), right click > extract the .exe file. Then copy the Balatro.exe file into `Balatro.love` (note the case sensitivity, as PortMaster runs on Linux which has case sensitive file systems).
 
 
 ## Advanced Instructions
