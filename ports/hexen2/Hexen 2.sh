@@ -11,13 +11,29 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 
+#export PORT_32BIT="Y" # If using a 32 bit port
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+GAMEDIR=/$directory/ports/hexen2
 
-GAMEDIR="/$directory/ports/hexen2"
+cd $GAMEDIR
+
+if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+$ESUDO rm -rf ~/.hexen2
+$ESUDO ln -sfv $GAMEDIR/conf/.hexen2 ~/
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
@@ -32,36 +48,8 @@ ADDLPARAMS="-conwidth 340 -lm_2 +viewsize 120 +gl_glows 1 +gl_extra_dynamic_ligh
 # Load directly into an expansion, a map, or a mod
 #RUNMOD="+map hexn1"
 
-cd $GAMEDIR
-
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-
-# gl4es
-export LIBGL_GL=15
-export LIBGL_ES=1
-
-# Detect JelOS/Device combination and address GL libs accordingly.
-if [ "$OS_NAME" == "JELOS" ] && [ "$DEVICE_NAME" == "RG351P" ] || [ "$DEVICE_NAME" == "RG351M" ] || [ "$DEVICE_NAME" == "RG351MP" ] || [ "$DEVICE_NAME" == "RG351V" ]; then
-  [ -f "$GAMEDIR/libs.jelos/libEGL.so.1" ] && $ESUDO rm -rf "$GAMEDIR/libs.jelos/libEGL.so.1"
-else
-  [ ! -f "$GAMEDIR/libs.jelos/libEGL.so.1" ] && $ESUDO cp -f "$GAMEDIR/lib/libEGL.so.1" "$GAMEDIR/libs.jelos/libEGL.so.1"
-fi
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export LD_LIBRARY_PATH="$GAMEDIR/libs.jelos:/usr/lib:$LD_LIBRARY_PATH"
-else
-  export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
-fi
-
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-# setup symbolic link to config directory
-$ESUDO rm -rf ~/.hexen2
-$ESUDO ln -sfv $GAMEDIR/conf/.hexen2 ~/
-
-$GPTOKEYB "glhexen2" -c "$GPTOKEYB_CONFIG" &
-./glhexen2 -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
+$GPTOKEYB "glhexen2.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+./glhexen2.${DEVICE_ARCH} -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
