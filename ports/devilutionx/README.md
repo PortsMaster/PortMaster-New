@@ -12,6 +12,7 @@ Thanks to the [diasurgical](https://github.com/diasurgical/devilutionX) team for
 
 
 ```sh
+# Instructions adapted from https://github.com/christianhaitian/rk3326_core_builds/blob/03467ea85acaa9bde9255a74a317a0bd7a6ad501/scripts/devilutionx.sh
 
 DEVILUTION_VERSION="1.5.2"
 
