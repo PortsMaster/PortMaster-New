@@ -11,6 +11,24 @@ If you make a config change that crashes the game, you can delete the ini file t
 Thanks to the [diasurgical](https://github.com/diasurgical/devilutionX) team for the source port that makes this possible.
 
 
+```sh
 
+DEVILUTION_VERSION="1.5.2"
+
+wget https://github.com/diasurgical/devilutionX/releases/download/$DEVILUTION_VERSION/devilutionx-src.tar.xz
+
+tar -xf devilutionx-src.tar.xz
+
+cd "devilutionx-src-$DEVILUTION_VERSION"
+
+cmake -Bbuild -DCMAKE_BUILD_TYPE="Release" -DDISABLE_ZERO_TIER=ON -DBUILD_TESTING=OFF -DBUILD_ASSETS_MPQ=OFF -DDEBUG=OFF -DPREFILL_PLAYER_NAME=ON
+
+cmake --build build -j4
+
+# Output files here:
+cp build/devilution "destionation_path/devilution"
+cp -r build/assets/ "destionation_path/assets"
+
+```
 
 
