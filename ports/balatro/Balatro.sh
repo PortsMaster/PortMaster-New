@@ -35,24 +35,31 @@ elif [ -f "balatro.love" ]; then
     GAMEFILE="balatro.love"
 fi
 
-# Extract globals.lua
-./bin/7za x "$GAMEFILE" globals.lua
+if [ -f "$GAMEFILE" ]; then
+  # Extract globals.lua
+  ./bin/7za x "$GAMEFILE" globals.lua
 
-# Modify globals.lua
-sed -i "$CRT" -i "$SHADOWS" -i "$BLOOM" globals.lua
-if [ $DISPLAY_WIDTH -le 1279 ]; then
-    sed -i "$TILE_W" -i "$TILE_H" globals.lua
+  # Modify globals.lua
+  sed -i "$CRT" -i "$SHADOWS" -i "$BLOOM" globals.lua
+  if [ $DISPLAY_WIDTH -le 1279 ]; then
+      sed -i "$TILE_W" -i "$TILE_H" globals.lua
+  fi
+
+  # Update the archive with the modified globals.lua
+  ./bin/7za u -aoa "$GAMEFILE" globals.lua
+
+  # Clean up
+  mv $GAMEFILE Balatro
+  rm globals.lua
 fi
 
-# Update the archive with the modified globals.lua
-./bin/7za u -aoa "$GAMEFILE" globals.lua
 
-# Clean up
-mv $GAMEFILE Balatro
-rm globals.lua
-
-$GPTOKEYB "love" -c "./balatro.gptk" &
-./love Balatro
+if [ -f "Balatro" ]; then
+  $GPTOKEYB "love" -c "./balatro.gptk" &
+  ./love Balatro
+else
+  echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
+fi
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
