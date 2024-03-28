@@ -20,6 +20,8 @@ GAMEDIR="/$directory/ports/magnibox"
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+export GMLOADER_PLATFORM="os_linux"
+
 
 # We log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -45,10 +47,10 @@ cd "$GAMEDIR"
 if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     if [ "$checksum" = "ee45b1cde7b43538b73df84a29dfc6a0" ]; then # itch.io version
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/magnibox.itch.patch gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/itch-to-control-fix.patch gamedata/game.droid && \
         rm gamedata/data.win
     elif [ "$checksum" = "30427fca0a9946d09a06e38aa2f4b41d" ]; then # steam version
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/magnibox.steam.patch gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/steam-to-control-fix.patch gamedata/game.droid && \
         rm gamedata/data.win
     else
         echo "Error: MD5 checksum of data.win does not match one of the expected checksums."    
