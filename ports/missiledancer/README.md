@@ -9,7 +9,11 @@ Links to get MissileDancer (Android Game is also working)
 - https://terarin.itch.io/missiledancerfree
 - https://store.steampowered.com/app/860590/MissileDancer/
 
-Copy data.win and all ogg files contained in the game folder to gamedata folder.
+For Itchi.io version, you have to extract the exe file with 7zip or similar applications and get the files (data.win and all ogg files) 
+
+For Android APK version, you open the .apk as an archive with a program like 7zip, navigate into the "assets" folder, then extract the .ogg files and the "data.droid" file. Finally, "data.droid" needs to be rename "data.win".
+
+After, you need to copy data.win and all ogg files to gamedata folder.
 
 ## Controls
 
