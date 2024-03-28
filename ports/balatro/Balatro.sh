@@ -1,5 +1,4 @@
 #!/bin/bash
-
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -8,47 +7,53 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-
-source $controlfolder/control.txt # We source the control.txt file contents here
-# The $ESUDO, $directory, $param_device and necessary sdl configuration controller configurations will be sourced from the control.txt file shown [here]
-
-# With device_info we can get dynamic device information like resolution, cpu, cfw etc.
+source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
 
-
-echo $directory
-GAMEDIR=/$directory/ports/balatro
-cd $GAMEDIR
+GAMEDIR="/$directory/ports/balatro"
+TILE_W="s/self.TILE_W = self.F_MOBILE_UI and 11.5 or 20/self.TILE_W = 16.5/g"
+TILE_H="s/self.TILE_H = self.F_MOBILE_UI and 20 or 11.5/self.TILE_H = 16.5/g"
+CRT="s/crt = 70,/crt = 0,/g"
+SHADOWS="s/shadows = 'On'/shadows = 'Off'/g"
+BLOOM="s/bloom = 1/bloom = 0/g"
 
 export XDG_DATA_HOME="$GAMEDIR/saves"
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+
 mkdir "$XDG_DATA_HOME"
+cd $GAMEDIR
 
-# Log the execution of the script
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+if [ -f "Balatro.exe" ]; then
+    GAMEFILE="Balatro.exe"
+elif [ -f "balatro.exe" ]; then
+    GAMEFILE="balatro.exe"
+elif [ -f "Balatro.love" ]; then
+    GAMEFILE="Balatro.love"
+elif [ -f "balatro.love" ]; then
+    GAMEFILE="balatro.love"
+fi
 
-GAMEFILE="./Balatro.exe"
+# Extract globals.lua
+./bin/7za x "$GAMEFILE" globals.lua
 
-# We launch gptokeyb using this $GPTOKEYB variable as it will take care of sourcing the executable from the central location,
-# assign the appropriate exit hotkey dependent on the device (ex. select + start for most devices and minus + start for the
-# rgb10) and assign the appropriate method for killing an executable dependent on the OS the port is run from.
-# With -c we assign a custom mapping file else gptokeyb will only run as a tool to kill the process.
-# For $ANALOGSTICKS we have the ability to supply multiple gptk files to support 1 and 2 analogue stick devices in different ways.
-# For a proper documentation how gptokeyb works: LINK
+# Modify globals.lua
+sed -i "$CRT" -i "$SHADOWS" -i "$BLOOM" globals.lua
+if [ $DISPLAY_WIDTH -le 1279 ]; then
+    sed -i "$TILE_W" -i "$TILE_H" globals.lua
+fi
+
+# Update the archive with the modified globals.lua
+./bin/7za u -aoa "$GAMEFILE" globals.lua
+
+# Clean up
+mv $GAMEFILE Balatro
+rm globals.lua
+
 $GPTOKEYB "love" -c "./balatro.gptk" &
+./love Balatro
 
-LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" ./love Balatro.love 2>&1
-
-# Although you can kill most of the ports (if not all of the ports) via a hotkey, the user may choose to exit gracefully.
-# That's fine but let's make sure gptokeyb is killed so we don't get ghost inputs or worse yet, 
-# launch it again and have 2 or more of them running.
 $ESUDO kill -9 $(pidof gptokeyb)
-
-# The line below is helpful for ArkOS, RetroOZ, and TheRA as some of these ports tend to cause the 
-# global hotkeys (like brightness and volume control) to stop working after exiting the port for some reason.
 $ESUDO systemctl restart oga_events &
-
-# Finally we clean up the terminal screen just for neatness sake as some people care about this.
 printf "\033c" > /dev/tty0
-
