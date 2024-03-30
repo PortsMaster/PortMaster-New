@@ -41,7 +41,7 @@ fi
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./forager.gptk &
+$GPTOKEYB "gmloader" &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
