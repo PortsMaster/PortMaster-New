@@ -1,8 +1,13 @@
 #!/bin/bash
+# PORTMASTER: abes_adventure.zip, Abes Adventure.sh
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "/storage/roms/ports/PortMaster/" ]; then
+  controlfolder="/storage/roms/ports/PortMaster"
+elif [ -d "$HOME/.config/PortMaster/" ]; then
+  controlfolder="$HOME/.config/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -28,5 +33,7 @@ ln -sfv /$directory/ports/abes_adventure/conf/.abe ~/
 $GPTOKEYB "abe.${DEVICE_ARCH}" -c "./abe.gptk" &
 ./abe.${DEVICE_ARCH}
 $ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+if [ $DEVICE_ARCH != "x86_64" ]; then
+  $ESUDO systemctl restart oga_events &
+  printf "\033c" > /dev/tty0
+fi
