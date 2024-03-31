@@ -13,8 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-
-source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
 
@@ -23,12 +21,14 @@ GAMEDIR=/$directory/ports/mrrescue
 export XDG_DATA_HOME="$GAMEDIR/saves"
 mkdir "$XDG_DATA_HOME"
 
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $GPTOKEYB "love.$DEVICE_ARCH" -c "mrrescue.gptk" &
 ./love.$DEVICE_ARCH "./mrrescue.love"
 
