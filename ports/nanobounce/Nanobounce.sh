@@ -1,5 +1,4 @@
 #!/bin/bash
-
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -9,40 +8,31 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
 
 get_controls
 
-## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
-CUR_TTY=/dev/tty0
+GAMEDIR=/$directory/ports/nanobounce
 
-PORTDIR="/$directory/ports"
-GAMEDIR="$PORTDIR/nanobounce"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 
-$ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
-export TERM=linux
-printf "\033c" > $CUR_TTY
+# Make sure uinput is accessible so we can make use of the gptokeyb controls.  351Elec/AmberElec, uOS and JelOS always runs in root, naughty naughty.  
+# The other distros don't so the $ESUDO variable provides the sudo or not dependant on the OS this script is run from.
+$ESUDO chmod 666 /dev/uinput
 
-printf "\033c" > $CUR_TTY
-## RUN SCRIPT HERE
+#for old portmaster installs where DEVICE_ARCH may not be defined or empty take the (previous) default
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
-export PORTMASTER_HOME="$GAMEDIR"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-echo "Starting game." > $CUR_TTY
-
-$GPTOKEYB "nanobounce" -c nanobounce.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./nanobounce 2>&1 | $ESUDO tee -a ./log.txt
-
+$GPTOKEYB "bounce.${DEVICE_ARCH}" -c "./bounce.gptk" &
+./bounce.${DEVICE_ARCH}
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
+printf "\033c" > /dev/tty0
 
-# Disable console
-printf "\033c" > $CUR_TTY
+
