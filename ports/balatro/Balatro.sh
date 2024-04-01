@@ -98,7 +98,7 @@ if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
 fi
 
 if [ -f "$LAUNCH_GAME" ]; then
-  $GPTOKEYB "love" -c "./balatro.gptk" &
+  $GPTOKEYB "love" &
   ./bin/love "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
