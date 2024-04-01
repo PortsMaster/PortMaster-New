@@ -41,7 +41,7 @@ ln -sfv "$gamedir/savedata" ~/.config/StardewValley
 export MONOGAME_PATCH="$gamedir/dlls/StardewPatches.dll"
 export MONO_PATH="$gamedir/dlls":"$gamedir"
 export PATH="$monodir/bin":"$PATH"
-export LD_LIBRARY_PATH="$gamedir/libs"
+export LD_LIBRARY_PATH="$gamedir/libs:$LD_LIBRARY_PATH"
 
 # Delete older GL4ES installs...
 rm -f $gamedir/libs/libGL.so.1 $gamedir/libs/libEGL.so.1
