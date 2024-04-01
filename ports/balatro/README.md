@@ -16,7 +16,7 @@ The port requires you to own a version of Balatro on Steam (either macOS or Wind
 The file is under `~/Library/Application Support/Steam/steamapps/common/Balatro/Balatro.app/Contents/Resources` (if you don't know how to navigate there, go to Steam > Right Click on Balatro > Manage > Browse Local File. Then in the `Balatro.app` package, right click > Show Package Contents > then go to Contents/Resources). You should see the file `Balatro.love` game file there. Drop the file under `ports/balatro` folder of PortMaster.
 
 #### on Windows
-You need to find the game's .exe file (Steam > Right Click on Balatro > Manage > Browse Local File). Use [7-Zip](https://www.7-zip.org/), right click > extract the .exe file. Then copy the Balatro.exe file into the `balatro` folder under `ports/balatro` folder of PortMaster.
+You need to find the game's .exe file (Steam > Right Click on Balatro > Manage > Browse Local File). Simply copy the Balatro.exe file into the `balatro` folder under `ports/balatro` folder of PortMaster.
 
 
 ## Note
