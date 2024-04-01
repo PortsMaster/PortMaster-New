@@ -23,6 +23,10 @@ export XDG_CONFIG_HOME="$GAMEDIR/saves"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 mkdir "$XDG_DATA_HOME"
+
+## Uncomment the following file to log the output, for debugging purpose
+# exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 if [ -f "Balatro.exe" ]; then
@@ -42,7 +46,8 @@ if [ -f "$GAMEFILE" ]; then
   # Modify globals.lua
 
   # change some default settings
-  sed -i 's/crt = 70,/crt = 0,/g' -i 's/bloom = 1/bloom = 0/g' globals.lua
+  sed -i 's/crt = 70,/crt = 0,/g' globals.lua
+  sed -i 's/bloom = 1/bloom = 0/g' globals.lua
   sed -i 's/s/shadows = 'On'/shadows = 'Off'/g' globals.lua
   sed -i 's/self.F_HIDE_BG = false/self.F_HIDE_BG = true/g' globals.lua
 
@@ -55,37 +60,46 @@ if [ -f "$GAMEFILE" ]; then
     cp resources/fonts/Nunito-Black.ttf resources/fonts/m6x11plus.ttf # change Nunito-Black to the in-game font file
     ./bin/7za u -aoa "$GAMEFILE" resources/fonts/m6x11plus.ttf
     rm resources/fonts/m6x11plus.ttf
-
-    if [ $DISPLAY_HEIGHT -eq 720 ]; then # RGB30 specific changes
-      mkdir -p ./functions
-      ./bin/7za x "$GAMEFILE" functions/common_events.lua
-      # move the hands a bit to the right
-      sed -i 's/G.hand.T.x = G.TILE_W - G.hand.T.w - 2.85/G.hand.T.x = G.TILE_W - G.hand.T.w - 1/g' functions/common_events.lua
-      # then move the playing area up
-      sed -i 's/G.play.T.y = G.hand.T.y - 3.6/G.play.T.y = G.hand.T.y - 4.5/g' functions/common_events.lua
-      # move the decks to the right
-      sed -i 's/G.deck.T.x = G.TILE_W - G.deck.T.w - 0.5/G.deck.T.x = G.TILE_W - G.deck.T.w + 0.85/g' functions/common_events.lua
-      # move the jokers to the left
-      sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.2/g' functions/common_events.lua
-
-      # Update the archive with the modified common_events.lua
-      ./bin/7za u -aoa "$GAMEFILE" functions/common_events.lua
-      rm functions/common_events.lua
-    fi
   fi
 
   # Update the archive with the modified globals.lua
   ./bin/7za u -aoa "$GAMEFILE" globals.lua
 
-  # Clean up
-  mv $GAMEFILE Balatro
+  # CP the file to Patched Balatro location
+  cp $GAMEFILE Balatro
+
+  # RGB30 & Other 1x1 square ratio device specific changes
+  if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then 
+    mkdir -p ./functions
+    ./bin/7za x "$GAMEFILE" functions/common_events.lua
+    # move the hands a bit to the right
+    sed -i 's/G.hand.T.x = G.TILE_W - G.hand.T.w - 2.85/G.hand.T.x = G.TILE_W - G.hand.T.w - 1/g' functions/common_events.lua
+    # then move the playing area up
+    sed -i 's/G.play.T.y = G.hand.T.y - 3.6/G.play.T.y = G.hand.T.y - 4.5/g' functions/common_events.lua
+    # move the decks to the right
+    sed -i 's/G.deck.T.x = G.TILE_W - G.deck.T.w - 0.5/G.deck.T.x = G.TILE_W - G.deck.T.w + 0.85/g' functions/common_events.lua
+    # move the jokers to the left
+    sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.2/g' functions/common_events.lua
+
+    # Update the archive with the modified common_events.lua
+    ./bin/7za u -aoa "$GAMEFILE" functions/common_events.lua
+    rm functions/common_events.lua
+    cp $GAMEFILE Balatro_1x1
+  fi
+
+  rm $GAMEFILE
   rm globals.lua
 fi
 
+LAUNCH_GAME="Balatro"
 
-if [ -f "Balatro" ]; then
+if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then 
+  LAUNCH_GAME="Balatro_1x1"
+fi
+
+if [ -f "$LAUNCH_GAME" ]; then
   $GPTOKEYB "love" -c "./balatro.gptk" &
-  ./love Balatro
+  ./love "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
 fi
