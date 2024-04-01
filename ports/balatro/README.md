@@ -19,28 +19,16 @@ The file is under `~/Library/Application Support/Steam/steamapps/common/Balatro/
 You need to find the game's .exe file (Steam > Right Click on Balatro > Manage > Browse Local File). Use [7-Zip](https://www.7-zip.org/), right click > extract the .exe file. Then copy the Balatro.exe file into the `balatro` folder under `ports/balatro` folder of PortMaster.
 
 
-## Advanced Instructions
+## Note
 
-You can further modify the games code, by extracting the `Balatro.love` file, change the content, then repackage (note: always repackage the content, not the root folder)
+This PortMaster script automatically patches the Balatro game files to make them suitable for small devices. Upon patching, the file `Balatro.love` or `Balatro.exe` will be updated and have their extension removed to `Balatro`.
 
-### Switch A / B or X / Y buttons
+Some of the patches include:
 
-Under `globals.lua` find the line and switch to TRUE/FALSE depending on your preferences:
+For devices < 1280px in width:
+- Increasing the scaling.
+- Replace the font with the open font Nunito (Black Variant) for visibility.
+- Disable CRT, Shadow, and reduce Background animation effect for performance and visibility.
+- Specifically on RGB30: move the items around for best visibility.
 
-```
-    self.F_SWAP_AB_PIPS = true             --Swapping button pips for A and B buttons (mainly for switch)
-    self.F_SWAP_AB_BUTTONS = true          --Swapping button function for A and B buttons (mainly for switch)
-    self.F_SWAP_XY_BUTTONS = true          --Swapping button function for X and Y buttons (mainly for switch)
-```
-
-### Scale the content up and down
-
-Under `globals.lua`, around line 220, change the TILE_W and TILE_H. The smaller it is, the more zoomed in the UI is. The default is 20.
-
-For example: more zoomed in value of 16.5 is good for the RGB30:
-```
-    self.TILE_W = 16.5
-    self.TILE_H = 16.5
-```
-
-If the UI got swished / overlapped, you can change the location of content under `functions/common_events.lua`.
+If you would like to bypass the patch, simply change your game file from `Balatro.love` or `Balatro.exe` to just `Balatro`.
