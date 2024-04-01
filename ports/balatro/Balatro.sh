@@ -99,7 +99,7 @@ fi
 
 if [ -f "$LAUNCH_GAME" ]; then
   $GPTOKEYB "love" -c "./balatro.gptk" &
-  ./love "$LAUNCH_GAME"
+  ./bin/love "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
 fi
