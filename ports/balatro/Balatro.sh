@@ -41,8 +41,15 @@ if [ -f "$GAMEFILE" ]; then
 
   # Modify globals.lua
   sed -i "$CRT" -i "$SHADOWS" -i "$BLOOM" globals.lua
-  if [ $DISPLAY_WIDTH -le 1279 ]; then
+
+  if [ $DISPLAY_WIDTH -le 1279 ]; then # increase the scale
       sed -i "$TILE_W" -i "$TILE_H" globals.lua
+  fi
+
+  if [ $DISPLAY_WIDTH -le 720 ]; then # switch out the font if the screen is too small; helping with readability
+    cp resources/fonts/Nunito-Black.ttf resources/fonts/m6x11plus.ttf # change Nunito-Black to the in-game font file
+    ./bin/7za u -aoa "$GAMEFILE" resources/fonts/m6x11plus.ttf
+    rm resources/fonts/m6x11plus.ttf
   fi
 
   # Update the archive with the modified globals.lua
