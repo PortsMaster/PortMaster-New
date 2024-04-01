@@ -1,9 +1,14 @@
 #!/bin/bash
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 # Below we assign the source of the control folder (which is the PortMaster folder) based on the distro:
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -11,6 +16,7 @@ fi
 # We source the control.txt file contents here
 # The $ESUDO, $directory, $param_device and necessary 
 # Sdl configuration controller configurations will be sourced from the control.txt
+
 source $controlfolder/control.txt
 
 # We pull the controller configs from the get_controls function from the control.txt file here
@@ -66,3 +72,4 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
