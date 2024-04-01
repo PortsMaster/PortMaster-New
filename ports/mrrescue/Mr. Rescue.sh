@@ -29,7 +29,7 @@ cd $GAMEDIR
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-$GPTOKEYB "love.$DEVICE_ARCH" -c "mrrescue.gptk" &
+$GPTOKEYB "love.$DEVICE_ARCH" &
 ./love.$DEVICE_ARCH "./mrrescue.love"
 
 $ESUDO kill -9 $(pidof gptokeyb)
