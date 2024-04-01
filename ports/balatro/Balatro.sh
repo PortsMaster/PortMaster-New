@@ -1,11 +1,17 @@
 #!/bin/bash
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
+
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
@@ -13,7 +19,6 @@ get_controls
 
 GAMEDIR="/$directory/ports/balatro"
 
-export XDG_DATA_HOME="$GAMEDIR/saves"
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
@@ -61,7 +66,7 @@ if [ -f "$GAMEFILE" ]; then
       # move the decks to the right
       sed -i 's/G.deck.T.x = G.TILE_W - G.deck.T.w - 0.5/G.deck.T.x = G.TILE_W - G.deck.T.w + 0.85/g' functions/common_events.lua
       # move the jokers to the left
-      sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.15/g' functions/common_events.lua
+      sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.2/g' functions/common_events.lua
 
       # Update the archive with the modified common_events.lua
       ./bin/7za u -aoa "$GAMEFILE" functions/common_events.lua
