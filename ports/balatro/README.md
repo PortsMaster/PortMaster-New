@@ -6,10 +6,11 @@ The port requires you to own a version of Balatro on Steam (either macOS or Wind
 
 ## Installation instructions
 
-- Install the port from PortMaster
-- Generate the `Balatro.love` game file.
+- Buy the game from [Steam](https://store.steampowered.com/app/2379780/Balatro/).
+- Install the port from PortMaster.
+- Find the `Balatro.love` (on Mac) or `Balatro.exe` (on Windows) game file.
 
-### Here is how you can generate Balatro.love:
+### Here is how you can find the game file:
 
 #### on macOS
 
