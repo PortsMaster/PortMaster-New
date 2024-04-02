@@ -19,10 +19,12 @@ get_controls
 
 GAMEDIR="/$directory/ports/balatro"
 
+export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
-mkdir "$XDG_DATA_HOME"
+mkdir -p "$XDG_DATA_HOME"
+mkdir -p "$XDG_CONFIG_HOME"
 
 ## Uncomment the following file to log the output, for debugging purpose
 # exec > >(tee "$GAMEDIR/log.txt") 2>&1
