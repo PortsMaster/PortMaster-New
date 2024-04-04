@@ -13,9 +13,6 @@ source $controlfolder/device_info.txt
 
 get_controls
 
-# uncomment and modify the following line to select a custom ingame language (this example changes it from the OS default US English (en_US.UTF8) to Brazilian Portuguese (pt_BR.UTF8))
-#export LANG=pt_BR.UTF8
-
 BINARYNAME="SuperMeatBoy"
 GAMEDIR=/$directory/ports/supermeatboy
 CONFDIR="$GAMEDIR/conf/"
@@ -24,6 +21,16 @@ CUR_TTY=/dev/tty0
 $ESUDO chmod 666 $CUR_TTY
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# extract Humble version if it's there
+if [[ -f "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" ]]; then
+  echo "Extracting Humble version..."
+  unzip "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" -x 'guis/*' 'meta/*' 'scripts/*' 'data/amd64/*' -d "${GAMEDIR}/gamedata/"
+  mv ${GAMEDIR}/gamedata/data/* ${GAMEDIR}/gamedata
+  # move the Humble archive to a subfolder so it only gets extracted on the first run
+  mkdir -p ${GAMEDIR}/gamedata/humble
+  mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin ${GAMEDIR}/gamedata/humble"
+fi
 
 cd $GAMEDIR/gamedata/
 
@@ -38,6 +45,27 @@ if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
 else
   source "${controlfolder}/libgl_default.txt"
 fi
+
+# determine best output resolution based on device CPU or RAM
+output_res=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}
+if [ "$DEVICE_CPU" == "RK3326" ]; then
+  detail_level="ultralowdetail"
+elif [ "$DEVICE_CPU" == "RK3356" ]; then
+  detail_level="lowdetail"
+elif [ "$DEVICE_RAM" -ge 4 ]; then
+  detail_level="highdetail"
+else
+  detail_level="meddetail"
+fi
+echo "Setting game resolution to $output_res, detail level to $detail_level"
+
+# uncomment these to manually override output settings:
+#output_res="320x240"
+#detail_level="ultralowdetail"
+
+# uncomment this to select ingame language. Default is US English (en_US.UTF8) eg: Brazilian Portuguese (pt_BR.UTF8):
+#export LANG=pt_BR.UTF8
+echo "Game language is set to $LANG"
 
 # Setup Box86
 #export BOX86_ALLOWMISSINGLIBS=1
@@ -57,8 +85,7 @@ export TEXTINPUTINTERACTIVE="Y"
 
 pwd
 $GPTOKEYB "box86" xbox360 &
-# edit resolution parameter to suit device. add -lowdetail or -ultralowdetail to help performance in boss levels
-$GAMEDIR/box86/box86 ./x86/$BINARYNAME -640x480 -fullscreen
+$GAMEDIR/box86/box86 ./x86/$BINARYNAME -$output_res -$detail_level -fullscreen
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
