@@ -20,14 +20,10 @@ get_controls
 GAMEDIR="/$directory/ports/descent"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 GAME="d1x-rebirth"
+ASPECT_X=${ASPECT_X:-4}
+ASPECT_Y=${ASPECT_Y:-3}
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 $ESUDO rm -rf ~/.$GAME
 ln -sfv $GAMEDIR/config ~/.$GAME
@@ -55,15 +51,9 @@ sed -i "s/^AspectY=.*/AspectY=$ASPECT_X/g" $GAMEDIR/config/descent.cfg
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-if [ $CFW_NAME == "ArkOS" ]; then
-	$GPTOKEYB "$GAME.compat" -c "config/joy.gptk" & 
-	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-	./$GAME.compat -hogdir data
-else
-	$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
-	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-	./$GAME.$DEVICE_ARCH -hogdir data
-fi
+$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+./$GAME.$DEVICE_ARCH -hogdir data
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events & 
