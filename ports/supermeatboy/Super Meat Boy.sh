@@ -50,18 +50,18 @@ fi
 output_res=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}
 if [ "$DEVICE_CPU" == "RK3326" ]; then
   detail_level="ultralowdetail"
-elif [ "$DEVICE_CPU" == "RK3356" ]; then
+elif [ "$DEVICE_CPU" == "RK3566" ]; then
   detail_level="lowdetail"
 elif [ "$DEVICE_RAM" -ge 4 ]; then
   detail_level="highdetail"
 else
   detail_level="meddetail"
 fi
-echo "Setting game resolution to $output_res, detail level to $detail_level"
 
 # uncomment these to manually override output settings:
 #output_res="320x240"
 #detail_level="ultralowdetail"
+echo "Setting game resolution to $output_res, detail level to $detail_level"
 
 # uncomment this to select ingame language. Default is US English (en_US.UTF8) eg: Brazilian Portuguese (pt_BR.UTF8):
 #export LANG=pt_BR.UTF8
