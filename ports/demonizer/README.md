@@ -8,9 +8,9 @@ Links to get Demonizer :
 - https://ioribranford.itch.io/demonizer
 - https://store.steampowered.com/app/1091390/Demonizer/
 
-The port was tested with the demo version (1.1.2), the full version (1.1.2) and also the beta (2.0).
+The port was tested with the demo version (1.1.2), the full version (1.1.2) and also the beta version (2.0).
 
-You need to copy the love file in gamedata directory and named it demonizer.love.
+You need to copy the game file (demonizer-demo.love or demonizer-full.love or demonizer demo.exe or ...) in gamedata directory and named it demonizer.love.
 
 ## Controls
 
