@@ -1,10 +1,10 @@
 ## Notes
 <br/>
-Thanks to [Team Meat](http://www.supermeatboy.com/) (Tommy Refenes and Edmund McMillen) with fantastic music is by Danny Baranowsky for creating this game, and thanks to [fexofenadine](https://github.com/fexofenadine) for porting this to PortMaster.
+A big, meaty thanks to [Team Meat](http://www.supermeatboy.com/) (the dynamic duo of Tommy Refenes and Edmund McMillen) and the maestro of melody, Danny Baranowsky, for creating this game. And let's not forget [fexofenadine](https://github.com/fexofenadine), who despite being named after an antihistamine, didn't sneeze at the challenge of porting this to PortMaster. Bless you, fexofenadine!
 <br/><br/>
-* If you own the game on Steam, copy the Steam version of Super Meat Boy (for Linux) game files to the ```ports/supermeatboy/gamedata``` directory.
+* If you're a proud owner of the game on Steam, do a little copy-paste dance! Move the Steam version of Super Meat Boy (for Linux) game files to the ```ports/supermeatboy/gamedata``` directory. Easy peasy, meaty squeezy!
 <br/><br/>
-* If you are on Windows, you can grab the linux gamefiles by opening your Steam console, and running:```download_depot 40800 40802 6556596646716197166```.
+* For our Windows friends, you can snatch the Linux game files right from your Steam console. Just run this magic spell: ```download_depot 40800 40802 6556596646716197166```. Abracadabra, and the files are yours!
 <br/><br/>
-* If you have the Humble version, place your ```supermeatboy-linux-11112013-bin``` file in the ```ports/supermeatboy/gamedata``` directory and it will extract the needed files on first run.
+* If you've got the Humble version, just place your ```supermeatboy-linux-11112013-bin``` file in the ```ports/supermeatboy/gamedata``` directory. It'll do a little unpacking dance on its first run. Just like opening a present!
 <br/>
