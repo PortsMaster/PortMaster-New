@@ -14,6 +14,8 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
 
 [ -f "/etc/os-release" ] && source "/etc/os-release"
 CUR_TTY=/dev/tty0

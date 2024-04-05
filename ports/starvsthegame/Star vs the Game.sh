@@ -18,6 +18,8 @@ fi
 # Sdl configuration controller configurations will be sourced from the control.txt
 
 source $controlfolder/control.txt
+export PORT_32BIT="Y"
+
 
 # We pull the controller configs from the get_controls function from the control.txt file here
 get_controls

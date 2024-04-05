@@ -13,6 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
+export PORT_32BIT="Y"
+
 
 get_controls
 
