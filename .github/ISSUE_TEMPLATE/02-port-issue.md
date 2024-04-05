@@ -33,6 +33,7 @@ The firmware you were using when you encountered the problem. If known, add vers
 * [ ] ArkOS Wummle
 * [ ] AmberELEC
 * [ ] JelOS
+* [ ] RockNix
 * [ ] uOS
 * [ ] RetroOZ
 * [ ] TheRA
