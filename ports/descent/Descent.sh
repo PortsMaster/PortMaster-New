@@ -51,9 +51,15 @@ sed -i "s/^AspectY=.*/AspectY=$ASPECT_X/g" $GAMEDIR/config/descent.cfg
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-./$GAME.$DEVICE_ARCH -hogdir data
+if [ $CFW_NAME == "ArkOS" ]; then
+	$GPTOKEYB "$GAME.compat" -c "config/joy.gptk" & 
+	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+	./$GAME.compat -hogdir data
+else
+	$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
+	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+	./$GAME.$DEVICE_ARCH -hogdir data
+fi
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events & 
