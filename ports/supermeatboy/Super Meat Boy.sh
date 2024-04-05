@@ -34,7 +34,7 @@ if [[ -f "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" ]]; then
   mv ${GAMEDIR}/gamedata/data/* ${GAMEDIR}/gamedata
   # move the Humble archive to a subfolder so it only gets extracted on the first run
   mkdir -p ${GAMEDIR}/gamedata/humble
-  mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin ${GAMEDIR}/gamedata/humble"
+  mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" "${GAMEDIR}/gamedata/humble"
 fi
 
 cd $GAMEDIR/gamedata/
