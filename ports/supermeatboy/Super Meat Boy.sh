@@ -44,6 +44,12 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 
+# If there isn't a config file present, copy the default one to avoid volume sliders being set to zero
+if [ ! -f "$GAMEDIR/conf/SuperMeatBoy/UserData/reg0.dat" ] && [ ! -f "$GAMEDIR/gamedata/userdata/reg0.dat" ]; then
+  echo "Can't locate a configuration file. Importing a default."
+  cp "$GAMEDIR/conf/SuperMeatBoy/UserData/reg0.default" "$GAMEDIR/conf/SuperMeatBoy/UserData/reg0.dat"
+fi
+
 # Setup gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -88,7 +94,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 export TEXTINPUTINTERACTIVE="Y"
 
-pwd
 $GPTOKEYB "box86" xbox360 &
 $GAMEDIR/box86/box86 ./x86/$BINARYNAME -$output_res -$detail_level -fullscreen
 
