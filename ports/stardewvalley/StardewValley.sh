@@ -54,8 +54,8 @@ else
 fi
 
 if [[ "$LIBGL_ES" != "" ]]; then
-	export SDL_VIDEO_GL_DRIVER="libGL.so.1"
-	export SDL_VIDEO_EGL_DRIVER="libEGL.so.1"
+	export SDL_VIDEO_GL_DRIVER="${gamedir}/gl4es/libGL.so.1"
+	export SDL_VIDEO_EGL_DRIVER="${gamedir}/gl4es/libEGL.so.1"
 fi
 
 # Jump into the gamedata dir now
