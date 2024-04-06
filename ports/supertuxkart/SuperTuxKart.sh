@@ -44,7 +44,7 @@ export SUPERTUXKART_ASSETS_DIR="$GAMEDIR/data/"
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "supertuxkart" -c supertuxkart.gptk textinput &
-LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" $TASKSET ./supertuxkart 2>&1 | $ESUDO tee -a ./log.txt
+LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./supertuxkart 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
