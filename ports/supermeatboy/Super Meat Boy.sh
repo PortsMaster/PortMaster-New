@@ -89,9 +89,11 @@ export BOX86_DYNAREC=1
 export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAMEDIR/libs/x86:$GAMEDIR/gamedata/x86"
 
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/box86/native/libGL.so.1"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+fi
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 
 $GPTOKEYB "box86" xbox360 &
