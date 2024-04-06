@@ -1,4 +1,4 @@
-## Notes of MissileDancer
+## Notes of Demonizer
 
 Thanks to [IoriBranford](https://ioribranford.itch.io/) for this great Shump !
 
