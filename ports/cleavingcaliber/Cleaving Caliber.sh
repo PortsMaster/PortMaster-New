@@ -21,6 +21,8 @@ source $controlfolder/control.txt
 
 # With device_info we can get dynamic device information like resolution, cpu, cfw etc.
 source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
 
 # We load custom fixes for some firmwares for example jelos on 32 bit mod_jelos.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"

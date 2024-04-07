@@ -44,6 +44,7 @@ def load_headers(header_file):
         header_data = fh.read()
 
     header_map = {}
+    headers_fixed = set()
 
     for block in header_data.split(HEADER_OLD):
         if block.strip() == '':
@@ -56,9 +57,12 @@ def load_headers(header_file):
         header_data, footer_data = block.split(HEADER_NEW, 1)
         header_map[header_data.strip()] = footer_data.strip()
 
-    print(json.dumps(header_map, indent=4))
+        if footer_data.strip() != '':
+            headers_fixed.add(footer_data.strip())
 
-    return header_map
+    # print(json.dumps(header_map, indent=4))
+
+    return header_map, headers_fixed
 
 
 def save_headers(header_file, header_map):
@@ -79,9 +83,10 @@ def main(argv):
         hash_cache = HashCache(CACHE_FILE)
 
     if HEADER_MAP.is_file():
-        header_map = load_headers(HEADER_MAP)
+        header_map, headers_fixed = load_headers(HEADER_MAP)
     else:
         header_map = {}
+        headers_fixed = set()
 
     seen_headers = {}
     script_data = {}
@@ -94,7 +99,7 @@ def main(argv):
             script_text = script_file.read_text()
 
             if '$controlfolder/control.txt' not in script_text:
-                print(f"check {script_file}\n")
+                print(f"[  BAD  ] {script_file}")
                 continue
 
             header_text, body_text = script_text.split('$controlfolder/control.txt', 1)
@@ -104,6 +109,13 @@ def main(argv):
             body_text = "source $controlfolder/control.txt\n" + body_text
 
             header_text = re.sub(r'\n#\s+PORTMASTER:[^\n]*\n', '\n', header_text, re.I|re.MULTILINE)
+
+            if header_text.strip() in headers_fixed:
+                if '-q' not in argv:
+                    print(f"[  OK   ] {script_file}")
+                continue
+
+            print(f"[REPLACE] {script_file}")
 
             seen_headers.setdefault(header_text, [])
             header_map.setdefault(header_text.strip(), '')

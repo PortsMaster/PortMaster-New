@@ -13,6 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
+export PORT_32BIT="Y"
+
 [ -f "/etc/os-release" ] && source "/etc/os-release"
 
 get_controls

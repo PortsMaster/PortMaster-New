@@ -59,7 +59,7 @@ This name must not clash with any other existing ports.
 
 ### New Port Structure:
 
-Ports are now contained within the `port` top level directory, each port has its own sub-directory named after the port itself. Each port must adhere to the `portname` rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}`.
+Ports are now contained within the `port` top level directory, each port has its own sub-directory named after the port itself. Each port must adhere to the `portname` rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}` and a `gameinfo.xml`.
 
 The script should have capital letters (like `Port Name.sh`) and must end in `.sh`, the port directory should be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
 
@@ -73,6 +73,7 @@ A port directory might look like the following:
   - README.md
   - screenshot.jpg
   - cover.jpg
+  - gameinfo.xml
   - Port Name.sh
   - portname/
     - <portfiles here>
@@ -121,7 +122,11 @@ Example from 2048.
         "image": {},
         "rtr": true,
         "runtime": null,
-        "reqs": []
+        "reqs": [],
+        "arch": [
+            "aarch64",
+            "armhf"
+        ]
     }
 }
 ```
@@ -132,6 +137,7 @@ Example from 2048.
 - [x] Load port data
 - [x] Check port has reqired files
 - [ ] Check for common errors in ports.
+- [ ] Check for gameinfo.xml errors.
 - [x] Check if port clashes with other ports
 - [x] Run port.spec before zipping port
 - [x] Create portname.zip only if port is changed
