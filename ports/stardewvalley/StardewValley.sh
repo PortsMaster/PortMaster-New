@@ -62,7 +62,10 @@ fi
 cd "$gamedir/gamedata"
 
 # Fix for the Linux builds, use mono-provided libraries instead.
-rm -f MonoGame.Framework.* System.dll
+# Exception for the System.Data.* assemblies, since Stardew needs
+# xxHash types we would otherwise not provide.
+mv System.Data*.dll "$gamedir/dlls"
+rm -f MonoGame.Framework.* System*.dll
 
 # Check if it's the Windows or Linux version
 if [[ -f "Stardew Valley.exe" ]]; then
