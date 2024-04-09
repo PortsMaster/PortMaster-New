@@ -29,6 +29,14 @@ $ESUDO chmod 666 $CUR_TTY
 
 # extract Humble version if it's there
 if [[ -f "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" ]]; then
+  if [ "$CFW_NAME" == "muOS" ]; then
+    # Busybox unzip doesnt like it, we use zip to fix it, but zip wants the file to be named .zip
+    mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-broken.zip"
+    zip -FF "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-broken.zip" --out "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-fixed.zip"
+    mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-fixed.zip" "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin"
+    rm -f "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-broken.zip"
+  fi
+
   echo "Extracting Humble version..."
   unzip "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" -x 'guis/*' 'meta/*' 'scripts/*' 'data/amd64/*' -d "${GAMEDIR}/gamedata/"
   mv ${GAMEDIR}/gamedata/data/* ${GAMEDIR}/gamedata
