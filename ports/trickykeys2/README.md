@@ -9,5 +9,5 @@ Thanks [Team Bugulon](https://team-bugulon.itch.io/) for creating this game and 
 |D-pad/L-stick|Movement |
 |A|Jump / Select|
 |B|Back|
-|Select|Start / Stop AI|
-|Start|Pause / Menu|
+|Y/Start/R1/R2|Start / Stop AI|
+|Select|Pause / Menu|
