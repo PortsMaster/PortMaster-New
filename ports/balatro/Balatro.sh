@@ -93,6 +93,19 @@ if [ -f "$GAMEFILE" ]; then
   rm globals.lua
 fi
 
+if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ]; then
+  # These libs are no good.
+  LIBDIR="$GAMEDIR/libs.${DEVICE_ARCH}"
+
+  if [ -f "$LIBDIR/libfontconfig.so.1" ]; then
+    $ESUDO rm -f "$LIBDIR/libfontconfig.so.1"
+  fi
+
+  if [ -f "$LIBDIR/libtheoradec.so.1" ]; then
+    $ESUDO rm -f "$LIBDIR/libtheoradec.so.1"
+  fi
+fi
+
 LAUNCH_GAME="Balatro"
 
 if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
