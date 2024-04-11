@@ -21,7 +21,7 @@ GAMEDIR="/$directory/ports/balatro"
 
 export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
@@ -43,7 +43,7 @@ fi
 
 if [ -f "$GAMEFILE" ]; then
   # Extract globals.lua
-  ./bin/7za x "$GAMEFILE" globals.lua
+  ./bin/7za.${DEVICE_ARCH} x "$GAMEFILE" globals.lua
 
   # Modify globals.lua
 
@@ -60,20 +60,20 @@ if [ -f "$GAMEFILE" ]; then
 
   if [ $DISPLAY_WIDTH -le 720 ]; then # switch out the font if the screen is too small; helping with readability
     cp resources/fonts/Nunito-Black.ttf resources/fonts/m6x11plus.ttf # change Nunito-Black to the in-game font file
-    ./bin/7za u -aoa "$GAMEFILE" resources/fonts/m6x11plus.ttf
+    ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" resources/fonts/m6x11plus.ttf
     rm resources/fonts/m6x11plus.ttf
   fi
 
   # Update the archive with the modified globals.lua
-  ./bin/7za u -aoa "$GAMEFILE" globals.lua
+  ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" globals.lua
 
   # CP the file to Patched Balatro location
   cp $GAMEFILE Balatro
 
   # RGB30 & Other 1x1 square ratio device specific changes
-  if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then 
+  if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
     mkdir -p ./functions
-    ./bin/7za x "$GAMEFILE" functions/common_events.lua
+    ./bin/7za.${DEVICE_ARCH} x "$GAMEFILE" functions/common_events.lua
     # move the hands a bit to the right
     sed -i 's/G.hand.T.x = G.TILE_W - G.hand.T.w - 2.85/G.hand.T.x = G.TILE_W - G.hand.T.w - 1/g' functions/common_events.lua
     # then move the playing area up
@@ -84,7 +84,7 @@ if [ -f "$GAMEFILE" ]; then
     sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.2/g' functions/common_events.lua
 
     # Update the archive with the modified common_events.lua
-    ./bin/7za u -aoa "$GAMEFILE" functions/common_events.lua
+    ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" functions/common_events.lua
     rm functions/common_events.lua
     cp $GAMEFILE Balatro_1x1
   fi
@@ -95,13 +95,13 @@ fi
 
 LAUNCH_GAME="Balatro"
 
-if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then 
+if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
   LAUNCH_GAME="Balatro_1x1"
 fi
 
 if [ -f "$LAUNCH_GAME" ]; then
-  $GPTOKEYB "love" &
-  ./bin/love "$LAUNCH_GAME"
+  $GPTOKEYB "love.${DEVICE_ARCH}" &
+  ./bin/love.${DEVICE_ARCH} "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
 fi
