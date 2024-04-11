@@ -47,12 +47,18 @@ def load_port(port_dir):
 
     git_ignore_file = port_dir / '.gitignore'
     git_ignores = []
+    allow_files = []
     large_files = {}
 
     if git_ignore_file.is_file():
         with open(git_ignore_file, 'r') as fh:
             for line in fh:
                 line = line.strip()
+
+                if line.startswith('##') and 'ALLOW' in line:
+                    allow_files.append(line.split(':', 1)[-1].strip())
+                    continue
+
                 if line == '' or line.startswith('#'):
                     continue
 
@@ -79,6 +85,9 @@ def load_port(port_dir):
             if not file_name.is_file():
                 continue
 
+            if file_name.name in allow_files:
+                continue
+
             if '.part.' in file_name.name:
                 large_file_name, part_check, part_number = str(file_name).rsplit('.', 2)
 
@@ -101,13 +110,18 @@ def load_port(port_dir):
 
     git_ignores.sort(key=lambda name: name.casefold())
 
-    if len(git_ignores) > 0 or len(large_files) > 0:
-        print('-' * 40)
+    if len(git_ignores) > 0 or len(large_files) > 0 or len(allow_files) > 0:
+        print('#' * 40)
+        print(f'# {port_dir.name}')
         print("git_ignores = ", json.dumps(git_ignores, indent=4))
         print("large_files = ", json.dumps(large_files, indent=4))
-
+        print("allow_files = ", json.dumps(allow_files, indent=4))
         with open(git_ignore_file, 'w') as fh:
             print(GITIGNORE_HEADER, file=fh)
+
+            for file_name in allow_files:
+                print(f"## ALLOW: {file_name}", file=fh)
+
             for file_name in git_ignores:
                 print(file_name, file=fh)
 
