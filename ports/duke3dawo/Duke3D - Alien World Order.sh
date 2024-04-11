@@ -73,7 +73,7 @@ else
 fi
 
 $GPTOKEYB "eduke32.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
-./eduke32.${DEVICE_ARCH} awo.zip -nosetup -gamegrp e32wt.grp -xE32WT.CON 2>&1 | tee -a ./log.txt
+./eduke32.${DEVICE_ARCH} awo.zip -nosetup -gamegrp e32wt.grp -xE32WT.CON
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
