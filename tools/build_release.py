@@ -58,12 +58,14 @@ TODAY = str(datetime.datetime.today().date())
 
 ROOT_DIR = Path('.')
 
-CACHE_FILE = ROOT_DIR / '.hash_cache'
-RELEASE_DIR = ROOT_DIR / 'releases'
-RUNTIMES_DIR = ROOT_DIR / 'runtimes'
+CACHE_FILE    = ROOT_DIR / '.hash_cache'
+RELEASE_DIR   = ROOT_DIR / 'releases'
+RUNTIMES_DIR  = ROOT_DIR / 'runtimes'
 MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
-STATUS_FILE = RELEASE_DIR / 'ports_status.json'
-PORTS_DIR = ROOT_DIR / 'ports'
+STATUS_FILE   = RELEASE_DIR / 'ports_status.json'
+PORTS_DIR     = ROOT_DIR / 'ports'
+
+SPLIT_IMAGES  = True
 
 GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
@@ -944,7 +946,8 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
             )
 
     ## Jank :|
-    build_new_images_zip(old_manifest, new_manifest, port_status)
+    if SPLIT_IMAGES:
+        build_new_images_zip(old_manifest, new_manifest, port_status)
 
     utils = []
 
@@ -954,13 +957,14 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
     utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
 
-    for img_id in range(1000):
-        image_xxx_zip = f"images.{img_id:03d}.zip"
+    if SPLIT_IMAGES:
+        for img_id in range(1000):
+            image_xxx_zip = f"images.{img_id:03d}.zip"
 
-        if image_xxx_zip not in new_manifest:
-            break
+            if image_xxx_zip not in new_manifest:
+                break
 
-        utils.append(RELEASE_DIR / image_xxx_zip)
+            utils.append(RELEASE_DIR / image_xxx_zip)
 
     runtimes_map = {}
 

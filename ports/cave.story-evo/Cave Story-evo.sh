@@ -1,11 +1,13 @@
 #!/bin/bash
-# PORTMASTER: cave.story-evo.zip, Cave Story-evo.sh
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -54,3 +56,4 @@ LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_
 
 $ESUDO kill -9 $(pidof gptokeyb) & 
 printf "\033c" >> /dev/tty1
+
