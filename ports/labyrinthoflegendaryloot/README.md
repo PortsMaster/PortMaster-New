@@ -3,7 +3,9 @@
 Special thanks to [dominaxis-games](https://itch.io/profile/dominaxis-games) for making this game, making it available for free and allowing us to modify and distribute it!
 
 Source: https://dominaxis-games.itch.io/labyrinth-of-legendary-loot
-Modified by Kompaan for the handheld experience
+
+Modified by Kompaan for the handheld experience, 
+UI layout optimized for 640x480 or greater, smaller will have elements overlapping in some places
 
 ## Controls
 
