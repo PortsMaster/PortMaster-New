@@ -9,3 +9,34 @@ Thanks to JohnnyonFlame for the necessary modification to allow this game to run
 You can donate towards JohnnyonFlame's work [here](https://ko-fi.com/johnnyonflame)
 <br/>
 
+## Extra
+
+Your `gamedata/` directory should look like:
+
+```
+gamedata/
+`-- shovelknight
+    |-- 32
+    |   |-- ShovelKnight
+    |   `-- lib
+    |       |-- libBox2D.so
+    |       |-- ..
+    |       |-- lots of files
+    |       |-- ...
+    |       `-- libfmodex.so
+    |-- 64
+    |   |-- ShovelKnight
+    |   `-- lib
+    |       |-- libBox2D.so
+    |       |-- ..
+    |       |-- lots of files
+    |       |-- ...
+    |       `-- libfmodex64.so
+    |-- data
+    |   |-- KK_Encounter_GigaCardia.pak
+    |   |-- ..
+    |   |-- lots of files
+    |   |-- ...
+    |   `-- zubaz.pak
+    `-- shovelknight
+```
