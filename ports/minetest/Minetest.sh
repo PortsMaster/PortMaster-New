@@ -1,10 +1,13 @@
 #!/bin/bash
-# PORTMASTER: Minetest.zip, Minetest.sh
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -13,6 +16,7 @@ source $controlfolder/control.txt
 source $controlfolder/tasksetter
 
 get_controls
+
 CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports/"
@@ -21,8 +25,7 @@ cd $GAMEDIR
 
 # Grab text output...
 $ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
+"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
@@ -68,7 +71,7 @@ else
 fi
 
 $GPTOKEYB "./bin/minetest" -c "$GAMEDIR/$GPTK_FILE" &
-$TASKSET ./bin/minetest | tee -a ./log.txt
+$TASKSET ./bin/minetest
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
