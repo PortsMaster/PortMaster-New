@@ -51,7 +51,6 @@ if [ -f "$GAME_FILE" ]; then
   output_dir="assets/sounds/compressed"
   mkdir -p "$output_dir"
   ./bin/7za x "$GAME_FILE" "$input_dir"
-  LD_LIBRARY_PATH=./libs/ffmpeg
 
   for file in "$input_dir"/*.ogg; do
     # Get the filename without the directory path
