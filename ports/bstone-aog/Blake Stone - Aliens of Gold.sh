@@ -13,55 +13,49 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+get_controls
 
 GAMEDIR="/$directory/ports/bstone-aog"
 
-GPTOKEYB_CONFIG="$GAMEDIR/bstone.gptk"
+$ESUDO chmod 777 -R $GAMEDIR/*
 
-if [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]]; then
-  xres="1920"
-  yres="1152"
-elif [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG503" ]]; then
-  xres="960"
-  yres="544"
-elif [[ "$(cat /sys/class/drm/card0-HDMI-A-1/status)" == "connected" ]]; then
-  xres="$(cat /sys/class/drm/card0-HDMI-A-1/modes | grep -o -P '\d*x\d*' | cut -dx -f1)"
-  yres="$(cat /sys/class/drm/card0-HDMI-A-1/modes | grep -o -P '\d*x\d*' | cut -dx -f2)"
-elif [[ "$(cat /sys/class/drm/card0-DSI-1/status)" == "connected" ]]; then
-  xres="$(cat /sys/class/drm/card0-DSI-1/modes | grep -o -P '\d*x\d*' | cut -dx -f1)"
-  yres="$(cat /sys/class/drm/card0-DSI-1/modes | grep -o -P '\d*x\d*' | cut -dx -f2)"
+if [[ "$CFW_NAME" == "muOS" ]]; then
+    sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"software"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
+    ADDLPARAMS="--no_screens"
 else
-  xres="640"
-  yres="480"
-fi
-echo $xres
-echo $yres
-
-$ESUDO sed -i "s|vid_width \"[0-9]\+\"|vid_width \"$xres\"|g" $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-$ESUDO sed -i "s|vid_height \"[0-9]\+\"|vid_height \"$yres\"|g" $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-
-if [[ $xres == '480' ]] || [[$xres == '320']]; then
-    $ESUDO sed -i '/vid_is_ui_stretched / s/"1"/"0"/' $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-    $ESUDO sed -i '/vid_is_widescreen / s/"1"/"0"/' $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-else
-    $ESUDO sed -i '/vid_is_ui_stretched / s/"0"/"1"/' $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-    $ESUDO sed -i '/vid_is_widescreen / s/"0"/"1"/' $GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt
-fi
-
-if [[ $ANALOGSTICKS == '1' ]]; then
-    GPTOKEYB_CONFIG="$GAMEDIR/bstone.gptk.leftanalog"  
+    sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"gles_2_0"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
+    ADDLPARAMS=""
 fi
 
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 $ESUDO rm -rf ~/.local/share/bibendovsky
 ln -sfv $GAMEDIR/conf/bibendovsky ~/.local/share/
 
+$ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "bstone" -c "$GPTOKEYB_CONFIG" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./bstone --data_dir $GAMEDIR/gamedata/aliens_of_gold  2>&1 | tee $GAMEDIR/log.txt
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+if [[ $ANALOGSTICKS == '1' ]]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/bstone1joy.gptk"
+elif [[ $DEVICE_NAME == 'x55' ]] || [[ $DEVICE_NAME == 'RG353P' ]]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/bstonetriggers.gptk"
+else
+    GPTOKEYB_CONFIG="$GAMEDIR/bstone.gptk"
+fi
+
+$GPTOKEYB "bstone.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+./bstone.${DEVICE_ARCH} --vid_windowed_width $DISPLAY_WIDTH --vid_windowed_height $DISPLAY_HEIGHT --vid_is_ui_stretched 1 $ADDLPARAMS --data_dir $GAMEDIR/gamedata/aliens_of_gold
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-
+printf "\033c" > /dev/tty0
+printf "\033c" > /dev/tty1
