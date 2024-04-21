@@ -88,11 +88,14 @@ if [ -f "$GAME_FILE" ]; then
   rm "$MOUSE_FILE"  
   MAIN_FILE="main.lua"  
   ./bin/7za x "$GAME_FILE" "$MAIN_FILE"
-  sed -i "/function love.load(arg)/a \  cursorImage = love.graphics.newImage('left_ptr.png')" $MAIN_FILE    
-  lines=("" "function drawCursor()" "  local mouseX, mouseY = love.mouse.getPosition()" "  love.graphics.draw(cursorImage, mouseX, mouseY)" "end")
-  for line in "${lines[@]}"; do
-    echo "$line" >> $MAIN_FILE
-  done  
+  sed -i "/function love.load(arg)/a \  cursorImage = love.graphics.newImage('left_ptr.png')" $MAIN_FILE
+  
+  echo "" >> $MAIN_FILE
+  echo "function drawCursor()" >> $MAIN_FILE
+  echo "  local mouseX, mouseY = love.mouse.getPosition()" >> $MAIN_FILE
+  echo "  love.graphics.draw(cursorImage, mouseX, mouseY)" >> $MAIN_FILE
+  echo "end" >> $MAIN_FILE
+  
   sed -i "/screenManager:draw()/a \  drawCursor()" $MAIN_FILE  
   sed -i "/function love\.load(arg)/a \    love\.mouse\.setVisible(false)" $MAIN_FILE
   ./bin/7za u -mx0 -aoa "$GAME_FILE" "$MAIN_FILE"
