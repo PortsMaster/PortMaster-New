@@ -34,6 +34,26 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+CUR_TTY=/dev/tty0
+
+# Define the archive file name
+ARCHIVE_FILE="data.tar.gz"
+
+# Check if the archive file exists
+if [[ -f "$ARCHIVE_FILE" ]]; then
+   echo "Extracting game data, this can take a few minutes..." > "$CUR_TTY"
+   
+   # Extract the archive and check if the extraction was successful
+   if tar -xzf "$ARCHIVE_FILE"; then
+       echo "Extraction successful." > "$CUR_TTY"
+       $ESUDO rm -f "$ARCHIVE_FILE"
+   else
+       echo "Error: Extraction failed." > "$CUR_TTY"
+	   sleep 5
+       exit 1
+   fi
+fi
+
 $GPTOKEYB "minetest" -c "$GAMEDIR/minetest.gptk.$ANALOG_STICKS" &
 ./bin/minetest
 
