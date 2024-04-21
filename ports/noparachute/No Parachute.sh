@@ -35,7 +35,7 @@ LAUNCH_FILE="noparachute"
 if [ -f "$GAME_FILE" ]; then
   LUASTEAM_FILE="luasteam.lua"
   cp "patch/$LUASTEAM_FILE" "$LUASTEAM_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$LUASTEAM_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$LUASTEAM_FILE"
   rm "$LUASTEAM_FILE"
   ./bin/7za d "$GAME_FILE" "luasteam.dll"
 
@@ -58,7 +58,7 @@ if [ -f "$GAME_FILE" ]; then
   sed -i "s/texcolor.a += 1/texcolor.a += 1.0/" "$PLANERENDERINGLUA_FILE"
   sed -i "s/float borderMul = 1 - borderStep\.x \* borderStep\.y/float borderMul = 1\.0 - borderStep\.x * borderStep\.y/" "$PLANERENDERINGLUA_FILE"
   sed -i "/texcolor\.rgb = mix(texcolor\.rgb \* vcolor\.rgb, fogcolor\.rgb, depth)/a\    if (texcolor\.r >= 0.98 && texcolor\.g >= 0.98 && texcolor\.b >= 0.98) \{return vec4(0.0, 0.0, 0.0, 0.0);\}" "$PLANERENDERINGLUA_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$PLANERENDERINGLUA_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$PLANERENDERINGLUA_FILE"
   rm -rf "core"
   
   # fix settigns scaling for non 16:9
@@ -68,23 +68,23 @@ if [ -f "$GAME_FILE" ]; then
   sed -i "s/local overlayHeight = overlayWidth \* 0\.75/local overlayHeight = overlayWidth \* 0\.80/" "$SETTINGSLUA_FILE"  
   sed -i "s/overlayY + overlayHeight \* 0\.94/overlayY + overlayHeight \* 0\.80/" "$SETTINGSLUA_FILE"
   sed -i "s/(\"btn_settings_close\"), overlayX, overlayY + overlayHeight/(\"btn_settings_close\"), overlayX, overlayY + overlayHeight \* 0\.84/" "$SETTINGSLUA_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$SETTINGSLUA_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$SETTINGSLUA_FILE"
   rm -rf "ui"
   
   MAFLUA_FILE="lib/maf.lua"
   ./bin/7za x "$GAME_FILE" "$MAFLUA_FILE"
   sed -i "/add = function(v, u, out)/a \            if type(u) ~= \"table\" then out\.x, out\.y, out\.z = v\.x + u, v\.y + u, v\.z + u return out end" "$MAFLUA_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$MAFLUA_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$MAFLUA_FILE"
   rm -rf "lib"
   
   SCREENLUA_FILE="ui/screens/GameScreen.lua"
   ./bin/7za x "$GAME_FILE" "$SCREENLUA_FILE"
   sed -i "s/love\.mouse\.setVisible(true)/love\.mouse\.setVisible(false)/" "$SCREENLUA_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$SCREENLUA_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$SCREENLUA_FILE"
   rm -rf "ui"
   MOUSE_FILE="left_ptr.png"
   cp "patch/$MOUSE_FILE" "$MOUSE_FILE"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$MOUSE_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$MOUSE_FILE"
   rm "$MOUSE_FILE"  
   MAIN_FILE="main.lua"  
   ./bin/7za x "$GAME_FILE" "$MAIN_FILE"
@@ -98,7 +98,7 @@ if [ -f "$GAME_FILE" ]; then
   
   sed -i "/screenManager:draw()/a \  drawCursor()" $MAIN_FILE  
   sed -i "/function love\.load(arg)/a \    love\.mouse\.setVisible(false)" $MAIN_FILE
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$MAIN_FILE"
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$MAIN_FILE"
   rm $MAIN_FILE
 
   mv "$GAME_FILE" "$LAUNCH_FILE"
