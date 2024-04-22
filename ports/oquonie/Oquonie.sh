@@ -17,7 +17,7 @@ source $controlfolder/device_info.txt
 
 get_controls
 
-GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/oquonie"
+GAMEDIR=/$directory/ports/oquonie/
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
