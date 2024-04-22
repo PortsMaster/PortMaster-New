@@ -36,7 +36,7 @@ if [ -f "$GAME_FILE" ]; then
   # allow to run without steam
   LUASTEAM_FILE="luasteam.lua"
   cp "patch/$LUASTEAM_FILE" "$LUASTEAM_FILE"
-  ./bin/7za u -aoa "$GAME_FILE" "$LUASTEAM_FILE"
+  ./bin/7za u -aoa -y "$GAME_FILE" "$LUASTEAM_FILE"
   rm "$LUASTEAM_FILE"
   ./bin/7za d "$GAME_FILE" "luasteam.dll"
   
@@ -45,7 +45,7 @@ if [ -f "$GAME_FILE" ]; then
   SCREEN_FILE="screen.lua"
   ./bin/7za x "$GAME_FILE" "$SETUP_FOLDER/$SCREEN_FILE"
   sed -i "s/if Screen.scale < 3/--if Screen.scale < 3/" "$SETUP_FOLDER/$SCREEN_FILE"
-  ./bin/7za u -aoa "$GAME_FILE" "$SETUP_FOLDER/$SCREEN_FILE"
+  ./bin/7za u -aoa -y "$GAME_FILE" "$SETUP_FOLDER/$SCREEN_FILE"
   rm -r $SETUP_FOLDER
 
   mv "$GAME_FILE" "$LAUNCH_FILE"
