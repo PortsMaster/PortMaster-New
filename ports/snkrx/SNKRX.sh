@@ -30,18 +30,18 @@ if [ -f "$GAME_FILE" ]; then
   
   MOUSE_FILE="left_ptr.png"
   cp "patch/$MOUSE_FILE" "$MOUSE_FILE"
-  ./bin/7za u -aoa "$GAME_FILE" "$MOUSE_FILE"
+  ./bin/7za u -aoa -y "$GAME_FILE" "$MOUSE_FILE"
   rm "$MOUSE_FILE"
   
   engine_dir="engine"
   mkdir -p "./$engine_dir"
   cp -rf "./patch/$engine_dir"/* "$engine_dir"
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$engine_dir"/*
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$engine_dir"/*
   rm -rf "$engine_dir"  
   for file in "./patch"/*.lua; do   
     filename=$(basename "$file") # Get the filename without the directory path
 	cp "./patch/$filename" "./"
-   ./bin/7za u -mx0 -aoa "$GAME_FILE" "$filename"
+   ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$filename"
     rm "$filename"
   done
   
@@ -60,7 +60,7 @@ if [ -f "$GAME_FILE" ]; then
   done
 
   mv -f "$output_dir"/* "$input_dir"  
-  ./bin/7za u -mx0 -aoa "$GAME_FILE" "$input_dir"/*
+  ./bin/7za u -mx0 -aoa -y "$GAME_FILE" "$input_dir"/*
   rm -rf "assets"
   
   mv "$GAME_FILE" "$LAUNCH_FILE"
