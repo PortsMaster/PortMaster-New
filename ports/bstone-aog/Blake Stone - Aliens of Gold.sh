@@ -21,7 +21,7 @@ GAMEDIR="/$directory/ports/bstone-aog"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
-if [[ "$CFW_NAME" == "muOS" ]]; then
+if [[ "$CFW_NAME" == "muOS" ]] && [[ "$DEVICE_ARCH" == "armhf" ]]; then
     sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"software"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
     ADDLPARAMS="--no_screens"
 else
