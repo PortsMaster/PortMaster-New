@@ -23,8 +23,10 @@ $ESUDO chmod 777 -R $GAMEDIR/*
 
 if [[ "$CFW_NAME" == "muOS" ]]; then
     sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"software"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
+    ADDLPARAMS="--no_screens"
 else
     sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"gles_2_0"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
+    ADDLPARAMS=""
 fi
 
 cd $GAMEDIR
@@ -51,7 +53,7 @@ else
 fi
 
 $GPTOKEYB "bstone.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
-./bstone.${DEVICE_ARCH} --vid_windowed_width $DISPLAY_WIDTH --vid_windowed_height $DISPLAY_HEIGHT --vid_is_ui_stretched 1 --data_dir $GAMEDIR/gamedata/planet_strike
+./bstone.${DEVICE_ARCH} --vid_windowed_width $DISPLAY_WIDTH --vid_windowed_height $DISPLAY_HEIGHT --vid_is_ui_stretched 1 $ADDLPARAMS --data_dir $GAMEDIR/gamedata/planet_strike
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
