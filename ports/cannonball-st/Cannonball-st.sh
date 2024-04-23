@@ -33,7 +33,7 @@ echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/cannonball"
 
-./cannonball |& tee log.txt /dev/tty0
+./cannonball 2>&1 | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &
