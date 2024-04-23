@@ -1,11 +1,6 @@
 ## Notes
 
-Copy in the following files from  the Steam version of [Bunny's Flowers](https://store.steampowered.com/app/1375480/Bunnys_Flowers/)
-* data.win
-* audiogroup1.dat
-* audiogroup2.dat
-
-into `/roms/ports/bunnysflowers/gamedata`
+Thanks to [zuza](https://www.zuza.games/) for creating this lovely game!
 
 
 ## Controls
