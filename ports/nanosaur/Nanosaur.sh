@@ -16,8 +16,9 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR="/$directory/ports/Abuse"
+GAMEDIR=/$directory/ports/nanosaur/
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-./Nanosaur | tee ./log.txt
+./Nanosaur
