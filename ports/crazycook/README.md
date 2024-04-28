@@ -10,7 +10,7 @@ You have to cook burgers and throw them into the mouths of your busy customers b
 | Button     | Action               |
 | ---------- | -------------------- |
 | D-Pad      | Directional movement |
-| B          | Throw                |
+| A/B        | Ingredient/throw     |
 | Select     | Menu                 |
 | Start      | Enter                |
 

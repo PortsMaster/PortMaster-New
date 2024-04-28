@@ -50,7 +50,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "$runtime" -c "./brutalcastle.gptk" &
+$GPTOKEYB "$runtime" -c "./crazycook.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Crazy Cook.pck"
 
 $ESUDO umount "$godot_dir"
