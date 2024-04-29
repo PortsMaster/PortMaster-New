@@ -9,7 +9,8 @@ Portmaster Version:
 - Cebion https://github.com/Cebion
 - Black_Hand https://github.com/Blackerererer
 	
-Special thanks to: kloptops for helping me test it
+- Cebion - Special thanks to: kloptops for helping me test it
+- Black_Hand - Special thanks to: Cebion for testing it and helping me with the PM process. JanTrueno and Slow Pixel for testing.
 
 # Compatible Mods:
 Flare: Empyrean Campaign (Default Preinstalled Game)
@@ -27,7 +28,7 @@ OpenValley: Open Source version of Stardew Valley https://gitea.it/rixty/OpenVal
 # Instructions:
 
 To run the game start Flare Engine.sh from your ports folder.
-To add Mods copy them to the flare/mods folder and select the mod in the confiuration/mod menu ingame.
+To add Mods copy them to the flare/mods folder and select the mod in the configuration/mod menu ingame.
 
 
 ## Controls
