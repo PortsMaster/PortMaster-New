@@ -34,6 +34,7 @@ fi
 
 $ESUDO rm -rf ~/.hexen2
 $ESUDO ln -sfv $GAMEDIR/conf/.hexen2 ~/
+$ESUDO cp -f "$GAMEDIR/conf/.hexen2/portals/config.cfg" "$GAMEDIR/portals/autoexec.cfg"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
@@ -41,7 +42,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
-if [ "$DEVICE_NAME" == "x55" ] || [ "$DEVICE_NAME" == "RG353P" ]; then
+if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2.gptk"
