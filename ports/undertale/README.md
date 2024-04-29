@@ -8,4 +8,3 @@ Thanks to ptitSeb for box86 (https://github.com/ptitSeb/box86)
 Thanks to JohnnyonFlame for the necessary modification to allow this game to run on supported linux distros.
 You can donate towards JohnnyonFlame's work [here](https://ko-fi.com/johnnyonflame)
 <br/>
-
