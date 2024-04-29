@@ -8,9 +8,10 @@ Portmaster Version:
 
 - Cebion https://github.com/Cebion
 - Black_Hand https://github.com/Blackerererer
-	
-- Cebion - Special thanks to: kloptops for helping me test it.
-- Black_Hand - Special thanks to: Cebion for testing it and helping me with the PM process. JanTrueno and Slow Pixel for testing.
+
+Special thanks:
+- Cebion - kloptops for helping me test it.
+- Black_Hand - Cebion for testing it and helping me with the PM process. JanTrueno and Slow Pixel for testing.
 
 # Compatible Mods:
 Flare: Empyrean Campaign (Default Preinstalled Game)
