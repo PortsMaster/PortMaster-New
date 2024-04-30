@@ -31,7 +31,7 @@ elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH == "aarch64" ]]; then
   raconf="--config /mnt/mmc/MUOS/retroarch/retroarch32.cfg"
 elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH != "aarch64" ]]; then
   raloc="/mnt/mmc/MUOS"
-  raconf="/mnt/mmc/MUOS/.retroarch/retroarch.cfg"
+  raconf="--config /mnt/mmc/MUOS/.retroarch/retroarch.cfg"
 else
   raloc="/usr/bin"
   raconf=""
