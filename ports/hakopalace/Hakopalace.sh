@@ -23,7 +23,7 @@ $ESUDO chmod 666 /dev/tty0
 
 GAMEDIR="/$directory/ports/hakopalace"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
@@ -37,17 +37,6 @@ if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
-fi
-
-# Check if there are .ogg files in ./gamedata
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.ogg ./assets/ || exit 1
-
-    # Zip the contents of ./game.apk including the .ogg files
-    zip -r -0 ./hakopalace.apk ./assets/ || exit 1
-    rm -Rf "$GAMEDIR/assets/" || exit 1
 fi
 
 # Rename data.win to game.droid if it exists in ./gamedata
