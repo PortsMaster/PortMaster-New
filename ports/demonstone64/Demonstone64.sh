@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: demonstone64.zip, Demonstone64.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
