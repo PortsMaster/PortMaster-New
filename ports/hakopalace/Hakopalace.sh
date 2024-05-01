@@ -38,7 +38,16 @@ if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then
 else
   source "${controlfolder}/libgl_default.txt"
 fi
+# Check if there are .ogg files in ./gamedata
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    # Move all .ogg files from ./gamedata to ./assets
+    mkdir -p ./assets
+    mv ./gamedata/*.ogg ./assets/ || exit 1
 
+    # Zip the contents of ./game.apk including the .ogg files
+    zip -r -0 ./hakopalace.apk ./assets/ || exit 1
+    rm -Rf "$GAMEDIR/assets/" || exit 1
+fi
 # Rename data.win to game.droid if it exists in ./gamedata
 if [ -e "./gamedata/data.win" ]; then
     mv ./gamedata/data.win ./gamedata/game.droid || exit 1
