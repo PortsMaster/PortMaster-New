@@ -23,7 +23,9 @@ PORT_INFO_ROOT_ATTRS = {
 PORT_INFO_ATTR_ATTRS = {
     'title': "",
     'desc': "",
+    'desc_md': None,
     'inst': "",
+    'inst_md': None,
     'genres': [],
     'porter': [],
     'image': None,
