@@ -29,7 +29,7 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-GAME_FILE="CardswithPersonalities.exe"
+GAME_FILE="CardsWithPersonalities.exe"
 LAUNCH_FILE="cardswithpersonalities"
 
 if [ -f "$GAME_FILE" ]; then
