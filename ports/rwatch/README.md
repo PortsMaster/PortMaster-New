@@ -1,8 +1,8 @@
 ## Notes
 
-Huge thank you to the creator of this game, [Nizakashii] (@Nizakashii.itch.io) and thanks to all who tested and reviewed this port.
--Download (@Nizakashii.itch.io/R&Watch-Dobtopus)
--Extract and place data.win file into gamedata folder
+Huge thank you to the creator of this game, nizakashii@itch.io, and thanks to all who tested and reviewed this port.
+--Download from [Nizakashii] (https//:nizakashii.itch.io/rwatch)
+--Extract and place data.win file into gamedata folder
  
 
 ## Controls
