@@ -2,8 +2,8 @@
 
 Huge thank you to the talented author of this game, [Nizakashii] (@nizakashii.itch.io)
 & thanks to all testers.
-Download from [Nizakashii] (https://nizakashii.itch.io/Hakopalace
-Extract & place data.win file into gamedata folder
+-Download from [Nizakashii] (https://nizakashii.itch.io/Hakopalace)
+-Extract & place data.win file into gamedata folder
 
 ## Controls
 
