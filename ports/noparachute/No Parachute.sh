@@ -41,10 +41,6 @@ if [ -f "$GAME_FILE" ]; then
 
   PLANERENDERINGLUA_FILE="core/systems/PlaneRendering.lua"
   ./bin/7za x "$GAME_FILE" "$PLANERENDERINGLUA_FILE"
-  sed -i "/local blurShader = love\.graphics\.newShader\[\[/a #ifdef GL_ES" "$PLANERENDERINGLUA_FILE"
-  sed -i "/local planeShader = love\.graphics\.newShader\[\[/a #ifdef GL_ES" "$PLANERENDERINGLUA_FILE"
-  sed -i "/#ifdef GL_ES/a  precision mediump float;" "$PLANERENDERINGLUA_FILE"
-  sed -i "/precision mediump float;/a #endif" "$PLANERENDERINGLUA_FILE  "
   sed -i "s/uniform vec4 fogcolor = vec4(1, 0, 0, 1)/extern vec4 fogcolor/" "$PLANERENDERINGLUA_FILE"
   sed -i "s/uniform float depth = 0.0/extern float depth/" "$PLANERENDERINGLUA_FILE"
   sed -i "s/uniform float border = 1.0/extern float border/" "$PLANERENDERINGLUA_FILE"
