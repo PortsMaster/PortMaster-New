@@ -47,7 +47,7 @@ else
 fi
 
 $GPTOKEYB "quakespasm.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
-./quakespasm.${DEVICE_ARCH} -current +scr_showfps 1 +joy_enable 0 +r_oldwater 1 +r_particles 1 +r_shadows 0 +r_sky_quality 6
+./quakespasm.${DEVICE_ARCH} -current +scr_showfps 1 +joy_enable 0 +r_oldwater 1 +r_particles 1 +r_shadows 0 +r_sky_quality 5
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events

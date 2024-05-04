@@ -50,7 +50,7 @@ fi
 RUNMOD="-game ad +map start"
 
 $GPTOKEYB "quakespasm.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
-./quakespasm.${DEVICE_ARCH} -current +scr_showfps 1 +joy_enable 0 +r_oldwater 1 +r_particles 1 +r_shadows 0 +r_sky_quality 6 $RUNMOD
+./quakespasm.${DEVICE_ARCH} -current +scr_showfps 1 +joy_enable 0 +r_oldwater 1 +r_particles 1 +r_shadows 0 +r_sky_quality 5 $RUNMOD
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events
