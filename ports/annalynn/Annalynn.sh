@@ -38,16 +38,23 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-# Check if there are .ogg files in ./gamedata and move them to the appropriate places
- if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mv ./gamedata/*.ogg ./assets/
-    echo "Moved ogg files from ./gamedata to ./assets/"
+# Pack audio into apk if not done yet
+if [ -n "$(ls ./gamedata/*.ogg ./gamedata/*.wav 2>/dev/null)" ]; then
+    # Move all .ogg and .wav files from ./gamedata to ./assets
+    mkdir -p ./assets
+    mv ./gamedata/*.ogg ./assets/ || exit 1
+    echo "Moved .ogg and .wav files from ./gamedata to ./assets/"
 
-    # Zip the contents of ./carriesorderup.apk including the new .ogg files
-    zip -r -0 ./annalynn.apk ./annalynn.apk ./assets/
-    echo "Zipped contents to ./annalynn.apk"
+    # Zip the contents of ./game.apk including the new .ogg and .wav files
+    zip -r -0 ./annalynn.apk ./assets/ || exit 1
+    echo "Zipped contents to ./game.apk"
+    rm -Rf "$GAMEDIR/assets/" || exit 1
+fi
 
+# Check if annalynn.exe exists in the /gamedata folder and delete it if it does
+if [ -f "./gamedata/annalynn.exe" ]; then
+    rm ./gamedata/annalynn.exe
+    echo "Deleted annalynn.exe from ./gamedata/"
 fi
 
 # Check for file existence before trying to manipulate them:
