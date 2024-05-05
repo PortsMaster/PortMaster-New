@@ -34,9 +34,7 @@ fi
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LIBGL_GL=15
-[[ "$DEVICE_ARCH" != 'armhf' ]] && export LIBGL_ES=1
-[[ "$CFW_NAME" == 'muOS' ]] && [[ "$DEVICE_ARCH" == 'aarch64' ]] && export LIBGL_ES=2 && export LIBGL_GL=21
+[[ "$CFW_NAME" == 'muOS' ]] && [[ "$DEVICE_ARCH" == 'armhf' ]] && export LIBGL_GL=15
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
