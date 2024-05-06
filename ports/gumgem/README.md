@@ -1,6 +1,14 @@
 ## Notes
-<br/>
 
-Thanks to [Dzel](https://dazel.itch.io/gumgem/) for creating this game and for permission to bundle the game files.  Also thanks to tabreturn for the porting work for portmaster.
-<br/>
+Thanks to [DAZEL](https://dazel.itch.io/gumgem/) for creating this game. You can purchase Gumgem at: https://dazel.itch.io/gumgem
+
+
+## Controls
+
+| Button | Action   |
+| -------| -------- |
+| D-PAD  | Movement |
+| A      | Jump     |
+| B      | Climb    |
+| X      | Dash     |
 

@@ -1,11 +1,14 @@
 #!/bin/bash
-# PORTMASTER: mimisdeliverydash.zip, Mimis_Delivery_Dash.sh
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 # Source PortMaster tools
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -14,6 +17,8 @@ source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+$ESUDO chmod 666 /dev/tty0
 
 # Declare variables
 GAMEDIR="/$directory/ports/mimisdeliverydash"
@@ -26,41 +31,32 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 # Change dir & add config
 cd $GAMEDIR
 
-# Run the installer file if it hasn't been run yet
-set -e  # Exit on error
-set -x  # Enable debugging
-if [ ! -f "$GAMEDIR/installed" ]; then
-	ASSETS="assets"
+# pack audio into apk if not done yet
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    # Move all .ogg files from ./gamedata to ./assets
+    mkdir ./assets
+    mv ./gamedata/*.ogg ./assets/
+    echo "Moved .ogg files from ./gamedata to ./assets/"
+
+    # Zip the contents of ./MDD.apk including the new .ogg files
+    zip -r -0 ./MDD.apk ./assets/
+    echo "Zipped contents to ./MDD.apk"
+    rm -Rf "$GAMEDIR/assets/"
 	
-	# Redirect output to install.log only for the commands within the if condition
-	(
-		exec > >(tee -a "$GAMEDIR/install.log") 2>&1
-
-		# Move all .ogg files from ./gamedata to ./assets
-		mkdir assets & mv ./gamedata/*.ogg ./assets/
-
-		# Rename data.win
-		mv "gamedata/data.win" "gamedata/game.droid"
-
-		# Add assets to MDD.apk
-		echo "Zipping $ASSETS into apk..." > /dev/tty0
-		./libs/7za a -r "./MDD.apk" "./$ASSETS"
-	
-		# Create 'installed' file to indicate successful installation
-		touch "$GAMEDIR/installed"
-	)
+	# Rename data.win
+	mv "gamedata/data.win" "gamedata/game.droid"
 fi
 
 # Setup controls
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" -c "controls.gptk" &
+$GPTOKEYB "gmloader" -c "control.gptk" &
 echo "Loading, please wait... " > /dev/tty0
 
-# Run the game
-./gmloader MDD.apk |& tee log.txt /dev/tty0
+$ESUDO chmod +x "$GAMEDIR/gmloader"
 
-# Kill proccesses & restart services
-$ESUDO kill -9 "$(pidof gptokeyb)"
+./gmloader MDD.apk
+
+$ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
 printf "\033c" > /dev/tty0
+

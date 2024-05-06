@@ -1,16 +1,23 @@
 #!/bin/bash
-# PORTMASTER: sulka.zip, Sulka.sh
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source "$controlfolder/control.txt"
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -23,11 +30,6 @@ GAMEDIR="/$directory/ports/sulka"
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd "$GAMEDIR"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
@@ -42,10 +44,10 @@ echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
-
-./gmloader sulka.apk |& tee log.txt /dev/tty0
+./gmloader sulka.apk | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
 printf "\033c" > /dev/tty0
+

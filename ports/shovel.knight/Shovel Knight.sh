@@ -1,15 +1,23 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,10 +29,14 @@ printf "\033c" > /dev/tty1
 GAMEDIR="/$directory/ports/shovelknight"
 cd $GAMEDIR/gamedata/shovelknight/32
 
+# gl4es
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
 export LIBGL_NOBANNER=1
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
 export BOX86_LOG=0
 export BOX86_LD_PRELOAD=$GAMEDIR/libShovelKnight.so
 export LD_LIBRARY_PATH=$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib:/usr/lib32

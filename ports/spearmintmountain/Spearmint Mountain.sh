@@ -1,16 +1,21 @@
 #!/bin/bash
-# PORTMASTER: spearmintmountain.zip, Spearmint Mountain.sh
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -32,6 +37,17 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
+# Check if there are .ogg files in ./gamedata
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    # Move all .ogg files from ./gamedata to ./assets
+    mv ./gamedata/*.ogg ./assets/
+    echo "Moved .ogg files from ./gamedata to ./assets/"
+
+    # Zip the contents of ./sm.apk including the new .ogg files
+    zip -r ./sm.apk ./sm.apk ./assets/
+    echo "Zipped contents to ./sm.apk"
+fi
+
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
@@ -44,3 +60,4 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

@@ -1,17 +1,21 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -168,13 +172,15 @@ fi
 #   export PORTMASTER_SCREEN_WIDTH=480
 #   export PORTMASTER_SCREEN_HEIGHT=320
 # else
-#   export PORTMASTER_SCREEN_WIDTH=640
-#   export PORTMASTER_SCREEN_HEIGHT=480
+  # export PORTMASTER_SCREEN_WIDTH=640
+  # export PORTMASTER_SCREEN_HEIGHT=480
 # fi
 
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 export SDL12COMPAT_OPENGL_SCALING=1
 export SDL12COMPAT_SCALE_METHOD=linear
@@ -183,12 +189,10 @@ export SDL12COMPAT_USE_GAME_CONTROLLERS=1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH:/usr/lib32"
-
 export PORTMASTER_GAMEPATH="${GAMEDIR}"
 
-$GPTOKEYB "rlvm" -c "${GAMEDIR}/rlvm.gptk" &
-$TASKSET ./rlvm $MSGOTHIC "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
+$GPTOKEYB "rlvm.${DEVICE_ARCH}" -c "${GAMEDIR}/rlvm.gptk" &
+$TASKSET ./rlvm.${DEVICE_ARCH} $MSGOTHIC "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
@@ -197,3 +201,4 @@ $ESUDO systemctl restart oga_events &
 
 # Disable console
 printf "\033c" > $CUR_TTY
+

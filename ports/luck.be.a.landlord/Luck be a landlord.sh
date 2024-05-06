@@ -1,14 +1,21 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -23,7 +30,7 @@ elif [ -f "/$GAMEDIR/gamedata/Luck be a Landlord.pck" ]; then
   echo "patching Luck be a Landlord.pck"
   export LD_LIBRARY_PATH=/$GAMEDIR/lib
   cd /$GAMEDIR/gamedata/
-  $SUDO ../xdelta3 -d -s "Luck be a Landlord.pck" "Luck be a Landlord.xdelta" "Luck be a Landlord-patched.pck"
+  $SUDO $controlfolder/xdelta3 -d -s "Luck be a Landlord.pck" "Luck be a Landlord.xdelta" "Luck be a Landlord-patched.pck"
 fi
 
 # Ensure the conf directory exists
@@ -59,10 +66,11 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./luckbealandlord.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "gamedata/Luck be a Landlord-patched.pck"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Luck be a Landlord-patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
 

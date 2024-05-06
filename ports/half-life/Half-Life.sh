@@ -1,19 +1,25 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
+source $controlfolder/device_info.txt
 
 get_controls
 CUR_TTY=/dev/tty0
 
+SCRIPTDIR="$(dirname "$0")"
 PORTDIR="/$directory/ports/"
 GAMEDIR="${PORTDIR}/Half-Life"
 cd $GAMEDIR
@@ -54,8 +60,8 @@ if [[ -f "${GAMEDIR}/bshift/halflife.wad" ]] && [[ -f "${GAMEDIR}/binaries/bshif
   $ESUDO cp -rfv "${GAMEDIR}/binaries/bshift" "${GAMEDIR}/" | $ESUDO tee -a ./log.txt
 
   # Make mod run script
-  $ESUDO cp -v "${PORTDIR}/Half-Life.sh" "${PORTDIR}/Half-Life Blue Shift.sh" | $ESUDO tee -a ./log.txt
-  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game bshift"/' "${PORTDIR}/Half-Life Blue Shift.sh"
+  $ESUDO cp -v "${SCRIPTDIR}/Half-Life.sh" "${SCRIPTDIR}/Half-Life Blue Shift.sh" | $ESUDO tee -a ./log.txt
+  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game bshift"/' "${SCRIPTDIR}/Half-Life Blue Shift.sh"
 
   # Mark step as done
   $ESUDO rm -fv "${GAMEDIR}/binaries/bshift_first_run" | $ESUDO tee -a ./log.txt
@@ -69,20 +75,22 @@ if [[ -f "${GAMEDIR}/gearbox/OPFOR.WAD" ]] && [[ -f "${GAMEDIR}/binaries/gearbox
   $ESUDO cp -rfv "${GAMEDIR}/binaries/gearbox" "${GAMEDIR}/" | $ESUDO tee -a ./log.txt
 
   # Make mod run script
-  $ESUDO cp -v "${PORTDIR}/Half-Life.sh" "${PORTDIR}/Half-Life Opposing Forces.sh"  | $ESUDO tee -a ./log.txt
-  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game gearbox"/' "${PORTDIR}/Half-Life Opposing Forces.sh"
+  $ESUDO cp -v "${SCRIPTDIR}/Half-Life.sh" "${SCRIPTDIR}/Half-Life Opposing Force.sh"  | $ESUDO tee -a ./log.txt
+  $ESUDO sed -i 's/RUNMOD=/RUNMOD="-game gearbox"/' "${SCRIPTDIR}/Half-Life Opposing Force.sh"
 
   # Mark step as done
   $ESUDO rm -fv "${GAMEDIR}/binaries/gearbox_first_run"  | $ESUDO tee -a ./log.txt
 fi
 
+DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib32:$GAMEDIR/valve/dlls:$GAMEDIR/valve/cl_dlls"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH:/usr/lib32:$GAMEDIR/valve/dlls:$GAMEDIR/valve/cl_dlls"
 
-$GPTOKEYB "xash3d" &
-$TASKSET ./xash3d -ref gles2 -fullscreen -console $RUNMOD 2>&1 | tee -a ./log.txt
+$GPTOKEYB "xash3d.${DEVICE_ARCH}" &
+$TASKSET ./xash3d.${DEVICE_ARCH} -ref gles2 -fullscreen -console $RUNMOD 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
@@ -91,3 +99,4 @@ $ESUDO systemctl restart oga_events &
 
 # Disable console
 printf "\033c" >> $CUR_TTY
+
