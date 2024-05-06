@@ -47,7 +47,7 @@ fi
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./secretgarden.gptk &
+$GPTOKEYB "gmloader" -c ./.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
