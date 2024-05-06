@@ -1,5 +1,5 @@
 ## Notes
-Thanks to [youdoyoubuddy] (https://youdoyoubuddy.itch.io/) for creating this game and making it available for free! 
+Thanks to [youdoyoubuddy](https://youdoyoubuddy.itch.io/) for creating this game and making it available for free! 
  
 Source: https://youdoyoubuddy.itch.io/spell-sling
  
