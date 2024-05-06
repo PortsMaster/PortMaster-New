@@ -2,18 +2,23 @@
 
 Thanks to [Ozkan Sezer](https://github.com/sezero/quakespasm) for this awesome source port for Quake.
 
-Source: https://github.com/sezero/quakespasm, https://github.com/Slayer366/quakespasm-for-GL4ES
+Source: [Slayer366](https://github.com/Slayer366/quakespasm-for-GL4ES)
+
+Get Quake, Scourge of Armagon, Dissolution of Eternity, Dimension of the Past, and Dimension of the Machine from:
+[Steam](https://store.steampowered.com/app/2310/Quake/)
+OR
+[GOG](https://www.gog.com/en/game/quake_the_offering)
+
+Get Arcane Dimensions for free from moddb [simonoc](https://www.moddb.com/mods/arcane-dimensions)
 
 It is recommended to use an RK3566 or faster CPU to run Arcane Dimensions or Dimension of the Machine.
 
 To invert right joystick look, set mouse-look invert option in the game's options menu.
 
-Quakespasm supports mp3, ogg, flac, and other formats, too.
-
-Note for some JelOS users: If you don't have music after placing your ogg or mp3 files with JelOS, use flac instead.
+Quakespasm supports mp3, ogg, flac, and more.
 
 
-Game data files needed:
+Game files needed:
 
 Quake:
 - quakespasm/id1/pak0.pak
