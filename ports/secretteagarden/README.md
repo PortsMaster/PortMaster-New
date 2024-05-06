@@ -1,6 +1,8 @@
 ## Notes
 
-Big thanks to Angus Beer, William Burroughs, and Howie, for this adorable yet challenging game. Also, special thanks to all who tested this port. 
+Big thanks to [Angus Beer] (https//:angusbeer.itch.io) for this adorable yet challenging game. Also, special thanks to all who tested this port.
+Download at (https//:angusbeer.itch.io/Secret-Tea-Garden)
+Extract and place data.win file into gamedata folder.
 
 ## Controls
 
@@ -11,6 +13,6 @@ Big thanks to Angus Beer, William Burroughs, and Howie, for this adorable yet ch
 |X|Action|
 |A|Action|
 |Start|Pause/Skip talk/Copy look|
-|L1|Full screen|
+
 
 
