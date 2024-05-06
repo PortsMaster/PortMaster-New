@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: secretteagarden.zip, Secret Tea Garden.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
