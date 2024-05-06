@@ -36,6 +36,14 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+# on ROCKNIX for some reason it's looking for the music in assets/ and in all lower case, so just put it there as well
+if [ ! -d ./assets ]; then
+  unzip ./swapwoodquestr.apk 'assets/*'
+  for file in ./assets/*.ogg ; do
+      mv -v "$file" "${file,,}"
+  done
+fi
+
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "gmloader" -c "$GAMEDIR/swapwoodquestr.gptk" &
 
