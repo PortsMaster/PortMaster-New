@@ -1,7 +1,7 @@
 ## Notes
 
-Big thanks to [Angus Beer] (https//:angusbeer.itch.io) for this adorable yet challenging game. Also, special thanks to all who tested this port.
-Download at (https//:angusbeer.itch.io/Secret-Tea-Garden)
+Big thanks to Angus Beer for this adorable yet challenging game. Also, special thanks to all who tested this port.
+Download at [Angus Beer] (https//:angusbeer.itch.io/Secret-Tea-Garden)
 Extract and place data.win file into gamedata folder.
 
 ## Controls
