@@ -33,12 +33,6 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
 # Rename data.win to game.droid if it exists in ./gamedata
 if [ -e "./gamedata/data.win" ]; then
     mv ./gamedata/data.win ./gamedata/game.droid || exit 1
