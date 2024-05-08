@@ -13,6 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 # the included copy of oga_controls seems to breaks exiting on non oga devices...
 rm -f "/$directory/ports/rawgl/oga_controls"
@@ -22,9 +24,20 @@ get_controls
 GAMEDIR="/$directory/ports/rawgl"
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 $ESUDO chmod 666 /dev/tty1
-# use gptokeyb instead
-$GPTOKEYB "rawgl" & 
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [[ $LOWRES == "Y" ]]; then
   rawgl_screen="--window=480x320"
@@ -33,14 +46,16 @@ elif [[ -e "/dev/input/by-path/platform-odroidgo3-joypad-event-joystick" ]]; the
 else
   rawgl_screen="--window=640x480"
 fi
+
 # add support for 3DO iso file
 GAMEDATA="$(ls $GAMEDIR/gamedata/*.iso | head -1)"
 if [[ "$GAMEDATA" == "" ]]; then
   GAMEDATA="$GAMEDIR/gamedata"
 fi
-LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./rawgl $rawgl_screen --render=software --datapath="$GAMEDATA" --language=us 2>&1 | tee $GAMEDIR/log.txt
+
+$GPTOKEYB "rawgl" & 
+./rawgl $rawgl_screen --render=software --datapath="$GAMEDATA" --language=us
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
-
-
