@@ -41,6 +41,10 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+fi 
+
 export LIBGL_NOBANNER=1
 export BOX86_LOG=0
 export BOX86_LD_PRELOAD=$GAMEDIR/libShovelKnight.so
