@@ -16,7 +16,6 @@ source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -24,12 +23,21 @@ get_controls
 GAMEDIR="/$directory/ports/iconoclasts"
 cd $GAMEDIR/gamedata
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
+
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
+
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.armhf/libEGL.so.1"
+fi 
 
 export CHOWDREN_FPS=30
 export LIBGL_FB_TEX_SCALE=0.5
@@ -40,8 +48,6 @@ export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_DLSYM_ERROR=1
 export SDL_DYNAMIC_API="libSDL2-2.0.so.0"
 export BOX86_LD_PRELOAD="$GAMEDIR/libIconoclasts.so"
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/box86/native/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/box86/native/libEGL.so.1"
 
 export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"/usr/config/emuelec/lib32"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/native":"$GAMEDIR/gamedata/bin32"

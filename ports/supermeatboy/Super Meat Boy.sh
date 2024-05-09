@@ -60,6 +60,9 @@ if [ ! -f "$GAMEDIR/conf/SuperMeatBoy/UserData/reg0.dat" ] && [ ! -f "$GAMEDIR/g
 fi
 
 # Setup gl4es
+
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
+
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else

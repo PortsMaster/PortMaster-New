@@ -30,6 +30,10 @@ GAMEDIR="/$directory/ports/spelunky"
 LIBDIR="$GAMEDIR/lib32"
 BINDIR="$GAMEDIR/box86"
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
+
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -37,24 +41,29 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+fi 
+
 # system
 export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 
 # box86
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
-export BOX86_LIBGL="$LIBDIR/libGL.so.1"
 export BOX86_PATH="$BINDIR"
 
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
+
 $ESUDO sudo rm -rf ~/.config/SpelunkyClassicHD
 ln -sfv $GAMEDIR/.config/SpelunkyClassicHD/ ~/.config
+
 $GPTOKEYB "box86" -c "spelunky.gptk" & 
 
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$BINDIR/box86 $GAMEDIR/spelunky 2>&1 | tee $GAMEDIR/log.txt
+$BINDIR/box86 $GAMEDIR/spelunky
 
 $ESUDO kill -9 $(pidof gptokeyb) & 
 unset LD_LIBRARY_PATH
