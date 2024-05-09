@@ -19,5 +19,6 @@ Also thanks to Cebion for compiling mkxp and making this port possible.
 |Back buttons|Alt. battle inputs|
 |Start|Menu|
 |Select|Interact|
+|R3|Q battle input|
 
 
