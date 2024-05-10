@@ -2,7 +2,7 @@
 
 Thanks to [Skinner Space](https://skinner-space.itch.io/brutal-castle) for creating this game and it available for free!
 
-You have to cook burgers and throw them into the mouths of your busy customers before they lose their patience. Be cautious! Your customers have specific preferences. If you feed a vegetarian with beef, he will vomit it back at your face! Your goal is to earn enough money before the time. Cook fast and pass the test of a chef to become the best cook!
+You have to cook burgers and throw them into the mouths of your busy customers before they lose their patience. Be cautious! Your customers have specific preferences. If you feed a vegetarian with beef, he will vomit it back at your face! Your goal is to earn enough money before the time expires. Cook fast and pass the test of a chef to become the best cook!
 
 
 ## Controls
