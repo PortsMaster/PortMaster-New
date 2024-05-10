@@ -43,11 +43,14 @@ local constants = {
     screen_size = {16, 9}, -- For example
     tile_size = 32, -- For example
 }
+local constants = require("constants")
+
 function love.draw()
   if state then
+   local horizontal_offset = (love.graphics.getWidth() - (constants.screen_size[1] * constants.tile_size * render.scale)) / 2
     local vertical_offset = (love.graphics.getHeight() - (constants.screen_size[2] * constants.tile_size * render.scale)) / 2
     love.graphics.push()
-    love.graphics.translate(0, vertical_offset)
+    love.graphics.translate(horizontal_offset, vertical_offset)
     render.render_game(state, render_tick)
     love.graphics.pop()
   end
