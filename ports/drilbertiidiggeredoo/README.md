@@ -8,7 +8,7 @@ Thanks to Tom Mason (wheybags) for creating this game [and for permission to inc
 | Button     | Action               |
 | ---------- | -------------------- |
 | D-PAD      | Directional movement |
-| Y/R1       | Restart              |
+| Y/L1       | Restart              |
 | X/R1       | Undo                 |
 | A/START    | Start                |
 
