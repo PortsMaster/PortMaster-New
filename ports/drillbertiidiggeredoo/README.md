@@ -1,14 +1,14 @@
 ## Notes
 
-Thanks to Hamdy Elzanqali for creating this games and [CYFO games](https://cyfo.itch.io/banana-duck) for permission to include the game files in this port.  Also thanks to tabreturn for the porting work for portmaster.
+Thanks to Tom Mason (wheybags) for creating this game [and for permission to include the game files in this port]. Credits: https://github.com/wheybags/ld49/blob/master/credits.txt
 
 
 ## Controls
 
-| Button     | Action              |
-| ---------- | ------------------- |
-| LEFT/RIGHT | Horizontal movement |
-| A/B        | Jump                |
-| R1         | Reload              |
-| START      | Pause               |
+| Button     | Action               |
+| ---------- | -------------------- |
+| D-PAD      | Directional movement |
+| Y/R1       | Restart              |
+| X/R1       | Undo                 |
+| A/START    | Start                |
 
