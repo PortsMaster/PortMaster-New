@@ -49,15 +49,20 @@ fi
 # Patch game
 cd "$GAMEDIR"
 
-# If "gamedata/game.unx" exists and matches the checksum steam version
+# If "gamedata/game.unx" exists and matches the checksum of the itch or steam versions
 if [ -f "./gamedata/game.unx" ]; then
     checksum=$(md5sum "./gamedata/game.unx" | awk '{print $1}')
-    # Checksum for the game.unx
+    
+    # Checksum for the itch.io version
     if [ "$checksum" = "a198bebfa9996bbc956da6297fcf2ec2" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/game.xdelta gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/itch.xdelta gamedata/game.droid && \
+        rm gamedata/game.unx
+    # Checksum for the Steam version
+    elif [ "$checksum" = "5850b7f787b69213744afac33a12eb9e" ]; then
+        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/steam.xdelta gamedata/game.droid && \
         rm gamedata/game.unx
     else
-        echo "Error: MD5 checksum of data.win does not match any expected version."
+        echo "Error: MD5 checksum of game.unx does not match any expected version."
     fi
 else    
     echo "Error: Missing files in gamedata folder or game has been patched."
