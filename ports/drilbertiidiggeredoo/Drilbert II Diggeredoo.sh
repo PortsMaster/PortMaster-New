@@ -16,7 +16,7 @@ source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 get_controls
 
-GAMEDIR=/$directory/ports/drillbertiidiggeredoo
+GAMEDIR=/$directory/ports/drilbertiidiggeredoo
 
 export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
@@ -24,7 +24,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
-$GPTOKEYB "love.${DEVICE_ARCH}" -c "./drillbertiidiggeredoo.gptk" &
+$GPTOKEYB "love.${DEVICE_ARCH}" -c "./drilbertiidiggeredoo.gptk" &
 ./bin/love.${DEVICE_ARCH} gamedata 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
