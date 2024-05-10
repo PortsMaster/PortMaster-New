@@ -58,7 +58,7 @@ render.setup = function()
 
     ffi.C.SetProcessDPIAware()
   end
-
+--[[
   local _, _, flags = love.window.getMode()
   local width, height = love.window.getDesktopDimensions(flags.display)
 
@@ -81,6 +81,23 @@ render.setup = function()
   end
 
   love.window.setMode(size[1] * render.scale, size[2] * render.scale)
+]] 
+
+  -- non-interger scaling patch
+  local _, _, flags = love.window.getMode()
+  local width, height = love.window.getDesktopDimensions(flags.display)
+  local usable_width = width
+  local usable_height = height
+  local target_tile_size = constants.screen_size
+  local target_width = target_tile_size[1] * constants.tile_size
+  local target_height = target_tile_size[2] * constants.tile_size
+  local scale_x = usable_width / target_width
+  local scale_y = usable_height / target_height
+  render.scale = math.min(scale_x, scale_y)
+  local window_width = math.floor(target_width * render.scale)
+  local window_height = math.floor(target_height * render.scale)
+  love.window.setMode(window_width, window_height)
+
 end
 
 render._draw_tile = function(x, y, tile_index, render_tick)
