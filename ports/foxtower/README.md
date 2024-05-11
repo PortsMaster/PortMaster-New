@@ -5,10 +5,10 @@ Thanks to [Nozomu Games](https://nozomu57.itch.io/) for creating this fantastic 
 
 ## Controls
 
-| Button     | Action               |
-| ---------- | -------------------- |
-| A/B        | Jump                 |
-| Start      | Pause                |
+| Button | Action |
+| ------ | ------ |
+| A/B    | Jump   |
+| Start  | Pause  |
 
 
 ## Compile
