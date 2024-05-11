@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Nozomu Games](https://nozomu57.itch.io/) for creating this fantastic free game.
+All files included and ready to run. Thanks to [Nozomu Games](https://nozomu57.itch.io/) for the fantastic game and permission to distribute the files.
 
 
 ## Controls
