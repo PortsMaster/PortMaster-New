@@ -34,10 +34,8 @@ cd $GAMEDIR
 
 # patch if it hasn't been patched yet
 if [ -f "$GAMEDIR/gamedata/game.unx" ]; then
-  $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/data.unx" "$GAMEDIR/mableandthewood.xdelta" "$GAMEDIR/gamedata/game.droid"
-  if [ $? -eq 0 ]; then
-    rm "$GAMEDIR/gamedata/game.unx"
-  fi
+  ./xdelta3 -d -s "gamedata/game.unx" "mableandthewood.xdelta3" "gamedata/game.droid"
+  rm "gamedata/game.unx"
 fi
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
