@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Tom Mason (wheybags) for creating this game [and for permission to include the game files in this port]. Credits: https://github.com/wheybags/ld49/blob/master/credits.txt
+Thanks to Tom Mason (wheybags) for creating this game and making it available for free!. Credits: https://github.com/wheybags/ld49/blob/master/credits.txt
 
 
 ## Controls
