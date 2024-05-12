@@ -32,10 +32,13 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+# patch if it hasn't been patched yet
+if [ -f "$GAMEDIR/gamedata/game.unx" ]; then
+  $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/data.unx" "$GAMEDIR/mableandthewood.xdelta" "$GAMEDIR/gamedata/game.droid"
+  if [ $? -eq 0 ]; then
+    rm "$GAMEDIR/gamedata/game.unx"
+  fi
+fi
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
