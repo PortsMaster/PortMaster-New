@@ -14,10 +14,9 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+export PORT_32BIT="Y"
 
 get_controls
 
@@ -25,7 +24,7 @@ BINARY_NAME="runner2.patched"
 GAMEDIR=/$directory/ports/bittriprunner2
 CONFDIR="$GAMEDIR/conf/"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -35,6 +34,7 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
 
 # Setup gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -44,16 +44,20 @@ else
 fi
 
 export BOX86_DYNAREC=1
-export BOX86_FORCE_ES=31
+
 
 # Setup Box86 logging
 export BOX86_LOG=1
 export BOX86_SHOWSEGV=1
-
+export BOX86_FORCE_ES=31
 export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAMEDIR/libs/x86":
 
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/box86/native/libGL.so.1"
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+
+fi 
+
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 export TEXTINPUTINTERACTIVE="Y"

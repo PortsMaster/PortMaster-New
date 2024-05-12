@@ -13,17 +13,27 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
 GAMEDIR=/$directory/ports/iichantra_pear
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
-export SDL12COMPAT_USE_GAME_CONTROLLERS=1
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+export SDL12COMPAT_USE_GAME_CONTROLLERS=1
+export LD_LIBRARY_PATH="$PWD/libs"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [[ "$(cat /sys/firmware/devicetree/base/model | tr -d '\0')" == "Anbernic RG552" ]]; then
   xres="1920"
@@ -47,7 +57,9 @@ $ESUDO sed -i "s|window_height = [0-9]\+;|window_height = $yres;|g" $GAMEDIR/con
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "iiChantra.Release" -c "./iiChantra.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./iiChantra.Release 2>&1 | tee -a ./log.txt
+./iiChantra.Release
+
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

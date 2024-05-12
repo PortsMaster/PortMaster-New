@@ -13,9 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
 
 get_controls
 
@@ -28,6 +26,14 @@ GAMEDIR="$PORTDIR/yatka"
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 ## RUN SCRIPT HERE
 

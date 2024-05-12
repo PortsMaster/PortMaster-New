@@ -27,7 +27,7 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/mystikbelle"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 LIBDIR="$GAMEDIR/lib32"
 BINDIR="$GAMEDIR/box86"
@@ -45,7 +45,10 @@ export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 # box86
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
-export BOX86_LIBGL="$LIBDIR/libGL.so.1"
+
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+fi 
 
 cd $GAMEDIR
 
@@ -57,8 +60,6 @@ $GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
 $GAMEDIR/box86/box86 $GAMEDIR/runner
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
 $ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
-
