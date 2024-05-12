@@ -24,6 +24,17 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
+# patch game
+if [ -e "patch/patched_true" ]; then
+  echo "already patched"
+else
+  cp patch/gfx/*.png gamedata/gfx/
+  patch gamedata/main.lua < patch/main.lua.diff
+  patch gamedata/render.lua < patch/render.lua.diff
+  touch patch/patched_true
+  echo "patching complete"
+fi
+
 $GPTOKEYB "love.${DEVICE_ARCH}" -c "./drilbertiidiggeredoo.gptk" &
 ./bin/love.${DEVICE_ARCH} gamedata 2>&1 | tee -a ./log.txt
 
