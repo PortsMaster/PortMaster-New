@@ -13,7 +13,7 @@ from pathlib import Path
 ## Port Information
 
 PORT_INFO_ROOT_ATTRS = {
-    'version': 2,
+    'version': 3,
     'name': None,
     'items': None,
     'items_opt': None,
@@ -164,8 +164,10 @@ def port_info_load(raw_info, source_name=None, do_default=False):
     if info.get('version', None) == 1 or 'source' in info:
         # Update older json version to the newer one.
         info = info.copy()
-        info['name'] = info['source'].rsplit('/', 1)[-1]
-        del info['source']
+        if isinstance(info['source'], str):
+            info['name'] = info['source'].rsplit('/', 1)[-1]
+            del info['source']
+
         info['version'] = 2
 
         if info.get('md5', None) is not None:
@@ -179,6 +181,10 @@ def port_info_load(raw_info, source_name=None, do_default=False):
         # WHOOPS! :O
         if info.get('attr', {}).get('runtime', None) == "blank":
             info['attr']['runtime'] = None
+
+    if info.get('version', None) == 2:
+        # :D
+        info['version'] = 3
 
     if isinstance(info.get('attr', {}).get('porter'), str):
         info['attr']['porter'] = [info['attr']['porter']]
