@@ -34,7 +34,7 @@ cd $GAMEDIR
 
 # patch if it hasn't been patched yet
 if [ -f "$GAMEDIR/gamedata/game.unx" ]; then
-  ./xdelta3 -d -s "gamedata/game.unx" "mableandthewood.xdelta3" "gamedata/game.droid"
+  $controlfolder/xdelta3 -d -s "gamedata/game.unx" "mableandthewood.xdelta3" "gamedata/game.droid"
   rm "gamedata/game.unx"
 fi
 
