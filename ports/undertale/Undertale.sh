@@ -48,6 +48,8 @@ export BOX86_PATH="$BINDIR"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
+cd $GAMEDIR
+
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
@@ -57,8 +59,6 @@ fi
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
 fi 
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.config/UNDERTALE
 $ESUDO ln -s /$GAMEDIR/conf/UNDERTALE ~/.config/

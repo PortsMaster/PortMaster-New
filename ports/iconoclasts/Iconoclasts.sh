@@ -21,7 +21,8 @@ export PORT_32BIT="Y"
 get_controls
 
 GAMEDIR="/$directory/ports/iconoclasts"
-cd $GAMEDIR/gamedata
+
+cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -38,6 +39,8 @@ if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
 export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.armhf/libEGL.so.1"
 fi 
+
+cd $GAMEDIR/gamedata
 
 export CHOWDREN_FPS=30
 export LIBGL_FB_TEX_SCALE=0.5

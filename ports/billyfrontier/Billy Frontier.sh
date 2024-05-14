@@ -21,6 +21,8 @@ get_controls
 GAMEDIR=/$directory/ports/billyfrontier
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
+
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
@@ -34,7 +36,7 @@ fi
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-cd $GAMEDIR
+
 
 if [ "$ANALOG_STICKS" = "0" ]; then
   sed -i 's/up = up/up = mouse_movement_up/' billyfrontier.gptk

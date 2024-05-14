@@ -32,6 +32,8 @@ BINDIR="$GAMEDIR/box86"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
 
 # gl4es
@@ -53,7 +55,7 @@ export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 export BOX86_PATH="$BINDIR"
 
-cd $GAMEDIR
+
 
 $ESUDO chmod 666 /dev/uinput
 
