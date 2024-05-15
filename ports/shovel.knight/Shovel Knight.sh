@@ -27,10 +27,10 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/shovelknight"
-cd $GAMEDIR/gamedata/shovelknight/32
+
+cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 # gl4es
@@ -44,6 +44,8 @@ fi
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
 fi 
+
+cd $GAMEDIR/gamedata/shovelknight/32
 
 export LIBGL_NOBANNER=1
 export BOX86_LOG=0

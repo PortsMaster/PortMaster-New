@@ -32,6 +32,8 @@ GAMEDIR="/$directory/ports/mystikbelle"
 LIBDIR="$GAMEDIR/lib32"
 BINDIR="$GAMEDIR/box86"
 
+cd $GAMEDIR
+
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -49,8 +51,6 @@ export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
 fi 
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.config/Mystik_Belle
 $ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle

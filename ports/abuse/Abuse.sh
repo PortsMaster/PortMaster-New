@@ -23,6 +23,8 @@ get_controls
 
 $ESUDO chmod 666 /dev/tty1
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -53,8 +55,6 @@ if [ -f "/boot/rk3326-rg351v-linux.dtb" ] || [ $(cat "/storage/.config/.OS_ARCH"
   GPTOKEYB_CONFIG="abuse.gptk.rg351p.leftanalog"
   sed -i '/ctr_left_stick_aim\=0/s//ctr_left_stick_aim\=1/' $GAMEDIR/user/config.txt
 fi
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.abuse
 ln -sfv $GAMEDIR/conf/.abuse ~/

@@ -35,6 +35,8 @@ else
   fi
 fi
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -46,8 +48,6 @@ fi
 export BL2_HOME=/$directory/ports/blockout2
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.bl2
 ln -sfv /$directory/ports/blockout2/conf/.bl2 ~/
