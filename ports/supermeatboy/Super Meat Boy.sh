@@ -46,7 +46,7 @@ if [[ -f "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" ]]; then
   mv "${GAMEDIR}/gamedata/supermeatboy-linux-11112013-bin" "${GAMEDIR}/gamedata/humble"
 fi
 
-cd $GAMEDIR/gamedata/
+cd $GAMEDIR
 
 mkdir -p "$GAMEDIR/conf"
 
@@ -60,11 +60,16 @@ if [ ! -f "$GAMEDIR/conf/SuperMeatBoy/UserData/reg0.dat" ] && [ ! -f "$GAMEDIR/g
 fi
 
 # Setup gl4es
+
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
+
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
+
+cd $GAMEDIR/gamedata/
 
 # determine best output resolution based on device CPU or RAM
 output_res=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}

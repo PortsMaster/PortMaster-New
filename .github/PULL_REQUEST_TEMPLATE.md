@@ -10,7 +10,8 @@
 Ensure your game has been tested on all major CFWs:
 - [ ] AmberELEC
 - [ ] ArkOS
-- [ ] JELOS
+- [ ] ROCKNIX
+- [ ] muOS
 
 ### Resolution Tests
 Test all major resolutions:
@@ -26,6 +27,7 @@ Test all major resolutions:
     - README.md
     - screenshot.jpg
     - cover.jpg
+    - gameinfo.xml
     - Port Name.sh
     - portname/
       - <portfiles here>

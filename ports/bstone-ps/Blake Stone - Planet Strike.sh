@@ -26,9 +26,10 @@ $ESUDO chmod 777 -R $GAMEDIR/*
 if [[ "$CFW_NAME" == 'muOS' ]] && [[ "$DEVICE_ARCH" == 'armhf' ]]; then
     sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"software"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
     ADDLPARAMS="--no_screens"
+elif [[ "$CFW_NAME" == 'muOS' ]] && [[ "$DEVICE_ARCH" == 'aarch64' ]]; then
+    sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"software"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
 else
     sed -i 's/^\(vid_renderer\s*\)"[^"]*"/\1"gles_2_0"/' "$GAMEDIR/conf/bibendovsky/bstone/bstone_config.txt"
-    unset ADDLPARAMS
 fi
 
 cd $GAMEDIR

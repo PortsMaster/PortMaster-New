@@ -13,12 +13,16 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 export PORT_32BIT="Y"
 
 
 get_controls
 
-GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/sstse"
+GAMEDIR=/$directory/ports/sstse/
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod ugo+rwx -R $GAMEDIR/*
 $ESUDO chmod ugo+rwx $GAMEDIR/../*.sh
@@ -26,7 +30,7 @@ $ESUDO chmod ugo+rwx $GAMEDIR/../*.sh
 cd $GAMEDIR
 
 # system
-export LD_LIBRARY_PATH=$GAMEDIR/Bin/gl4es:$GAMEDIR/Bin/libs:/usr/lib32:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$GAMEDIR/Bin/libs:/usr/lib32:$LD_LIBRARY_PATH
 
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
@@ -34,20 +38,24 @@ $ESUDO chmod 666 /dev/uinput
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
 # gl4es
-export SDL_VIDEO_GL_DRIVER=$GAMEDIR/Bin/gl4es/libGL.so.1
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
 export LIBGL_ES=1
 export LIBGL_GL=14
+fi 
 
 $GPTOKEYB "ssam-tse" -c "$GAMEDIR/serioussam.gptk" &
 $GAMEDIR/Bin/ssam-tse
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
-
-# Disable console
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
-

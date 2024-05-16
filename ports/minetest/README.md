@@ -66,6 +66,7 @@ Defaults are below
 
 ## 0-Stick Controls
 ***Note:** At this time mouse emulation is restricted to the `D-pad`, and cannot be moved to `A`/`B`/`X`/`Y` (which might be more natural)*
+
 |Button|Action|
 |--|--|
 |`Select`|Escape|

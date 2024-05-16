@@ -54,6 +54,7 @@ if [[ -f "$ARCHIVE_FILE" ]]; then
    fi
 fi
 
+chmod +x ./bin/minetest
 $GPTOKEYB "minetest" -c "$GAMEDIR/minetest.gptk.$ANALOG_STICKS" &
 ./bin/minetest
 
