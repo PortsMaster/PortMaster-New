@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
@@ -23,6 +24,14 @@ GAMEDIR=/$directory/ports/openxcom
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
 cd $GAMEDIR
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 $GPTOKEYB  "openxcom" $HOTKEY textinput -c "./openxcom.$ANALOGSTICKS.gptk" &
 LD_LIBRARY_PATH="$PWD/libs" ./openxcom -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config" 2>&1 | tee -a ./log.txt

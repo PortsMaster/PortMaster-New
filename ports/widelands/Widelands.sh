@@ -13,16 +13,29 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 GAMEDIR=/$directory/ports/widelands/
 CONFDIR="$GAMEDIR/conf/"
 
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
@@ -31,11 +44,6 @@ export XDG_DATA_HOME="$CONFDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
-
-#Set up GL4ES
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
 
 CUR_TTY=/dev/tty0
 
@@ -68,7 +76,7 @@ fi
 
 $GPTOKEYB "widelands" -c "./widelands.gptk" &
  
-./widelands --datadir=data --homedir=conf 2>&1 | tee $GAMEDIR/log.txt
+./widelands --datadir=data --homedir=conf
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

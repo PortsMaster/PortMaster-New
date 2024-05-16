@@ -13,9 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -24,7 +23,11 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/prototype"
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
+
 chmod -R 777 .
 $ESUDO chmod 666 $CUR_TTY
 $ESUDO touch log.txt
@@ -32,18 +35,23 @@ $ESUDO chmod 666 log.txt
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
-printf "\033c" > $CUR_TTY
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+
 ## RUN SCRIPT HERE
 
 echo "Starting game." > $CUR_TTY
 $GPTOKEYB "prototype" -c "prototype.gptk" &
-LIBGL_FB=4 LIBGL_ES=2 LIBGL_GL=21 LD_LIBRARY_PATH=$GAMEDIR/libs/ ./prototype
-
+./prototype
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
-
-# Disable console
-printf "\033c" > $CUR_TTY
+printf "\033c" > /dev/tty1
+printf "\033c" > /dev/tty
