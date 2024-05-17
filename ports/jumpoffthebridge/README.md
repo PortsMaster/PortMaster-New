@@ -8,13 +8,4 @@ Special thanks to [Cody Penn](https://store.steampowered.com/search/?developer=C
 In-game tutorial
 Controls are rebindable with Start inside the Options Menu
 
-## Controls
-
-| Button | Action |
-|--|--| 
-|||
-|||
-|||
-|||
-
 
