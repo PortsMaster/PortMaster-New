@@ -24,6 +24,8 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
+"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # patch game
 if [ -e "patch/patched_true" ]; then
   echo "already patched"
@@ -35,8 +37,9 @@ else
   echo "patching complete"
 fi
 
+$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "love.${DEVICE_ARCH}" -c "./drilbertiidiggeredoo.gptk" &
-./bin/love.${DEVICE_ARCH} gamedata 2>&1 | tee -a ./log.txt
+./bin/love.${DEVICE_ARCH} gamedata
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
