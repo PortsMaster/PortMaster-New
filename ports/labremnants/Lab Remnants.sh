@@ -29,8 +29,8 @@ mkdir -p "$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# Log the execution of the script, the script overwrites itself on each launch
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
