@@ -54,7 +54,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "$runtime" -c "./viralreoad.gptk" &
+$GPTOKEYB "$runtime" -c "./viralreload.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Viral Reload.pck"
 
 $ESUDO umount "$godot_dir"
