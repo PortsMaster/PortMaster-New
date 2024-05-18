@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Retrocade Media](https://retrocademedia.itch.io/) for creating this game. You can purchase Humming Out at: https://retrocademedia.itch.io/viral-reload. Download the Linux version and extract it, and place the *Viral Reload.pck* file in the gamedata directory. This has been tested with the *Viral Reload Linux.zip*, Jan 26, 2022 release.
+Thanks to [Retrocade Media](https://retrocademedia.itch.io/) for creating this game. You can purchase Viral Reload at: https://retrocademedia.itch.io/viral-reload. Download the Linux version and extract it, and place the *Viral Reload.pck* file in the gamedata directory. This has been tested with the *Viral Reload Linux.zip*, Jan 26, 2022 release.
 
 
 ## Controls
