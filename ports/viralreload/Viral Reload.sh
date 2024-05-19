@@ -22,18 +22,31 @@ get_controls
 GAMEDIR=/$directory/ports/viralreload
 CONFDIR="$GAMEDIR/conf/"
 
-# Ensure the conf directory exists
+# ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
-# Set the XDG environment variables for config & savefiles
+# set the xdg environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
+# patch game
+if [ -f "gamedata/Viral Reload.pck" ]; then
+    # get data.win checksum
+    checksum=$(md5sum "gamedata/Viral Reload.pck" | awk '{ print $1 }')
+    # patch .pck
+    if [ "$checksum" == "820dad0ddf285066d3add51692d4157e" ]; then
+        $controlfolder/xdelta3 -d -s "gamedata/Viral Reload.pck" "viralreload.xdelta3" "gamedata/Viral Reload_patched.pck"
+        rm "gamedata/Viral Reload.pck"
+    else
+      echo "checksum does not match; wrong build/version of game"
+    fi
+fi
+
 runtime="frt_3.4.5"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
-  # Check for runtime if not downloaded via PM
+  # check for runtime if not downloaded via pm
   if [ ! -f "$controlfolder/harbourmaster" ]; then
     echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
     sleep 5
@@ -43,7 +56,7 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
-# Setup Godot
+# setup godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$godot_dir"
@@ -55,7 +68,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./viralreload.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Viral Reload.pck"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Viral Reload_patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)
