@@ -2,16 +2,18 @@
 
 Thanks to [Retrocade Media](https://retrocademedia.itch.io/) for creating this game. You can purchase Viral Reload at: https://retrocademedia.itch.io/viral-reload. Download the Linux version and extract it, and place the *Viral Reload.pck* file in the gamedata directory. This has been tested with the *Viral Reload Linux.zip*, Jan 26, 2022 release.
 
+**Note** that the game takes a while to start (even on a PC).
+
 
 ## Controls
 
-| Button | Action   |
-| -------| -------- |
-| D-PAD  | Movement |
-| A      | Dash     |
-| B      | Fire     |
-| START  | Start    |
-| SELECT | Options  |
+| Button              | Action   |
+| --------------------| -------- |
+| D-PAD or LEFT-STICK | Movement |
+| A/X/R1/R2           | Fire     |
+| B/Y/L1/L2           | Dash     |
+| START               | Start    |
+| SELECT              | Options  |
 
 
 ## Compile
