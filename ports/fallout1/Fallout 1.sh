@@ -1,8 +1,6 @@
 #!/bin/bash
 # Built from https://github.com/alexbatalov/fallout2-ce
 
-PORTNAME="Fallout 1"
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -17,6 +15,8 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
+
+PORTNAME="Fallout 1"
 
 to_lower_case() {
     for SRC in $(find "$1" -depth); do
@@ -63,7 +63,7 @@ export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
 
-$GPTOKEYB "fallout-ce" -c "./fallout1.gptk.$ANALOGSTICKS" textinput &
+$GPTOKEYB "fallout-ce" -c "./fallout1.gptk.$ANALOG_STICKS" textinput &
 if [[ $whichos == *"ArkOS"* ]]; then
     LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ./fallout-ce 2>&1 | tee -a ./log.txt
 else

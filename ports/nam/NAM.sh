@@ -21,22 +21,22 @@ GAMEDIR="/$directory/ports/rednukem-NAM"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # if [[ ! -e $GAMEDIR/conf/rednukem/rednukem.cfg ]]; then
-  if   [[ $LOWRES == 'Y' && $ANALOGSTICKS == '1' ]]; then
+  if   [[ $LOWRES == 'Y' && $ANALOG_STICKS == '1' ]]; then
     mv -f $GAMEDIR/conf/rednukem/rednukem.cfg.480 $GAMEDIR/conf/rednukem/rednukem.cfg
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.640
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480.2analogs
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.640.2analogs
-  elif [[ $LOWRES == 'Y' && $ANALOGSTICKS == '2' ]]; then
+  elif [[ $LOWRES == 'Y' && $ANALOG_STICKS == '2' ]]; then
     mv -f $GAMEDIR/conf/rednukem/rednukem.cfg.480.2analogs $GAMEDIR/conf/rednukem/rednukem.cfg
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.640
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.640.2analogs
-  elif [[ $LOWRES == 'N' && $ANALOGSTICKS == '1' ]]; then
+  elif [[ $LOWRES == 'N' && $ANALOG_STICKS == '1' ]]; then
     mv -f $GAMEDIR/conf/rednukem/rednukem.cfg.640 $GAMEDIR/conf/rednukem/rednukem.cfg
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480.2analogs
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.640.2analogs
-  elif [[ $LOWRES == 'N' && $ANALOGSTICKS == '2' ]]; then
+  elif [[ $LOWRES == 'N' && $ANALOG_STICKS == '2' ]]; then
     mv -f $GAMEDIR/conf/rednukem/rednukem.cfg.640.2analogs $GAMEDIR/conf/rednukem/rednukem.cfg
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480
     rm -f $GAMEDIR/conf/rednukem/rednukem.cfg.480.2analogs

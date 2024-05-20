@@ -27,7 +27,7 @@ $ESUDO chmod 666 /dev/uinput
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs"
 
-$GPTOKEYB "exult" $HOTKEY -c "$GAMEDIR/exult.$ANALOGSTICKS.gptk" &
+$GPTOKEYB "exult" $HOTKEY -c "$GAMEDIR/exult.$ANALOG_STICKS.gptk" &
 ./exult -c "$GAMEDIR/exult.nokeyring.cfg"
 
 $ESUDO kill -9 $(pidof gptokeyb)

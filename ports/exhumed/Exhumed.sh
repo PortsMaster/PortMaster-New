@@ -20,7 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/Exhumed"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if   [[ $ANALOGSTICKS == '1' ]]; then
+if   [[ $ANALOG_STICKS == '1' ]]; then
   if [ ! -f "$GAMEDIR/conf/pcexhumed/pcexhumed.cfg" ]; then
      mv -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.1analog $GAMEDIR/conf/pcexhumed/pcexhumed.cfg
      rm -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.2analog
@@ -29,7 +29,7 @@ if   [[ $ANALOGSTICKS == '1' ]]; then
      mv -f $GAMEDIR/pcexhumed.gptk.1analog $GAMEDIR/pcexhumed.gptk
      rm -f $GAMEDIR/pcexhumed.gptk.2analog
   fi
-elif [[ $ANALOGSTICKS == '2' ]]; then
+elif [[ $ANALOG_STICKS == '2' ]]; then
   if [ ! -f "$GAMEDIR/conf/pcexhumed/pcexhumed.cfg" ]; then
      mv -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.2analog $GAMEDIR/conf/pcexhumed/pcexhumed.cfg
      rm -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.1analog

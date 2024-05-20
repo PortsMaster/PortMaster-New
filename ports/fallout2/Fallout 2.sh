@@ -2,8 +2,6 @@
 # Ported by Maciej Suminski <orson at orson dot net dot pl>
 # Built from https://github.com/alexbatalov/fallout2-ce
 
-PORTNAME="Fallout 2"
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -21,6 +19,8 @@ source $controlfolder/device_info.txt
 
 get_controls
 
+PORTNAME="Fallout 2"
+
 GAMEDIR=/$directory/ports/fallout2/
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -37,7 +37,8 @@ done
 
 $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-$GPTOKEYB "fallout2-ce" -c "./fallout2.gptk.$ANALOGSTICKS" -hotkey back &
+$GPTOKEYB "fallout2-ce" -c "./fallout2.gptk.$ANALOG_STICKS" -hotkey back &
+
 if [[ $whichos == *"ArkOS"* ]]; then
   LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ./fallout2-ce
 else

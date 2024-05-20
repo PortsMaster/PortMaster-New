@@ -31,9 +31,14 @@ else
   sheight="480"
 fi
 
+export LD_LIBRARY_PATH="$PWD/libs"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "lsdlsrb2" -c "./srb2.$ANALOGSTICKS.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./lsdlsrb2 -nojoy -home ./conf -width $swidth -height $sheight
+
+$GPTOKEYB "lsdlsrb2" -c "./srb2.$ANALOG_STICKS.gptk" &
+./lsdlsrb2 -nojoy -home ./conf -width $swidth -height $sheight
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

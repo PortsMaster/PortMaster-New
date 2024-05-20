@@ -28,7 +28,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "SJ3" -c "$GAMEDIR/skijump3.gptk.$ANALOGSTICKS" &
+$GPTOKEYB "SJ3" -c "$GAMEDIR/skijump3.gptk.$ANALOG_STICKS" &
 ./SJ3
 
 $ESUDO kill -9 $(pidof gptokeyb)

@@ -20,7 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/CorsixTH"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if   [[ $ANALOGSTICKS == '1' ]]; then
+if   [[ $ANALOG_STICKS == '1' ]]; then
   GPTOKEYB_CONFIG="$GAMEDIR/corsixth.gptk.leftanalog"
 else
   GPTOKEYB_CONFIG="$GAMEDIR/corsixth.gptk.rightanalog"

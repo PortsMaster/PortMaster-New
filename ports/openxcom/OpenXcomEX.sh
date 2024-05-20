@@ -28,7 +28,7 @@ export TEXTINPUTNOAUTOCAPITALS="Y"
 export LD_LIBRARY_PATH="$PWD/libs"
 cd $GAMEDIR
 
-$GPTOKEYB  "openxcom" $HOTKEY textinput -c "./openxcom.$ANALOGSTICKS.gptk" &
+$GPTOKEYB  "openxcom" $HOTKEY textinput -c "./openxcom.$ANALOG_STICKS.gptk" &
 ./openxcom -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config"
 
 $ESUDO kill -9 $(pidof gptokeyb)
