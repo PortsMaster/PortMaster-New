@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
@@ -20,13 +21,16 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
 GAMEDIR=/$directory/ports/openxcom
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
+export LD_LIBRARY_PATH="$PWD/libs"
 cd $GAMEDIR
 
 $GPTOKEYB  "openxcom" $HOTKEY textinput -c "./openxcom.$ANALOGSTICKS.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" ./openxcom -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config" 2>&1 | tee -a ./log.txt
+./openxcom -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config"
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
-

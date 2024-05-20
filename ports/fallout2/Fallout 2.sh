@@ -17,8 +17,12 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
+
+GAMEDIR=/$directory/ports/fallout2/
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd /$directory/ports/fallout2
 
@@ -35,9 +39,9 @@ $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $GPTOKEYB "fallout2-ce" -c "./fallout2.gptk.$ANALOGSTICKS" -hotkey back &
 if [[ $whichos == *"ArkOS"* ]]; then
-  LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ./fallout2-ce 2>&1 | tee -a ./log.txt
+  LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ./fallout2-ce
 else
-  ./fallout2-ce 2>&1 | tee -a ./log.txt
+  ./fallout2-ce
 fi
 
 $ESUDO kill -9 $(pidof gptokeyb)

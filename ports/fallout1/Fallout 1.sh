@@ -16,6 +16,7 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 to_lower_case() {
     for SRC in $(find "$1" -depth); do
