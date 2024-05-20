@@ -27,14 +27,23 @@ export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
-# We log the execution of the script into log.txt
+# we log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-mv "gamedata/data.win" "gamedata/game.droid"
+# extract exe
+if [ -f "./gamedata/Lawn Buster for Hire.exe" ]; then
+  mv "gamedata/Lawn Buster for Hire.exe" ./LawnBusterforHire.exe
+  ./7z x -mhe=off LawnBusterforHire.exe -ogamedata -r
+  mv "gamedata/data.win" "gamedata/game.droid"
+  mv "gamedata/new_splash.png" "gamedata/splash.png"
+  rm gamedata/*.dll gamedata/*.exe
+else
+  echo "Lawn Buster for Hire.exe does not exist (or already extracted)"
+fi
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
+# make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" -c ./lawnbusterforhire.gptk &
