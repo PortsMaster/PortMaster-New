@@ -9,10 +9,12 @@ The game code is modified by Troidem to allow running via portmaster.
 
 ## Controls
 
-| Button | Action |
-|--|--| 
-|DPAD/LSTICK/RSTICK|Move, navigate|
-|A/X|Select|
-|B/Y|Cancel|
-|L1/L2|Zoom in (skill tree)|
-|R1/R2|Zoom out (skill tree)|
+| Button             | Action                                 |
+|--------------------|----------------------------------------| 
+| DPAD/LSTICK/RSTICK | Move, navigate                         |
+| A/X                | Select                                 |
+| B/Y                | Cancel                                 |
+| L1/L2              | Zoom in (skill tree)                   |
+| R1/R2              | Zoom out (skill tree)                  |
+| START              | Confirm passive selection (skill tree) |
+| SELECT             | Cancel passive selection (skill tree)  |
