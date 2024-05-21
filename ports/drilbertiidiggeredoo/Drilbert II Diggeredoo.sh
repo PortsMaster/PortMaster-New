@@ -31,8 +31,8 @@ if [ -e "patch/patched_true" ]; then
   echo "already patched"
 else
   cp patch/gfx/*.png gamedata/gfx/
-  patch gamedata/main.lua < patch/main.lua.diff
-  patch gamedata/render.lua < patch/render.lua.diff
+  ./bin/patch.${DEVICE_ARCH} gamedata/main.lua < patch/main.lua.diff
+  ./bin/patch.${DEVICE_ARCH} gamedata/render.lua < patch/render.lua.diff
   touch patch/patched_true
   echo "patching complete"
 fi
