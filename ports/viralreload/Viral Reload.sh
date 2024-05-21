@@ -37,8 +37,7 @@ if [ -f "gamedata/Viral Reload.pck" ]; then
     checksum=$(md5sum "gamedata/Viral Reload.pck" | awk '{ print $1 }')
     # patch .pck
     if [ "$checksum" == "820dad0ddf285066d3add51692d4157e" ]; then
-        $controlfolder/xdelta3 -d -s "gamedata/Viral Reload.pck" "viralreload.xdelta3" "gamedata/Viral Reload_patched.pck"
-        rm "gamedata/Viral Reload.pck"
+        $controlfolder/xdelta3 -d -s "gamedata/Viral Reload.pck" "viralreload.xdelta3" "gamedata/Viral Reload_patched.pck" && rm "gamedata/Viral Reload.pck"
     else
       echo "checksum does not match; wrong build/version of game"
     fi
