@@ -13,9 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
+source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -24,9 +23,7 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/zelda_roth"
-if [ -f "/etc/os-release" ]; then
-  source "/etc/os-release"
-fi 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ "$VERSION" == "19.10 (Eoan Ermine)" ]; then
 
@@ -36,27 +33,28 @@ fi
 
 cd $GAMEDIR
 
-
-
 $ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
+
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
-printf "\033c" > $CUR_TTY
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs"
 ## RUN SCRIPT HERE
-#$ESUDO chmod -x ./zelda_roth
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "zelda_roth" -c "zelda_roth.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" ./zelda_roth 2>&1 | $ESUDO tee -a ./log.txt
+./zelda_roth
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
-
-# Disable console
-printf "\033c" > $CUR_TTY
+printf "\033c" > /dev/tty1
+printf "\033c" > /dev/tty0
