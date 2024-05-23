@@ -56,7 +56,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./titan.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$$runtime" $GODOT_OPTS --main-pack titan_tactics.pck
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack titan_tactics.pck
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

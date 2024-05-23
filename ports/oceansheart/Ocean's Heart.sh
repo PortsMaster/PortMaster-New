@@ -27,6 +27,8 @@ solarus_file="$controlfolder/libs/${runtime}.squashfs"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -37,8 +39,6 @@ fi
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
-
-cd $GAMEDIR
 
 # Check for runtime
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then

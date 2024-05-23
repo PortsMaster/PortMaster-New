@@ -26,6 +26,8 @@ CUR_TTY=/dev/tty0
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/zelda3t"
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -39,8 +41,6 @@ if [ "$VERSION" == "19.10 (Eoan Ermine)" ]; then
 cp /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 /$GAMEDIR/libs && mv /$GAMEDIR/libs/libSDL2-2.0.so.0.10.0 /$GAMEDIR/libs/libSDL2-2.0.so.0
 
 fi
-
-cd $GAMEDIR
 
 $ESUDO chmod 666 $CUR_TTY
 

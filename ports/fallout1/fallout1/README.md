@@ -10,7 +10,7 @@ You need to copy `critter.dat`, `master.dat` and the `data` folder from the orig
 |-------------------|-----------------------------------|
 | **A**             | Attack                            |
 | **B**             | End turn                          |
-| **X**             | Map                               |
+| **X**             | Slow Mouse (Hold)                 |
 | **Y**             | End combat                        |
 | **L1**            | Right mouse                       |
 | **L2**            | Switch active item                |
