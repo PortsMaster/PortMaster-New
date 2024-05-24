@@ -41,7 +41,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 [ -f falcon_mkxp.bin ] && mv falcon_mkxp.bin gamedata/falcon_mkxp.bin
 cp conf/mkxp.conf gamedata/
 
-$GPTOKEYB "falcon_mkxp.bin" -c "./lisathepointess.gptk" &
+$GPTOKEYB "falcon_mkxp.bin" -c "./lisathetimeless.gptk" &
 $GAMEDIR/gamedata/falcon_mkxp.bin
 
 $ESUDO kill -9 $(pidof gptokeyb)
