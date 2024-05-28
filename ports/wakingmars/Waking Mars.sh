@@ -34,8 +34,6 @@ cd $GAMEDIR
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
-export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
-
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
@@ -47,7 +45,7 @@ else
 fi
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
 
 # Setup Box86

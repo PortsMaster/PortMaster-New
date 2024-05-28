@@ -61,8 +61,6 @@ fi
 
 # Setup gl4es
 
-export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
-
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
@@ -104,7 +102,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAMEDIR/libs/x86:$GAMEDIR/gamedata/x86"
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
