@@ -34,8 +34,6 @@ BINDIR="$GAMEDIR/box86"
 
 cd $GAMEDIR
 
-export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
-
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -44,7 +42,7 @@ else
 fi
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
 
 # system

@@ -49,7 +49,7 @@ export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
 
 $ESUDO rm -rf ~/.config/Mystik_Belle
