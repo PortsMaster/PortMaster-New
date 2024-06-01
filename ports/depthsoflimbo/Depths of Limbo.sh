@@ -30,7 +30,7 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
 game_name="DepthsOfLimbo"
-launch_file="DepthsOfLimbo.game"
+launch_dir="gamedata"
 
 if [ -f "$game_name.exe" ]; then
   game_file="$game_name.exe"
@@ -41,25 +41,19 @@ elif [ -f "$game_name.love" ]; then
 fi
 
 if [ -f "$game_file" ]; then 
-  patched_files_dir="patched"
   patched_file="patched.zip"
   if [ -f "src.zip" ]; then
     rm "$patch_file"
     $controlfolder/xdelta3 -f -e -s "$game_file" "src.zip" "$patch_file"
   fi
   $ESUDO $controlfolder/xdelta3 -d -s "$game_file" -f "$patch_file" "$patched_file"
-  $GAMEDIR/bin/7za x "$game_file" -o"$patched_files_dir" -y
-  $GAMEDIR/bin/7za x "$patched_file" -o"$patched_files_dir" -y  
-  cd $patched_files_dir
-  $GAMEDIR/bin/7za u -mx0 -aoa "$GAMEDIR/$launch_file" "./"*
-  cd $GAMEDIR
+  $GAMEDIR/bin/7za x "$game_file" -o"$launch_dir" -y
+  $GAMEDIR/bin/7za x "$patched_file" -o"$launch_dir" -y
   rm "$game_file"
   rm "$patched_file"
-  rm -rf "$patched_files_dir"
 fi
 
-input_file="input.lua"
-./bin/7za x "$launch_file" "$input_file"
+input_file="$launch_dir/input.lua"
 
 if [ "$ANALOG_STICKS" -lt "2" ]; then
   sed -i 's/gamepad_enabled = true/gamepad_enabled = false/' "$input_file"
@@ -69,11 +63,8 @@ else
   gptk_args=""
 fi
 
-./bin/7za u -mx0 -aoa -y "$launch_file" "$input_file"
-rm "$input_file"
-
 $GPTOKEYB "love" $gptk_args &
-$GAMEDIR/bin/love "$launch_file"
+$GAMEDIR/bin/love "$launch_dir"
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
