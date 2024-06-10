@@ -42,7 +42,7 @@ else
 fi
 
 # system
-export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 
 # box86
 export BOX86_ALLOWMISSINGLIBS=1

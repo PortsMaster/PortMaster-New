@@ -50,7 +50,7 @@ export BOX86_DLSYM_ERROR=1
 export SDL_DYNAMIC_API="libSDL2-2.0.so.0"
 export BOX86_LD_PRELOAD="$GAMEDIR/libIconoclasts.so"
 
-export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"/usr/config/emuelec/lib32"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"/usr/config/emuelec/lib32"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/native":"$GAMEDIR/gamedata/bin32"
 
 export BOX86_DYNAREC=1
