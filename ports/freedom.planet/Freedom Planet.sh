@@ -45,7 +45,7 @@ if [[ $whichos == *"RetroOZ"* ]]; then
     export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32:$GAMEDIR/box86/native"
     export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib32/:./:lib/:lib32/:x86/"
 else
-    export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:/usr/lib32"
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:/usr/lib32"
     export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:./:lib/:libbin32/:x86/"
 fi
 

@@ -50,7 +50,7 @@ cd $GAMEDIR/gamedata/shovelknight/32
 export LIBGL_NOBANNER=1
 export BOX86_LOG=0
 export BOX86_LD_PRELOAD=$GAMEDIR/libShovelKnight.so
-export LD_LIBRARY_PATH=$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib:/usr/lib32
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib:/usr/lib32
 export BOX86_LD_LIBRARY_PATH=$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib32/:./:lib/:lib32/:x86/
 export BOX86_DYNAREC=1
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
