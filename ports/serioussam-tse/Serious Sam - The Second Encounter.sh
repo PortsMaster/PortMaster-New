@@ -50,7 +50,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
-  export LIBGL_ES=1
   export LIBGL_GL=14
 fi
 
