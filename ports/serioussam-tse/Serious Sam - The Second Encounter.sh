@@ -48,11 +48,11 @@ fi
 export LD_LIBRARY_PATH="$GAMEDIR/Bin/libs:/usr/lib32:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
-#if [ "$LIBGL_FB" != "" ] && [ "$CFW_NAME" != 'ROCKNIX' ]; then
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
   export LIBGL_ES=1
   export LIBGL_GL=14
-#fi
+fi
 
 $GPTOKEYB "ssam-tse" -c "$GPTOKEYB_CONFIG" &
 $GAMEDIR/Bin/ssam-tse
