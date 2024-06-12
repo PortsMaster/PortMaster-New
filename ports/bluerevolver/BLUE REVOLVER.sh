@@ -50,6 +50,11 @@ if [ -f "$game_file" ]; then
     exit 1
   fi
 
+  if [ ! -f "$controlfolder/xdelta3" ]; then
+    echo "xdelta3 not found"
+    exit 1
+  fi
+
   rm -rf "$launch_dir"
   patched_file="patched.zip"
   if [ -f "src.zip" ]; then
