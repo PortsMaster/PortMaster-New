@@ -55,12 +55,13 @@ if [ -f "$game_file" ]; then
     exit 1
   fi
 
-  rm -rf "$launch_dir"
-  patched_file="patched.zip"
   if [ -f "src.zip" ]; then
     rm "$patch_file"
     $controlfolder/xdelta3 -f -e -s "$game_file" "src.zip" "$patch_file"
   fi
+  
+  rm -rf "$launch_dir"
+  patched_file="patched.zip"
   $ESUDO $controlfolder/xdelta3 -d -s "$game_file" -f "$patch_file" "$patched_file"
   $GAMEDIR/bin/7za x "$game_file" -o"$launch_dir" -y
   $GAMEDIR/bin/7za x "$patched_file" -o"$launch_dir" -y
@@ -69,7 +70,7 @@ if [ -f "$game_file" ]; then
 fi
 
 $GPTOKEYB "love" -c "bluerevolver.gptk" &
-./bin/love "gamedata"
+./bin/love "$launch_dir"
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
