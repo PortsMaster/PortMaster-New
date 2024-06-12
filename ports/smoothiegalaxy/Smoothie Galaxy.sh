@@ -35,17 +35,8 @@ export GMLOADER_PLATFORM="os_windows"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
 $ESUDO chmod 666 /dev/uinput
-
 $GPTOKEYB "gmloader" -c "./smoothiegalaxy.gptk" &
-
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 # Run gmloader
