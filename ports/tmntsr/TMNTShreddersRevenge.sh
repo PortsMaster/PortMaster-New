@@ -58,7 +58,7 @@ export FNA_SDL2_FORCE_BASE_PATH=0
 
 sha1sum -c "${gamedir}/gamedata/.ver_checksum"
 if [ $? -ne 0 ]; then
-	echo "Checksum fail or unpatched binary found, patching game..." |& tee /dev/tty0
+	echo "Checksum fail or unpatched binary found, patching game..." | tee /dev/tty0
 	rm -f "${gamedir}/gamedata/.astc_done"
 	rm -f "${gamedir}/gamedata/.patch_done"
 fi
