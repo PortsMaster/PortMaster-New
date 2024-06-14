@@ -52,7 +52,7 @@ export FNA3D_FORCE_DRIVER=OpenGL
 export FNA3D_OPENGL_FORCE_ES3=1
 
 $GPTOKEYB "mono" &
-$TASKSET mono $gameassembly |& tee "$gamedir/log.txt" /dev/tty0
+$TASKSET mono $gameassembly 2>&1 | tee "$gamedir/log.txt" /dev/tty0
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"

@@ -59,7 +59,7 @@ $GPTOKEYB "gmloader" &
 echo "Loading, please wait... " > /dev/tty0
 
 # Run the game
-./gmloader savant.apk |& tee log.txt /dev/tty0
+./gmloader savant.apk 2>&1 | tee log.txt /dev/tty0
 
 # Kill proccesses & restart services
 $ESUDO kill -9 "$(pidof gptokeyb)"
