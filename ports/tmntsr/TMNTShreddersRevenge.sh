@@ -84,7 +84,7 @@ printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly} |& tee ${gamedir}/log.txt
+$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly} | tee ${gamedir}/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
