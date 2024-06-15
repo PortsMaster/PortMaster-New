@@ -29,7 +29,7 @@ $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "gameselector" -c "selector.gptk" &
 echo "Loading, please wait... " > /dev/tty0
 
-./gameselector |& tee log.txt /dev/tty0
+./gameselector 2>&1 | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &

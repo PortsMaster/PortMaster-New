@@ -57,17 +57,17 @@ export FNA_SDL2_FORCE_BASE_PATH=0
 
 # Not patched? let's perform first time setup
 if [[ ! -f "$gamedir/gamedata/MONOMODDED_ParisEngine.dll" ]]; then	
-	echo "Performing first time setup..." |& tee /dev/tty0 "${gamedir}/install_log.txt"
-	echo "This may take upwards of 5 minutes, please wait." |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
+	echo "Performing first time setup..." 2>&1 | tee /dev/tty0 "${gamedir}/install_log.txt"
+	echo "This may take upwards of 5 minutes, please wait." 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
 
 	# Configure MonoMod settings
 	export MONOMOD_MODS="$gamedir/patches"
 	export MONOMOD_DEPDIRS="${MONO_PATH}":"${gamedir}/monomod"
 
 	# Patch the ParisEngine file
-	mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/ParisEngine.dll" |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
+	mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/ParisEngine.dll" 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
 	if [ $? -ne 0 ]; then
-		echo "Failure performing first time setup, report this." |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
+		echo "Failure performing first time setup, report this." 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
 		exit -1
 	fi
 fi
@@ -76,7 +76,7 @@ printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all ../MMLoader.exe ${gameassembly} |& tee /dev/tty0 "${gamedir}/log.txt"
+$TASKSET mono --ffast-math -O=all ../MMLoader.exe ${gameassembly} 2>&1 | tee /dev/tty0 "${gamedir}/log.txt"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"

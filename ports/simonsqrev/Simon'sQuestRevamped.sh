@@ -54,7 +54,7 @@ echo "Loading, please wait... " > /dev/tty0
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 
-./gmloader simons_quest_revamped.apk |& tee log.txt /dev/tty0
+./gmloader simons_quest_revamped.apk 2>&1 | tee log.txt /dev/tty0
 
 $ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &

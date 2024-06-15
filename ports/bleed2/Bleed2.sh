@@ -53,7 +53,7 @@ export FNA3D_OPENGL_FORCE_ES3=1
 export FNA3D_OPENGL_FORCE_VBO_DISCARD=1
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all ${gameassembly} |& tee /dev/tty0 "${gamedir}/log.txt"
+$TASKSET mono --ffast-math -O=all ${gameassembly} 2>&1 | tee /dev/tty0 "${gamedir}/log.txt"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"

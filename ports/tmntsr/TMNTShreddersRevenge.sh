@@ -58,7 +58,7 @@ export FNA_SDL2_FORCE_BASE_PATH=0
 
 sha1sum -c "${gamedir}/gamedata/.ver_checksum"
 if [ $? -ne 0 ]; then
-	echo "Checksum fail or unpatched binary found, patching game..." |& tee /dev/tty0
+	echo "Checksum fail or unpatched binary found, patching game..." 2>&1 | tee /dev/tty0
 	rm -f "${gamedir}/gamedata/.astc_done"
 	rm -f "${gamedir}/gamedata/.patch_done"
 fi
@@ -84,7 +84,7 @@ printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly} |& tee ${gamedir}/log.txt
+$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly} 2>&1 | tee ${gamedir}/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
