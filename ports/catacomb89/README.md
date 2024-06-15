@@ -7,15 +7,15 @@ Both the floppy disk and GOG versions are compatible.
 If you don't own either of the Catacomb games you can get Catacomb (1989) and The Catacomb (a.k.a. Catacomb II) from:
 [GOG](https://www.gog.com/en/game/catacombs_pack)
 
-Copy all *.CAT files into the 'ports/catacomb/' directory.
+Copy all *.CAT files into the 'ports/catacomb89/' directory.
 
 Files should be uppercase.  If game files are lowercase, the launcher will attempt to convert them to uppercase automatically.
 
 Game files needed:
-- catacomb/DEMO.CAT
-- catacomb/LEVEL1.CAT thru catacomb/LEVEL10.CAT
-- catacomb/SOUNDS.CAT
-- catacomb/TOPSCORS.CAT
+- catacomb89/DEMO.CAT
+- catacomb89/LEVEL1.CAT thru catacomb89/LEVEL10.CAT
+- catacomb89/SOUNDS.CAT
+- catacomb89/TOPSCORS.CAT
 
 ## Controls
 
