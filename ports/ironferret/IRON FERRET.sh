@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: ironferret.zip, IRON FERRET.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -30,7 +29,7 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
