@@ -24,7 +24,7 @@ CONFDIR="$GAMEDIR/conf/"
 CUR_TTY=/dev/tty0
 $ESUDO chmod 666 $CUR_TTY
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
