@@ -28,7 +28,6 @@ CONFDIR="$GAMEDIR/conf/"
 mkdir -p "$GAMEDIR/conf"
 export XDG_DATA_HOME="$CONFDIR"
 
-cd $GAMEDIR
 
 runtime="frt_3.3.4" # was built using 3.3.2
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
