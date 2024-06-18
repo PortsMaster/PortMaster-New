@@ -55,10 +55,11 @@ if [ -f "./gamedata/data.win" ]; then
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/steam.xdelta gamedata/game.droid && \
         rm gamedata/data.win
     else
-        echo "Error: MD5 checksum of game.unx does not match any expected version."
+        echo "Error: MD5 checksum of data.win does not match any expected version."
+        exit 1
     fi
 else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
+    echo "Missing files in gamedata folder or game has been patched."
 fi
 
 
