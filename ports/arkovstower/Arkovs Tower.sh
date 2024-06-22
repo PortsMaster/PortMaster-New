@@ -33,6 +33,8 @@ GAME_FILE="arkovsTower.exe"
 LAUNCH_FILE="arkovsTower"
 
 if [ -f "$GAME_FILE" ]; then
+  rm $LAUNCH_FILE
+  
   # allow to run without steam
   LUASTEAM_FILE="luasteam.lua"
   cp "patch/$LUASTEAM_FILE" "$LUASTEAM_FILE"
