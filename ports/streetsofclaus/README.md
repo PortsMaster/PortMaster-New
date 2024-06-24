@@ -1,6 +1,6 @@
 ## Notes
 
-Huge thank you to the great people at [Red Screen Soft](https://www.redscreensoft.com/) for allowing PortMaster to distribute their free games.
+Huge thank you to the great people at [Red Screen Soft](https://all-x.itch.io/streets-of-claus) for allowing PortMaster to distribute their free games.
 Another big thank you to all who helped in testing this port!
 
 ## Controls
