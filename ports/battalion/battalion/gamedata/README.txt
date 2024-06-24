@@ -13,7 +13,7 @@ Your creativity and dedication to producing games will not go unnoticed. The int
 - [BATTALION]
 - [Streets of Claus]
 - [Crystals of Amalgam]
-- [Pepper Penguin]
+- [Pepper Pengui]
 - [Not Very Pro Wrestling]
 
 Each of these games has added immense value to our platform, and we appreciate the hard work and passion that went into their development. We look forward to continuing our partnership and exploring new ways to bring fantastic gaming experiences to our users.
