@@ -34,6 +34,7 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
 CUR_TTY=/dev/tty0
 
 # Define the archive file name
