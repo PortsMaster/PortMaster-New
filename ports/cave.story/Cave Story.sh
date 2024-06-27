@@ -13,21 +13,27 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
-whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
-if [[ $whichos == *"TheRA"* ]]; then
+if [[ $CFW_NAME == "TheRA" ]]; then
   raloc="/opt/retroarch/bin"
   raconf=""
-elif [[ $whichos == *"RetroOZ"* ]]; then
+elif [[ $CFW_NAME == "RetroOZ" ]]; then
   raloc="/opt/retroarch/bin"
   raconf="--config /home/odroid/.config/retroarch/retroarch.cfg"
-elif [[ -e "/storage/.config/.OS_ARCH" ]] || [ -z $ESUDO ]; then
-  raloc="/usr/bin"
-  raconf=""
-else
+elif [[ $CFW_NAME == "ArkOS" ]]; then
   raloc="/usr/local/bin"
+  raconf=""
+elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH == "aarch64" ]]; then
+  raloc="/usr/bin"
+  raconf="--config /mnt/mmc/MUOS/retroarch/retroarch32.cfg"
+elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH != "aarch64" ]]; then
+  raloc="/mnt/mmc/MUOS"
+  raconf="--config /mnt/mmc/MUOS/.retroarch/retroarch.cfg"
+else
+  raloc="/usr/bin"
   raconf=""
 fi
 
