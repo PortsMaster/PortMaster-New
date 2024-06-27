@@ -26,12 +26,9 @@ elif [[ $CFW_NAME == "RetroOZ" ]]; then
 elif [[ $CFW_NAME == "ArkOS" ]]; then
   raloc="/usr/local/bin"
   raconf=""
-elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH == "aarch64" ]]; then
+elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
-  raconf="--config /mnt/mmc/MUOS/retroarch/retroarch32.cfg"
-elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH != "aarch64" ]]; then
-  raloc="/mnt/mmc/MUOS"
-  raconf="--config /mnt/mmc/MUOS/.retroarch/retroarch.cfg"
+  raconf="-v -f -c /mnt/mmc/MUOS/retroarch/retroarch.cfg"
 else
   raloc="/usr/bin"
   raconf=""
