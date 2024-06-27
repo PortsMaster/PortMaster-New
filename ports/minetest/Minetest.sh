@@ -44,7 +44,7 @@ if [[ -f "$ARCHIVE_FILE" ]]; then
    echo "Extracting game data, this can take a few minutes..." > "$CUR_TTY"
    
    # Extract the archive and check if the extraction was successful
-   if tar -xzf "$ARCHIVE_FILE"; then
+   if zcat "$ARCHIVE_FILE" | tar -xv; then
        echo "Extraction successful." > "$CUR_TTY"
        $ESUDO rm -f "$ARCHIVE_FILE"
    else
@@ -54,6 +54,8 @@ if [[ -f "$ARCHIVE_FILE" ]]; then
    fi
 fi
 
+[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && [ -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
+ifconfig lo up
 chmod +x ./bin/minetest
 $GPTOKEYB "minetest" -c "$GAMEDIR/minetest.gptk.$ANALOG_STICKS" &
 ./bin/minetest
