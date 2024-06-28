@@ -49,7 +49,7 @@ then
   text_viewer -f 25 -w -t "Ressources installation" --input_file $GAMEDIR/restool-msg.txt -y
   if [ $? -eq 21 ]
   then
-    unzip "${RESTOOL_ZIP}"
+    unzip "${RESTOOL_ZIP}" 2>&1
     if [ ! $? -eq 0 ]
     then
       echo "$0: An error occured while extracting ${RESTOOL_ZIP}"
