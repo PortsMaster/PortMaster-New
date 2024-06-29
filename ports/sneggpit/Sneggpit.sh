@@ -1,21 +1,29 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 # Below we assign the source of the control folder (which is the PortMaster folder) based on the distro:
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
-  controlfolder="/opt/system/Tools/PortMaster" # Location for ArkOS which is mapped from /roms/tools or /roms2/tools for devices that support 2 sd cards and have them in use.
+  controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
-  controlfolder="/opt/tools/PortMaster" # Location for TheRA
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
-  controlfolder="/roms/ports/PortMaster" # Location for 351Elec/AmberElec, JelOS and RetroOZ
+  controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt # We source the control.txt file contents here
+# We source the control.txt file contents here
+source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+get_controls
 
-get_controls # We pull the controller configs from the get_controls function from the control.txt file here
+GAMEDIR="/$directory/ports/sneggpit"
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-DEVICE_ARCH="${`uname -m`:-aarch64}"
+cd "$GAMEDIR"
+EXECUTABLE="$GAMEDIR/arcajs.${DEVICE_ARCH}"
 
-# We switch to the port's directory location below
-cd /$directory/ports/sneggpit
+chmod +x "$EXECUTABLE"
 
-./arcajs.${DEVICE_ARCH} ../sneggpit
+$EXECUTABLE ../sneggpit
