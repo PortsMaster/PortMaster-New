@@ -13,7 +13,9 @@ source $controlfolder/control.txt # We source the control.txt file contents here
 
 get_controls # We pull the controller configs from the get_controls function from the control.txt file here
 
+DEVICE_ARCH="${`uname -m`:-aarch64}"
+
 # We switch to the port's directory location below
 cd /$directory/ports/sneggpit
 
-./arcajs.aarch64 ../sneggpit
+./arcajs.${DEVICE_ARCH} ../sneggpit
