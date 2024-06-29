@@ -1,12 +1,13 @@
 const UI = app.require('ui');
+const isSquare = app.width === app.height;
 const is3to2 = app.width*2 === app.height*3;
 const is4to3 = app.width*3 === app.height*4;
-const arenaW = is4to3 ? 28 : is3to2 ? 30 :app.width>app.height ? 32 : 18;
-const arenaH = is4to3 ? 21 : is3to2 ? 20 : app.width>app.height ? 18 : 32;
+const arenaW = isSquare ? 24 : is4to3 ? 28 : is3to2 ? 30 :app.width>app.height ? 32 : 18;
+const arenaH = isSquare ? 24 : is4to3 ? 21 : is3to2 ? 20 : app.width>app.height ? 18 : 32;
 const tileSz=Math.floor(Math.min(app.width/arenaW,app.height/arenaH));
 const tileImg = app.getResource('snegg_tiles.svg', {centerX:0.5, centerY:0.5, scale:8*tileSz/256});
 const tiles = app.createTileResources(tileImg, 4,4, 0)
-const fontSc = app.width<1280 ? 1 : Math.floor(app.width/640);
+const fontSc = isSquare ? Math.max(1, Math.floor(app.width/360)) : app.width<1280 ? 1 : Math.floor(app.width/640);
 const fontGame = fontSc==1 ? 0 : app.createImageFontResource(0, {scale:fontSc});
 const FRAMES_PER_SEC = 60;
 const engineVersion = 20231218;
@@ -519,6 +520,12 @@ function ScreenGame(numPlayers, usePointerInput) {
 	this.gamepad = function(evt) {
 		if(evt.index === 0)
 			gamepadMapping.apply(evt);
+
+		if(evt.type==='button' && (evt.button in {6:true,7:true})) {
+			buttonState[evt.button] = evt.value===1;
+			if(buttonState[6] && buttonState[7])
+				return app.close();
+		}
 		if(state === 'pause')
 			return ui.handleGamepad(evt);
 
@@ -565,11 +572,8 @@ function ScreenGame(numPlayers, usePointerInput) {
 				return app.on(ScreenAttract);
 			if(evt.button in {6:true,7:true}) {
 				buttonState[evt.button] = evt.value===1;
-				if(evt.value===1) {
-					if(buttonState[6] && buttonState[7])
-						return app.close();
+				if(evt.value===1)
 					togglePlayPause();
-				}
 			}
 		}
 	}

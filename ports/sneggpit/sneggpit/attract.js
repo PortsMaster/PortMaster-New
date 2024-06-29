@@ -139,6 +139,7 @@ var ScreenAttract = {
 	}),
 	music: -1,
 	musicVolume: 0.4,
+	buttonState: {},
 
 	enter: function() {
 		const sSz = app.queryImage(iconStart0).width*0.9, sSz2=sSz/2;
@@ -200,6 +201,11 @@ var ScreenAttract = {
 
 	gamepad: function(evt) {
 		gamepadMapping.apply(evt);
+		if(evt.type==='button' && (evt.button in {6:true,7:true})) {
+			this.buttonState[evt.button] = evt.value===1;
+			if(this.buttonState[6] && this.buttonState[7])
+				return app.close();
+		}
 		this.ui.handleGamepad(evt);
 	},
 
