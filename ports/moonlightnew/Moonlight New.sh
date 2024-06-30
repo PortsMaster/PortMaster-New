@@ -28,7 +28,7 @@ CONFDIR="$GAMEDIR/conf/"
 mkdir -p "$GAMEDIR/conf"
 
 # Enable logging
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+#> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
