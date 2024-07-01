@@ -1,0 +1,111 @@
+#!/bin/bash
+
+key_mapping=(
+    ["ProceduralTextures"]="DetailProcedurals"
+    ["Fog"]="DetailFog"
+    ["LightCoronas"]="DetailCoronas"
+    ["WeaponCoronas"]="DetailWeaponCoronas"
+    ["ObjectComplexity"]="DetailObjectComp"
+    ["PowerupHalos"]="DetailPowerupHalos"
+    ["ScorchMarks"]="DetailScorchMarks"
+    ["DynamicLighting"]="Dynamic_Lighting"
+    ["ForceFeedback"]="EnableJoystickFF"
+    ["SimpleHeadlight"]="FastHeadlight"
+    ["Gamma"]="RS_gamma"
+    ["TerrainDetail"]="RS_pixelerror"
+    ["MipMapping"]="RS_mipping"
+    ["ShaderType"]="RS_light"
+    ["RenderDistance"]="RS_terraindist"
+    ["TextureQuality"]="RS_texture_quality"
+    ["VSync"]="RS_vsync"
+    ["BilinearFiltering"]="RS_bilear"
+    ["GuidedMissileView"]="MissileView"
+    ["MusicVolume"]="MUS_mastervol"
+    ["MirrorSurfaces"]="MirrorSurfaces"
+    ["MineAutoleveling"]="RoomLeveling"
+    ["SoundQuality"]="SoundQuality"
+    ["SoundQuantity"]="SoundQuantity"
+    ["SoundVolume"]="SND_mastervol"
+    ["SpecularMapping"]="Specmapping"
+    ["TerrainAutoleveling"]="TerrLeveling"
+    ["PXOLogin"]="TrackerLogin"
+    ["PXOPassword"]="TrackerPassword"
+    ["DirectIP"]="DirectIP"
+)
+
+key_types=(
+    ["RS_gamma"]="string"
+    ["RS_terraindist"]="string"
+    ["Dynamic_Lighting"]="dword"
+    ["RS_vsync"]="dword"
+    ["RS_bilear"]="dword"
+    ["RS_mipping"]="dword"
+    ["RS_light"]="dword"
+    ["RS_texture_quality"]="dword"
+    ["SND_mastervol"]="string"
+    ["MUS_mastervol"]="string"
+    ["EnableJoystickFF"]="dword"
+    ["SoundQuality"]="dword"
+    ["SoundQuantity"]="dword"
+    ["DetailObjectComp"]="dword"
+    ["RS_pixelerror"]="string"
+    ["TerrLeveling"]="dword"
+    ["RoomLeveling"]="dword"
+    ["DetailScorchMarks"]="dword"
+    ["DetailFog"]="dword"
+    ["DetailCoronas"]="dword"
+    ["DetailWeaponCoronas"]="dword"
+    ["DetailProcedurals"]="dword"
+    ["DetailPowerupHalos"]="dword"
+    ["Specmapping"]="dword"
+    ["MirrorSurfaces"]="dword"
+    ["FastHeadlight"]="dword"
+    ["MissileView"]="dword"
+    ["TrackerLogin"]="string"
+    ["TrackerPassword"]="string"
+    ["DirectIP"]="string"
+)
+
+# Function to update the .Descent3Registry file based on user-friendly ini values
+parse_ini() {
+  local key=$1
+  local value=$2
+  local type=$3
+  local file=$4
+  local entry
+
+  if [[ "$type" == "dword" ]]; then
+    if [[ "$value" =~ ^[0-9]+$ ]]; then
+      value=$(printf "%X" "$value")
+    elif [[ "$value" =~ ^[0-9]+\.[0-9]+$ ]]; then
+      value=$(printf "%X" "${value%.*}")
+    fi
+    entry="\"$key\"=dword:$value"
+  elif [[ "$type" == "string" ]]; then
+    value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    entry="\"$key\"=\"$value\""  # Treat value as a string, wrap in double quotes
+  else
+    echo "Unsupported registry type for key: $key"
+    return 1
+  fi
+
+  if grep -q "^\"$key\"=\".*\"" "$file"; then
+    sed -i "s|^\"$key\"=\".*\"|$entry|" "$file" || echo "Failed to update $file"
+  else
+    echo "$entry" >> "$file" || echo "Failed to append to $file"
+  fi
+}
+
+# Read the ini file and update settings
+while IFS='=' read -r key value_comment; do
+  key=$(echo "$key" | sed 's/^[ \t]*//;s/[ \t]*$//')  # Trim spaces
+  value=$(echo "$value_comment" | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/;.*$//' | tr -d '\r')
+  [[ -z "$key" || "$key" =~ ^\[ ]] && continue
+  registry_key=${key_mapping[$key]}
+  if [[ -n "$registry_key" ]]; then
+    registry_type=${key_types[$registry_key]}
+    parse_ini "$registry_key" "$value" "$registry_type" "$REGFILE"
+  else
+    echo "No mapping found for key: $key"
+  fi
+done < "$INIFILE"
