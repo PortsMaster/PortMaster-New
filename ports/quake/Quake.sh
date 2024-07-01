@@ -13,29 +13,28 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
-whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
-if [[ $whichos == *"TheRA"* ]]; then
+if [[ $CFW_NAME == "TheRA" ]]; then
   raloc="/opt/retroarch/bin"
   raconf=""
-elif [[ $whichos == *"RetroOZ"* ]]; then
+elif [[ $CFW_NAME == "RetroOZ" ]]; then
   raloc="/opt/retroarch/bin"
   raconf="--config /home/odroid/.config/retroarch/retroarch.cfg"
-elif [[ -e "/storage/.config/.OS_ARCH" ]] || [[ -z $ESUDO ]]; then
-  raloc="/usr/bin"
-  raconf=""
-else
+elif [[ $CFW_NAME == "ArkOS" ]]; then
   raloc="/usr/local/bin"
+  raconf=""
+elif [[ $CFW_NAME == "muOS" ]]; then
+  raloc="/usr/bin"
+  raconf="-v -f -c /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+else
+  raloc="/usr/bin"
   raconf=""
 fi
 
 GAMEDIR="/$directory/ports/quake"
 
-#if [ "${OS_NAME}" == *"JELOS"* ]; then
-#  LD_LIBRARY_PATH=/usr/lib32 $raloc/retroarch32 $raconf -L $GAMEDIR/tyrquake_libretro.so $GAMEDIR/quakepaks/
-#else
-  $raloc/retroarch $raconf -L $GAMEDIR/tyrquake_libretro.so $GAMEDIR/quakepaks/id1/*
-#fi
-
+$GPTOKEYB "retroarch" &
+$raloc/retroarch $raconf -L $GAMEDIR/tyrquake_libretro.so $GAMEDIR/quakepaks/id1/*
