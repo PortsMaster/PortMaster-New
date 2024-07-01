@@ -21,9 +21,18 @@ get_controls
 GAMEDIR="/$directory/ports/sneggpit"
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd "$GAMEDIR"
-EXECUTABLE="$GAMEDIR/arcajs.${DEVICE_ARCH}"
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod 666 /dev/uinput
 
+EXECUTABLE="$GAMEDIR/arcajs.${DEVICE_ARCH}"
 chmod +x "$EXECUTABLE"
 
-$EXECUTABLE ../sneggpit
+cd "$GAMEDIR"
+
+$GPTOKEYB "$EXECUTABLE" -c "./sneggpit.gptk" &
+$EXECUTABLE -j -1 ../sneggpit
+
+$ESUDO kill -9 $(pidof gptokeyb)
+$ESUDO systemctl restart oga_events &
+printf "\033c" > /dev/tty0

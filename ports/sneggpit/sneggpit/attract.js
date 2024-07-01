@@ -191,11 +191,6 @@ var ScreenAttract = {
 		app.setPointer(0);
 		if(evt.key===' ')
 			evt.key = 'Enter';
-		if(evt.type==='keydown') switch(evt.key) {
-		case 'GoBack':
-		case 'Escape':
-			return app.close();
-		}
 		this.ui.handleKeyboard(evt);
 	},
 
