@@ -13,16 +13,25 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
 $ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/sonic2"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $GPTOKEYB "sonic2013" &
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./sonic2013 2>&1 | tee $GAMEDIR/log.txt
+./sonic2013
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
