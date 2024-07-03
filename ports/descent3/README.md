@@ -1,7 +1,7 @@
 # Descent 3 for PortMaster
 
 ## Notes
-This fork of Descent 3 is tailored to retro handhelds via gl4es and PortMaster. Build instructions can be found at the [fork repository](https://github.com/JeodC/Descent3). The provided binary was built with debia bullseye to support older GLIBC. You can build your own binary with newer GLIBC using bookworm, if your CFW supports it, but performance gain may be minimal.
+This fork of Descent 3 is tailored to retro handhelds via gl4es and PortMaster. Build instructions can be found at the [fork repository](https://github.com/JeodC/Descent3). The provided binary was built with debian bullseye to support older GLIBC. You can build your own binary with newer GLIBC using bookworm, if your CFW supports it, but performance gain may be minimal.
 
 The following patches have been applied to this release:
 

@@ -1,87 +1,45 @@
-#!/bin/bash
+#!/bin/sh
 
-key_mapping=(
-    ["ProceduralTextures"]="DetailProcedurals"
-    ["Fog"]="DetailFog"
-    ["LightCoronas"]="DetailCoronas"
-    ["WeaponCoronas"]="DetailWeaponCoronas"
-    ["ObjectComplexity"]="DetailObjectComp"
-    ["PowerupHalos"]="DetailPowerupHalos"
-    ["ScorchMarks"]="DetailScorchMarks"
-    ["DynamicLighting"]="Dynamic_Lighting"
-    ["ForceFeedback"]="EnableJoystickFF"
-    ["SimpleHeadlight"]="FastHeadlight"
-    ["Gamma"]="RS_gamma"
-    ["TerrainDetail"]="RS_pixelerror"
-    ["MipMapping"]="RS_mipping"
-    ["ShaderType"]="RS_light"
-    ["RenderDistance"]="RS_terraindist"
-    ["TextureQuality"]="RS_texture_quality"
-    ["VSync"]="RS_vsync"
-    ["BilinearFiltering"]="RS_bilear"
-    ["GuidedMissileView"]="MissileView"
-    ["MusicVolume"]="MUS_mastervol"
-    ["MirrorSurfaces"]="MirrorSurfaces"
-    ["MineAutoleveling"]="RoomLeveling"
-    ["SoundQuality"]="SoundQuality"
-    ["SoundQuantity"]="SoundQuantity"
-    ["SoundVolume"]="SND_mastervol"
-    ["SpecularMapping"]="Specmapping"
-    ["TerrainAutoleveling"]="TerrLeveling"
-    ["PXOLogin"]="TrackerLogin"
-    ["PXOPassword"]="TrackerPassword"
-    ["DirectIP"]="DirectIP"
-)
+# Define key mapping using simple space-separated strings
+key_mapping_keys="ProceduralTextures Fog LightCoronas WeaponCoronas ObjectComplexity PowerupHalos ScorchMarks DynamicLighting ForceFeedback SimpleHeadlight Gamma TerrainDetail MipMapping ShaderType RenderDistance TextureQuality VSync BilinearFiltering GuidedMissileView MusicVolume MirrorSurfaces MineAutoleveling SoundQuality SoundQuantity SoundVolume SpecularMapping TerrainAutoleveling PXOLogin PXOPassword DirectIP"
+key_mapping_values="DetailProcedurals DetailFog DetailCoronas DetailWeaponCoronas DetailObjectComp DetailPowerupHalos DetailScorchMarks Dynamic_Lighting EnableJoystickFF FastHeadlight RS_gamma RS_pixelerror RS_mipping RS_light RS_terraindist RS_texture_quality RS_vsync RS_bilear MissileView MUS_mastervol MirrorSurfaces RoomLeveling SoundQuality SoundQuantity SND_mastervol Specmapping TerrLeveling TrackerLogin TrackerPassword DirectIP"
 
-key_types=(
-    ["RS_gamma"]="string"
-    ["RS_terraindist"]="string"
-    ["Dynamic_Lighting"]="dword"
-    ["RS_vsync"]="dword"
-    ["RS_bilear"]="dword"
-    ["RS_mipping"]="dword"
-    ["RS_light"]="dword"
-    ["RS_texture_quality"]="dword"
-    ["SND_mastervol"]="string"
-    ["MUS_mastervol"]="string"
-    ["EnableJoystickFF"]="dword"
-    ["SoundQuality"]="dword"
-    ["SoundQuantity"]="dword"
-    ["DetailObjectComp"]="dword"
-    ["RS_pixelerror"]="string"
-    ["TerrLeveling"]="dword"
-    ["RoomLeveling"]="dword"
-    ["DetailScorchMarks"]="dword"
-    ["DetailFog"]="dword"
-    ["DetailCoronas"]="dword"
-    ["DetailWeaponCoronas"]="dword"
-    ["DetailProcedurals"]="dword"
-    ["DetailPowerupHalos"]="dword"
-    ["Specmapping"]="dword"
-    ["MirrorSurfaces"]="dword"
-    ["FastHeadlight"]="dword"
-    ["MissileView"]="dword"
-    ["TrackerLogin"]="string"
-    ["TrackerPassword"]="string"
-    ["DirectIP"]="string"
-)
+# Define key types using simple space-separated strings
+key_types_keys="RS_gamma RS_terraindist Dynamic_Lighting RS_vsync RS_bilear RS_mipping RS_light RS_texture_quality SND_mastervol MUS_mastervol EnableJoystickFF SoundQuality SoundQuantity DetailObjectComp RS_pixelerror TerrLeveling RoomLeveling DetailScorchMarks DetailFog DetailCoronas DetailWeaponCoronas DetailProcedurals DetailPowerupHalos Specmapping MirrorSurfaces FastHeadlight MissileView TrackerLogin TrackerPassword DirectIP"
+key_types_values="string string dword dword dword dword dword dword string string dword dword dword string dword dword dword dword dword dword dword dword dword dword dword dword string string string"
+
+# Function to get value from key mapping
+get_value_from_key() {
+  local key="$1"
+  local keys="$2"
+  local values="$3"
+  local i=1
+
+  for k in $keys; do
+    if [ "$k" = "$key" ]; then
+      echo $values | cut -d' ' -f$i
+      return
+    fi
+    i=$((i + 1))
+  done
+}
 
 # Function to update the .Descent3Registry file based on user-friendly ini values
 parse_ini() {
-  local key=$1
-  local value=$2
-  local type=$3
-  local file=$4
+  local key="$1"
+  local value="$2"
+  local type="$3"
+  local file="$4"
   local entry
 
-  if [[ "$type" == "dword" ]]; then
-    if [[ "$value" =~ ^[0-9]+$ ]]; then
+  if [ "$type" = "dword" ]; then
+    if echo "$value" | grep -qE '^[0-9]+$'; then
       value=$(printf "%X" "$value")
-    elif [[ "$value" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    elif echo "$value" | grep -qE '^[0-9]+\.[0-9]+$'; then
       value=$(printf "%X" "${value%.*}")
     fi
     entry="\"$key\"=dword:$value"
-  elif [[ "$type" == "string" ]]; then
+  elif [ "$type" = "string" ]; then
     value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
     entry="\"$key\"=\"$value\""  # Treat value as a string, wrap in double quotes
   else
@@ -100,10 +58,11 @@ parse_ini() {
 while IFS='=' read -r key value_comment; do
   key=$(echo "$key" | sed 's/^[ \t]*//;s/[ \t]*$//')  # Trim spaces
   value=$(echo "$value_comment" | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/;.*$//' | tr -d '\r')
-  [[ -z "$key" || "$key" =~ ^\[ ]] && continue
-  registry_key=${key_mapping[$key]}
-  if [[ -n "$registry_key" ]]; then
-    registry_type=${key_types[$registry_key]}
+  [ -z "$key" ] || echo "$key" | grep -qE '^\[' && continue
+  
+  registry_key=$(get_value_from_key "$key" "$key_mapping_keys" "$key_mapping_values")
+  if [ -n "$registry_key" ]; then
+    registry_type=$(get_value_from_key "$registry_key" "$key_types_keys" "$key_types_values")
     parse_ini "$registry_key" "$value" "$registry_type" "$REGFILE"
   else
     echo "No mapping found for key: $key"
