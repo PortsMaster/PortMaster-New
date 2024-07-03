@@ -49,31 +49,31 @@ You can use the `D-PAD` buttons in menus to select items and scroll pages.
 
 | Button | Action |
 |--|--| 
-|A|Primary Fire|
+|A|Rear View|
 |B|Use Inventory Item|
-|X|Secondary Fire|
+|X|Toggle Headlight|
 |Y|Fire Flare|
-|L1|Reverse|
-|R1|Scroll Menu Options / Accelerate|
+|L1|Fire Secondary Weapon|
+|R1|Fire Primary Weapon|
 |L2|Scroll Primary Weapon|
 |R2|Scroll Secondary Weapon|
-|L3|Options Menu|
+|L3|Afterburner|
 |R3|Unassigned|
 |D-PAD UP|Look Up|
 |D-PAD DOWN|Look Down|
 |D-PAD LEFT|Turn Left|
 |D-PAD RIGHT|Turn Right|
-|LEFT ANALOG|Look Around|
-|RIGHT ANALOG|Slide Up/Down & Bank Left/Right|
+|LEFT ANALOG|Accelerate/Reverse & Slide Left/Right|
+|RIGHT ANALOG|Look Around|
 |START|Start / Accept / Enter|
 |SELECT|Back / Escape|
 |SELECT + Y|Previous Inventory Item|
 |SELECT + A|Next Inventory Item|
 |SELECT + B|Guidebot Menu|
-|SELECT + X|Use Afterburner|
+|SELECT + X|Cycle Left Window|
 |SELECT + L1|Open Telcom (Briefing and Objectives)|
-|SELECT + L2|Load Game|
 |SELECT + R1|View Ship Log|
+|SELECT + L2|Load Game|
 |SELECT + R2|Save Game|
 
 ## Thanks
