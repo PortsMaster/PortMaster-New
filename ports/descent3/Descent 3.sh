@@ -22,14 +22,20 @@ DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 INIFILE="$GAMEDIR/d3.ini"
 REGFILE="$GAMEDIR/config/.Descent3Registry"
 DEBUGMODE=0
-declare -A key_mapping
-declare -A key_types
+
+
+# Use positional parameters for key mapping
+key_mapping_keys=""
+key_mapping_values=""
+key_types_keys=""
+key_types_values=""
 
 cd $GAMEDIR
 
 # Setup permissions
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
+$ESUDO chmod 777 "$GAMEDIR/game"
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 
 # Create config dir
