@@ -24,7 +24,7 @@ GAMEDIR=/$directory/ports/sonic2sms
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/saves/"
 export GMLOADER_PLATFORM="os_android"
