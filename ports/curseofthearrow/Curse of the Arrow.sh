@@ -29,7 +29,6 @@ cd $GAMEDIR
 
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
-
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
