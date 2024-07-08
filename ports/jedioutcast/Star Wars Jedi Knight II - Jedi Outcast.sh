@@ -44,8 +44,6 @@ fi
 export LD_LIBRARY_PATH=$GAMEDIR/libs:$LD_LIBRARY_PATH
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-source /etc/profile
-
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
   APP_TO_KILL="."
