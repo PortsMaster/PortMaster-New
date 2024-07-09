@@ -17,7 +17,7 @@ source $controlfolder/device_info.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/to_the_moon
+GAMEDIR="/$directory/ports/to_the_moon"
 CONFDIR="$GAMEDIR/conf/"
 
 CUR_TTY=/dev/tty0
@@ -53,12 +53,26 @@ if [ -f ""$WOG_FILE"" ]; then
 	rm -f "$WOG_FILE"
     echo "Setup complete. Have fun playing!" > "$CUR_TTY"
 fi
-[ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ gamedata/lib gamedata/lib64
-[ -f falcon_mkxp.bin ] && mv falcon_mkxp.bin gamedata/falcon_mkxp.bin
-cp conf/mkxp.conf gamedata/
+
+# Run minilauncher
+chmod +x ./love
+$GPTOKEYB "love" &
+./love minilauncher
+FOLDER=$(<selected_game.txt)
+
+# Cleanup minilauncher
+$ESUDO kill -9 $(pidof gptokeyb)
+$ESUDO systemctl restart oga_events &
+printf "\033c" > /dev/tty0
+
+
+[ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ $FOLDER/lib gamedata/lib64
+[ -f falcon_mkxp.bin ] && cp falcon_mkxp.bin "$FOLDER/falcon_mkxp.bin"
+cp conf/mkxp.conf $FOLDER/
 
 $GPTOKEYB "falcon_mkxp.bin" -c "./to_the_moon.gptk" &
-$GAMEDIR/gamedata/falcon_mkxp.bin
+$GAMEDIR/$FOLDER/falcon_mkxp.bin
+$ESUDO rm -f selected_game.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
