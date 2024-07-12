@@ -19,7 +19,7 @@ export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="/$directory/ports/malditacastilla"
+GAMEDIR="/$directory/ports/maldita.castilla"
 cd $GAMEDIR
 
 # Exports
