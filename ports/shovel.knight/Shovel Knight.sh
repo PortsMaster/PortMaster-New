@@ -70,7 +70,7 @@ $ESUDO ln -s $GAMEDIR/Yacht\ Club\ Games ~/.local/share/
 $ESUDO chmod 666 /dev/uinput
 
 chmod +x ShovelKnight $GAMEDIR/box86/box86
-$GPTOKEYB "box86" -c "$GAMEDIR/shovelknight.gptk" &
+$GPTOKEYB "ShovelKnight" -c "$GAMEDIR/shovelknight.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $TASKSET $GAMEDIR/box86/box86 ShovelKnight
 
