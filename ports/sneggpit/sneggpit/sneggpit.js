@@ -531,7 +531,7 @@ function ScreenGame(numPlayers, usePointerInput) {
 
 		var dir = -1;
 		if(evt.type==='axis' && evt.index<players.length && state==='running') {
-			if(evt.axis===0 || evt.axis===4) {
+			if(evt.axis===0 || evt.axis===2) {
 				if(evt.value>0.9) {
 					dir = 1;
 					axisState[evt.index][0] = 1.0;
@@ -546,7 +546,7 @@ function ScreenGame(numPlayers, usePointerInput) {
 						dir = (axisState[evt.index][1]==1.0) ? 2 : 0;
 				}
 			}
-			else if(evt.axis===1 || evt.axis===5) {
+			else if(evt.axis===1 || evt.axis===3) {
 				if(evt.value>0.9) {
 					dir = 2;
 					axisState[evt.index][1] = 1.0;
