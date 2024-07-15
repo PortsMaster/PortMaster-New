@@ -44,4 +44,12 @@ I also have to say a big thank you to my fellow testers:
 |R2|N (no)|
 |L3|toggle music on/off|
 
+## Compile
+
+````
+git clone https://github.com/cdeletre/frozen-bubble-aarch64.git
+cd frozen-bubble-aarch64
+docker build --platform=linux/arm64 -t frozen-bubble-aarch64 .
+docker run --rm -v ${PWD}:/frozen-bubble frozen-bubble-aarch64 /frozen-bubble/build.sh
+```
 

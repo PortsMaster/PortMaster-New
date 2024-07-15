@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: render96ex.zip, render96ex.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
