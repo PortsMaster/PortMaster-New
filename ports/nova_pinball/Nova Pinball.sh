@@ -18,6 +18,8 @@ source $controlfolder/device_info.txt
 get_controls
 
 GAMEDIR=/$directory/ports/nova_pinball
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 if [ "$DEVICE_NAME" = "RGB30" ]; then
@@ -25,9 +27,13 @@ if [ "$DEVICE_NAME" = "RGB30" ]; then
   sed -i 's/t.window.height = [0-9]*/t.window.height = '"$DISPLAY_HEIGHT"'/' game/conf.lua
 fi
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "love" -c "./game.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" ./love game 2>&1 | tee -a ./log.txt
+./love game
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

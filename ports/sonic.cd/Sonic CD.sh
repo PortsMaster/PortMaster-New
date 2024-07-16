@@ -28,7 +28,7 @@ fi
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
-  export LD_LIBRARY_PATH="$GAMEDIR/libs"
+  export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 else
   export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:/usr/lib32"
 fi

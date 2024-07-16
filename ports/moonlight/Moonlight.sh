@@ -129,7 +129,7 @@ Steam() {
         fi
         printf "\033c" > /dev/tty0
 
-        export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib"
+        export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:$LD_LIBRARY_PATH"
         #$GAMEDIR/moonlight stream -fps $fps $res --unsupported --nosops -mapping $GAMEDIR/gamecontrollerdb.txt -app $app -platform $platform $ip > /dev/tty0
         cd $GAMEDIR/quit
         $ESUDO $controlfolder/oga_controls moonlight $param_device &

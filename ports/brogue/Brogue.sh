@@ -31,7 +31,7 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "brogue" -c "./brogue.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" 
+LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" 
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" 
 ./brogue 2>&1 | tee $GAMEDIR/log.txt
 

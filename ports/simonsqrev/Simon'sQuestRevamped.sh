@@ -25,7 +25,7 @@ printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/simons_quest_revamped"
 
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/simons_quest_revamped/lib"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/simons_quest_revamped/lib:$LD_LIBRARY_PATH"
 
 cd "$GAMEDIR"
 

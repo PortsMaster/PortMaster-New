@@ -32,7 +32,7 @@ else
 fi
 
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
-export LD_LIBRARY_PATH="$PWD/libs"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [[ "$(cat /sys/firmware/devicetree/base/model | tr -d '\0')" == "Anbernic RG552" ]]; then

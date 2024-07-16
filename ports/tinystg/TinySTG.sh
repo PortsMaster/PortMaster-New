@@ -20,7 +20,7 @@ GAMEDIR=/$directory/ports/tinystg
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

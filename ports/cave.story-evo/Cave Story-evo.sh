@@ -50,9 +50,12 @@ $ESUDO rm -rf ~/.local/share/nxengine
 $ESUDO ln -s $GAMEDIR/conf/nxengine ~/.local/share/
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "nxengine-evo" -c nxengine-evo.gptk &
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./nxengine-evo
+./nxengine-evo
 
 $ESUDO kill -9 $(pidof gptokeyb) & 
 printf "\033c" >> /dev/tty1

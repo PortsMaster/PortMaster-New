@@ -22,7 +22,7 @@ GAMEDIR="/$directory/ports/skijump3"
 
 cd $GAMEDIR
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/tty1

@@ -31,7 +31,7 @@ else
   sheight="480"
 fi
 
-export LD_LIBRARY_PATH="$PWD/libs"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
