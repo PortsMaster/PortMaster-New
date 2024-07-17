@@ -62,6 +62,12 @@ then
   fi
 fi
 
+# Install a default sm64conf.txt
+if [ ! -f $CONFDIR/sm64config.txt ]
+then
+  cp sm64config.default.txt $CONFDIR/sm64config.txt 2>&1
+fi
+
 # Check if mandatory ressources are installed before launching the game
 if [ ! -f $GAMEDIR/$RES_DIR/$BASEZIP ] || [ ! -d $GAMEDIR/$RES_DIR/$DEMOS_DIR ] || [ ! -d $GAMEDIR/$RES_DIR/$TEXTS_DIR ]
 then
