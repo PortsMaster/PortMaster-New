@@ -6,7 +6,7 @@ Kanon HD does _not_ work!
 ## Notes
 Kanon has an [English Patch](https://www.gamepressure.com/download.asp?ID=77952) that can be applied to the [Standard](https://vndb.org/r274) or [All Ages](https://vndb.org/r275) editions.
 
-This port is marked experimental because we can't save and load games due to the inability to display the right-click context menu.
+The save and load menu is currently broken on widescreen devices.
 
 ## Default Gameplay Controls
 | Button | Action |

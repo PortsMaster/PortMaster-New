@@ -4,7 +4,7 @@ You need a copy of [Air Standard Edition](https://vndb.org/r87). Install the `rl
 ## Notes
 Air Standard Edition has an [English Patch](https://winter-confetti.blogspot.com/2014/04/air-standard-edition-2005-english-patch.html). Other versions and patches are untested. 
 
-This port is marked experimental because we can't save and load games due to the inability to display the right-click context menu.
+The save and load menu is currently broken on widescreen devices.
 
 ## Default Gameplay Controls
 | Button | Action |
