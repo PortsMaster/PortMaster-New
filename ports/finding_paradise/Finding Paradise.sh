@@ -35,7 +35,7 @@ export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$GAMEDATA"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 # Extract and organize game files if the installer exists
 

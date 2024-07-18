@@ -17,13 +17,18 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/hawkthorne
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 export LOVE_GRAPHICS_USE_OPENGLES=1
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "love" &
-LD_LIBRARY_PATH="$PWD/libs" ./love hawkthorne.love 2>&1 | tee -a ./log.txt
+./love hawkthorne.love
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

@@ -17,6 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/infra_arcana/
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 CONFDIR="$GAMEDIR/conf/"
 
 # Ensure the conf directory exists
@@ -25,15 +26,15 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "ia" -c "./infra_arcana.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" 
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" 
-./ia 2>&1 | tee $GAMEDIR/log.txt
+./ia
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

@@ -19,11 +19,16 @@ get_controls
 $ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/sonicmania"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+
 $GPTOKEYB "RSDKv5" &
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./RSDKv5 2>&1 | tee $GAMEDIR/log.txt
+./RSDKv5
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
-

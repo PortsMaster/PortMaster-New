@@ -17,11 +17,18 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/wetspot2
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "wetspot2" -c "./wetspot2.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./wetspot2 -n 2>&1 | tee -a ./log.txt
+./wetspot2
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

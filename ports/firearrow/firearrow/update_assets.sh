@@ -16,7 +16,7 @@ done
 # On other supported platforms you're sudo by default so eh
 # Unzip and Structure files
 $ESUDO utils/unzip "firearrowrapper.apk" -d firearrowpatch/ 
-export LD_LIBRARY_PATH=$(pwd)/utils/lib 
+export LD_LIBRARY_PATH=$(pwd)/utils/lib::$LD_LIBRARY_PATH
 
 # Create final archive
 cd firearrowpatch

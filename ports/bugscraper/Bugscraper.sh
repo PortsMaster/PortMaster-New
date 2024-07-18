@@ -19,6 +19,8 @@ get_controls
 GAMEDIR=/$directory/ports/bugscraper/
 CONFDIR="$GAMEDIR/conf/"
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
@@ -28,10 +30,13 @@ export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "love" -c "./bugscraper.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./love gamedata 2>&1 | tee $GAMEDIR/log.txt
+./love gamedata
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

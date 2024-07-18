@@ -25,7 +25,7 @@ GAMEDIR=/$directory/ports/openxcom
 
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
-export LD_LIBRARY_PATH="$PWD/libs"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 cd $GAMEDIR
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"

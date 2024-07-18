@@ -17,14 +17,21 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/gigalomania
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO rm -rf ~/.config/gigalomania/
 ln -sfv /$directory/ports/gigalomania/conf/ ~/.config/gigalomania
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "gigalomania" -c "./gigalomania.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./gigalomania 2>&1 | tee -a ./log.txt
+./gigalomania
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

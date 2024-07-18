@@ -35,7 +35,7 @@ export GMLOADER_PLATFORM="os_windows" \
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/Hydorah/lib"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/Hydorah/lib:$LD_LIBRARY_PATH"
 
 
 if [ ! -f flagfile ]; then

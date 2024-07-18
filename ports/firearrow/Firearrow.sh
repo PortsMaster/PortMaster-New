@@ -13,9 +13,11 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
+source $controlfolder/device_info.txt
 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+export PORT_32BIT="Y"
 
 get_controls
 
@@ -25,11 +27,9 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/firearrow"
-
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/firearrow/lib"
  
 cd "$GAMEDIR"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ ! -f flagfile ]; then
 
@@ -40,12 +40,7 @@ fi
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/firearrow/lib"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/firearrow/lib:$LD_LIBRARY_PATH"
 
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid

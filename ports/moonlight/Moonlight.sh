@@ -129,7 +129,7 @@ Steam() {
         fi
         printf "\033c" > /dev/tty0
 
-        export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib"
+        export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:$LD_LIBRARY_PATH"
         #$GAMEDIR/moonlight stream -fps $fps $res --unsupported --nosops -mapping $GAMEDIR/gamecontrollerdb.txt -app $app -platform $platform $ip > /dev/tty0
         cd $GAMEDIR/quit
         $ESUDO $controlfolder/oga_controls moonlight $param_device &
@@ -268,7 +268,7 @@ fi
   if [ -f "/opt/system/Advanced/Switch to main SD for Roms.sh" ] || [ -f "/opt/system/Advanced/Switch to SD2 for Roms.sh" ]; then
     $ESUDO setfont /usr/share/consolefonts/Lat7-Terminus20x10.psf.gz
   fi
-  export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib"
+  export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:$LD_LIBRARY_PATH"
   $GAMEDIR/moonlight pair "$IP" > /dev/tty0
   if [ "$?" == "0" ]; then
     settings[0]="$IP"

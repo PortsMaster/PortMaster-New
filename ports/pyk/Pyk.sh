@@ -35,7 +35,7 @@ if [ -f "/$GAMEDIR/gamedata/pyk-patched.pck" ]; then
 # ... or patched .pck if not found
 elif [ -f "/$GAMEDIR/gamedata/pyk.pck" ]; then
   echo "patching pyk.pck"
-  export LD_LIBRARY_PATH=/$GAMEDIR/lib
+  export LD_LIBRARY_PATH=/$GAMEDIR/lib:$LD_LIBRARY_PATH
   cd /$GAMEDIR/gamedata/
   $SUDO $controlfolder/xdelta3 -d -s "pyk.pck" "pyk.xdelta" "pyk-patched.pck"
 fi
@@ -63,10 +63,11 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./pyk.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/pyk-patched.pck"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/pyk-patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

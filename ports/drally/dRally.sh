@@ -51,8 +51,6 @@ $GPTOKEYB "drally_linux" -c drally.gptk textinput &
 $TASKSET ./drally_linux 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

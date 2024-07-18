@@ -29,13 +29,9 @@ mkdir -p "$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
-if [ -f "/etc/os-release" ]; then
-  source "/etc/os-release"
-fi 
-
 cd $GAMEDIR
 
-export LD_LIBRARY_PATH=/$GAMEDIR/lib
+export LD_LIBRARY_PATH=/$GAMEDIR/lib:$LD_LIBRARY_PATH
 
 if [ -e "SpookyGhostsDotCom-Steam" ]; then
   $ESUDO $controlfolder/xdelta3 -d -s "SpookyGhostsDotCom-Steam" "SpookyConvertSteam.xdelta" "SpookyGhostsDotCom" && $ESUDO ./xdelta3 -d -s "SpookyGhostsDotCom" "Spooky.xdelta" "data.pck"

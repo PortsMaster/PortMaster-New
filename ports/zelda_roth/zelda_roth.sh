@@ -46,7 +46,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 ## RUN SCRIPT HERE
 
 echo "Starting game." > $CUR_TTY
