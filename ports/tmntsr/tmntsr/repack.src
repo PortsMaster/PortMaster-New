@@ -9,23 +9,10 @@ LEADER_PID=$$
 # Prefer the system utilities...
 export PATH="${PATH}:${SCRIPT_PATH}/utils"
 
-SWPFILE=~/.tmntswap
-
 if ! command -v mono &> /dev/null
 then
     msgbox "Error." $'The Mono Runtime could not be located.\nPlease install Mono and try again.'
     exit 1
-fi
-
-# Ask questions first...
-if [[ ! -f "${gamedir}/gamedata/.patch_done" ]]; then
-	confirm $'Precompile Game Code?' $'Pre-compile the game code for this device?\nPatching will take longer.'
-	COMPILE=$RESULT
-fi
-
-if [[ ! -f "${gamedir}/gamedata/.astc_done" ]]; then
-	confirm $'Use High Quality Compression?' $'Does not affect performance or load time.\nCompression will take longer.'
-	HQ_COMPRESSION=$RESULT
 fi
 
 if [[ ! -f "${gamedir}/gamedata/.intro_done" ]]; then
@@ -37,10 +24,6 @@ trap "sig_usr31_trap" SIGUSR1
 sig_usr31_trap() {
 	# Abort everything.
 	kill_recursive $$
-	if [ -f $SWPFILE ]; then
-		$ESUDO swapoff ${SWPFILE}
-		$ESUDO rm ${SWPFILE}
-	fi
 	
 	msgbox "Error." $'Fatal error performing first time setup.\nGame files left in a possibly broken state.'
 	exit 1
@@ -64,14 +47,12 @@ patch() {
 			mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/ParisEngine.dll"
 			mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/${gameassembly}"
 
-			if [[ ${COMPILE} == 1 ]]; then
-				mono --ffast-math -O=all --aot=llvm "${gamedir}/gamedata/MONOMODDED_ParisEngine.dll"
-				mono --ffast-math -O=all --aot=llvm "${gamedir}/gamedata/MONOMODDED_${gameassembly}"
-				
-				# Move the precompiled bins so that Mono will find them
-				mv "${gamedir}/gamedata/MONOMODDED_ParisEngine.dll.so" "${gamedir}/gamedata/ParisEngine.dll.so"
-				mv "${gamedir}/gamedata/MONOMODDED_${gameassembly}.so" "${gamedir}/gamedata/${gameassembly}.so"
-			fi
+			mono --ffast-math -O=all --aot "${gamedir}/gamedata/MONOMODDED_ParisEngine.dll"
+			mono --ffast-math -O=all --aot "${gamedir}/gamedata/MONOMODDED_${gameassembly}"
+			
+			# Move the precompiled bins so that Mono will find them
+			mv "${gamedir}/gamedata/MONOMODDED_ParisEngine.dll.so" "${gamedir}/gamedata/ParisEngine.dll.so"
+			mv "${gamedir}/gamedata/MONOMODDED_${gameassembly}.so" "${gamedir}/gamedata/${gameassembly}.so"
 		)
 
 		ERR=$?
@@ -97,10 +78,7 @@ patch() {
 # and the time it takes to perform recompression, not performance.
 astc() {
 	if [[ ! -f "${gamedir}/gamedata/.astc_done" ]]; then
-		export ASTC_QUALITY=10.0
-		if [[ "${HQ_COMPRESSION}" == 1 ]]; then
-			export ASTC_QUALITY=60.0
-		fi
+		export ASTC_QUALITY=60.0
 
 		mono "${gamedir}/FNARepacker.exe" "${gamedir}/gamedata/Content/"
 		if [[ $? != 0 ]]; then
@@ -136,25 +114,6 @@ intro() {
 	fi
 }
 
-# Create swap for compile step...
-if [[ ${COMPILE} == 1 ]]; then
-	if [ -f $SWPFILE ]; then
-		$ESUDO swapoff ${SWPFILE}
-		$ESUDO rm ${SWPFILE}
-	fi
-
-	# This step might fail on 1GB devices, add swap if that's the case...
-	mem_total=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
-	if [[ $mem_total -lt 1816820 ]]; then
-		echo "First Time Setup: Creating swap file..."
-
-		$ESUDO dd if=/dev/zero of=${SWPFILE} bs=1M count=512
-		$ESUDO chmod 600 ${SWPFILE}
-		$ESUDO mkswap ${SWPFILE}
-		$ESUDO swapon ${SWPFILE}
-	fi
-fi
-
 # Perform some of the tasks in parallel by detaching the subshells
 # To avoid too much resource pressure, we're only encoding the intro once
 # the patching process has finished.
@@ -165,11 +124,5 @@ wait $pid_patch; (intro) & pid_intro=$! # Transcode game intro
 
 # Wait for all processes to finish.
 wait
-
-# Created swap? now delete it.
-if [ -f $SWPFILE ]; then
-	$ESUDO swapoff ${SWPFILE}
-	$ESUDO rm ${SWPFILE}
-fi
 
 exit 0

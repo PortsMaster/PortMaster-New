@@ -46,7 +46,7 @@ I also have to say a big thank you to my fellow testers:
 
 ## Compile
 
-````
+```
 git clone https://github.com/cdeletre/frozen-bubble-aarch64.git
 cd frozen-bubble-aarch64
 docker build --platform=linux/arm64 -t frozen-bubble-aarch64 .
