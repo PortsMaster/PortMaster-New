@@ -39,6 +39,8 @@ The 60 fps feature is enabled by default. If your device can not handle it and t
 
 You may need to adjust your gamepad configuration in the option menu depending on your CFW and the handheld model.
 
+If you have updated the port and still have control issues with D-PAD only handheld (weird shoulder button ghost inputs for exemple) try to reset the configuration, see here below **How to reset configuration**. 
+
 ## Menus
 
 The option menu can be accessed during the game by pressing **Start** then **R1** (this is R on N64 gamepad).
@@ -71,9 +73,13 @@ If you did something wrong in the dynos configuration (dynos menu) and the game 
 
 ## Compile
 
+```
 git clone -b tester_rt64alpha https://github.com/cdeletre/Render96ex.git
 docker build --platform=linux/arm64 -t render96ex-aarch64 .
 docker run --rm -v ${PWD}:/render96 render96ex-aarch64 make NOEXTRACT=1 USE_GLES=1 -j4
 mv build/us_pc/sm64.us.f3dex2e sm64.us.f3dex2e.aarch64
+```
+
+For more details see [README.md](https://github.com/cdeletre/Render96ex/tree/tester_rt64alpha)
 
 If you need to tune the content of `restool.zip` it is available here https://github.com/cdeletre/R96ex-restool
