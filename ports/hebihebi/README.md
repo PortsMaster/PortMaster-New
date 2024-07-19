@@ -8,9 +8,9 @@ All files included and ready to run. Thanks to [Taylor Ritenour]( https://taylor
 | Button  | Action                     |
 | ------- | -------------------------- |
 | D-PAD   | Direction/movement         |
-| A/START | Enter/proceed              |
-| B       | Undo                       |
-| X       | Navigate back through menu |
+| START   | Enter/proceed              |
+| A/B     | Undo                       |
+| X/Y     | Navigate back through menu |
 | R1      | Pause                      |
 
 
