@@ -26,6 +26,7 @@ rlvm_file="$controlfolder/libs/${runtime}.squashfs"
 font="--font $rlvm_dir/fonts/msgothic.ttc"
 
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -55,7 +56,9 @@ rm -rf "$HOME/.rlvm/KEY_planetarian_ME"
 ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_planetarian_ME"
 
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
-export SDL_VIDEO_GL_DRIVER="$rlvm_dir/libs/libGL.so.1"
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+fi
 
 # Setup controls
 $ESUDO chmod 666 /dev/tty0
