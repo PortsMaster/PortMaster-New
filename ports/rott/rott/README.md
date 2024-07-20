@@ -24,15 +24,12 @@ New gameplay options:
 
 And all of the improvements made in the icculus source port...
 
-To run the game you'll need the following things:
-
-`SDL2.dll` (https://www.libsdl.org/download-2.0.php)
-
-`SDL2_mixer.dll` (https://www.libsdl.org/projects/SDL_mixer/)
-
-And the files:
+To run the game you'll need the following things files:
 
 ```
+HUNTBGIN.RTC
+HUNTBGIN.RTL
+HUNTBGIN.WAD
 DEMO1_3.DMO
 DEMO2_3.DMO
 DEMO3_3.DMO
@@ -40,20 +37,12 @@ DEMO4_3.DMO
 REMOTE1.RTS
 ```
 
-And
+And for the registered version:
 
 ```
 DARKWAR.RTC
 DARKWAR.RTL
 DARKWAR.WAD
-```
-
-Or
-
-```
-HUNTBGIN.RTC
-HUNTBGIN.RTL
-HUNTBGIN.WAD
 ```
 
 Place all those files in the same directory as `rott.exe`.
