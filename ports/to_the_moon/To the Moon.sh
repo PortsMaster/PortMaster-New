@@ -68,7 +68,11 @@ printf "\033c" > /dev/tty0
 
 [ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ $FOLDER/lib gamedata/lib64
 [ -f falcon_mkxp.bin ] && cp falcon_mkxp.bin "$FOLDER/falcon_mkxp.bin"
-cp conf/mkxp.conf $FOLDER/
+if [ $FOLDER == "minisode2" ]; then
+  cp conf/mkxp2.conf "$FOLDER/mkxp.conf"
+else
+  cp conf/mkxp.conf $FOLDER/
+fi
 
 $GPTOKEYB "falcon_mkxp.bin" -c "./to_the_moon.gptk" &
 $GAMEDIR/$FOLDER/falcon_mkxp.bin
