@@ -73,8 +73,6 @@ $GPTOKEYB "augustus.${DEVICE_ARCH}" -c augustus.gptk &
 ./augustus.${DEVICE_ARCH} data/
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

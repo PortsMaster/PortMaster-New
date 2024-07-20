@@ -35,7 +35,7 @@ cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="${GAMEDIR}/libs.${DEVICE_ARCH}:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${GAMEDIR}/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export PATH="${GAMEDIR}/bin.${DEVICE_ARCH}:${PATH}"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
@@ -60,6 +60,12 @@ then
     cd ../
     rm -rf ${RESTOOL_DIR}
   fi
+fi
+
+# Install a default sm64conf.txt
+if [ ! -f $CONFDIR/sm64config.txt ]
+then
+  cp sm64config.default.txt $CONFDIR/sm64config.txt 2>&1
 fi
 
 # Check if mandatory ressources are installed before launching the game

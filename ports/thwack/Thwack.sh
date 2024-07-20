@@ -31,7 +31,7 @@ if [ -f "/$GAMEDIR/gamedata/Thwack-patched.pck" ]; then
 # ... or patch full game if unpatched full version found
 elif [ -f "/$GAMEDIR/gamedata/Thwack.pck" ]; then
   echo "patching Thwack.pck"
-  export LD_LIBRARY_PATH=/$GAMEDIR/lib
+  export LD_LIBRARY_PATH=/$GAMEDIR/lib:$LD_LIBRARY_PATH
   cd /$GAMEDIR/gamedata/
   $SUDO $controlfolder/xdelta3 -d -s "Thwack.pck" "Thwack.xdelta" "Thwack-patched.pck"
   THWACKPCK="Thwack-patched.pck"
@@ -67,10 +67,12 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "$runtime" -c "./thwack.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/$THWACKPCK"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/$THWACKPCK"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

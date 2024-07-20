@@ -108,7 +108,7 @@ fi
 chmod +x "$GAMEDIR/box86/box86"
 chmod +x "$GAMEDIR/gamedata/bin32/Chowdren"
 
-$GPTOKEYB "box86" -c "$GAMEDIR/iconoclasts.gptk" &
+$GPTOKEYB "Chowdren" -c "$GAMEDIR/iconoclasts.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $GAMEDIR/box86/box86 bin32/Chowdren 2>&1 | tee $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)

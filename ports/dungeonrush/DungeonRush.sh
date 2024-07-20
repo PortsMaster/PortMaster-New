@@ -17,15 +17,16 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR="/$directory/ports/dungeonrush"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+
 $GPTOKEYB "dungeon_rush" -c dungeon_rush.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./dungeon_rush data/ 2>&1 | $ESUDO tee -a ./log.txt
+./dungeon_rush data/
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

@@ -12,11 +12,6 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
-
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
@@ -24,6 +19,8 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/zgloom"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
@@ -35,14 +32,14 @@ printf "\033c" > $CUR_TTY
 
 ## RUN SCRIPT HERE
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "zgloom" -c zgloom.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./zgloom 2>&1 | $ESUDO tee -a ./log.txt
+./zgloom
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

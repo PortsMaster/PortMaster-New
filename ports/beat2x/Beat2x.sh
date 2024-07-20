@@ -40,7 +40,7 @@ echo "Starting game." > $CUR_TTY
 export PORTMASTER_HOME="$GAMEDIR"
 
 $GPTOKEYB "beat2x" -c beat2x.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./beat2x 2>&1 | $ESUDO tee -a ./log.txt
+LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH" $TASKSET ./beat2x 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH

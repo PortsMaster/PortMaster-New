@@ -28,7 +28,7 @@ if [ -f "/$GAMEDIR/gamedata/Luck be a Landlord-patched.pck" ]; then
 # ... or patch full game if unpatched full version found
 elif [ -f "/$GAMEDIR/gamedata/Luck be a Landlord.pck" ]; then
   echo "patching Luck be a Landlord.pck"
-  export LD_LIBRARY_PATH=/$GAMEDIR/lib
+  export LD_LIBRARY_PATH=/$GAMEDIR/lib:$LD_LIBRARY_PATH
   cd /$GAMEDIR/gamedata/
   $SUDO $controlfolder/xdelta3 -d -s "Luck be a Landlord.pck" "Luck be a Landlord.xdelta" "Luck be a Landlord-patched.pck"
 fi
@@ -63,10 +63,11 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./luckbealandlord.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Luck be a Landlord-patched.pck"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/Luck be a Landlord-patched.pck"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

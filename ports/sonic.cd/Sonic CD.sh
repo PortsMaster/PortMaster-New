@@ -17,6 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR="/$directory/ports/soniccd"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 666 /dev/tty1
 
@@ -28,15 +29,18 @@ fi
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
-  export LD_LIBRARY_PATH="$GAMEDIR/libs"
+  export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 else
-  export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:/usr/lib32"
+  export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:/usr/lib32:$LD_LIBRARY_PATH"
 fi
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 cd $GAMEDIR
+
 $GPTOKEYB "soniccd" -c "soniccd.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./soniccd 2>&1 | tee $GAMEDIR/log.txt
+./soniccd
+
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1

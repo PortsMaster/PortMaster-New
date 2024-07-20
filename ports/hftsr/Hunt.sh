@@ -43,7 +43,7 @@ if [ "$resolution_lower" = "640x480" ]; then
   HUNT="Hunt.pck"
 else
   echo "Resolution is in 4:3 format."
-  export LD_LIBRARY_PATH=/$GAMEDIR/lib
+  export LD_LIBRARY_PATH=/$GAMEDIR/lib:$LD_LIBRARY_PATH
   $SUDO $controlfolder/xdelta3 -d -s "Hunt.pck" "Hunt.xdelta" "Hunts.pck"
   HUNT="Hunts.pck"
   rm Hunt.pck
@@ -72,10 +72,11 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./Hunt.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "$HUNT"
+"$runtime" $GODOT_OPTS --main-pack "$HUNT"
 
 $ESUDO umount "$godot_dir"
 $ESUDO kill -9 $(pidof gptokeyb)

@@ -34,7 +34,7 @@ if [ "$OS_NAME" == "JELOS" ]; then
   export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
 fi
 
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/neogensokyo/libs"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/neogensokyo/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 

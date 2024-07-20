@@ -36,7 +36,7 @@ fi
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/neoncityriders/libs"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/neoncityriders/libs:$LD_LIBRARY_PATH"
 
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid

@@ -46,6 +46,7 @@ $ESUDO chmod 666 $CUR_TTY
 
 export TERM=linux
 printf "\033c" > $CUR_TTY
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 ## RUN SCRIPT HERE
 $ESUDO chmod -x ./zelda3t
@@ -53,7 +54,7 @@ $ESUDO chmod -x ./zelda3t
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "zelda3t" -c "zelda3t.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" ./zelda3t
+./zelda3t
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH

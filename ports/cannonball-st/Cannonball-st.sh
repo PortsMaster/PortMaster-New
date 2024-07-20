@@ -20,7 +20,7 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 GAMEDIR="/$directory/ports/Cannonball-st"
 
-export LD_LIBRARY_PATH="/$directory/ports/Cannonball-st/lib"
+export LD_LIBRARY_PATH="/$directory/ports/Cannonball-st/lib:$LD_LIBRARY_PATH"
 
 cd "$GAMEDIR"
 

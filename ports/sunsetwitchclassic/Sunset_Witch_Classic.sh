@@ -25,7 +25,7 @@ printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/sunsetwitchclassic"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
 cd $GAMEDIR
