@@ -3,8 +3,7 @@
 Thanks to the developers of Freebird Games for creating such a wonderful game.
 https://www.gog.com/en/game/to_the_moon
 
-GOG Files are compatible.
-Steam Game files may work
+Use the Linux versions. Steam and GOG files both work.
 
 ## Controls
 
