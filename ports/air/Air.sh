@@ -19,6 +19,7 @@ get_controls
 
 # Set variables
 GAMEDIR="/$directory/ports/air"
+SAVEDIR="KEY_AIR_SE KEY_AIR_ME_ALL"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 runtime="rlvm"
 rlvm_dir="$HOME/rlvm"
@@ -51,13 +52,15 @@ $ESUDO umount "$rlvm_file" || true
 $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
-# Create config dir
-rm -rf "$HOME/.rlvm/KEY_AIR_SE"
-ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_AIR_SE"
+# Create the config folders
+for SAVEDIR in "${SAVEDIR[@]}"; do
+    rm -rf "$HOME/.rlvm/$SAVEDIR"
+    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
+done
 
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then
-  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+  export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
 fi
 
 # Setup controls
