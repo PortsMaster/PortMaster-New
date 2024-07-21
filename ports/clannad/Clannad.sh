@@ -59,6 +59,7 @@ ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_CLANNAD_ENHD"
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
+  export LD_LIBRARY_PATH="$rlvm_dir/gl4es:$LD_LIBRARY_PATH"
 fi
 
 # Setup controls
