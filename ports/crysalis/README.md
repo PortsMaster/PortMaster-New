@@ -23,3 +23,7 @@ The Run Time Package and gamedata will be installed during the first launch. It 
 |Back buttons|Alt. battle inputs|
 |Start|Menu|
 |Select|Interact|
+
+## Compile instructions
+
+Nothing to build !
