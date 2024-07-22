@@ -1,6 +1,6 @@
 ## Notes
 
-All files included and ready to run. Thanks to [Taylor Ritenour]( https://taylorritenour.itch.io/hebi-hebi) for the fantastic game and permission to distribute the files.
+All files included and ready to run. Thanks to [Taylor Ritenour](https://taylorritenour.itch.io) for the fantastic game and permission to distribute the files.
 
 
 ## Controls
