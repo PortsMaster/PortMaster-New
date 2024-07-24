@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Adam Le Doux for making [bitsy](https://www.bitsy.org/).
+Thanks to Adam Le Doux for making [bitsy](https://www.bitsy.org/) and giving us the permission to distribute bitsybox with *A night train to the forest zone* and *Mossland*.
 
 If you like this game please support the author on [itch.io](https://ledoux.itch.io/bitsybox)
 
