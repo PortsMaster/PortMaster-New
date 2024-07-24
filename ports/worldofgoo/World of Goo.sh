@@ -46,6 +46,16 @@ fi
 export LD_LIBRARY_PATH="$GAMEDIR/box64/native":"/usr/lib":"/usr/lib/aarch64-linux-gnu/":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
 export BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/x64":"$GAMEDIR/box64/native":"$GAMEDIR/libs/x64"
 
+# Move existing savedata to the port directory to avoid overwriting existing
+# saves. (Previous versions of the port didn't symlink savedata.)
+if [ -d ~/.WorldOfGoo ] && [ ! -h ~/.WorldOfGoo ]; then
+    $ESUDO cp -RT ~/.WorldOfGoo "$GAMEDIR/savedata"
+fi
+
+# Setup savedir
+$ESUDO rm -rf ~/.WorldOfGoo
+ln -sfv "$GAMEDIR/savedata" ~/.WorldOfGoo
+
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
 fi 
