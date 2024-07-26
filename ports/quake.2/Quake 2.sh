@@ -47,7 +47,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-# $GPTOKEYB "quake2" -c "$GAMEDIR/quake2.gptk" &
 $GPTOKEYB "quake2" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./quake2 +set vid_renderer gles3 +set r_customwidth $swidth +set r_customheight $sheight +set r_hudscale $sscale +set r_menuscale $sscale -datadir $GAMEDIR  +set vid_fullscreen 2 -portable 2>&1 | tee $GAMEDIR/log.txt
 
