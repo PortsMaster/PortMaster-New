@@ -51,7 +51,6 @@ $GPTOKEYB "quake2" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./quake2 +set vid_renderer gles3 +set r_customwidth $swidth +set r_customheight $sheight +set r_hudscale $sscale +set r_menuscale $sscale -datadir $GAMEDIR  +set vid_fullscreen 2 -portable 2>&1 | tee $GAMEDIR/log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console
