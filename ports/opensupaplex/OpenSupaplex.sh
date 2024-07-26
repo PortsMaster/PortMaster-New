@@ -12,6 +12,7 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+source $controlfolder/control.txt
 get_controls
 
 CUR_TTY=/dev/tty0
