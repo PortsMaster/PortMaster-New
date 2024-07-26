@@ -24,7 +24,7 @@ get_controls
 GAMEDIR="/$directory/ports/quake2"
 
 
- if [[ $LOWRES == 'Y' && $CFW_NAME != "muOS" ]]; then
+ if [[ $LOWRES == 'Y']; then
   swidth="640"
   sheight="480"
   sscale="3"
