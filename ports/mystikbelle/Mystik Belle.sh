@@ -56,7 +56,7 @@ $ESUDO rm -rf ~/.config/Mystik_Belle
 $ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle
 
 $GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
-#echo "Loading, please wait... (might take a while!)" > /dev/tty0
+echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $GAMEDIR/box86/box86 $GAMEDIR/runner
 
 $ESUDO kill -9 $(pidof gptokeyb)
