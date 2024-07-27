@@ -28,7 +28,7 @@ $ESUDO chmod 666 /dev/uinput
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$GPTOKEYB "gmloadernext" -xbox360 &
+$GPTOKEYB "gmloadernext" xbox360 &
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 ./gmloadernext game.apk
