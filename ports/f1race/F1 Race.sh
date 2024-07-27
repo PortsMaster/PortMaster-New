@@ -12,6 +12,7 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+source $controlfolder/control.txt
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
