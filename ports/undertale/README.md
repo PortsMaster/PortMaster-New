@@ -15,5 +15,6 @@ Disclaimer: There are Undertale fan translations out there, but those require v1
 |Y|In-Game Menu|
 
 ## Thanks
-TobyFox -- For the game
+TobyFox -- For the game  
+krishenriksen -- For the original box86 port  
 JohnnyOnFlame -- For GMLoader
