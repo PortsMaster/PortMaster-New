@@ -47,7 +47,7 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]]; then
+if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]] || [[ "$DEVICE_NAME" == 'RG40XX' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/bstonetriggers.gptk"
 else
     GPTOKEYB_CONFIG="$GAMEDIR/bstone$ANALOG_STICKS.gptk"
