@@ -23,9 +23,6 @@ $ESUDO chmod 666 /dev/tty0
 GAMEDIR="/$directory/ports/downwell"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
 
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -67,8 +64,6 @@ else
     echo "Error: Missing files in gamedata folder or game has been patched."
 fi
 
-
-cd "$GAMEDIR"
 # Pack Audio into apk and move game files to the right place
 if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
     # Move all audiogroup.dat from ./gamedata to ./assets
