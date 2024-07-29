@@ -32,7 +32,7 @@ else
 fi
 
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$GPTOKEYB "gmloadernext" -xbox360 &
+$GPTOKEYB "gmloadernext" xbox360 &
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 ./gmloadernext game.apk
