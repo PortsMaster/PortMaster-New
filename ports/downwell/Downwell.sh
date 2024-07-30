@@ -81,19 +81,6 @@ if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
     echo "Moving and Cleaning of game files done"
 fi
 
-# Check if CFW_NAME is 'ArkOS' or 'ArkOS wuMMLe' to patch libzip.so.5
-if [ "$CFW_NAME" == "ArkOS" ] || [ "$CFW_NAME" == "ArkOS wuMMLe" ]; then
-    # Replace libzip.so.5 in libs folder with libzip.so.5.arkos
-    if [ -f "$GAMEDIR/libs/libzip.so.5" ] && [ -f "$GAMEDIR/patch/libzip.so.5.arkos" ]; then
-        rm "$GAMEDIR/libs/libzip.so.5" || { echo "Failed to delete libzip.so.5"; exit 1; }
-        cp "$GAMEDIR/patch/libzip.so.5.arkos" "$GAMEDIR/libs/libzip.so.5" || { echo "Failed to replace libzip.so.5"; exit 1; }
-        echo "libzip.so.5 replaced successfully."
-    else
-        echo "Error: libzip.so.5 or libzip.so.5.arkos not found."
-        exit 1
-    fi
-fi
-
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" -c ./downwell.gptk &
