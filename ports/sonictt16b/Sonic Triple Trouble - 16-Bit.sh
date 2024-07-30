@@ -25,7 +25,11 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/uinput
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+if [ $CFW_NAME == "*ArkOS*" ]; then
+    export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs2:$LD_LIBRARY_PATH"
+else
+    export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+fi
 
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $GPTOKEYB "gmloadernext" xbox360 &
