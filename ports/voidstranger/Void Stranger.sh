@@ -80,12 +80,12 @@ $ESUDO chmod +x "$GAMEDIR/lib/splash"
 #SPLASH TIME
 #runs twice to ensure it shows up
 if [ $first_time = true ]; then
-  $ESUDO ./lib/splash "loadingsplash.png" &
-  $ESUDO ./lib/splash "loadingsplash.png" &
+  $ESUDO ./lib/splash "loadingsplash.png" 1 
+  $ESUDO ./lib/splash "loadingsplash.png" 7000 &
   echo "First splash."
 elif [ -f "gamedata/splash.png" ]; then
-  $ESUDO ./lib/splash gamedata/"splash.png" &
-  $ESUDO ./lib/splash gamedata/"splash.png" &
+  $ESUDO ./lib/splash gamedata/"splash.png" 1 
+  $ESUDO ./lib/splash gamedata/"splash.png" 7000 &
   echo "Normal splash."
 else
   echo "No splash image found."
