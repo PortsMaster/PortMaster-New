@@ -4,6 +4,8 @@ Special thanks to [@moppppin](https://twitter.com/moppppin)/[@strotchy](https://
 
 Source: https://store.steampowered.com/app/360740/Downwell/
 
+Special thanks to JohnnyOnFlame for GMLoader-Next and Jantrueno for the initial packaging
+
 ## Controls
 
 | Button | Action |
