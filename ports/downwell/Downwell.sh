@@ -83,7 +83,7 @@ fi
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./downwell.gptk &
+$GPTOKEYB "gmloadernext" -c ./downwell.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
