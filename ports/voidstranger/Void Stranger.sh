@@ -30,10 +30,10 @@ export GMLOADER_SAVEDIR="$GAMEDIR"
 export GMLOADER_PLATFORM="os_linux"
 
 # log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # here is what we are expecting to get out of the patching process
-expected_chksm="f38006605356a868087ccff137eb274d"
+expected_chksm111="f38006605356a868087ccff137eb274d"
 
 #first time setup check
 first_time=false
@@ -41,7 +41,7 @@ first_time=false
 # Check to see if a patched game already exists at the start, and verify with current patch version:
 if [ -f "game.droid" ]; then
   final_chksm=$(md5sum "game.droid" | awk '{print $1}')
-  if [ "$final_chksm" = "$expected_chksm" ]; then
+  if [ "$final_chksm" = "$expected_chksm111" ]; then
     echo "Found patched game.droid file. Checksum good. md5: ""$final_chksm"
   else
     echo "WARNING: game.droid checksum does not match; expecting $expected_chksm; current md5: ""$final_chksm"
@@ -81,7 +81,7 @@ $ESUDO chmod +x "$GAMEDIR/lib/splash"
 #runs twice to ensure it shows up
 if [ $first_time = true ]; then
   $ESUDO ./lib/splash "loadingsplash.png" 1 
-  $ESUDO ./lib/splash "loadingsplash.png" 7000 &
+  $ESUDO ./lib/splash "loadingsplash.png" 12000 &
   echo "First splash."
 elif [ -f "gamedata/splash.png" ]; then
   $ESUDO ./lib/splash gamedata/"splash.png" 1 

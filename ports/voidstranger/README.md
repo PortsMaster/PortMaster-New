@@ -8,9 +8,9 @@ This port supports v1.1.1 of the Steam version of the game, or v1.1.1 of the itc
 
 -Purchase game via https://store.steampowered.com/app/2121980/Void_Stranger/ 
 
--Place game .png, .dat, .csv, and .win files in the "/gamedata/" folder. 
+-Place all game .png, .dat, .csv, and .win files in the "/gamedata/" folder. 
 
--On first run, the game will take a couple of minutes to load. It is running through patching the data.win file via xdelta, zipping audio files and other files into the .apk, and parsing the .csv data file. Subsequent starts should go faster. 
+-On first run, the game will take a 2-4 minutes to load. The port is running through patching the data.win file via xdelta, zipping audio files and other files into the .apk, and parsing the .csv game data file. Subsequent starts should go faster. 
 
 ## Controls
 
@@ -21,6 +21,7 @@ This port supports v1.1.1 of the Steam version of the game, or v1.1.1 of the itc
 (|controller button| = |keyboard key|)  
 back = esc  
 start = enter  
+
 up = up  
 down = down  
 left = left  
@@ -29,14 +30,17 @@ left_analog_up = up
 left_analog_down = down  
 left_analog_left = left  
 left_analog_right = right  
+
 a = z  
 b = z  
 x = z  
 y = z  
-l1 = z  
+l1 = z 
+
 l2 = f2  
+r2 = f3
+
 r1 = mouse_right  
-r2 = f3  
 right_analog_up = mouse_movement_up  
 right_analog_down = mouse_movement_down  
 right_analog_left = mouse_movement_left  
@@ -53,7 +57,6 @@ The "X" and "L1" buttons are planned to be "turbo" buttons; currently not fully 
 -gmloader by JohnnyOnFlame. 
 
 -Thanks to the Portmaster Discord for their support.  
-
 -Thanks to the System Erasure Discord group of modding enthusiasts (@gooeyPhantasm for testing, @skirlez & @Malkav0 for gml palette implementation, @skirlez, @AbbyV and @Fayti1703 for coding fixes). 
 
 -Custom palettes that are/will be included from the System Erasure Discord: 
