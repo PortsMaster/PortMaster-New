@@ -14,39 +14,24 @@ This port supports v1.1.1 of the Steam version of the game, or v1.1.1 of the itc
 
 ## Controls
 
--The game should recongnize an xinput controller natively if you are using one with your device for some reason. 
+| Button | Action |
+|--|--| 
+|A|ACTION|
+|B|ACTION|
+|X|ACTION|
+|Y|ACTION|
+|L1|ACTION|
+|DPAD|MOVEMENT|
+|L STICK|MOVEMENT|
+|R1|RIGHT CLICK (ACTIVATE CURSOR SHORTCUT)|
+|R STICK|MOUSE MOVEMENT|
+|L2|TOGGLE TIMER|
+|R2|TOGGLE STEPS|
+|START|MENU|
+|SELECT|EXIT GAME|
 
--From the .gptk file: 
 
-(|controller button| = |keyboard key|)  
-back = esc  
-start = enter  
-
-up = up  
-down = down  
-left = left  
-right = right  
-left_analog_up = up  
-left_analog_down = down  
-left_analog_left = left  
-left_analog_right = right  
-
-a = z  
-b = z  
-x = z  
-y = z  
-l1 = z 
-
-l2 = f2  
-r2 = f3
-
-r1 = mouse_right  
-right_analog_up = mouse_movement_up  
-right_analog_down = mouse_movement_down  
-right_analog_left = mouse_movement_left  
-right_analog_right = mouse_movement_right 
-
-The "X" and "L1" buttons are planned to be "turbo" buttons; currently not fully functional, but holding these buttons will result in multiple inputs if you're trying to skip through dialogue. 
+The "X" and "L1" buttons will enter multiple actions if held down, mainly for skipping dialogue. 
 
 ## Credits
 
@@ -59,7 +44,7 @@ The "X" and "L1" buttons are planned to be "turbo" buttons; currently not fully 
 -Thanks to the Portmaster Discord for their support.  
 -Thanks to the System Erasure Discord group of modding enthusiasts (@gooeyPhantasm for testing, @skirlez & @Malkav0 for gml palette implementation, @skirlez, @AbbyV and @Fayti1703 for coding fixes). 
 
--Custom palettes that are/will be included from the System Erasure Discord: 
+-Custom palettes that are included from the System Erasure Discord: 
     "ZERORANGER (FAMILIORANGE)" by gooeyPhantasm  
     "GB GREEN" by gooeyPhantasm  
     "GB POCKET" by gooeyPhantasm  
@@ -76,6 +61,6 @@ The "X" and "L1" buttons are planned to be "turbo" buttons; currently not fully 
 
 ## *Built With*
 
--https://github.com/JohnnyonFlame/gmloader-next/blob/master/LICENSE.md 
+[gmloader-next](https://github.com/JohnnyonFlame/gmloader-next/blob/master/LICENSE.md)
 
--https://github.com/XDOneDude/UndertaleModToolCE/blob/master/LICENSE.txt 
+[UTMT-CE](https://github.com/XDOneDude/UndertaleModToolCE/blob/master/LICENSE.txt) 
