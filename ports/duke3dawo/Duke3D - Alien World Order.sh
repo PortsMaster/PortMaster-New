@@ -66,7 +66,7 @@ else
   fi
 fi
 
-if [ $DEVICE_NAME == 'x55' ] || [ $DEVICE_NAME == 'RG353P' ]; then
+if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32.gptk"
