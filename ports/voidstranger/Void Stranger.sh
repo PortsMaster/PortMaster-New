@@ -32,7 +32,7 @@ cd $GAMEDIR
 # log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# check for "installed" file
+# check for "installed" file; this assumes game.droid has already been patched/moved
 if [ -f "installed" ]; then
   final_chksm=$(md5sum "game.droid" | awk '{print $1}')
   echo "Found patched game.droid file. md5: ""$final_chksm"
