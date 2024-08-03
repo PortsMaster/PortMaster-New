@@ -29,6 +29,8 @@ CUR_TTY="/dev/tty0"
 # Set current virtual screen
 if [ "$CFW_NAME" == "muOS" ]; then
   /opt/muos/extra/muxlog & CUR_TTY="/tmp/muxlog_info"
+else
+    CUR_TTY="/dev/tty0"
 fi
 
 cd $GAMEDIR
@@ -75,9 +77,6 @@ if [ ! -f "$GAMEDIR/installed" ]; then
 fi
     echo "Done! Loading game..." > $CUR_TTY
 fi
-
-# Exports
-export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs":$LD_LIBRARY_PATH
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "control.gptk" &
