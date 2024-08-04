@@ -23,7 +23,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 $GPTOKEYB "uxnemu" -c "$GAMEDIR/oquonie.gptk" &
-./uxnemu oquonie.rom
+./uxnemu -f oquonie.rom
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
