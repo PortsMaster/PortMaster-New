@@ -42,7 +42,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
-if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]]; then
+if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2.gptk"

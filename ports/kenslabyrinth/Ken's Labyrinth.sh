@@ -22,9 +22,9 @@ GAMEDIR="/$directory/ports/kenslabyrinth"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ $ANALOG_STICKS == '1' ]; then
-    GPTOKEYB_CONFIG="$GAMEDIR/ken1joy.gptk"  
-elif [ $DEVICE_NAME == 'x55' ] || [ $DEVICE_NAME == 'RG353P' ]; then
-    GPTOKEYB_CONFIG="$GAMEDIR/kentriggers.gptk"  
+    GPTOKEYB_CONFIG="$GAMEDIR/ken1joy.gptk"
+elif [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/kentriggers.gptk"
 else
     GPTOKEYB_CONFIG="$GAMEDIR/ken.gptk"
 fi

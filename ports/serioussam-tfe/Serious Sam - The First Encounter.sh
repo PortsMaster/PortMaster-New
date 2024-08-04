@@ -23,7 +23,7 @@ get_controls
 #GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/sstfe"
 GAMEDIR="/$directory/ports/sstfe"
 
-if [ $DEVICE_NAME == 'x55' ] || [ $DEVICE_NAME == 'RG353P' ]; then
+if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/serioussamtriggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/serioussam.gptk"
