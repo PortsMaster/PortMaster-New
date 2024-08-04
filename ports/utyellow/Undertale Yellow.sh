@@ -39,15 +39,8 @@ cd $GAMEDIR
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 $ESUDO chmod 777 "$GAMEDIR/lib/7za"
 
-# If we're using arkos we need to export the openal library in lib2
-case "$CFW_NAME" in
-    *ArkOS*)
-        export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs2:$LD_LIBRARY_PATH"
-        ;;
-    *)
-        export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-        ;;
-esac
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 # Run the installer file if it hasn't been run yet
 if [ ! -f "$GAMEDIR/installed" ]; then	
