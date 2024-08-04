@@ -50,7 +50,7 @@ if [ "$CFW_NAME" == "muOS" ]; then
 else
     CUR_TTY="/dev/tty0"
 fi
-echo "\033c" > $CUR_TTY
+printf "\033c" > $CUR_TTY
 
 # Variables
 GAMEDIR="/$directory/ports/sonictt16b"
@@ -101,13 +101,6 @@ elif [ -f "installed.32bit" ]; then
     export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs32:$LD_LIBRARY_PATH"
     GMLOADER="gmloadernext.armhf"
 fi
-
-# Export an additional library if arkos
-case "$CFW_NAME" in
-    *ArkOS*)
-        export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs2:$LD_LIBRARY_PATH"
-        ;;
-esac
 
 # Run the game
 echo "Loading, please wait... (might take a while!)" > $CUR_TTY
