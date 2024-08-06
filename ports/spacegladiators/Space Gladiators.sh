@@ -41,6 +41,25 @@ fi
 # Patch game
 cd "$GAMEDIR"
 
+# Check if data.zip exists in the patch directory
+if [ -f "./patch/data.zip" ]; then
+    echo "data.zip found. Unzipping..."
+    
+    # Unzip the data.zip file into the patch directory
+    unzip "./patch/data.zip" -d "./patch/"
+    
+    # Check if the unzip was successful
+    if [ $? -eq 0 ]; then
+        echo "Unzip successful. Deleting data.zip..."
+        rm "./patch/data.zip"
+        echo "data.zip deleted."
+    else
+        echo "Failed to unzip data.zip."
+    fi
+else
+    echo "data.zip not found in ./patch."
+fi
+
 # If "gamedata/data.win" exists and matches the checksum steam version
 if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
