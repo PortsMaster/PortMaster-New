@@ -1,9 +1,13 @@
 #!/bin/bash
 
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
@@ -11,8 +15,9 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 $ESUDO chmod 666 /dev/tty0
 
@@ -41,7 +46,7 @@ if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     # Checksum for the data.win
     if [ "$checksum" = "1bdab689e0a681f64dd6aa4c9402c075" ]; then
-        echo "data.win is being patched..."
+        echo "data.win is being patched..." && \
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/data.xdelta gamedata/game.droid && \
         rm gamedata/data.win
     else
@@ -49,6 +54,20 @@ if [ -f "./gamedata/data.win" ]; then
     fi
 else    
     echo "Error: Missing files in gamedata folder or game has been patched."
+fi
+
+# If "gamedata/game.droid" and "./patch/data.xdelta" exists and matches the checksum steam version
+if [ -f "./gamedata/game.droid" ] && [ -f "./patch/data.xdelta" ]; then
+    checksum=$(md5sum "./gamedata/game.droid" | awk '{print $1}')
+    # Checksum for the game.droid
+    if [ "$checksum" = "6d79cd968d9cf229a22d69973ae125e8" ]; then
+        echo "data.xdelta deleted" && \
+        rm -Rf ./patch
+    else
+        echo "Error: MD5 checksum of game.droid does not match any expected version. Patching may have failed"
+    fi
+else    
+    echo "data.xdelta not present, if game does not run, kindly re-download the package from PortMaster"
 fi
 
 # Check if SpaceGladiators.exe exists in the /gamedata folder and delete it if it does
