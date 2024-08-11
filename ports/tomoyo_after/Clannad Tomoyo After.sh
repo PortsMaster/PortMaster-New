@@ -19,6 +19,7 @@ get_controls
 
 # Set variables
 GAMEDIR="/$directory/ports/tomoyo_after"
+SAVEDIR="KEY\智代アフター KEY_智代アフター_EN_ALL"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 runtime="rlvm"
 rlvm_dir="$HOME/rlvm"
@@ -51,9 +52,11 @@ $ESUDO umount "$rlvm_file" || true
 $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
-# Create config dir
-rm -rf "$HOME/.rlvm/KEY_智代アフター_EN_ALL"
-ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_智代アフター_EN_ALL"
+# Create the config folders
+for SAVEDIR in "${SAVEDIR[@]}"; do
+    rm -rf "$HOME/.rlvm/$SAVEDIR"
+    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
+done
 
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then
