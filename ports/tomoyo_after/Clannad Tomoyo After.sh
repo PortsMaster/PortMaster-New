@@ -58,6 +58,14 @@ for SAVEDIR in "${SAVEDIR[@]}"; do
     ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
 done
 
+# Check and modify Gameexe.ini
+INI="$GAMEDIR/gamedata/Gameexe.ini"
+if grep -q '#REGNAME = "KEY\智代アフター_EN_ALL"' $INI; then
+    sed -i 's/#WAKU.001.TYPE=0/#WAKU.001.TYPE=5/' $INI
+    sed -i 's/#WAKU.001.000.NAME="s_mw00d_convertible"/#WAKU.001.000.NAME="s_mw00d"/' $INI
+    sed -i 's/#WAKU.001.000.BACK="s_mw00e_convertible"/#WAKU.001.000.BACK="s_mw00e"/' $INI
+fi
+
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
