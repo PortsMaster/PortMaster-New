@@ -19,7 +19,6 @@ get_controls
 
 # Set variables
 GAMEDIR="/$directory/ports/kanon"
-SAVEDIR="KEY_KANON_SE KEY_KANON_ME_ALL"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 runtime="rlvm"
 rlvm_dir="$HOME/rlvm"
@@ -52,10 +51,11 @@ $ESUDO umount "$rlvm_file" || true
 $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
-# Create the config folders
-for SAVEDIR in "${SAVEDIR[@]}"; do
-    rm -rf "$HOME/.rlvm/$SAVEDIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
+# Create config folders
+SAVEDIRS="KEY_KANON_SE KEY_KANON_ME_ALL"
+for DIR in $SAVEDIRS; do
+    rm -rf "$HOME/.rlvm/$DIR"
+    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
 done
 
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
