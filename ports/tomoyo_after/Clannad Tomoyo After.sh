@@ -51,9 +51,20 @@ $ESUDO umount "$rlvm_file" || true
 $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
-# Create config dir
-rm -rf "$HOME/.rlvm/KEY_智代アフター_EN_ALL"
-ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_智代アフター_EN_ALL"
+# Create the config folders
+SAVEDIR="KEY\智代アフター KEY_智代アフター_EN_ALL"
+for DIR in $SAVEDIRS; do
+    rm -rf "$HOME/.rlvm/$DIR"
+    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
+done
+
+# Check and modify Gameexe.ini
+INI="$GAMEDIR/gamedata/Gameexe.ini"
+if grep -q '#REGNAME = "KEY\智代アフター_EN_ALL"' $INI; then
+    sed -i 's/#WAKU.001.TYPE=0/#WAKU.001.TYPE=5/' $INI
+    sed -i 's/#WAKU.001.000.NAME="s_mw00d_convertible"/#WAKU.001.000.NAME="s_mw00d"/' $INI
+    sed -i 's/#WAKU.001.000.BACK="s_mw00e_convertible"/#WAKU.001.000.BACK="s_mw00e"/' $INI
+fi
 
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then

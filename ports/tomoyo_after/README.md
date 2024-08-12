@@ -7,7 +7,7 @@ tomoyo_after/gamedata
 ├───dat
 ├───g00
 ├───gan
-├───koe
+├───koe (safe to remove if not using voices)
 ├───mov (not used atm but might be usable in the future; safe to remove)
 └───wav
 └───Gameexe.ini
@@ -18,10 +18,11 @@ This is a big port!! The Steam edition is roughly 2.54GB total of gamedata!
 
 ## Notes
 - Known Issues
-    - Textbox name rendering may have some glitches, but still readable and playable
     - Dungeon crawling minigame does not work
 
-You should be able to use older editions of Tomoyo After if you have them, but they have not been tested.
+You should be able to use older editions of Tomoyo After if you have them. The following are confirmed working:
+
+- [Tomoyo After - Perfect Edition (JP)](https://vndb.org/r35173) with [Unofficial English Patch](https://vndb.org/r1476)
 
 ## Default Gameplay Controls
 | Button | Action |
