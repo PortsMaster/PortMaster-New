@@ -29,6 +29,10 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+if [ -n "$(pgrep sway)" ]; then
+  timeout 7 watch swaymsg '[app_id=sonic2013] fullscreen enable' &
+fi
+
 $GPTOKEYB "sonic2013" &
 ./sonic2013
 

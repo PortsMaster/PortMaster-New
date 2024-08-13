@@ -42,6 +42,10 @@ $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
+if [ -n "$(pgrep sway)" ]; then
+  timeout 7 watch swaymsg '[app_id=bgdi] fullscreen enable' &
+fi
+
 $GPTOKEYB "bgdi" -c "$GAMEDIR/sorr.gptk" &
 ./bgdi $(find "$GAMEDIR" -type f -iname "sorr.dat")
 
