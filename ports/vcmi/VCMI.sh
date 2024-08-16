@@ -20,7 +20,7 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/vcmi"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+>"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -28,38 +28,38 @@ $ESUDO chmod 666 $CUR_TTY
 $ESUDO touch log.txt
 $ESUDO chmod 666 log.txt
 export TERM=linux
-printf "\033c" > $CUR_TTY
+printf "\033c" >$CUR_TTY
 
-printf "\033c" > $CUR_TTY
+printf "\033c" >$CUR_TTY
 ## RUN SCRIPT HERE
 
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
-  FILES_TO_REMOVE=()
-  BUILDER_OPTIONS=()
+  FILES_TO_REMOVE=""
+  BUILDER_OPTIONS=""
   if [ -f setup_heroes_of_might_and_magic_3_*.exe ]; then
     # Install from gog installer
-    FILES_TO_REMOVE+=(setup_heroes_of_might_and_magic_3_*.exe setup_heroes_of_might_and_magic_3_*.bin)
-    BUILDER_OPTIONS+=("--gog" setup_heroes_of_might_and_magic_3_*.exe)
+    FILES_TO_REMOVE="setup_heroes_of_might_and_magic_3_*.exe setup_heroes_of_might_and_magic_3_*.bin"
+    BUILDER_OPTIONS="--gog setup_heroes_of_might_and_magic_3_*.exe"
   elif [ -d "${GAMEDIR}/cd1" ] && [ -d "${GAMEDIR}/cd2" ]; then
-    BUILDER_OPTIONS+=("--cd1" "${GAMEDIR}/cd1" "--cd2" "${GAMEDIR}/cd2")
-    FILES_TO_REMOVE+=("${GAMEDIR}/cd1" "${GAMEDIR}/cd2")
+    BUILDER_OPTIONS="--cd1 ${GAMEDIR}/cd1 --cd2 ${GAMEDIR}/cd2"
+    FILES_TO_REMOVE="${GAMEDIR}/cd1 ${GAMEDIR}/cd2"
   elif [ -d "${GAMEDIR}/install" ]; then
-    BUILDER_OPTIONS+=("--data" "${GAMEDIR}/install")
-    FILES_TO_REMOVE+=("${GAMEDIR}/install")
+    BUILDER_OPTIONS="--data ${GAMEDIR}/install"
+    FILES_TO_REMOVE="${GAMEDIR}/install"
   else
-    echo "Missing game files, see README for more info." > $CUR_TTY
+    echo "Missing game files, see README for more info." >$CUR_TTY
     sleep 5
-    printf "\033c" > $CUR_TTY
+    printf "\033c" >$CUR_TTY
     $ESUDO systemctl restart oga_events &
     exit 1
   fi
 
-  LD_LIBRARY_PATH="${PWD}/libs:$LD_LIBRARY_PATH" bin/vcmibuilder --dest "${PWD}/data/" ${BUILDER_OPTIONS[@]}
-  $ESUDO rm -fRv ${FILES_TO_REMOVE[@]}
+  LD_LIBRARY_PATH="${PWD}/libs:$LD_LIBRARY_PATH" bin/vcmibuilder --dest "${PWD}/data/" $BUILDER_OPTIONS
+  $ESUDO rm -fRv $FILES_TO_REMOVE
   cd $GAMEDIR
 fi
 
-echo "Starting game." > $CUR_TTY
+echo "Starting game." >$CUR_TTY
 
 export PORTMASTER_HOME="${GAMEDIR}"
 export LD_LIBRARY_PATH="${GAMEDIR}/libs:${LD_LIBRARY_PATH}"
@@ -73,5 +73,4 @@ $ESUDO killall -9 tee
 $ESUDO systemctl restart oga_events &
 
 # Disable console
-printf "\033c" > $CUR_TTY
-
+printf "\033c" >$CUR_TTY
