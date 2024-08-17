@@ -14,7 +14,6 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
@@ -29,12 +28,6 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 # rename game files for gmloadernext
 if [ -f "data.win" ]; then
