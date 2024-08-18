@@ -20,6 +20,6 @@ Gmloader-next is released under the GPLv2 License, see the license file for more
 # Thanks
 Special thanks to:
 nexy - for making the game  
-JohnnyonFlame - for gmloader-next
+JohnnyonFlame - for gmloader-next  
 the PortMaster crew - helping me along the way
 Jeod - for introducing me to porting games and inspiring me to do this
