@@ -15,7 +15,7 @@ Purchase the game from [Itch.io](https://n-nexy.itch.io/super-dungeon-muncher) o
 |Y|Confirm|
 
 # License
-This is free software. The source files in this repository are released under the GPLv2 License, see the license file for more information.
+Gmloader-next is released under the GPLv2 License, see the license file for more information.
 
 # Thanks
 Special thanks to:
