@@ -8,7 +8,7 @@ Purchase the game from [Itch.io](https://n-nexy.itch.io/super-dungeon-muncher) o
 | Button | Action |
 |--|--|
 |D-PAD|Move|
-|LEFT/RIGHT ANALOG|not working|
+|LEFT ANALOG|Move|
 |B|Confirm|
 |A|Confirm|
 |X|Confirm|
