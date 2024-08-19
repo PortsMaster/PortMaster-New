@@ -1,7 +1,7 @@
 ## Notes
 
 I'd like to thank the following:
-- Shoehead, for making a fun game;
+- [Shoehead](https://shoehead.itch.io/), for making a fun game;
 - Fraxinus88, for making a killer tutorial on porting Game Maker games;
 - The PortMaster team for the great project;
 - And you for downloading it. Have fun! :)
