@@ -33,12 +33,6 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
