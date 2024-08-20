@@ -37,7 +37,8 @@ fi
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloadernext" -c ./control.gptk &
+$GPTOKEYB "gmloadernext" xbox360 &
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
