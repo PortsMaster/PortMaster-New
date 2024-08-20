@@ -8,11 +8,12 @@ Purchase the game from [Itch.io](https://n-nexy.itch.io/super-dungeon-muncher) o
 | Button | Action |
 |--|--|
 |D-PAD|Move|
-|LEFT ANALOG|Move|
 |B|Confirm|
 |A|Confirm|
 |X|Confirm|
 |Y|Confirm|
+
+TATE mode is supported as of version 1.4 of the game files. TATE mode can be enabled in the settings. 
 
 # License
 Gmloader-next is released under the GPLv2 License, see the license file for more information.
