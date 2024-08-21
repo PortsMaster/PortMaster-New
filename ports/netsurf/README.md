@@ -1,5 +1,5 @@
 ## Notes
-Thanks to the [Netsurf Team] (https://www.netsurf-browser.org/) for creating this browser.
+Thanks to the [Netsurf Team](https://www.netsurf-browser.org/) for creating this browser.
 Special thanks to [Snow](https://github.com/tailtwo) 
 For making necessary changes and initial workand the keymap to make it run on these devices!
 
