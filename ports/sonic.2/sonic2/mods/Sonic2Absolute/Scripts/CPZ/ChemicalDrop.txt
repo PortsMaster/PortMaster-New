@@ -1,0 +1,117 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Chemical Drop Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 72 : TYPE_CHEMICALDROP
+
+// Function declarations
+reserve function ChemicalDrop_Function165
+reserve function ChemicalDrop_Function166
+
+// Static Values
+
+// Tables
+
+function ChemicalDrop_Function165
+	if object[currentPlayer].value37 != 2
+		if object[currentPlayer].state != PlayerObject_Death
+			arrayPos0 = object[currentPlayer].entityPos
+			arrayPos0 += playerCount
+			if object[currentPlayer].value7 == 0
+				if object[currentPlayer].value8 == 0
+					object[currentPlayer].state = PlayerObject_Hurt
+					if object[currentPlayer].xpos > object.xpos
+						object[currentPlayer].speed = 0x20000
+					else
+						object[currentPlayer].speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+	end if
+end function
+
+
+function ChemicalDrop_Function166
+	temp1 = object.yvel
+	temp1 >>= 1
+	FlipSign(temp1)
+	PlaySfx(SfxName[Chemical Splash], 0)
+	object.type = TypeName[Blank Object]
+	temp0 = 0
+	while temp0 < 5
+		CreateTempObject(TypeName[Chemical Splash], 0, object.xpos, object.ypos)
+		object[tempObjectPos].drawOrder = 2
+		Rand(object[tempObjectPos].xvel, 512)
+		object[tempObjectPos].xvel -= 256
+		object[tempObjectPos].xvel <<= 10
+		if object[tempObjectPos].xvel < 0
+			object[tempObjectPos].xvel += 0x20000
+		end if
+		object[tempObjectPos].xvel -= 0x10000
+		if temp0 > 0
+			Rand(object[tempObjectPos].yvel, 0x7FE)
+			object[tempObjectPos].yvel -= 0x400
+			object[tempObjectPos].yvel <<= 8
+		end if
+		object[tempObjectPos].yvel += temp1
+		temp0++
+	loop
+end function
+
+
+event ObjectMain
+	object.ypos += object.yvel
+	object.yvel += 0x3800
+	temp1 = object.ypos
+	temp1 >>= 16
+	temp1 -= screen.cameraY
+	Abs(temp1)
+	temp1 -= 15
+	if temp1 >= screen.ycenter
+		object.type = TypeName[Blank Object]
+	end if
+	ObjectTileCollision(CSIDE_FLOOR, 0, 11, 0)
+	if checkResult == 1
+		CallFunction(ChemicalDrop_Function166)
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(ChemicalDrop_Function165)
+			CallFunction(ChemicalDrop_Function166)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-9, -18, 18, 29, 97, 189)
+		SpriteFrame(-9, -18, 18, 29, 117, 189)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-9, -18, 18, 29, 1, 64)
+		SpriteFrame(-9, -18, 18, 29, 21, 64)
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

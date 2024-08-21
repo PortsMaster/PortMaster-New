@@ -1,0 +1,364 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Grabber Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 64 : TYPE_GRABBER
+
+// Function declarations
+reserve function Grabber_Function150
+reserve function Grabber_DebugDraw
+reserve function Grabber_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Grabber_Function150
+	object[arrayPos0].xpos = object[arrayPos0].value0
+	object[arrayPos0].ypos = object[arrayPos0].value1
+	object[arrayPos0].value2 = 256
+	object[arrayPos0].value3 = 0
+	object[arrayPos0].value4 = 0
+	object[arrayPos0].value8 = -1
+	object[arrayPos0].value9 = 0
+	object[arrayPos0].value10 = 0
+	object[arrayPos0].value11 = 0
+	object[arrayPos0].animation = 0
+	object[arrayPos0].state = 0
+	if object[arrayPos0].propertyValue == 0
+		object[arrayPos0].direction = FLIP_NONE
+		object[arrayPos0].xvel = -0x4000
+	else
+		object[arrayPos0].direction = FLIP_X
+		object[arrayPos0].xvel = 0x4000
+	end if
+	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+end function
+
+
+function Grabber_DebugDraw
+	temp0 = object.ypos
+	temp0 -= 0xC0000
+	DrawSpriteFX(3, FX_FLIP, object.xpos, temp0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Grabber_DebugSpawn
+	CreateTempObject(TypeName[Grabber], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].value0 = object.xpos
+	object[tempObjectPos].value1 = object.ypos
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[tempObjectPos].propertyValue = object.direction
+	CallFunction(Grabber_Function150)
+end function
+
+
+event ObjectMain
+	object.priority = PRIORITY_ACTIVE
+	switch object.state
+	case 0
+		object.value2--
+		if object.value2 <= 0
+			object.value2 = 256
+			FlipSign(object.xvel)
+			object.direction ^= FLIP_X
+		end if
+		object.xpos += object.xvel
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -64, 0, 64, 128, currentPlayer, 1, 1, 1, 1)
+			if checkResult == 1
+				object.state = 2
+				object.value3 = 16
+			end if
+		next
+		break
+	case 2
+		object.value3--
+		if object.value3 < 0
+			object.value3 = 32
+			object.state = 1
+			object.animation = 1
+		end if
+		break
+	case 1
+		object.value3--
+		if object.value3 < 0
+			object.state = 3
+		end if
+		object.ypos += 0x20000
+		break
+	case 3
+		object.value3++
+		if object.value3 >= 32
+			object.value3 = 0
+			object.state = 0
+			object.animation = 0
+		end if
+		object.ypos -= 0x20000
+		break
+	case 4
+		object.value3++
+		if object.value3 >= 32
+			object.value2 = 1
+			object.value3 = 16
+			object.animation = 2
+			object.state++
+		end if
+		object.ypos -= 0x20000
+		currentPlayer = object.value8
+		object[currentPlayer].xpos = object.xpos
+		object[currentPlayer].ypos = object.ypos
+		object[currentPlayer].ypos += 0x100000
+		break
+	case 5
+		if object.value8 != -1
+			currentPlayer = object.value8
+			if object.value11 != 0
+				object.value9--
+				if object.value9 == 0
+					object.value10 = 0
+					object.value11 = 0
+				end if
+				temp0 = 0
+				if object[currentPlayer].left != 0
+					temp0 |= 1
+				end if
+				if object[currentPlayer].right != 0
+					temp0 |= 2
+				end if
+				if temp0 != 0
+					if temp0 != 3
+						if temp0 != object.value11
+							object.value11 = temp0
+							object.value10++
+							if object.value10 >= 4
+								object[currentPlayer].state = PlayerObject_HandleAir
+								object.value8 = -1
+								object.value12 = 16
+								object.state = 6
+							else
+								object.value9 = 32
+							end if
+						end if
+					end if
+				end if
+			else
+				if object[currentPlayer].left != 0
+					object.value11 |= 1
+					object.value9 = 32
+				end if
+				if object[currentPlayer].right != 0
+					object.value11 |= 2
+					object.value9 = 32
+				end if
+			end if
+			object[currentPlayer].xpos = object.xpos
+			object[currentPlayer].ypos = object.ypos
+			object[currentPlayer].ypos += 0x100000
+		end if
+		break
+	case 6
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value0
+		object.ypos = object.value1
+		if object.outOfBounds == 1
+			arrayPos0 = object.entityPos
+			CallFunction(Grabber_Function150)
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	if object.value12 > 0
+		object.value12--
+	end if
+	temp7 = object.value8
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if currentPlayer != temp7
+			if object.value8 == -1
+				if object[currentPlayer].state != PlayerObject_Blank
+					if object.animation == 1
+						BoxCollisionTest(C_TOUCH, object.entityPos, -8, 0, 8, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+						if checkResult == 1
+							if object[currentPlayer].value7 > 0
+								CallFunction(PlayerObject_BadnikBreak)
+								checkResult = 0
+							else
+								object.state = 4
+								object.animation = 0
+								object.value8 = currentPlayer
+								object[currentPlayer].xvel = 0
+								object[currentPlayer].yvel = 0
+								object[currentPlayer].speed = 0
+								object[currentPlayer].value1 = 0
+								object[currentPlayer].state = PlayerObject_Blank
+								object[currentPlayer].gravity = GRAVITY_AIR
+								object[currentPlayer].animation = ANI_GRABBED
+								object[currentPlayer].direction = object.direction
+								object[currentPlayer].direction ^= FLIP_X
+								PlaySfx(SfxName[Catch], 0)
+								checkResult = 1
+							end if
+						end if
+					else
+						checkResult = 0
+					end if
+				end if
+			end if
+			if object[currentPlayer].state != PlayerObject_Blank
+				if object.value12 == 0
+					if checkResult == 0
+						BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+						if checkResult == 1
+							CallFunction(PlayerObject_BadnikBreak)
+						end if
+					end if
+				end if
+			end if
+		end if
+	next
+	switch object.animation
+	case 0
+		object.frame = 0
+		object.value6 = 5
+		GetBit(object.value7, object.value2, 2)
+		object.value7 += 3
+		break
+	case 1
+		object.animationTimer++
+		object.animationTimer &= 15
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.value6 = object.frame
+		object.value6 += 5
+		break
+	case 2
+		object.value2--
+		if object.value2 == 0
+			if object.frame == 0
+				object.frame = 2
+			else
+				object.frame = 0
+			end if
+			object.value2 = object.value3
+			object.value3--
+			if object.value3 == 0
+				if object.value8 != -1
+					currentPlayer = object.value8
+					if object[currentPlayer].state == PlayerObject_Blank
+						CallFunction(PlayerObject_Hit)
+						if object[currentPlayer].state != PlayerObject_Hurt
+							object[currentPlayer].state = PlayerObject_HandleAir
+						end if
+						object.value8 = -1
+						temp7 = -1
+					end if
+				end if
+				ResetObjectEntity(object.entityPos, TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+				object.drawOrder = 4
+				PlaySfx(SfxName[Destroy], 0)
+			end if
+		end if
+		break
+	end switch
+	if object.type != TypeName[Grabber]
+		if temp7 != -1
+			currentPlayer = temp7
+			object[currentPlayer].state = PlayerObject_HandleAir
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.value4 == 0
+		temp0 = object.value1
+		temp0 -= 0x80000
+		temp1 = object.ypos
+		temp1 -= object.value1
+		temp1 >>= 20
+		temp1 += 7
+		DrawSpriteFX(temp1, FX_FLIP, object.xpos, temp0)
+		temp0 -= 0x40000
+		DrawSpriteFX(object.value7, FX_FLIP, object.xpos, temp0)
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		AddDrawListEntityRef(5, object.entityPos)
+	else
+		DrawSpriteFX(object.value6, FX_FLIP, object.xpos, object.ypos)
+	end if
+	object.value4 ^= 1
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CPZ/Objects.gif")
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-27, -8, 40, 32, 5, 74)
+		SpriteFrame(-27, -8, 43, 31, 5, 107)
+		SpriteFrame(-27, -8, 40, 32, 73, 41)
+		SpriteFrame(-4, -4, 8, 8, 46, 74)
+		SpriteFrame(-4, -4, 8, 8, 114, 42)
+		SpriteFrame(-6, 8, 23, 16, 5, 140)
+		SpriteFrame(-6, 8, 30, 15, 29, 140)
+		SpriteFrame(-1, 0, 1, 16, 2, 74)
+		SpriteFrame(-1, 0, 1, 32, 2, 74)
+		SpriteFrame(-1, 0, 1, 48, 2, 74)
+		SpriteFrame(-1, 0, 1, 64, 2, 74)
+		SpriteFrame(-1, 0, 1, 80, 2, 74)
+		SpriteFrame(-1, 0, 1, 96, 2, 74)
+		SpriteFrame(-1, 0, 1, 112, 2, 74)
+		SpriteFrame(-1, 0, 1, 128, 2, 74)
+		SpriteFrame(-1, 0, 1, 128, 2, 74)
+		SpriteFrame(0, 0, 1, 1, 1, 74)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-27, -8, 40, 32, 131, 280)
+		SpriteFrame(-27, -8, 43, 31, 172, 280)
+		SpriteFrame(-27, -8, 40, 32, 217, 280)
+		SpriteFrame(-4, -4, 8, 8, 102, 302)
+		SpriteFrame(-4, -4, 8, 8, 145, 334)
+		SpriteFrame(-6, 8, 23, 16, 154, 313)
+		SpriteFrame(-6, 8, 30, 15, 178, 313)
+		SpriteFrame(-1, 0, 1, 16, 124, 501)
+		SpriteFrame(-1, 0, 1, 32, 124, 501)
+		SpriteFrame(-1, 0, 1, 48, 124, 501)
+		SpriteFrame(-1, 0, 1, 64, 124, 501)
+		SpriteFrame(-1, 0, 1, 80, 124, 501)
+		SpriteFrame(-1, 0, 1, 112, 124, 501)
+		SpriteFrame(-1, 0, 1, 96, 124, 501)
+		SpriteFrame(-1, 0, 1, 128, 124, 501)
+		SpriteFrame(-1, 0, 1, 128, 124, 501)
+		SpriteFrame(0, 0, 1, 1, 123, 501)
+	end if
+	foreach (TypeName[Grabber], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		CallFunction(Grabber_Function150)
+	next
+	SetTableValue(TypeName[Grabber], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Grabber_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Grabber_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

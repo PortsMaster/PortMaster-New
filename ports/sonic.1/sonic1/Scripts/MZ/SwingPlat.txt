@@ -1,0 +1,313 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Swing Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.length
+
+private alias object.value0 : object.swingAngle
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SwingPlatform_DebugDraw
+reserve function SwingPlatform_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value SwingPlatform_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SwingPlatform_DebugDraw
+	temp7 = debugMode[0].currentSelection
+	temp7 -= SwingPlatform_startDebugID
+
+	// Draw the post
+	DrawSprite(0)
+
+	// Draw the chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+
+	// Draw the platform itself
+	temp1 -= 8
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+private function SwingPlatform_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= SwingPlatform_startDebugID
+
+	CreateTempObject(TypeName[Swing Platform], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Backup the object's position, as it'll need to be moved for collision checks
+	temp2 = object.xpos
+	temp3 = object.ypos
+
+	GetTableValue(object.swingAngle, 12, StageSetup_oscillationTable)
+	object.swingAngle >>= 8
+	if object.direction == FLIP_X
+		object.swingAngle ^= 255
+		object.swingAngle += 129
+	end if
+	object.swingAngle <<= 1
+
+	temp1 = object.length
+	temp1++
+	temp1 <<= 4
+	temp1 -= 8
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos(object.collisionOffset.x, object.swingAngle)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 7
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= 0xFFFF0000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin(object.collisionOffset.y, object.swingAngle)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 7
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= 0xFFFF0000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+	
+	// Move the object back to its actual position
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	// Draw the post
+	DrawSprite(0)
+	
+	// Draw the chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.length
+		Cos(temp2, object.swingAngle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, object.swingAngle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	
+	// Draw the platform itself
+	temp1 -= 8
+	Cos(object.drawPos.x, object.swingAngle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000
+	
+	Sin(object.drawPos.y, object.swingAngle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 76, 160)	// connection joint - #0
+	SpriteFrame(-8, -8, 16, 16, 93, 160)	// chain link 		- #1
+	SpriteFrame(-24, -8, 48, 16, 69, 177) 	// platform 		- #2
+
+	temp0 = 0
+	SwingPlatform_startDebugID = DebugMode_ObjCount
+	SwingPlatform_startDebugID--
+	while temp0 < 8
+		SetTableValue(TypeName[Swing Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SwingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SwingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.length
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+
+	temp1 -= 8
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	DrawSpriteXY(2, temp2, temp3)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		// Draw the platform's path to the right and left too to show where and how far it'll go
+		
+		object.inkEffect = INK_ALPHA
+		
+		// Left chains
+		temp0 = 0
+		temp1 = 16
+		while temp0 < object.length
+			Cos(temp2, 0)
+			temp2 *= temp1
+			temp2 <<= 7
+			temp2 += object.xpos
+			Sin(temp3, 0)
+			temp3 *= temp1
+			temp3 <<= 7
+			temp3 += object.ypos
+			DrawSpriteFX(1, FX_INK, temp2, temp3)
+			temp0++
+			temp1 += 16
+		loop
+
+		// Left platform
+		temp1 -= 8
+		Cos(temp2, 0)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 0)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteFX(2, FX_INK, temp2, temp3)
+		
+		// Right chains
+		temp0 = 0
+		temp1 = 16
+		while temp0 < object.length
+			Cos(temp2, 256)
+			temp2 *= temp1
+			temp2 <<= 7
+			temp2 += object.xpos
+			Sin(temp3, 256)
+			temp3 *= temp1
+			temp3 <<= 7
+			temp3 += object.ypos
+			DrawSpriteFX(1, FX_INK, temp2, temp3)
+			temp0++
+			temp1 += 16
+		loop
+
+		// Right platform
+		temp1 -= 8
+		Cos(temp2, 256)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 256)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteFX(2, FX_INK, temp2, temp3)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 76, 160)	// connection joint - #0
+	SpriteFrame(-8, -8, 16, 16, 93, 160)	// chain link 		- #1
+	SpriteFrame(-24, -8, 48, 16, 69, 177) 	// platform 		- #2
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end event

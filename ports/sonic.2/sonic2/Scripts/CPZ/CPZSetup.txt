@@ -1,0 +1,1126 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: CPZ Setup Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.aniTileTimer
+// value1 is unused?
+private alias object.value2 : object.scrollPos
+
+// Values used for updating the underwater Super Palette
+private alias object.value6  : object.clrDivisor_R
+private alias object.value7  : object.clrDivisor_G
+private alias object.value8  : object.clrDivisor_B
+private alias object.value9  : object.waterClrDivisor_R
+private alias object.value10 : object.waterClrDivisor_G
+private alias object.value11 : object.waterClrDivisor_B
+
+private alias object.value12 : object.drawingIndex
+private alias object.value13 : object.rippleTimer
+private alias object.value14 : object.paletteTimer
+private alias object.value15 : object.bgTowerLightPalIndex
+private alias object.value16 : object.rainbowLightPalIndex
+private alias object.value17 : object.chemLiquidPalIndex1
+private alias object.value18 : object.chemLiquidPalIndex2
+private alias object.value19 : object.chemLiquidPalIndex3
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+private alias 7 : TRACK_SUPER
+
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+// Music Events
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Music Loops
+private alias 684580 : MUSIC_LOOP_CPZ
+private alias 547578 : MUSIC_LOOP_CPZ_F
+
+private alias 38679  : MUSIC_LOOP_INV
+private alias 30897  : MUSIC_LOOP_INV_F
+
+// Achievement Aliases
+private alias 1 : ACHIEVEMENT_CHEMICALFREE
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CPZSetup_getClrDivisor
+reserve function CPZSetup_InitSuperSonicPal
+reserve function CPZSetup_InitSuperTailsPal
+reserve function CPZSetup_InitSuperKnuxPal
+reserve function CPZSetup_InitSuperAmyPal
+reserve function CPZSetup_SpeedUpMusic
+reserve function CPZSetup_SlowDownMusic
+
+
+// ========================
+// Static Values
+// ========================
+
+public value CPZSetup_rotatingStairTimer 	= 0
+public value Water_flashTimer 				= 0
+public value CPZSetup_enteredWater 			= 0
+private value CPZSetup_hasAchievement 		= 0
+private value CPZSetup_waterTintActive		= 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table CPZSetup_bgTowerLightPalTable
+	0xE00000, 0xC00000, 0xA00000, 0x800000, 0x600000, 0x400000, 0x200000, 0x400000
+	0x600000, 0x800000, 0xA00000, 0xC00000, 0xE00000, 0xE02000, 0xE04000, 0xE02000
+end table
+
+private table CPZSetup_rainbowLightPalTable
+	0x00E000, 0x20C000, 0x40A000, 0x608000, 0x806000, 0xA04000, 0xC02000
+	0xE00000, 0xC00020, 0xA00040, 0x800060, 0x600080, 0x4000A0, 0x2000C0
+	0x0000E0, 0x0020C0, 0x0040A0, 0x006080, 0x008060, 0x00A040, 0x00C020
+end table
+
+private table CPZSetup_chemLiquidPalTable
+	0x0040E0, 0x0000C0, 0x0000C0
+	0x0060E0, 0x0020C0, 0x0000C0
+	0x0040E0, 0x0040E0, 0x0000C0
+	0x0020C0, 0x0060E0, 0x0020C0
+	0x0000C0, 0x0040E0, 0x0040C0
+	0x0000C0, 0x0020C0, 0x0040E0
+	0x0000C0, 0x0000C0, 0x0060E0
+	0x0020C0, 0x0000C0, 0x0040E0
+	0x0020E0, 0x0000C0, 0x0020C0
+end table
+
+private table CPZSetup_deformationTable
+	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
+	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
+	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+end table
+
+// Unused palette table, also found in DEZSetup and EndSetup and even Mania's CPZ!
+// These are actually colors for one of WFZ's palette cycles
+// However, you won't find this in WFZSetup because in this 2013 remake, WFZ only uses 1 of the 3 palette cycles it had in the original game,
+// this one being among the 2 that were cut
+// Why they were cut, I have no idea, but at the very least, it's certainly a mystery how one of them ended up here of all places...
+private table CPZSetup_unusedPalette
+	0x00E000, 0x00A000, 0x006000, 0x002000, 0x000000, 0x000020, 0x000060, 0x0020A0, 0x0060E0, 0x0020A0, 0x000060, 0x000020, 0x000000, 0x200000, 0x600000, 0xA00000
+	0xE00000, 0xE04000, 0xE00000, 0xA00000, 0x600000, 0x200000, 0x000000, 0x202000, 0x606000, 0xA0A000, 0xE0E000, 0xA0A000, 0x606000, 0x202000, 0x000000, 0x002000
+	0x006000, 0x00A000
+end table
+
+private table CPZSetup_replay_attract_S
+	0x380000, 0x1EC0000
+	0x00, 10
+	0x08, 52
+	0x38, 1
+	0x28, 5
+	0x08, 35
+	0x38, 1
+	0x28, 8
+	0x08, 255
+	0x08, 214
+	0x00, 9
+	0x04, 3
+	0x34, 1
+	0x24, 9
+	0x28, 2
+	0x08, 54
+	0x00, 2
+	0x04, 2
+	0x00, 1
+	0x08, 192
+	0x38, 1
+	0x28, 41
+	0x08, 13
+	0x0A, 1
+	0x02, 26
+	0x0A, 2
+	0x08, 16
+	0x00, 2
+	0x04, 22
+	0x00, 8
+	0x08, 34
+	0x38, 1
+	0x28, 3
+	0x08, 32
+	0x00, 1
+	0x04, 10
+	0x00, 1
+	0x08, 10
+	0x00, 16
+	0x04, 39
+	0x00, 1
+	0x02, 20
+	0x00, 1
+	0x04, 29
+	0x00, 37
+	0x04, 12
+	0x00, 4
+	0x04, 4
+	0x00, 24
+	0x30, 1
+	0x20, 4
+	0x04, 7
+	0x00, 20
+	0x04, 30
+	0x00 // There's supposed to be an even amount of entries, since these come in pairs, but I guess this table felt like having an extra value?
+end table
+
+private table CPZSetup_replay_attract_T
+	0x380000, 0x1F00000
+	0x00, 53
+	0x08, 45
+	0x38, 1
+	0x28, 6
+	0x08, 34
+	0x38, 1
+	0x28, 9
+	0x08, 55
+	0x38, 1
+	0x28, 21
+	0x08, 249
+	0x38, 1
+	0x28, 12
+	0x08, 84
+	0x38, 1
+	0x28, 21
+	0x08, 138
+	0x38, 1
+	0x28, 9
+	0x2A, 16
+	0x0A, 9
+	0x08, 96
+	0x0A, 4
+	0x02, 9
+	0x0A, 2
+	0x08, 71
+	0x00, 11
+	0x04, 44
+	0x00, 13
+	0x04, 4
+	0x00, 4
+	0x04, 10
+	0x00, 9
+	0x04, 9
+	0x00, 3
+	0x04, 39
+	0x00, 6
+	0x04, 11
+	0x00, 7
+	0x04, 5
+	0x00, 13
+	0x30, 1
+	0x20, 3
+	0x28, 1
+	0x08, 5
+	0x38, 1
+	0x28, 3
+	0x20, 2
+	0x00, 4
+	0x30, 1
+	0x20, 4
+	0x00, 4
+	0x38, 1
+	0x28, 4
+	0x08, 4
+	0x38, 1
+	0x20, 5
+	0x00, 3
+	0x30, 1
+	0x20, 6
+	0x00, 3
+	0x04, 1
+	0x34, 1
+	0x24, 5
+	0x04, 3
+	0x34, 1
+	0x24, 1
+	0x20, 4
+	0x00, 4
+	0x38, 1
+	0x28, 4
+	0x08, 2
+	0x00, 3
+	0x30, 1
+	0x20, 4
+	0x00, 4
+	0x30, 1
+	0x20, 4
+	0x00, 4
+	0x30, 1
+	0x20, 4
+	0x00, 4
+	0x38, 1
+	0x28, 4
+	0x08, 4
+	0x38, 1
+	0x28, 1
+	0x20, 4
+	0x00, 4
+	0x30, 1
+	0x20, 4
+	0x00, 4
+	0x30, 1
+	0x20, 5
+	0x00, 4
+	0x30, 1
+	0x20, 5
+	0x00, 3
+	0x08, 12
+	0x00, 11
+	0x08, 34
+	0x38, 1
+	0x28, 21
+	0x08, 3
+	0x00, 13
+	0x08, 119
+	0x38, 2
+end table
+
+private table CPZSetup_replay_attract_K
+	0x380000, 0x1EC0000
+	0x00, 54
+	0x08, 45
+	0x38, 1
+	0x28, 7
+	0x08, 34
+	0x38, 1
+	0x28, 20
+	0x08, 0xFF
+	0x08, 218
+	0x38, 1
+	0x28, 9
+	0x08, 61
+	0x38, 1
+	0x28, 9
+	0x08, 14
+	0x00, 1
+	0x04, 14
+	0x00, 6
+	0x08, 110
+	0x00, 10
+	0x08, 10
+	0x00, 24
+	0x08, 5
+	0x00, 7
+	0x08, 20
+	0x38, 1
+	0x28, 1
+	0x20, 3
+	0x00, 5
+	0x04, 39
+	0x00, 26
+	0x08, 57
+	0x38, 1
+	0x28, 16
+	0x08, 7
+	0x38, 1
+	0x28, 22
+	0x29, 2
+	0x09, 31
+	0x08, 21
+	0x38, 1
+	0x28, 11
+	0x08, 175
+	0x0A, 1
+	0x02, 244
+	0x32, 1
+	0x22, 26
+	0x2A, 1
+	0x28, 1
+	0x08, 4
+	0x38, 1
+	0x28, 24
+	0x08, 2
+	0x00, 25
+	0x08, 5
+	0x38, 1
+	0x28, 10
+	0x08, 32
+	0x00, 1
+	0x04, 23
+	0x00, 4
+	0x08, 20
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+// Wacky function to take a normal color and turn it into an underwater color
+private function CPZSetup_getClrDivisor
+	// Regular Color
+	object.clrDivisor_R = temp1
+	object.clrDivisor_R >>= 16
+
+	object.clrDivisor_G = temp1
+	object.clrDivisor_G >>= 8
+	object.clrDivisor_G &= 0xFF
+
+	object.clrDivisor_B = temp1
+	object.clrDivisor_B &= 0xFF
+
+	// Underwater Color
+	object.waterClrDivisor_R = temp2
+	object.waterClrDivisor_R >>= 16
+
+	object.waterClrDivisor_G = temp2
+	object.waterClrDivisor_G >>= 8
+	object.waterClrDivisor_G &= 0xFF
+
+	object.waterClrDivisor_B = temp2
+	object.waterClrDivisor_B &= 0xFF
+
+	// Minimum of 1 (you cant divide by zero)
+	if object.waterClrDivisor_R == 0
+		object.waterClrDivisor_R = 1
+	end if
+
+	if object.waterClrDivisor_G == 0
+		object.waterClrDivisor_G = 1
+	end if
+
+	if object.waterClrDivisor_B == 0
+		object.waterClrDivisor_B = 1
+	end if
+
+	object.clrDivisor_R <<= 8
+	object.clrDivisor_G <<= 8
+	object.clrDivisor_B <<= 8
+	object.clrDivisor_R /= object.waterClrDivisor_R
+	object.clrDivisor_G /= object.waterClrDivisor_G
+	object.clrDivisor_B /= object.waterClrDivisor_B
+
+	if object.clrDivisor_R == 0
+		object.clrDivisor_R = 0x100
+	end if
+
+	if object.clrDivisor_G == 0
+		object.clrDivisor_G = 0x100
+	end if
+
+	if object.clrDivisor_B == 0
+		object.clrDivisor_B = 0x100
+	end if
+end function
+
+
+private function CPZSetup_InitSuperSonicPal
+	temp0 = 0
+
+	// First Set of colors is just the regular underwater palette
+	GetPaletteEntry(1, 2, temp1)
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 3, temp1)
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 4, temp1)
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 5, temp1)
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+	temp0++
+
+	CopyPalette(1, 0, 4, 2, 4)
+	while temp0 < 64
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
+		SetPaletteEntry(3, 0, temp1)
+		temp0++
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
+		SetPaletteEntry(3, 1, temp1)
+		temp0++
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
+		SetPaletteEntry(3, 2, temp1)
+		temp0++
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
+		SetPaletteEntry(3, 3, temp1)
+		temp0 -= 3
+
+		// Just mix the 2 palettes, we'll use the results as our new colors
+		SetPaletteFade(5, 3, 4, 48, 0, 4)
+
+		GetPaletteEntry(5, 0, temp1)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+		temp0++
+
+		GetPaletteEntry(5, 1, temp1)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+		temp0++
+
+		GetPaletteEntry(5, 2, temp1)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+		temp0++
+
+		GetPaletteEntry(5, 3, temp1)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
+		temp0++
+	loop
+end function
+
+
+private function CPZSetup_InitSuperTailsPal
+	temp0 = 0
+
+	GetPaletteEntry(1, 13, temp1)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 17, temp1)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 18, temp1)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 16, temp1)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+	temp0++
+
+	while temp0 < 24
+		GetPaletteEntry(0, 13, temp1)
+		GetPaletteEntry(1, 13, temp2)
+
+		CallFunction(CPZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 0xFF
+
+		temp3 = temp1
+		temp3 &= 0xFF
+
+		temp1 >>= 16
+
+		temp1 *= 0xF8
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0xF8
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0xF8
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+
+		if temp1 > 0xE0
+			temp1 = 0xE0
+		end if
+
+		if temp2 > 0xE0
+			temp2 = 0xE0
+		end if
+
+		if temp3 > 0xE0
+			temp3 = 0xE0
+		end if
+
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+		temp0++
+
+
+		GetPaletteEntry(0, 17, temp1)
+		GetPaletteEntry(1, 17, temp2)
+
+		CallFunction(CPZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 0xFF
+
+		temp3 = temp1
+		temp3 &= 0xFF
+
+		temp1 >>= 16
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+
+		if temp1 > 0xE0
+			temp1 = 0xE0
+		end if
+
+		if temp2 > 0xE0
+			temp2 = 0xE0
+		end if
+
+		if temp3 > 0xE0
+			temp3 = 0xE0
+		end if
+
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+		temp0++
+
+
+		GetPaletteEntry(0, 18, temp1)
+		GetPaletteEntry(1, 18, temp2)
+
+		CallFunction(CPZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 0xFF
+
+		temp3 = temp1
+		temp3 &= 0xFF
+
+		temp1 >>= 16
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+
+		if temp1 > 0xE0
+			temp1 = 0xE0
+		end if
+
+		if temp2 > 0xE0
+			temp2 = 0xE0
+		end if
+
+		if temp3 > 0xE0
+			temp3 = 0xE0
+		end if
+
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+		temp0++
+
+
+		GetPaletteEntry(0, 16, temp1)
+		GetPaletteEntry(1, 16, temp2)
+
+		CallFunction(CPZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 0xFF
+
+		temp3 = temp1
+		temp3 &= 0xFF
+
+		temp1 >>= 16
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+
+		if temp1 > 0xE0
+			temp1 = 0xE0
+		end if
+		
+		if temp2 > 0xE0
+			temp2 = 0xE0
+		end if
+
+		if temp3 > 0xE0
+			temp3 = 0xE0
+		end if
+
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
+		temp0++
+	loop
+end function
+
+
+private function CPZSetup_InitSuperKnuxPal
+	temp0 = 0
+
+	GetPaletteEntry(1, 26, temp1)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 27, temp1)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
+	temp0++
+
+	GetPaletteEntry(1, 28, temp1)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
+	temp0++
+end function
+
+
+private function CPZSetup_InitSuperAmyPal
+#platform: USE_ORIGINS
+	temp0 = 0
+	
+	GetPaletteEntry(1, 54, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 50, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 51, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 52, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 53, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	while temp0 < 30
+		temp4 = temp0
+		temp4 -= 5
+		
+		GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+		
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 255
+		
+		temp3 = temp1
+		temp3 &= 255
+		
+		temp1 >>= 16
+		temp1 += 32
+		if temp1 > 255
+			temp1 = 255
+		end if
+		
+		temp2 += 32
+		if temp2 > 255
+			temp2 = 255
+		end if
+		
+		temp3 += 32
+		if temp3 > 255
+			temp3 = 255
+		end if
+		
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+		temp0++
+	loop
+	
+	temp6 = 25
+	while temp0 < 50
+		temp5 = 0
+		while temp5 < 5
+			temp4 = temp6
+			temp4 += temp5
+			GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+			SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+			temp0++
+			temp5++
+		loop
+		
+		temp6 -= 5
+	loop
+#endplatform
+end function
+
+
+private function CPZSetup_SpeedUpMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("ChemicalPlant_F.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ_F, 8000)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("ChemicalPlant_F.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
+			break
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("ChemicalPlant_F.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			break
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
+	end if
+end function
+
+
+private function CPZSetup_SlowDownMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ, 12500)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
+			break
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			break
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+#platform: USE_ORIGINS
+	if stage.state != STAGE_FROZEN
+#endplatform
+		GetTableValue(temp0, 21, StageSetup_oscillationTable)
+		if temp0 == 0
+			CPZSetup_rotatingStairTimer++
+			CPZSetup_rotatingStairTimer &= 3
+		end if
+
+		object.rippleTimer++
+		if object.rippleTimer > 7
+			tileLayer[1].deformationOffset++
+			object.rippleTimer = 0
+		end if
+
+		// Animate the converyor belts in the background
+		object.aniTileTimer++
+		if object.aniTileTimer == 5
+			object.aniTileTimer = 0
+
+			object.frame++
+			object.frame &= 7
+			temp0 = object.frame
+			temp0 += 768
+			Copy16x16Tile(767, temp0)
+		end if
+
+		if Water_flashTimer > 0
+			Water_flashTimer--
+		end if
+
+		// Manage the various cycling palettes throughout the stage
+		object.paletteTimer++
+		if object.paletteTimer == 8
+			object.paletteTimer = 0
+
+			object.bgTowerLightPalIndex++
+			object.bgTowerLightPalIndex &= 15
+			GetTableValue(temp0, object.bgTowerLightPalIndex, CPZSetup_bgTowerLightPalTable)
+			SetPaletteEntry(0, 175, temp0)
+
+			object.rainbowLightPalIndex++
+			object.rainbowLightPalIndex %= 21
+			GetTableValue(temp0, object.rainbowLightPalIndex, CPZSetup_rainbowLightPalTable)
+			SetPaletteEntry(0, 191, temp0)
+
+			object.chemLiquidPalIndex1 += 3
+			object.chemLiquidPalIndex1 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex1, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 188, temp0)
+
+			object.chemLiquidPalIndex2 += 3
+			object.chemLiquidPalIndex2 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex2, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 189, temp0)
+
+			object.chemLiquidPalIndex3 += 3
+			object.chemLiquidPalIndex3 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex3, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 190, temp0)
+		end if
+
+		if CPZSetup_hasAchievement == false
+			if stage.debugMode == false
+				if stage.actNum == 2
+					if object[30].type == TypeName[Act Finish]
+						CPZSetup_hasAchievement = true
+						if CPZSetup_enteredWater == false
+							// Grant the "100% Chemical Free" Achievement
+							CallNativeFunction2(SetAchievement, ACHIEVEMENT_CHEMICALFREE, 100)
+						end if
+					end if
+				end if
+			end if
+		end if
+#platform: USE_ORIGINS
+	end if
+	
+	object.drawingIndex = 0
+	CPZSetup_waterTintActive = 0
+#endplatform
+end event
+
+
+event ObjectDraw
+#platform: USE_ORIGINS
+	// If this check doesn't pass, the water tint is skipped over, and the foreground Girders are skipped over as well
+	// Unfortunately, this check always passes because the value is always set to 0 as seen above LOL
+	// (Interesting note though - this value does at least reach, but not surpass, 4 in 2PVS where 2 screens are active, does that mean anything?)
+	if CPZSetup_waterTintActive < 4
+#endplatform
+		if object.drawingIndex == 0
+			// Activating the Water tint
+			
+			temp0 = stage.waterLevel
+			temp0 -= screen.yoffset
+			if temp0 < 0
+				temp0 = 0
+			end if
+			if temp0 > screen.ysize
+				temp0 = screen.ysize
+			end if
+
+			SetActivePalette(0, 0, temp0)
+			if Water_flashTimer > 0
+				SetActivePalette(2, temp0, screen.ysize)
+			else
+				SetActivePalette(1, temp0, screen.ysize)
+			end if
+
+			// Add the object to the draw list again, for the Girders
+			AddDrawListEntityRef(2, object.entityPos)
+		else
+			// Drawing the Girders
+			
+			temp0 = screen.xoffset
+			temp0 *= 6
+			temp0 >>= 3
+			temp0 &= 0x1FF
+			FlipSign(temp0)
+			temp0 += object.scrollPos
+
+			temp1 = screen.yoffset
+			temp1 >>= 1
+			temp1 &= 0xFF
+			FlipSign(temp1)
+
+			DrawSpriteScreenXY(0, temp0, temp1)
+			DrawSpriteScreenXY(1, temp0, temp1)
+		end if
+#platform: USE_ORIGINS
+	end if
+#endplatform
+
+	object.drawingIndex ^= 1
+#platform: USE_ORIGINS
+	CPZSetup_waterTintActive++
+#endplatform
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CPZ/Objects.gif")
+
+	// Reset the boss flashing color
+	SetPaletteEntry(0, 192, 0x000000)
+
+	// Set the Chemical Plant music, and set its speedup/slowndown functions too
+	SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ)
+	SpeedUpMusic = CPZSetup_SpeedUpMusic
+	SlowDownMusic = CPZSetup_SlowDownMusic
+
+	// Sprite Frames - Foreground Girder
+	SpriteFrame(-16, 0, 32, 256, 224, 0)
+	SpriteFrame(-16, 256, 32, 256, 224, 0)
+
+	// Conveyor Belt Tile - Frame 1
+	Copy16x16Tile(767, 768)
+
+	// Locky and Pocky are the ones swimming in these chemicals
+	animalType1 = TypeName[Locky]
+	animalType2 = TypeName[Pocky]
+
+	// Set object 10 to be a CPZ Setup object
+	object[SLOT_ZONESETUP].type 				= TypeName[CPZ Setup]
+#platform: USE_STANDALONE
+	object[SLOT_ZONESETUP].priority 			= PRIORITY_ACTIVE
+#endplatform
+#platform: USE_ORIGINS
+	object[SLOT_ZONESETUP].priority 			= PRIORITY_ALWAYS
+#endplatform
+	object[SLOT_ZONESETUP].drawOrder 			= 0
+	object[SLOT_ZONESETUP].scrollPos 			= 496
+	object[SLOT_ZONESETUP].chemLiquidPalIndex2 	= 1
+	object[SLOT_ZONESETUP].chemLiquidPalIndex3 	= 2
+
+	temp0 = screen.xcenter
+	temp0 >>= 2
+	object[SLOT_ZONESETUP].scrollPos -= temp0
+
+	CPZSetup_rotatingStairTimer = 0
+
+	// Load the water palette
+	LoadPalette("CPZ_WaterPal.act", 1, 0, 0, 256)
+
+	// Init underwater Super palettes
+	CallFunction(CPZSetup_InitSuperSonicPal)
+	CallFunction(CPZSetup_InitSuperTailsPal)
+	CallFunction(CPZSetup_InitSuperKnuxPal)
+#platform: USE_ORIGINS
+	CallFunction(CPZSetup_InitSuperAmyPal)
+#endplatform
+
+	// Load the eletric flash palette in case the player tries to swim with a lightning shield
+	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
+
+	Water_flashTimer = 0
+
+	// Reset the ripple effect
+	arrayPos0 = 0
+	while arrayPos0 < 576
+		temp0 = arrayPos0
+		temp0 &= 0x3F
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, CPZSetup_deformationTable)
+		arrayPos0++
+	loop
+
+	if options.attractMode == true
+		switch stage.playerListPos
+		case PLAYER_SONIC_A
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A // Amy isn't even able to show up in demos, but check for her anyway I guess
+#endplatform
+			Player_attractTable 	= CPZSetup_replay_attract_S
+			Player_attractTableSize = 109
+			Player_attractDuration 	= 1800
+			break
+			
+		case PLAYER_TAILS_A
+			Player_attractTable 	= CPZSetup_replay_attract_T
+			Player_attractTableSize = 216
+			Player_attractDuration 	= 1560
+			break
+			
+		case PLAYER_KNUCKLES_A
+			Player_attractTable 	= CPZSetup_replay_attract_K
+			Player_attractTableSize = 126
+			Player_attractDuration 	= 1680
+			break
+		end switch
+		
+		CallFunction(Player_SetupAttractDemo)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

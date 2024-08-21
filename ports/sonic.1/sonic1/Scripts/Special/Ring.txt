@@ -1,0 +1,157 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Ring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.value0 : player.rings
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias 2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Ring_DebugDraw
+reserve function Ring_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Ring_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Ring_DebugSpawn
+	temp5 = TypeName[Ring]
+	temp4 = 0
+	CallFunction(DebugMode_PlaceBlock)
+	object[arrayPos0].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			object.type = TypeName[Ring Sparkle]
+			
+			player[currentPlayer].rings++
+			if player[currentPlayer].rings > 999
+				player[currentPlayer].rings = 999
+			end if
+
+			if player[currentPlayer].rings >= ringExtraLife
+				if options.gameMode != MODE_TIMEATTACK
+#platform: USE_STANDALONE
+					player.lives++
+#endplatform
+#platform: USE_ORIGINS
+					if game.coinMode == false
+						player.lives++
+					else
+						CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+					end if
+#endplatform
+					PlaySfx(SfxName[Life], false)
+					PauseMusic()
+					ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+					object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+				end if
+				
+				ringExtraLife += 100
+				if ringExtraLife >= 300
+					ringExtraLife = 1000
+				end if
+			end if
+
+			if Player_isWinner == false
+				if ringPan == 0
+					PlaySfx(SfxName[Ring L], false)
+					SetSfxAttributes(SfxName[Ring L], -1, -100)
+					ringPan = 1
+				else
+					PlaySfx(SfxName[Ring R], false)
+					SetSfxAttributes(SfxName[Ring R], -1, 100)
+					ringPan = 0
+				end if
+			end if
+
+			if player[currentPlayer].rings == 50
+				player.continues++
+				PlaySfx(SfxName[Continue], false)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	CallFunction(SpecialSetup_GetBlockPos)
+	DrawSpriteXY(ringFrame, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Loop through all objects, view this as a foreach
+	arrayPos0 = 32
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[Ring]
+			object[arrayPos0].drawOrder = 4
+		end if
+		
+		arrayPos0++
+	loop
+
+	// Ring frames
+	SpriteFrame(-8, -8, 16, 16, 172, 376)
+	SpriteFrame(-8, -8, 16, 16, 189, 376)
+	SpriteFrame(-8, -8, 16, 16, 206, 376)
+	SpriteFrame(-8, -8, 16, 16, 223, 376)
+	SpriteFrame(-8, -8, 16, 16, 240, 376)
+	SpriteFrame(-8, -8, 16, 16, 257, 376)
+	SpriteFrame(-8, -8, 16, 16, 274, 376)
+	SpriteFrame(-8, -8, 16, 16, 291, 376)
+
+	// Add this object to the stage's debug mode list
+	SetTableValue(TypeName[Ring], DebugMode_ObjCount, DebugMode_TypeTable)
+	SetTableValue(Ring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Ring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 172, 376)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

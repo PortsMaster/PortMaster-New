@@ -1,0 +1,223 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Rotating Spike Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatingSpike_DebugDraw
+reserve function RotatingSpike_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RotatingSpike_startDebugID = 0
+
+
+private function RotatingSpike_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function RotatingSpike_DebugSpawn
+	CreateTempObject(TypeName[Rotating Spike], object.direction, object.xpos, object.ypos)
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatingSpike_startDebugID
+
+	object[tempObjectPos].speed = 1
+	object[tempObjectPos].speed <<= temp0
+	if object.direction == 1
+		object[tempObjectPos].angle = 256
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle -= object.speed
+	if object.angle < 0
+		object.angle += 512
+	end if
+
+	temp0 = object.xpos
+	temp1 = object.ypos
+
+	Cos(object.xpos, object.angle)
+	object.xpos *= 0x2800
+	object.xpos += temp0
+
+	Sin(object.ypos, object.angle)
+	object.ypos *= 0x2800
+	object.ypos += temp1
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	Cos(temp0, object.angle)
+	temp0 *= 0x2800
+	temp0 += object.xpos
+
+	Sin(temp1, object.angle)
+	temp1 *= 0x2800
+	temp1 += object.ypos
+
+	DrawSpriteXY(0, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-24, -24, 48, 48, 61, 178)
+
+	foreach (TypeName[Rotating Spike], arrayPos0, ALL_ENTITIES)
+		switch object[arrayPos0].propertyValue
+		case 0
+			object[arrayPos0].speed = 4
+			break
+
+		case 1
+			object[arrayPos0].speed = 4
+			object[arrayPos0].angle = 256
+			break
+
+		case 2
+			object[arrayPos0].speed = 1
+			break
+
+		case 3
+			object[arrayPos0].speed = 1
+			object[arrayPos0].angle = 256
+			break
+
+		case 4
+			object[arrayPos0].speed = 2
+			break
+
+		case 5
+			object[arrayPos0].speed = 2
+			object[arrayPos0].angle = 256
+			break
+			
+		end switch
+	next
+
+	temp0 = 0
+	RotatingSpike_startDebugID = DebugMode_ObjCount
+	while temp0 < 3
+		SetTableValue(TypeName[Rotating Spike], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatingSpike_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatingSpike_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		object.inkEffect = INK_BLEND
+		switch object.propertyValue
+		default
+		case 0
+		case 2
+		case 4
+			object.angle = 0
+			break
+			
+		case 1
+		case 3
+		case 5
+			object.angle = 256
+			break
+			
+		end switch
+
+		Cos(temp0, object.angle)
+		temp0 *= 0x2800
+		temp0 += object.xpos
+
+		Sin(temp1, object.angle)
+		temp1 *= 0x2800
+		temp1 += object.ypos
+
+		DrawSpriteFX(0, FX_INK, temp0, temp1)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-24, -24, 48, 48, 61, 178)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Speed: Fast, Starting Side: Right", 0)
+	AddEnumVariable("Speed: Fast, Starting Side: Left", 1)
+	AddEnumVariable("Speed: Slow, Starting Side: Right", 2)
+	AddEnumVariable("Speed: Slow, Starting Side: Left", 3)
+	AddEnumVariable("Speed: Medium, Starting Side: Right", 4)
+	AddEnumVariable("Speed: Medium, Starting Side: Left", 5)
+end event

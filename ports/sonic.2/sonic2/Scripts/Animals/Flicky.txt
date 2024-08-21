@@ -1,0 +1,262 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Flicky Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.delay
+
+private alias object.value0 : object.timer // its this in ANIMAL_WAIT
+private alias object.value0 : object.bounceDir // its this in every other state
+private alias object.value1 : object.randomizeDir
+
+private alias 0 : ANIMAL_WAIT
+private alias 1 : ANIMAL_FALL
+private alias 2 : ANIMAL_BOUNCING_PLACED
+private alias 3 : ANIMAL_BOUNCING_FIXED
+private alias 4 : ANIMAL_BOUNCING_FOLLOW
+private alias 5 : ANIMAL_BOUNCING_FREE
+
+private alias  0x30000 : ANIMAL_XVEL
+private alias -0x40000 : ANIMAL_YVEL
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Flicky_DebugDraw
+reserve function Flicky_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Flicky_DebugDraw
+	DrawSprite(2)
+end function
+
+
+private function Flicky_DebugSpawn
+	CreateTempObject(TypeName[Flicky], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == FACING_RIGHT
+		object[tempObjectPos].state = ANIMAL_BOUNCING_FIXED
+		object[tempObjectPos].xvel = ANIMAL_XVEL
+		object[tempObjectPos].yvel = ANIMAL_YVEL
+
+		Rand(checkResult, 32)
+		if checkResult < 16
+			object[tempObjectPos].direction = FACING_LEFT
+			FlipSign(object[tempObjectPos].xvel)
+		end if
+	else
+		object[tempObjectPos].state = ANIMAL_BOUNCING_FOLLOW
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ANIMAL_WAIT
+		if object.timer < object.delay
+			object.timer++
+		else
+			object.xvel = ANIMAL_XVEL
+			if object.randomizeDir == true
+				object.drawOrder = 4
+
+				Rand(checkResult, 32)
+				if checkResult < 16
+					object.direction = FACING_LEFT
+					FlipSign(object.xvel)
+				end if
+			else
+				object.direction = FACING_LEFT
+				FlipSign(object.xvel)
+			end if
+
+			object.yvel = -0x40000
+			object.state++
+		end if
+		break
+
+	case ANIMAL_FALL
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, PATH_A)
+			if checkResult == true
+				object.yvel = ANIMAL_YVEL
+				object.state++
+			end if
+		end if
+		break
+
+	case ANIMAL_BOUNCING_FOLLOW
+		if player[0].xpos < object.xpos
+			object.direction = FACING_LEFT
+		else
+			object.direction = FACING_RIGHT
+		end if
+ 	// Fall through
+	case ANIMAL_BOUNCING_PLACED
+	case ANIMAL_BOUNCING_FIXED
+	case ANIMAL_BOUNCING_FREE
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, PATH_A)
+			if checkResult == true
+				if object.state == ANIMAL_BOUNCING_FIXED
+					if object.bounceDir == FACING_LEFT
+						FlipSign(object.xvel)
+						object.direction ^= FACING_LEFT
+					end if
+
+					object.bounceDir ^= FACING_LEFT
+				end if
+
+				object.yvel = ANIMAL_YVEL
+			end if
+		end if
+
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		break
+		
+	end switch
+
+	if object.state < ANIMAL_BOUNCING_FIXED
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case ANIMAL_WAIT
+	case ANIMAL_FALL
+		DrawSprite(2)
+		break
+
+	case ANIMAL_BOUNCING_PLACED
+	case ANIMAL_BOUNCING_FIXED
+	case ANIMAL_BOUNCING_FOLLOW
+	case ANIMAL_BOUNCING_FREE
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-8, -7, 16, 15, 66, 239)
+	SpriteFrame(-8, -8, 16, 15, 83, 239)
+	SpriteFrame(-6, -8, 11, 20, 50, 213)
+
+	foreach (TypeName[Flicky], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = ANIMAL_BOUNCING_FIXED
+			object[arrayPos0].xvel = ANIMAL_XVEL
+			object[arrayPos0].yvel = ANIMAL_YVEL
+
+			Rand(checkResult, 32)
+			if checkResult < 16
+				object[arrayPos0].direction = FACING_LEFT
+				FlipSign(object[arrayPos0].xvel)
+			end if
+		else
+			if object[arrayPos0].propertyValue == 2
+				object[arrayPos0].state = ANIMAL_BOUNCING_FOLLOW
+			end if
+
+			if object[arrayPos0].propertyValue == 3
+				object[arrayPos0].state = ANIMAL_BOUNCING_FREE
+				object[arrayPos0].xvel = ANIMAL_XVEL
+				FlipSign(object[arrayPos0].xvel)
+				object[arrayPos0].direction = FACING_LEFT
+			end if
+		end if
+		
+		object[arrayPos0].propertyValue = 0
+	next
+
+	SetTableValue(TypeName[Flicky], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Flicky_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Flicky_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // behavior
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // behavior
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-6, -8, 11, 20, 50, 213)
+
+	AddEditorVariable("behavior")
+	SetActiveVariable("behavior")
+	AddEnumVariable("Placed", 0)
+	AddEnumVariable("Fixed", 1)
+	AddEnumVariable("Follow", 2)
+	AddEnumVariable("Free", 3)
+end event

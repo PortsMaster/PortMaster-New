@@ -1,0 +1,266 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Bubblers Mother Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.spawnTimer
+private alias object.value2 : object.startPos.x
+private alias object.value3 : object.startPos.y
+
+// States
+private alias 0 : BUBBLERSMOTHER_PATROL
+private alias 1 : BUBBLERSMOTHER_FOUNDPLAYER
+private alias 2 : BUBBLERSMOTHER_ATTACKING
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BubblersMother_Setup
+reserve function BubblersMother_DebugDraw
+reserve function BubblersMother_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BubblersMother_Setup
+	object[arrayPos0].direction = object[arrayPos0].propertyValue
+	if object[arrayPos0].direction == FLIP_NONE
+		object[arrayPos0].xvel = -0x4000
+	else
+		object[arrayPos0].xvel = 0x4000
+	end if
+	object[arrayPos0].yvel = 0
+	object[arrayPos0].timer = 512
+	object[arrayPos0].spawnTimer = 0
+	object[arrayPos0].frame = 1
+	object[arrayPos0].animationTimer = 0
+	object[arrayPos0].priority = PRIORITY_BOUNDS
+	object[arrayPos0].state = BUBBLERSMOTHER_PATROL
+end function
+
+
+private function BubblersMother_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function BubblersMother_DebugSpawn
+	CreateTempObject(TypeName[Bubblers Mother], object.direction, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].startPos.y = object.ypos
+	arrayPos0 = object[tempObjectPos].entityPos
+	CallFunction(BubblersMother_Setup)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BUBBLERSMOTHER_PATROL
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		object.animationTimer++
+		object.animationTimer &= 3
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.frame++
+
+		object.timer--
+		if object.timer == 0
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+			object.timer = 512
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.state == BUBBLERSMOTHER_PATROL
+				if object.direction == FLIP_NONE
+					BoxCollisionTest(C_TOUCH, object.entityPos, -160, 12, 16, 96, currentPlayer, -1, -1, 1, 1)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, 16, 12, 160, 96, currentPlayer, -1, -1, 1, 1)
+				end if
+
+				if checkResult == true
+					object.state = BUBBLERSMOTHER_FOUNDPLAYER
+					object.frame = 2
+					object.timer = 16
+					if object.direction == FLIP_NONE
+						object.xvel = -0x28000
+					else
+						object.xvel = 0x28000
+					end if
+				end if
+			end if
+		next
+		break
+
+	case BUBBLERSMOTHER_FOUNDPLAYER
+		object.timer--
+		if object.timer < 0
+			object.state = BUBBLERSMOTHER_ATTACKING
+		end if
+
+		object.animationTimer++
+		object.animationTimer &= 3
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.frame++
+		break
+
+	case BUBBLERSMOTHER_ATTACKING
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+
+		object.spawnTimer++
+		if object.spawnTimer >= 20
+			object.spawnTimer = 0
+			temp0 = object.xpos
+			if object.direction == FLIP_NONE
+				temp0 += 0x60000
+			else
+				temp0 -= 0x60000
+			end if
+			temp1 = object.ypos
+			temp1 += 0xA0000
+			CreateTempObject(TypeName[Bubbler], 0, temp0, temp1)
+		end if
+
+		object.animationTimer++
+		if object.animationTimer >= 3
+			object.animationTimer = 0
+		end if
+
+		object.frame = object.animationTimer
+		object.frame++
+		break
+		
+	end switch
+
+	if object.outOfBounds == true
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
+			arrayPos0 = object.entityPos
+			CallFunction(BubblersMother_Setup)
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+		SpriteFrame(0, 0, 1, 1, 117, 102)
+		SpriteFrame(15, -3, 7, 13, 150, 111)
+		SpriteFrame(15, -3, 8, 13, 158, 111)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+
+		// they uhhhh.... kinda forgot all the other frames
+	end if
+
+	foreach (TypeName[Bubblers Mother], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		CallFunction(BubblersMother_Setup)
+	next
+
+	SetTableValue(TypeName[Bubblers Mother], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(BubblersMother_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(BubblersMother_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.direction, object.propertyValue, 0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

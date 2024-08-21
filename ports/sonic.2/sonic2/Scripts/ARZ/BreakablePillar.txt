@@ -1,0 +1,355 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Breakable Pillar Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.height
+private alias object.value1 : object.delay
+
+// States
+private alias 0 : BREAKABLEPILLAR_AWAITPLAYER
+private alias 1 : BREAKABLEPILLAR_RISE
+private alias 2 : BREAKABLEPILLAR_RISEN
+private alias 3 : BREAKABLEPILLAR_NONE
+private alias 4 : BREAKABLEPILLAR_TILEDELAY
+private alias 5 : BREAKABLEPILLAR_FALL
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BreakablePillar_DebugDraw
+reserve function BreakablePillar_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value BreakablePillar_startDebugID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table BreakablePillar_tileVelTable
+	-0x20000, -0x20000, -0x1C000, -0x1C000, 0x1C000, -0x1C000, 0x20000, -0x20000, -0x18000, -0x18000, 0x18000, -0x18000, -0x14000, -0x14000, 0x14000, -0x14000
+	-0x10000, -0x10000, 0x10000, -0x10000, -0xC000, -0xC000, 0xC000, -0xC000, -0x8000, -0x8000, 0x8000, -0x8000
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BreakablePillar_DebugDraw
+	EditFrame(0, -28, -24, 56, 32, 59, 42)
+	DrawSprite(0)
+
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BreakablePillar_startDebugID
+	temp0++
+	DrawSprite(temp0)
+end function
+
+
+private function BreakablePillar_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BreakablePillar_startDebugID
+	temp0++
+	CreateTempObject(TypeName[Breakable Pillar], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].height = 32
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BREAKABLEPILLAR_AWAITPLAYER
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -40, -256, 40, 256, currentPlayer, -1, -1, 1, 1)
+			if checkResult == true
+				object.priority = PRIORITY_ACTIVE
+				object.state++
+			end if
+		next
+		break
+
+	case BREAKABLEPILLAR_RISE
+		object.height += 2
+		if object.height == 80
+			object.state = 2
+		end if
+		break
+
+	case BREAKABLEPILLAR_RISEN
+		break
+
+	case BREAKABLEPILLAR_NONE
+		break
+
+	case BREAKABLEPILLAR_TILEDELAY
+		object.delay--
+		if object.delay < 0
+			object.state++
+		end if
+		break
+
+	case BREAKABLEPILLAR_FALL
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state < BREAKABLEPILLAR_TILEDELAY
+		temp0 = object.height
+		temp0 -= 8
+		FlipSign(temp0)
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.state < BREAKABLEPILLAR_NONE
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, temp0, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_TOP
+					player[currentPlayer].animation = ANI_JUMPING
+					if player[currentPlayer].state == Player_State_GlideLeft
+						FlipSign(player[currentPlayer].xvel)
+						player[currentPlayer].speed = player[currentPlayer].xvel
+					end if
+
+					player[currentPlayer].state = Player_State_Roll
+					player[currentPlayer].gravity = GRAVITY_AIR
+					PlaySfx(SfxName[Ledge Break], false)
+
+					temp5 = 0
+					temp0 = object.height
+					temp0 >>= 5
+					temp1 = object.height
+					temp1 &= 31
+					if temp1 != 0
+						temp0++
+					end if
+					temp3 = object.height
+					FlipSign(temp3)
+					temp3 += 16
+					temp3 <<= 16
+					temp3 += object.ypos
+					temp2 = object.xpos
+					temp2 -= 0x180000
+					temp1 = 3
+					while temp1 < 7
+						CreateTempObject(TypeName[Breakable Pillar], temp1, temp2, temp3)
+						GetTableValue(object[tempObjectPos].xvel, temp5, BreakablePillar_tileVelTable)
+						temp5++
+						GetTableValue(object[tempObjectPos].yvel, temp5, BreakablePillar_tileVelTable)
+						temp5++
+						object[tempObjectPos].state = BREAKABLEPILLAR_TILEDELAY
+						temp2 += 0x100000
+						temp1++
+					loop
+
+					temp3 += 0x100000
+					temp4 = 4
+					while temp0 >= 0
+						temp1 = 7
+						temp2 = object.xpos
+						temp2 -= 0x80000
+						while temp1 < 9
+							CreateTempObject(TypeName[Breakable Pillar], temp1, temp2, temp3)
+							GetTableValue(object[tempObjectPos].xvel, temp5, BreakablePillar_tileVelTable)
+							temp5++
+							GetTableValue(object[tempObjectPos].yvel, temp5, BreakablePillar_tileVelTable)
+							temp5++
+							object[tempObjectPos].delay = temp4
+							object[tempObjectPos].state = BREAKABLEPILLAR_TILEDELAY
+							temp2 += 0x100000
+							temp1++
+						loop
+						temp3 += 0x100000
+						temp4 += 4
+						temp0--
+					loop
+
+					temp3 = object.ypos
+					temp3 += 0x100000
+					if object.propertyValue == 1
+						temp6 = 0
+					else
+						temp6 = 2
+					end if
+					temp6 += 9
+
+					temp1 = 0
+					temp2 = object.xpos
+					temp2 -= 0x80000
+					while temp1 < 2
+						CreateTempObject(TypeName[Breakable Pillar], temp6, temp2, temp3)
+						GetTableValue(object[tempObjectPos].xvel, temp5, BreakablePillar_tileVelTable)
+						temp5++
+						GetTableValue(object[tempObjectPos].yvel, temp5, BreakablePillar_tileVelTable)
+						temp5++
+						object[tempObjectPos].delay = temp4
+						object[tempObjectPos].state = BREAKABLEPILLAR_TILEDELAY
+						temp2 += 0x100000
+						temp6++
+						temp1++
+					loop
+					object.state = BREAKABLEPILLAR_NONE
+				end if
+			end if
+		next
+
+		temp0 = screen.xcenter
+		temp0 += 184
+		CheckCameraProximity(object.ixpos, 0, temp0, -1)
+		if checkResult == false
+			object.height 	= 32
+			object.delay 	= 0
+			object.state 	= BREAKABLEPILLAR_AWAITPLAYER
+			object.priority = PRIORITY_BOUNDS
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state != BREAKABLEPILLAR_NONE
+		temp0 = object.height
+		temp0 -= 8
+		FlipSign(temp0)
+		EditFrame(0, -28, temp0, 56, object.height, 59, 42)
+
+		DrawSprite(0)
+		DrawSprite(object.propertyValue)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-28, -24, 56, 32, 59, 42)
+	SpriteFrame(-16, 8, 32, 24, 223, 137)
+	SpriteFrame(-16, 8, 32, 16, 71, 130)
+	SpriteFrame(-4, -8, 12, 16, 59, 42)
+	SpriteFrame(-8, -8, 16, 16, 71, 42)
+	SpriteFrame(-8, -8, 16, 16, 87, 42)
+	SpriteFrame(-8, -8, 12, 16, 103, 42)
+	SpriteFrame(-8, -8, 16, 16, 71, 58)
+	SpriteFrame(-8, -8, 16, 16, 87, 58)
+	SpriteFrame(-8, -8, 16, 24, 223, 137)
+	SpriteFrame(-8, -8, 16, 24, 239, 137)
+	SpriteFrame(-8, -8, 16, 16, 71, 130)
+	SpriteFrame(-8, -8, 16, 16, 87, 130)
+
+	temp0 = 0
+	BreakablePillar_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Breakable Pillar], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(BreakablePillar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(BreakablePillar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+
+	foreach (TypeName[Breakable Pillar], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].height = 32
+		object[arrayPos0].propertyValue++
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // noGrass
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // noGrass
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.height = 80
+	object.frame = object.propertyValue
+	object.frame++
+
+	temp0 = object.height
+	temp0 -= 8
+	FlipSign(temp0)
+	EditFrame(0, -28, temp0, 56, object.height, 59, 42)
+
+	DrawSprite(0)
+	DrawSprite(object.frame)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-28, -24, 56, 32, 59, 42)
+	SpriteFrame(-16, 8, 32, 24, 223, 137)
+	SpriteFrame(-16, 8, 32, 16, 71, 130)
+	SpriteFrame(-4, -8, 12, 16, 59, 42)
+	SpriteFrame(-8, -8, 16, 16, 71, 42)
+	SpriteFrame(-8, -8, 16, 16, 87, 42)
+	SpriteFrame(-8, -8, 12, 16, 103, 42)
+	SpriteFrame(-8, -8, 16, 16, 71, 58)
+	SpriteFrame(-8, -8, 16, 16, 87, 58)
+	SpriteFrame(-8, -8, 16, 24, 223, 137)
+	SpriteFrame(-8, -8, 16, 24, 239, 137)
+	SpriteFrame(-8, -8, 16, 16, 71, 130)
+	SpriteFrame(-8, -8, 16, 16, 87, 130)
+
+	AddEditorVariable("noGrass")
+	SetActiveVariable("noGrass")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

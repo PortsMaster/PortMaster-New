@@ -1,0 +1,353 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Springboard Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.bounceDelay
+private alias object.value1 : object.force // unused (set but never actually used properly, which funnily enough is how it works in the original S2 too)
+private alias object.value2 : object.activePlayers
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.frame : player.frame
+private alias object.prevAnimation : player.prevAnimation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.collisionBottom : player.collisionBottom
+private alias object.tileCollisions : player.tileCollisions
+private alias object.value1  : player.timer
+private alias object.value10 : player.animationReserve
+private alias object.value17 : debugMode.currentSelection
+private alias object.value25 : player.gravityStrength
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Springboard_DebugDraw
+reserve function Springboard_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Springboard_debugStartID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+// tech
+private table Springboard_springForceTable
+	-0x40000, -0xA0000, -0x80000
+end table
+
+private table Springboard_springPowerTable
+	 0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000
+	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
+	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
+	-0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000
+	-0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x40000, -0x40000
+end table
+
+private table Springboard_heightsReadyTable
+	 8,  9, 10, 11, 12, 13, 14
+	15, 16, 16, 17, 18, 19, 20
+	20, 21, 21, 22, 23, 24, 24
+	24, 24, 24, 24, 24, 24, 24
+end table
+
+private table Springboard_heightsFlatTable
+	 8,  9, 10, 11, 12, 12, 12
+	12, 13, 13, 13, 13, 13, 13
+	14, 14, 15, 15, 16, 16, 16
+	16, 15, 15, 14, 14, 13, 13
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Springboard_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Springboard_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Springboard_debugStartID
+	CreateTempObject(TypeName[Springboard], 0, object.xpos, object.ypos)
+	GetTableValue(object[tempObjectPos].force, temp0, Springboard_springForceTable) // doesn't really mean anything since object.force is unused
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.bounceDelay != 0
+		object.bounceDelay--
+		switch object.bounceDelay
+		case 0
+			temp2 = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				GetBit(temp3, object.activePlayers, temp2)
+				if temp3 == true
+					temp0 = player[currentPlayer].xpos
+					temp0 -= object.xpos
+					temp0 += 0x1C0000
+					temp0 >>= 17
+					GetBit(temp3, object.direction, 0)
+					if temp3 == FLIP_X
+						temp0 -= 28
+						FlipSign(temp0)
+					end if
+
+					if temp0 >= 8
+						player[currentPlayer].animationReserve = ANI_WALKING
+						if player[currentPlayer].animation == ANI_RUNNING
+							player[currentPlayer].animationReserve = ANI_RUNNING
+						end if
+						
+						if player[currentPlayer].animation == ANI_PEELOUT
+							player[currentPlayer].animationReserve = ANI_PEELOUT
+						end if
+
+						object.bounceDelay = 1
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						player[currentPlayer].tileCollisions = true
+						player[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].speed = player[currentPlayer].xvel
+						temp0 -= 8
+						temp0 <<= 1
+						if temp0 > 39
+							temp0 = 39
+						end if
+
+						GetTableValue(player[currentPlayer].yvel, temp0, Springboard_springPowerTable)
+						player[currentPlayer].yvel -= 0x40000 // constant in place of object.force (see ObjectStartup)
+						player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+						player[currentPlayer].animation = ANI_TWIRL
+						player[currentPlayer].prevAnimation = ANI_TWIRL
+						player[currentPlayer].frame = 0
+						player[currentPlayer].animationSpeed = 80
+						player[currentPlayer].timer = 0
+						PlaySfx(SfxName[Spring], false)
+					end if
+				end if
+				temp2++
+			next
+			break
+
+		case 1
+			object.frame = 0
+			break
+
+		default
+			object.frame = 1
+			break
+			
+		end switch
+	end if
+
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = player[currentPlayer].xpos
+		temp0 -= object.xpos
+		temp0 += 0x1C0000
+		temp0 >>= 17
+		if temp0 < 0
+			temp0 = 0
+		end if
+		if temp0 > 27
+			temp0 = 27
+		end if
+
+		switch object.direction
+		case FLIP_NONE
+			if object.frame == 0
+				GetTableValue(temp1, temp0, Springboard_heightsReadyTable)
+			else
+				GetTableValue(temp1, temp0, Springboard_heightsFlatTable)
+			end if
+
+			FlipSign(temp1)
+			temp4 = player[currentPlayer].speed
+			temp5 = player[currentPlayer].xpos
+			BoxCollisionTest(C_SOLID, object.entityPos, -28, temp1, 28, -8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			switch checkResult
+			case COL_LEFT
+				player[currentPlayer].speed = temp4
+				player[currentPlayer].xpos = temp5
+				// [Fallthrough]
+			case COL_NONE
+			case COL_RIGHT
+			case COL_BOTTOM
+				GetBit(temp3, object.activePlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 28
+						if player[currentPlayer].yvel >= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = true
+						end if
+					end if
+				end if
+				break
+			end switch
+			break
+
+		case FLIP_X
+			temp0 -= 27
+			Abs(temp0)
+			if object.frame == 0
+				GetTableValue(temp1, temp0, Springboard_heightsReadyTable)
+			else
+				GetTableValue(temp1, temp0, Springboard_heightsFlatTable)
+			end if
+
+			FlipSign(temp1)
+			temp4 = player[currentPlayer].speed
+			temp5 = player[currentPlayer].xpos
+			BoxCollisionTest(C_SOLID, object.entityPos, -28, temp1, 28, -8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			switch checkResult
+			case COL_RIGHT
+				player[currentPlayer].speed = temp4
+				player[currentPlayer].xpos = temp5
+				// [Fallthrough]
+			case COL_NONE
+			case COL_LEFT
+			case COL_TOP
+				GetBit(temp3, object.activePlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 28
+						if player[currentPlayer].yvel >= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = true
+						end if
+					end if
+				end if
+				break
+			end switch
+			break
+			
+		// Sorry, no upside-down Springboards..
+		case FLIP_Y
+			break
+
+		case FLIP_XY
+			break
+			
+		end switch
+
+		if checkResult == true
+			SetBit(object.activePlayers, temp2, true)
+			if temp0 >= 8
+				if object.bounceDelay == 0
+					object.bounceDelay = 6
+				end if
+			end if
+		else
+			SetBit(object.activePlayers, temp2, false)
+		end if
+		
+		temp2++
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	foreach (TypeName[Springboard], arrayPos0, ALL_ENTITIES)
+		// This part is... weird
+		// For one, where is this temp0 coming from?
+		// Here's some fun little notes
+		// - This object was definitely scripted using the original game's asm as reference, seeing that the two's code are pretty similar
+		// - In the original S2, the object would get a force value based on (subtype & 2)
+		//   - However, even with that, the force value would never get read and a force of 0x40000 (the first entry on the table) would be used all the time instead
+		// - For some reason, it looks like they decided to do the same thing in this remake?
+		//   - They still have the same force table, they still get the force value and store it, and they even still force a force of 0x40000 in the actual script too
+		//   - this whole situation is kinda really confusing, but at the very least we can guess that temp0 was like
+		//       GetBit(temp0, object.propertyValue, 1)
+		//   - Or something like that (in the original game bit 0 was useTwirlAnim and the second bit would be force)
+		
+		GetTableValue(object[arrayPos0].force, temp0, Springboard_springForceTable)
+	next
+	
+	// One of the rare instances of code being between the sprite sheet and Sprite Frames, a Springboard only has two frames
+	SpriteFrame(-28, -24, 56, 16, 52, 160)
+	SpriteFrame(-28, -16, 56, 8, 52, 177)
+	
+	temp0 = 0
+	Springboard_debugStartID = DebugMode_ObjCount
+	while temp0 < 3
+		SetTableValue(TypeName[Springboard], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Springboard_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Springboard_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-28, -24, 56, 16, 52, 160)
+	
+	// dir is attr to set from scene, prop val is unused even if it is set sometimes (in the original game it was force/useTwirlAnim)
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

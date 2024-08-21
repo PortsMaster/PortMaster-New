@@ -1,0 +1,121 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: DER Hand Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 49 : TYPE_DERHAND
+
+
+// Static Values
+
+// Tables
+public table DERHand_table56
+	0x20000, 0x10000, 0x8000, 0
+end table
+
+
+event ObjectMain
+	switch object.state
+	case 0
+	case 2
+		break
+	case 1
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	case 3
+		object.value0--
+		if object.value0 < 0
+			object.value0 = 32
+			temp0 = object.ypos
+			temp0 -= object[0].ypos
+			Abs(temp0)
+			if temp0 >= 0x1000000
+				temp0 = 0xFF0000
+			end if
+			temp0 >>= 6
+			GetTableValue(object.yvel, temp0, DERHand_table56)
+			if object[0].ypos < object.ypos
+				FlipSign(object.yvel)
+			end if
+			if object.direction == FLIP_NONE
+				object.xvel = -0x80000
+			else
+				object.xvel = 0x80000
+			end if
+			PlaySfx(SfxName[Release], 0)
+			object.state = 4
+		else
+			object.yvel += 0x2000
+			object.ypos += object.yvel
+		end if
+		break
+	case 4
+		object.value0--
+		if object.value0 < 0
+			object.value0 = 32
+			FlipSign(object.xvel)
+			object.yvel = object.value1
+			object.yvel -= object.ypos
+			object.yvel >>= 5
+			object.state = 5
+		else
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		end if
+		break
+	case 5
+		object.value0--
+		if object.value0 < 0
+			object.value0 = 0
+			object.xvel = 0
+			object.yvel = 0
+			object.state = 2
+		else
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		end if
+		break
+	end switch
+	if object.state > 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -4, 24, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				CallFunction(PlayerObject_Hit)
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == 1
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 430, 100)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 942, 100)
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

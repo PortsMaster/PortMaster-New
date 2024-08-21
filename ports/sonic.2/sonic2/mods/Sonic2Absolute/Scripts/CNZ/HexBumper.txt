@@ -1,0 +1,211 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Hex Bumper Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 44 : TYPE_HEXBUMPER
+
+// Function declarations
+reserve function HexBumper_DebugDraw
+reserve function HexBumper_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function HexBumper_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function HexBumper_DebugSpawn
+	CreateTempObject(TypeName[Hex Bumper], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+event ObjectMain
+	if object.state > 0
+		object.frame = object.value0
+		object.frame /= 5
+		object.frame++
+		object.value0++
+		if object.value0 > 15
+			object.value0 = 0
+			object.state = 0
+			object.frame = 0
+		end if
+	end if
+	if object.outOfBounds == 1
+		object.priority = PRIORITY_ACTIVE_BOUNDS
+	end if
+	if object.xvel != 0
+		if Slots.Power == 0
+			object.xpos += object.xvel
+			if object.xvel > 0
+				if object.xpos >= object.value4
+					object.xpos = object.value4
+					FlipSign(object.xvel)
+				end if
+			else
+				if object.xpos <= object.value3
+					object.xpos = object.value3
+					FlipSign(object.xvel)
+				end if
+			end if
+		end if
+	end if
+	temp7 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp6 = object.value5
+		temp6 >>= temp7
+		temp6 &= 255
+		if temp6 == 0
+			if object[currentPlayer].animation != ANI_HURT
+				BoxCollisionTest(C_TOUCH, object.entityPos, -12, -8, 12, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+				if checkResult == 1
+					if object.state == 0
+						PlaySfx(SfxName[Bumper], 0)
+					end if
+					if object.value0 > 5
+						PlaySfx(SfxName[Bumper], 0)
+					end if
+					object.state = 1
+					object.priority = PRIORITY_ACTIVE
+					temp0 = object[currentPlayer].xpos
+					temp0 -= object.xpos
+					temp1 = object[currentPlayer].ypos
+					temp1 -= object.ypos
+					ATan2(temp2, temp0, temp1)
+					temp2 += 32
+					temp2 &= 255
+					temp2 >>= 6
+					switch temp2
+					case 0
+						temp0 = 0x80000
+						temp1 = object[currentPlayer].yvel
+						object.value1 = -0x40000
+						object.value2 = 0
+						break
+					case 1
+						if object[currentPlayer].xpos < object.xpos
+							temp0 = -0x20000
+						else
+							temp0 = 0x20000
+						end if
+						temp1 = 0x80000
+						object.value1 = 0
+						object.value2 = -0x40000
+						break
+					case 2
+						temp0 = -0x80000
+						temp1 = object[currentPlayer].yvel
+						object.value1 = 0x40000
+						object.value2 = 0
+						break
+					case 3
+						if object[currentPlayer].xpos < object.xpos
+							temp0 = -0x20000
+						else
+							temp0 = 0x20000
+						end if
+						temp1 = -0x80000
+						object.value1 = 0
+						object.value2 = 0x40000
+						break
+					end switch
+					if object[currentPlayer].state == PlayerObject_HandleFlyCarry
+						object[1].value36 = 30
+					end if
+					CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+					temp2 = checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+					temp2 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLYING)
+					temp2 |= checkResult
+					CheckEqual(object[currentPlayer].state, PlayerObject_HandleRollDecel)
+					temp2 |= checkResult
+					CheckEqual(object[currentPlayer].state, PlayerObject_Unknown)
+					temp2 |= checkResult
+					if temp2 == 0
+						object[currentPlayer].state = PlayerObject_HandleAir
+						if object[currentPlayer].animation != ANI_JUMPING
+							if object[currentPlayer].animation != ANI_RUNNING
+								object[currentPlayer].animation = ANI_WALKING
+							end if
+						end if
+					end if
+					if object[currentPlayer].animation != ANI_GLIDING
+						object[currentPlayer].xvel += temp0
+						object[currentPlayer].speed = object[currentPlayer].xvel
+						object[currentPlayer].value1 = 0
+					end if
+					object[currentPlayer].yvel = temp1
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object[currentPlayer].tileCollisions = 1
+					temp6 = 3
+					temp6 <<= temp7
+					object.value5 |= temp6
+				end if
+			end if
+		else
+			temp5 = 1
+			temp5 <<= temp7
+			object.value5 -= temp5
+		end if
+		temp7 += 8
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = object.frame
+	temp0 &= 1
+	if temp0 == 0
+		DrawSprite(0)
+	else
+		temp1 = object.xpos
+		temp1 += object.value1
+		temp2 = object.ypos
+		temp2 += object.value2
+		DrawSpriteXY(0, temp1, temp2)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == 1
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 99, 99)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 581, 343)
+	end if
+	foreach (TypeName[Hex Bumper], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].xvel = 0x10000
+			object[arrayPos0].value3 = object[arrayPos0].xpos
+			object[arrayPos0].value3 -= 0x600000
+			object[arrayPos0].value4 = object[arrayPos0].xpos
+			object[arrayPos0].value4 += 0x600000
+		end if
+	next
+	SetTableValue(TypeName[Hex Bumper], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HexBumper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HexBumper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

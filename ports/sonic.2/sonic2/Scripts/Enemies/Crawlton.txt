@@ -1,0 +1,311 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Crawlton Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.extend.length
+private alias object.value2 : object.extend.x
+private alias object.value3 : object.extend.y
+private alias object.value4 : object.head.x
+private alias object.value5 : object.head.y
+private alias object.value6 : object.target.distance
+private alias object.value7 : object.target.entityPos
+
+// States
+private alias 0 : CRAWLTON_AWAITPLAYER
+private alias 1 : CRAWLTON_EXTENDDELAY
+private alias 2 : CRAWLTON_EXTEND
+private alias 3 : CRAWLTON_RETRACTDELAY
+private alias 4 : CRAWLTON_RETRACT
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Crawlton_DebugDraw
+reserve function Crawlton_DebugSpawn
+reserve function Crawlton_CheckPlayerDist
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Crawlton_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Crawlton_DebugSpawn
+	CreateTempObject(TypeName[Crawlton], 0, object.xpos, object.ypos)
+end function
+
+
+private function Crawlton_CheckPlayerDist
+	// This function calculates the total distance of player from Crawlton,
+	// `object.target.distance` is like the function's "return value" of sorts
+	
+	temp0 = player[currentPlayer].xpos
+	temp0 -= object.xpos
+	temp0 >>= 16
+	object.target.distance = temp0
+	object.target.distance *= temp0
+
+	temp0 = player[currentPlayer].ypos
+	temp0 -= object.ypos
+	temp0 >>= 16
+	temp1 = temp0
+	temp1 *= temp0
+
+	object.target.distance += temp1
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CRAWLTON_AWAITPLAYER
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.state == CRAWLTON_AWAITPLAYER // It may seem redundant with the switch-case, but this is making sure a target player hasn't been found already from previous loops of this foreach
+				if player[currentPlayer].xpos < object.xpos
+					object.direction = FLIP_NONE
+				else
+					object.direction = FLIP_X
+				end if
+
+				CallFunction(Crawlton_CheckPlayerDist)
+				if object.target.distance < 0x4000
+					object.target.entityPos = currentPlayer
+					object.state = CRAWLTON_EXTENDDELAY
+				end if
+			end if
+		next
+		break
+
+	case CRAWLTON_EXTENDDELAY
+		currentPlayer = object.target.entityPos
+
+		// Turn to face the target player if needed
+		if player[currentPlayer].xpos < object.xpos
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+
+		object.timer++
+		if object.timer == 32
+			CallFunction(Crawlton_CheckPlayerDist)
+			if object.target.distance < 0x4000
+				object.extend.x = player[currentPlayer].xpos
+				object.extend.x -= object.xpos
+				object.extend.x /= 0x12000
+
+				object.extend.y = player[currentPlayer].ypos
+				object.extend.y -= object.ypos
+				object.extend.y /= 0x12000
+			else
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+
+				temp1 = player[currentPlayer].ypos
+				temp1 -= object.ypos
+
+				ATan2(temp2, temp0, temp1)
+
+				Cos256(object.extend.x, temp2)
+				Sin256(object.extend.y, temp2)
+
+				object.extend.x *= 224
+				object.extend.y *= 224
+
+				object.extend.x >>= 9
+				object.extend.y >>= 9
+			end if
+
+			object.timer = 0
+			object.state = CRAWLTON_EXTEND
+		end if
+		break
+
+	case CRAWLTON_EXTEND
+		if object.extend.length < 0x1C0000
+			object.extend.length += 0x10000
+		else
+			object.state = CRAWLTON_RETRACTDELAY
+		end if
+		break
+
+	case CRAWLTON_RETRACTDELAY
+		object.timer++
+		if object.timer == 32
+			object.timer = 0
+			object.state = CRAWLTON_RETRACT
+		end if
+		break
+
+	case CRAWLTON_RETRACT
+		if object.extend.length > 0
+			object.extend.length -= 0x10000
+		else
+			object.state = CRAWLTON_AWAITPLAYER
+		end if
+		break
+
+	end switch
+
+	// Calculate head position
+	object.head.x = object.extend.x
+	object.head.x *= object.extend.length
+	object.head.x /= 28
+	object.head.x += object.xpos
+
+	object.head.y = object.extend.y
+	object.head.y *= object.extend.length
+	object.head.y /= 28
+	object.head.y += object.ypos
+
+	// Backup the object position and move the object to its head pos for collision checks
+	temp6 = object.xpos
+	temp7 = object.ypos
+
+	object.xpos = object.head.x
+	object.ypos = object.head.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -8, 10, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+
+	// If the badnik was broken it'd be an Animal object now, which is why this check is here to
+	// make sure the Freed Animal doesn't teleport
+	if object.type == TypeName[Crawlton]
+		// The object is still a Crawlton, it's safe to move it back
+		object.xpos = temp6
+		object.ypos = temp7
+		if object.outOfBounds == true
+			// Dunno why this condition is here though, if it's just empty
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// Draw a body piece at the object base regardless of state
+	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+
+	// Then, draw extra body pieces depending on what the Crawlton is doing
+	switch object.state
+	case CRAWLTON_EXTEND
+		temp0 = object.extend.length
+		temp0 &= 0x3FFFF
+		while temp0 < object.extend.length
+			temp1 = object.extend.x
+			temp1 *= temp0
+			temp1 /= 28
+			temp1 += object.xpos
+
+			temp2 = object.extend.y
+			temp2 *= temp0
+			temp2 /= 28
+			temp2 += object.ypos
+
+			DrawSpriteFX(1, FX_FLIP, temp1, temp2)
+			temp0 += 0x40000
+		loop
+		break
+
+	case CRAWLTON_RETRACTDELAY
+	case CRAWLTON_RETRACT
+		temp0 = 0x40000
+		while temp0 < object.extend.length
+			temp1 = object.extend.x
+			temp1 *= temp0
+			temp1 /= 28
+			temp1 += object.xpos
+
+			temp2 = object.extend.y
+			temp2 *= temp0
+			temp2 /= 28
+			temp2 += object.ypos
+
+			DrawSpriteFX(1, FX_FLIP, temp1, temp2)
+			temp0 += 0x40000
+		loop
+		break
+
+	end switch
+
+	// And draw the head regardless of state too
+	DrawSpriteFX(0, FX_FLIP, object.head.x, object.head.y)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-16, -8, 24, 16, 152, 114) // 0 - Head Frame
+		SpriteFrame(-8, -8, 16, 15, 135, 114)  // 1 - Body Frame
+	else
+		// Note - even if these are spriteframes for MBZ, they're broken with values copied directly from MCZ's sheet
+		// Using these sheet positions results in the middle of CPZ's chemical dropper and CNZ's boss electricity
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 24, 16, 152, 114)
+		SpriteFrame(-8, -8, 16, 15, 135, 114)
+	end if
+
+	SetTableValue(TypeName[Crawlton], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Crawlton_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Crawlton_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-16, -8, 24, 16, 152, 114)
+		SpriteFrame(-8, -8, 16, 15, 135, 114)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		// Decomp note - using fixed frames here
+		SpriteFrame(-16, -8, 24, 16, 534, 289)
+		SpriteFrame(-8, -8, 16, 15, 559, 289)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

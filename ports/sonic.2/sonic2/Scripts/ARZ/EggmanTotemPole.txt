@@ -1,0 +1,174 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Totem Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value3 : object.timer
+private alias object.value7 : object.rumbleTimer
+private alias object.value8 : object.offset
+private alias object.value9 : object.eyePos
+
+// States
+private alias 0 : EGGMANTOTEMPOLE_RISING
+private alias 1 : EGGMANTOTEMPOLE_IDLE
+private alias 2 : EGGMANTOTEMPOLE_2
+private alias 3 : EGGMANTOTEMPOLE_LOWERING
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EGGMANTOTEMPOLE_RISING
+		object.ypos -= 0x10000
+
+		object.rumbleTimer++
+		object.rumbleTimer %= 40
+		if object.rumbleTimer == 8
+			PlaySfx(SfxName[Rumble], false)
+		end if
+
+		temp0 = object.rumbleTimer
+		temp0 &= 7
+		if temp0 == 0
+			screen.shakeX = 1
+		end if
+
+		temp0 = object.rumbleTimer
+		temp0 &= 3
+		if temp0 == 0
+			screen.shakeY = 2
+		end if
+
+		object.timer--
+		if object.timer == 0
+			object.state++
+		end if
+		break
+
+	case EGGMANTOTEMPOLE_IDLE
+		break
+
+	case EGGMANTOTEMPOLE_2
+		FlipSign(object.offset)
+		object.timer--
+		if object.timer == 0
+			object.state = EGGMANTOTEMPOLE_IDLE
+			object.offset = 0
+		end if
+		break
+
+	case EGGMANTOTEMPOLE_LOWERING
+		object.ypos += 0x10000
+		object.rumbleTimer++
+		object.rumbleTimer %= 40
+
+		temp0 = object.rumbleTimer
+		temp0 &= 7
+		if temp0 == 0
+			screen.shakeX = 1
+		end if
+
+		temp0 = object.rumbleTimer
+		temp0 &= 3
+		if temp0 == 0
+			screen.shakeY = 2
+		end if
+
+		object.timer--
+		if object.timer == 0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -64, 24, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if object.state == EGGMANTOTEMPOLE_LOWERING
+				if checkResult == COL_TOP
+					player[currentPlayer].ypos += 0x10000
+				end if
+			end if
+		else
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -64, 16, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if object.state == EGGMANTOTEMPOLE_LOWERING
+				if checkResult == COL_TOP
+					player[currentPlayer].ypos += 0x10000
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = object.xpos
+	temp0 += object.offset
+
+	temp1 = object.ypos
+	temp1 += object.offset
+	DrawSpriteFX(0, FX_FLIP, temp0, temp1)
+
+	if object.state == EGGMANTOTEMPOLE_2
+		temp1 += object.eyePos
+		DrawSpriteFX(1, FX_FLIP, temp0, temp1)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("ARZ/Objects.gif")
+		
+		// Pillar Frame
+		SpriteFrame(0, -64, 32, 160, 223, 1)
+		
+		// Eye Frame
+		SpriteFrame(19, -13, 12, 8, 211, 24)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Pillar Frame
+		SpriteFrame(0, -64, 32, 160, 1, 95)
+		
+		// Eye Frame
+		SpriteFrame(19, -13, 12, 8, 328, 31)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("ARZ/Objects.gif")
+		SpriteFrame(0, -64, 32, 160, 223, 1) 	// Totem Pole
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(0, -64, 32, 160, 1, 95) 	// Bluer Totem Pole
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

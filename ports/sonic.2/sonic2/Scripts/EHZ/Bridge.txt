@@ -1,0 +1,374 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Bridge Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.length
+
+private alias object.value0 : object.activePlayerCount
+private alias object.value1 : object.timer
+private alias object.value2 : object.stoodPos
+private alias object.value3 : object.depression
+private alias object.value4 : object.bridgeDepth
+private alias object.value5 : object.playerID
+private alias object.value6 : object.startPos
+private alias object.value7 : object.endPos
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.collisionBottom : player.collisionBottom
+private alias object.floorSensorC : player.floorSensorC
+private alias object.floorSensorL : player.floorSensorL
+private alias object.floorSensorR : player.floorSensorR
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Bridge_DebugDraw
+reserve function Bridge_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Bridge_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Bridge_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
+	temp2 = temp0
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += 0x80000
+
+	temp1 = 0
+	while temp1 < temp2
+		DrawSpriteXY(0, temp0, object.ypos)
+		temp0 += 0x100000
+		temp1++
+	loop
+
+	if temp1 == 0
+		DrawSprite(0)
+	end if
+end function
+
+
+private function Bridge_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
+	CreateTempObject(TypeName[Bridge], temp0, object.xpos, object.ypos)
+
+	object[tempObjectPos].startPos = temp0
+	object[tempObjectPos].startPos <<= 19
+	object[tempObjectPos].endPos = object[tempObjectPos].startPos
+	FlipSign(object[tempObjectPos].startPos)
+	object[tempObjectPos].startPos += object[tempObjectPos].xpos
+	object[tempObjectPos].endPos += object[tempObjectPos].xpos
+	object[tempObjectPos].playerID = -1
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.activePlayerCount > 0
+		if object.timer < 128
+			object.timer += 8
+		end if
+	else
+		if object.timer > 0
+			object.timer -= 8
+			object.playerID = -1
+		else
+			object.depression = 0
+		end if
+	end if
+	object.bridgeDepth = object.depression
+	object.bridgeDepth *= object.timer
+	object.bridgeDepth >>= 7
+	object.activePlayerCount = 0
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].state != Player_State_LedgePullUp
+			if player[currentPlayer].xpos > object.startPos
+				if player[currentPlayer].xpos < object.endPos
+					if currentPlayer == object.playerID
+						object.stoodPos = player[currentPlayer].xpos
+						object.stoodPos -= object.startPos
+						temp0 = object.stoodPos
+						temp0 >>= 8
+						temp1 = object.endPos
+						temp1 -= object.startPos
+						temp2 = temp1
+						temp2 >>= 16
+						temp0 /= temp2
+						Sin(object.depression, temp0)
+						temp1 >>= 13
+						object.depression *= temp1
+						temp0 = object.ypos
+						temp0 -= 0x300000
+						if player[currentPlayer].ypos > temp0
+							if player[currentPlayer].yvel >= 0
+								temp2 = player[currentPlayer].collisionBottom
+								FlipSign(temp2)
+								temp2 <<= 16
+								temp2 += object.bridgeDepth
+								temp2 -= 0x80000
+								object.activePlayerCount++
+								player[currentPlayer].ypos = object.ypos
+								player[currentPlayer].ypos += temp2
+								player[currentPlayer].gravity = GRAVITY_GROUND
+								player[currentPlayer].yvel = 0
+								player[currentPlayer].floorSensorL = 1
+								player[currentPlayer].floorSensorC = 1
+								player[currentPlayer].floorSensorR = 1
+							else
+								object.playerID = -2
+							end if
+						end if
+					else
+						if player[currentPlayer].yvel >= 0
+							temp0 = player[currentPlayer].xpos
+							temp0 -= object.startPos
+							if temp0 > object.stoodPos
+								temp0 = object.endPos
+								temp0 -= player[currentPlayer].xpos
+								temp3 = object.endPos
+								temp3 -= object.startPos
+								temp3 -= object.stoodPos
+								temp1 = temp0
+								temp1 <<= 7
+								temp1 /= temp3
+							else
+								temp1 = temp0
+								temp1 <<= 7
+								temp1 /= object.stoodPos
+							end if
+							Sin(temp2, temp1)
+							temp2 *= object.bridgeDepth
+							temp2 >>= 9
+							temp2 -= 0x80000
+							if player[currentPlayer].yvel < 0x8000
+								temp3 = temp2
+								temp3 >>= 16
+								temp4 = temp3
+								temp3 -= 8
+							else
+								temp3 = temp2
+								temp3 >>= 16
+								temp4 = temp3
+								temp4 += 8
+							end if
+
+							BoxCollisionTest(C_TOUCH, object.entityPos, -0x400, temp3, 0x400, temp4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+							if checkResult == true
+								object.activePlayerCount++
+								player[currentPlayer].ypos = player[currentPlayer].collisionBottom
+								FlipSign(player[currentPlayer].ypos)
+								player[currentPlayer].ypos <<= 16
+								player[currentPlayer].ypos += object.ypos
+								player[currentPlayer].ypos += temp2
+								player[currentPlayer].floorSensorL = true
+								player[currentPlayer].floorSensorC = true
+								player[currentPlayer].floorSensorR = true
+								if currentPlayer == 0
+									if object.playerID < 4
+										if object.playerID > 0
+											object.stoodPos = player[currentPlayer].xpos
+											object.stoodPos -= object.startPos
+											temp0 = object.stoodPos
+											temp0 >>= 8
+											temp1 = object.endPos
+											temp1 -= object.startPos
+											temp2 = temp1
+											temp2 >>= 16
+											temp0 /= temp2
+											Sin(object.depression, temp0)
+											temp1 >>= 13
+											object.depression *= temp1
+											object.bridgeDepth = object.depression
+											object.bridgeDepth *= object.timer
+											object.bridgeDepth >>= 7
+										end if
+
+										object.playerID = 0
+										if player[currentPlayer].yvel < 256
+											object.timer = 128
+										end if
+									end if
+								else
+									if object.playerID == -1
+										object.playerID = currentPlayer
+										if player[currentPlayer].yvel < 256
+											object.timer = 128
+										end if
+									end if
+
+									if object.playerID == -2
+										object.playerID = currentPlayer
+									end if
+								end if
+								
+								player[currentPlayer].gravity = GRAVITY_GROUND
+								player[currentPlayer].yvel = 0
+							end if
+						end if
+					end if
+				else
+					if currentPlayer == object.playerID
+						object.playerID = -2
+						object.timer = 32
+					end if
+				end if
+			else
+				if currentPlayer == object.playerID
+					object.playerID = -2
+					object.timer = 32
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp1 = object.startPos
+	temp1 += 0x80000
+	temp4 = 0x80000
+	temp5 = object.stoodPos
+	temp5 >>= 20
+	while temp0 < temp5
+		temp3 = temp4
+		temp3 <<= 7
+		temp3 /= object.stoodPos
+		Sin(temp2, temp3)
+		temp2 *= object.bridgeDepth
+		temp2 >>= 9
+		temp2 += object.ypos
+		DrawSpriteXY(0, temp1, temp2)
+		temp1 += 0x100000
+		temp4 += 0x100000
+		temp0++
+	loop
+	temp2 = object.bridgeDepth
+	temp2 += object.ypos
+	DrawSpriteXY(0, temp1, temp2)
+
+	temp1 += 0x100000
+	temp0++
+	temp5 = object.endPos
+	temp5 -= object.startPos
+	temp5 -= object.stoodPos
+	temp1 = object.endPos
+	temp1 -= 0x80000
+	temp4 = 0x80000
+	while temp0 < object.length
+		temp3 = temp4
+		temp3 <<= 7
+		temp3 /= temp5
+		Sin(temp2, temp3)
+		temp2 *= object.bridgeDepth
+		temp2 >>= 9
+		temp2 += object.ypos
+		DrawSpriteXY(0, temp1, temp2)
+		temp1 -= 0x100000
+		temp4 += 0x100000
+		temp0++
+	loop
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 82, 78)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 137, 313)
+	end if
+
+	foreach (TypeName[Bridge], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos = object[arrayPos0].length
+		object[arrayPos0].startPos <<= 19
+		object[arrayPos0].endPos = object[arrayPos0].startPos
+		FlipSign(object[arrayPos0].startPos)
+		object[arrayPos0].startPos += object[arrayPos0].xpos
+		object[arrayPos0].endPos += object[arrayPos0].xpos
+		object[arrayPos0].playerID = -1
+	next
+
+	temp0 = 0
+	Bridge_startDebugID = DebugMode_ObjCount
+	Bridge_startDebugID--
+	while temp0 < 16
+		SetTableValue(TypeName[Bridge], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Bridge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Bridge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp0 = object.length
+	temp2 = temp0
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += 0x80000
+	temp1 = 0
+	while temp1 < temp2
+		DrawSpriteXY(0, temp0, object.ypos)
+		temp0 += 0x100000
+		temp1++
+	loop
+
+	if temp1 == 0
+		DrawSprite(0)
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 82, 78)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 137, 313)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end event

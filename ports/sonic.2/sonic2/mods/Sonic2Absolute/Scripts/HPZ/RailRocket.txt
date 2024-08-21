@@ -1,0 +1,327 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Rail Rocket Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 67 : TYPE_RAILROCKET
+
+// Function declarations
+reserve function RailRocket_DebugDraw
+reserve function RailRocket_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function RailRocket_DebugDraw
+	DrawSprite(object.direction)
+end function
+
+
+function RailRocket_DebugSpawn
+	CreateTempObject(TypeName[Rail Rocket], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value11 = object.direction
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.value5 > 0
+			if object.value12 > 0
+				object.value12 -= 16
+			else
+				object.value12 -= 8
+			end if
+		else
+			if object.value12 < 0
+				object.value12 += 16
+			else
+				object.value12 += 8
+			end if
+		end if
+		object.value5 += object.value12
+		if object.value10 == 1
+			object.speed = -0x80000
+			object.state = 1
+			PlaySfx(SfxName[Launch], 0)
+		end if
+		break
+	case 1
+		object.ypos += object.speed
+		temp0 = object.speed
+		temp0 >>= 1
+		if object.value11 == 0
+			object.xpos += temp0
+			object.value5 += 32
+			if object.value5 >= 512
+				object.value5 = 512
+			end if
+		else
+			object.xpos -= temp0
+			object.value5 -= 32
+			if object.value5 <= -512
+				object.value5 = -512
+			end if
+		end if
+		if object.ypos <= object.value9
+			object.speed = 0
+			object.ypos = object.value9
+			if object.value11 == 0
+				object.value12 = -128
+			else
+				object.value12 = 128
+			end if
+			object.state = 2
+		end if
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		temp0 = object.speed
+		Abs(temp0)
+		temp0 >>= 16
+		object.animationTimer += temp0
+		object.animationTimer &= 15
+		object.value13++
+		object.value13 &= 3
+		if ringTimer == 0
+			CreateTempObject(TypeName[Dust Puff], 0, object.xpos, object.ypos)
+			if object.value11 == 0
+				object[tempObjectPos].ixpos += 10
+			else
+				object[tempObjectPos].ixpos -= 10
+			end if
+			object[tempObjectPos].iypos += 22
+		end if
+		break
+	case 2
+		if object.value5 > 0
+			if object.value12 > 0
+				object.value12 -= 16
+			else
+				object.value12 -= 8
+			end if
+		else
+			if object.value12 < 0
+				object.value12 += 16
+			else
+				object.value12 += 8
+			end if
+		end if
+		object.value5 += object.value12
+		object.value0++
+		if object.value0 == 60
+			object.value0 = 0
+			object.state = 3
+		end if
+		object.value13++
+		object.value13 &= 3
+		break
+	case 3
+		object.speed += 0x1800
+		if object.speed > 0x80000
+			object.speed = 0x80000
+		end if
+		object.ypos += object.speed
+		temp0 = object.speed
+		temp0 >>= 1
+		if object.value11 == 0
+			object.xpos += temp0
+			object.value5 -= 32
+			if object.value5 <= -512
+				object.value5 = -512
+			end if
+		else
+			object.xpos -= temp0
+			object.value5 += 32
+			if object.value5 >= 512
+				object.value5 = 512
+			end if
+		end if
+		if object.ypos >= object.value2
+			object.speed = 0
+			object.xpos = object.value1
+			object.ypos = object.value2
+			if object.value11 == 0
+				object.value12 = 128
+			else
+				object.value12 = -128
+			end if
+			object.state = 4
+		end if
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		temp0 = object.speed
+		Abs(temp0)
+		temp0 >>= 16
+		object.animationTimer += temp0
+		object.animationTimer &= 15
+		break
+	case 4
+		if object.value5 > 0
+			if object.value12 > 0
+				object.value12 -= 16
+			else
+				object.value12 -= 8
+			end if
+		else
+			if object.value12 < 0
+				object.value12 += 16
+			else
+				object.value12 += 8
+			end if
+		end if
+		object.value5 += object.value12
+		if object.value10 == 0
+			object.state = 0
+		end if
+		break
+	end switch
+	temp0 = 0
+	temp4 = object.value5
+	object.value3 = object.xpos
+	object.value4 = object.ypos
+	while temp0 < 8
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 511
+		Sin(temp2, temp5)
+		temp2 *= 786
+		object.value3 += temp2
+		Cos(temp3, temp5)
+		temp3 *= 786
+		object.value4 += temp3
+		temp0++
+		temp4 += object.value5
+	loop
+	if object.value8 > 0
+		object.value8--
+	end if
+	object.value10 = 0
+	temp0 = object.xpos
+	temp1 = object.ypos
+	object.xpos = object.value3
+	object.ypos = object.value4
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object[currentPlayer].state != PlayerObject_Blank
+			if object.value8 == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -10, 16, 10, 24, currentPlayer, HITBOX_AUTO, 0, HITBOX_AUTO, 0)
+				if checkResult == 1
+					if object[currentPlayer].gravity == GRAVITY_AIR
+						object[currentPlayer].state = PlayerObject_Blank
+						object[currentPlayer].animation = ANI_HANGING
+						object[currentPlayer].speed = 0
+						object[currentPlayer].xvel = 0
+						object[currentPlayer].yvel = 0
+						object[currentPlayer].xpos = object.xpos
+						object[currentPlayer].ypos = object[currentPlayer].collisionTop
+						FlipSign(object[currentPlayer].ypos)
+						object[currentPlayer].ypos += 8
+						object[currentPlayer].ypos <<= 16
+						object[currentPlayer].ypos += object.ypos
+						PlaySfx(SfxName[Catch], 0)
+						object.value10 = 1
+					end if
+				end if
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -4, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				if object[currentPlayer].jumpPress == 1
+					object[currentPlayer].state = PlayerObject_HandleAir
+					object[currentPlayer].yvel = -0x40000
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object.value8 = 30
+				else
+					object[currentPlayer].xpos = object.xpos
+					object[currentPlayer].ypos = object[currentPlayer].collisionTop
+					FlipSign(object[currentPlayer].ypos)
+					object[currentPlayer].ypos += 8
+					object[currentPlayer].ypos <<= 16
+					object[currentPlayer].ypos += object.ypos
+					object.value10 = 1
+				end if
+			end if
+		end if
+	next
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp4 = object.value5
+	object.value6 = object.xpos
+	object.value7 = object.ypos
+	while temp0 < 7
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 511
+		Sin(temp2, temp5)
+		temp2 *= 786
+		object.value6 += temp2
+		Cos(temp3, temp5)
+		temp3 *= 786
+		object.value7 += temp3
+		DrawSpriteXY(2, object.value6, object.value7)
+		temp0++
+		temp4 += object.value5
+	loop
+	DrawSpriteXY(3, object.value3, object.value4)
+	switch object.state
+	case 1
+	case 2
+		object.direction = object.value11
+		temp0 = object.value13
+		temp0 >>= 1
+		temp0 += 4
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+	object.direction = object.value11
+	object.direction ^= object.frame
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-20, -27, 40, 54, 66, 168)
+	SpriteFrame(-20, -27, 40, 54, 140, 57)
+	SpriteFrame(-3, -3, 6, 6, 198, 50)
+	SpriteFrame(-8, -3, 16, 16, 193, 57)
+	SpriteFrame(4, 11, 12, 16, 210, 46)
+	SpriteFrame(5, 11, 8, 12, 184, 57)
+	foreach (TypeName[Rail Rocket], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].value11 = object[arrayPos0].propertyValue
+		object[arrayPos0].value11 >>= 7
+		temp0 = object[arrayPos0].propertyValue
+		temp0 &= 127
+		if temp0 == 0
+			object[arrayPos0].value9 = object[arrayPos0].ypos
+			object[arrayPos0].value9 -= 0x1000000
+		else
+			temp0 <<= 21
+			object[arrayPos0].value9 = object[arrayPos0].ypos
+			object[arrayPos0].value9 -= temp0
+		end if
+	next
+	SetTableValue(TypeName[Rail Rocket], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RailRocket_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RailRocket_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

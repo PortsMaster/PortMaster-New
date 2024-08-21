@@ -1,0 +1,636 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Sign Post Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Variables
+private alias object.value0 : object.fallbackTimer // Added in Origins 2.0.1
+private alias object.value1 : object.spinCount
+private alias object.value2 : object.spinTimer
+private alias object.value3 : object.activePlayers
+private alias object.value4 : object.allPlayersFinished
+private alias object.value5 : object.lastPlayerID
+
+// States
+private alias 0 : SIGNPOST_IDLE
+private alias 1 : SIGNPOST_SPUN
+private alias 2 : SIGNPOST_EXITPLAYER
+private alias 3 : SIGNPOST_IDLE_VS
+private alias 4 : SIGNPOST_SPUN_VS
+private alias 5 : SIGNPOST_UNUSED // used for SBZ2>3 transition in S1, not used in this game
+private alias 6 : SIGNPOST_FINISHED
+
+// Player Aliases
+private alias object.type 			: player.type
+private alias object.propertyValue 	: player.character
+private alias object.xpos 			: player.xpos
+private alias object.ypos 			: player.ypos
+private alias object.ixpos			: player.ixpos
+private alias object.speed			: player.speed
+private alias object.xvel 			: player.xvel
+private alias object.yvel 			: player.yvel
+private alias object.gravity 		: player.gravity
+private alias object.animation		: player.animation
+private alias object.controlMode 	: player.controlMode
+private alias object.scrollTracking : player.scrollTracking
+private alias object.interaction 	: player.interaction
+private alias object.jumpPress 		: player.jumpPress
+private alias object.jumpHold 		: player.jumpHold
+private alias object.up 			: player.up
+private alias object.down 			: player.down
+private alias object.left 			: player.left
+private alias object.right 			: player.right
+private alias object.value7 		: player.invincibleTimer
+private alias object.value21 		: player.acceleration
+private alias object.value30		: player.jumpOffset
+
+private alias 1 : SUPERSTATE_SUPER
+private alias 2 : SUPERSTATE_FADEOUT
+
+// VSGame aliases
+private alias object.value0 : vsGame.timer
+private alias object.value5 : vsGame.countdownPlayer
+
+// VSGame States
+private alias 0 : VSGAME_DISPLAYTAGS
+private alias 2 : VSGAME_FADEOUT
+private alias 3 : VSGAME_FINISH_COUNTDOWN
+private alias 4 : VSGAME_GOTOVSRESULTS
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+// Achievement Aliases
+private alias  0 : ACHIEVEMENT_QUICKRUN
+private alias  3 : ACHIEVEMENT_SUPERSTAR
+private alias 10 : ACHIEVEMENT_SCRAMBLEDEGG
+
+// Reserved Object Slot Aliases
+private alias 30 : SLOT_ACTFINISH
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SignPost_DebugDraw
+reserve function SignPost_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+public value SignPost_initFallback = 0
+public value SignPost_fallbackCheck = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SignPost_DebugDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end function
+
+
+private function SignPost_DebugSpawn
+	CreateTempObject(TypeName[Sign Post], 0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = 1
+	object[tempObjectPos].spinCount = 16
+	if options.vsMode == true
+		object[tempObjectPos].state = SIGNPOST_IDLE_VS
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SIGNPOST_IDLE
+#platform: USE_ORIGINS
+		object.fallbackTimer++
+#endplatform
+		
+		temp0 = object.ypos
+		temp0 += 0x400000
+		if player[0].ypos < temp0
+			stage.newXBoundary1 = object.xpos
+			stage.newXBoundary1 >>= 16
+			stage.newXBoundary1 -= screen.xcenter
+			stage.newXBoundary1 -= screen.xcenter
+
+			stage.newXBoundary2 = object.xpos
+			stage.newXBoundary2 >>= 16
+			stage.newXBoundary2 += screen.xcenter
+
+			if player[0].xpos > object.xpos
+				stage.newXBoundary1 = object.xpos
+				stage.newXBoundary1 >>= 16
+				stage.newXBoundary1 -= screen.xcenter
+				
+				switch player[0].character
+				case PLAYER_SONIC_A
+					EditFrame(5, -24, -16, 48, 32, 34, 1)
+					break
+
+				case PLAYER_TAILS_A
+					EditFrame(5, -24, -16, 48, 32, 34, 34)
+					break
+
+				case PLAYER_KNUCKLES_A
+					EditFrame(5, -24, -16, 48, 32, 34, 67)
+					break
+					
+#platform: USE_ORIGINS
+				case PLAYER_AMY_A
+					EditFrame(5, -24, -16, 48, 32, 34, 149)
+					break
+#endplatform
+				end switch
+
+				// No achievements in debug mode!
+				if stage.debugMode == false
+					if stage.activeList == BONUS_STAGE
+						// Boss Attack is on the Bonus Stage list, check for the Boss Attack achievement
+						// (This code doesn't account for Origins having everything on the Bonus list since Missions didn't even exist back then)
+						if stage.minutes < 7
+							// Grant the "Scrambled Egg" Achievement
+							CallNativeFunction2(SetAchievement, ACHIEVEMENT_SCRAMBLEDEGG, 100)
+						end if
+					else
+						if stage.listPos == 0
+							if stage.minutes == 0
+								if stage.seconds < 35
+									// Grant the "Quick Run" Achievement, for beating EHZ in under 35 seconds
+									CallNativeFunction2(SetAchievement, ACHIEVEMENT_QUICKRUN, 100)
+								end if
+							end if
+						end if
+					end if
+				end if
+
+#platform: USE_ORIGINS
+				CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
+#endplatform
+				stage.timeEnabled = false
+				object.state = SIGNPOST_SPUN
+#platform: USE_ORIGINS
+				SignPost_initFallback = object.fallbackTimer
+#endplatform
+				PlaySfx(SfxName[Sign Post], false)
+				
+				if Player_superState == SUPERSTATE_SUPER
+					Player_superState = SUPERSTATE_FADEOUT
+					if stage.debugMode == false
+						// Grant the "Superstar" Achievement, for beating an act while transformed
+						CallNativeFunction2(SetAchievement, ACHIEVEMENT_SUPERSTAR, 100)
+					end if
+				end if
+			end if
+		end if
+		break
+		
+	case SIGNPOST_SPUN
+		music.volume--
+
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
+			object.frame++
+			if object.frame == 5
+				object.frame = 1
+				
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				
+				object.spinCount--
+				if object.spinCount == 0
+					SetBit(object.activePlayers, 0, true)
+					if stage.player2Enabled == true
+						SetBit(object.activePlayers, 1, true)
+					end if
+					object.state = SIGNPOST_EXITPLAYER
+				end if
+			end if
+		end if
+		break
+
+	case SIGNPOST_EXITPLAYER
+		temp0 = screen.xcenter
+		temp0 <<= 16
+		temp0 += object.xpos
+		
+#platform: USE_ORIGINS
+		object.fallbackTimer++
+		SignPost_fallbackCheck = object.fallbackTimer
+		SignPost_fallbackCheck -= SignPost_initFallback
+		if SignPost_fallbackCheck > 200
+			PlayMusic(TRACK_ACTFINISH)
+			object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+			object[SLOT_ACTFINISH].drawOrder = 6
+			object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+		end if
+#endplatform
+		
+		if player[0].xpos > temp0
+			PlayMusic(TRACK_ACTFINISH)
+			object.state = SIGNPOST_FINISHED
+			object[30].type = TypeName[Act Finish]
+			object[30].drawOrder = 6
+			object[30].priority = PRIORITY_ACTIVE
+#platform: USE_ORIGINS
+		else
+			if player[0].animation == ANI_PUSHING
+				PlayMusic(TRACK_ACTFINISH)
+				object.state = SIGNPOST_FINISHED
+				object[30].type = TypeName[Act Finish]
+				object[30].drawOrder = 6
+				object[30].priority = PRIORITY_ACTIVE
+			end if
+#endplatform
+		end if
+		break
+
+	case SIGNPOST_IDLE_VS
+		stage.newXBoundary2 = object.xpos
+		stage.newXBoundary2 >>= 16
+		stage.newXBoundary2 += screen.xcenter
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp1, object.activePlayers, currentPlayer)
+			if temp1 == false
+				if player[currentPlayer].xpos > object.xpos
+					object.priority = PRIORITY_ACTIVE
+					
+					SetBit(object.activePlayers, currentPlayer, true)
+					
+					if currentPlayer == 0
+						if Player_superState == SUPERSTATE_SUPER
+							Player_superState = SUPERSTATE_FADEOUT
+						end if
+
+						if vs.playerID == 0
+							temp2 = 0
+						else
+							temp2 = 1
+						end if
+					else
+						if vs.playerID == 0
+							temp2 = 1
+						else
+							temp2 = 0
+						end if
+					end if
+
+					if temp2 == 0
+						vs.time1P = stage.milliSeconds
+						vs.time1P = stage.seconds
+						vs.time1P *= 100
+						temp2 = stage.minutes
+						temp2 *= 6000
+						vs.time1P += temp2
+						vs.time1P += stage.milliSeconds
+					else
+						vs.time2P = stage.milliSeconds
+						vs.time2P = stage.seconds
+						vs.time2P *= 100
+						temp2 = stage.minutes
+						temp2 *= 6000
+						vs.time2P += temp2
+						vs.time2P += stage.milliSeconds
+					end if
+
+					object.lastPlayerID = currentPlayer
+					object.spinCount = 16
+					object.state = SIGNPOST_SPUN_VS
+					PlaySfx(SfxName[Sign Post], false)
+
+					if object.allPlayersFinished == false
+						PlaySfx(SfxName[Sign Post 2P], false)
+						object[30].state = VSGAME_FINISH_COUNTDOWN
+						vsGame[30].countdownPlayer = currentPlayer
+						vsGame[30].countdownPlayer ^= 1
+						switch player[currentPlayer].character
+						case PLAYER_SONIC_A
+							EditFrame(5, -24, -16, 48, 32, 34, 1)
+							break
+							
+						case PLAYER_TAILS_A
+							EditFrame(5, -24, -16, 48, 32, 34, 34)
+							break
+							
+						case PLAYER_KNUCKLES_A
+							EditFrame(5, -24, -16, 48, 32, 34, 67)
+							break
+							
+#platform: USE_ORIGINS
+						case PLAYER_AMY_A
+							EditFrame(5, -24, -16, 48, 32, 34, 149)
+							break
+#endplatform
+						end switch
+					else
+						object[30].state = VSGAME_DISPLAYTAGS
+#platform: USE_ORIGINS
+						stage.timeEnabled = false
+#endplatform
+					end if
+
+					if object.activePlayers == 3 // both bits set? (3 is 0b11)
+						object.allPlayersFinished	= true
+						object[30].state 			= VSGAME_DISPLAYTAGS
+					end if
+				end if
+			end if
+		next
+		break
+
+	case SIGNPOST_SPUN_VS
+		if object.allPlayersFinished == true
+			music.volume--
+		else
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				GetBit(temp1, object.activePlayers, currentPlayer)
+				if temp1 == false
+					if player[currentPlayer].xpos > object.xpos
+						object.spinTimer	= 1
+						object.frame 	 	= 4
+						object.spinCount 	= 1
+					end if
+				end if
+			next
+		end if
+
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
+			object.frame++
+			if object.frame == 5
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				
+				object.spinCount--
+				if object.spinCount == 0
+					if object.allPlayersFinished == false
+						object.allPlayersFinished = true
+						object.state = SIGNPOST_IDLE_VS
+						
+#platform: USE_STANDALONE
+						if object.lastPlayerID == 0
+							// Start spectating P2
+							camera[0].target 			= 1
+							player[1].scrollTracking 	= true
+							object[9].type = TypeName[Blank Object]
+							CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
+							vsGame[tempObjectPos].timer = 384
+							object[tempObjectPos].state = VSGAME_FADEOUT
+							camera[0].xpos = player[1].xpos
+							camera[0].xpos >>= 16
+							camera[0].ypos = player[1].ypos
+							camera[0].ypos >>= 16
+						end if
+#endplatform
+					else
+						object.state = SIGNPOST_FINISHED
+						object[30].state = VSGAME_GOTOVSRESULTS
+						vsGame[30].timer = -768
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case SIGNPOST_FINISHED
+		break
+	end switch
+	
+	// Invisible off-screen barrier
+	
+	// Bug Details:
+	// 212 in the line "temp0 += 212" is supposed to be the center of the screen when the screen width is set to 424 (the default screen width in RSDK)
+	// For some reason, it's set as a constant rather than using "screen.xcenter", meaning the barrier will always be 252 pixels away from the sign post regardless of screen width
+	// If your screen width is set to over 520, the barrier won't reach the edge of the screen, softlocking the game during exit stage right...
+	// We decided to provide a decomp-exclusive fix, so you shouldn't have to worry about this there
+	
+	temp0 = 40
+	temp0 += 212
+#platform: USE_DECOMP
+	temp0 = 40
+	temp0 += screen.xcenter
+#endplatform
+	temp0 <<= 16
+	temp0 += object.xpos
+	currentPlayer = 0
+	while currentPlayer < playerCount
+		GetBit(temp1, object.activePlayers, currentPlayer)
+		if temp1 == true
+			player[currentPlayer].interaction 	= false
+			player[currentPlayer].controlMode 	= CONTROLMODE_NONE
+			player[currentPlayer].up 			= false
+			player[currentPlayer].down 			= false
+			player[currentPlayer].left 			= false
+			player[currentPlayer].right 		= true
+			player[currentPlayer].jumpPress 	= false
+			player[currentPlayer].jumpHold 		= false
+		end if
+	
+#platform: USE_DECOMP
+		// Another ultrawide screen fix, this time for when the screen is wide enough to extend beyond
+		// the stage width, causing the player to constantly fall and wrap around the stage vertically
+		if player[currentPlayer].xpos > object.xpos
+			if player[currentPlayer].gravity == GRAVITY_AIR
+				temp1 = object.ypos
+				temp1 += 0x200000 // This is quite a bit under the floor - this is because some acts have wavy ground at the end
+				if player[currentPlayer].animation == ANI_JUMPING
+					temp2 = player[currentPlayer].jumpOffset
+					temp2 <<= 16
+					temp1 -= temp2
+				end if
+				if player[currentPlayer].ypos > temp1
+					player[currentPlayer].ypos	= temp1
+					player[currentPlayer].yvel	= 0
+				end if
+			end if
+		end if
+#endplatform
+
+		if player[currentPlayer].xpos > temp0
+			player[currentPlayer].xpos 	= temp0
+			player[currentPlayer].speed	= 0
+			player[currentPlayer].xvel 	= 0
+		end if
+
+		if player[currentPlayer].type == TypeName[Debug Mode]
+			SetBit(object.activePlayers, currentPlayer, false)
+		end if
+		
+		currentPlayer++
+	loop
+	
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if object.state > SIGNPOST_IDLE
+			player[0].invincibleTimer = 80
+		end if
+	end if
+#endplatform
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	
+	if object.spinCount > 8
+		DrawSprite(object.frame)
+	else
+		temp0 = object.frame
+		temp0 += 4
+		DrawSprite(temp0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	
+	SpriteFrame(-24, 16, 48, 16, 34, 132) // #0 - Post
+	
+#platform: USE_ORIGINS
+	switch stage.playerListPos
+	// Has Sonic Team never heard of a default case?
+	case PLAYER_SONIC_A
+	case PLAYER_TAILS_A
+	case PLAYER_KNUCKLES_A
+	case PLAYER_SONIC_TAILS_A
+	case PLAYER_KNUCKLES_TAILS_A
+#endplatform
+		SpriteFrame(-24, -16, 48, 32, 34, 100)	// #1 - Eggman giving a big smile
+		SpriteFrame(-16, -16, 32, 32, 149, 99)	// #2 - Spin frame 1
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #3 - Spin frame 2
+		SpriteFrame(-16, -16, 32, 32, 116, 99)	// #4 - Spin frame 3
+		SpriteFrame(-24, -16, 48, 32, 34, 1)	// #5 - Main character frame (Sonic here, but will change to the appropriate character in-game)
+		SpriteFrame(-16, -16, 32, 32, 149, 99)	// #6 - Spin frame 4 (duplicate of frame 1)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #7 - Spin frame 5 (duplicate of frame 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 99)	// #8 - Spin frame 6 (duplicate of frame 3)
+#platform: USE_ORIGINS
+		break
+		
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-24, -16, 48, 32, 34, 100)	// #1 - Eggman giving a big smile
+		SpriteFrame(-16, -16, 32, 32, 149, 132)	// #2 - Spin frame 1 (Amy)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #3 - Spin frame 2
+		SpriteFrame(-16, -16, 32, 32, 116, 132)	// #4 - Spin frame 3 (Amy)
+		SpriteFrame(-24, -16, 48, 32, 34, 149)	// #5 - Amy frame
+		SpriteFrame(-16, -16, 32, 32, 149, 132)	// #6 - Spin frame 4 (duplicate of frame 1)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #7 - Spin frame 5 (duplicate of frame 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 132)	// #8 - Spin frame 6 (duplicate of frame 3)
+		break
+	end switch
+#endplatform
+
+	foreach (TypeName[Sign Post], arrayPos0, ALL_ENTITIES)
+		CheckGreater(object[arrayPos0].propertyValue, 0)
+		temp0 = checkResult
+		CheckEqual(options.vsMode, false)
+		temp0 &= checkResult
+		if temp0 == true
+			object[arrayPos0].type = TypeName[Blank Object]
+		else
+			object[arrayPos0].frame = 1
+			object[arrayPos0].spinCount = 16
+			if object[arrayPos0].propertyValue != 2
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+			end if
+		end if
+
+		if options.vsMode == true
+			object[arrayPos0].state = SIGNPOST_IDLE_VS
+		end if
+	next
+
+	SetTableValue(TypeName[Sign Post], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SignPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SignPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 132)
+	SpriteFrame(-24, -16, 48, 32, 34, 100)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Normal", 0)
+	AddEnumVariable("VS Only (No Y Bounds)", 1)
+	AddEnumVariable("VS Only (Use Y Bounds)", 2)
+end event

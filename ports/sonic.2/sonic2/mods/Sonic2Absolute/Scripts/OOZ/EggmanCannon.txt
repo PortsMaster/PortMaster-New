@@ -1,0 +1,184 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Eggman Cannon Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 62 : TYPE_EGGMANCANNON
+
+
+// Static Values
+
+// Tables
+public table EggmanCannon_table46
+	-0x780000, -0x800000, -0x700000, -0x510000
+end table
+
+
+event ObjectMain
+	object.angle += 4
+	object.angle &= 511
+	if object[0].xpos < object.xpos
+		object.direction = FLIP_NONE
+	else
+		object.direction = FLIP_X
+	end if
+	switch object.state
+	case 0
+		object.value1 = object.xpos
+		object.value2 = object.ypos
+		object.value4 = object.ypos
+		object.value4 -= 0x700000
+		object.value3 = object.ypos
+		object.yvel = -0x8000
+		object.state = 1
+		break
+	case 1
+		object.value2 += object.yvel
+		if object.value2 <= object.value4
+			object.value2 = object.value4
+			object.value5 = 3
+			object.value0 = 128
+			object.value6 = 0
+			object.state++
+		end if
+		break
+	case 2
+		if object.animationTimer > 0
+			object.animationTimer--
+		else
+			object.frame = 0
+		end if
+		object.value0--
+		if object.value0 == 0
+			if object.value5 > 0
+				Rand(temp0, 4)
+				while temp0 == object.value6
+					if stage.milliSeconds > 50
+						temp0++
+					else
+						temp0--
+					end if
+					temp0 &= 3
+				loop
+				object.value6 = temp0
+				GetTableValue(object.value4, temp0, EggmanCannon_table46)
+				object.value4 += object.value3
+				if object.value4 < object.value2
+					object.yvel = -0x8000
+				else
+					object.yvel = 0x8000
+				end if
+				object.state = 3
+			else
+				object.yvel = 0x8000
+				object.state = 4
+			end if
+		end if
+		break
+	case 3
+		object.value2 += object.yvel
+		checkResult = 0
+		if object.yvel < 0
+			if object.value2 <= object.value4
+				object.value2 = object.value4
+				checkResult = 1
+			end if
+		else
+			if object.value2 >= object.value4
+				object.value2 = object.value4
+				checkResult = 1
+			end if
+		end if
+		if checkResult == 1
+			object.animationTimer = 7
+			object.frame = 1
+			object.value5--
+			object.value0 = 40
+			object.state = 2
+			Cos(object.xpos, object.angle)
+			object.xpos <<= 11
+			object.xpos += object.value1
+			Sin(object.ypos, object.angle)
+			object.ypos <<= 9
+			object.ypos += object.value2
+			CreateTempObject(TypeName[Eggman Laser], 0, object.xpos, object.ypos)
+			object[tempObjectPos].drawOrder = 2
+			object[tempObjectPos].direction = object.direction
+			if object.direction == FLIP_NONE
+				object[tempObjectPos].xvel = -0x40000
+			else
+				object[tempObjectPos].xvel = 0x40000
+			end if
+			PlaySfx(SfxName[Small Laser], 0)
+		end if
+		break
+	case 4
+		object.value2 += object.yvel
+		if object.value2 > object.value3
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	temp1 = object.angle
+	temp1 -= 288
+	temp1 &= 511
+	temp0 = 0
+	temp2 = object.value2
+	temp2 += 0x780000
+	while temp0 < 8
+		Cos(object.xpos, temp1)
+		object.xpos <<= 11
+		object.xpos += object.value1
+		Sin(object.ypos, temp1)
+		object.ypos <<= 9
+		object.ypos += temp2
+		DrawSprite(2)
+		temp0++
+		temp1 += 32
+		temp1 &= 511
+		temp2 -= 0xF0000
+	loop
+	Cos(object.xpos, temp1)
+	object.xpos <<= 11
+	object.xpos += object.value1
+	Sin(object.ypos, temp1)
+	object.ypos <<= 9
+	object.ypos += temp2
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+	if checkResult == 1
+		CallFunction(PlayerObject_Hit)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-32, -8, 40, 16, 141, 207)
+		SpriteFrame(-32, -8, 40, 16, 141, 224)
+		SpriteFrame(-8, -8, 16, 16, 379, 196)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 40, 16, 512, 180)
+		SpriteFrame(-32, -8, 40, 16, 553, 180)
+		SpriteFrame(-8, -8, 16, 16, 355, 214)
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

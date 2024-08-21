@@ -1,0 +1,342 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Balloon Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.angle  : object.angle.x
+private alias object.value1 : object.angle.y
+
+private alias object.value0 : object.parent
+
+// TODO: prolly should be mpz rather than mbz, same applies to other uses of it in this zone too
+
+// States
+private alias 0 : MBZEGGMANBALLOON_ROTATING
+private alias 1 : MBZEGGMANBALLOON_EXPAND
+private alias 2 : MBZEGGMANBALLOON_BOUNCING
+private alias 3 : MBZEGGMANBALLOON_POPPED
+
+// MBZEggman Aliases
+private alias object.value17 : mbzEggman.balloonRadius.x
+private alias object.value18 : mbzEggman.balloonRadius.y
+private alias object.value19 : mbzEggman.balloonOffset.y
+private alias object.value20 : mbzEggman.activeBalloons
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+
+private alias object.value7  : player.invincibleTimer
+private alias object.value8  : player.blinkTimer
+private alias object.value16 : player.isSidekick
+private alias object.value25 : player.gravityStrength
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Tables
+// ========================
+
+private table EggmanBalloon_expandFrameTable
+	0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 3, 4, 3, 4, 5, 6, 7, 8
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case MBZEGGMANBALLOON_ROTATING
+		object.angle.x += 4
+		object.angle.x &= 0xFF
+		object.angle.y += 4
+		object.angle.y &= 0xFF
+
+		if object.angle.x == 0x80
+			object.drawOrder = 3
+		else
+			if object.angle.x == 0
+				object.drawOrder = 2
+			end if
+		end if
+
+		object.frame = object.angle.x
+		object.frame -= 0x20
+		object.frame &= 0xFF
+		object.frame >>= 6
+		if object.frame == 3
+			object.frame = 1
+		end if
+
+		arrayPos0 = object.parent
+
+		temp0 = object.angle.x
+		Cos256(object.xpos, temp0)
+		object.xpos *= mbzEggman[arrayPos0].balloonRadius.x
+		object.xpos <<= 8
+		object.xpos += object[arrayPos0].xpos
+
+		temp0 += object.angle.y
+		temp0 &= 0xFF
+		Sin256(object.ypos, temp0)
+		object.ypos *= mbzEggman[arrayPos0].balloonRadius.y
+		object.ypos <<= 8
+		object.ypos += object[arrayPos0].ypos
+		object.ypos += mbzEggman[arrayPos0].balloonOffset.y
+		break
+
+	case MBZEGGMANBALLOON_EXPAND
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+
+		if object.yvel >= 0x18000
+			object.yvel = 0x18000
+		end if
+
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, PATH_A)
+			if checkResult == true
+				if player[0].xpos < object.xpos
+					object.xvel = -0x8000
+					object.direction = FLIP_NONE
+				else
+					object.xvel = 0x8000
+					object.direction = FLIP_X
+				end if
+				FlipSign(object.yvel)
+				object.state = MBZEGGMANBALLOON_BOUNCING
+			end if
+		end if
+
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		GetTableValue(object.frame, temp0, EggmanBalloon_expandFrameTable)
+		if object.frame != 8
+			object.animationTimer++
+		end if
+		break
+
+	case MBZEGGMANBALLOON_BOUNCING
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x480
+
+		if object.yvel >= 0x18000
+			object.yvel = 0x18000
+		end if
+
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, PATH_A)
+			if checkResult == true
+				if player[0].xpos < object.xpos
+					object.xvel = -0x8000
+					object.direction = FLIP_NONE
+				else
+					object.xvel = 0x8000
+					object.direction = FLIP_X
+				end if
+				FlipSign(object.yvel)
+			end if
+		end if
+		break
+
+	case MBZEGGMANBALLOON_POPPED
+		object.animationTimer--
+		if object.animationTimer == 0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state < MBZEGGMANBALLOON_POPPED
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.frame < 6
+				BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+					temp0 = checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
+					temp0 |= checkResult
+#platform: USE_ORIGINS
+					if stage.playerListPos == PLAYER_AMY
+						if player[currentPlayer].isSidekick == false
+							CheckEqual(player[currentPlayer].animation, ANI_HAMMER_JUMP)
+							temp0 |= checkResult
+							CheckEqual(player[currentPlayer].animation, ANI_HAMMER_DASH)
+							temp0 |= checkResult
+						end if
+					end if
+#endplatform
+					CheckNotEqual(player[currentPlayer].invincibleTimer, 0)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLYING)
+					temp1 = checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLYINGTIRED)
+					temp1 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLY_LIFT_UP)
+					temp1 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLY_LIFT_DOWN)
+					temp1 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLY_LIFT_TIRED)
+					temp1 |= checkResult
+					if temp1 == true
+						CheckGreater(player[currentPlayer].ypos, object.ypos)
+						temp0 |= checkResult
+					end if
+
+					if temp0 == true
+						PlaySfx(SfxName[Explosion], false)
+						object.state 			= MBZEGGMANBALLOON_POPPED
+						object.frame 			= 9
+						object.animationTimer 	= 3
+
+						arrayPos0 = object.parent
+						mbzEggman[arrayPos0].activeBalloons--
+						if mbzEggman[arrayPos0].activeBalloons < 0
+							mbzEggman[arrayPos0].activeBalloons = 0
+						end if
+
+						if player[currentPlayer].gravity == GRAVITY_AIR
+							FlipSign(player[currentPlayer].xvel)
+							player[currentPlayer].speed = player[currentPlayer].xvel
+							player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+							player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+							FlipSign(player[currentPlayer].yvel)
+						end if
+
+						if player[currentPlayer].animation == ANI_GLIDING
+							player[currentPlayer].animation = ANI_GLIDING_DROP
+							player[currentPlayer].state 	= Player_State_GlideDrop
+						end if
+					else
+						if player[currentPlayer].state != Player_State_Death
+							if player[currentPlayer].blinkTimer == 0
+								if player[currentPlayer].invincibleTimer == 0
+									player[currentPlayer].state = Player_State_GotHit
+									if player[currentPlayer].xpos > object.xpos
+										player[currentPlayer].speed = 0x20000
+									else
+										player[currentPlayer].speed = -0x20000
+									end if
+								end if
+								PlaySfx(SfxName[Explosion], false)
+								object.state 			= MBZEGGMANBALLOON_POPPED
+								object.frame 			= 9
+								object.animationTimer 	= 3
+								
+								arrayPos0 = object.parent
+								mbzEggman[arrayPos0].activeBalloons--
+								if mbzEggman[arrayPos0].activeBalloons < 0
+									mbzEggman[arrayPos0].activeBalloons = 0
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 302, 138)	// Balloon - Frame 1 				- #0
+		SpriteFrame(-10, -10, 20, 20, 281, 134)	// Balloon - Frame 2 				- #1
+		SpriteFrame(-12, -12, 24, 24, 256, 130)	// Balloon - Frame 3 				- #2
+		SpriteFrame(-6, -12, 12, 23, 319, 133)	// Squish Frame 					- #3
+		SpriteFrame(-11, -5, 22, 10, 332, 133)	// Squash Frame 					- #4
+		SpriteFrame(-8, -8, 16, 18, 355, 133)	// Tiny Balloon 					- #5
+		SpriteFrame(-12, -12, 24, 23, 372, 133)	// Small Eggman Balloon - Frame 1 	- #6
+		SpriteFrame(-16, -16, 32, 32, 397, 133)	// Small Eggman Balloon - Frame 2 	- #7
+		SpriteFrame(-24, -24, 48, 47, 430, 133)	// Eggman Balloon 					- #8
+		SpriteFrame(-21, -24, 42, 48, 277, 207)	// Pop 								- #9
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 371, 239)	// Balloon - Frame 1 				- #0
+		SpriteFrame(-10, -10, 20, 20, 350, 235)	// Balloon - Frame 2 				- #1
+		SpriteFrame(-12, -12, 24, 24, 325, 231)	// Balloon - Frame 3 				- #2
+		SpriteFrame(-6, -12, 12, 23, 375, 214)	// Squish Frame 					- #3
+		SpriteFrame(-11, -5, 22, 10, 388, 245)	// Squash Frame 					- #4
+		SpriteFrame(-8, -8, 16, 18, 411, 237)	// Tiny Balloon 					- #5
+		SpriteFrame(-12, -12, 24, 23, 428, 232)	// Small Eggman Balloon - Frame 1 	- #6
+		SpriteFrame(-16, -16, 32, 32, 453, 223)	// Small Eggman Balloon - Frame 2 	- #7
+		SpriteFrame(-24, -24, 48, 47, 486, 208)	// Eggman Balloon 					- #8
+		SpriteFrame(-21, -24, 42, 48, 312, 182)	// Pop 								- #9
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(8)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 302, 138)	// Balloon - Frame 1 				- #0
+		SpriteFrame(-10, -10, 20, 20, 281, 134)	// Balloon - Frame 2 				- #1
+		SpriteFrame(-12, -12, 24, 24, 256, 130)	// Balloon - Frame 3 				- #2
+		SpriteFrame(-6, -12, 12, 23, 319, 133)	// Squish Frame 					- #3
+		SpriteFrame(-11, -5, 22, 10, 332, 133)	// Squash Frame 					- #4
+		SpriteFrame(-8, -8, 16, 18, 355, 133)	// Tiny Balloon 					- #5
+		SpriteFrame(-12, -12, 24, 23, 372, 133)	// Small Eggman Balloon - Frame 1 	- #6
+		SpriteFrame(-16, -16, 32, 32, 397, 133)	// Small Eggman Balloon - Frame 2 	- #7
+		SpriteFrame(-24, -24, 48, 47, 430, 133)	// Eggman Balloon 					- #8
+		SpriteFrame(-21, -24, 42, 48, 277, 207)	// Pop 								- #9
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 371, 239)	// Balloon - Frame 1 				- #0
+		SpriteFrame(-10, -10, 20, 20, 350, 235)	// Balloon - Frame 2 				- #1
+		SpriteFrame(-12, -12, 24, 24, 325, 231)	// Balloon - Frame 3 				- #2
+		SpriteFrame(-6, -12, 12, 23, 375, 214)	// Squish Frame 					- #3
+		SpriteFrame(-11, -5, 22, 10, 388, 245)	// Squash Frame 					- #4
+		SpriteFrame(-8, -8, 16, 18, 411, 237)	// Tiny Balloon 					- #5
+		SpriteFrame(-12, -12, 24, 23, 428, 232)	// Small Eggman Balloon - Frame 1 	- #6
+		SpriteFrame(-16, -16, 32, 32, 453, 223)	// Small Eggman Balloon - Frame 2 	- #7
+		SpriteFrame(-24, -24, 48, 47, 486, 208)	// Eggman Balloon 					- #8
+		SpriteFrame(-21, -24, 42, 48, 312, 182)	// Pop 								- #9
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

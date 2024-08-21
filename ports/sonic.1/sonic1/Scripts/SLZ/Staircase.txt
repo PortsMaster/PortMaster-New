@@ -1,0 +1,349 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Staircase Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.stairPos
+
+private alias 0 : STAIRCASE_ACTIVATE_TOP
+private alias 1 : STAIRCASE_ACTIVATING_TOP
+private alias 2 : STAIRCASE_LOWERING
+private alias 3 : STAIRCASE_LOWERED
+private alias 4 : STAIRCASE_ACTIVATE_BOTTOM
+private alias 5 : STAIRCASE_ACTIVATING_BOTTOM
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.gravity : player.gravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Staircase_DebugDraw
+reserve function Staircase_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Staircase_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Staircase_DebugSpawn
+	CreateTempObject(TypeName[Staircase], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == FLIP_NONE
+		object[tempObjectPos].direction = FLIP_NONE
+	else
+		object[tempObjectPos].direction = FLIP_X
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.priority = PRIORITY_ACTIVE
+	switch object.state
+	case STAIRCASE_ACTIVATE_TOP
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 112, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				object.timer = 32
+				object.state++
+			end if
+		next
+		break
+
+	case STAIRCASE_ACTIVATING_TOP
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 112, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+
+		object.timer--
+		if object.timer < 0
+			object.timer = 128
+			object.state++
+		end if
+		break
+
+	case STAIRCASE_LOWERING
+		temp0 = object.xpos
+		temp1 = object.ypos
+		if object.direction == FLIP_NONE
+			object.xpos += 0x600000
+			temp4 = -0x200000
+		else
+			temp4 = 0x200000
+		end if
+
+		temp5 = object.stairPos
+		temp2 = 1
+		while temp2 < 5
+			object.ypos += temp5
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_TOP
+					temp6 = object.ypos
+					temp6 &= 0xFFFF0000
+					temp7 = 0x4000
+					temp7 *= temp2
+					temp7 += object.ypos
+					temp7 &= 0xFFFF0000
+					temp7 -= temp6
+					player[currentPlayer].ypos += temp7
+				end if
+
+				if player[currentPlayer].gravity == 0
+					if checkResult == COL_BOTTOM
+						CallFunction(Player_Kill)
+					end if
+				end if
+			next
+			object.xpos += temp4
+			temp2++
+		loop
+		object.stairPos += 0x4000
+		object.xpos = temp0
+		object.ypos = temp1
+
+		object.timer--
+		if object.timer <= 0
+			object.state++
+		end if
+		break
+
+	case STAIRCASE_LOWERED
+		temp0 = object.xpos
+		temp1 = object.ypos
+		if object.direction == FLIP_NONE
+			object.xpos += 0x600000
+			temp4 = -0x200000
+		else
+			temp4 = 0x200000
+		end if
+
+		temp5 = object.stairPos
+		temp2 = 1
+		while temp2 < 5
+			object.ypos += temp5
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if player[currentPlayer].gravity == 0
+					if checkResult == COL_BOTTOM
+						CallFunction(Player_Kill)
+					end if
+				end if
+			next
+			object.xpos += temp4
+			temp2++
+		loop
+		object.xpos = temp0
+		object.ypos = temp1
+		break
+
+	case STAIRCASE_ACTIVATE_BOTTOM
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 112, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_BOTTOM
+				object.timer = 59
+				object.state++
+			end if
+		next
+		break
+
+	case STAIRCASE_ACTIVATING_BOTTOM
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 112, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+
+		object.timer--
+		if object.timer < 0
+			object.timer = 128
+			object.state = STAIRCASE_LOWERING
+		end if
+		break
+
+	end switch
+
+	if object.outOfBounds == true
+		object.priority = PRIORITY_BOUNDS
+		object.state = STAIRCASE_ACTIVATE_TOP
+		object.stairPos = 0
+		if object.propertyValue == 2
+			object.state = STAIRCASE_ACTIVATE_BOTTOM
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case STAIRCASE_ACTIVATE_TOP
+	case STAIRCASE_ACTIVATING_TOP
+	case STAIRCASE_ACTIVATE_BOTTOM
+		DrawSprite(0)
+		break
+
+	case STAIRCASE_LOWERING
+	case STAIRCASE_LOWERED
+		temp2 = object.xpos
+		temp3 = object.ypos
+		if object.direction == FLIP_NONE
+			temp2 += 0x600000
+			temp4 = -0x200000
+		else
+			temp4 = 0x200000
+		end if
+		temp5 = object.stairPos
+		temp3 += temp5
+		DrawSpriteXY(1, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteXY(1, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteXY(1, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteXY(1, temp2, temp3)
+		break
+
+	case STAIRCASE_ACTIVATING_BOTTOM
+		temp2 = object.xpos
+		if object.direction == FLIP_NONE
+			temp2 += 0x600000
+			temp4 = -0x200000
+		else
+			temp4 = 0x200000
+		end if
+
+		GetBit(temp5, object.timer, 2)
+		temp5 <<= 16
+		temp6 = 0
+		while temp6 < 4
+			temp3 = object.ypos
+			temp3 += temp5
+			temp5 ^= 0x10000
+			DrawSpriteXY(1, temp2, temp3)
+			temp2 += temp4
+			temp6++
+		loop
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-16, -16, 128, 32, 67, 26)
+	SpriteFrame(-16, -16, 32, 32, 67, 26)
+	foreach (TypeName[Staircase], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 2
+			object[arrayPos0].state = STAIRCASE_ACTIVATE_BOTTOM
+		end if
+	next
+	SetTableValue(TypeName[Staircase], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Staircase_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Staircase_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw the activated Staircase
+		
+		object.inkEffect = INK_BLEND
+		temp2 = object.xpos
+		temp3 = object.ypos
+		if object.direction == FLIP_NONE
+			temp2 += 0x600000
+			temp4 = -0x200000
+		else
+			temp4 = 0x200000
+		end if
+
+		temp5 = 0x200000
+		temp3 += temp5
+		DrawSpriteFX(1, FX_INK, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteFX(1, FX_INK, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteFX(1, FX_INK, temp2, temp3)
+		temp2 += temp4
+		temp3 += temp5
+		DrawSpriteFX(1, FX_INK, temp2, temp3)
+		
+		editor.drawingOverlay = false
+	end if
+	
+	// The Staircase's unactivated position
+	object.inkEffect = INK_NONE
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-16, -16, 128, 32, 67, 26)
+	SpriteFrame(-16, -16, 32, 32, 67, 26)
+	
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Activate From Top", 0)
+	// 1 goes unused, it was prolly for directions before it was migrated to just object.direction directly
+	AddEnumVariable("Activate From Bottom", 2)
+end event

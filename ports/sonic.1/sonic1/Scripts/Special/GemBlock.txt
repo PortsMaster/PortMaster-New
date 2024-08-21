@@ -1,0 +1,212 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Gem Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.color
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.storedColor
+
+private alias 0 : BLOCK_GEM_IDLE
+private alias 1 : BLOCK_GEM_ACTIVATED
+
+// Player aliases
+private alias object.value10 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function GemBlock_DebugDraw
+reserve function GemBlock_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value GemBlock_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function GemBlock_DebugDraw
+	temp4 = debugMode[0].currentSelection
+	temp4 -= GemBlock_startDebugID
+	DrawSprite(temp4)
+end function
+
+
+private function GemBlock_DebugSpawn
+	temp4 = debugMode[0].currentSelection
+	temp4 -= GemBlock_startDebugID
+	temp5 = TypeName[Gem Block]
+	CallFunction(DebugMode_PlaceBlock)
+	object[arrayPos0].drawOrder = 4
+	object[arrayPos0].groupID = GROUP_BLOCKS
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == BLOCK_GEM_ACTIVATED
+		object.color = object.timer
+		object.color >>= 1
+		object.color &= 3
+		object.timer++
+		if object.timer == 16
+			object.priority = PRIORITY_BOUNDS
+			object.timer = 0
+			object.color = object.storedColor
+			object.color++
+			if object.color == 4
+				object.type = TypeName[Blank Object]
+			else
+				object.state = BLOCK_GEM_IDLE
+			end if
+
+			SpecialSetup_gemBlockBusy = false
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			CallFunction(SpecialSetup_PlayerBlockCol)
+		next
+	else
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			CallFunction(SpecialSetup_PlayerBlockCol)
+			if SpecialSetup_gemBlockBusy == false
+				if checkResult > 0
+					object.state = BLOCK_GEM_ACTIVATED
+					object.priority = PRIORITY_ACTIVE
+					SpecialSetup_gemBlockBusy = true
+					object.storedColor = object.color
+					if Player_isWinner == false
+						PlaySfx(SfxName[Gem Block], false)
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	CallFunction(SpecialSetup_GetBlockPos)
+	temp2 = SpecialSetup_gemBlockTimer
+	temp2 /= 5
+	switch temp2
+	case 0
+		object.direction = FLIP_NONE
+		break
+
+	case 1
+		object.direction = FLIP_X
+		break
+
+	case 2
+		object.direction = FLIP_XY
+		break
+
+	case 3
+		object.direction = FLIP_Y
+		break
+		
+	end switch
+
+	DrawSpriteFX(object.propertyValue, FX_FLIP, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Gem frames
+	SpriteFrame(-12, -12, 24, 24, 301, 76)
+	SpriteFrame(-12, -12, 24, 24, 326, 76)
+	SpriteFrame(-12, -12, 24, 24, 351, 76)
+	SpriteFrame(-12, -12, 24, 24, 376, 76)
+
+	foreach (TypeName[Gem Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].groupID = GROUP_BLOCKS
+	next
+
+	// Add this to the debug object list four times for the four types of gems
+	temp0 = 0
+	GemBlock_startDebugID = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Gem Block], DebugMode_ObjCount, DebugMode_TypeTable)
+		SetTableValue(GemBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(GemBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 0 // color
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		case 0 // color
+			object.propertyValue = temp0
+			object.propertyValue &= 3
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-12, -12, 24, 24, 301, 76)
+	SpriteFrame(-12, -12, 24, 24, 326, 76)
+	SpriteFrame(-12, -12, 24, 24, 351, 76)
+	SpriteFrame(-12, -12, 24, 24, 376, 76)
+	
+	AddEditorVariable("color")
+	SetActiveVariable("color")
+	AddEnumVariable("Blue", 0)
+	AddEnumVariable("Green", 1)
+	AddEnumVariable("Yellow", 2)
+	AddEnumVariable("Pink", 3)
+end event

@@ -1,0 +1,231 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Spikes Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 17 : TYPE_SPIKES
+
+// Function declarations
+reserve function Spikes_DebugDraw
+reserve function Spikes_DebugSpawn
+
+// Static Values
+public value Spikes_value30 = 0;
+
+// Tables
+
+function Spikes_DebugDraw
+	temp2 = object[0].value17
+	temp2 -= Spikes_value30
+	DrawSprite(temp2)
+end function
+
+
+function Spikes_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= Spikes_value30
+	CreateTempObject(TypeName[Spikes], temp0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 1
+		if object.value0 < 60
+			object.value0++
+		else
+			object.state++
+			object.value0 = 0
+			temp0 = screen.xcenter
+			temp0 += 64
+			temp1 = temp0
+			FlipSign(temp0)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -128, temp1, 128, 0, 0, 0, 0, 0)
+			if checkResult == 1
+				PlaySfx(SfxName[Spikes Move], 0)
+			end if
+		end if
+		break
+	case 2
+		if object.value1 < 0x200000
+			object.value1 += 0x80000
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		else
+			object.state++
+		end if
+		break
+	case 3
+		if object.value0 < 60
+			object.value0++
+		else
+			object.state++
+			object.value0 = 0
+			temp0 = screen.xcenter
+			temp0 += 64
+			temp1 = temp0
+			FlipSign(temp0)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -128, temp1, 128, 0, 0, 0, 0, 0)
+			if checkResult == 1
+				PlaySfx(SfxName[Spikes Move], 0)
+			end if
+		end if
+		break
+	case 4
+		if object.value1 > 0
+			object.value1 -= 0x80000
+			object.xpos -= object.xvel
+			object.ypos -= object.yvel
+		else
+			object.state = 1
+		end if
+		break
+	case 5
+		arrayPos0 = object.value2
+		object.ypos = object[-arrayPos0].ypos
+		break
+	end switch
+	
+	
+	switch object.propertyValue
+	case 0 //top hurts
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+			if object[currentPlayer].yvel > -1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, -17, 15, -12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_SpikeHit)
+				end if
+			end if
+		next
+		break
+	case 1 //right hurts
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+			if object[currentPlayer].xvel <= 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, 12, -15, 16, 15, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_SpikeHit)
+				end if
+			end if
+		next
+		break
+	case 2 //left hurts
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -15, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -15, -12, 15, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				CallFunction(PlayerObject_SpikeHit)
+			end if
+		next
+		break
+	case 3 //bottom hurts
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object[currentPlayer].yvel
+			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 15, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					if object[currentPlayer].collisionMode == CMODE_FLOOR
+						CallFunction(PlayerObject_Kill)
+						object[currentPlayer].value7 = 0
+					else
+						CallFunction(PlayerObject_SpikeHit)
+					end if
+				else
+					CallFunction(PlayerObject_SpikeHit)
+				end if
+				temp0 = 1
+			end if
+			if temp0 < 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, 12, 15, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_SpikeHit)
+				end if
+			end if
+		next
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-16, -16, 32, 32, 182, 99)
+	SpriteFrame(-16, -16, 32, 32, 182, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 99)
+	temp0 = 0
+	Spikes_value30 = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Spikes], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Spikes_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Spikes_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+	foreach (TypeName[Spikes], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue > 3
+			object[arrayPos0].propertyValue &= 3
+			temp0 = object[arrayPos0].propertyValue
+			temp0 &= 3
+			switch temp0
+			case 0
+				object[arrayPos0].xvel = 0
+				object[arrayPos0].yvel = 0x80000
+				object[arrayPos0].ypos += 0x200000
+				break
+			case 1
+				object[arrayPos0].xvel = -0x80000
+				object[arrayPos0].yvel = 0
+				object[arrayPos0].xpos -= 0x200000
+				break
+			case 2
+				object[arrayPos0].xvel = 0x80000
+				object[arrayPos0].yvel = 0
+				object[arrayPos0].xpos += 0x200000
+				break
+			case 3
+				object[arrayPos0].xvel = 0
+				object[arrayPos0].yvel = -0x80000
+				object[arrayPos0].ypos -= 0x200000
+				break
+			end switch
+			object[arrayPos0].value1 = 0x200000
+			if object[arrayPos0].state != 5
+				object[arrayPos0].state = 3
+			end if
+		end if
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

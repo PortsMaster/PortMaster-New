@@ -1,0 +1,176 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.stoodPlayers
+private alias object.value3 : object.debrisDistance.x
+
+// States
+private alias 0 : WFZEGGMANPLATFORM_ENTER
+private alias 1 : WFZEGGMANPLATFORM_MOVE
+private alias 2 : WFZEGGMANPLATFORM_DESTROYED
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp1 = object.ypos
+	temp1 &= 0xFFFF0000
+
+	switch object.state
+	case WFZEGGMANPLATFORM_ENTER
+		object.ypos += 0x10000
+
+		object.timer++
+		if object.timer >= 119
+			object.timer 		= 96
+			object.xvel 		= -0x10000
+			object.yvel 		= 0x10000
+			object.startPos.y 	= object.ypos
+			object.state 		= WFZEGGMANPLATFORM_MOVE
+		end if
+		break
+
+	case WFZEGGMANPLATFORM_MOVE
+		if object.timer == 0
+			object.timer = 192
+			FlipSign(object.xvel)
+		end if
+
+		if object.ypos >= object.startPos.y
+			object.yvel -= 0x400
+		else
+			object.yvel += 0x400
+		end if
+
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.timer--
+		break
+
+	case WFZEGGMANPLATFORM_DESTROYED
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+
+		object.debrisDistance.x++
+		break
+		
+	end switch
+
+	FlipSign(temp1)
+	temp0 = object.ypos
+	temp0 &= 0xFFFF0000
+	temp1 += temp0
+	if object.state < WFZEGGMANPLATFORM_DESTROYED
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		object.animationTimer++
+		if object.animationTimer >= 24
+			object.animationTimer = 0
+		end if
+
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp0, object.stoodPlayers, temp2)
+			if temp0 == true
+				player[currentPlayer].xpos += object.xvel
+				player[currentPlayer].ypos += temp1
+			end if
+			SetBit(object.stoodPlayers, temp2, false)
+
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				SetBit(object.stoodPlayers, temp2, true)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -4, 8, 4, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+			end if
+
+			temp2++
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state == WFZEGGMANPLATFORM_DESTROYED
+		temp0 = -16
+		temp0 -= object.debrisDistance.x
+		EditFrame(6, temp0, -8, 16, 22, 409, 18)
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+
+		object.direction ^= FLIP_X
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+	else
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 376, 18)
+		SpriteFrame(-16, -8, 32, 23, 376, 43)
+		SpriteFrame(-16, -8, 32, 22, 376, 67)
+		SpriteFrame(-16, -8, 32, 22, 409, 18)
+		SpriteFrame(-16, -8, 32, 22, 409, 41)
+		SpriteFrame(-16, -8, 32, 23, 409, 64)
+		SpriteFrame(-16, -8, 16, 22, 409, 18)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 397, 18)
+		SpriteFrame(-16, -8, 32, 23, 397, 43)
+		SpriteFrame(-16, -8, 32, 22, 397, 67)
+		SpriteFrame(-16, -8, 32, 22, 430, 18)
+		SpriteFrame(-16, -8, 32, 22, 430, 41)
+		SpriteFrame(-16, -8, 32, 23, 430, 64)
+		SpriteFrame(-16, -8, 16, 22, 430, 18)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 376, 18)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 397, 18)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

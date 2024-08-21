@@ -1,0 +1,145 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Lose Ring Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 11 : TYPE_LOSERING
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	object.yvel += 0x1800
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+	if object.yvel >= 0
+		ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+		if checkResult == 1
+			temp0 = object.yvel
+			temp0 >>= 2
+			object.yvel -= temp0
+			FlipSign(object.yvel)
+			if object.yvel > -0x10000
+				object.yvel = -0x10000
+			end if
+		end if
+	end if
+	object.value0++
+	if object.value0 == 256
+		object.type = TypeName[Blank Object]
+		object.xvel = 0
+		object.yvel = 0
+		object.value0 = 0
+	else
+		object.animationTimer += object.animationSpeed
+		if object.animationTimer > 255
+			object.animationTimer -= 256
+			object.frame++
+			if object.frame == 8
+				object.frame = 0
+				if object.animationSpeed > 16
+					object.animationSpeed -= 16
+				end if
+			end if
+		end if
+		if object.value0 >= 240
+			object.alpha -= 16
+		end if
+	end if
+	if object.value0 > 63
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			CheckEqual(object[currentPlayer].state, PlayerObject_Knockback)
+			temp0 = checkResult
+			CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
+			temp0 |= checkResult
+			if temp0 == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object.type = TypeName[Ring Sparkle]
+					if stage.debugMode == 0
+						saveRAM[997]++
+						if saveRAM[997] > saveRAM[998]
+							saveRAM[998] = saveRAM[997]
+						end if
+					end if
+					if object.propertyValue == 0
+						object.drawOrder = 4
+					else
+						object.drawOrder = 2
+					end if
+					object.value0 = 0
+					object.value1 = 0
+					object.value0 = 0
+					object.frame = 0
+					if object[currentPlayer].value16 == 1
+						object[0].value0++
+						if object[0].value0 > 999
+							object[0].value0 = 999
+						end if
+					else
+						object[currentPlayer].value0++
+						if object[currentPlayer].value0 > 999
+							object[currentPlayer].value0 = 999
+						end if
+					end if
+					if object[0].value0 >= ringExtraLife
+						if options.gameMode < 2
+							if saved.lives == 0
+								player.lives++
+								PlaySfx(SfxName[Life], 0)
+								PauseMusic()
+								ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
+								object[25].priority = PRIORITY_ACTIVE
+							end if
+							ringExtraLife += 100
+							if ringExtraLife > 300
+								ringExtraLife = 1000
+							end if
+						end if
+					end if
+					if ringPan == 0
+						PlaySfx(SfxName[Ring L], 0)
+						SetSfxAttributes(SfxName[Ring L], -1, -100)
+						ringPan = 1
+					else
+						PlaySfx(SfxName[Ring R], 0)
+						SetSfxAttributes(SfxName[Ring R], -1, 100)
+						ringPan = 0
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	SpriteFrame(-8, -8, 16, 16, 1, 18)
+	SpriteFrame(-8, -8, 16, 16, 1, 35)
+	SpriteFrame(-8, -8, 16, 16, 1, 52)
+	SpriteFrame(-8, -8, 16, 16, 1, 69)
+	SpriteFrame(-8, -8, 16, 16, 1, 86)
+	SpriteFrame(-8, -8, 16, 16, 1, 103)
+	SpriteFrame(-8, -8, 16, 16, 1, 120)
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

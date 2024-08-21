@@ -1,0 +1,163 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Sinking Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.sinkPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.stood
+
+// States
+private alias 0 : SINKINGPLATFORM_IDLE
+private alias 1 : SINKINGPLATFORM_SINKING
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SinkingPlatform_DebugDraw
+reserve function SinkingPlatform_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SinkingPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SinkingPlatform_DebugSpawn
+	CreateTempObject(TypeName[Sinking Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].sinkPos.y = object[tempObjectPos].ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.ypos
+
+	switch object.state
+	case SINKINGPLATFORM_IDLE
+		if object.ypos <= object.sinkPos.y
+			object.ypos = object.sinkPos.y
+			object.yvel = 0
+			if object.stood == true
+				object.yvel = 0x10000
+				object.state = SINKINGPLATFORM_SINKING
+			end if
+		else
+			object.yvel -= 0x3800
+			if object.yvel < -0x80000
+				object.yvel = -0x80000
+			end if
+			object.ypos += object.yvel
+		end if
+		break
+
+	case SINKINGPLATFORM_SINKING
+		object.ypos += object.yvel
+		if object.stood == false
+			object.state = SINKINGPLATFORM_IDLE
+		end if
+		break
+		
+	end switch
+	object.stood = false
+
+	temp0 = object.ypos
+	temp6 &= 0xFFFF0000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp6
+	object.ypos = temp6
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].yvel < 0
+			if object.yvel < player[currentPlayer].yvel
+				temp1 = true
+			else
+				temp1 = false
+			end if
+		else
+			temp1 = false
+		end if
+
+		if temp1 == true
+			temp1 = player[currentPlayer].yvel
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -20, 32, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].yvel = 0x10000
+			end if
+
+			BoxCollisionTest(C_SOLID2, object.entityPos, -32, -20, 32, -4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].ypos += object.collisionOffset.y
+				object.stood |= true
+			else
+				player[currentPlayer].yvel = temp1
+			end if
+		else
+			BoxCollisionTest(C_SOLID2, object.entityPos, -32, -20, 32, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].yvel = 0x70000
+				player[currentPlayer].ypos += object.collisionOffset.y
+				object.stood |= true
+			end if
+		end if
+	next
+
+	object.ypos = temp0
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-32, -20, 64, 40, 1, 183)
+
+	foreach (TypeName[Sinking Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].sinkPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Sinking Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SinkingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SinkingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-32, -20, 64, 40, 1, 183)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

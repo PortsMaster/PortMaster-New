@@ -1,0 +1,227 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Spiral Path Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.activePlayers
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.rotation : player.rotation
+private alias object.angle : player.angle
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.frame : player.frame
+private alias object.prevAnimation : player.prevAnimation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.collisionBottom : player.collisionBottom
+private alias object.value42 : player.prevGravity
+
+
+// ========================
+// Tables
+// ========================
+
+// Used to determine which frame the player should use when corkscrewing
+private table SpiralPath_spriteTable
+	6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7
+end table
+
+// Values for the small player Y Pos offset when corkscrewing
+// This is just a cosine table with an amplitude of 32 - same as the original ROM - so it's not much special
+private table SpiralPath_offsetTable
+	 32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32
+	 32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  31,  31
+	 31,  31,  31,  31,  31,  31,  31,  31,  31,  31,  31,  31,  31,  30,  30,  30
+	 30,  30,  30,  30,  30,  30,  29,  29,  29,  29,  29,  28,  28,  28,  28,  27
+	 27,  27,  27,  26,  26,  26,  25,  25,  25,  24,  24,  24,  23,  23,  22,  22
+	 21,  21,  20,  20,  19,  18,  18,  17,  16,  16,  15,  14,  14,  13,  12,  12
+	 11,  10,  10,   9,   8,   8,   7,   6,   6,   5,   4,   4,   3,   2,   2,   1
+	  0,  -1,  -2,  -2,  -3,  -4,  -4,  -5,  -6,  -7,  -7,  -8,  -9,  -9, -10, -10
+	-11, -11, -12, -12, -13, -14, -14, -15, -15, -16, -16, -17, -17, -18, -18, -19
+	-19, -19, -20, -21, -21, -22, -22, -23, -23, -24, -24, -25, -25, -26, -26, -27
+	-27, -28, -28, -28, -29, -29, -30, -30, -30, -31, -31, -31, -32, -32, -32, -33
+	-33, -33, -33, -34, -34, -34, -35, -35, -35, -35, -35, -35, -35, -35, -36, -36
+	-36, -36, -36, -36, -36, -36, -36, -37, -37, -37, -37, -37, -37, -37, -37, -37
+	-37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37, -37
+	-37, -37, -37, -37, -36, -36, -36, -36, -36, -36, -36, -35, -35, -35, -35, -35
+	-35, -35, -35, -34, -34, -34, -33, -33, -33, -33, -32, -32, -32, -31, -31, -31
+	-30, -30, -30, -29, -29, -28, -28, -28, -27, -27, -26, -26, -25, -25, -24, -24
+	-23, -23, -22, -22, -21, -21, -20, -19, -19, -18, -18, -17, -16, -16, -15, -14
+	-14, -13, -12, -11, -11, -10,  -9,  -8,  -7,  -7,  -6,  -5,  -4,  -3,  -2,  -1
+	 0,   1,    2,   3,   4,   5,   6,   7,   8,   8,   9,  10,  10,  11,  12,  13
+	 13,  14,  14,  15,  15,  16,  16,  17,  17,  18,  18,  19,  19,  20,  20,  21
+	 21,  22,  22,  23,  23,  24,  24,  24,  25,  25,  25,  25,  26,  26,  26,  26
+	 27,  27,  27,  27,  28,  28,  28,  28,  28,  28,  29,  29,  29,  29,  29,  29
+	 29,  30,  30,  30,  30,  30,  30,  30,  31,  31,  31,  31,  31,  31,  31,  31
+	 31,  31,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32
+	 32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Make this object always active, it's larger than the screen is normally so we can't depend on the normal priority system
+	object.priority = PRIORITY_ACTIVE
+	
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = player[currentPlayer].xpos
+		temp0 -= object.xpos
+		
+		GetBit(temp3, object.activePlayers, temp2)
+		if temp3 == false
+			if player[currentPlayer].prevGravity == GRAVITY_GROUND
+				BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				
+				if checkResult == true
+					SetBit(object.activePlayers, temp2, true)
+					player[currentPlayer].yvel = 0
+				end if
+			end if
+		else
+			temp0 += 0xD00000
+			temp1 = player[currentPlayer].xvel
+			Abs(temp1)
+			CheckLower(temp1, 0x60000)
+			
+			temp3 = checkResult
+			CheckLower(player[currentPlayer].yvel, -0x40000)
+			temp3 |= checkResult
+			CheckLower(temp0, 0)
+			temp3 |= checkResult
+			CheckGreater(temp0, 0x19FFFFF)
+			temp3 |= checkResult
+			
+			if temp3 == true
+				SetBit(object.activePlayers, temp2, false)
+				if player[currentPlayer].prevGravity == GRAVITY_AIR
+					if player[currentPlayer].yvel >= 0
+						if player[currentPlayer].state != Player_State_Carried
+							if player[currentPlayer].animation != ANI_SKIDDING
+								player[currentPlayer].animation = ANI_TWIRL
+								player[currentPlayer].angle = 0
+							end if
+						end if
+					end if
+				end if
+			else
+				player[currentPlayer].yvel = 0
+				
+				temp0 >>= 16
+				
+				GetTableValue(player[currentPlayer].ypos, temp0, SpiralPath_offsetTable)
+				
+				player[currentPlayer].ypos -= player[currentPlayer].collisionBottom
+				player[currentPlayer].ypos += 19
+				player[currentPlayer].ypos <<= 16
+				player[currentPlayer].ypos += object.ypos
+				
+#platform: USE_ORIGINS
+				if player[currentPlayer].state == Player_State_HammerDash
+					player[currentPlayer].state = Player_State_Ground
+				end if
+#endplatform
+				
+				if player[currentPlayer].state == Player_State_Ground
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						
+						// We're setting prevAnimation too because we don't want frame number to be reset
+						player[currentPlayer].prevAnimation = ANI_TWIRL
+						player[currentPlayer].animation = ANI_TWIRL
+						player[currentPlayer].animationSpeed = 0
+						player[currentPlayer].direction = FACING_RIGHT
+						
+						temp1 = object.xpos
+						temp1 -= 0xC40000
+						temp0 = player[currentPlayer].xpos
+						temp0 -= temp1
+						temp0 >>= 21
+						temp0 %= 12
+						
+						if player[currentPlayer].speed > 0
+							player[currentPlayer].frame = temp0
+							player[currentPlayer].rotation = 0
+						else
+							GetTableValue(player[currentPlayer].frame, temp0, SpiralPath_spriteTable)
+							player[currentPlayer].rotation = 256 // flipY
+						end if
+					end if
+				end if
+				
+				player[currentPlayer].gravity = GRAVITY_GROUND
+			end if
+		end if
+		
+		temp2++
+	next
+	
+	if object.outOfBounds == true
+		object.priority = PRIORITY_BOUNDS
+		
+		temp0 = false
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Check if any players are still on the Spiral Path
+			BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			temp0 |= checkResult
+		next
+		
+		if temp0 == false
+			// If there aren't any players on it, then reset
+			object.activePlayers = 0
+		end if
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw the movement path
+		temp0 = 0
+		while temp0 < 384
+			temp1 = temp0
+			temp1 -= 192
+			temp1 <<= 16
+			temp1 += object.xpos
+			GetTableValue(temp2, temp0, SpiralPath_offsetTable)
+			temp2 <<= 16
+			temp2 += object.ypos
+			
+			DrawRectWorld(temp1, temp2, 2, 2, 255, 255, 255, 255)
+			temp0++
+		loop
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

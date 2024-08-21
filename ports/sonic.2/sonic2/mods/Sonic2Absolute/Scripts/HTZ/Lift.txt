@@ -1,0 +1,176 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Lift Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 57 : TYPE_LIFT
+
+// Function declarations
+reserve function Lift_DebugDraw
+reserve function Lift_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Lift_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Lift_DebugSpawn
+	CreateTempObject(TypeName[Lift], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	temp7 = 0
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, 41, 32, 57, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.state = 1
+				object.priority = PRIORITY_ACTIVE
+			end if
+		next
+		break
+	case 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, 41, 32, 57, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				if object.direction == FLIP_X
+					object[currentPlayer].xpos -= 0x20000
+				else
+					object[currentPlayer].xpos += 0x20000
+				end if
+				object[currentPlayer].ypos += 0x10000
+			end if
+		next
+		if object.direction == FLIP_X
+			object.xpos -= 0x20000
+		else
+			object.xpos += 0x20000
+		end if
+		object.ypos += 0x10000
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 0
+			PlaySfx(SfxName[Lift Tick], 0)
+		end if
+		object.value0--
+		if object.value0 == 0
+			object.value1 = object.ypos
+			object.priority = PRIORITY_ACTIVE
+			object.state = 2
+		end if
+		break
+	case 2
+		temp0 = object.ypos
+		object.ypos = object.value1
+		temp1 = object.value1
+		temp1 &= -0x10000
+		object.value1 += object.yvel
+		object.yvel += 0x3800
+		temp2 = object.value1
+		temp2 &= -0x10000
+		temp2 -= temp1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, 41, 32, 57, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object[currentPlayer].ypos += temp2
+			end if
+		next
+		if object.outOfBounds == 1
+			object.state = 3
+		else
+			temp7 = 1
+		end if
+		object.ypos = temp0
+		break
+	case 3
+		break
+	end switch
+	if temp7 == 0
+		if object.outOfBounds == 1
+			temp0 = object.xpos
+			temp1 = object.ypos
+			object.xpos = object.value2
+			object.ypos = object.value3
+			if object.outOfBounds == 1
+				object.yvel = 0
+				object.value0 = object.propertyValue
+				object.value0 <<= 3
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.state = 0
+			else
+				object.xpos = temp0
+				object.ypos = temp1
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.value1)
+		break
+	case 3
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == 1
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-28, -63, 56, 90, 102, 1)
+		SpriteFrame(-28, 27, 56, 13, 109, 198)
+		SpriteFrame(-32, 27, 64, 21, 109, 212)
+		SpriteFrame(-32, 27, 64, 21, 109, 234)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-28, -63, 56, 90, 73, 848)
+		SpriteFrame(-28, 27, 56, 13, 73, 939)
+		SpriteFrame(-32, 27, 64, 21, 1, 953)
+		SpriteFrame(-32, 27, 64, 21, 65, 953)
+	end if
+	foreach (TypeName[Lift], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value2 = object[arrayPos0].xpos
+		object[arrayPos0].value3 = object[arrayPos0].ypos
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].value0 = object[arrayPos0].propertyValue
+		object[arrayPos0].value0 <<= 3
+	next
+	SetTableValue(TypeName[Lift], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Lift_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Lift_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

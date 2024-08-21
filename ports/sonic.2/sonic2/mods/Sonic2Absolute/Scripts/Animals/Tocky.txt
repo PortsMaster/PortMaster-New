@@ -1,0 +1,200 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Tocky Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 42 : TYPE_TOCKY
+
+// Function declarations
+reserve function Tocky_DebugDraw
+reserve function Tocky_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Tocky_DebugDraw
+	DrawSprite(2)
+end function
+
+
+function Tocky_DebugSpawn
+	CreateTempObject(TypeName[Tocky], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].state = 3
+		object[tempObjectPos].xvel = 0x14000
+		object[tempObjectPos].yvel = -0x20000
+		Rand(checkResult, 32)
+		if checkResult < 16
+			object[tempObjectPos].direction = FLIP_X
+			FlipSign(object[tempObjectPos].xvel)
+		end if
+	else
+		object[tempObjectPos].state = 4
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.value0 < object.propertyValue
+			object.value0++
+		else
+			object.xvel = 0x14000
+			if object.value1 == 1
+				object.drawOrder = 4
+				Rand(checkResult, 32)
+				if checkResult < 16
+					object.direction = FLIP_X
+					FlipSign(object.xvel)
+				end if
+			else
+				object.direction = FLIP_X
+				FlipSign(object.xvel)
+			end if
+			object.yvel = -0x40000
+			object.state++
+		end if
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == 1
+				object.yvel = -0x20000
+				object.state++
+			else	
+				if object.yvel >= 0x40000
+					CheckCurrentStageFolder("Zone10")
+					if checkResult == 1
+						object.state = 6
+						object.frame = 3
+					end if
+				end if
+			end if
+		end if
+		break
+	case 6
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == 1
+				object.yvel = -0x20000
+				object.state++
+			end if
+		end if
+		if object.value15 < 6
+			object.value15++
+		else
+			object.frame = 4
+			object.yvel = 0x20000
+		end if
+		break
+	case 4
+		if object[0].xpos < object.xpos
+			object.direction = FLIP_X
+		else
+			object.direction = FLIP_NONE
+		end if
+	case 2
+	case 3
+	case 5
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == 1
+				if object.state == 3
+					if object.value0 == 1
+						FlipSign(object.xvel)
+						object.direction ^= FLIP_X
+					end if
+					object.value0 ^= 1
+				end if
+				object.yvel = -0x20000
+			end if
+		end if
+		break
+	end switch
+	if object.state < 3
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 6
+		DrawSprite(object.frame)
+	case 0
+	case 1
+		DrawSprite(2)
+		break
+	case 2
+	case 3
+	case 4
+	case 5
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-12, -5, 24, 13, 134, 239)
+	SpriteFrame(-12, -4, 24, 12, 159, 240)
+	SpriteFrame(-8, -15, 15, 27, 175, 213)
+	SpriteFrame(-7, -21, 13, 18, 23, 177)
+	SpriteFrame(-11, -27, 21, 24, 1, 171)
+	foreach (TypeName[Tocky], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = 3
+			object[arrayPos0].xvel = 0x14000
+			object[arrayPos0].yvel = -0x20000
+			Rand(checkResult, 32)
+			if checkResult < 16
+				object[arrayPos0].direction = FLIP_X
+				FlipSign(object[arrayPos0].xvel)
+			end if
+		else
+			if object[arrayPos0].propertyValue == 2
+				object[arrayPos0].state = 4
+			end if
+			if object[arrayPos0].propertyValue == 3
+				object[arrayPos0].state = 5
+				object[arrayPos0].xvel = 0x14000
+				FlipSign(object[arrayPos0].xvel)
+				object[arrayPos0].direction = FLIP_X
+			end if
+		end if
+		object[arrayPos0].propertyValue = 0
+	next
+	SetTableValue(TypeName[Tocky], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Tocky_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Tocky_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

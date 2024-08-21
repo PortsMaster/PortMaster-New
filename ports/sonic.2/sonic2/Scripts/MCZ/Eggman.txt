@@ -1,0 +1,845 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// Using MCZEggman as a prefix here because there's like 12 "Eggman" objects in the game so it's less confusing this way
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.oscillationAngle
+private alias object.value3  : object.health
+private alias object.value4  : object.invincibilityTimer
+private alias object.value5  : object.exploding
+
+private alias object.value6  : object.boundsM
+private alias object.value7  : object.boundsL
+private alias object.value8  : object.boundsR
+private alias object.value9  : object.boundsT
+private alias object.value10 : object.boundsB
+
+// value11 is unused
+
+private alias object.value12 : object.flameAnimation
+private alias object.value13 : object.flameAnimTimer
+
+private alias object.value14 : object.lightsFrame
+
+private alias object.value15 : object.drillOffsetL.x
+private alias object.value16 : object.drillOffsetR.x
+private alias object.value17 : object.drillOffset.y
+private alias object.value18 : object.drillFrame
+private alias object.value19 : object.drillAnimSpeed
+
+private alias object.value20 : object.shakeStopPos
+private alias object.value21 : object.shakeTimer
+
+// Eggman States
+private alias 0  : MCZEGGMAN_AWAITPLAYER
+private alias 1  : MCZEGGMAN_ENTERDELAY
+private alias 2  : MCZEGGMAN_ENTEREGGMAN
+private alias 3  : MCZEGGMAN_RISE
+private alias 4  : MCZEGGMAN_LANDINGDRILLTURN
+private alias 5  : MCZEGGMAN_RISINGDRILLTURN
+private alias 6  : MCZEGGMAN_ADVANCELEFT
+private alias 7  : MCZEGGMAN_ADVANCERIGHT
+private alias 8  : MCZEGGMAN_EXPLODING
+private alias 9  : MCZEGGMAN_DEFEATFALL
+private alias 10 : MCZEGGMAN_DEFEATRISE
+private alias 11 : MCZEGGMAN_FLEE
+private alias 12 : MCZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : MCZEGGANI_INVISIBLE
+private alias 1 : MCZEGGANI_IDLE
+private alias 2 : MCZEGGANI_LAUGH
+private alias 3 : MCZEGGANI_HIT
+private alias 4 : MCZEGGANI_DEFEATED
+private alias 5 : MCZEGGANI_TOASTED
+private alias 6 : MCZEGGANI_PANIC
+
+// Jet States
+private alias 0 : FLAMEANI_INACITVE
+private alias 1 : FLAMEANI_ACITVE
+
+// Drill states
+private alias 0 : DRILL_ACTIVE
+private alias 1 : DRILL_FELLOFF
+
+// Player aliases
+private alias object.xpos 			: player.xpos
+private alias object.xvel 			: player.xvel
+private alias object.speed 			: player.speed
+private alias object.animation 		: player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.value40 		: player.hitboxLeft
+private alias object.value38 		: player.hitboxTop
+private alias object.value41 		: player.hitboxRight
+private alias object.value39 		: player.hitboxBottom
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias  0 : MUSICEVENT_FADETOBOSS
+private alias  1 : MUSICEVENT_FADETOSTAGE
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MCZEggman_Oscillate
+reserve function MCZEggman_UpdateDrills
+reserve function MCZEggman_ShakeScreen
+
+
+// ========================
+// Tables
+// ========================
+
+private table MCZEggman_flameAnimTimerTable
+	9, 9, 10, 10
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function MCZEggman_Oscillate
+	// Used after getting defeated
+	Sin256(object.ypos, object.oscillationAngle)
+	object.ypos <<= 10
+	object.ypos += object.originPos.y
+	object.oscillationAngle += 2
+	object.oscillationAngle &= 0xFF
+end function
+
+
+private function MCZEggman_UpdateDrills
+	// Set the two drill's angles so that they can properly rotate
+	object[-1].angle = object.rotation
+	object[+1].angle = object.rotation
+
+	object[-1].frame = object.drillFrame
+	object[-1].frame >>= 2
+
+	if object.rotation > 88
+		object[-1].frame += 3
+		temp0 = object.rotation
+		temp0 -= 128
+		temp0 &= 511
+	else
+		temp0 = object.rotation
+	end if
+
+	// The two drills should use the same frame
+	object[+1].frame = object[-1].frame
+
+	// Animation of the drills is done here
+	object.drillFrame += object.drillAnimSpeed
+	object.drillFrame %= 12
+
+	object[-1].xpos = object.xpos
+	object[+1].xpos = object.xpos
+
+	if object.direction == FLIP_NONE
+		object[-1].xpos += object.drillOffsetL.x
+		object[+1].xpos += object.drillOffsetR.x
+		object[-1].rotation = 0x200
+		object[-1].rotation -= temp0
+		object[-1].rotation &= 0x1FF
+		object[+1].rotation = object[-1].rotation
+	else
+		object[-1].xpos -= object.drillOffsetL.x
+		object[+1].xpos -= object.drillOffsetR.x
+		object[-1].rotation = temp0
+		object[+1].rotation = temp0
+	end if
+
+	object[-1].ypos = object.ypos
+	object[-1].ypos += object.drillOffset.y
+	object[-1].direction = object.direction
+
+	object[+1].ypos = object.ypos
+	object[+1].ypos += object.drillOffset.y
+	object[+1].direction = object.direction
+end function
+
+
+private function MCZEggman_ShakeScreen
+	// Called when "burrowing" in the rock in order to shake the screen and spawn rocks
+	if object.ypos < object.shakeStopPos
+		object.shakeTimer++
+		object.shakeTimer %= 40
+		if object.shakeTimer == 8
+			PlaySfx(SfxName[Rumble], false)
+		end if
+
+		temp0 = object.shakeTimer
+		temp0 &= 3
+		if temp0 == 0
+			screen.shakeY = 2
+		end if
+		
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			temp0 = oscillation
+			temp0 &= 15
+			if temp0 == 0
+				temp0 = 1
+			else
+				temp0 = 0
+			end if
+			
+			Rand(temp1, screen.xsize)
+			temp2 = object.shakeTimer
+			temp2 <<= 4
+			temp1 += temp2
+			temp1 %= screen.xsize
+			temp1 -= screen.xcenter
+			temp1 <<= 16
+			temp1 += object.boundsM
+			temp2 = object.boundsT
+			temp2 += 0x900000
+			CreateTempObject(TypeName[Boss Rock], temp0, temp1, temp2)
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case MCZEGGMAN_AWAITPLAYER
+		temp0 = object[-1].xpos
+		temp0 -= 0x100000
+		if player[0].xpos > temp0
+			// Set screen bounds
+			// object[-1] is drill A's slot, [+1] is drill B's slot
+			temp0 = object[-1].ixpos
+			temp0 -= screen.xcenter
+			stage.newXBoundary1 = temp0
+
+			temp0 = object[-1].ixpos
+			temp0 += screen.xcenter
+			stage.newXBoundary2 = temp0
+
+			temp0 = stage.newYBoundary2
+			temp0 -= screen.ysize
+			stage.newYBoundary1 = temp0
+
+			object.boundsM = object[-1].xpos
+
+			object.boundsL = -112
+			object.boundsL *= screen.xsize
+			object.boundsL /= 320
+			object.boundsL <<= 16
+
+			object.boundsR = object.boundsL
+			FlipSign(object.boundsR)
+
+			object.boundsL += object[-1].xpos
+			object.boundsR += object[-1].xpos
+
+			object.boundsT = object[-1].ypos
+			object.boundsT -= 0x1200000
+
+			object.boundsB = object[-1].ypos
+			object.boundsB -= 0x200000
+
+			object.shakeStopPos = object[+1].ypos
+			object.shakeStopPos += 0x280000
+
+			object.xpos = 16
+			object.xpos *= screen.xsize
+			object.xpos /= 320
+			object.xpos <<= 16
+			object.xpos += object[-1].xpos
+
+			object.ypos = object.boundsT
+
+			object.animation = MCZEGGANI_IDLE
+
+			// Start the boss music
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
+			// Spawn the drills
+			CheckCurrentStageFolder("Zone06")
+			if checkResult == true
+				// In Mystic Cave - no special action needed here
+				object[-1].type = TypeName[Eggman Drill]
+				object[+1].type = TypeName[Eggman Drill]
+			else
+				// In EGZ, the `Eggman Drill` namespace is already taken up by another object so use a renamed variant
+				object[-1].type = TypeName[Eggman Drill 2]
+				object[+1].type = TypeName[Eggman Drill 2]
+			end if
+
+			object.lightsFrame = 6
+
+			object.flameAnimation = FLAMEANI_ACITVE
+
+			object.drillOffsetL.x = -0x120000
+			object.drillOffsetR.x = 0x160000
+			CallFunction(MCZEggman_UpdateDrills) // Called to init the drills' other values
+
+			object.drillOffset.y = 0
+			
+#platform: USE_STANDALONE
+			object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+			if game.bossOneLife == false
+				object.health = 8
+			else
+				object.health = 1
+			end if
+#endplatform
+
+			object.priority = PRIORITY_ACTIVE
+			object.state = MCZEGGMAN_ENTERDELAY
+		end if
+		break
+
+	case MCZEGGMAN_ENTERDELAY
+		object.timer++
+		if object.timer == 60
+			object.timer = 0
+			object.yvel = 0xC000
+			object.drillAnimSpeed = 2
+			object.state = MCZEGGMAN_ENTEREGGMAN
+		end if
+		break
+
+	case MCZEGGMAN_ENTEREGGMAN
+		object.ypos += object.yvel
+		if object.ypos >= object.boundsB
+			object.ypos = object.boundsB
+			object.lightsFrame = 7
+			object.flameAnimation = FLAMEANI_INACITVE
+			object.drillAnimSpeed = 1
+			if player[0].xpos > object.xpos
+				object.direction = FLIP_X
+			end if
+			object.state = MCZEGGMAN_LANDINGDRILLTURN
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		CallFunction(MCZEggman_ShakeScreen)
+		break
+
+	case MCZEGGMAN_RISE
+		object.ypos += object.yvel
+		if object.ypos <= object.boundsT
+			object.ypos = object.boundsT
+			object.yvel = 0x10000
+			if player[0].xpos > object.boundsM
+				object.xpos = object.boundsL
+				object.direction = FLIP_X
+			else
+				object.xpos = object.boundsR
+				object.direction = FLIP_NONE
+			end if
+			object.state = MCZEGGMAN_ENTEREGGMAN
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		CallFunction(MCZEggman_ShakeScreen)
+		break
+
+	case MCZEGGMAN_LANDINGDRILLTURN
+		// Turning the drills horizontally after burrowing out
+		object.timer++
+		if object.timer == 100
+			object.timer = 0
+			object.drillAnimSpeed = 2
+			if object.direction == FLIP_NONE
+				object.xvel = -0x20000
+				object.state = MCZEGGMAN_ADVANCELEFT
+			else
+				object.xvel = 0x20000
+				object.state = MCZEGGMAN_ADVANCERIGHT
+			end if
+		end if
+
+		if object.timer > 40
+			if object.rotation < 128
+				object.rotation += 4
+			end if
+
+			temp0 = 128
+			temp0 -= object.rotation
+			temp0 <<= 9
+			temp1 = object.rotation
+			temp1 <<= 9
+
+			object.drillOffsetL.x = -18
+			object.drillOffsetR.x = 22
+			object.drillOffsetL.x *= temp0
+			object.drillOffsetR.x *= temp0
+			object.drillOffset.y = 0
+			object.drillOffset.y *= temp0
+
+			temp2 = -6
+			temp3 = 34
+			temp2 *= temp1
+			temp3 *= temp1
+			temp4 = 4
+			temp4 *= temp1
+
+			object.drillOffsetL.x += temp2
+			object.drillOffsetR.x += temp3
+			object.drillOffset.y += temp4
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		break
+
+	case MCZEGGMAN_RISINGDRILLTURN
+		// Turning the drills vertically in order to burrow back into the roof of rocks
+		object.timer++
+		if object.timer == 100
+			object.timer = 0
+			object.drillAnimSpeed = 2
+			object.yvel = -0xC000
+			object.lightsFrame = 6
+			object.state = MCZEGGMAN_RISE
+		end if
+
+		if object.timer > 40
+			if object.rotation > 0
+				object.rotation -= 4
+			end if
+
+			temp0 = 128
+			temp0 -= object.rotation
+			temp0 <<= 9
+			temp1 = object.rotation
+			temp1 <<= 9
+
+			object.drillOffsetL.x = -18
+			object.drillOffsetR.x = 22
+			object.drillOffsetL.x *= temp0
+			object.drillOffsetR.x *= temp0
+			object.drillOffset.y = 0
+			object.drillOffset.y *= temp0
+
+			temp2 = -6
+			temp3 = 34
+			temp2 *= temp1
+			temp3 *= temp1
+			temp4 = 4
+			temp4 *= temp1
+
+			object.drillOffsetL.x += temp2
+			object.drillOffsetR.x += temp3
+			object.drillOffset.y += temp4
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		break
+
+	case MCZEGGMAN_ADVANCELEFT
+		object.xpos += object.xvel
+		if object.xpos <= object.boundsL
+			object.xpos = object.boundsL
+			object.flameAnimation = FLAMEANI_ACITVE
+			object.drillAnimSpeed = 1
+			object.state = MCZEGGMAN_RISINGDRILLTURN
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		break
+
+	case MCZEGGMAN_ADVANCERIGHT
+		object.xpos += object.xvel
+		if object.xpos >= object.boundsR
+			object.xpos = object.boundsR
+			object.flameAnimation = FLAMEANI_ACITVE
+			object.drillAnimSpeed = 1
+			object.state = MCZEGGMAN_RISINGDRILLTURN
+		end if
+
+		CallFunction(MCZEggman_UpdateDrills)
+		break
+
+	case MCZEGGMAN_EXPLODING
+		object.timer++
+
+		if object.timer == 60
+			if object.direction == FLIP_NONE
+				object[-1].xvel = -0x10000
+			else
+				object[-1].xvel = 0x10000
+			end if
+			object[-1].yvel = -0x20000
+			object[-1].state = DRILL_FELLOFF
+		end if
+
+		if object.timer == 120
+			if object.direction == FLIP_NONE
+				object[+1].xvel = 0x10000
+			else
+				object[+1].xvel = -0x10000
+			end if
+			object[+1].yvel = -0x20000
+			object[+1].state = DRILL_FELLOFF
+		end if
+
+		if object.timer == 180
+			object.timer = 0
+			object.animation = MCZEGGANI_TOASTED
+			object.exploding = false
+			object.yvel = 0
+			object.state = MCZEGGMAN_DEFEATFALL
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+		end if
+		break
+
+	case MCZEGGMAN_DEFEATFALL
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		object.timer++
+		if object.timer == 16
+			object.yvel = 0
+			object.timer = 0
+			object.animationTimer = 0
+			object.state++
+		end if
+		break
+
+	case MCZEGGMAN_DEFEATRISE
+		if object.timer < 24
+			object.ypos += object.yvel
+			object.yvel -= 0x800
+			object.timer++
+		else
+			object.timer = 0
+			object.yvel = 0
+			object.originPos.y = object.ypos
+			object.state++
+		end if
+		break
+
+	case MCZEGGMAN_FLEE
+		CallFunction(MCZEggman_Oscillate)
+		if object.timer < 8
+			object.timer++
+		else
+			object.timer = 0
+			object.animation = MCZEGGANI_PANIC
+			object.flameAnimation = FLAMEANI_ACITVE
+			object.animationTimer = 0
+			object.direction = FLIP_X
+			object.priority = PRIORITY_ACTIVE
+			
+#platform: USE_STANDALONE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+#endplatform
+			
+			object.state++
+		end if
+		break
+
+	case MCZEGGMAN_ESCAPE
+		object.xpos += 0x40000
+		object.originPos.y -= 0x4000
+		CallFunction(MCZEggman_Oscillate)
+		if object.outOfBounds == true
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+
+	end switch
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			// Update boss flashing
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true
+				SetPaletteEntry(0, 192, 0xE0E0E0)
+			else
+				SetPaletteEntry(0, 192, 0x000000)
+			end if
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.invincibilityTimer < 32
+				CheckEqual(player[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+				if temp0 != false
+					if object.animation != MCZEGGANI_LAUGH
+						// If the player just got hurt, then start chuckling
+						object.animation = MCZEGGANI_LAUGH
+						object.animationTimer = 0
+					end if
+				end if
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CallFunction(Player_CheckHit)
+					if checkResult == true
+						object.health--
+						if object.health == 0
+#platform: USE_ORIGINS
+							CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+							CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+
+							player.score += 1000
+							object.timer = 0
+							object.animation = MCZEGGANI_DEFEATED
+							object.flameAnimation = FLAMEANI_INACITVE
+							object.animationTimer = 0
+							object.exploding = true
+							object.originPos.y = object.ypos
+							object.state = MCZEGGMAN_EXPLODING
+							object[-1].interaction = false
+							object[+1].interaction = false
+							SetPaletteEntry(0, 192, 0x000000)
+						else
+							object.animation = MCZEGGANI_HIT
+							object.animationTimer = 0
+							object.invincibilityTimer = 64
+							PlaySfx(SfxName[Boss Hit], false)
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	if object.state != MCZEGGMAN_ESCAPE
+		// Enforce the right wall
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+
+	if object.exploding == true
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+
+	// First draw the ship
+	DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+	if object.lightsFrame == 7 // ??? - This could be a simple `DrawSpriteFX(object.lightsFrame, ...)` instead, as the variable's set up like that
+		DrawSpriteFX(7, FX_FLIP, object.xpos, object.ypos)
+	end if
+
+	// Then draw Eggman himself, he's animated here as well
+	switch object.animation
+	case MCZEGGANI_INVISIBLE
+	default
+		break
+
+	case MCZEGGANI_IDLE
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MCZEGGANI_LAUGH
+		temp0 = object.animationTimer
+		temp0 &= 15
+		temp0 >>= 3
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+
+			if player[0].animation != ANI_DYING // If P1 is dead, continue laughing
+				object.animation = MCZEGGANI_IDLE
+			end if
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MCZEGGANI_HIT
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			object.animation = MCZEGGANI_IDLE
+		end if
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MCZEGGANI_DEFEATED
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		temp0 %= 5
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MCZEGGANI_TOASTED
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MCZEGGANI_PANIC
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 &= 1
+		if temp0 == 1
+			DrawSpriteFX(11, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+
+	end switch
+
+	switch object.flameAnimation
+	case FLAMEANI_INACITVE
+		// The jet isn't "on" so just draw the frame without any fire coming from it
+		DrawSpriteFX(8, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case FLAMEANI_ACITVE
+		// The jet is active, animate it
+		GetTableValue(temp0, object.flameAnimTimer, MCZEggman_flameAnimTimerTable)
+		object.flameAnimTimer++
+		object.flameAnimTimer &= 3
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone06")
+
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-26, -24, 44, 16, 34, 48)  // 0  - Robotnik normal frame 1
+		SpriteFrame(-26, -24, 44, 16, 79, 48)  // 1  - Robotnik normal frame 2
+		SpriteFrame(-26, -24, 44, 16, 34, 65)  // 2  - Robotnik laughing frame 2
+		SpriteFrame(-26, -24, 44, 16, 79, 65)  // 3  - Robotnik laughing frame 2
+		SpriteFrame(-26, -24, 44, 16, 34, 82)  // 4  - Robotnik hurt frame 2
+		SpriteFrame(-26, -24, 44, 16, 79, 82)  // 5  - Robotnik hurt frame 2
+		SpriteFrame(-38, -37, 70, 58, 74, 197) // 6  - Ship, lights off frame
+		SpriteFrame(-34, 0, 17, 16, 5, 234)    // 7  - Ship, lights on frame
+		SpriteFrame(-8, 18, 24, 8, 207, 152)   // 8  - Jet frame 1
+		SpriteFrame(-8, 18, 24, 16, 190, 165)  // 9  - Jet frame 2
+		SpriteFrame(-8, 18, 24, 32, 176, 132)  // 10 - Jet frame 3
+		SpriteFrame(3, -28, 11, 8, 76, 132)    // 11 - Panic frame
+
+		if options.vsMode == true
+			// No bosses in 2P
+			foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].type = TypeName[Blank Object]
+			next
+		end if
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-26, -24, 44, 16, 1, 5)
+		SpriteFrame(-26, -24, 44, 16, 62, 5)
+		SpriteFrame(-26, -24, 44, 16, 1, 26)
+		SpriteFrame(-26, -24, 44, 16, 62, 26)
+		SpriteFrame(-26, -24, 44, 16, 1, 47)
+		SpriteFrame(-26, -24, 44, 16, 62, 47)
+		SpriteFrame(-38, -37, 70, 58, 182, 197)
+		SpriteFrame(-34, 0, 17, 16, 182, 180)
+		SpriteFrame(-8, 18, 24, 8, 388, 227)
+		SpriteFrame(-8, 18, 24, 16, 388, 210)
+		SpriteFrame(-8, 18, 24, 32, 388, 177)
+		SpriteFrame(3, -28, 11, 8, 45, 88)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(1) // ship
+	DrawSprite(0) // robotnik
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// TODO: boss stuff
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-26, -24, 44, 16, 34, 48)
+		SpriteFrame(-38, -37, 70, 58, 74, 197)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-26, -24, 44, 16, 1, 5)
+		SpriteFrame(-38, -37, 70, 58, 182, 197)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

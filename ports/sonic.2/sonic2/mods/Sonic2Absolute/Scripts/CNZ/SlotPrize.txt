@@ -1,0 +1,143 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Slot Prize Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 63 : TYPE_SLOTPRIZE
+
+
+// Static Values
+public value SlotPrize_value41 = 0;
+
+// Tables
+
+event ObjectMain
+	temp0 = object.xpos
+	temp0 -= object.value0
+	temp0 >>= 4
+	object.xpos -= temp0
+	temp0 = object.ypos
+	temp0 -= object.value1
+	temp0 >>= 4
+	object.ypos -= temp0
+	if object.alpha < 256
+		object.alpha += 32
+	end if
+	if object.state == 0
+		object.frame++
+		object.frame &= 7
+	end if
+	object.value2--
+	if object.value2 <= 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if object[currentPlayer].value16 == 1
+				 if object.type != TypeName[Slot Prize]
+					 checkResult = 0
+				end if
+			end if
+			if checkResult == 1 // if true
+				if object.state == 0 // set state to SLOTPRIZE_WINNER (cleanup reference)
+					if options.vsMode == true // check if in VS Mode (safety check)
+						object[currentPlayer].value0++ // make current player recieve the rings, depending if it's Player 1 or 2 in VS Mode.
+						if options.gameMode != 5
+							if object[currentPlayer].value0 > 999
+								object[currentPlayer].value0 = 999
+							end if
+						end if
+					else // if not in VS Mode.
+						object[0].value0++ // make Player 1 recieve the rings, regardless if P2 was the one in the machine.
+						if options.gameMode != 5
+							if object[0].value0 > 999
+								object[0].value0 = 999
+							end if
+						end if
+					end if
+					if object[0].value0 >= ringExtraLife
+						if options.gameMode < 2
+							if saved.lives == 0
+								player.lives++
+								PlaySfx(SfxName[Life], 0)
+								PauseMusic()
+								ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
+								object[25].priority = PRIORITY_ACTIVE
+							end if
+						end if
+						ringExtraLife += 100
+						if ringExtraLife > 300
+							ringExtraLife = 1000
+						end if
+					end if
+					if ringPan == 0
+						PlaySfx(SfxName[Ring L], 0)
+						SetSfxAttributes(SfxName[Ring L], -1, -100)
+						ringPan = 1
+					else
+						PlaySfx(SfxName[Ring R], 0)
+						SetSfxAttributes(SfxName[Ring R], -1, 100)
+						ringPan = 0
+					end if
+					ResetObjectEntity(object.entityPos, TypeName[Ring Sparkle], 0, object.xpos, object.ypos)
+				else // give Player the Spikes prize.
+					if options.gameMode == 5
+						object[currentPlayer].value0--
+					else
+						if options.vsMode == true // same safety check, but for spikes prize
+							if object[currentPlayer].value0 > 0 // if currentPlayer in Slot Machine has rings higher than 0 
+								object[currentPlayer].value0-- // decrease ring count of currentPlayer.
+							end if
+						else
+							if object[0].value0 > 0 // if Player 1 has rings over 0, regardless if P1 or Sidekick is in the Slot Machine
+								object[0].value0-- // decrease ring count of Player 1.
+							end if
+						end if
+					end if
+					if SlotPrize_value41 == 0 // SlotPrize_SpikeSfxTimer == 0
+						PlaySfx(SfxName[Spike], 0)
+					end if
+					SlotPrize_value41++ // SlotPrize_SpikeSfxTimer++
+					SlotPrize_value41 %= 3
+					object.type = TypeName[Blank Object]
+				end if
+			end if
+		next
+		if object.value2 < -5
+			//Destroy prize if it doesn't detect a collision
+			if object.type == TypeName[Slot Prize]
+				object.type = TypeName[Blank Object]
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 110, 256)
+	SpriteFrame(-8, -8, 16, 16, 110, 273)
+	SpriteFrame(-8, -8, 16, 16, 110, 290)
+	SpriteFrame(-8, -8, 16, 16, 110, 307)
+	SpriteFrame(-8, -8, 16, 16, 110, 324)
+	SpriteFrame(-8, -8, 16, 16, 110, 341)
+	SpriteFrame(-8, -8, 16, 16, 110, 358)
+	SpriteFrame(-8, -8, 16, 16, 110, 375)
+	SpriteFrame(-8, -8, 15, 15, 226, 34)
+	SlotPrize_value41 = 0
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

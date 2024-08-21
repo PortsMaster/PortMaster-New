@@ -1,0 +1,130 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Harpoon H Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.hitboxL
+private alias object.value2 : object.hitboxR
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HarpoonH_DebugDraw
+reserve function HarpoonH_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table HarpoonH_delayTable
+	66, 4, 66, 4
+end table
+
+private table HarpoonH_frameTable
+	0, 1, 2, 1
+end table
+
+private table HarpoonH_sizeTable
+	8, 24, 40, 24
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HarpoonH_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function HarpoonH_DebugSpawn
+	CreateTempObject(TypeName[Harpoon H], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.animationTimer == 0
+		object.timer++
+		if object.timer >= 4
+			object.timer = 0
+		end if
+		GetTableValue(object.animationTimer, object.timer, HarpoonH_delayTable)
+		GetTableValue(object.frame, object.timer, HarpoonH_frameTable)
+	else
+		object.animationTimer--
+	end if
+
+	object.hitboxL = -8
+	GetTableValue(object.hitboxR, object.timer, HarpoonH_sizeTable)
+	GetBit(temp0, object.direction, 0)
+
+	if temp0 == FLIP_X
+		FlipSign(object.hitboxL)
+		FlipSign(object.hitboxR)
+		temp0 = object.hitboxR
+		object.hitboxR = object.hitboxL
+		object.hitboxL = temp0
+	end if
+
+	// Check interaction with players
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxL, -4, object.hitboxR, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	
+	// Harpoon frames
+	SpriteFrame(-8, -4, 16, 8, 196, 129)
+	SpriteFrame(-8, -4, 32, 8, 158, 163)
+	SpriteFrame(-8, -4, 48, 8, 94, 115)
+
+	// Add this object to the debug item list
+	SetTableValue(TypeName[Harpoon H], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HarpoonH_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HarpoonH_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-8, -4, 48, 8, 94, 115)
+	
+	// Direction attr should be used
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

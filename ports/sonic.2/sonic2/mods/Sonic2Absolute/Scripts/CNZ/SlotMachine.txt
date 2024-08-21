@@ -1,0 +1,615 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Slot Machine Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 56 : TYPE_SLOTMACHINE
+private alias object.value17 : slot.tick
+private alias object.value18 : powercut
+
+// Function declarations
+reserve function SlotMachine_Function135
+reserve function SlotMachine_DebugDraw
+reserve function SlotMachine_DebugSpawn
+reserve function SlotMachine_StartReels
+
+// Static Values
+public value SlotMachine_value34 = 0;
+public value SlotMachine_value35 = 0;
+public value SlotMachine_value36 = 0;
+public value SlotMachine_value37 = 0;
+public value SlotMachine_OddsTable = 0;
+
+// Tables
+public table SlotMachine_table43
+	3, 5, 2, 1, 0, 4, 1, 2
+end table
+
+public table SlotMachine_table44
+	3, 5, 2, 1, 0, 4, 5, 0
+end table
+
+public table SlotMachine_table45
+	3, 5, 2, 1, 0, 4, 1, 2
+end table
+
+public table SlotMachine_table46
+	30, 25, 10, 20, 150, -1
+end table
+
+public table SlotMachine_table47
+	8, 0, 0, 0, 18, 4, 4, 4, 18, 3, 3, 3, 36, 2, 2, 2
+	30, 5, 5, 5, 26, 1, 1, 1, 4, 5, 5, 1, 255, 15, 15, 15
+end table
+
+public table SlotMachine_table48
+	30, 0, 0, 0, 18, 4, 4, 4, 18, 3, 3, 3, 30, 2, 2, 2
+	8, 5, 5, 5, 32, 1, 1, 1, 4, 5, 5, 1, 255, 15, 15, 15
+end table
+
+function SlotMachine_Function135
+	if ringPan == 0
+		PlaySfx(SfxName[Ring L], 0)
+		SetSfxAttributes(SfxName[Ring L], -1, -100)
+		ringPan = 1
+	else
+		PlaySfx(SfxName[Ring R], 0)
+		SetSfxAttributes(SfxName[Ring R], -1, 100)
+		ringPan = 0
+	end if
+end function
+
+
+function SlotMachine_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function SlotMachine_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= SlotMachine_value37
+	CreateTempObject(TypeName[Slot Machine], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.frame = 0
+		break
+	case 1
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		temp0 = object.value0
+		temp0 &= 15
+		if temp0 == 15
+			CreateTempObject(TypeName[Object Score], 0, object.xpos, object.ypos)
+			object[tempObjectPos].drawOrder = 4
+			PlaySfx(SfxName[Slot Machine], 0)
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object[currentPlayer].state == SlotMachine_PlayerBlank
+					BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						arrayPos0 = 22
+						if object[currentPlayer].value16 == 0
+							arrayPos0 += currentPlayer
+						end if
+						player.score += 100
+					end if
+				end if
+			next
+		end if
+		object.value0++
+		if object.value0 == 128
+			object.value0 = 0
+			object.state = 5
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object[currentPlayer].state == SlotMachine_PlayerBlank
+					BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						object[currentPlayer].state = PlayerObject_HandleAir
+						object[currentPlayer].gravity = GRAVITY_AIR
+					end if
+				end if
+			next
+		end if
+		break
+	case 2
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 15
+			PlaySfx(SfxName[Slot Machine], 0)
+		end if
+		temp0 &= 7
+		if temp0 == 0
+			if object.value1 < object.value7
+				object.value1++
+			end if
+			if object.value2 < object.value8
+				object.value2++
+			end if
+			if object.value3 < object.value9
+				object.value3++
+			end if
+		end if
+		SlotMachine_value34 += object.value1
+		SlotMachine_value34 &= 255
+		SlotMachine_value35 += object.value2
+		SlotMachine_value35 &= 255
+		SlotMachine_value36 += object.value3
+		SlotMachine_value36 &= 255
+		if object.value0 != 0
+			object.value0--
+		else
+			if object.value11 != 0
+				object.value11++
+			end if
+			switch object.value10
+			case 0
+				switch object.value11
+				case 0
+					temp0 = SlotMachine_value34
+					temp0 >>= 5
+					if temp0 == object.value4
+						temp0 = SlotMachine_value34
+						temp0 &= 31
+						if temp0 < object.value1
+							object.value1 = 2
+							object.value7 = 2
+							PlaySfx(SfxName[Catch], 0)
+							object.value11++
+						end if
+					end if
+					break
+				case 3
+					object.value1 = -2
+					object.value7 = -2
+					break
+				case 6
+					object.value1 = 0
+					object.value7 = 0
+					object.value11 = 0
+					object.value10++
+					break
+				end switch
+				break
+			case 1
+				switch object.value11
+				case 0
+					GetBit(temp0, SlotMachine_value34, 4)
+					if temp0 == 1
+						SlotMachine_value34 += 32
+						SlotMachine_value34 &= 255
+					end if
+					SlotMachine_value34 &= 224
+					temp0 = SlotMachine_value35
+					temp0 >>= 5
+					if temp0 == object.value5
+						temp0 = SlotMachine_value35
+						temp0 &= 31
+						if temp0 < object.value2
+							object.value2 = 2
+							object.value8 = 2
+							PlaySfx(SfxName[Catch], 0)
+							object.value11++
+						end if
+					end if
+					break
+				case 3
+					object.value2 = -2
+					object.value8 = -2
+					break
+				case 6
+					object.value2 = 0
+					object.value8 = 0
+					object.value11 = 0
+					object.value10++
+					break
+				end switch
+				break
+			case 2
+				switch object.value11
+				case 0
+					GetBit(temp0, SlotMachine_value35, 4)
+					if temp0 == 1
+						SlotMachine_value35 += 32
+						SlotMachine_value35 &= 255
+					end if
+					SlotMachine_value35 &= 224
+					temp0 = SlotMachine_value36
+					temp0 >>= 5
+					if temp0 == object.value6
+						temp0 = SlotMachine_value36
+						temp0 &= 31
+						if temp0 < object.value3
+							object.value3 = 2
+							object.value9 = 2
+							PlaySfx(SfxName[Catch], 0)
+							object.value11++
+						end if
+					end if
+					break
+				case 3
+					object.value3 = -2
+					object.value9 = -2
+					break
+				case 6
+					object.value3 = 0
+					object.value9 = 0
+					break
+				case 7
+					GetBit(temp0, SlotMachine_value36, 4)
+					if temp0 == 1
+						SlotMachine_value36 += 32
+						SlotMachine_value36 &= 255
+					end if
+					SlotMachine_value36 &= 224
+					object.value11 = 0
+					object.value10 = 0
+					object.state = 4
+					GetTableValue(temp1, object.value4, SlotMachine_table43)
+					GetTableValue(temp2, object.value5, SlotMachine_table44)
+					GetTableValue(temp3, object.value6, SlotMachine_table45)
+
+					object.value12 = 0
+					if temp1 == temp2
+						if temp2 == temp3
+							GetTableValue(object.value12, temp1, SlotMachine_table46)
+						else
+							if temp1 == 4
+								GetTableValue(object.value12, temp3, SlotMachine_table46)
+								object.value12 <<= 2
+							else
+								if temp3 == 4
+									GetTableValue(object.value12, temp1, SlotMachine_table46)
+									object.value12 <<= 1
+								end if
+							end if
+						end if
+					else
+						if temp1 == temp3
+							if temp1 == 4
+								GetTableValue(object.value12, temp2, SlotMachine_table46)
+								object.value12 <<= 2
+							else
+								if temp2 == 4
+									GetTableValue(object.value12, temp1, SlotMachine_table46)
+									object.value12 <<= 1
+								end if
+							end if
+						else
+							if temp2 == temp3
+								if temp2 == 4
+									GetTableValue(object.value12, temp1, SlotMachine_table46)
+									object.value12 <<= 2
+								else
+									if temp1 == 4
+										GetTableValue(object.value12, temp2, SlotMachine_table46)
+										object.value12 <<= 1
+									end if
+								end if
+							end if
+						end if
+					end if
+					if object.value12 == 0
+						if temp1 == 3
+							object.value12 += 2
+						end if
+						if temp2 == 3
+							object.value12 += 2
+						end if
+						if temp3 == 3
+							object.value12 += 2
+						end if
+					end if
+					if object.value12 < 0
+						object.value12 = -100
+					end if
+					if object.value12 == 0
+						object.value0 = 1
+					else
+						if object.value12 > 0
+							object.value0 = 26
+						else
+							object.value0 = 30
+						end if
+					end if
+					break
+				end switch
+				break
+			end switch
+		end if
+		break
+	case 4
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		if object.value12 == 0
+			object.value0--
+			if object.value0 <= 0
+				object.angle = 0
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.state = 5
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					if object[currentPlayer].state == SlotMachine_PlayerBlank
+						BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+						if checkResult == 1
+							object[currentPlayer].state = PlayerObject_HandleAir
+							object[currentPlayer].gravity = GRAVITY_AIR
+							if options.gameMode == 5
+								if slot.tick > powercut
+									slot.tick = 1
+									Rand(powercut, 100)
+									Slots.Power = 1
+									PlaySfx(SfxName[Explosion],0)
+								end if
+							end if
+						end if
+					end if
+				next
+			end if
+		else
+			GetBit(temp0, oscillation, 0)
+			if temp0 == 0
+				Cos256(temp0, object.angle)
+				temp0 <<= 15
+				temp0 += object.xpos
+				Sin256(temp1, object.angle)
+				temp1 <<= 15
+				temp1 += object.ypos
+				CreateTempObject(TypeName[Slot Prize], 0, temp0, temp1)
+				object[tempObjectPos].value0 = object.xpos
+				object[tempObjectPos].value1 = object.ypos
+				object[tempObjectPos].inkEffect = INK_ALPHA
+				if object.value12 > 0
+					object[tempObjectPos].value2 = 26
+					object.angle += 137
+					object.value12--
+				else
+					object[tempObjectPos].value2 = 30
+					object[tempObjectPos].state = 1
+					object[tempObjectPos].frame = 8
+					object.angle += 144
+					object.value12++
+				end if
+				object.angle &= 255
+			end if
+		end if
+		break
+	case 5
+		object.frame = 0
+		object.value0++
+		if object.value0 == 30
+			object.value0 = 0
+			object.state = 0
+		end if
+		break
+	end switch
+	if object.state == 5
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -24, -20, -17, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			BoxCollisionTest(C_BOX, object.entityPos, 17, -20, 24, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		next
+	else
+		if Slots.Power == 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_BOX, object.entityPos, -24, -20, 24, 20, currentPlayer, HITBOX_AUTO, -12, HITBOX_AUTO, 12)
+				switch checkResult
+				case 1
+					CallFunction(SlotMachine_StartReels)
+					break
+				case 4
+					BoxCollisionTest(C_TOUCH, object.entityPos, -12, -24, 12, 24, currentPlayer, HITBOX_AUTO, -12, HITBOX_AUTO, 12)
+					if checkResult == 1
+						CallFunction(SlotMachine_StartReels)
+					end if
+					break
+				end switch
+			next
+		end if
+	end if
+end event
+
+function SlotMachine_StartReels
+	if object.state == 0
+		object.priority = PRIORITY_ACTIVE
+		if object.propertyValue == 0
+			object.state = 1
+		else
+			slot.tick++
+			object.state = 2
+			if options.vsMode == 0
+				Rand(object.value7, 4)
+				object.value7 += 2
+				Rand(object.value8, 4)
+				object.value8 += 2
+				Rand(object.value9, 4)
+				object.value9 += 2
+				Rand(object.value0, 16)
+			else
+				vs.randomValue *= 0x41C64E6D
+				vs.randomValue += 0x3039
+				vs.randomValue &= 0x7FFFFFFF
+				object.value7 = vs.randomValue
+				object.value7 >>= 16
+				object.value7 &= 3
+				object.value7 += 2
+				vs.randomValue *= 0x41C64E6D
+				vs.randomValue += 0x3039
+				vs.randomValue &= 0x7FFFFFFF
+				object.value8 = vs.randomValue
+				object.value8 >>= 16
+				object.value8 &= 3
+				object.value8 += 2
+				vs.randomValue *= 0x41C64E6D
+				vs.randomValue += 0x3039
+				vs.randomValue &= 0x7FFFFFFF
+				object.value9 = vs.randomValue
+				object.value9 >>= 16
+				object.value9 &= 3
+				object.value9 += 2
+				vs.randomValue *= 0x41C64E6D
+				vs.randomValue += 0x3039
+				vs.randomValue &= 0x7FFFFFFF
+				object.value0 = vs.randomValue
+				object.value0 >>= 16
+				object.value0 &= 15
+			end if
+			object.value0 += 14
+			object.value0 *= 3
+			temp0 = 0
+			temp1 = 0
+			if options.vsMode == 0
+				rand(temp2, 256)
+			else
+				temp2 = oscillation
+				temp2 &= 255
+			end if
+			switch options.gameMode
+				case 5
+					if object[0].value0 < 0
+						SlotMachine_OddsTable = SlotMachine_table47
+					else
+						SlotMachine_OddsTable = SlotMachine_table48
+					end if
+					break
+				default
+					SlotMachine_OddsTable = SlotMachine_table47
+					break
+			end switch			
+			object[9].value33++
+			object[9].value35 = temp2
+			while temp1 != 255
+				GetTableValue(temp1, temp0, SlotMachine_OddsTable)
+				temp2 -= temp1
+				if temp2 >= 0
+					temp0 += 4
+				else
+					temp1 = 255
+				end if
+			loop
+			GetTableValue(temp1, temp0, SlotMachine_OddsTable)
+			if temp1 != 255
+				temp0++
+				GetTableValue(object.value4, temp0, SlotMachine_OddsTable)
+				temp0++
+				GetTableValue(object.value5, temp0, SlotMachine_OddsTable)
+				temp0++
+				GetTableValue(object.value6, temp0, SlotMachine_OddsTable)
+			else
+				if options.vsMode == 0
+					Rand(object.value4, 8)
+					Rand(object.value5, 8)
+					Rand(object.value6, 8)
+				else
+					vs.randomValue *= 0x41C64E6D
+					vs.randomValue += 0x2A16F5
+					vs.randomValue &= 0x7FFFFFFF
+					object.value4 = vs.randomValue
+					object.value4 >>= 16
+					object.value4 &= 7
+					vs.randomValue *= 0x41C64E6D
+					vs.randomValue += 0x3118
+					vs.randomValue &= 0x7FFFFFFF
+					object.value5 = vs.randomValue
+					object.value5 >>= 16
+					object.value5 &= 7
+					vs.randomValue *= 0x41C64E6D
+					vs.randomValue += 0x13988F
+					vs.randomValue &= 0x7FFFFFFF
+					object.value6 = vs.randomValue
+					object.value6 >>= 16
+					object.value6 &= 7
+				end if
+			end if
+		end if
+	end if
+	object[currentPlayer].state = SlotMachine_PlayerBlank
+	object[currentPlayer].animation = ANI_JUMPING
+	object[currentPlayer].value15 = 0
+	object[currentPlayer].value35 = 0
+	object[currentPlayer].gravity = GRAVITY_AIR
+	object[currentPlayer].animationSpeed = 40
+	object[currentPlayer].speed = 0
+	object[currentPlayer].xvel = 0
+	object[currentPlayer].yvel = 1
+	object[currentPlayer].xpos = object.xpos
+	object[currentPlayer].ypos = object.ypos
+end function
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -20, 48, 40, 1, 99)
+	SpriteFrame(-24, -20, 48, 40, 50, 99)
+	foreach (TypeName[Slot Machine], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		Rand(object[arrayPos0].value18, 100)
+	next
+	
+	if options.vsMode == 0
+		Rand(SlotMachine_value34, 8)
+		SlotMachine_value34 <<= 5
+		Rand(SlotMachine_value35, 8)
+		SlotMachine_value35 <<= 5
+		Rand(SlotMachine_value36, 8)
+		SlotMachine_value36 <<= 5
+	else
+		vs.randomValue *= 0x41C64E6D
+		vs.randomValue += 0x3039
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_value34 = vs.randomValue
+		SlotMachine_value34 >>= 16
+		SlotMachine_value34 &= 7
+		SlotMachine_value34 <<= 5
+		vs.randomValue *= 0x41C64E6D
+		vs.randomValue += 0x3039
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_value35 = vs.randomValue
+		SlotMachine_value35 >>= 16
+		SlotMachine_value35 &= 7
+		SlotMachine_value35 <<= 5
+		vs.randomValue *= 0x41C64E6D
+		vs.randomValue += 0x3039
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_value36 = vs.randomValue
+		SlotMachine_value36 >>= 16
+		SlotMachine_value36 &= 7
+		SlotMachine_value36 <<= 5
+	end if
+	temp0 = 0
+	SlotMachine_value37 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Slot Machine], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SlotMachine_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SlotMachine_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

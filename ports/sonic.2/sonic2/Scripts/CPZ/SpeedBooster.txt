@@ -1,0 +1,223 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Speed Booster Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.boostSpeed
+private alias object.value1 : object.timer
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.controlLock : player.controlLock
+
+private alias object.value1  : player.timer
+private alias object.value14 : player.skidding
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SpeedBooster_DebugDraw
+reserve function SpeedBooster_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value SpeedBooster_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SpeedBooster_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SpeedBooster_DebugSpawn
+	CreateTempObject(TypeName[Speed Booster], 0, object.xpos, object.ypos)
+
+	GetBit(temp0, object.direction, 0)
+	if temp0 == FLIP_NONE
+		object[tempObjectPos].direction = FLIP_NONE
+	else
+		object[tempObjectPos].direction = FLIP_X
+	end if
+
+	temp0 = debugMode[0].currentSelection
+	temp0 -= SpeedBooster_startDebugID
+	if temp0 == 0
+		object[tempObjectPos].boostSpeed = 0x100000
+	else
+		object[tempObjectPos].boostSpeed = 0x0A0000
+	end if
+
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.timer != 0
+		object.timer--
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, 0, 0, 0, 0)
+		if checkResult == true
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				if object.timer == 0
+					object.timer = 2
+					PlaySfx(SfxName[Spring], false)
+				end if
+
+				temp1 = false
+				temp0 = object.boostSpeed
+				if object.direction == FLIP_X
+					FlipSign(object.boostSpeed)
+					if player[currentPlayer].speed > temp0
+						temp1 = true
+					end if
+				else
+					if player[currentPlayer].speed < temp0
+						temp1 = true
+					end if
+				end if
+
+				if temp1 == true
+					player[currentPlayer].state = Player_State_Ground
+					if player[currentPlayer].animation != ANI_JUMPING
+						if player[currentPlayer].animation != ANI_RUNNING
+							player[currentPlayer].animation = ANI_WALKING
+						end if
+					end if
+
+					player[currentPlayer].timer 		= 0
+					player[currentPlayer].controlLock 	= 0
+					player[currentPlayer].skidding		= 0
+					player[currentPlayer].controlLock 	= 15
+					player[currentPlayer].speed 		= object.boostSpeed
+					player[currentPlayer].direction 	= object.direction
+					if object.direction == FLIP_X
+						FlipSign(player[currentPlayer].speed)
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	GetBit(temp0, oscillation, 1)
+	if temp0 == false
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	// Note - the majority of the speed booster sprite is built into the level tiles itself
+	// All that's drawn here is the overlay spinning frame, and even then, it's only drawn sometimes
+
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 91, 25)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 474, 321)
+	end if
+
+	foreach (TypeName[Speed Booster], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].boostSpeed = 0x100000
+		else
+			object[arrayPos0].boostSpeed = 0x0A0000
+		end if
+		
+		object[arrayPos0].drawOrder = 5
+	next
+
+	temp0 = 0
+	SpeedBooster_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Speed Booster], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SpeedBooster_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SpeedBooster_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // boostSpeed
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // boostSpeed
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 91, 25)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 474, 321)
+	end if
+
+	AddEditorVariable("boostSpeed")
+	SetActiveVariable("boostSpeed")
+	AddEnumVariable("Faster", 0)
+	AddEnumVariable("Slower", 1)
+end event

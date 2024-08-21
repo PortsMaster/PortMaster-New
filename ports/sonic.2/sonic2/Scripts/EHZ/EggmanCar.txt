@@ -1,0 +1,244 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Car Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.boundsL
+private alias object.value3 : object.boundsR
+private alias object.value4 : object.carPos.y
+
+// States
+private alias 0 : EHZEGGMANCAR_SELFDRIVING
+private alias 1 : EHZEGGMANCAR_EGGMANENTER
+private alias 2 : EHZEGGMANCAR_DRIVING
+private alias 3 : EHZEGGMANCAR_EXPLODE
+private alias 4 : EHZEGGMANCAR_DESTROYED
+
+// Eggman Aliases
+private alias object.value8 : eggman.health
+
+// Car Drill States
+private alias 0 : EHZEGGMANDRILL_ATTATCHED
+private alias 2 : EHZEGGMANDRILL_FIRED
+
+// Car Wheel States
+private alias 2 : EHZEGGMANWHEEL_BOUNCE
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state < EHZEGGMANCAR_EXPLODE
+		object.drawPos.y = object.carPos.y
+		object.drawPos.y >>= 1
+		object.drawPos.y -= 0xC0000
+		object.carPos.y = 0
+	end if
+
+	switch object.state
+	case EHZEGGMANCAR_SELFDRIVING
+		object.xpos -= 0x10000
+
+		object.timer++
+		if object.timer == 321
+			object.timer = 0
+			object.state++
+		end if
+
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 0
+			temp0 = object.xpos
+			if object.direction == FLIP_NONE
+				temp0 += 0x2E0000
+			else
+				temp0 -= 0x2E0000
+			end if
+
+			temp1 = object.drawPos.y
+			temp1 -= 0x40000
+			CreateTempObject(TypeName[Exhaust Puff], 0, temp0, temp1)
+			object[tempObjectPos].yvel = -0x10000
+		end if
+		break
+
+	case EHZEGGMANCAR_EGGMANENTER
+		break
+
+	case EHZEGGMANCAR_DRIVING
+		object.xpos += object.xvel
+
+		if object.xpos <= object.boundsL
+			FlipSign(object.xvel)
+			object.direction ^= FLIP_X
+			object[-2].direction ^= FLIP_X
+			object[-1].direction ^= FLIP_X
+			object[+1].direction ^= FLIP_X
+			object[+2].direction ^= FLIP_X
+			object[+3].direction ^= FLIP_X
+			object[+4].direction ^= FLIP_X
+
+			// if we can fire drill, do fire drill
+			if eggman[-1].health == 1
+				if object[+1].state == EHZEGGMANDRILL_ATTATCHED
+					object[+1].state += EHZEGGMANDRILL_FIRED
+					object[+1].xpos = object.xpos
+					if object.direction == FLIP_NONE
+						object[+1].xpos -= 0x360000
+						object[+1].xvel = -0x30000
+					else
+						object[+1].xpos += 0x360000
+						object[+1].xvel = 0x30000
+					end if
+				end if
+			end if
+		end if
+
+		if object.xpos >= object.boundsR
+			FlipSign(object.xvel)
+			object.direction ^= FLIP_X
+			object[-2].direction ^= FLIP_X
+			object[-1].direction ^= FLIP_X
+			object[+1].direction ^= FLIP_X
+			object[+2].direction ^= FLIP_X
+			object[+3].direction ^= FLIP_X
+			object[+4].direction ^= FLIP_X
+
+			// if we can fire drill, do fire drill
+			if eggman[-1].health == 1
+				if object[+1].state == EHZEGGMANDRILL_ATTATCHED
+					object[+1].state += EHZEGGMANDRILL_FIRED
+					object[+1].xpos = object.xpos
+					if object.direction == FLIP_NONE
+						object[+1].xpos -= 0x360000
+						object[+1].xvel = -0x30000
+					else
+						object[+1].xpos += 0x360000
+						object[+1].xvel = 0x30000
+					end if
+				end if
+			end if
+		end if
+
+		// Handle eggman pos
+		object[-1].xpos = object.xpos
+		object[-1].ypos = object.drawPos.y
+		object[-1].ypos -= 0x80000
+
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 0
+			temp0 = object.xpos
+			if object.direction == FLIP_NONE
+				temp0 += 0x2E0000
+			else
+				temp0 -= 0x2E0000
+			end if
+
+			temp1 = object.drawPos.y
+			temp1 -= 0x40000
+			CreateTempObject(TypeName[Exhaust Puff], 0, temp0, temp1)
+			object[tempObjectPos].yvel = -0x10000
+		end if
+		break
+
+	case EHZEGGMANCAR_EXPLODE
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+
+		object.drawPos.y = object.ypos
+		ObjectTileCollision(CSIDE_FLOOR, 0, 17, PATH_A)
+		if checkResult == true
+			if object.direction == FLIP_NONE
+				temp0 = -0x20000
+			else
+				temp0 = 0x20000
+			end if
+
+			// Back Wheel
+			object[-2].state += EHZEGGMANWHEEL_BOUNCE
+			object[-2].xvel = temp0
+			object[-2].yvel = 0x30000
+			FlipSign(object[-2].xvel)
+
+			// Front Wheel 1
+			object[+2].state += EHZEGGMANWHEEL_BOUNCE
+			object[+2].xvel = temp0
+			object[+2].yvel = 0x30000
+
+			// Front Wheel 2
+			object[+3].state += EHZEGGMANWHEEL_BOUNCE
+			object[+3].xvel = temp0
+			object[+3].yvel = 0x30000
+
+			object.state++
+		end if
+
+		// Eggman
+		object[-1].xpos = object.xpos
+		object[-1].ypos = object.drawPos.y
+		object[-1].ypos -= 0x80000
+		break
+		
+	case EHZEGGMANCAR_DESTROYED
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		
+		// Car Body Frame
+		SpriteFrame(-48, -16, 93, 32, 0, 109)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Car Body Frame
+		SpriteFrame(-48, -16, 93, 32, 123, 1)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-48, -16, 93, 32, 0, 109)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-48, -16, 93, 32, 123, 1)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,179 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Launcher Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 63 : TYPE_LAUNCHER
+
+// Function declarations
+reserve function Launcher_DebugDraw
+reserve function Launcher_DebugSpawn
+
+// Static Values
+public value Launcher_value48 = 0;
+
+// Tables
+
+function Launcher_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Launcher_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= Launcher_value48
+	temp0++
+	temp0 <<= 2
+	CreateTempObject(TypeName[Launcher], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].value0 = object.xpos
+	object[tempObjectPos].value1 = object.xpos
+	object[tempObjectPos].direction = object.direction
+	temp0 <<= 20
+	if object.direction == FLIP_NONE
+		object[tempObjectPos].value1 -= temp0
+		object[tempObjectPos].value2 = -0x8000
+	else
+		object[tempObjectPos].value1 += temp0
+		object[tempObjectPos].value2 = 0x8000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		break
+	case 1
+		object.xvel += object.value2
+		object.xpos += object.xvel
+		temp0 = 0
+		if object.direction == FLIP_NONE
+			if object.xpos <= object.value1
+				temp0 = 1
+			end if
+		else
+			if object.xpos >= object.value1
+				temp0 = 1
+			end if
+		end if
+		if temp0 == 1
+			temp2 = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				GetBit(temp0, object.value3, temp2)
+				if temp0 == 1
+					if object[currentPlayer].yvel >= 0
+						object[currentPlayer].xvel = object.xvel
+						object[currentPlayer].speed = object.xvel
+						object[currentPlayer].yvel = -0x40000
+						object[currentPlayer].gravity = GRAVITY_AIR
+						object[currentPlayer].state = PlayerObject_HandleAir
+						object[currentPlayer].direction = object.direction
+						object[currentPlayer].direction ^= FLIP_X
+					end if
+				end if
+				temp2++
+			next
+			object.state = 2
+		end if
+		break
+	case 2
+		if object.direction == FLIP_NONE
+			object.xpos += 0x40000
+			if object.xpos >= object.value0
+				object.xpos = object.value0
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.state = 0
+			end if
+		else
+			object.xpos -= 0x40000
+			if object.xpos <= object.value0
+				object.xpos = object.value0
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.state = 0
+			end if
+		end if
+		break
+	end switch
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.value3, temp2)
+		if temp0 == 1
+			if object[currentPlayer].yvel >= 0
+				object[currentPlayer].xpos = object.xpos
+				object[currentPlayer].xvel = 0
+				object[currentPlayer].speed = 0
+				object[currentPlayer].animation = ANI_STOPPED
+				object[currentPlayer].state = PlayerObject_HandleGround
+				object[currentPlayer].direction = object.direction
+				object[currentPlayer].direction ^= FLIP_X
+			end if
+		end if
+		SetBit(object.value3, temp2, 0)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, -8, currentPlayer, -1, HITBOX_AUTO, 1, HITBOX_AUTO)
+		if checkResult == 1
+			SetBit(object.value3, temp2, 1)
+			if object.state == 0
+				PlaySfx(SfxName[Launch], 0)
+				if object.direction == FLIP_NONE
+					object.xvel = -0xC0000
+				else
+					object.xvel = 0xC0000
+				end if
+				object.priority = PRIORITY_ACTIVE
+				object.state = 1
+			end if
+		end if
+		temp2++
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == 1
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -31, 32, 16, 152, 74)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -31, 32, 16, 445, 403)
+	end if
+	foreach (TypeName[Launcher], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		temp0 = object[arrayPos0].propertyValue
+		temp0 <<= 20
+		if object[arrayPos0].direction == FLIP_NONE
+			object[arrayPos0].value1 -= temp0
+			object[arrayPos0].value2 = -0x8000
+		else
+			object[arrayPos0].value1 += temp0
+			object[arrayPos0].value2 = 0x8000
+		end if
+	next
+	temp0 = 0
+	Launcher_value48 = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Launcher], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Launcher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Launcher_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

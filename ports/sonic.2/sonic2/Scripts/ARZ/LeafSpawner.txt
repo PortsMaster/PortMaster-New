@@ -1,0 +1,142 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Leaf Spawner Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.spawnDelay
+private alias object.value1 : object.hitboxR
+private alias object.value2 : object.hitboxL
+
+// Leaf Aliases
+private alias object.value1 : leaf.originPos.x
+private alias object.value2 : leaf.originPos.y
+private alias object.value3 : leaf.fallAngle
+private alias object.value4 : leaf.angleVel
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LeafSpawner_SpawnLeaf
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function LeafSpawner_SpawnLeaf
+	CreateTempObject(TypeName[Leaf], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+
+	Rand(temp2, 16)
+	temp2 -= 8
+	temp2 <<= 16
+	object[tempObjectPos].xpos += temp2
+
+	Rand(temp2, 16)
+	temp2 -= 8
+	temp2 <<= 16
+	object[tempObjectPos].ypos += temp2
+	Rand(object[tempObjectPos].frame, 2)
+
+	leaf[tempObjectPos].originPos.x = player[currentPlayer].xpos
+	leaf[tempObjectPos].originPos.y = player[currentPlayer].ypos
+	leaf[tempObjectPos].fallAngle = 2
+	leaf[tempObjectPos].angleVel = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.spawnDelay == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxL, -32, object.hitboxR, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = player[currentPlayer].xvel
+				Abs(temp0)
+				temp1 = player[currentPlayer].yvel
+				Abs(temp1)
+				temp0 |= temp1
+
+				if temp0 > 0x20000
+					object.spawnDelay = 15
+					PlaySfx(SfxName[Rustle], false)
+					CallFunction(LeafSpawner_SpawnLeaf)
+					object[tempObjectPos].xvel = -0x8000
+					object[tempObjectPos].yvel = -0x8000
+
+					CallFunction(LeafSpawner_SpawnLeaf)
+					object[tempObjectPos].xvel = 0xC000
+					object[tempObjectPos].yvel = -0x4000
+
+					CallFunction(LeafSpawner_SpawnLeaf)
+					object[tempObjectPos].xvel = -0xC000
+					object[tempObjectPos].yvel = 0x4000
+
+					CallFunction(LeafSpawner_SpawnLeaf)
+					object[tempObjectPos].xvel = 0x8000
+					object[tempObjectPos].yvel = 0x8000
+				end if
+			end if
+		next
+	else
+		object.spawnDelay--
+	end if
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Leaf Spawner], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].hitboxR = 32
+		object[arrayPos0].hitboxR <<= object[arrayPos0].propertyValue
+		object[arrayPos0].hitboxL = object[arrayPos0].hitboxR
+		FlipSign(object[arrayPos0].hitboxL)
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		// Draw the object's hitbox
+		// Intentionally ignoring editor.drawingOveraly here
+
+		temp0 = 32
+		temp0 <<= object.propertyValue
+		temp0 *= 0x2
+		temp1 = temp0
+		temp1 += object.xpos
+		temp2 = object.ypos
+		temp2 -= 32
+		DrawRectOutline(temp1, temp2, temp0, 64, 255, 0, 0, 255)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 168, 18) // Trigger
+	
+	// Goes up in powers of 2, 0 = 32, 1 = 64, 2 = 128, 3 = 256, etc
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "size")
+end event

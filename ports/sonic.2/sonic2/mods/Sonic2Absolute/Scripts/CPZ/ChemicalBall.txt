@@ -1,0 +1,179 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Chemical Ball Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 55 : TYPE_CHEMICALBALL
+
+// Function declarations
+reserve function ChemicalBall_Function131
+reserve function ChemicalBall_DebugDraw
+reserve function ChemicalBall_DebugSpawn
+reserve function ChemicalBall_Function134
+
+// Static Values
+public value ChemicalBall_value46 = 0;
+
+// Tables
+
+function ChemicalBall_Function131
+	object[arrayPos0].xpos = object[arrayPos0].value7
+	object[arrayPos0].ypos = object[arrayPos0].value8
+	object[arrayPos0].value0 = object[arrayPos0].value1
+	if object[arrayPos0].direction == FLIP_NONE
+		object[arrayPos0].value3 = 0x600000
+		object[arrayPos0].value4 = 0xB00
+	else
+		object[arrayPos0].value3 = -0x600000
+		object[arrayPos0].value4 = -0xB00
+	end if
+	object[arrayPos0].value6 = -0x48000
+	object[arrayPos0].xvel = 0
+	object[arrayPos0].yvel = -0x48000
+	object[arrayPos0].state = 0
+	if object[arrayPos0].priority != PRIORITY_XBOUNDS_DESTROY
+		object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+	end if
+end function
+
+
+function ChemicalBall_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function ChemicalBall_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= ChemicalBall_value46
+	CreateTempObject(TypeName[Chemical Ball], 0, object.xpos, object.ypos)
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].value7 = object.xpos
+	object[arrayPos0].value8 = object.ypos
+	object[arrayPos0].value2 = temp0
+	object[arrayPos0].value2 >>= 3
+	object[arrayPos0].direction = object.direction
+	object[arrayPos0].value1 = temp0
+	object[arrayPos0].value1 &= 7
+	CallFunction(ChemicalBall_Function131)
+end function
+
+
+function ChemicalBall_Function134
+	temp0 = screen.cameraX
+	temp1 = object.xpos
+	temp1 >>= 16
+	temp0 -= temp1
+	Abs(temp0)
+	temp0 -= 8
+	if temp0 <= screen.xcenter
+		temp0 = screen.cameraY
+		temp1 = object.ypos
+		temp1 >>= 16
+		temp0 -= temp1
+		Abs(temp0)
+		temp0 -= 8
+		if temp0 <= screen.ycenter
+			PlaySfx(SfxName[Chemical Jump], 0)
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	object.priority = PRIORITY_ACTIVE
+	if object.state == 0
+		object.value0--
+		if object.value0 < 0
+			object.state++
+			object.value0 = 59
+			CallFunction(ChemicalBall_Function134)
+		end if
+	else
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		if object.value2 == 0
+			object.xvel += object.value4
+			if object.yvel == 0
+				FlipSign(object.value4)
+			end if
+			if object.ypos >= object.value8
+				object.yvel = object.value6
+				object.xvel = 0
+				object.state--
+			end if
+		else
+			if object.yvel == 0
+				object.xpos += object.value3
+			end if
+			if object.yvel == 0x18000
+				CallFunction(ChemicalBall_Function134)
+			end if
+			if object.ypos == object.value8
+				object.yvel = object.value6
+				object.xpos = object.value7
+				FlipSign(object.value4)
+				CallFunction(ChemicalBall_Function134)
+			end if
+		end if
+	end if
+	temp0 = screen.cameraX
+	temp1 = object.value3
+	temp1 >>= 1
+	temp1 += object.value7
+	temp1 >>= 16
+	temp0 -= temp1
+	Abs(temp0)
+	temp0 -= 192
+	if temp0 > screen.xcenter
+		arrayPos0 = object.entityPos
+		CallFunction(ChemicalBall_Function131)
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(PlayerObject_Hit)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 207, 125)
+	foreach (TypeName[Chemical Ball], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value7 = object[arrayPos0].xpos
+		object[arrayPos0].value8 = object[arrayPos0].ypos
+		GetBit(object[arrayPos0].value2, object[arrayPos0].propertyValue, 7)
+		GetBit(object[arrayPos0].direction, object[arrayPos0].propertyValue, 6)
+		object[arrayPos0].value1 = object[arrayPos0].propertyValue
+		object[arrayPos0].value1 &= 63
+		CallFunction(ChemicalBall_Function131)
+	next
+	temp0 = 0
+	ChemicalBall_value46 = DebugMode_ObjCount
+	while temp0 < 16
+		SetTableValue(TypeName[Chemical Ball], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(ChemicalBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(ChemicalBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

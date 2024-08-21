@@ -1,0 +1,168 @@
+//-------Aliases-------//
+private alias object.value0 : object.delay
+private alias object.value1 : object.anitick
+private alias object.value2 : object.lemgth
+
+
+// Function declarations
+
+// Static Values
+
+
+// Tables
+
+function HangBar_DebugDraw
+	DrawSprite(7)
+end function
+
+
+function HangBar_DebugSpawn
+	CreateTempObject(TypeName[HangBar], 7, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+	object[tempObjectPos].inkEffect = INK_ALPHA
+	object[tempObjectPos].alpha = 160
+end function
+
+function GrabBar_AnimateShuffle
+	object.anitick++
+	if object.anitick == 8
+		object.anitick = 0
+		object[currentPlayer].frame++
+		object[currentPlayer].frame %= 4
+	end if
+end function
+
+event ObjectMain
+	if object.delay > 0
+		object.delay--
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object[currentPlayer].state != PlayerObject_Blank
+			if object.delay == 0
+				temp0 = object[currentPlayer].collisionTop
+				temp1 = object.lemgth
+				temp1 *= 64
+				temp2 = temp1
+				FlipSign(temp2)
+				BoxCollisionTest(C_TOUCH, object.entityPos, temp2, 0, temp1, 8, currentPlayer, -1, temp0, 1, temp0)
+				if checkResult == 1
+					if object[currentPlayer].gravity == GRAVITY_AIR
+						object[currentPlayer].state = PlayerObject_Blank
+						object[currentPlayer].animation = ANI_HANGMOVE
+						object[currentPlayer].speed = 0
+						object[currentPlayer].xvel = 0
+						object[currentPlayer].yvel = 0
+						object[currentPlayer].ypos = object[currentPlayer].collisionTop
+						object[currentPlayer].ypos++
+						FlipSign(object[currentPlayer].ypos)
+						object[currentPlayer].ypos <<= 16
+						object[currentPlayer].ypos += object.ypos
+						PlaySfx(SfxName[Catch], 0)
+					end if
+				end if
+			end if
+		else
+			temp1 = object.lemgth
+			temp1 *= 64
+			temp2 = temp1
+			FlipSign(temp2)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp2, -24, temp1, 24, currentPlayer, -1, -1, 1, 1)
+				if checkResult == 1
+				if object[currentPlayer].jumpPress == 1
+					object[currentPlayer].animation = ANI_JUMPING
+					PlaySfx(SfxName[Jump], 0)
+					object[currentPlayer].value35 = 1
+					object[currentPlayer].state = PlayerObject_HandleAir
+					object[currentPlayer].yvel = 0x10000
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object.delay = 8
+				else
+					if object[currentPlayer].state == PlayerObject_Blank
+						if object[currentPlayer].left == 1
+							object[currentPlayer].direction = FLIP_X
+							object[currentPlayer].xpos -= 0x10000
+							temp0 = object.lemgth
+							temp0 <<= 22
+							FlipSign(temp0)
+							temp0 += object.xpos
+							temp0 += 0x100000
+							if object[currentPlayer].xpos < temp0
+								object[currentPlayer].xpos = temp0
+							else
+								CallFunction(GrabBar_AnimateShuffle)
+							end if
+						else
+							if object[currentPlayer].right == 1
+								object[currentPlayer].direction = FLIP_NONE
+								object[currentPlayer].xpos += 0x10000
+								temp0 = object.lemgth
+								temp0 <<= 22
+								temp0 += object.xpos
+								temp0 -= 0x100000
+								if object[currentPlayer].xpos > temp0
+									object[currentPlayer].xpos = temp0
+								else
+								CallFunction(GrabBar_AnimateShuffle)
+								end if
+							else
+								object[currentPlayer].frame = 0
+							end if
+						end if
+						object[currentPlayer].ypos = object[currentPlayer].collisionTop
+						object[currentPlayer].ypos++
+						FlipSign(object[currentPlayer].ypos)
+						object[currentPlayer].ypos <<= 16
+						object[currentPlayer].ypos += object.ypos
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp1 = object.lemgth
+	temp1 <<= 1
+	temp2 = object.xpos
+	while temp0 < temp1
+		DrawSpriteXY(0, temp2, object.ypos)
+		temp2 += 0x200000
+		temp0++
+	loop
+	temp2 = object.xpos
+	while temp0 > 0
+		temp2 -= 0x200000
+		DrawSpriteXY(0, temp2, object.ypos)
+		temp0--
+	loop
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(0, 0, 32, 9, 330, 202) //0 Bar
+	SpriteFrame(-12, -13, 24, 13, 387, 187) //1 Anchor top
+	SpriteFrame(-12, 0, 24, 13, 412, 187) //2 Anchor bottom
+	foreach (TypeName[HangBar], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].lemgth = object[arrayPos0].propertyValue
+		object[arrayPos0].lemgth &= 15
+		object[arrayPos0].lemgth++
+	next
+	SetTableValue(TypeName[HangBar], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HangBar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HangBar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

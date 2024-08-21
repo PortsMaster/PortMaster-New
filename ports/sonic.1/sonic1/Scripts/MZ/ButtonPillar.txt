@@ -1,0 +1,167 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Button Pillar Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.shinePos.y
+
+private alias 0 : BUTTONPILLAR_AWAITBUTTON
+private alias 1 : BUTTONPILLAR_MOVING
+private alias 2 : BUTTONPILLAR_MOVED
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// PushButton aliases
+private alias object.propertyValue : pushButton.stood
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function ButtonPillar_DebugDraw
+reserve function ButtonPillar_DebugSpawn
+
+
+private function ButtonPillar_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function ButtonPillar_DebugSpawn
+	CreateTempObject(TypeName[Button Pillar], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BUTTONPILLAR_AWAITBUTTON
+		if pushButton[-1].stood == true
+			object.state = BUTTONPILLAR_MOVING
+			object.priority = PRIORITY_ACTIVE
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -56, 32, 56, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+
+	case BUTTONPILLAR_MOVING
+		if object.timer < 144
+			object.timer += 2
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_SOLID, object.entityPos, -32, -56, 32, 56, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_TOP
+					player[currentPlayer].ypos += 0x20000
+				end if
+			next
+			object.ypos += 0x20000
+		else
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_SOLID, object.entityPos, -32, -56, 32, 56, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			next
+			object.state++
+		end if
+		break
+
+	case BUTTONPILLAR_MOVED
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -56, 32, 56, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+		
+	end switch
+
+	object.angle = oscillation
+	object.angle <<= 1
+	Sin(object.shinePos.y, object.angle)
+	object.shinePos.y <<= 12
+	object.shinePos.y += object.ypos
+	object.shinePos.y &= 0xFFFF0000
+
+	if object.outOfBounds == true
+		temp0 = object.ypos
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
+			object.priority = PRIORITY_BOUNDS
+			object.state = BUTTONPILLAR_AWAITBUTTON
+			object.timer = 0
+		else
+			object.ypos = temp0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	DrawSpriteXY(1, object.xpos, object.shinePos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -56, 64, 112, 126, 1)
+	SpriteFrame(-16, -16, 31, 32, 159, 114)
+
+	foreach (TypeName[Button Pillar], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Button Pillar], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(ButtonPillar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(ButtonPillar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+	
+		// Draw an arrow to link it to its activator button
+		DrawArrow(object.xpos, object.ypos, object[-1].xpos, object[-1].ypos, 255, 255, 255)
+	
+		// Draw a preview of where the pillar will end up
+		temp0 = object.ixpos
+		temp0 -= 32
+		temp1 = 2
+		temp1 *= 144
+		temp1 += object.iypos
+		temp1 -= 56
+		DrawRectOutline(temp0, temp1, 64, 112, 255, 255, 255, 255)
+//		object.inkEffect = INK_BLEND
+//		DrawSpriteFX(0, FX_INK, object.xpos, temp1)
+//		DrawSpriteFX(1, FX_INK, object.xpos, temp1)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -56, 64, 112, 126, 1)
+	SpriteFrame(-16, -16, 31, 32, 159, 114)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

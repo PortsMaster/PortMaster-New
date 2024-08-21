@@ -1,0 +1,371 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Spikes Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.movePos
+private alias object.value2 : object.parentSlot
+
+private alias 0 : SPIKES_STATIC
+private alias 1 : SPIKES_HIDDEN
+private alias 2 : SPIKES_APPEAR
+private alias 3 : SPIKES_SHOWN
+private alias 4 : SPIKES_DISAPPEAR
+private alias 5 : SPIKES_HASPARENT
+
+// Player Aliases
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.collisionMode : player.collisionMode
+private alias object.value7  : player.invincibleTimer
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Spikes_DebugDraw
+reserve function Spikes_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Spikes_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Spikes_DebugDraw
+	temp2 = debugMode[0].currentSelection
+	temp2 -= Spikes_startDebugID
+	DrawSprite(temp2)
+end function
+
+
+private function Spikes_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Spikes_startDebugID
+	CreateTempObject(TypeName[Spikes], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SPIKES_HIDDEN
+		if object.timer < 60
+			object.timer++
+		else
+			object.state++
+			object.timer = 0
+			temp0 = screen.xcenter
+			temp0 += 64
+			temp1 = temp0
+			FlipSign(temp0)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -128, temp1, 128, 0, 0, 0, 0, 0)
+			if checkResult == true
+				PlaySfx(SfxName[Spikes Move], false)
+			end if
+		end if
+		break
+
+	case SPIKES_APPEAR
+		if object.movePos < 0x200000
+			object.movePos += 0x80000
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKES_SHOWN
+		if object.timer < 60
+			object.timer++
+		else
+			object.state++
+			object.timer = 0
+			temp0 = screen.xcenter
+			temp0 += 64
+			temp1 = temp0
+			FlipSign(temp0)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -128, temp1, 128, 0, 0, 0, 0, 0)
+			if checkResult == true
+				PlaySfx(SfxName[Spikes Move], false)
+			end if
+		end if
+		break
+
+	case SPIKES_DISAPPEAR
+		if object.movePos > 0
+			object.movePos -= 0x80000
+			object.xpos -= object.xvel
+			object.ypos -= object.yvel
+		else
+			object.state = SPIKES_HIDDEN
+		end if
+		break
+
+	case SPIKES_HASPARENT
+		arrayPos0 = object.parentSlot
+		object.ypos = object[-arrayPos0].ypos
+		break
+	end switch
+
+	switch object.propertyValue
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_BOTTOM
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(Player_Kill)
+				end if
+			end if
+
+			if player[currentPlayer].yvel > -1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, -17, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_SpikeHit)
+				end if
+			end if
+		next
+		break
+
+	case 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_BOTTOM
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(Player_Kill)
+				end if
+			end if
+
+			if player[currentPlayer].xvel <= 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, 12, -15, 16, 15, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_SpikeHit)
+				end if
+			end if
+		next
+		break
+
+	case 2
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -15, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_BOTTOM
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(Player_Kill)
+				end if
+			end if
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -15, -12, 15, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_SpikeHit)
+			end if
+		next
+		break
+
+	case 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].yvel
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 15, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_BOTTOM
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					if player[currentPlayer].collisionMode == CMODE_FLOOR
+						CallFunction(Player_Kill)
+						player[currentPlayer].invincibleTimer = 0
+					else
+						CallFunction(Player_SpikeHit)
+					end if
+				else
+					CallFunction(Player_SpikeHit)
+				end if
+				temp0 = 1
+			end if
+
+			if temp0 < 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, 12, 15, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_SpikeHit)
+				end if
+			end if
+		next
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-16, -16, 32, 32, 182, 99)
+	SpriteFrame(-16, -16, 32, 32, 182, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 99)
+
+	temp0 = 0
+	Spikes_startDebugID = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Spikes], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Spikes_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Spikes_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+
+	foreach (TypeName[Spikes], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue > 3
+			object[arrayPos0].propertyValue &= 3
+			temp0 = object[arrayPos0].propertyValue
+			temp0 &= 3
+			switch temp0
+			case 0
+				object[arrayPos0].xvel = 0
+				object[arrayPos0].yvel = 0x80000
+				object[arrayPos0].ypos += 0x200000
+				break
+				
+			case 1
+				object[arrayPos0].xvel = -0x80000
+				object[arrayPos0].yvel = 0
+				object[arrayPos0].xpos -= 0x200000
+				break
+				
+			case 2
+				object[arrayPos0].xvel = 0x80000
+				object[arrayPos0].yvel = 0
+				object[arrayPos0].xpos += 0x200000
+				break
+				
+			case 3
+				object[arrayPos0].xvel = 0
+				object[arrayPos0].yvel = -0x80000
+				object[arrayPos0].ypos -= 0x200000
+				break
+			end switch
+			
+			object[arrayPos0].movePos = 0x200000
+			if object[arrayPos0].state != SPIKES_HASPARENT
+				object[arrayPos0].state = SPIKES_SHOWN
+			end if
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // orientation
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 1 // moving
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // orientation
+			temp0 = editor.variableValue
+			temp0 &= 3
+
+			temp1 = 3
+			Not(temp1)
+
+			object.propertyValue &= temp1
+			object.propertyValue |= temp0
+			break
+			
+		case 1 // moving
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		case EDIT_VAR_VAL2
+			// TODO: dunno if val2 is set before, after, or not at all during this, test
+			CheckNotEqual(editor.variableValue, 0)
+			checkResult *= 5
+			object.state = checkResult
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.frame = object.propertyValue
+	object.frame &= 3
+	DrawSprite(object.frame)
+	
+	CheckEqual(object.state, 5)
+	temp0 = checkResult
+	CheckEqual(editor.showGizmos, true)
+	temp0 &= checkResult
+	if temp0 == true
+		editor.drawingOverlay = true
+		
+		arrayPos0 = object.parentSlot
+		DrawLine(object.xpos, object.ypos, object[-arrayPos0].xpos, object[-arrayPos0].ypos, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-16, -16, 32, 32, 182, 99)
+	SpriteFrame(-16, -16, 32, 32, 182, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 132)
+	SpriteFrame(-16, -16, 32, 32, 215, 99)
+
+	AddEditorVariable("orientation")
+	SetActiveVariable("orientation")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Down", 3)
+
+	AddEditorVariable("moving")
+	SetActiveVariable("moving")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+	
+	SetVariableAlias(ALIAS_VAR_VAL2, "parentOffset") // state has to be set to 5 for this to be used
+end event

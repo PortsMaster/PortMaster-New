@@ -1,0 +1,182 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: C Floor Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 43 : TYPE_CFLOOR
+
+// Function declarations
+reserve function CFloor_DebugDraw
+reserve function CFloor_DebugSpawn
+
+// Static Values
+
+// Tables
+public table CFloor_table42
+	1, 2, 3, 4, 5, 6, 7, 8
+end table
+
+//0x107CF
+private table CFloor_table0
+	4, 3, 2, 1, 8, 7, 6, 5
+end table
+
+private table CFloor_table1
+	30, 22, 14, 6, 26, 18, 10, 2
+end table
+
+function CFloor_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function CFloor_DebugSpawn
+	CreateTempObject(TypeName[C Floor], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value2 = CFloor_table1
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 1
+		if object.value0 < 10
+			object.value0++
+		else
+			temp5 = 0
+			temp0 = 0
+			temp3 = object.ypos
+			temp3 -= 0x80000
+			temp4 = 10
+			while temp0 < 2
+				temp1 = 0
+				temp2 = object.xpos
+				if object.direction == FLIP_NONE
+					temp2 -= 0x300000
+				else
+					temp2 += 0x300000
+				end if
+				while temp1 < 4
+					GetTableValue(temp6, temp5, CFloor_table42)
+					CreateTempObject(TypeName[C Floor], temp6, temp2, temp3)
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].state = 4
+					GetTableValue(object[tempObjectPos].value1, temp5, object.value2)
+					temp5++
+					temp6++
+					temp1++
+					if object.direction == FLIP_NONE
+						temp2 += 0x200000
+					else
+						temp2 -= 0x200000
+					end if
+					temp4 += 4
+				loop
+				temp4 -= 26
+				object.frame += 2
+				temp0++
+				temp3 += 0x180000
+			loop
+			PlaySfx(SfxName[Ledge Break], 0)
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		if object.value0 < 20
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 4
+		if object.value0 < object.value1
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 5
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	if object.state < 4
+		if object.outOfBounds == 1
+			object.state = 0
+			object.value0 = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+	end if
+	if object.state < 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.propertyValue < 2
+				if object[currentPlayer].yvel >= 0
+					BoxCollisionTest(C_PLATFORM, object.entityPos, -64, -24, 64, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				else
+					checkResult = 0
+				end if
+			else
+				BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			end if
+			if checkResult == 1
+				if object.state == 0
+					object.state = 1
+					object.priority = PRIORITY_ACTIVE
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 4
+	case 5
+		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64, -24, 128, 48, 1, 207)
+	SpriteFrame(-16, -16, 32, 32, 1, 207)
+	SpriteFrame(-16, -16, 32, 32, 33, 207)
+	SpriteFrame(-16, -16, 32, 32, 65, 207)
+	SpriteFrame(-16, -16, 32, 32, 97, 207)
+	SpriteFrame(-16, -8, 32, 16, 1, 239)
+	SpriteFrame(-16, -8, 32, 16, 33, 239)
+	SpriteFrame(-16, -8, 32, 16, 65, 239)
+	SpriteFrame(-16, -8, 32, 16, 97, 239)
+	foreach (TypeName[C Floor], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value2 = CFloor_table1
+	next
+	SetTableValue(TypeName[C Floor], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CFloor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CFloor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,207 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Redz Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 54 : TYPE_REDZ
+
+// Function declarations
+reserve function Redz_DebugDraw
+reserve function Redz_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Redz_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Redz_DebugSpawn
+	CreateTempObject(TypeName[Redz], 0, object.xpos, object.ypos)
+	if object.direction == FLIP_NONE
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x8000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x8000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE
+		end if
+		object.xpos += object.xvel
+		if object.direction == FLIP_NONE
+			ObjectTileGrip(CSIDE_FLOOR, -8, 16, 0)
+		else
+			ObjectTileGrip(CSIDE_FLOOR, 8, 16, 0)
+		end if
+		if checkResult == 0
+			object.state = 1
+			object.animation = 1
+			object.animationTimer = 0
+			object.frame = 0
+		end if
+		if stage.actNum == 2
+			object.value3 = 300
+		end if
+		if object.value3 < 1
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object.direction == FLIP_NONE
+					BoxCollisionTest(C_TOUCH, object.entityPos, -64, -96, 0, -8, currentPlayer, 0, 0, 0, 0)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, 0, -96, 64, -8, currentPlayer, 0, 0, 0, 0)
+				end if
+				if checkResult == 1
+					object.state = 2
+					object.animation = 1
+					object.frame = 0
+					object.value3 = 60
+				end if
+			next
+		else
+			object.value3--
+		end if
+		break
+	case 1
+		if object.value0 < 59
+			object.value0++
+		else
+			object.value0 = 0
+			object.state = 0
+			object.animation = 0
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+		end if
+		break
+	case 2
+		if object.value0 < 30
+			object.value0++
+		else
+			object.value0 = 0
+			object.frame = 4
+			object.state = 3
+			PlaySfx(SfxName[Flame Thrower], 0)
+		end if
+		break
+	case 3
+		if object.value0 < 90
+			temp0 = object.value0
+			temp0 &= 3
+			if temp0 == 0
+				CreateTempObject(TypeName[Redz Fire], 0, object.xpos, object.ypos)
+				object[tempObjectPos].drawOrder = 4
+				object[tempObjectPos].ypos -= 0x40000
+				temp0 = object.value0
+				temp0 <<= 3
+				temp0 &= 511
+				Sin(object.angle, temp0)
+				object.angle >>= 5
+				object.angle -= 48
+				object.angle &= 511
+				Cos(object[tempObjectPos].xvel, object.angle)
+				object[tempObjectPos].xvel <<= 8
+				Sin(object[tempObjectPos].yvel, object.angle)
+				object[tempObjectPos].yvel <<= 8
+				if object.direction == FLIP_NONE
+					object[tempObjectPos].xpos -= 0x80000
+					FlipSign(object[tempObjectPos].xvel)
+				else
+					object[tempObjectPos].xpos += 0x80000
+				end if
+			end if
+			object.value0++
+		else
+			object.value0 = 0
+			object.frame = 0
+			object.state = 0
+			object.animation = 0
+		end if
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		if object.outOfBounds == 1
+			if object.propertyValue == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x8000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x8000
+			end if
+			object.value3 = 0
+			object.animation = 0
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+			end if
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+	if object.animation == 0
+		object.frame = object.animationTimer
+		object.frame /= 10
+		object.animationTimer++
+		object.animationTimer %= 40
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-16, -16, 31, 32, 1, 118)
+	SpriteFrame(-16, -16, 30, 32, 1, 85)
+	SpriteFrame(-16, -16, 31, 32, 1, 118)
+	SpriteFrame(-16, -16, 32, 32, 1, 151)
+	SpriteFrame(-16, -16, 31, 32, 143, 140)
+	foreach (TypeName[Redz], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x8000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x8000
+		end if
+	next
+	SetTableValue(TypeName[Redz], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Redz_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Redz_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

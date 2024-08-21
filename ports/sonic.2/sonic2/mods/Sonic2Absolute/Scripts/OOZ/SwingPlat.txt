@@ -1,0 +1,209 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Swing Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 46 : TYPE_SWINGPLATFORM
+
+// Function declarations
+reserve function SwingPlatform_DebugDraw
+reserve function SwingPlatform_DebugSpawn
+
+// Static Values
+private value SwingPlatform_value34 = 0;
+
+// Tables
+
+function SwingPlatform_DebugDraw
+	temp7 = object[0].value17
+	temp7 -= SwingPlatform_value34
+	DrawSprite(0)
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+function SwingPlatform_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= SwingPlatform_value34
+	CreateTempObject(TypeName[Swing Platform], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	temp2 = object.xpos
+	temp3 = object.ypos
+	GetTableValue(object.angle, 12, StageSetup_table9)
+	object.angle >>= 8
+	if object.direction == FLIP_X
+		object.angle ^= 255
+		object.angle += 129
+	end if
+	object.angle <<= 1
+	temp1 = object.propertyValue
+	temp1++
+	temp1 <<= 4
+	temp1 -= 8
+	object.xpos = object.value1
+	object.ypos = object.value2
+	switch object.state
+	case 0
+		Cos(object.xpos, object.angle)
+		object.xpos *= temp1
+		object.xpos <<= 7
+		object.xpos += temp2
+		Sin(object.ypos, object.angle)
+		object.ypos *= temp1
+		object.ypos <<= 7
+		object.ypos += temp3
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x3000
+		temp7 = 0x720
+		temp7 <<= 16
+		if object.ypos >= temp7
+			object.state++
+		end if
+		object.xpos += object.xvel
+		break
+	case 2
+		Sin(object.ypos, object.value0)
+		object.value0 += 6
+		object.value0 &= 511
+		object.ypos >>= 7
+		object.ypos += 0x720
+		object.ypos <<= 16
+		break
+	end switch
+	object.value3 = object.xpos
+	object.value3 &= -0x10000
+	temp4 = object.value1
+	temp4 &= -0x10000
+	object.value3 -= temp4
+	object.value4 = object.ypos
+	object.value4 &= -0x10000
+	temp5 = object.value2
+	temp5 &= -0x10000
+	object.value4 -= temp5
+	object.value1 = object.xpos
+	object.value2 = object.ypos
+	object.xpos = temp4
+	object.ypos = temp5
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			if object.state == 0
+				if object.value45 == 1
+					if object.angle == 0
+						object.xvel = 0x20000
+						object.priority = PRIORITY_ACTIVE
+						object.state = 1
+					end if
+					if object.angle == 256
+						object.xvel = -0x20000
+						object.priority = PRIORITY_ACTIVE
+						object.state = 1
+					end if
+				end if
+			end if
+			object[currentPlayer].xpos += object.value3
+			object[currentPlayer].ypos += object.value4
+		end if
+	next
+	if object.state > 0
+		if object.outOfBounds == 1
+			object.xpos = temp2
+			object.ypos = temp3
+			if object.outOfBounds == 1
+				object.state = 0
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.xvel = 0
+				object.yvel = 0
+			end if
+		end if
+	end if
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.propertyValue
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	DrawSpriteXY(2, object.value1, object.value2)
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 51, 75)
+	SpriteFrame(-8, -8, 16, 16, 51, 75)
+	SpriteFrame(-32, -8, 64, 32, 68, 75)
+	foreach (TypeName[Swing Platform], arrayPos0, ALL_ENTITIES)
+		GetBit(object[arrayPos0].value45, object[arrayPos0].propertyValue, 7)
+		object[arrayPos0].propertyValue &= 127
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+	temp0 = 0
+	SwingPlatform_value34 = DebugMode_ObjCount
+	SwingPlatform_value34--
+	while temp0 < 8
+		SetTableValue(TypeName[Swing Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SwingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SwingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

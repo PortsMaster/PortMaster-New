@@ -1,0 +1,114 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: MissionAreaBL Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.state : object.setBounds
+
+// Player Aliases
+private alias object.xpos  : player.xpos
+private alias object.ypos  : player.ypos
+private alias object.xvel  : player.xvel
+private alias object.yvel  : player.yvel
+private alias object.speed : player.speed
+
+// Priority Aliases
+private alias 1 : PRIORITY_ACTIVE
+private alias 5 : PRIORITY_INACTIVE
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.setBounds == false
+		stage.newXBoundary1 = object.xpos
+		stage.newXBoundary1 >>= 16
+		stage.newXBoundary1 -= 16
+		
+		stage.newYBoundary2 = object.ypos
+		stage.newYBoundary2 >>= 16
+		stage.newYBoundary2 += 16
+		
+		object.setBounds = true
+	end if
+	
+	if stage.state == STAGE_RUNNING
+		// Make sure Sonic doesn't go lower than this Object
+		if player[0].ypos > object.ypos
+			player[0].yvel = 0
+			player[0].speed = 0
+			player[0].ypos = object.ypos
+			
+			game.forceKillPlayer = true
+			object.priority = PRIORITY_INACTIVE // This Object's job is done, we don't need to be here anymore
+		end if
+		
+		// Make sure Sonic doesn't go before this Object, either
+		if player[0].xpos < object.xpos
+			player[0].xvel = 0
+			player[0].speed = 0
+			player[0].xpos = object.xpos
+			
+			// In this case though, we aren't gonna unload because we're only enforcing normal walls, not death bounds
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// A whole event exists here, and yet nothing's in it...
+end event
+
+
+event ObjectStartup
+	// Cycle through all MissionAreaBL objects in the level and make them active
+	foreach (TypeName[MissionAreaBL], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	editor.drawingOverlay = true
+	
+	temp0 = object.xpos
+	temp0 -= 0x100000
+	
+	temp1 = object.ypos
+	temp1 += 0x100000
+	
+	temp2 = temp0
+	temp2 += 0x380000
+	
+	temp3 = temp1
+	temp3 -= 0x380000
+	
+	// draw some long corners
+	// TODO: i don't think this works, ask for a render
+	DrawLine(temp0, temp1, temp0, temp3, 255, 0, 255)
+	DrawLine(temp0, temp1, temp2, temp1, 255, 0, 255)
+	
+	editor.drawingOverlay = false
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

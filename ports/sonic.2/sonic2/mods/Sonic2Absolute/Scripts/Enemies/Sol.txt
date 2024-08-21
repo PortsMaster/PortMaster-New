@@ -1,0 +1,328 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Sol Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 50 : TYPE_SOL
+
+// Function declarations
+reserve function Sol_DebugDraw
+reserve function Sol_DebugSpawn
+reserve function Sol_Function118
+reserve function Sol_Function119
+reserve function Sol_Function120
+
+// Static Values
+
+// Tables
+
+function Sol_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Sol_DebugSpawn
+	CreateTempObject(TypeName[Sol], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value2 = object[tempObjectPos].xpos
+	object[tempObjectPos].value1 = 15
+	object[tempObjectPos].value3 = 1
+	if object[tempObjectPos].propertyValue == 0
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x4000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x4000
+	end if
+end function
+
+
+function Sol_Function118
+	temp0 = 0
+	temp7 = object.angle
+	temp1 = object.xpos
+	temp2 = object.ypos
+	while temp0 < 4
+		GetBit(temp6, object.value1, temp0)
+		if temp6 == 1
+			Cos256(object.xpos, temp7)
+			object.xpos <<= 12
+			object.xpos += temp1
+			Sin256(object.ypos, temp7)
+			object.ypos <<= 12
+			object.ypos += temp2
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_FireHit)
+				end if
+			next
+		end if
+		temp7 += 64
+		temp7 &= 255
+		temp0++
+	loop
+	object.xpos = temp1
+	object.ypos = temp2
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+end function
+
+
+function Sol_Function119
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(PlayerObject_FireHit)
+		end if
+	next
+end function
+
+
+function Sol_Function120
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		object.xpos = object.value2
+		if object.outOfBounds == 1
+			object.xpos = object.value2
+			object.value1 = 15
+			if object.propertyValue == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x4000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x4000
+			end if
+			object.value0 = 0
+			object.animationTimer = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.state = 0
+			object.angle = 0
+		else
+			object.xpos = temp0
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		if object.direction == FLIP_NONE
+			object.angle++
+		else
+			object.angle--
+		end if
+		object.angle &= 255
+		CallFunction(Sol_Function118)
+		if object.value3 == 1
+			object.value6 = 0x7FFFFFFF
+			object.value4 = 0xFFFF
+			object.value5 = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				temp0 = object[currentPlayer].ypos
+				temp0 -= object.ypos
+				Abs(temp0)
+				if temp0 < object.value6
+					object.value6 = temp0
+					object.value5 = currentPlayer
+				end if
+				if temp0 < 0x400000
+					if object.value4 != 0xFFFF
+						arrayPos0 = object.value4
+						temp0 = object[currentPlayer].xpos
+						temp0 -= object.xpos
+						Abs(temp0)
+						temp1 = object[arrayPos0].xpos
+						temp1 -= object.xpos
+						Abs(temp1)
+						if temp0 < temp1
+							object.value4 = currentPlayer
+						end if
+					else
+						object.value4 = currentPlayer
+					end if
+				end if
+			next
+			if object.value4 != 0xFFFF
+				arrayPos0 = object.value4
+				temp0 = object.xpos
+				temp0 -= object[arrayPos0].xpos
+				Abs(temp0)
+				if temp0 <= 0x800000
+					object.state = 1
+					object.frame = 1
+				end if
+			else
+				arrayPos0 = object.value5
+			end if
+			if object[arrayPos0].xpos < object.xpos
+				object.direction = FLIP_NONE
+				object.xvel = -0x4000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x4000
+			end if
+		end if
+		CallFunction(Sol_Function120)
+		break
+	case 1
+		object.xpos += object.xvel
+		if object.direction == FLIP_NONE
+			object.angle++
+		else
+			object.angle--
+		end if
+		object.angle &= 255
+		temp0 = 0
+		temp7 = object.angle
+		while temp0 < 4
+			if temp7 == 64
+				GetBit(temp6, object.value1, temp0)
+				if temp6 == 1
+					Cos256(temp1, temp7)
+					temp1 <<= 12
+					temp1 += object.xpos
+					Sin256(temp2, temp7)
+					temp2 <<= 12
+					temp2 += object.ypos
+					SetBit(object.value1, temp0, 0)
+					CreateTempObject(TypeName[Sol], 0, temp1, temp2)
+					object[tempObjectPos].state = 3
+					object[tempObjectPos].value8 = object.value8
+					object[tempObjectPos].value7 = object.value7
+					if object.direction == FLIP_NONE
+						object[tempObjectPos].xvel = -0x20000
+					else
+						object[tempObjectPos].xvel = 0x20000
+					end if
+				end if
+			end if
+			temp7 += 64
+			temp7 &= 255
+			temp0++
+		loop
+		CallFunction(Sol_Function118)
+		if object.value1 == 0
+			object.state = 2
+			if object.direction == FLIP_NONE
+				object.xvel = -0x4000
+			else
+				object.xvel = 0x4000
+			end if
+		end if
+		if object.animationTimer < 16
+			object.animationTimer++
+		else
+			object.frame = 2
+		end if
+		CallFunction(Sol_Function120)
+		break
+	case 2
+		object.xpos += object.xvel
+		CallFunction(Sol_Function118)
+		CallFunction(Sol_Function120)
+		break
+	case 3
+		object.xpos += object.xvel
+		CallFunction(Sol_Function119)
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	object.value8++
+	if object.value8 >= 12
+		object.value8 = 0
+	end if
+	object.value7 = object.value8
+	object.value7 /= 6
+	object.value7 += 3
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		temp0 = 0
+		temp7 = object.angle
+		while temp0 < 4
+			GetBit(temp6, object.value1, temp0)
+			if temp6 == 1
+				Cos256(temp1, temp7)
+				temp1 <<= 12
+				temp1 += object.xpos
+				Sin256(temp2, temp7)
+				temp2 <<= 12
+				temp2 += object.ypos
+				DrawSpriteXY(object.value7, temp1, temp2)
+			end if
+			temp7 += 64
+			temp7 &= 255
+			temp0++
+		loop
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 3
+		DrawSprite(object.value7)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == 1
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 1, 33)
+		SpriteFrame(-8, -8, 16, 16, 18, 33)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 91, 222)
+		SpriteFrame(-8, -8, 16, 16, 1, 33)
+		SpriteFrame(-8, -8, 16, 16, 18, 33)
+	end if
+	foreach (TypeName[Sol], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value2 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = 15
+		object[arrayPos0].value3 = 1
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x4000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x4000
+		end if
+	next
+	SetTableValue(TypeName[Sol], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Sol_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Sol_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,424 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Sign Post Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 21 : TYPE_SIGNPOST
+
+// Function declarations
+reserve function SignPost_DebugDraw
+reserve function SignPost_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function SignPost_DebugDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end function
+
+
+function SignPost_DebugSpawn
+	CreateTempObject(TypeName[Sign Post], 0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = 1
+	object[tempObjectPos].value1 = 16
+	if options.vsMode == 1
+		object[tempObjectPos].state = 3
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		temp0 = object.ypos
+		temp0 += 0x400000
+		if object[0].ypos < temp0
+			stage.newXBoundary1 = object.xpos
+			stage.newXBoundary1 >>= 16
+			stage.newXBoundary1 -= screen.xcenter
+			stage.newXBoundary1 -= screen.xcenter
+			if object.value7 == 0				
+				temp0 = object.xpos
+				temp0 >>= 16
+				temp0 += screen.xcenter
+				temp1 = tileLayer[0].xsize
+				temp1 <<= 7
+				temp1 -= 40
+				if temp1 < temp0
+					stage.newXBoundary2 = temp1
+				else
+					stage.newXBoundary2 = temp0
+				end if
+				object.value7 = stage.newXBoundary2
+				object.value7 += 25
+				object.value7 <<= 16
+			end if
+			if object[0].xpos > object.xpos
+				stage.newXBoundary1 = object.xpos
+				stage.newXBoundary1 >>= 16
+				stage.newXBoundary1 -= screen.xcenter
+				switch object[0].propertyValue
+				case 0
+					EditFrame(5, -24, -16, 48, 32, 34, 1)
+					break
+				case 1
+					EditFrame(5, -24, -16, 48, 32, 34, 34)
+					break
+				case 2
+					EditFrame(5, -24, -16, 48, 32, 34, 67)
+					break
+				end switch
+				if stage.debugMode == 0
+					if stage.activeList == BONUS_STAGE
+						if stage.minutes < 7
+							//CallNativeFunction2(SetAchievement, 10, 100)
+							//achievement.trigger = 50 // Scrambled Egg
+						end if
+					end if
+				end if
+				object.state = 1
+				PlaySfx(SfxName[Sign Post], 0)
+				if PlayerObject_SuperState == 1
+					PlayerObject_SuperState = 2
+					if stage.debugMode == 0
+						//CallNativeFunction2(SetAchievement, 3, 100)
+						achievement.trigger = 4 //Superstar
+					end if
+				end if
+				if options.gameMode == 2
+					if stage.timeEnabled == 1
+						timeAttack.result = stage.seconds
+						timeAttack.result *= 100
+						temp0 = stage.minutes
+						temp0 *= 0x1770
+						timeAttack.result += temp0
+						timeAttack.result += stage.milliSeconds
+						if stage.activeList == REGULAR_STAGE
+							arrayPos1 = 30
+							if SuperTimeAttack == 0
+								arrayPos1 *= stage.playerListPos
+							else
+								arrayPos1 *= 3
+							end if
+							arrayPos1 += stage.listPos
+							arrayPos1 += 500
+							
+							if timeAttack.result < saveRAM[arrayPos1]
+								saveRAM[arrayPos1] = timeAttack.result
+								WriteSaveRAM()
+								PlaySfx(SfxName[Event], 0)
+							end if
+					
+						else
+							CallNativeFunction2(SetLeaderboard, 21, timeAttack.result)
+						end if
+					end if
+				end if				
+				stage.timeEnabled = 0
+			end if
+		end if
+		break
+	case 1
+		music.volume--
+		object.value2++
+		if object.value6 == 0
+			if stage.debugMode == 0
+				if stage.activeList == REGULAR_STAGE
+					if stage.listPos == 0
+						if stage.minutes == 0
+							if stage.seconds < 35
+								//CallNativeFunction2(SetAchievement, 0, 100)
+								achievement.trigger = 1 // Quick Run
+							end if
+						end if
+					end if
+				end if
+			end if
+			object.value6 = 1
+		end if
+		if object.value2 == 2
+			object.value2 = 0
+			object.frame++
+			if object.frame == 5
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				object.value1--
+				if object.value1 == 0
+					SetBit(object.value3, 0, 1)
+					if stage.player2Enabled == 1
+						SetBit(object.value3, 1, 1)
+					end if
+					object.state = 2
+				end if
+			end if
+		end if
+		break
+	case 2
+		if object[0].xpos > object.value7
+			PlayMusic(1)
+			object.state = 6
+			object[30].type = TypeName[Act Finish]
+			object[30].drawOrder = 6
+			object[30].priority = PRIORITY_ACTIVE
+		end if
+		break
+	case 3	
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 += screen.xcenter
+		temp1 = tileLayer[0].xsize
+		temp1 <<= 7
+		temp1 -= 40
+		if temp1 < temp0
+			stage.newXBoundary2 = temp1
+		else
+			stage.newXBoundary2 = temp0
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp1, object.value3, currentPlayer)
+			if temp1 == 0
+				if object[currentPlayer].xpos > object.xpos
+					object.priority = PRIORITY_ACTIVE
+					SetBit(object.value3, currentPlayer, 1)
+					if currentPlayer == 0
+						if PlayerObject_SuperState == 1
+							PlayerObject_SuperState = 2
+						end if
+						if vs.playerID == 0
+							temp2 = 0
+						else
+							temp2 = 1
+						end if
+					else
+						if vs.playerID == 0
+							temp2 = 1
+						else
+							temp2 = 0
+						end if
+					end if
+					if temp2 == 0
+						vs.time1P = stage.milliSeconds
+						vs.time1P = stage.seconds
+						vs.time1P *= 100
+						temp2 = stage.minutes
+						temp2 *= 0x1770
+						vs.time1P += temp2
+						vs.time1P += stage.milliSeconds
+					else
+						vs.time2P = stage.milliSeconds
+						vs.time2P = stage.seconds
+						vs.time2P *= 100
+						temp2 = stage.minutes
+						temp2 *= 0x1770
+						vs.time2P += temp2
+						vs.time2P += stage.milliSeconds
+					end if
+					object.value5 = currentPlayer
+					object.value1 = 16
+					object.state = 4
+					PlaySfx(SfxName[Sign Post], 0)
+					if object.value4 == 0
+						PlaySfx(SfxName[Sign Post 2P], 0)
+						object[30].state = 3
+						object[30].value5 = currentPlayer
+						object[30].value5 ^= 1
+						switch object[currentPlayer].propertyValue
+						case 0
+							EditFrame(5, -24, -16, 48, 32, 34, 1)
+							break
+						case 1
+							EditFrame(5, -24, -16, 48, 32, 34, 34)
+							break
+						case 2
+							EditFrame(5, -24, -16, 48, 32, 34, 67)
+							break
+						end switch
+					else
+						object[30].state = 0
+					end if
+					if object.value3 == 3
+						object.value4 = 1
+						object[30].state = 0
+					end if
+				end if
+			end if
+		next
+		break
+	case 4
+		if object.value4 == 1
+			music.volume--
+		else
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				GetBit(temp1, object.value3, currentPlayer)
+				if temp1 == 0
+					if object[currentPlayer].xpos > object.xpos
+						object.value2 = 1
+						object.frame = 4
+						object.value1 = 1
+					end if
+				end if
+			next
+		end if
+		object.value2++
+		if object.value2 == 2
+			object.value2 = 0
+			object.frame++
+			if object.frame == 5
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				object.value1--
+				if object.value1 == 0
+					if object.value4 == 0
+						object.value4 = 1
+						object.state = 3
+						if object.value5 == 0
+							screen.cameraTarget = 1
+							object[1].scrollTracking = 1
+							object[9].type = TypeName[Blank Object]
+							CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
+							object[tempObjectPos].value0 = 384
+							object[tempObjectPos].state = 2
+							screen.cameraX = object[1].xpos
+							screen.cameraX >>= 16
+							screen.cameraY = object[1].ypos
+							screen.cameraY >>= 16
+						end if
+					else
+						object.state = 6
+						object[30].state = 4
+						object[30].value0 = -768
+					end if
+				end if
+			end if
+		end if
+		break
+	case 6		
+		break
+	end switch
+	
+	currentPlayer = 0
+	while currentPlayer < playerCount
+		if object[currentPlayer].xpos > object.value7
+			object[currentPlayer].xpos = object.value7
+			object[currentPlayer].xvel = 0
+			object[currentPlayer].speed = 0
+		end if
+		GetBit(temp1, object.value3, currentPlayer)
+		if temp1 == 1
+			//object[currentPlayer].interaction = 0
+			object[currentPlayer].controlMode = -1
+			object[currentPlayer].up = 0
+			object[currentPlayer].down = 0
+			object[currentPlayer].left = 0
+			object[currentPlayer].right = 1
+			object[currentPlayer].jumpPress = 0
+			object[currentPlayer].jumpHold = 0
+		end if
+		if object[currentPlayer].type == TypeName[Debug Mode]
+			SetBit(object.value3, currentPlayer, 0)
+		end if
+		currentPlayer++
+	loop
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	if object.value1 > 8
+		DrawSprite(object.frame)
+	else
+		temp0 = object.frame
+		temp0 += 4
+		DrawSprite(temp0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 132)
+	SpriteFrame(-24, -16, 48, 32, 34, 100)
+	switch stage.playerListPos
+	case 0
+		SpriteFrame(-16, -16, 32, 32, 149, 99) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 99) //smear to the left
+		SpriteFrame(-24, -16, 48, 32, 34, 1)
+		SpriteFrame(-16, -16, 32, 32, 149, 99) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 99) //smear to the left
+		break
+	case 1
+		SpriteFrame(-16, -16, 32, 32, 116, 132) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 83, 132) //smear to the left
+		SpriteFrame(-24, -16, 48, 32, 34, 1)
+		SpriteFrame(-16, -16, 32, 32, 116, 132) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 83, 132) //smear to the left
+		break
+	case 2
+		SpriteFrame(-16, -16, 32, 32, 83, 164) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 149, 132) //smear to the left
+		SpriteFrame(-24, -16, 48, 32, 34, 1)
+		SpriteFrame(-16, -16, 32, 32, 83, 164) //smear to the right
+		SpriteFrame(-4, -16, 8, 32, 247, 2)
+		SpriteFrame(-16, -16, 32, 32, 149, 132) //smear to the left
+		break
+	end switch
+	foreach (TypeName[Sign Post], arrayPos0, ALL_ENTITIES)	
+		CheckGreater(object[arrayPos0].propertyValue, 0)
+		temp0 = checkResult
+		CheckEqual(options.vsMode, 0)
+		temp0 &= checkResult
+		CheckNotEqual(options.gameMode, 2)
+		temp0 &= checkResult
+		if temp0 == 1
+			object[arrayPos0].type = TypeName[Blank Object]
+		else
+			object[arrayPos0].frame = 1
+			object[arrayPos0].value1 = 16
+			if object[arrayPos0].propertyValue != 2
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+			end if
+		end if
+		if options.vsMode == 1
+			object[arrayPos0].state = 3
+		end if
+	next
+	SetTableValue(TypeName[Sign Post], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SignPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SignPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

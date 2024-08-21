@@ -1,0 +1,253 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Cylinder Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 53 : TYPE_CYLINDER
+
+
+// Static Values
+
+// Tables
+public table Cylinder_table45
+	6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6
+end table
+
+
+public table OtherCylinder_table45
+	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+end table
+
+
+event ObjectMain
+	object.priority = PRIORITY_ACTIVE
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp3, object.value1, temp2)
+		if temp3 == 0
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.value10, 60, object.value11, 76, currentPlayer, HITBOX_AUTO, 1, HITBOX_AUTO, HITBOX_AUTO)
+			if object[currentPlayer].yvel < 0
+				checkResult = 0
+			end if
+			if checkResult == 1
+				SetBit(object.value1, temp2, 1)
+				object[currentPlayer].yvel = 0
+				switch temp2
+				case 0
+					object.value2 = 0
+					object.value6 = object[currentPlayer].direction
+					break
+				case 1
+					object.value3 = 0
+					object.value7 = object[currentPlayer].direction
+					break
+				case 2
+					object.value4 = 0
+					object.value8 = object[currentPlayer].direction
+					break
+				case 3
+					object.value5 = 0
+					object.value9 = object[currentPlayer].direction
+					break
+				end switch
+			else
+				temp0 = object[currentPlayer].collisionTop
+				temp0 <<= 16
+				temp0 += object[currentPlayer].ypos
+				temp0 -= object.ypos
+				if temp0 < -0x300000
+					BoxCollisionTest(C_BOX, object.entityPos, object.value10, -64, object.value11, -48, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				else
+					temp0 = object[currentPlayer].collisionBottom
+					temp0 <<= 16
+					temp0 += object[currentPlayer].ypos
+					temp0 -= object.ypos
+					if temp0 > 0x400000
+						BoxCollisionTest(C_BOX, object.entityPos, object.value10, 48, object.value11, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					end if
+				end if
+			end if
+		else
+			temp3 = 0
+			temp0 = object[currentPlayer].xpos
+			temp0 -= object.xpos
+			Abs(temp0)
+			CheckLower(object[currentPlayer].yvel, -0x40000)
+			temp3 |= checkResult
+			CheckGreater(temp0, object.value12)
+			temp3 |= checkResult
+			if temp3 == 1
+				SetBit(object.value1, temp2, 0)
+				if object[currentPlayer].gravity == GRAVITY_AIR
+					if object[currentPlayer].yvel >= 0
+						if object[currentPlayer].state != PlayerObject_HandleFlyCarry
+							if object[currentPlayer].animation != ANI_SKIDDING
+								if object[currentPlayer].xvel < 0
+									object[currentPlayer].direction = FLIP_X
+								end if
+								object[currentPlayer].animation = ANI_TWIRL
+								object[currentPlayer].angle = 0
+								object[currentPlayer].rotation = 0
+							end if
+						end if
+					end if
+				end if
+				switch temp2
+				case 0
+					temp6 = object.value2
+					break
+				case 1
+					temp6 = object.value3
+					break
+				case 2
+					temp6 = object.value4
+					break
+				case 3
+					temp6 = object.value5
+					break
+				end switch
+				temp6 += 32
+				temp6 &= 255
+				if temp6 >= 64
+					object[currentPlayer].yvel = 0
+				else
+					object[currentPlayer].yvel >>= 1
+				end if
+			else
+				object[currentPlayer].yvel = 0
+				temp0 >>= 16
+				switch temp2
+				case 0
+					temp6 = object.value2
+					temp7 = object.value6
+					break
+				case 1
+					temp6 = object.value3
+					temp7 = object.value7
+					break
+				case 2
+					temp6 = object.value4
+					temp7 = object.value8
+					break
+				case 3
+					temp6 = object.value5
+					temp7 = object.value9
+					break
+				end switch
+				temp6 += 4
+				temp6 &= 255
+				Cos256(object[currentPlayer].ypos, temp6)
+				object[currentPlayer].ypos *= 42
+				object[currentPlayer].ypos >>= 8
+				object[currentPlayer].ypos -= object[currentPlayer].collisionBottom
+				object[currentPlayer].ypos += 19
+				object[currentPlayer].ypos <<= 16
+				object[currentPlayer].ypos += object.ypos
+				
+				if object[currentPlayer].state == PlayerObject_LookingUp
+					object[currentPlayer].state = PlayerObject_HandleGround	
+				end if
+				if object[currentPlayer].state == PlayerObject_Crouching
+					object[currentPlayer].state = PlayerObject_HandleGround	
+				end if				
+				if object[currentPlayer].state == PlayerObject_HandleGround		
+					//if object[currentPlayer].gravity == GRAVITY_AIR
+						object[currentPlayer].prevAnimation = ANI_TWIRL
+						object[currentPlayer].animation = ANI_TWIRL
+						object[currentPlayer].animationSpeed = 0
+						object[currentPlayer].direction = FLIP_NONE
+						temp0 = temp6
+						temp0 /= 21
+						if object[currentPlayer].xvel != 0
+							if object[currentPlayer].xvel > 0
+								temp7 = 0
+							else
+								temp7 = 1
+							end if
+						end if
+						if temp7 == 0
+							GetTableValue(object[currentPlayer].frame, temp0, OtherCylinder_table45)
+							object[currentPlayer].rotation = 0
+						else
+							GetTableValue(object[currentPlayer].frame, temp0, Cylinder_table45)
+							object[currentPlayer].rotation = 256
+						end if
+					//end if
+				end if
+				if object[currentPlayer].state == PlayerObject_HandleRolling
+					if object[currentPlayer].xvel != 0
+						if object[currentPlayer].xvel > 0
+							object[currentPlayer].direction = FLIP_NONE
+						else
+							object[currentPlayer].direction = FLIP_X
+						end if
+					end if
+				end if
+				switch temp2
+				case 0
+					object.value2 = temp6
+					object.value6 = temp7
+					break
+				case 1
+					object.value3 = temp6
+					object.value7 = temp7
+					break
+				case 2
+					object.value4 = temp6
+					object.value8 = temp7
+					break
+				case 3
+					object.value5 = temp6
+					object.value9 = temp7
+					break
+				end switch
+				object[currentPlayer].gravity = GRAVITY_GROUND
+			end if
+		end if
+		temp2++
+	next
+	if object.value1 != 0
+		if object.propertyValue == 0
+			if object.outOfBounds == 1
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+			end if
+		end if
+		temp0 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.value10, -64, object.value11, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			temp0 |= checkResult
+		next
+		if temp0 == 0
+			object.value1 = 0
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Cylinder], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].value11 = 192
+			object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+		else
+			object[arrayPos0].value11 = 384
+			object[arrayPos0].priority = PRIORITY_ACTIVE
+		end if
+		object[arrayPos0].value12 = object[arrayPos0].value11
+		object[arrayPos0].value12 <<= 16
+		object[arrayPos0].value10 = object[arrayPos0].value11
+		FlipSign(object[arrayPos0].value10)
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

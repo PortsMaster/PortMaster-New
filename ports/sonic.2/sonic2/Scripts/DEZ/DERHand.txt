@@ -1,0 +1,168 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: DER Hand Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.originPos.y
+
+// States
+// Some are shared with other body parts
+private alias 1 : BODYPART_DESTROYED
+private alias 2 : BODYPART_ACTIVE
+
+private alias 0 : DERHAND_NONE
+private alias 3 : DERHAND_FIRE
+private alias 4 : DERHAND_FIRED
+private alias 5 : DERHAND_COMINGBACK
+
+// Player aliases
+private alias 0 : SLOT_PLAYER1
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Tables
+// ========================
+
+private table DERHand_velocities
+	0x20000, 0x10000, 0x8000, 0x0000
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case DERHAND_NONE
+	case BODYPART_ACTIVE
+		break
+
+	case BODYPART_DESTROYED
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case DERHAND_FIRE
+		object.timer--
+		if object.timer < 0
+			object.timer = 32
+
+			temp0 = object.ypos
+			temp0 -= player[SLOT_PLAYER1].ypos
+			Abs(temp0)
+			if temp0 >= 0x1000000
+				temp0 = 0xFF0000
+			end if
+			temp0 >>= 6
+
+			GetTableValue(object.yvel, temp0, DERHand_velocities)
+			if player[SLOT_PLAYER1].ypos < object.ypos
+				FlipSign(object.yvel)
+			end if
+
+			if object.direction == FLIP_NONE
+				object.xvel = -0x80000
+			else
+				object.xvel = 0x80000
+			end if
+
+			PlaySfx(SfxName[Release], false)
+			object.state = DERHAND_FIRED
+		else
+			object.yvel += 0x2000
+			object.ypos += object.yvel
+		end if
+		break
+
+	case DERHAND_FIRED
+		object.timer--
+		if object.timer < 0
+			object.timer = 32
+			FlipSign(object.xvel)
+			object.yvel = object.originPos.y
+			object.yvel -= object.ypos
+			object.yvel >>= 5
+			object.state = DERHAND_COMINGBACK
+		else
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		end if
+		break
+
+	case DERHAND_COMINGBACK
+		object.timer--
+		if object.timer < 0
+			object.timer = 0
+			object.xvel = 0
+			object.yvel = 0
+			object.state = BODYPART_ACTIVE
+		else
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		end if
+		break
+
+	end switch
+
+	if object.state > BODYPART_DESTROYED
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -4, 24, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 430, 100)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 942, 100)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 430, 100)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 24, 942, 100)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

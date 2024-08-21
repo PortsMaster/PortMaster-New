@@ -1,0 +1,448 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Transporter Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.playerID
+private alias object.value1 : object.nodePos.x
+private alias object.value2 : object.nodePos.y
+private alias object.value3 : object.nodeChangeDelay
+private alias object.value4 : object.tablePtr
+private alias object.value5 : object.tableSize
+private alias object.value6 : object.tablePos
+
+// States
+private alias 0 : TRANSPORTER_WAITING
+private alias 1 : TRANSPORTER_ACTIVATING
+private alias 2 : TRANSPORTER_TRANSPORTING
+
+// Types
+private alias 0 : TRANSPORTER_TYPE_D_LONG
+private alias 1 : TRANSPORTER_TYPE_D_MED
+private alias 2 : TRANSPORTER_TYPE_URU
+private alias 3 : TRANSPORTER_TYPE_D_SHORT
+private alias 4 : TRANSPORTER_TYPE_DLD
+private alias 5 : TRANSPORTER_TYPE_U
+private alias 6 : TRANSPORTER_TYPE_ULU
+private alias 7 : TRANSPORTER_TYPE_HIDDEN
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.scrollTracking : player.scrollTracking
+private alias object.tileCollisions : player.tileCollisions
+private alias object.value0  : player.rings
+private alias object.value5  : player.rollAnimationSpeed
+private alias object.value7  : player.invincibleTimer
+
+// Achievement Aliases
+private alias 8 : ACHIEVEMENT_HIDDENTRANSPORTER
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Transporter_HandleNewNode
+
+
+// ========================
+// Tables
+// ========================
+
+private table Transporter_tableSizes
+	1, 1, 7, 1, 7, 1, 7, 1
+end table
+
+private table Transporter_tablePtrs[8]
+
+// World Positions of the "nodes", kinda rigid way of doin it, but whatever works I suppose...
+private table Transporter_movementTable0
+	0x7940000, 0x98C0000
+end table
+
+private table Transporter_movementTable1
+	0x940000, 0x38C0000
+end table
+
+private table Transporter_movementTable2
+	0x7940000, 0x2E80000
+	0x7A40000, 0x2C00000
+	0x7D00000, 0x2AC0000
+	0x8580000, 0x2AC0000
+	0x8840000, 0x2980000
+	0x8940000, 0x2700000
+	0x8940000, 0x1900000
+end table
+
+private table Transporter_movementTable3
+	0x8940000, 0x6900000
+end table
+
+private table Transporter_movementTable4
+	0x11940000, 0x4700000
+	0x11840000, 0x4980000
+	0x11580000, 0x4AC0000
+	0x0FD00000, 0x4AC0000
+	0x0FA40000, 0x4C00000
+	0x0F940000, 0x4E80000
+	0x0F940000, 0x5900000
+end table
+
+private table Transporter_movementTable5
+	0x12940000, 0x4900000
+end table
+
+private table Transporter_movementTable6
+	0x15940000, 0x7E80000
+	0x15840000, 0x7C00000
+	0x15600000, 0x7AC0000
+	0x14D00000, 0x7AC0000
+	0x14A40000, 0x7980000
+	0x14940000, 0x7700000
+	0x14940000, 0x5900000
+end table
+
+private table Transporter_movementTable7
+	0x8940000, 0x900000
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Transporter_HandleNewNode
+	temp0 = object.nodePos.x
+	temp2 = 0x1000
+	temp0 -= player[currentPlayer].xpos
+	if temp0 < 0
+		FlipSign(temp0)
+		FlipSign(temp2)
+	end if
+
+	temp0 >>= 16
+	temp1 = object.nodePos.y
+	temp3 = 0x1000
+	temp1 -= player[currentPlayer].ypos
+	if temp1 < 0
+		FlipSign(temp1)
+		FlipSign(temp3)
+	end if
+
+	temp1 >>= 16
+	if temp1 >= temp0
+		temp1 = object.nodePos.y
+		temp1 -= player[currentPlayer].ypos
+		temp1 &= 0xFFFF0000
+		temp1 /= temp3
+
+		temp0 = object.nodePos.x
+		temp0 -= player[currentPlayer].xpos
+		if temp0 != 0
+			temp0 &= 0xFFFF0000
+			temp0 /= temp1
+		end if
+
+		temp0 <<= 8
+		temp3 <<= 8
+		temp1 >>= 8
+		player[currentPlayer].xvel = temp0
+		player[currentPlayer].yvel = temp3
+		Abs(temp1)
+		object.nodeChangeDelay = temp1
+	else
+		temp0 = object.nodePos.x
+		temp0 -= player[currentPlayer].xpos
+		temp0 &= 0xFFFF0000
+		temp0 /= temp2
+
+		temp1 = object.nodePos.y
+		temp1 -= player[currentPlayer].ypos
+		if temp1 != 0
+			temp1 &= 0xFFFF0000
+			temp1 /= temp0
+		end if
+
+		temp1 <<= 8
+		temp2 <<= 8
+		temp0 >>= 8
+		player[currentPlayer].xvel = temp2
+		player[currentPlayer].yvel = temp1
+		Abs(temp0)
+		object.nodeChangeDelay = temp0
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case TRANSPORTER_WAITING
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_Static
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+				if object.direction == FLIP_X
+					temp0 += 0xF0000
+				end if
+				
+				if temp0 >= 0
+					if temp0 < 0x100000
+						temp1 = player[currentPlayer].ypos
+						temp1 -= object.ypos
+						temp1 += 0x200000
+						if temp1 >= 0
+							if temp1 < 0x400000
+								temp0 = true
+
+								if object.propertyValue == TRANSPORTER_TYPE_HIDDEN
+									if player[currentPlayer].rings < 50
+										temp0 = false
+									else
+										if stage.debugMode == false
+											if currentPlayer == 0
+												// Grant the "Hidden Transporter" Achievement
+												CallNativeFunction2(SetAchievement, ACHIEVEMENT_HIDDENTRANSPORTER, 100)
+											end if
+										end if
+									end if
+								end if
+
+								if temp0 == true
+									CreateTempObject(TypeName[Transporter], object.propertyValue, object.xpos, object.ypos)
+									GetTableValue(object[tempObjectPos].tablePtr, object.propertyValue, Transporter_tablePtrs)
+									GetTableValue(object[tempObjectPos].tableSize, object.propertyValue, Transporter_tableSizes)
+									object[tempObjectPos].state = TRANSPORTER_ACTIVATING
+									object[tempObjectPos].playerID = currentPlayer
+									player[currentPlayer].state = Player_State_Static
+									player[currentPlayer].tileCollisions = false
+									player[currentPlayer].animation = ANI_JUMPING
+									player[currentPlayer].rollAnimationSpeed = 0
+									player[currentPlayer].animationSpeed = 0
+									player[currentPlayer].xvel = 0
+									player[currentPlayer].yvel = 0
+									player[currentPlayer].gravity = GRAVITY_AIR
+									player[currentPlayer].scrollTracking = true
+									player[currentPlayer].xpos = object.xpos
+									player[currentPlayer].ypos = object.ypos
+									PlaySfx(SfxName[Rolling], false)
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRANSPORTER_ACTIVATING
+		currentPlayer = object.playerID
+
+		// Oscillate a bit
+		Sin256(player[currentPlayer].ypos, object.angle)
+		object.angle += 2
+		player[currentPlayer].ypos <<= 11
+		FlipSign(player[currentPlayer].ypos)
+		player[currentPlayer].ypos += object.ypos
+
+		// Stay Invincible while in the transporter
+		if player[currentPlayer].invincibleTimer < 2
+			player[currentPlayer].invincibleTimer = 2
+		end if
+
+		if object.angle == 0x80
+			temp0 = object.tablePos
+			temp0 <<= 1
+			GetTableValue(object.nodePos.x, temp0, object.tablePtr)
+			temp0++
+			GetTableValue(object.nodePos.y, temp0, object.tablePtr)
+
+			if object.propertyValue == TRANSPORTER_TYPE_ULU // (this one uses screen wrapping)
+				player[currentPlayer].ypos += 0x8000000
+				if currentPlayer == 0
+					tileLayer[2].scrollPos -= 0x1000000
+					camera[0].ypos += 0x800
+					screen.yoffset += 0x800
+				end if
+				
+				// Bug Details (kinda?):
+				// -> Rings are teleported in order to mask the screen wrap, but if P2 enters
+				//     a teleporter without P1 then the rings will visibly disappear in front of the camera
+				foreach (TypeName[Ring], arrayPos0, ACTIVE_ENTITIES)
+					BoxCollisionTest(C_TOUCH, object.entityPos, -128, -256, 0, 0, arrayPos0, -8, -8, 8, 8)
+					if checkResult == true
+						object[arrayPos0].ypos += 0x8000000
+					end if
+				next
+			end if
+
+			CallFunction(Transporter_HandleNewNode)
+			object.state++
+			PlaySfx(SfxName[Release], false)
+		end if
+		break
+
+	case TRANSPORTER_TRANSPORTING
+		currentPlayer = object.playerID
+		object.nodeChangeDelay--
+
+		if object.nodeChangeDelay < 0
+			player[currentPlayer].xpos = object.nodePos.x
+			player[currentPlayer].ypos = object.nodePos.y
+
+			object.tablePos++
+			if object.tablePos >= object.tableSize
+				object.type = TypeName[Blank Object]
+				player[currentPlayer].ypos &= 0x7FF0000
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				player[currentPlayer].animation = ANI_WALKING
+				player[currentPlayer].tileCollisions = true
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].yvel = 0x20000
+			else
+				temp0 = object.tablePos
+				temp0 <<= 1
+				GetTableValue(object.nodePos.x, temp0, object.tablePtr)
+				temp0++
+				GetTableValue(object.nodePos.y, temp0, object.tablePtr)
+				CallFunction(Transporter_HandleNewNode)
+			end if
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+
+	// Set position tables to the master table
+	SetTableValue(Transporter_movementTable0, TRANSPORTER_TYPE_D_LONG, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable1, TRANSPORTER_TYPE_D_MED, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable2, TRANSPORTER_TYPE_URU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable3, TRANSPORTER_TYPE_D_SHORT, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable4, TRANSPORTER_TYPE_DLD, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable5, TRANSPORTER_TYPE_U, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable6, TRANSPORTER_TYPE_ULU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable7, TRANSPORTER_TYPE_HIDDEN, Transporter_tablePtrs)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		temp7 = object.xpos
+		temp6 = object.ypos
+		
+		// TODO: attempt at drawing paths here, prolly broken though
+		
+		temp0 = object.propertyValue
+		temp0 &= 7
+		
+		GetTableValue(object.tablePtr, temp0, Transporter_tablePtrs)
+		GetTableValue(object.tableSize, temp0, Transporter_tableSizes)
+		object.tableSize *= 2
+		
+		temp0 = 0
+		while temp0 < object.tableSize
+			GetTableValue(object.nodePos.x, temp0, object.tablePtr)
+			temp0++
+			GetTableValue(object.nodePos.y, temp0, object.tablePtr)
+			temp0++
+			
+			DrawArrow(object.xpos, object.ypos, object.nodePos.x, object.nodePos.y, 0xFF, 0xFF, 0x00)
+			
+			object.xpos = object.nodePos.x
+			object.ypos = object.nodePos.y
+		loop
+		
+		object.xpos = temp7
+		object.ypos = temp6
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "T" (-ransporter)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Straight Down (Long)", TRANSPORTER_TYPE_D_LONG)
+	AddEnumVariable("Straight Down", TRANSPORTER_TYPE_D_MED)
+	AddEnumVariable("Up, Right, Up", TRANSPORTER_TYPE_URU)
+	AddEnumVariable("Straight Down (Short)", TRANSPORTER_TYPE_D_SHORT)
+	AddEnumVariable("Down, Left, Down", TRANSPORTER_TYPE_DLD)
+	AddEnumVariable("Straight Up", TRANSPORTER_TYPE_U)
+	AddEnumVariable("Up, Left, Up", TRANSPORTER_TYPE_ULU)
+	AddEnumVariable("Straight up if more than 49 rings (Awards Achievement)", TRANSPORTER_TYPE_HIDDEN)
+	
+	SetTableValue(Transporter_movementTable0, TRANSPORTER_TYPE_D_LONG, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable1, TRANSPORTER_TYPE_D_MED, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable2, TRANSPORTER_TYPE_URU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable3, TRANSPORTER_TYPE_D_SHORT, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable4, TRANSPORTER_TYPE_DLD, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable5, TRANSPORTER_TYPE_U, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable6, TRANSPORTER_TYPE_ULU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable7, TRANSPORTER_TYPE_HIDDEN, Transporter_tablePtrs)
+end event

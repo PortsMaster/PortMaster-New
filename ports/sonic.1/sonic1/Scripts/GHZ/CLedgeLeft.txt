@@ -1,0 +1,257 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: C Ledge Left Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.delay
+
+private alias 0 : CLEDGEL_ACTIVE
+private alias 1 : CLEDGEL_COLLAPSE
+private alias 2 : CLEDGEL_COLLAPSED
+private alias 3 : CLEDGEL_NONE
+private alias 4 : CLEDGEL_TILEDELAY
+private alias 5 : CLEDGEL_TILEFALL
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CLedgeLeft_DebugDraw
+reserve function CLedgeLeft_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+// This table is used by CLedgeRight as well, which is why it's public
+// (Neat note - in earlier versions of S1 this was a raw file, but after tables were introduced it was made to be like this instead)
+public table CLedgeLeft_heightArray
+	32, 32, 32, 32, 32, 32
+	32, 32, 33, 33, 34, 34
+	35, 35, 36, 36, 37, 37
+	38, 38, 39, 39, 40, 40
+	41, 41, 42, 42, 43, 43
+	44, 44, 45, 45, 46, 46
+	47, 47, 48, 48, 48, 48
+	48, 48, 48, 48, 48, 48
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function CLedgeLeft_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function CLedgeLeft_DebugSpawn
+	CreateTempObject(TypeName[C Ledge Left], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CLEDGEL_NONE
+		break
+
+	case CLEDGEL_COLLAPSE
+		if object.timer < 10
+			object.timer++
+		else
+			object.frame = 1
+			temp0 = 0
+			temp3 = object.ypos
+			temp3 -= 0x380000
+			temp4 = 10
+			while temp0 < 6
+				temp1 = 0
+				temp2 = object.xpos
+				temp2 -= 0x280000
+				while temp1 < 6
+					CreateTempObject(TypeName[C Ledge Left], object.frame, temp2, temp3)
+					object[tempObjectPos].state = CLEDGEL_TILEDELAY
+					object[tempObjectPos].delay = temp4
+					object.frame++
+					temp1++
+					temp2 += 0x100000
+					temp4 += 4
+				loop
+				temp4 -= 26
+				temp0++
+				temp3 += 0x100000
+			loop
+			
+			// In initial versions this just played Sfx[Ledge Break], but a later update changed it
+			// and made it play a sound across both ears
+			
+			PlaySfx(SfxName[Ledge Break L], false)
+			SetSfxAttributes(SfxName[Ledge Break L], -1, -100)
+			PlaySfx(SfxName[Ledge Break R], false)
+			SetSfxAttributes(SfxName[Ledge Break R], -1, 100)
+			
+			object.timer = 0
+			
+			object.state++
+		end if
+		break
+
+	case CLEDGEL_COLLAPSED
+		if object.timer < 20
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+		end if
+		break
+
+	case CLEDGEL_NONE
+		break
+
+	case CLEDGEL_TILEDELAY
+		if object.timer < object.delay
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CLEDGEL_TILEFALL
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state < CLEDGEL_NONE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].yvel >= 0
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+				temp0 >>= 17
+				temp0 += 24
+				if temp0 < 0
+					temp0 = 0
+				end if
+				if temp0 > 47
+					temp0 = 47
+				end if
+				temp2 = 47
+				temp2 -= temp0
+				GetTableValue(temp1, temp2, CLedgeLeft_heightArray)
+				temp1 -= 84
+				temp0 = temp1
+				temp0 += 32
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -48, temp1, 48, temp0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					player[currentPlayer].ypos += 0x40000
+					if object.state == CLEDGEL_ACTIVE
+						object.state = CLEDGEL_COLLAPSE
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case CLEDGEL_ACTIVE
+	case CLEDGEL_COLLAPSE
+		DrawSprite(0)
+		break
+
+	case CLEDGEL_TILEDELAY
+	case CLEDGEL_TILEFALL
+		DrawSprite(object.propertyValue)
+		break
+
+	case CLEDGEL_COLLAPSED
+	case CLEDGEL_NONE
+	default
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("GHZ/Objects.gif")
+	
+	// 0 - Full Platform Frame
+	SpriteFrame(-48, -64, 96, 96, 1, 51)
+	
+	// All the Platform "Tile" Frames are done in a loop
+	temp0 = 51
+	while temp0 < 147 // sprY + height (51 + 96 = 147)
+		temp1 = 1
+		while temp1 < 97 // sprX + width (1 + 96 = 97)
+			SpriteFrame(-8, -8, 16, 16, temp1, temp0)
+			temp1 += 16
+		loop
+		
+		temp0 += 16
+	loop
+
+	// This was hangin' out in the earliest S1 builds
+	// It's safe to assume that this is how it was done pre-tables, given that this object was done while the RSDKv4 spec was still being developed
+	// (Also separate other note - LoadTextFile had 3 paramters back then but in current versions in only has 2, that's another neat little change)
+    // LoadTextFile(MENU_2, "Data/Game/Misc/CLedgeMask.bin", false)
+
+	SetTableValue(TypeName[C Ledge Left], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CLedgeLeft_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CLedgeLeft_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		temp0 = 48; temp1 = 48; temp2 = 48; temp3 = 48;
+		CallFunction(EditorHelpers_DrawHitbox)
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("GHZ/Objects.gif")
+	SpriteFrame(-48, -64, 96, 96, 1, 51)
+
+	// Although used by the object, it shouldn't be set by the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

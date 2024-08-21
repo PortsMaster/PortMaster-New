@@ -1,0 +1,688 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: VS Game Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// This object isn't only used for managing 2PVS things, but also for the (2013, not Origins) Boss Rush too
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.storedPosP1.x
+private alias object.value2 : object.storedPosP1.y
+private alias object.value3 : object.storedPosP2.x
+private alias object.value4 : object.storedPosP2.y
+private alias object.value5 : object.countdownPlayer
+private alias object.value6 : object.countdownTimer
+private alias object.value7 : object.waterSlotID
+
+// States
+private alias 0 : VSGAME_DISPLAYTAGS
+private alias 1 : VSGAME_TELEPORT
+private alias 2 : VSGAME_FADEOUT
+private alias 3 : VSGAME_FINISH_COUNTDOWN
+private alias 4 : VSGAME_GOTOVSRESULTS
+private alias 5 : VSGAME_BOSSATTACK_FADEIN
+private alias 6 : VSGAME_BOSSATTACK_END
+private alias 7 : VSGAME_SCREENFADE
+
+// Water Aliases
+private alias object.value1 : object.constBubbleTimer
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.ixpos : player.ixpos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.visible : player.visible
+private alias object.collisionPlane : player.collisionPlane
+private alias object.propertyValue : player.character
+private alias object.value0  : player.rings
+private alias object.value1  : player.timer
+private alias object.value4  : player.drownLevel
+private alias object.value6  : player.speedShoesTimer
+private alias object.value7  : player.invincibleTimer
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value37 : player.shield
+
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+
+// Shields
+private alias 1 : SHIELD_NORMAL
+
+// Reserved Object Slots
+private alias 0  : SLOT_PLAYER1
+private alias 1  : SLOT_PLAYER2
+private alias 30 : SLOT_VSGAME
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case VSGAME_DISPLAYTAGS
+		if vs.playerID == 0
+			if oscillation == 500
+				// Sync the two player's randomValue so that the same random events happen between them
+				CallNativeFunction2(TransmitGlobal, "vs.randomValue", vs.randomValue)
+			end if
+		end if
+
+		if player[SLOT_PLAYER1].state != Player_State_Static
+			object.storedPosP1.x = player[SLOT_PLAYER1].xpos
+			object.storedPosP1.y = player[SLOT_PLAYER1].ypos
+		end if
+
+		if player[SLOT_PLAYER2].state != Player_State_Static
+			object.storedPosP2.x = player[SLOT_PLAYER2].xpos
+			object.storedPosP2.y = player[SLOT_PLAYER2].ypos
+		end if
+		break
+
+	case VSGAME_TELEPORT
+		if object.timer < 384
+			object.timer += 16
+
+			if player[SLOT_PLAYER1].state == Player_State_Static
+				object.state = VSGAME_FADEOUT
+#platform: USE_ORIGINS
+			else
+				if player[SLOT_PLAYER1].state == Player_State_Death
+					object.state = VSGAME_FADEOUT
+				end if
+#endplatform
+
+			end if
+
+			if player[SLOT_PLAYER2].state == Player_State_Static
+				object.state = VSGAME_FADEOUT
+#platform: USE_ORIGINS
+			else
+				if player[SLOT_PLAYER2].state == Player_State_Death
+					object.state = VSGAME_FADEOUT
+				end if
+#endplatform
+			end if
+		else
+			object.state = VSGAME_FADEOUT
+			if player[SLOT_PLAYER2].type != TypeName[Blank Object]
+#platform: USE_STANDALONE
+				player[SLOT_PLAYER1].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[SLOT_PLAYER1].state = Player_State_Air_NoDropDash
+#endplatform
+				player[SLOT_PLAYER1].xpos = object[SLOT_VSGAME].storedPosP2.x
+				player[SLOT_PLAYER1].ypos = object[SLOT_VSGAME].storedPosP2.y
+
+#platform: USE_STANDALONE
+				player[SLOT_PLAYER2].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[SLOT_PLAYER2].state = Player_State_Air_NoDropDash
+#endplatform
+				player[SLOT_PLAYER2].xpos = object[SLOT_VSGAME].storedPosP1.x
+				player[SLOT_PLAYER2].ypos = object[SLOT_VSGAME].storedPosP1.y
+#platform: USE_ORIGINS
+				camera[0].xpos = player[SLOT_PLAYER1].ixpos
+				camera[0].ypos = player[SLOT_PLAYER1].iypos
+				camera[1].xpos = player[SLOT_PLAYER2].ixpos
+				camera[1].ypos = player[SLOT_PLAYER2].iypos
+#endplatform
+#platform: USE_STANDALONE
+				screen.cameraX = player[SLOT_PLAYER1].ixpos
+				screen.cameraY = player[SLOT_PLAYER1].iypos
+#endplatform
+
+				temp0 = player[SLOT_PLAYER1].collisionPlane
+				player[SLOT_PLAYER1].collisionPlane = player[SLOT_PLAYER2].collisionPlane
+				player[SLOT_PLAYER2].collisionPlane = temp0
+
+				temp0 = player[SLOT_PLAYER1].shield
+				player[SLOT_PLAYER1].shield = player[SLOT_PLAYER2].shield
+				player[SLOT_PLAYER2].shield = temp0
+				
+#platform: USE_ORIGINS
+				if object[SLOT_VSGAME].waterSlotID != 0
+					arrayPos0 = 0
+					arrayPos1 = 0
+					
+					CheckNotEqual(player[SLOT_PLAYER1].drownLevel, 0)
+					temp0 = checkResult
+					CheckEqual(player[SLOT_PLAYER2].drownLevel, 0)
+					checkResult &= temp0
+					if checkResult != false
+						arrayPos0 = 0
+						arrayPos1 = 1
+					end if
+					
+					CheckEqual(player[SLOT_PLAYER1].drownLevel, 0)
+					temp0 = checkResult
+					CheckNotEqual(player[SLOT_PLAYER2].drownLevel, 0)
+					checkResult &= temp0
+					if checkResult != false
+						arrayPos0 = 1
+						arrayPos1 = 0
+					end if
+					
+					if arrayPos0 != arrayPos1
+						player[arrayPos0].drownLevel = 0
+						currentPlayer = arrayPos0
+						CallFunction(BrokenMonitor_ResetDrownMusic)
+						player[arrayPos0].yvel <<= 1
+						if player[arrayPos0].yvel < -0x100000
+							player[arrayPos0].yvel = -0x100000
+						end if
+						
+						if player[arrayPos0].state == Player_State_Fly
+							if player[arrayPos0].timer < 480
+								PlaySfx(SfxName[Flying], true)
+							else
+								PlaySfx(SfxName[Jump], true)
+							end if
+						end if
+						
+						if player[arrayPos1].yvel > 0
+							player[arrayPos1].yvel >>= 2
+						end if
+						
+						if player[arrayPos1].state == Player_State_Fly
+							StopSfx(SfxName[Flying])
+							StopSfx(SfxName[Jump])
+						end if
+						
+						player[arrayPos1].xvel >>= 1
+						player[arrayPos1].speed >>= 1
+						arrayPos0 = object.waterSlotID
+						arrayPos0 += 0 // the world would crumble if this wasn't here
+						object[arrayPos0].constBubbleTimer = 52
+						arrayPos0++
+						object[arrayPos0].constBubbleTimer = 52
+					end if
+				end if
+#endplatform
+
+				arrayPos0 = 0
+				arrayPos0 += playerCount
+				temp0 = object[arrayPos0].type
+
+				// Normally players shouldn't be Super in 2PVS, but if they are then just make them have some invincibility
+				if Player_superState == SUPERSTATE_SUPER
+					temp0 = invincibilityType
+					player[SLOT_PLAYER1].invincibleTimer = 1260
+				end if
+
+				arrayPos1 = 1
+				arrayPos1 += playerCount
+				temp1 = object[arrayPos1].type
+				if temp0 == temp1
+					if temp0 != invincibilityType
+						currentPlayer = 0
+						CallFunction(Player_ApplyShield)
+						currentPlayer = 1
+						arrayPos0 = arrayPos1
+						CallFunction(Player_ApplyShield)
+					else
+						temp0 = player[SLOT_PLAYER1].invincibleTimer
+						player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+						player[SLOT_PLAYER2].invincibleTimer = temp0
+					end if
+				else
+					if temp0 == invincibilityType
+						currentPlayer = 0
+						CallFunction(Player_ApplyShield)
+						ResetObjectEntity(arrayPos1, invincibilityType, 0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
+						object[arrayPos1].priority = PRIORITY_ACTIVE
+
+						temp0 = player[SLOT_PLAYER1].invincibleTimer
+						player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+						player[SLOT_PLAYER2].invincibleTimer = temp0
+					else
+						if temp1 == invincibilityType
+							ResetObjectEntity(arrayPos0, invincibilityType, 0, player[SLOT_PLAYER1].xpos, player[SLOT_PLAYER1].ypos)
+							object[arrayPos0].priority = PRIORITY_ACTIVE
+							currentPlayer = 1
+							arrayPos0 = arrayPos1
+							CallFunction(Player_ApplyShield)
+
+							temp0 = player[SLOT_PLAYER1].invincibleTimer
+							player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+							player[SLOT_PLAYER2].invincibleTimer = temp0
+						else
+							currentPlayer = 0
+							CallFunction(Player_ApplyShield)
+							currentPlayer = 1
+							arrayPos0 = arrayPos1
+							CallFunction(Player_ApplyShield)
+						end if
+					end if
+				end if
+
+				temp0 = player[SLOT_PLAYER1].speedShoesTimer
+				player[SLOT_PLAYER1].speedShoesTimer = player[SLOT_PLAYER2].speedShoesTimer
+				player[SLOT_PLAYER2].speedShoesTimer = temp0
+				
+#platform: USE_ORIGINS
+				temp0 = player[SLOT_PLAYER1].sortedDrawOrder
+				player[SLOT_PLAYER1].sortedDrawOrder = player[SLOT_PLAYER2].sortedDrawOrder
+				player[SLOT_PLAYER2].sortedDrawOrder = temp0
+#endplatform
+				
+				currentPlayer = 0
+				CallFunction(Player_UpdatePhysicsState)
+				currentPlayer = 1
+				CallFunction(Player_UpdatePhysicsState)
+
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					switch player[currentPlayer].character
+					case PLAYER_TAILS_A
+					case PLAYER_KNUCKLES_A
+						if player[currentPlayer].shield > SHIELD_NORMAL
+							player[currentPlayer].shield = SHIELD_NORMAL
+							arrayPos0 = currentPlayer
+							arrayPos0 += playerCount
+							if object[arrayPos0].type != invincibilityType
+								CallFunction(Player_ApplyShield)
+							end if
+						end if
+						// no break, but who cares
+					end switch
+				next
+			end if
+		end if
+		SetScreenFade(208, 255, 224, object.timer)
+		break
+
+	case VSGAME_FADEOUT
+		if object.timer > 0
+			object.timer -= 16
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		SetScreenFade(208, 255, 224, object.timer)
+		break
+
+	case VSGAME_FINISH_COUNTDOWN
+#platform: USE_STANDALONE
+		if object.countdownTimer > 0
+			object.timer++
+			if object.timer == 60
+				object.timer = 0
+				object.countdownTimer--
+				if object.countdownTimer == 0
+					currentPlayer = object.countdownPlayer
+					if player[currentPlayer].state != Player_State_Death
+						if player[currentPlayer].type != TypeName[Death Event]
+#endplatform
+#platform: USE_ORIGINS
+		currentPlayer = object.countdownPlayer
+		if player[currentPlayer].state != Player_State_Death
+			if player[currentPlayer].type != TypeName[Death Event]
+				if object.countdownTimer > 0
+					object.timer++
+					if object.timer == 60
+						object.timer = 0
+						object.countdownTimer--
+						if object.countdownTimer == 0
+
+#endplatform
+
+							if currentPlayer == 0
+								if vs.playerID == 0
+									temp2 = 0
+								else
+									temp2 = 1
+								end if
+							else
+								if vs.playerID == 0
+									temp2 = 1
+								else
+									temp2 = 0
+								end if
+							end if
+
+							if temp2 == 0
+								vs.time1P = stage.seconds
+								vs.time1P *= 100
+								temp2 = stage.minutes
+								temp2 *= 6000
+								vs.time1P += temp2
+								vs.time1P += stage.milliSeconds
+							else
+								vs.time2P = stage.seconds
+								vs.time2P *= 100
+								temp2 = stage.minutes
+								temp2 *= 6000
+								vs.time2P += temp2
+								vs.time2P += stage.milliSeconds
+							end if
+
+							stage.timeOver = true
+#platform: USE_ORIGINS
+							stage.timeEnabled = false
+#endplatform
+							CallFunction(Player_Kill)
+						end if
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case VSGAME_GOTOVSRESULTS
+		if object.timer < 384
+			object.timer += 16
+		else
+			if vs.playerID == 0
+				vs.rings1P = player[SLOT_PLAYER1].rings
+				vs.rings2P = player[SLOT_PLAYER2].rings
+			else
+				vs.rings1P = player[SLOT_PLAYER2].rings
+				vs.rings2P = player[SLOT_PLAYER1].rings
+			end if
+			stage.activeList = PRESENTATION_STAGE
+			stage.listPos = 3
+			LoadStage()
+		end if
+
+		if object.timer > 0
+			SetScreenFade(0, 0, 0, object.timer)
+		end if
+		break
+
+	case VSGAME_BOSSATTACK_FADEIN
+		if object.timer == 320
+			player[SLOT_PLAYER1].rings = vs.rings1P
+			player[SLOT_PLAYER1].speed = vs.speed
+			player[SLOT_PLAYER1].xvel = vs.speed
+			player[SLOT_PLAYER1].yvel = 0
+			player[SLOT_PLAYER1].gravity = GRAVITY_GROUND
+			player[SLOT_PLAYER1].shield = vs.items1P
+			temp0 = currentPlayer
+			temp1 = arrayPos0
+			currentPlayer = 0
+			arrayPos0 = playerCount
+			arrayPos0 += currentPlayer
+			CallFunction(Player_ApplyShield)
+			currentPlayer = temp0
+			arrayPos0 = temp1
+			temp0 = vs.time1P
+			temp0 /= 6000
+			stage.minutes = temp0
+			temp0 = vs.time1P
+			temp0 /= 100
+			temp0 %= 60
+			stage.seconds = temp0
+			temp0 = vs.time1P
+			temp0 %= 100
+			stage.milliSeconds = temp0
+			TitleCard_showZoneText = true // (The EHZ Boss Rush file already has this set btw)
+		end if
+
+		if object.timer < 256
+			stage.state = STAGE_RUNNING
+			stage.timeEnabled = true
+			player[SLOT_PLAYER1].visible = true
+		else
+			if stage.listPos == 2 // CPZ (Boss Rush)
+				player[SLOT_PLAYER1].ypos = object.ypos
+			end if
+		end if
+
+		if object.timer > 0
+			object.timer -= 16
+		else
+			object.type = TypeName[Blank Object]
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	case VSGAME_BOSSATTACK_END
+		if object.timer > -1
+			if object.timer < 320
+				object.timer += 16
+			else
+				vs.rings1P = player[SLOT_PLAYER1].rings
+				vs.time1P = stage.seconds
+				vs.time1P *= 100
+				temp2 = stage.minutes
+				temp2 *= 6000
+				vs.time1P += temp2
+				vs.time1P += stage.milliSeconds
+				vs.items1P = player[SLOT_PLAYER1].shield
+				vs.speed = player[SLOT_PLAYER1].speed
+				stage.listPos++
+				LoadStage()
+			end if
+
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			if player[SLOT_PLAYER1].xpos > object.xpos
+				object.timer = 0
+			end if
+		end if
+		break
+		
+#platform: USE_ORIGINS
+	case VSGAME_SCREENFADE
+		object.drawOrder = 6
+		
+		if object.timer > 0
+			object.timer -= 16
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		break
+#endplatform
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case VSGAME_DISPLAYTAGS
+#platform: USE_STANDALONE
+		temp0 = vs.playerID
+		temp0 ^= 1
+		DrawSpriteXY(temp0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
+#endplatform
+
+#platform: USE_ORIGINS
+		currentPlayer = screen.currentID
+		currentPlayer ^= 1
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			object.direction = FLIP_X
+			DrawSpriteFX(currentPlayer, FX_FLIP, player[currentPlayer].xpos, player[currentPlayer].ypos)
+		else
+			DrawSpriteXY(currentPlayer, player[currentPlayer].xpos, player[currentPlayer].ypos)
+		end if
+#endplatform
+		break
+
+	case VSGAME_FINISH_COUNTDOWN
+#platform: USE_STANDALONE
+		temp0 = vs.playerID
+		temp0 ^= 1
+		DrawSpriteXY(temp0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
+
+		temp0 = object.countdownTimer
+		temp0 /= 10
+		temp0 += 2
+		temp1 = screen.xcenter
+		temp1 -= 8
+		DrawSpriteScreenXY(temp0, temp1, 13)
+
+		temp0 = object.countdownTimer
+		temp0 %= 10
+		temp0 += 2
+		temp1 += 8
+		DrawSpriteScreenXY(temp0, temp1, 13)
+#endplatform
+
+#platform: USE_ORIGINS
+		currentPlayer = screen.currentID
+		currentPlayer ^= 1
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			object.direction = FLIP_X
+			DrawSpriteFX(currentPlayer, FX_FLIP, player[currentPlayer].xpos, player[currentPlayer].ypos)
+		else
+			DrawSpriteXY(currentPlayer, player[currentPlayer].xpos, player[currentPlayer].ypos)
+		end if
+		
+		if screen.currentID == object.countdownPlayer
+			temp0 = object.countdownTimer
+			temp0 /= 10
+			temp0 += 2
+			temp1 = object.countdownTimer
+			temp1 %= 10
+			temp1 += 2
+			temp2 = screen.xcenter
+			temp2 -= 8
+			temp2 += 8
+			
+			if game.playMode == BOOT_PLAYMODE_MIRRORING
+				object.direction = FLIP_X
+				DrawSpriteScreenFX(temp1, FX_FLIP, temp2, 13)
+				temp2 += 8
+				DrawSpriteScreenFX(temp0, FX_FLIP, temp2, 13)
+			else
+				DrawSpriteScreenXY(temp0, temp2, 13)
+				temp2 += 8
+				DrawSpriteScreenXY(temp1, temp2, 13)
+			end if
+		end if
+#endplatform
+		break
+
+	case VSGAME_BOSSATTACK_FADEIN
+		if object.timer > 256
+			DrawRect(0, 0, screen.xsize, screen.ysize, 0x00, 0x00, 0x00, 0xFF)
+		end if
+		break
+		
+#platform: USE_ORIGINS
+	case VSGAME_SCREENFADE
+		if object.propertyValue == screen.currentID
+			DrawRect(0, 0, screen.xsize, screen.ysize, 208, 255, 224, object.timer)
+		end if
+		break
+#endplatform
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -32, 16, 7, 103, 48) // 1P - #0
+	SpriteFrame(-8, -32, 16, 7, 103, 56) // 2P - #1
+
+	SpriteFrame(0, 0, 8, 11, 1, 50)		 // 0  - #2
+	SpriteFrame(0, 0, 8, 11, 10, 50)	 // 1  - #3
+	SpriteFrame(0, 0, 8, 11, 19, 50)	 // 2  - #4
+	SpriteFrame(0, 0, 8, 11, 28, 50)	 // 3  - #5
+	SpriteFrame(0, 0, 8, 11, 1, 62)		 // 4  - #6
+	SpriteFrame(0, 0, 8, 11, 10, 62)	 // 5  - #7
+	SpriteFrame(0, 0, 8, 11, 19, 62)	 // 6  - #8
+	SpriteFrame(0, 0, 8, 11, 28, 62)	 // 7  - #9
+	SpriteFrame(0, 0, 8, 11, 1, 74)		 // 8  - #10
+	SpriteFrame(0, 0, 8, 11, 10, 74)	 // 9  - #11
+	
+	temp0 = false
+	foreach (TypeName[VS Game], arrayPos0, ALL_ENTITIES)
+		switch object[arrayPos0].propertyValue
+		case 1 // Boss Attack (Start)
+			object[arrayPos0].state = VSGAME_BOSSATTACK_FADEIN
+			object[arrayPos0].timer = 320
+			object[arrayPos0].priority = PRIORITY_ALWAYS
+			object[arrayPos0].drawOrder = 6
+			player[SLOT_PLAYER1].visible = false
+			stage.state = STAGE_PAUSED
+			temp0++
+			break
+
+		case 2 // Boss Attack (End)
+			object[arrayPos0].state = VSGAME_BOSSATTACK_END
+			object[arrayPos0].timer = -1
+			object[arrayPos0].priority = PRIORITY_XBOUNDS
+			temp0++
+			break
+
+		default
+			object[arrayPos0].type = TypeName[Blank Object]
+			break
+		end switch
+	next
+
+	if temp0 == false
+		vs.bossAttack = false
+	end if
+
+	if options.vsMode == true
+		object[SLOT_VSGAME].type = TypeName[VS Game]
+		object[SLOT_VSGAME].priority = PRIORITY_ACTIVE
+		object[SLOT_VSGAME].drawOrder = 5
+		object[SLOT_VSGAME].countdownTimer = 60
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -32, 16, 7, 103, 56)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	// type 0 isn't to be placed in a level
+	AddEnumVariable("Boss Attack (Start)", 1)
+	AddEnumVariable("Boss Attack (End)", 2)
+end event

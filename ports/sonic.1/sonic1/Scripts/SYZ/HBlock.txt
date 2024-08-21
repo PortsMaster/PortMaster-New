@@ -1,0 +1,244 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: H Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.amplitude.x
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.gravity : player.gravity
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HBlock_DebugDraw
+reserve function HBlock_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value HBlock_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HBlock_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function HBlock_DebugSpawn
+	CreateTempObject(TypeName[H Block], object.direction, object.xpos, object.ypos)
+
+	temp0 = debugMode[0].currentSelection
+	temp0 -= HBlock_startDebugID
+	if temp0 == 0
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].amplitude.x = 0x2000
+		else
+			object[tempObjectPos].amplitude.x = -0x2000
+		end if
+	else
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].amplitude.x = 0x1000
+		else
+			object[tempObjectPos].amplitude.x = -0x1000
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = SYZSetup_oscillation
+	object.angle *= 0x200
+	object.angle /= 356
+	
+	Sin(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= object.amplitude.x
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= 0xFFFF0000
+	object.collisionOffset.x -= object.drawPos.x
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = object.xpos
+		object.xpos = object.drawPos.x
+		temp1 = player[currentPlayer].gravity
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_TOP
+			if temp1 == GRAVITY_AIR
+				player[currentPlayer].xpos += object.collisionOffset.x
+			end if
+		end if
+		object.xpos = temp0
+	next
+end event
+
+
+event ObjectDraw
+	Sin(object.drawPos.x, object.angle)
+	object.drawPos.x *= object.amplitude.x
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000
+
+	DrawSpriteXY(0, object.drawPos.x, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 119, 34)
+
+	foreach (TypeName[H Block], arrayPos0, ALL_ENTITIES)
+		switch object[arrayPos0].propertyValue
+		case 0
+			object[arrayPos0].amplitude.x = 0x2000
+			break
+
+		case 1
+			object[arrayPos0].amplitude.x = 0x1000
+			break
+
+		case 2
+			object[arrayPos0].amplitude.x = -0x1000
+			break
+
+		case 3
+			object[arrayPos0].amplitude.x = -0x2000
+			break
+			
+		end switch
+	next
+
+	temp0 = 0
+	HBlock_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[H Block], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(HBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(HBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 0 // moveSpeed
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		case 0 // moveSpeed
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw the block's starting position
+
+		switch object.propertyValue
+		case 0
+			object.amplitude.x = 0x2000
+			break
+			
+		case 1
+			object.amplitude.x = 0x1000
+			break
+			
+		case 2
+			object.amplitude.x = -0x1000
+			break
+			
+		case 3
+			object.amplitude.x = -0x2000
+			break
+			
+		end switch
+
+		object.inkEffect = INK_BLEND
+		Sin(object.drawPos.x, 0x80)
+		object.drawPos.x *= object.amplitude.x
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= 0xFFFF0000
+
+		DrawSpriteFX(0, FX_INK, object.drawPos.x, object.ypos)
+		
+		switch object.propertyValue
+		case 0
+		case 3
+			// Draw an arrow for the block's full path
+			FlipSign(object.amplitude.x)
+			Sin(temp0, 0x80)
+			temp0 *= object.amplitude.x
+			temp0 += object.xpos
+			temp0 &= 0xFFFF0000
+			DrawArrow(object.drawPos.x, object.ypos, temp0, object.ypos, 255, 255, 255)
+			break
+			
+		end switch
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 119, 34)
+
+	AddEditorVariable("moveSpeed")
+	SetActiveVariable("moveSpeed")
+	AddEnumVariable("Fast", 0)
+	AddEnumVariable("Slow", 1)
+	AddEnumVariable("Fast (Reverse)", 2)
+	AddEnumVariable("Slow (Reverse)", 3)
+end event

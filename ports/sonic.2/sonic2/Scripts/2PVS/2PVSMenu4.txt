@@ -1,0 +1,354 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: 2P VS Menu 4 Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// This script is exclusive to Sonic Origins
+// It's a local multiplayer version of 2P VS Menu 2 (Character Select)
+
+// Slot 0 = 2PVSSetup
+// Slot 1 = Player 1's 2PVSMenu4 (prop val 1)
+// Slot 2 = Player 2's 2PVSMenu4 (prop val 2)
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue	: object.player
+
+private alias object.value0			: object.timer
+private alias object.value1			: object.selection
+private alias object.value2			: object.selectionTimer
+
+// States
+private alias 0 : 2PVSMENU4_SETUP
+private alias 1 : 2PVSMENU4_WAITFORINPUT
+private alias 2 : 2PVSMENU4_SELECTING
+private alias 3 : 2PVSMENU4_SELECTEDPLAYER
+private alias 4 : 2PVSMENU4_WAITFORP1
+private alias 5 : 2PVSMENU4_WAITFORP2
+private alias 6 : 2PVSMENU4_TOVSMENU3
+private alias 7 : 2PVSMENU4_TOVSMENU1
+
+// Selections
+private alias 0 : 2PVSMENU4_SEL_NONE
+private alias 1 : 2PVSMENU4_SEL_SONIC
+private alias 2 : 2PVSMENU4_SEL_TAILS
+private alias 3 : 2PVSMENU4_SEL_KNUX
+private alias 4 : 2PVSMENU4_SEL_AMY
+private alias 5 : 2PVSMENU4_SEL_BACK
+
+// 2PVSMenu1 Aliases
+private alias object.value0 : 2PVSMenu1.timer
+
+private alias 1 : 2PVSMENU1_SELECTING
+
+// 2PVSMenu3 Aliases
+private alias object.value0 : 2PVSMenu3.timer
+
+private alias 1 : 2PVSMENU3_SELECTING
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case 2PVSMENU4_SETUP
+		AssignInputSlotToDevice(object.player, -1)
+		object.selection = 2PVSMENU4_SEL_NONE
+		object.state = 2PVSMENU4_WAITFORINPUT
+		break
+		
+	case 2PVSMENU4_WAITFORINPUT
+		arrayPos0 = object.player
+		
+		checkResult = keyPress[arrayPos0].up
+		checkResult |= keyPress[arrayPos0].down
+		checkResult |= keyPress[arrayPos0].left
+		checkResult |= keyPress[arrayPos0].right
+		checkResult |= keyPress[arrayPos0].buttonA
+		checkResult |= keyPress[arrayPos0].buttonC
+		checkResult |= keyPress[arrayPos0].start
+		
+		if checkResult == true
+			object.selection = 2PVSMENU4_SEL_SONIC
+			object.state = 2PVSMENU4_SELECTING
+			PlaySfx(SfxName[Menu Move], false)
+		end if
+		
+		if keyPress[0].buttonB == true
+			if object.entityPos == 1 // If this is the P1 box
+				if object.state == 2PVSMENU4_WAITFORINPUT
+					object.timer = 0
+					object.state = 2PVSMENU4_TOVSMENU1
+				end if
+			end if
+		end if
+		break
+		
+	case 2PVSMENU4_SELECTING
+		arrayPos0 = object.player
+		
+		temp0 = 0
+		
+		if keyPress[arrayPos0].buttonB == true
+			object.selection = 2PVSMENU4_SEL_NONE
+			object.state = 2PVSMENU4_WAITFORINPUT
+		else
+			if keyPress[arrayPos0].left == true
+				temp0 = 1
+				object.selection--
+				if object.selection < 2PVSMENU4_SEL_SONIC
+					if game.hasPlusDLC == true
+						object.selection = 2PVSMENU4_SEL_AMY
+					else
+						object.selection = 2PVSMENU4_SEL_KNUX
+					end if
+				end if
+				PlaySfx(SfxName[Menu Move], false)
+			end if
+			
+			if keyPress[arrayPos0].right == true
+				temp0 = 2
+				object.selection++
+				if game.hasPlusDLC == true
+					if object.selection > 2PVSMENU4_SEL_AMY
+						object.selection = 2PVSMENU4_SEL_SONIC
+					end if
+				else
+					if object.selection > 2PVSMENU4_SEL_KNUX
+						object.selection = 2PVSMENU4_SEL_SONIC
+					end if
+				end if
+				PlaySfx(SfxName[Menu Move], false)
+			end if
+			
+			checkResult = keyPress[arrayPos0].start
+			checkResult |= keyPress[arrayPos0].buttonA
+			if checkResult == true
+				object.selectionTimer = 0
+				PlaySfx(SfxName[Star Post], false)
+				object.state = 2PVSMENU4_SELECTEDPLAYER
+			end if
+		end if
+		
+		foreach (TypeName[2P VS Menu 4], arrayPos0, ACTIVE_ENTITIES)
+			if arrayPos0 != object.entityPos
+				if object[arrayPos0].state > 2PVSMENU4_SELECTING
+					// If both players are highlighting the same character, change it so they aren't
+					if object[arrayPos0].selection == object.selection
+						if temp0 == 1
+							object.selection--
+							if object.value1 < 2PVSMENU4_SEL_SONIC
+								if game.hasPlusDLC == true
+									object.selection = 2PVSMENU4_SEL_AMY
+								else
+									object.selection = 2PVSMENU4_SEL_KNUX
+								end if
+							end if
+						else
+							object.selection++
+							if game.hasPlusDLC == true
+								if object.selection > 2PVSMENU4_SEL_AMY
+									object.selection = 2PVSMENU4_SEL_SONIC
+								end if
+							else
+								if object.selection > 2PVSMENU4_SEL_KNUX
+									object.selection = 2PVSMENU4_SEL_SONIC
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+		
+	case 2PVSMENU4_SELECTEDPLAYER
+		if object.selectionTimer < 32
+			object.selectionTimer++
+		else
+			object.timer = -256
+			
+			if object.player == 1
+				object.state = 2PVSMENU4_WAITFORP2
+				if object.selection == 2PVSMENU4_SEL_AMY
+					stage.playerListPos = PLAYER_AMY
+				else
+					stage.playerListPos = object.selection
+					stage.playerListPos--
+				end if
+			else
+				object.state = 2PVSMENU4_WAITFORP1
+				if object.selection == 2PVSMENU4_SEL_AMY
+					vs.player2Type = PLAYER_AMY
+				else
+					vs.player2Type = object.selection
+					vs.player2Type--
+				end if
+			end if
+		end if
+		break
+		
+	case 2PVSMENU4_WAITFORP1
+		break
+		
+	case 2PVSMENU4_WAITFORP2
+		checkResult = true
+		foreach (TypeName[2P VS Menu 4], arrayPos0, ACTIVE_ENTITIES)
+			if object[arrayPos0].state < 2PVSMENU4_WAITFORP1
+				checkResult = false
+			end if
+		next
+		
+		if checkResult == true
+			object.state = 2PVSMENU4_TOVSMENU3
+		else
+			arrayPos0 = object.player
+			if keyPress[arrayPos0].buttonB == true
+				object.state = 2PVSMENU4_SELECTING
+				PlaySfx(SfxName[Menu Back], false)
+			end if
+		end if
+		break
+		
+	case 2PVSMENU4_TOVSMENU3
+		if object.timer < 256
+			object.timer += 16
+			if object.timer > 0
+				SetScreenFade(0, 0, 0, object.timer)
+			end if
+		else
+			ResetObjectEntity(1, TypeName[2P VS Menu 3], 0, 0, 0)
+			object[1].priority = PRIORITY_ACTIVE
+			ResetObjectEntity(2, TypeName[Blank Object], 0, 0, 0)
+			object[0].state = 2PVSMENU3_SELECTING
+			2PVSMenu3[0].timer = 384
+			SetScreenFade(0, 0, 0, 255)
+		end if
+		break
+		
+	case 2PVSMENU4_TOVSMENU1
+		if object.timer < 256
+			object.timer += 16
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			ResetObjectEntity(1, TypeName[2P VS Menu 1], 0, 0, 0)
+			object[1].priority = PRIORITY_ACTIVE
+			ResetObjectEntity(2, TypeName[Blank Object], 0, 0, 0)
+			object[0].state = 2PVSMENU1_SELECTING
+			2PVSMenu1[0].timer = 384
+			SetScreenFade(0, 0, 0, 255)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.player == 1
+		// For the main object, draw the "Player Select" text at the top of the screen
+		DrawSpriteScreenXY(0, screen.xcenter, 17)
+		DrawSpriteScreenXY(1, screen.xcenter, 17)
+	end if
+	
+	// Draw the Selection Box
+	// (This little bit of math is to make the selection box flash a little, after the character's been selected)
+	temp0 = object.selectionTimer
+	temp0 >>= 2
+	temp0 &= 1
+	temp0 += 2
+	DrawSpriteScreenXY(temp0, screen.xcenter, object.ypos)
+	
+	switch object.selection
+	case 2PVSMENU4_SEL_NONE
+		DrawSpriteScreenXY(11, screen.xcenter, object.ypos) // "Wating for"
+		temp0 = 11
+		temp0 += object.player
+		DrawSpriteScreenXY(temp0, screen.xcenter, object.ypos) // Either "P1" or "P2"
+		break
+		
+	case 2PVSMENU4_SEL_SONIC
+		DrawSpriteScreenXY(4, screen.xcenter, object.ypos)
+		break
+		
+	case 2PVSMENU4_SEL_TAILS
+		DrawSpriteScreenXY(5, screen.xcenter, object.ypos)
+		break
+		
+	case 2PVSMENU4_SEL_KNUX
+		DrawSpriteScreenXY(6, screen.xcenter, object.ypos)
+		break
+		
+	case 2PVSMENU4_SEL_AMY
+		DrawSpriteScreenXY(14, screen.xcenter, object.ypos)
+		break
+	end switch
+	
+	if object.state == 2PVSMENU4_SELECTING
+		arrayPos0 = object.player
+		
+		if keyDown[arrayPos0].left == true
+			DrawSpriteScreenXY(8, screen.xcenter, object.ypos)
+		else
+			DrawSpriteScreenXY(7, screen.xcenter, object.ypos)
+		end if
+		
+		if keyDown[arrayPos0].right == true
+			DrawSpriteScreenXY(10, screen.xcenter, object.ypos)
+		else
+			DrawSpriteScreenXY(9, screen.xcenter, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-104, 0, 96, 14, 1, 249)	// PLAYER text					- #0
+	SpriteFrame(8, 0, 96, 14, 1, 264)		// SELECT text					- #1
+	SpriteFrame(-32, -32, 64, 64, 98, 249)	// Details Border				- #2
+	SpriteFrame(-32, -32, 64, 64, 163, 249)	// Details Border (Selected)	- #3
+	SpriteFrame(-12, -20, 24, 40, 1, 279)	// Sonic						- #4
+	SpriteFrame(-16, -20, 32, 40, 54, 279)	// Tails						- #5
+	SpriteFrame(-14, -20, 27, 40, 26, 279)	// Knuckles						- #6
+	SpriteFrame(-56, -10, 20, 20, 138, 22)	// Left Arrow					- #7
+	SpriteFrame(-56, -10, 20, 20, 138, 64)	// Right Arrow					- #8
+	SpriteFrame(36, -10, 20, 20, 159, 22)	// Left Arrow (Pressed)			- #9
+	SpriteFrame(36, -10, 20, 20, 159, 64)	// Right Arrow (Pressed)		- #10
+	SpriteFrame(-28, -16, 56, 15, 44, 362)	// WAITING FOR					- #11
+	SpriteFrame(-8, 8, 16, 7, 218, 124)		// 1P							- #12
+	SpriteFrame(-8, 8, 16, 7, 218, 132)		// 2P							- #13
+	SpriteFrame(-10, -15, 21, 35, 1, 453)	// Amy							- #14
+	
+	// It still checks for 2P VS Menu 2 LOL
+	// (This object is never placed in a scene anyway, so this bit of code doesn't really matter)
+	foreach (TypeName[2P VS Menu 2], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-104, 0, 96, 14, 1, 249)		// PLAYER text					- #0
+	SpriteFrame(8, 0, 96, 14, 1, 264)			// SELECT text					- #1
+	
+	// Although used by the object, it's not to be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

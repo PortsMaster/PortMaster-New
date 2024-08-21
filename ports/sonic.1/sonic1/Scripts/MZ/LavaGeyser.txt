@@ -1,0 +1,249 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Lava Geyser Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.eruptAnimTimer
+private alias object.value3 : object.plumeFrame
+private alias object.value4 : object.eruptFrame
+
+private alias 0 : LAVAGEYSER_AWAITBLOCK
+private alias 1 : LAVAGEYSER_STARTERUPT
+private alias 2 : LAVAGEYSER_SHOWPLUME
+private alias 3 : LAVAGEYSER_ERUPTING
+private alias 4 : LAVAGEYSER_ERUPTED
+private alias 5 : LAVAGEYSER_HANDLEFINISH
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LavaGeyser_DebugDraw
+reserve function LavaGeyser_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function LavaGeyser_DebugDraw
+	DrawSprite(2)
+end function
+
+
+private function LavaGeyser_DebugSpawn
+	CreateTempObject(TypeName[Lava Geyser], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawPos.y = object.ypos
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case LAVAGEYSER_AWAITBLOCK
+		foreach (TypeName[Push Block], arrayPos0, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, arrayPos0, -16, -16, 16, 16, object.entityPos, -16, -32, 16, 16)
+			if checkResult == true
+				object.state = LAVAGEYSER_STARTERUPT
+				object.animationTimer = 0
+				object.eruptAnimTimer = 0
+				object.eruptFrame = 4
+			end if
+		next
+		break
+
+	case LAVAGEYSER_STARTERUPT
+		object.eruptFrame = object.eruptAnimTimer
+		object.eruptFrame /= 3
+		object.eruptFrame += 4
+		object.eruptAnimTimer++
+		object.eruptAnimTimer %= 6
+
+		object.timer++
+		if object.timer == 12
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case LAVAGEYSER_SHOWPLUME
+		object.eruptFrame = object.eruptAnimTimer
+		object.eruptFrame /= 3
+		object.eruptFrame += 6
+		object.eruptAnimTimer++
+		object.eruptAnimTimer %= 6
+
+		object.timer++
+		if object.timer == 12
+			object.timer = 0
+			object.frame = 0
+			object.plumeFrame = 8
+			object.yvel = -0x54000
+			object.state++
+			PlaySfx(SfxName[Fire Burn], false)
+			foreach (TypeName[Push Block], arrayPos0, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, arrayPos0, -16, -16, 16, 16, object.entityPos, -32, -32, 32, 16)
+				if checkResult == true
+					object[arrayPos0].yvel = -0x59000
+					object[arrayPos0].gravity = GRAVITY_AIR
+				end if
+			next
+		end if
+		break
+
+	case LAVAGEYSER_ERUPTING
+		object.yvel += 0x1800
+		object.ypos += object.yvel
+		if object.ypos >= object.drawPos.y
+			object.ypos = object.drawPos.y
+			object.state++
+		end if
+
+		object.eruptFrame = object.eruptAnimTimer
+		object.eruptFrame /= 3
+		object.plumeFrame = object.eruptFrame
+		object.eruptFrame += 2
+		object.plumeFrame += 8
+		object.eruptAnimTimer++
+		object.eruptAnimTimer %= 6
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+
+		temp0 = object.drawPos.y
+		temp0 -= object.ypos
+		temp0 >>= 16
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, 0, 32, temp0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_FireHit)
+			end if
+		next
+		break
+
+	case LAVAGEYSER_ERUPTED
+		object.eruptFrame = object.eruptAnimTimer
+		object.eruptFrame /= 3
+		object.eruptFrame += 2
+		object.eruptAnimTimer++
+		object.eruptAnimTimer %= 6
+
+		object.timer++
+		if object.timer == 12
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case LAVAGEYSER_HANDLEFINISH
+		object.eruptFrame = object.eruptAnimTimer
+		object.eruptFrame /= 3
+		object.eruptFrame += 4
+		object.eruptAnimTimer++
+		object.eruptAnimTimer %= 6
+		object.timer++
+		if object.timer == 12
+			object.timer = 0
+			object.state = LAVAGEYSER_AWAITBLOCK
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case LAVAGEYSER_STARTERUPT
+	case LAVAGEYSER_SHOWPLUME
+	case LAVAGEYSER_ERUPTED
+	case LAVAGEYSER_HANDLEFINISH
+		DrawSpriteXY(object.eruptFrame, object.xpos, object.drawPos.y)
+		break
+
+	case LAVAGEYSER_ERUPTING
+		temp0 = object.drawPos.y
+		temp0 -= object.ypos
+		temp0 >>= 16
+		temp1 = temp0
+		FlipSign(temp1)
+		if object.frame == 0
+			EditFrame(0, -32, temp1, 64, temp0, 317, 1)
+		else
+			EditFrame(1, -32, temp1, 64, temp0, 382, 1)
+		end if
+		DrawSpriteXY(object.frame, object.xpos, object.drawPos.y)
+		DrawSprite(object.plumeFrame)
+		DrawSpriteXY(object.eruptFrame, object.xpos, object.drawPos.y)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -128, 64, 256, 317, 1)
+	SpriteFrame(-32, -128, 64, 256, 382, 1)
+
+	SpriteFrame(-56, -18, 112, 30, 288, 332)
+	SpriteFrame(-55, -18, 110, 30, 401, 332)
+
+	SpriteFrame(-24, -18, 48, 30, 268, 1)
+	SpriteFrame(-23, -18, 46, 30, 270, 32)
+
+	SpriteFrame(-56, -22, 112, 34, 288, 297)
+	SpriteFrame(-55, -22, 110, 34, 401, 297)
+	SpriteFrame(-56, -26, 112, 38, 288, 258)
+	SpriteFrame(-55, -26, 110, 38, 401, 258)
+
+	foreach (TypeName[Lava Geyser], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawPos.y = object[arrayPos0].ypos
+		object[arrayPos0].drawOrder = 5
+	next
+
+	SetTableValue(TypeName[Lava Geyser], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(LavaGeyser_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(LavaGeyser_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(4)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -128, 64, 256, 317, 1)
+	SpriteFrame(-32, -128, 64, 256, 382, 1)
+	SpriteFrame(-56, -18, 112, 30, 288, 332)
+	SpriteFrame(-55, -18, 110, 30, 401, 332)
+	SpriteFrame(-24, -18, 48, 30, 268, 1)
+	SpriteFrame(-23, -18, 46, 30, 270, 32)
+	SpriteFrame(-56, -22, 112, 34, 288, 297)
+	SpriteFrame(-55, -22, 110, 34, 401, 297)
+	SpriteFrame(-56, -26, 112, 38, 288, 258)
+	SpriteFrame(-55, -26, 110, 38, 401, 258)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

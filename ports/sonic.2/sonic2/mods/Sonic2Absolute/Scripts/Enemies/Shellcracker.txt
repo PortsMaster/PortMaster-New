@@ -1,0 +1,299 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Shellcracker Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 43 : TYPE_SHELLCRACKER
+
+// Function declarations
+reserve function Shellcracker_Function103
+reserve function Shellcracker_DebugDraw
+reserve function Shellcracker_DebugSpawn
+reserve function Shellcracker_Function106
+reserve function Shellcracker_Function107
+
+// Static Values
+
+// Tables
+
+function Shellcracker_Function103
+	if object[arrayPos0].propertyValue == 0
+		object[arrayPos0].direction = FLIP_NONE
+		object[arrayPos0].xvel = 0x4000
+	else
+		object[arrayPos0].direction = FLIP_X
+		object[arrayPos0].xvel = -0x4000
+	end if
+	object[arrayPos0].frame = 0
+	object[arrayPos0].value0 = 320
+	object[arrayPos0].value3 = 0x140000
+	object[arrayPos0].value4 = 0
+	object[arrayPos0].state = 0
+	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+end function
+
+
+function Shellcracker_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Shellcracker_DebugSpawn
+	CreateTempObject(TypeName[Shellcracker], object.direction, object.xpos, object.ypos)
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].value1 = object.xpos
+	object[arrayPos0].value2 = object.ypos
+	CallFunction(Shellcracker_Function103)
+end function
+
+
+function Shellcracker_Function106
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -256, 96, 256, currentPlayer, -1, -1, 1, 1)
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 0, 256, currentPlayer, -1, -1, 1, 1)
+		end if
+		if checkResult == 1
+			object.value0 = 0
+			object.frame = 3
+			object.state = 2
+		end if
+	next
+end function
+
+
+function Shellcracker_Function107
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		object.ypos += object.value31
+		if object.outOfBounds == 1
+			arrayPos0 = object.entityPos
+			CallFunction(Shellcracker_Function103)
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		object.value0--
+		if object.value0 == 0
+			object.frame = 0
+			object.animationTimer = 0
+			object.value0 = 40
+			object.state = 1
+		end if
+		ObjectTileGrip(CSIDE_FLOOR, 0, 12, 0)
+		if checkResult == 0
+			object.frame = 0
+			object.animationTimer = 0
+			FlipSign(object.xvel)
+			object.value0 = 60
+			object.state = 1
+		end if
+		object.frame = object.animationTimer
+		object.frame >>= 4
+		object.animationTimer++
+		if object.animationTimer >= 48
+			object.animationTimer = 0
+		end if
+		CallFunction(Shellcracker_Function106)
+		if object.state == 2
+			object.value0 = 10
+			object.value4 = 1
+			object.frame = 0
+			object.state = 1
+		end if
+		CallFunction(Shellcracker_Function107)
+		break
+	case 1
+		object.value0--
+		if object.value0 == 0
+			object.value0 = 320
+			object.state = 0
+			if object.value4 == 1
+				object.value4 = 0
+				object.value0 = 0
+				object.frame = 3
+				object.state = 2
+			else
+				CallFunction(Shellcracker_Function106)
+			end if
+		end if
+		CallFunction(Shellcracker_Function107)
+		break
+	case 2
+		if object.value3 < 0x480000
+			object.value3 += 0x40000
+		else
+			object.value0 = 8
+			object.state = 3
+		end if
+		CallFunction(Shellcracker_Function107)
+		break
+	case 3
+		object.value0--
+		if object.value0 == 0
+			object.state = 4
+		end if
+		CallFunction(Shellcracker_Function107)
+		break
+	case 4
+		if object.value3 > 0x140000
+			object.value3 -= 0x40000
+		else
+			object.frame = 0
+			object.value0 = 40
+			object.state = 1
+		end if
+		CallFunction(Shellcracker_Function107)
+		break
+	case 5
+		arrayPos0 = object.value0
+		if object[arrayPos0].type == TypeName[Shellcracker]
+			object.type = TypeName[Blank Object]
+		end if
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		temp1 = object.ypos
+		temp1 >>= 16
+		temp1 -= screen.cameraY
+		Abs(temp1)
+		temp1 -= 32
+		if temp1 >= screen.ycenter
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	temp6 = object.xpos
+	temp7 = object.ypos
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state < 5
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				CreateTempObject(TypeName[Shellcracker], 0, object.xpos, object.ypos)
+				object[tempObjectPos].value3 = object.value3
+				object[tempObjectPos].direction = object.direction
+				object[tempObjectPos].state = 5
+				object[tempObjectPos].value0 = object.entityPos
+				if object.direction == FLIP_NONE
+					object[tempObjectPos].xvel = 0x40000
+				else
+					object[tempObjectPos].xvel = -0x40000
+				end if
+				CallFunction(PlayerObject_BadnikBreak)
+			end if
+			if object.type == TypeName[Shellcracker]
+				if object.direction == FLIP_NONE
+					object.xpos += object.value3
+				else
+					object.xpos -= object.value3
+				end if
+				object.ypos -= 0x80000
+				BoxCollisionTest(C_TOUCH, object.entityPos, -10, -7, 10, 7, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_Hit)
+				end if
+				object.xpos = temp6
+				object.ypos = temp7
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.state < 5
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+	if object.state >= 2
+		temp1 = object.ypos
+		temp1 -= 0x20000
+		temp2 = object.value3
+		temp7 = 0
+		while temp7 < 7
+			temp0 = object.xpos
+			if object.direction == FLIP_NONE
+				temp0 -= 0xA0000
+			else
+				temp0 += 0xA0000
+			end if
+			if temp2 < 0x180000
+				temp2 = 0x180000
+			end if
+			if object.direction == FLIP_NONE
+				temp0 += temp2
+			else
+				temp0 -= temp2
+			end if
+			DrawSpriteFX(4, FX_FLIP, temp0, temp1)
+			temp2 -= 0x80000
+			temp7++
+		loop
+		temp0 = object.xpos
+		if object.direction == FLIP_NONE
+			temp0 += object.value3
+		else
+			temp0 -= object.value3
+		end if
+		temp1 = object.ypos
+		temp1 -= 0x80000
+		DrawSpriteFX(5, FX_FLIP, temp0, temp1)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == 1
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-24, -19, 56, 31, 199, 30) //0 crab & claw
+		SpriteFrame(-24, -19, 56, 31, 199, 62) //1 crab & claw
+		SpriteFrame(-24, -19, 56, 31, 199, 94) //2 crab & slaw
+		SpriteFrame(-24, -12, 47, 24, 208, 126) //3 crab
+		SpriteFrame(-4, -4, 8, 8, 190, 53) //4 chain
+		SpriteFrame(-12, -11, 24, 22, 174, 30) //5 claw
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -19, 56, 31, 199, 30)
+		SpriteFrame(-24, -19, 56, 31, 199, 62)
+		SpriteFrame(-24, -19, 56, 31, 199, 94)
+		SpriteFrame(-24, -12, 47, 24, 208, 126)
+		SpriteFrame(-4, -4, 8, 8, 190, 53)
+		SpriteFrame(-12, -11, 24, 22, 174, 30)
+	end if
+	foreach (TypeName[Shellcracker], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].propertyValue ^= 1
+		CallFunction(Shellcracker_Function103)
+	next
+	SetTableValue(TypeName[Shellcracker], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Shellcracker_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Shellcracker_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

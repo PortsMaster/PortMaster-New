@@ -1,0 +1,281 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Elevator Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.centerPos.y
+private alias object.value3 : object.bounds.y
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.stood
+
+// States
+private alias 0 : ELEVATOR_AWAITSTOOD
+private alias 1 : ELEVATOR_MOVING
+private alias 2 : ELEVATOR_IDLE
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Elevator_DebugDraw
+reserve function Elevator_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Elevator_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Elevator_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Elevator_startDebugID
+	DrawSprite(temp0)
+end function
+
+
+private function Elevator_DebugSpawn
+	CreateTempObject(TypeName[Elevator], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.y = object.ypos
+	object[tempObjectPos].centerPos.y = object.ypos
+	object[tempObjectPos].centerPos.y -= 0x420000
+	object[tempObjectPos].bounds.y = object.ypos
+	object[tempObjectPos].bounds.y -= 0x800000
+	object[tempObjectPos].frame = debugMode[0].currentSelection
+	object[tempObjectPos].frame -= Elevator_startDebugID
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.ypos
+	switch object.state
+	case ELEVATOR_AWAITSTOOD
+		if object.stood == true
+			object.state = ELEVATOR_MOVING
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE
+			end if
+		end if
+		break
+
+	case ELEVATOR_MOVING
+		if object.ypos >= object.centerPos.y
+			object.yvel -= 0x680
+		else
+			object.yvel += 0x680
+		end if
+		object.ypos += object.yvel
+
+		if object.propertyValue == 0
+			if object.ypos <= object.bounds.y
+				object.ypos = object.bounds.y
+				object.yvel = 0
+				object.state = ELEVATOR_IDLE
+			end if
+		else
+			if object.ypos >= object.bounds.y
+				object.ypos = object.bounds.y
+				object.yvel = 0
+				object.state = ELEVATOR_IDLE
+			end if
+		end if
+		break
+
+	case ELEVATOR_IDLE
+		break
+		
+	end switch
+
+	object.stood = false
+	temp0 = object.ypos
+	temp6 &= 0xFFFF0000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp6
+	object.ypos = temp6
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.frame == 0
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		else
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -12, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		end if
+
+		if checkResult == true
+			player[currentPlayer].ypos += object.collisionOffset.y
+			object.stood = true
+		end if
+	next
+	object.ypos = temp0
+
+	if object.outOfBounds == true
+		temp0 = object.ypos
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
+			object.state = ELEVATOR_AWAITSTOOD
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_BOUNDS
+			end if
+			object.stood = false
+			object.yvel = 0
+		else
+			object.ypos = temp0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 127, 1)
+	SpriteFrame(-32, -12, 64, 24, 141, 26)
+
+	foreach (TypeName[Elevator], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].ypos += 0x40000
+		object[arrayPos0].startPos.y 	= object[arrayPos0].ypos
+		object[arrayPos0].centerPos.y 	= object[arrayPos0].ypos
+		object[arrayPos0].bounds.y 		= object[arrayPos0].ypos
+
+		temp0 = object[arrayPos0].propertyValue
+		temp0 &= 0x7F
+		temp0 <<= 18
+		object[arrayPos0].propertyValue >>= 7
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].ypos -= temp0
+			object[arrayPos0].startPos.y -= temp0
+			object[arrayPos0].bounds.y += temp0
+			object[arrayPos0].centerPos.y += 0x20000
+		else
+			object[arrayPos0].ypos += temp0
+			object[arrayPos0].startPos.y += temp0
+			object[arrayPos0].bounds.y -= temp0
+			object[arrayPos0].centerPos.y -= 0x20000
+		end if
+	next
+
+	temp0 = 0
+	Elevator_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Elevator], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Elevator_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Elevator_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // distance
+			checkResult = object.propertyValue
+			checkResult &= 0x7F
+			break
+			
+		case 1 // direction
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // distance
+			editor.variableValue &= 0x7F
+			object.propertyValue &= 0x80
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.frame, object.propertyValue, 7)
+	DrawSprite(object.frame)
+
+	if editor.showGizmos == true
+		object.inkEffect = INK_BLEND
+
+		// Top Preview
+		temp1 = object.ypos
+		temp1 += 0x40000
+		temp0 = object.propertyValue
+		temp0 &= 0x7F
+		temp0 <<= 18
+		temp1 += temp0
+		DrawSpriteFX(object.frame, FX_INK, object.xpos, temp1)
+
+		// Bottom Preview
+		temp1 = object.ypos
+		temp1 += 0x40000
+		temp0 = object.propertyValue
+		temp0 &= 0x7F
+		temp0 <<= 18
+		temp1 -= temp0
+		DrawSpriteFX(object.frame, FX_INK, object.xpos, temp1)
+
+		object.inkEffect = INK_NONE
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 127, 1)
+	SpriteFrame(-32, -12, 64, 24, 141, 26)
+
+	AddEditorVariable("distance")
+	SetActiveVariable("distance")
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end event

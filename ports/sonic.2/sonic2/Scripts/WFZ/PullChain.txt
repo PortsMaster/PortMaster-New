@@ -1,0 +1,346 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Pull Chain Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.isRetracting
+
+private alias object.value0 : object.extendPos
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.originPos.y
+private alias object.value3 : object.grabDelay
+private alias object.value4 : object.length
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.collisionTop : player.collisionTop
+private alias object.jumpPress : player.jumpPress
+
+private alias object.value17 : debugMode.currentSelection
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PullChain_DebugDraw
+reserve function PullChain_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value PullChain_sheetX 		 = 0
+private value PullChain_sheetY 		 = 0
+private value PullChain_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function PullChain_DebugDraw
+	DrawSprite(1)
+end function
+
+
+private function PullChain_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= PullChain_startDebugID
+	CreateTempObject(TypeName[Pull Chain], 0, object.xpos, object.ypos)
+	object[tempObjectPos].originPos.y = object[tempObjectPos].ypos
+
+	GetBit(temp1, temp0, 0)
+	if temp1 == 0
+		object[tempObjectPos].length = 80
+	else
+		object[tempObjectPos].length = 48
+	end if
+
+	GetBit(temp2, temp0, 1)
+	if temp2 == 0
+		object[tempObjectPos].yvel = 0x20000
+		object[tempObjectPos].ypos -= 0xF0000
+	else
+		object[tempObjectPos].yvel = -0x20000
+		if temp1 == 0
+			object[tempObjectPos].ypos += 0x910000
+		else
+			object[tempObjectPos].ypos += 0x510000
+		end if
+	end if
+
+	object[tempObjectPos].startPos.y = object[tempObjectPos].ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.isRetracting == true
+		if object.extendPos < object.length
+			object.extendPos++
+			object.ypos += object.yvel
+		end if
+	else
+		if object.extendPos > 0
+			object.extendPos--
+			object.ypos -= object.yvel
+		end if
+	end if
+
+	object.isRetracting = false
+	if object.grabDelay > 0
+		object.grabDelay--
+	end if
+
+	temp0 = object.ypos
+	temp0 += 0x380000
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].state != Player_State_Static
+			if object.grabDelay == 0
+				if player[currentPlayer].ypos < temp0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, 70, 8, 96, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, 32, 8, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				end if
+
+				if checkResult == true
+					player[currentPlayer].state = Player_State_Static
+					player[currentPlayer].animation = ANI_HANGING
+					player[currentPlayer].speed 	= 0
+					player[currentPlayer].xvel 		= 0
+					player[currentPlayer].yvel 		= 0
+					player[currentPlayer].xpos 		= object.xpos
+					player[currentPlayer].ypos 		= player[currentPlayer].collisionTop
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos += 36
+					player[currentPlayer].ypos <<= 16
+					player[currentPlayer].ypos += object.ypos
+					object.isRetracting |= true
+				end if
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -4, 8, 72, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				if player[currentPlayer].jumpPress == true
+#platform: USE_STANDALONE
+					player[currentPlayer].state		= Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state		= Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].yvel 		= -0x40000
+					player[currentPlayer].gravity 	= 1
+					object.grabDelay = 30
+				else
+					player[currentPlayer].xpos = object.xpos
+					player[currentPlayer].ypos = player[currentPlayer].collisionTop
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos += 36
+					player[currentPlayer].ypos <<= 16
+					player[currentPlayer].ypos += object.ypos
+					object.isRetracting |= true
+				end if
+			end if
+		end if
+	next
+
+	if object.frame == 0
+		if object.isRetracting == true
+			PlaySfx(SfxName[Catch], false)
+		end if
+	end if
+
+	// Not Actually used...
+	object.frame = object.isRetracting
+end event
+
+
+event ObjectDraw
+	temp0 = object.ypos
+	temp0 -= object.originPos.y
+	temp0 >>= 16
+	temp1 = PullChain_sheetY
+	temp1 -= temp0
+	temp2 = -40
+	temp2 -= temp0
+	temp0 += 80
+	EditFrame(0, -12, temp2, 24, temp0, PullChain_sheetX, temp1)
+
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-12, -40, 24, 65, 236, 191)	// The Hook 		- #0
+		SpriteFrame(-12, -40, 24, 65, 236, 191)	// The Hook (Again) - #1
+		PullChain_sheetX = 236
+		PullChain_sheetY = 176
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12, -40, 24, 65, 901, 358)	// The Hook 		- #0
+		SpriteFrame(-12, -40, 24, 65, 901, 358)	// The Hook (Again) - #1
+		PullChain_sheetX = 901
+		PullChain_sheetY = 358
+		PullChain_sheetY += 176 // weird way to do it, but sure
+	end if
+
+	foreach (TypeName[Pull Chain], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+		GetBit(temp1, object[arrayPos0].propertyValue, 0)
+		if temp1 == false
+			object[arrayPos0].length = 80
+		else
+			object[arrayPos0].length = 48
+		end if
+
+		GetBit(temp0, object[arrayPos0].propertyValue, 4)
+		if temp0 == false
+			object[arrayPos0].yvel = 0x20000
+			object[arrayPos0].ypos -= 0x200000
+		else
+			object[arrayPos0].yvel = -0x20000
+			if temp1 == false
+				object[arrayPos0].ypos += 0x800000
+			else
+				object[arrayPos0].ypos += 0x400000
+			end if
+			object[arrayPos0].originPos.y -= 0x110000
+		end if
+
+		object[arrayPos0].startPos.y 		= object[arrayPos0].ypos
+		object[arrayPos0].propertyValue = 0
+	next
+
+	temp0 = 0
+	PullChain_startDebugID = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Pull Chain], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(PullChain_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(PullChain_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		case 1 // direction
+			GetBit(checkResult, object.propertyValue, 4)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		case 1 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 4, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp7 = object.ypos
+	object.originPos.y = temp7
+
+	GetBit(temp1, object.propertyValue, 0)
+	GetBit(temp0, object.propertyValue, 4)
+	if temp0 == false
+		object.ypos -= 0x200000
+	else
+		if temp1 == false
+			object.ypos += 0x800000
+		else
+			object.ypos += 0x400000
+		end if
+		object.originPos.y -= 0x110000
+	end if
+
+	temp0 = object.ypos
+	temp0 -= object.originPos.y
+	temp0 >>= 16
+	temp1 = PullChain_sheetY
+	temp1 -= temp0
+	temp2 = -40
+	temp2 -= temp0
+	temp0 += 80
+	EditFrame(0, -12, temp2, 24, temp0, PullChain_sheetX, temp1)
+
+	DrawSprite(0)
+	
+	object.ypos = temp7
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-12, -40, 24, 65, 236, 191)	// The Hook 		- #0
+		SpriteFrame(-12, -40, 24, 65, 236, 191)	// The Hook (Again) - #1
+		PullChain_sheetX = 236
+		PullChain_sheetY = 176
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12, -40, 24, 65, 901, 358)	// The Hook 		- #0
+		SpriteFrame(-12, -40, 24, 65, 901, 358)	// The Hook (Again) - #1
+		PullChain_sheetX = 901
+		PullChain_sheetY = 358
+		PullChain_sheetY += 176
+	end if
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+	AddEnumVariable("Long", 0)
+	AddEnumVariable("Short", 1)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Down", 0)
+	AddEnumVariable("Up", 1)
+end event

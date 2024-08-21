@@ -1,0 +1,367 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: SS Single Result Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.iconSheet
+private alias object.value2  : object.textSheet
+private alias object.value3  : object.checkpoint1Winner
+private alias object.value4  : object.checkpoint2Winner
+private alias object.value5  : object.checkpoint3Winner
+private alias object.value6  : object.checkpoint1Rings1P
+private alias object.value7  : object.checkpoint2Rings1P
+private alias object.value8  : object.checkpoint3Rings1P
+private alias object.value9  : object.checkpoint1Rings2P
+private alias object.value10 : object.checkpoint2Rings2P
+private alias object.value11 : object.checkpoint3Rings2P
+private alias object.value12 : object.wins1P
+private alias object.value13 : object.wins2P
+private alias object.value14 : object.overallWinner
+private alias object.value15 : object.stageID
+
+// States
+private alias 0 : SSRESULTSINGLE_SETUP
+private alias 1 : SSRESULTSINGLE_WAITING
+private alias 2 : SSRESULTSINGLE_SHOWRESULTS
+private alias 3 : SSRESULTSINGLE_LOADSTAGE
+private alias 4 : SSRESULTSINGLE_FADEOUT
+
+// 2PVSSetup Aliases
+private alias object.value0 : 2PVSSetup.timer
+
+// 2PVSSetup States
+private alias 1 : 2PVSSETUP_FADEIN
+private alias 4 : 2PVSSETUP_TOSPECIALSTAGE
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SSRESULTSINGLE_SETUP
+		SetupMenu(MENU_1, 0, 3, 0)
+
+		LoadSpriteSheet("LevelSelect/Icons.gif")
+		object.iconSheet = object.spriteSheet
+
+		LoadSpriteSheet("LevelSelect/Text.gif")
+		object.textSheet = object.spriteSheet
+
+		menu1.selection = -1
+		if vs.tieBreaker == false
+			object.stageID = vs.listPos
+			object.stageID -= 4
+		else
+			if vs.activeList == SPECIAL_STAGE
+				object.stageID = 2
+			else
+				object.stageID = 3
+			end if
+		end if
+
+		object.checkpoint1Rings1P = vs.checkpoint1P
+		object.checkpoint1Rings1P &= 0xFF
+
+		object.checkpoint2Rings1P = vs.checkpoint1P
+		object.checkpoint2Rings1P >>= 8
+		object.checkpoint2Rings1P &= 0xFF
+
+		object.checkpoint3Rings1P = vs.checkpoint1P
+		object.checkpoint3Rings1P >>= 16
+
+		object.checkpoint1Rings2P = vs.checkpoint2P
+		object.checkpoint1Rings2P &= 0xFF
+
+		object.checkpoint2Rings2P = vs.checkpoint2P
+		object.checkpoint2Rings2P >>= 8
+		object.checkpoint2Rings2P &= 0xFF
+
+		object.checkpoint3Rings2P = vs.checkpoint2P
+		object.checkpoint3Rings2P >>= 16
+
+		switch object.stageID
+		case 0
+			AddMenuEntry(MENU_1, "@@@@@@@SPECIAL STAGE@@@* 1 *", true)
+			break
+
+		case 1
+			AddMenuEntry(MENU_1, "@@@@@@@SPECIAL STAGE@@@* 2 *", true)
+			break
+
+		case 2
+			AddMenuEntry(MENU_1, "@@@@@@@SPECIAL STAGE@@@* 3 *", true)
+			break
+
+		case 3
+			AddMenuEntry(MENU_1, "@@@@@@@SPECIAL STAGE", true)
+			break
+			
+		end switch
+
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@@@@@@@@@@@@@1P@@@@@@2P@@@@WINS", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "CHECKPOINT", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@@* 1 *", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@@* 2 *", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@@* 3 *", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@* TOTAL *@@@@@@@@@:", true)
+
+		object.wins1P = 0
+		object.wins2P = 0
+		if object.checkpoint1Rings1P == object.checkpoint1Rings2P
+			object.checkpoint1Winner = 3
+		else
+			if object.checkpoint1Rings1P > object.checkpoint1Rings2P
+				object.checkpoint1Winner = 1
+				object.wins1P++
+			else
+				object.checkpoint1Winner = 2
+				object.wins2P++
+			end if
+		end if
+
+		if object.checkpoint2Rings1P == object.checkpoint2Rings2P
+			object.checkpoint2Winner = 3
+		else
+			if object.checkpoint2Rings1P > object.checkpoint2Rings2P
+				object.checkpoint2Winner = 1
+				object.wins1P++
+			else
+				object.checkpoint2Winner = 2
+				object.wins2P++
+			end if
+		end if
+
+		if object.checkpoint3Rings1P == object.checkpoint3Rings2P
+			object.checkpoint3Winner = 3
+		else
+			if object.checkpoint3Rings1P > object.checkpoint3Rings2P
+				object.checkpoint3Winner = 1
+				object.wins1P++
+			else
+				object.checkpoint3Winner = 2
+				object.wins2P++
+			end if
+		end if
+
+		if object.wins1P == object.wins2P
+			object.overallWinner = 18
+		else
+			if object.wins1P > object.wins2P
+				object.overallWinner = 14
+			else
+				object.overallWinner = 16
+			end if
+		end if
+
+		arrayPos0 = vs.match
+		arrayPos0 <<= 2
+		if vs.tieBreaker == false
+			arrayPos0 += object.stageID
+		else
+			arrayPos0 += 2
+		end if
+		arrayPos0 += 0x400
+		saveRAM[arrayPos0] = object.wins2P
+		saveRAM[arrayPos0] <<= 4
+		saveRAM[arrayPos0] += object.wins1P
+		if object.stageID == 1
+			arrayPos0++
+			saveRAM[arrayPos0] = 0
+			arrayPos0++
+			saveRAM[arrayPos0] = 7
+		end if
+
+		object.state++
+		break
+
+	case SSRESULTSINGLE_WAITING
+		CallNativeFunction2(ReceiveEntity, 0x400, true)
+		ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
+		object.state++
+		break
+
+	case SSRESULTSINGLE_SHOWRESULTS
+		if object.timer < 60
+			object.timer++
+		else
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			if keyPress[0].start == true
+				checkResult = 0
+			end if
+			
+			if keyPress[0].buttonA == true
+				checkResult = 0
+			end if
+
+			if keyPress[0].buttonB == true
+				checkResult = 0
+			end if
+
+			if keyPress[0].buttonC == true
+				checkResult = 0
+			end if
+
+			if checkResult > -1
+				object.timer = 0
+				if vs.tieBreaker == true
+					object.state = SSRESULTSINGLE_FADEOUT
+				else
+					if object.stageID == 0
+						vs.listPos++
+						stage.activeList = vs.activeList
+						stage.listPos = vs.listPos
+						object.state = SSRESULTSINGLE_LOADSTAGE
+						object[0].state = 2PVSSETUP_TOSPECIALSTAGE
+						PlaySfx(SfxName[Warp], false)
+					else
+						CallFunction(ActResults_CheckTieBreaker)
+						if checkResult == true
+							stage.activeList = SPECIAL_STAGE
+							stage.listPos = 6
+							object.state = SSRESULTSINGLE_LOADSTAGE
+							object[0].state = 2PVSSETUP_TOSPECIALSTAGE
+							PlaySfx(SfxName[Warp], false)
+							vs.tieBreaker = true
+						else
+							object.state = SSRESULTSINGLE_FADEOUT
+						end if
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case SSRESULTSINGLE_LOADSTAGE
+		break
+
+	case SSRESULTSINGLE_FADEOUT
+		if object.timer < 256
+			object.timer += 16
+			SetScreenFade(0x00, 0x00, 0x00, object.timer)
+		else
+			if vs.activeList == SPECIAL_STAGE
+				ResetObjectEntity(1, TypeName[SS Results], 0, 0, 0)
+			else
+				ResetObjectEntity(1, TypeName[Zone Results], 0, 0, 0)
+			end if
+			object[1].priority = PRIORITY_ACTIVE
+			object[0].state = 2PVSSETUP_FADEIN
+			2PVSSetup[0].timer = 384
+			SetScreenFade(0x00, 0x00, 0x00, 0xFF)
+		end if
+		break
+		
+	end switch
+
+	object.animationTimer++
+	object.animationTimer &= 15
+end event
+
+
+event ObjectDraw
+	object.spriteSheet = object.iconSheet
+	DrawSpriteScreenXY(0, screen.xcenter, 17)
+
+	// 1P Results
+	temp0 = screen.xcenter
+	temp0 += 8
+	DrawNumbers(4, temp0, 129, object.checkpoint1Rings1P, 3, 8, false)
+	DrawNumbers(4, temp0, 145, object.checkpoint2Rings1P, 3, 8, false)
+	DrawNumbers(4, temp0, 161, object.checkpoint3Rings1P, 3, 8, false)
+
+	// 2P Results
+	temp0 = screen.xcenter
+	temp0 += 72
+	DrawNumbers(4, temp0, 129, object.checkpoint1Rings2P, 3, 8, false)
+	DrawNumbers(4, temp0, 145, object.checkpoint2Rings2P, 3, 8, false)
+	DrawNumbers(4, temp0, 161, object.checkpoint3Rings2P, 3, 8, false)
+
+	// Wins
+	temp0 = screen.xcenter
+	temp0 += 8
+	DrawNumbers(4, temp0, 185, object.wins1P, 1, 8, true)
+	temp0 += 32
+	DrawNumbers(4, temp0, 185, object.wins2P, 1, 8, true)
+
+	// Winners
+	temp0 = screen.xcenter
+	temp0 += 112
+	DrawSpriteScreenXY(object.checkpoint1Winner, temp0, 129)
+	DrawSpriteScreenXY(object.checkpoint2Winner, temp0, 145)
+	DrawSpriteScreenXY(object.checkpoint3Winner, temp0, 161)
+	temp0 = object.animationTimer
+	temp0 >>= 3
+	temp0 += object.overallWinner
+	DrawSpriteScreenXY(temp0, screen.xcenter, 210)
+
+	object.spriteSheet = object.textSheet
+	temp0 = screen.xcenter
+	temp0 -= 128
+	DrawMenu(MENU_1, temp0, 64)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	LoadSpriteSheet("LevelSelect/Text.gif")
+
+	SpriteFrame(-48, 0, 96, 14, 1, 136)		// RESULT				- #0
+	SpriteFrame(-8, 0, 16, 7, 98, 136)		// 1P text 				- #1
+	SpriteFrame(-8, 0, 16, 7, 115, 136)		// 2P text 				- #2
+	SpriteFrame(-16, 0, 32, 7, 132, 136) 	// TIED text			- #3
+	SpriteFrame(0, 0, 8, 7, 175, 140)		// 0 					- #4
+	SpriteFrame(0, 0, 8, 7, 183, 140)		// 1 					- #5
+	SpriteFrame(0, 0, 8, 7, 191, 140)		// 2 					- #6
+	SpriteFrame(0, 0, 8, 7, 199, 140)		// 3 					- #7
+	SpriteFrame(0, 0, 8, 7, 207, 140)		// 4 					- #8
+	SpriteFrame(0, 0, 8, 7, 215, 140)		// 5 					- #9
+	SpriteFrame(0, 0, 8, 7, 223, 140)		// 6 					- #10
+	SpriteFrame(0, 0, 8, 7, 231, 140)		// 7 					- #11
+	SpriteFrame(0, 0, 8, 7, 239, 140)		// 8 					- #12
+	SpriteFrame(0, 0, 8, 7, 247, 140)		// 9 					- #13
+	SpriteFrame(-47, 0, 91, 12, 1, 110)		// 1P WINS 				- #14
+	SpriteFrame(-47, 0, 91, 12, 1, 123)		// 1P WINS (Flashing) 	- #15
+	SpriteFrame(-47, 0, 91, 12, 93, 110)	// 2P WINS 				- #16
+	SpriteFrame(-47, 0, 91, 12, 93, 123)	// 2P WINS (Flashing) 	- #17
+	SpriteFrame(-22, 0, 44, 12, 1, 385)		// TIED 				- #18
+	SpriteFrame(-22, 0, 44, 12, 1, 398)		// TIED (Flashing) 		- #19
+
+	foreach (TypeName[SS Single Result], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-48, 0, 96, 14, 1, 136)		// RESULT				- #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,459 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: H Flipper Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.heightArrayTop
+private alias object.value2  : object.heightArrayBottom
+private alias object.value3  : object.sensorPosM
+private alias object.value4  : object.sensorPosL
+private alias object.value5  : object.sensorPosR
+private alias object.value6  : object.sensorHeightM
+private alias object.value7  : object.sensorHeightL
+private alias object.value8  : object.sensorHeightR
+private alias object.value9  : object.hitboxT
+private alias object.value10 : object.hitboxB
+
+// States
+private alias 0 : HFLIPPER_IDLE
+private alias 1 : HFLIPPER_ACTIVATED
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.ixpos : player.ixpos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.prevAnimation : player.prevAnimation
+private alias object.animation : player.animation
+private alias object.controlLock : player.controlLock
+private alias object.scrollTracking : player.scrollTracking
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+private alias object.collisionBottom : player.collisionBottom
+private alias object.jumpPress : player.jumpPress
+
+private alias object.value1  : player.timer
+private alias object.value30 : player.jumpOffset
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HFlipper_DebugDraw
+reserve function HFlipper_DebugSpawn
+reserve function HFlipper_LaunchPlayer
+
+
+// ========================
+// Tables
+// ========================
+
+private table HFlipper_heightArrayT_Right
+	-8, -8, -8, -8, -9, -9, -9, -9, -9, -9, -9, -8, -8, -7, -7, -6, -6, -5, -5, -4, -4, -3, -3, -2, -2, -1, -1, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 11
+end table
+
+private table HFlipper_heightArrayB_Right
+	5, 6, 7, 7, 8, 8, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18
+end table
+
+private table HFlipper_heightArrayT_Left
+	11, 10, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0, -1, -1, -2, -2, -3, -3, -4, -4, -5, -5, -6, -6, -7, -7, -8, -8, -9, -9, -9, -9, -9, -9, -9, -8, -8, -8, -8
+end table
+
+private table HFlipper_heightArrayB_Left
+	18, 18, 18, 18, 18, 18, 18, 17, 17, 17, 17, 16, 16, 16, 16, 15, 15, 15, 15, 14, 14, 14, 14, 13, 13, 13, 13, 12, 12, 12, 12, 11, 11, 11, 11, 10, 10, 10, 10, 9, 9, 9, 8, 8, 7, 7, 6, 5
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HFlipper_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function HFlipper_DebugSpawn
+	CreateTempObject(TypeName[H Flipper], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	if object[tempObjectPos].direction == FACING_RIGHT
+		object[tempObjectPos].heightArrayTop 	= HFlipper_heightArrayT_Right
+		object[tempObjectPos].heightArrayBottom = HFlipper_heightArrayB_Right
+	else
+		object[tempObjectPos].heightArrayTop 	= HFlipper_heightArrayT_Left
+		object[tempObjectPos].heightArrayBottom = HFlipper_heightArrayB_Left
+	end if
+end function
+
+
+private function HFlipper_LaunchPlayer
+	temp0 = player[currentPlayer].ixpos
+	temp0 -= object.ixpos
+	if object.direction == FLIP_X
+		FlipSign(temp0)
+	end if
+	temp0 += 35
+
+	temp2 = temp0
+	if temp2 > 64
+		temp2 = 64
+	end if
+	temp2 <<= 5
+	temp2 += 0x800
+	FlipSign(temp2)
+
+	temp3 = temp0
+	temp3 >>= 2
+	temp3 += 64
+
+	Sin256(temp0, temp3)
+	Cos256(temp1, temp3)
+	temp0 *= temp2
+	temp1 *= temp2
+
+	player[currentPlayer].yvel = temp0
+	if object.direction == FLIP_X
+		FlipSign(temp1)
+	end if
+	player[currentPlayer].speed = temp1
+	player[currentPlayer].xvel = temp1
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	default
+	case HFLIPPER_IDLE
+		break
+
+	case HFLIPPER_ACTIVATED
+		object.frame = object.timer
+		object.frame >>= 2
+		object.frame++
+		if object.timer < 12
+			object.timer++
+		else
+			object.timer = 0
+			object.frame = 0
+			object.state = HFLIPPER_IDLE
+		end if
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckEqual(player[currentPlayer].state, Player_State_Death)
+		temp0 = checkResult
+		CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+		temp0 |= checkResult
+		if temp0 == false
+			object.sensorPosL = player[currentPlayer].xpos
+			object.sensorPosL -= object.xpos
+			object.sensorPosL >>= 16
+
+			object.sensorPosM = object.sensorPosL
+			object.sensorPosM += player[currentPlayer].collisionLeft
+
+			object.sensorPosR = object.sensorPosL
+			object.sensorPosR += player[currentPlayer].collisionRight
+
+			object.sensorPosM += 24
+
+			if object.sensorPosM < 0
+				object.sensorPosM = 0
+			end if
+
+			if object.sensorPosM > 47
+				object.sensorPosM = 47
+			end if
+
+			object.sensorPosL += 24
+			if object.sensorPosL < 0
+				object.sensorPosL = 0
+			end if
+			
+			if object.sensorPosL > 47
+				object.sensorPosL = 47
+			end if
+
+			object.sensorPosR += 24
+			if object.sensorPosR < 0
+				object.sensorPosR = 0
+			end if
+
+			if object.sensorPosR > 47
+				object.sensorPosR = 47
+			end if
+
+			GetTableValue(object.sensorHeightM, object.sensorPosM, object.heightArrayTop)
+			GetTableValue(object.sensorHeightL, object.sensorPosL, object.heightArrayTop)
+			GetTableValue(object.sensorHeightR, object.sensorPosR, object.heightArrayTop)
+
+			object.hitboxT = object.sensorHeightM
+			if object.sensorHeightL < object.hitboxT
+				object.hitboxT = object.sensorHeightL
+			end if
+
+			if object.sensorHeightR < object.hitboxT
+				object.hitboxT = object.sensorHeightR
+			end if
+
+			GetTableValue(object.sensorHeightM, object.sensorPosM, object.heightArrayBottom)
+			GetTableValue(object.sensorHeightL, object.sensorPosL, object.heightArrayBottom)
+			GetTableValue(object.sensorHeightR, object.sensorPosR, object.heightArrayBottom)
+
+			object.hitboxB = object.sensorHeightM
+			if object.sensorHeightL > object.hitboxB
+				object.hitboxB = object.sensorHeightL
+			end if
+
+			if object.sensorHeightR > object.hitboxB
+				object.hitboxB = object.sensorHeightR
+			end if
+
+			if player[currentPlayer].state != Player_State_Static
+				BoxCollisionTest(C_SOLID, object.entityPos, -24, object.hitboxT, 24, object.hitboxB, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_BOTTOM
+					CheckEqual(player[currentPlayer].state, Player_State_Climb)
+					temp0 = checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_GlideLeft)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_GlideRight)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_Fly)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+					temp0 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+					temp0 |= checkResult
+					if temp0 == false
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						player[currentPlayer].gravity = GRAVITY_AIR
+					end if
+				end if
+
+				temp0 = 4
+			else
+				temp0 = 12
+			end if
+
+			object.hitboxT -= temp0
+			object.hitboxB = object.hitboxT
+			object.hitboxB += 8
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, object.hitboxT, 24, object.hitboxB, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].ypos = object.hitboxT
+				player[currentPlayer].ypos += temp0
+				player[currentPlayer].ypos -= player[currentPlayer].collisionBottom
+				player[currentPlayer].ypos <<= 16
+				player[currentPlayer].ypos += object.ypos
+				if object.state == HFLIPPER_IDLE
+					if object.direction == FLIP_X
+						BoxCollisionTest(C_TOUCH, object.entityPos, -26, -12, 20, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					else
+						BoxCollisionTest(C_TOUCH, object.entityPos, -20, -12, 26, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					end if
+
+					if checkResult == true
+						CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+						temp0 = checkResult
+						CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+						temp0 |= checkResult
+						if temp0 == false
+							player[currentPlayer].state 	= Player_State_Roll
+							player[currentPlayer].animation = ANI_JUMPING
+						end if
+
+						player[currentPlayer].scrollTracking = false
+						player[currentPlayer].gravity = GRAVITY_GROUND
+						player[currentPlayer].controlLock = 8
+						if player[currentPlayer].jumpPress == true
+							CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+							temp0 = checkResult
+							CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+							temp0 |= checkResult
+							if temp0 == false
+#platform: USE_STANDALONE
+								player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+								player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+							end if
+
+							player[currentPlayer].gravity 		= 1
+							player[currentPlayer].timer 		= 0
+							player[currentPlayer].controlLock 	= 0
+							CallFunction(HFlipper_LaunchPlayer)
+							object.state = HFLIPPER_ACTIVATED
+							StopSfx(SfxName[Jump])
+							PlaySfx(SfxName[Flipper], false)
+						else
+							player[currentPlayer].speed = object.xvel
+							player[currentPlayer].xvel = object.xvel
+							player[currentPlayer].yvel = 0
+						end if
+					else
+						CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+						temp0 = checkResult
+						CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+						temp0 |= checkResult
+						if temp0 == false
+#platform: USE_STANDALONE
+							player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+							player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						end if
+
+						player[currentPlayer].gravity 	= 1
+						player[currentPlayer].timer 	= 0
+					end if
+
+					player[currentPlayer].animation = ANI_JUMPING
+					if player[currentPlayer].prevAnimation != ANI_JUMPING
+						player[currentPlayer].iypos -= player[currentPlayer].jumpOffset
+					end if
+				else
+					CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+					temp0 = checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+					temp0 |= checkResult
+					if temp0 == false
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					end if
+
+					CallFunction(HFlipper_LaunchPlayer)
+					player[currentPlayer].gravity 	= 1
+					player[currentPlayer].timer 	= 0
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-25, -9, 47, 26, 26, 185)
+		SpriteFrame(-24, -8, 48, 16, 26, 212)
+		SpriteFrame(-25, -17, 47, 26, 26, 229)
+		SpriteFrame(-24, -8, 48, 16, 26, 212)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-25, -9, 47, 26, 189, 402)
+		SpriteFrame(-24, -8, 48, 16, 189, 429)
+		SpriteFrame(-25, -17, 47, 26, 189, 446)
+		SpriteFrame(-24, -8, 48, 16, 189, 429)
+	end if
+
+	foreach (TypeName[H Flipper], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		if object[arrayPos0].direction == FLIP_NONE
+			object[arrayPos0].heightArrayTop 	= HFlipper_heightArrayT_Right
+			object[arrayPos0].heightArrayBottom = HFlipper_heightArrayB_Right
+			object[arrayPos0].xvel 				= 0x10000
+		else
+			object[arrayPos0].heightArrayTop 	= HFlipper_heightArrayT_Left
+			object[arrayPos0].heightArrayBottom = HFlipper_heightArrayB_Left
+			object[arrayPos0].xvel 				= -0x10000
+		end if
+	next
+
+	SetTableValue(TypeName[H Flipper], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HFlipper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HFlipper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.direction = object.propertyValue
+	object.direction &= 1
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-25, -9, 47, 26, 26, 185)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-25, -9, 47, 26, 189, 402)
+	end if
+	
+	// Flippers also have FLIP_X attr set too sometimes but that's unused
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
+end event

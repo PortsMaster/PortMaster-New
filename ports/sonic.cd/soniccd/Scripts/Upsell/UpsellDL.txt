@@ -1,0 +1,270 @@
+//-----------------Sonic CD Upsell DL Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Fade
+#alias Object.Value1	:	Object.Selection
+
+// States
+#alias 0	:	UPSELLDL_SETUP_INFADE
+#alias 1	:	UPSELLDL_FADEIN
+#alias 2	:	UPSELLDL_CONTROLS
+#alias 3	:	UPSELLDL_EXIT
+
+// Presentation List Stages
+#alias 1	:	STAGE_P_MENU
+
+// Global SFX
+#alias 23	:	SFX_G_MENUBUTTON
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+// Engine & Callbacks
+#alias 8	:	CALLBACK_BUY_FULL_GAME_SELECTED
+
+#alias 5	:	ENGINE_ENTER_HIRESMODE
+#alias 6	:	ENGINE_EXIT_HIRESMODE
+
+
+sub ObjectMain
+	switch Object.State
+	case UPSELLDL_SETUP_INFADE
+		if Options.PhysicalControls == false
+			Object.Selection = -1
+		else
+			Object.Selection = 0
+		end if
+
+		if Object.Fade < 16
+			Object.Fade++
+		else
+			Object.Fade = 288
+			Object.State++
+		end if
+		SetScreenFade(0, 0, 0, 255)
+		break
+
+	case UPSELLDL_FADEIN
+		if Object.Fade > 0
+			Object.Fade -= 8
+		else
+			Object.State++
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	case UPSELLDL_CONTROLS
+		if Options.PhysicalControls == true
+			if KeyPress[0].Up == true
+				Object.Selection--
+				if Object.Selection < 0
+					Object.Selection = 1
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+
+			if KeyPress[0].Down == true
+				Object.Selection++
+				if Object.Selection > 1
+					Object.Selection = 0
+				end if
+				PlaySfx(SFX_G_MENUBUTTON, false)
+			end if
+
+			if KeyPress[0].Start == true
+				switch Object.Selection
+				case 0
+					EngineCallback(CALLBACK_BUY_FULL_GAME_SELECTED)
+					break
+				case 1
+					Object.State = UPSELLDL_EXIT
+					break
+				end switch
+			end if
+
+			if KeyPress[0].ButtonA == true
+				switch Object.Selection
+				case 0
+					EngineCallback(CALLBACK_BUY_FULL_GAME_SELECTED)
+					break
+				case 1
+					Object.State = UPSELLDL_EXIT
+					break
+				end switch
+			end if
+
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				Options.PhysicalControls = false
+				Object.Selection = -1
+			end if
+		else
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3  = CheckResult
+			TempValue0  = Screen.CenterX
+			TempValue0 -= 80
+			TempValue1  = Screen.CenterX
+			TempValue1 += 80
+			CheckTouchRect(TempValue0, 168, TempValue1, 200)
+			if CheckResult > -1
+				Object.Selection = 0
+			else
+				if TempValue3 < 0
+					if Object.Selection == 0
+						EngineCallback(CALLBACK_BUY_FULL_GAME_SELECTED)
+						Object.Selection = -1
+					end if
+				else
+					if Object.Selection == 0
+						Object.Selection = -1
+					end if
+				end if
+			end if
+
+			TempValue0  = Screen.CenterX
+			TempValue0 -= 64
+			TempValue1  = Screen.CenterX
+			TempValue1 += 64
+			CheckTouchRect(TempValue0, 208, TempValue1, 236)
+			if CheckResult > -1
+				Object.Selection = 1
+			else
+				if TempValue3 < 0
+					if Object.Selection == 1
+						Object.State = UPSELLDL_EXIT
+						Object.Selection = -1
+					end if
+				else
+					if Object.Selection == 1
+						Object.Selection = -1
+					end if
+				end if
+			end if
+
+			if KeyPress[0].Up == true
+				Object.Selection = 1
+				Options.PhysicalControls = true
+			end if
+
+			if KeyPress[0].Down == true
+				Object.Selection = 0
+				Options.PhysicalControls = true
+			end if
+		end if
+		break
+
+	case UPSELLDL_EXIT
+		if Object.Fade < 288
+			Object.Fade += 8
+		else
+			Engine.State = ENGINE_EXIT_HIRESMODE
+			
+			Stage.ActiveList = PRESENTATION_STAGE
+			Stage.ListPos    = STAGE_P_MENU
+			LoadStage()
+		end if
+
+		TempValue0 = Object.Fade
+		if TempValue0 > 255
+			TempValue0 = 255
+		end if
+		SetScreenFade(0, 0, 0, TempValue0)
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	Object.Scale = 216
+	DrawSpriteScreenFX(0, FX_SCALE, Screen.CenterX, Screen.CenterY)
+	
+	if Object.Selection == 0 // Buy full game
+		DrawSpriteScreenFX(1, FX_SCALE, Screen.CenterX, 186)
+	end if
+
+	if Object.Selection == 1 // Play again
+		DrawSpriteScreenFX(2, FX_SCALE, Screen.CenterX, 222)
+	end if
+end sub
+
+
+sub ObjectStartup
+	// Cycle through all scene objects and find if there are any Upsell DL Objects
+	TempValue0 = false
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Upsell DL]
+			// If there are, then set the load sheet flag to true
+			TempValue0 = true
+		end if
+
+		ArrayPos0++
+	loop
+
+	// Only if there's an Upsell DL object in the scene, load the sheet
+	// (It's a really large sheet! Loading it unnecessarily can heavily increase loading times!)
+	if TempValue0 == true
+		switch Engine.Language
+		case LANG_ENGLISH
+			// LoadSpriteSheet("Upsell/UpsellDL_EN.pvr") // Sonic CD Lite used PVRs, but the latest releases use gif instead
+			LoadSpriteSheet("Upsell/UpsellDL_EN.gif")
+			break
+		case LANG_FRENCH
+			LoadSpriteSheet("Upsell/UpsellDL_FR.gif")
+			break
+		case LANG_ITALIAN
+			LoadSpriteSheet("Upsell/UpsellDL_IT.gif")
+			break
+		case LANG_DEUTSCH
+			LoadSpriteSheet("Upsell/UpsellDL_DE.gif")
+			break
+		case LANG_SPANISH
+			LoadSpriteSheet("Upsell/UpsellDL_ES.gif")
+			break
+		case LANG_JAPANESE
+			// LoadSpriteSheet("Upsell/UpsellDL_JP.pvr") // Sonic CD Lite used PVRs, but the latest releases use gif instead
+			LoadSpriteSheet("Upsell/UpsellDL_JP.gif")
+			break
+		end switch
+
+		// Load the entire palette file, notably overriding the global section of the palette as well
+		LoadPalette("UpsellDL.act", 0, 0, 0, 256)
+	end if
+	
+	Engine.State = ENGINE_ENTER_HIRESMODE
+
+	SpriteFrame(-512, -288, 1024, 576, 0, 0) // Entire BG sprite
+
+	// The LANG_JAPANESE version of the selected frames are just a tad bit taller
+	if Engine.Language != LANG_JAPANESE
+		SpriteFrame(-128, -35, 260, 69, 381, 580) // "Buy full game" (or some equivalent in the chosen language)
+		SpriteFrame(-91, -24, 182, 49, 420, 673) // "Try again" (or some equivalent in the chosen language)
+	else
+		SpriteFrame(-128, -36, 260, 69, 381, 580) // "完全版の購入"
+		SpriteFrame(-91, -24, 183, 49, 420, 677) // "もう一度遊ぶ"
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Upsell/UpsellDL_EN.gif")
+	SpriteFrame(-512, -288, 1024, 576, 0, 0)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

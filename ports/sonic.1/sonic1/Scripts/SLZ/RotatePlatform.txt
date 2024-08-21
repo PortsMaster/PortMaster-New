@@ -1,0 +1,259 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Rotate Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatePlatform_DebugDraw
+reserve function RotatePlatform_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RotatePlatform_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RotatePlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function RotatePlatform_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatePlatform_startDebugID
+	temp1 = object.direction
+	temp1 <<= 2
+	temp0 += temp1
+	CreateTempObject(TypeName[Rotate Platform], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.xpos
+	temp7 = object.ypos
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	GetTableValue(temp0, 16, StageSetup_oscillationTable)
+	temp0 <<= 8
+	temp0 &= 0xFFFF0000
+	temp0 -= 0x500000
+
+	GetTableValue(temp1, 18, StageSetup_oscillationTable)
+	temp1 <<= 8
+	temp1 &= 0xFFFF0000
+	temp1 -= 0x500000
+
+	GetBit(temp2, object.propertyValue, 0)
+	if temp2 == true
+		FlipSign(temp0)
+		FlipSign(temp1)
+	end if
+
+	GetBit(temp2, object.propertyValue, 2)
+	if temp2 == true
+		FlipSign(temp0)
+	end if
+
+	GetBit(temp2, object.propertyValue, 1)
+	if temp2 == false
+		object.drawPos.x = temp0
+		object.drawPos.y = temp1
+	else
+		FlipSign(temp0)
+		object.drawPos.x = temp1
+		object.drawPos.y = temp0
+	end if
+	object.drawPos.x += temp6
+	object.drawPos.y += temp7
+
+	temp2 = object.drawPos.x
+	temp2 -= object.xpos
+	temp3 = object.drawPos.y
+	temp3 -= object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += temp2
+			player[currentPlayer].ypos += temp3
+		end if
+	next
+
+	object.xpos = temp6
+	object.ypos = temp7
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 16, 1, 196)
+
+	temp0 = 0
+	RotatePlatform_startDebugID = DebugMode_ObjCount
+	RotatePlatform_startDebugID--
+	while temp0 < 4
+		SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatePlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // flipMoveX
+			GetBit(checkResult, object.propertyValue, 2)
+			break
+			
+		case 1 // flipMoveY
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+			
+		case 2 // flipMoveXY
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // flipMoveX
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 2, checkResult)
+			break
+			
+		case 1 // flipMoveY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+			
+		case 2 // flipMoveXY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	// Actual Position
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw where the player will see the Platform
+		
+		temp6 = object.xpos
+		temp7 = object.ypos
+	
+		temp0 = 0
+		temp0 &= 0xFFFF0000
+		temp0 -= 0x500000
+	
+		temp1 = 0
+		temp1 &= 0xFFFF0000
+		temp1 -= 0x500000
+		
+		GetBit(temp2, object.propertyValue, 0)
+		if temp2 == true
+			FlipSign(temp0)
+			FlipSign(temp1)
+		end if
+		
+		GetBit(temp2, object.propertyValue, 2)
+		if temp2 == true
+			FlipSign(temp0)
+		end if
+		
+		GetBit(temp2, object.propertyValue, 1)
+		if temp2 == false
+			object.drawPos.x = temp0
+			object.drawPos.y = temp1
+		else
+			FlipSign(temp0)
+			object.drawPos.x = temp1
+			object.drawPos.y = temp0
+		end if
+		object.drawPos.x += temp6
+		object.drawPos.y += temp7
+		
+		object.inkEffect = INK_BLEND
+		DrawSpriteFX(0, FX_INK, object.drawPos.x, object.drawPos.y)
+		
+		DrawLine(object.xpos, object.ypos, object.drawPos.x, object.drawPos.y, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 16, 1, 196)
+
+	AddEditorVariable("flipMoveX")
+	SetActiveVariable("flipMoveX")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true",  true)
+
+	AddEditorVariable("flipMoveY")
+	SetActiveVariable("flipMoveY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true",  true)
+
+	AddEditorVariable("flipMoveXY")
+	SetActiveVariable("flipMoveXY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true",  true)
+end event

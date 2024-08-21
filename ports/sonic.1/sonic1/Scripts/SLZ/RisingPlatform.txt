@@ -1,0 +1,480 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Rising Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Platform
+private alias object.value0 : object.startPos.x
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.collisionOffset.x
+private alias object.value3 : object.collisionOffset.y
+private alias object.value4 : object.moveVel
+private alias object.value5 : object.halfwayDist
+private alias object.value6 : object.movePos
+private alias object.value7 : object.reverseDir
+private alias object.value8 : object.finishedMoving
+
+// Spawner
+private alias object.value0 : object.interval
+private alias object.value1 : object.timer
+
+private alias  0 : RISINGPLAT_MOVE_UP_IDLE
+private alias  1 : RISINGPLAT_MOVE_UP
+private alias  2 : RISINGPLAT_MOVE_DOWN_IDLE
+private alias  3 : RISINGPLAT_MOVE_DOWN
+private alias  4 : RISINGPLAT_MOVE_UP_RIGHT_IDLE
+private alias  5 : RISINGPLAT_MOVE_UP_RIGHT
+private alias  6 : RISINGPLAT_MOVE_DOWN_LEFT_IDLE
+private alias  7 : RISINGPLAT_MOVE_DOWN_LEFT
+private alias  8 : RISINGPLAT_FADEAWAY
+private alias  9 : RISINGPLAT_SPAWNER
+private alias 10 : RISINGPLAT_TRYRESET
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RisingPlatform_DebugDraw
+reserve function RisingPlatform_DebugSpawn
+reserve function RisingPlatform_HandleMovement
+reserve function RisingPlatform_HandleMoveFade
+reserve function RisingPlatform_HandleCollisions
+reserve function RisingPlatform_CheckOnScreen
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RisingPlatform_startDebugID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table RisingPlatform_distanceTable
+	0x400000
+	0x800000
+	0xD00000
+	0x400000
+	0x800000
+	0xD00000
+	0x500000
+	0x900000
+	0xB00000
+	0x500000
+	0x900000
+	0xB00000
+	0x800000
+	0x800000
+	0xC00000
+end table
+
+private table RisingPlatform_stateTable
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	0 // RISINGPLAT_MOVE_UP_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	2 // RISINGPLAT_MOVE_DOWN_IDLE
+	4 // RISINGPLAT_MOVE_UP_RIGHT_IDLE
+	6 // RISINGPLAT_MOVE_DOWN_LEFT_IDLE
+	8 // RISINGPLAT_FADEAWAY
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RisingPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function RisingPlatform_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RisingPlatform_startDebugID
+
+	CreateTempObject(TypeName[Rising Platform], temp0, object.xpos, object.ypos)
+
+	if temp0 < 14
+		object[tempObjectPos].startPos.x = object[tempObjectPos].xpos
+		object[tempObjectPos].startPos.y = object[tempObjectPos].ypos
+		object[tempObjectPos].collisionOffset.x = object[tempObjectPos].xpos
+		object[tempObjectPos].collisionOffset.y = object[tempObjectPos].ypos
+		temp0 = object[tempObjectPos].propertyValue
+		temp0 &= 15
+		GetTableValue(object[tempObjectPos].halfwayDist, temp0, RisingPlatform_distanceTable)
+		GetTableValue(object[tempObjectPos].state, temp0, RisingPlatform_stateTable)
+		object[tempObjectPos].movePos = 0
+		object[tempObjectPos].reverseDir = 0
+		object[tempObjectPos].finishedMoving = false
+	else
+		object[tempObjectPos].interval = 60
+		object[tempObjectPos].timer = 60
+		object[tempObjectPos].state = RISINGPLAT_SPAWNER
+		object[tempObjectPos].priority = PRIORITY_XBOUNDS
+	end if
+end function
+
+
+private function RisingPlatform_HandleMovement
+	if object.reverseDir == false
+		if object.moveVel < 0x80000
+			object.moveVel += 0x1000
+		end if
+	else
+		if object.moveVel > 0x4000
+			object.moveVel -= 0x1000
+		end if
+	end if
+
+	if object.movePos > object.halfwayDist
+		object.reverseDir = true
+	end if
+
+	object.movePos += object.moveVel
+
+	temp0 = object.halfwayDist
+	temp0 <<= 1
+
+	if object.movePos >= temp0
+		object.finishedMoving = true
+		object.movePos = temp0
+	end if
+end function
+
+
+private function RisingPlatform_HandleMoveFade
+	if object.reverseDir == false
+		if object.moveVel < 0x80000
+			object.moveVel += 0x1000
+		end if
+	else
+		if object.moveVel > 0
+			object.moveVel -= 0x1000
+		end if
+	end if
+
+	if object.movePos > object.halfwayDist
+		object.reverseDir = true
+	end if
+
+	object.movePos += object.moveVel
+
+	if object.moveVel == 0
+		object.finishedMoving = true
+	end if
+end function
+
+
+private function RisingPlatform_HandleCollisions
+	temp6 = object.xpos
+	temp6 &= 0xFFFF0000
+	temp0 = object.collisionOffset.x
+	temp0 &= 0xFFFF0000
+
+	temp6 -= temp0
+	temp7 = object.ypos
+	temp7 &= 0xFFFF0000
+	temp0 = object.collisionOffset.y
+	temp0 &= 0xFFFF0000
+	temp7 -= temp0
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -8, 40, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos -= temp6
+			player[currentPlayer].ypos -= temp7
+		end if
+	next
+	
+	object.xpos = object.collisionOffset.x
+	object.ypos = object.collisionOffset.y
+end function
+
+
+private function RisingPlatform_CheckOnScreen
+	if object.outOfBounds == true
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		object.collisionOffset.x = object.xpos
+		object.collisionOffset.y = object.ypos
+		object.movePos = 0
+		object.reverseDir = 0
+		object.finishedMoving = false
+		object.state = RISINGPLAT_TRYRESET
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case RISINGPLAT_MOVE_UP_IDLE
+	case RISINGPLAT_MOVE_DOWN_IDLE
+	case RISINGPLAT_MOVE_UP_RIGHT_IDLE
+	case RISINGPLAT_MOVE_DOWN_LEFT_IDLE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -8, 40, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.state++
+				object.priority = PRIORITY_ACTIVE
+			end if
+		next
+		break
+
+	case RISINGPLAT_MOVE_UP
+		CallFunction(RisingPlatform_HandleMovement)
+		object.collisionOffset.y = object.movePos
+		FlipSign(object.collisionOffset.y)
+		object.collisionOffset.y += object.startPos.y
+		CallFunction(RisingPlatform_HandleCollisions)
+		CallFunction(RisingPlatform_CheckOnScreen)
+		break
+
+	case RISINGPLAT_MOVE_DOWN
+		CallFunction(RisingPlatform_HandleMovement)
+		object.collisionOffset.y = object.movePos
+		object.collisionOffset.y += object.startPos.y
+		CallFunction(RisingPlatform_HandleCollisions)
+		CallFunction(RisingPlatform_CheckOnScreen)
+		break
+
+	case RISINGPLAT_MOVE_UP_RIGHT
+		CallFunction(RisingPlatform_HandleMovement)
+		object.collisionOffset.y = object.movePos
+		object.collisionOffset.y >>= 1
+		FlipSign(object.collisionOffset.y)
+		object.collisionOffset.y += object.startPos.y
+
+		object.collisionOffset.x = object.movePos
+		object.collisionOffset.x += object.startPos.x
+		CallFunction(RisingPlatform_HandleCollisions)
+		CallFunction(RisingPlatform_CheckOnScreen)
+		break
+
+	case RISINGPLAT_MOVE_DOWN_LEFT
+		CallFunction(RisingPlatform_HandleMovement)
+		object.collisionOffset.y = object.movePos
+		object.collisionOffset.y >>= 1
+		object.collisionOffset.y += object.startPos.y
+
+		object.collisionOffset.x = object.movePos
+		FlipSign(object.collisionOffset.x)
+		object.collisionOffset.x += object.startPos.x
+		CallFunction(RisingPlatform_HandleCollisions)
+		CallFunction(RisingPlatform_CheckOnScreen)
+		break
+
+	case RISINGPLAT_FADEAWAY
+		CallFunction(RisingPlatform_HandleMoveFade)
+		object.collisionOffset.y = object.movePos
+		FlipSign(object.collisionOffset.y)
+		object.collisionOffset.y += object.startPos.y
+		CallFunction(RisingPlatform_HandleCollisions)
+		temp0 = object.moveVel
+		temp0 >>= 8
+		if temp0 > 0x100
+			temp0 = 0x100
+		end if
+		object.alpha = temp0
+
+		if object.finishedMoving == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case RISINGPLAT_SPAWNER
+		object.timer--
+		if object.timer <= 0
+			CreateTempObject(TypeName[Rising Platform], 0, object.xpos, object.ypos)
+			object[tempObjectPos].startPos.x = object.xpos
+			object[tempObjectPos].startPos.y = object.ypos
+			object[tempObjectPos].collisionOffset.x = object.xpos
+			object[tempObjectPos].collisionOffset.y = object.ypos
+			temp0 = 14
+			GetTableValue(object[tempObjectPos].halfwayDist, temp0, RisingPlatform_distanceTable)
+			GetTableValue(object[tempObjectPos].state, temp0, RisingPlatform_stateTable)
+			object[tempObjectPos].movePos = 0
+			object[tempObjectPos].reverseDir = false
+			object[tempObjectPos].finishedMoving = false
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object.timer = object.interval
+		end if
+		break
+
+	case RISINGPLAT_TRYRESET
+		if object.outOfBounds == true
+			temp0 = object.propertyValue
+			temp0 &= 15
+			GetTableValue(object.halfwayDist, temp0, RisingPlatform_distanceTable)
+			GetTableValue(object.state, temp0, RisingPlatform_stateTable)
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state == RISINGPLAT_FADEAWAY
+		DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+	else
+		if object.state < RISINGPLAT_SPAWNER
+			DrawSprite(0)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-40, -8, 80, 32, 84, 188)
+
+	foreach (TypeName[Rising Platform], arrayPos0, ALL_ENTITIES)
+		GetBit(temp0, object[arrayPos0].propertyValue, 7)
+		if temp0 == false
+			object[arrayPos0].startPos.x = object[arrayPos0].xpos
+			object[arrayPos0].startPos.y = object[arrayPos0].ypos
+			object[arrayPos0].collisionOffset.x = object[arrayPos0].xpos
+			object[arrayPos0].collisionOffset.y = object[arrayPos0].ypos
+			temp0 = object[arrayPos0].propertyValue
+			temp0 &= 15
+			GetTableValue(object[arrayPos0].halfwayDist, temp0, RisingPlatform_distanceTable)
+			GetTableValue(object[arrayPos0].state, temp0, RisingPlatform_stateTable)
+			object[arrayPos0].movePos = 0
+			object[arrayPos0].reverseDir = false
+			object[arrayPos0].finishedMoving = false
+		else
+			object[arrayPos0].interval = object[arrayPos0].propertyValue
+			object[arrayPos0].interval &= 0x7F
+			object[arrayPos0].interval *= 6
+			object[arrayPos0].timer = object[arrayPos0].interval
+			object[arrayPos0].state = RISINGPLAT_SPAWNER
+			object[arrayPos0].priority = PRIORITY_XBOUNDS
+		end if
+	next
+
+	temp0 = 0
+	RisingPlatform_startDebugID = DebugMode_ObjCount
+	while temp0 < 15
+		SetTableValue(TypeName[Rising Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RisingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RisingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			GetBit(temp0, object.propertyValue, 7)
+			if temp0 == 0
+				checkResult = object.propertyValue
+				checkResult &= 0x0F
+			else
+				checkResult = 0
+			end if
+			break
+			
+		case 1 // spawnInterval
+			checkResult = object.propertyValue
+			checkResult &= 0x7F
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			editor.variableValue &= 0x0F
+
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 1 // spawnInterval
+			if editor.variableValue > 0 // it is "possible" to do 0 interval, but that would prolly just kill the game so actually no its not :]
+				editor.variableValue &= 0x7F
+
+				object.propertyValue = editor.variableValue
+				object.propertyValue |= 0x80
+			else
+				object.propertyValue = 0
+			end if
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-40, -8, 80, 32, 84, 188)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Up (Slow)", 0)
+	AddEnumVariable("Up (Med)", 1)
+	AddEnumVariable("Up (Fast)", 2)
+	AddEnumVariable("Down (Slow)", 3)
+	AddEnumVariable("Down (Med)", 4)
+	AddEnumVariable("Down (Fast)", 5)
+	AddEnumVariable("Up (Slow, Faster)", 6)
+	AddEnumVariable("Up (Med, Faster)", 7)
+	AddEnumVariable("Up (Fast, Faster)", 8)
+	AddEnumVariable("Down (Slow, Faster)", 9)
+	AddEnumVariable("Down (Med, Faster)", 10)
+	AddEnumVariable("Down (Fast, Faster)", 11)
+	AddEnumVariable("Up-Right", 12)
+	AddEnumVariable("Down-Left", 13)
+
+	// Intervals of 6 (so 6, 12, 18, 24, etc...)
+	AddEditorVariable("spawnInterval")
+	SetActiveVariable("spawnInterval")
+end event

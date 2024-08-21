@@ -1,0 +1,604 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Tornado Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 43 : TYPE_TORNADO
+
+// Function declarations
+reserve function Tornado_Function102
+reserve function Tornade_EndWFZ
+
+// Static Values
+private value Tornado_TriggerEnd = 0;
+// Tables
+public table Tornado_table42
+	5, 32, 6, 8, 7, 8, 8, 8, 7, 8, 6, 16, 9, 32, 6, 16
+	
+end table
+
+public table Tornado_table41
+	10, 9, 11, 9, 10, 9, 11, 9, 10, 9, 11, 9, 10, 9, 11, 9
+	
+end table
+
+public table Tornado_table39
+	520, 640, 712, 744, 808, 968, 0x418, 0x488, 0x4C8, 0x5A8, 0xFFFF
+end table
+
+public table Tornado_table40
+	-0x10000, -0x10000, 0x10000, 0, 0, 0x10000, 0x10000, -0x10000, 0x10000, 0x10000, 0x10000, -0x10000, -0x10000, 0x10000, -0x10000, -0x10000
+	-0x10000, 0x10000, -0x20000, 0, 0, 0
+end table
+
+function Tornade_EndWFZ
+	if object[30].type == TypeName[Act Finish]
+	else
+		if Tornado_TriggerEnd == 0
+			if inputPress.start == 1
+				Tornado_TriggerEnd = 1
+			end if
+		end if
+	end if
+	if Tornado_TriggerEnd > 0
+		music.volume -= 2
+		Tornado_TriggerEnd += 4
+		SetScreenFade(0, 0, 0, Tornado_TriggerEnd)
+		if Tornado_TriggerEnd >= 384
+			StopMusic()
+			fadeColor = 0
+			Tornado_TriggerEnd = 0
+			starPostID = 0
+			object.direction = FLIP_NONE
+			stage.listPos++
+			if stage.listPos > 20
+				stage.listPos = 12
+			end if
+			if options.gameMode == 1
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				arrayPos1 += 1000
+				if stage.player2Enabled == 1
+					switch stage.playerListPos
+						case 0
+							saveRAM[arrayPos1] = 3
+							break
+						case 2
+							saveRAM[arrayPos1] = 4
+							break
+					end switch
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				temp0 = stage.listPos
+				temp0++
+				if saveRAM[arrayPos1] != 22
+					saveRAM[arrayPos1] = temp0
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+				arrayPos1++
+				saveRAM[arrayPos1] = player.continues
+				WriteSaveRAM()
+			end if
+			
+			temp0 = engine.trialMode
+			if stage.listPos >= stage.listSize
+				temp0 = 1
+			end if
+			if temp0 == 0
+				LoadStage()
+			else
+				stage.activeList = PRESENTATION_STAGE
+				stage.listPos = 0
+				LoadStage()
+			end if
+		end if
+	end if
+end function
+
+function Tornado_Function102
+	if object.value1 == 0
+		object.value1 = 15
+		temp0 = object.xpos
+		Rand(temp1, 8)
+		temp1 <<= 18
+		temp0 -= temp1
+		temp1 = object.ypos
+		temp1 += 0x100000
+		CreateTempObject(TypeName[T Explosion], 0, temp0, temp1)
+	else
+		object.value1--
+	end if
+end function
+
+
+event ObjectMain
+	object.value3 = object.ypos
+	object.drawOrder = 4
+	switch object.state
+	case 0
+		temp0 = object[0].xpos
+		temp0 -= 0x100000
+		if object.xpos < temp0
+			object.type = TypeName[Blank Object]
+		else
+			if stage.playerListPos == 1
+				object[0].ypos += 0x40000
+			end if
+			object.state++
+		end if
+		break
+	case 1
+		object.xpos += object.xvel
+		object.value0--
+		if object.value0 == 0
+			object.yvel = 0x10000
+			object.value0 = 96
+			object.state = 2
+		else
+			temp0 = object.xpos
+			temp0 -= 0x100000
+			if object[0].xpos < temp0
+				object[0].xpos = temp0
+			end if
+			temp0 += 0x200000
+			if object[0].xpos > temp0
+				object[0].xpos = temp0
+			end if
+		end if
+		break
+	case 2
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		temp0 = oscillation
+		temp0 &= 31
+		if temp0 == 0
+			PlaySfx(SfxName[Laser Skim], 0)
+		end if
+		object.value0--
+		if object.value0 == 0
+			object.xvel = 0x20000
+			object.yvel = 0x20000
+			object.value0 = 96
+			object.state = 3
+		end if
+		CallFunction(Tornado_Function102)
+		break
+	case 3
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		CallFunction(Tornado_Function102)
+		break
+	case 4
+		BoxCollisionTest(C_TOUCH, object.entityPos, -640, -262, 0, 0, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			if object[0].gravity == GRAVITY_GROUND
+				object[0].controlMode = -1
+				object[0].jumpPress = 0
+				object[0].jumpHold = 0
+				object[0].up = 0
+				object[0].down = 0
+				object[0].left = 0
+				object[0].right = 0
+				if PlayerObject_SuperState == 1
+					PlayerObject_SuperState = 2
+					if stage.debugMode == 0
+						//CallNativeFunction2(SetAchievement, 3, 100)
+						achievement.trigger = 4 //Superstar
+					end if
+				end if				
+				object[0].speed = 0
+				object[0].animation = ANI_STOPPED
+				object[0].state = PlayerObject_HandleGround
+				object[0].direction = FLIP_NONE
+				object.state = 5
+				stage.pauseEnabled = 0
+				if options.gameMode == 2
+					if stage.timeEnabled == 1
+						timeAttack.result = stage.seconds
+						timeAttack.result *= 100
+						temp0 = stage.minutes
+						temp0 *= 0x1770
+						timeAttack.result += temp0
+						timeAttack.result += stage.milliSeconds
+						if stage.activeList == REGULAR_STAGE
+							arrayPos1 = 30
+							if SuperTimeAttack == 0
+								arrayPos1 *= stage.playerListPos
+							else
+								arrayPos1 *= 3
+							end if
+							arrayPos1 += stage.listPos
+							arrayPos1 += 499
+							
+							if timeAttack.result < saveRAM[arrayPos1]
+								saveRAM[arrayPos1] = timeAttack.result
+								WriteSaveRAM()
+								PlaySfx(SfxName[Event], 0)
+							end if
+					
+						else
+							CallNativeFunction2(SetLeaderboard, 21, timeAttack.result)
+						end if				
+					end if				
+				end if
+				stage.timeEnabled = 0
+			else
+				object[0].controlMode = -1
+				object[0].value15 = 0
+				object[0].value35 = 0
+				if object[0].speed > 0
+					object[0].speed /= 2
+				end if
+				if object[0].state == PlayerObject_KnuxGlideRight
+					object[0].value1 = 0
+					object[0].animation = ANI_GLIDING_DROP
+					object[0].state = PlayerObject_KnuxGlideDrop
+				end if
+				if object[0].state == PlayerObject_HandleTailsFlight
+					object[0].state = PlayerObject_HandleAir
+					object[0].animation = ANI_JUMPING
+					object[0].yvel = 1
+				end if
+				if object[0].state == PlayerObject_KnuxGlideSlide
+					object[0].speed = 0
+				end if				
+			end if
+		end if
+		break
+	case 5
+		if object[0].state == PlayerObject_HandleGround
+			object[0].value1 = 0
+		end if
+		object.value0++
+		switch options.gameMode
+			case 2
+				music.volume--
+				if object.value0 >= 120
+					object.value0 = 0
+					PlayMusic(1)
+					object[30].type = TypeName[Act Finish]
+					object[30].drawOrder = 6
+					object[30].priority = PRIORITY_ACTIVE
+					
+					object.type = TypeName[Blank Object]
+				end if
+				break
+			case 3
+				music.volume--
+				if object.value0 >= 120
+					object.value0 = 0
+					PlayMusic(1)
+					object[30].type = TypeName[Act Finish]
+					object[30].drawOrder = 6
+					object[30].priority = PRIORITY_ACTIVE
+					object.state++
+				end if
+				break
+			default	
+				if object.value0 >= 120
+					object.value0 = 0
+					object.state++
+				end if
+				break
+		end switch
+		break
+	case 6
+		object[0].right = 1
+		temp0 = object.xpos
+		temp0 -= 0x100000
+		if object[0].xpos >= temp0
+			object[0].xpos = temp0
+			object[0].xvel = 0
+			object[0].speed = 0
+			object[0].right = 0
+			object.xvel = 0x10000
+			object.yvel = -0x10000
+			object.state = 7
+		end if
+		CallFunction(Tornade_EndWFZ)
+		break
+	case 7
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.value0++
+		if object.value0 == 72
+			object[0].jumpPress = 1
+			object[0].jumpHold = 1
+			object[0].right = 1
+			object.value10 = object[0].value32
+			object[0].value32 = PlayerObject_Blank
+			object[0].value25 = 0x3800
+			object[0].value20 = 0x60000
+			object[0].value21 = 0xC00
+			object[0].value22 = 0xC00
+			object[0].value23 = 0x1800
+			object[0].value24 = 0x600
+			object[0].value9 = 0x8000
+			object[0].value29 = 0x600
+			object[0].value27 = 0x68000
+			object[0].value28 = -0x40000
+			object.state = 8
+		end if
+		CallFunction(Tornade_EndWFZ)
+		break
+	case 8
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.value0++
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -20, -8, 20, 8, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[0].jumpPress = 0
+			object[0].jumpHold = 0
+			object[0].xvel = 0
+			object[0].speed = 0
+			object[0].right = 0
+			object[0].value32 = object.value10
+			GetTableValue(object.value1, object.value8, Tornado_table39)
+			object.value8++
+			object.state = 9
+		end if
+		CallFunction(Tornade_EndWFZ)
+		break
+	case 9
+		if object.value0 < 0x488
+			tileLayer[1].scrollSpeed -= 256
+			if tileLayer[1].scrollSpeed < -0x60000
+				tileLayer[1].scrollSpeed = -0x60000
+			end if
+		else
+			if object.value0 > 0x800
+				tileLayer[1].scrollSpeed += 0x600
+				if tileLayer[1].scrollSpeed > 0
+					tileLayer[1].scrollSpeed = 0
+				end if
+				tileLayer[3].scrollSpeed += 0x4E0
+				if tileLayer[3].scrollSpeed > 0
+					tileLayer[3].scrollSpeed = 0
+					if stage[1].activeLayer != 2
+						stage[1].activeLayer = 2
+						stage[3].activeLayer = 2
+						tileLayer[2].scrollPos = 0
+						tileLayer[2].scrollSpeed = 0
+						hParallax[4].scrollPos = 0
+						hParallax[4].scrollSpeed = 0x20000
+					end if
+				end if
+			end if
+		end if
+		object[0].value1 = 0
+		object.value0++
+		if object.value0 >= object.value1
+			temp0 = object.value8
+			temp0 <<= 1
+			GetTableValue(object.xvel, temp0, Tornado_table40)
+			temp0++
+			GetTableValue(object.yvel, temp0, Tornado_table40)
+			GetTableValue(object.value1, object.value8, Tornado_table39)
+			object.value8++
+		end if
+		switch object.value0
+		case 296
+			object.value9 = 1
+			hParallax[0].scrollSpeed <<= 1
+			hParallax[1].scrollSpeed <<= 1
+			hParallax[2].scrollSpeed <<= 1
+			hParallax[3].scrollSpeed <<= 1
+			break
+		case 1148
+			object[0].jumpPress = 1
+			object[0].jumpHold = 1
+			break
+		case 1149
+			object[0].jumpPress = 0
+			break
+		case 1160
+			object[+4].value0 = 1
+			object[+5].value0 = 1
+			object[+6].value0 = 1
+			hParallax[0].scrollSpeed <<= 2
+			hParallax[1].scrollSpeed <<= 2
+			hParallax[2].scrollSpeed <<= 2
+			hParallax[3].scrollSpeed <<= 2
+			object[0].gravity = GRAVITY_GROUND
+			object[0].scrollTracking = 0
+			tileLayer[1].scrollSpeed = -0x80000
+			tileLayer[3].scrollSpeed = -0x80000
+			break
+		case 2200
+			stage[0].activeLayer = 3
+			tileLayer[3].scrollPos = 0x2490000
+			tileLayer[3].scrollSpeed = tileLayer[1].scrollSpeed
+			break
+		case 2624
+			object.value0 = 0
+			object.state = 10
+			break
+		end switch
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		CallFunction(Tornade_EndWFZ)
+		break
+	case 10
+		if object[30].type == TypeName[Act Finish]
+		else
+			music.volume -= 2
+			Tornado_TriggerEnd += 4
+			SetScreenFade(0, 0, 0, Tornado_TriggerEnd)
+			if Tornado_TriggerEnd == 384
+				StopMusic()
+				fadeColor = 0
+				Tornado_TriggerEnd = 0
+				starPostID = 0
+				object.direction = FLIP_NONE
+				stage.listPos++
+				if stage.listPos > 20
+					stage.listPos = 12
+				end if
+				if options.gameMode == 1
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					arrayPos1 += 1000
+					if stage.player2Enabled == 1
+						switch stage.playerListPos
+							case 0
+								saveRAM[arrayPos1] = 3
+								break
+							case 2
+								saveRAM[arrayPos1] = 4
+								break
+						end switch
+					else
+						saveRAM[arrayPos1] = stage.playerListPos
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+					temp0 = stage.listPos
+					temp0++
+					if saveRAM[arrayPos1] != 22
+						saveRAM[arrayPos1] = temp0
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.emeralds
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+					arrayPos1++
+					saveRAM[arrayPos1] = player.continues
+					WriteSaveRAM()
+				end if
+
+				temp0 = engine.trialMode
+				if stage.listPos >= stage.listSize
+					temp0 = 1
+				end if
+				if temp0 == 0
+					LoadStage()
+				else
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos = 0
+					LoadStage()
+				end if
+			
+			end if
+		end if
+		break
+	end switch
+	temp0 = object.ypos
+	object.value3 &= -0x10000
+	object.value4 = object.ypos
+	object.value4 &= -0x10000
+	object.value4 -= object.value3
+	object.ypos = object.value3
+	object.value2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp2 = object[currentPlayer].yvel
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -20, -8, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].xpos += object.xvel
+			object[currentPlayer].ypos += object.yvel
+			object.value2 |= 1
+		end if
+	next
+	object.ypos = temp0
+	object.frame++
+	object.frame &= 3
+	if object.value6 < 2
+		if stage.playerListPos == 1
+			GetTableValue(object.value5, object.value7, Tornado_table41)
+			object.value7++
+			GetTableValue(object.value6, object.value7, Tornado_table41)
+			object.value7++
+		else
+			GetTableValue(object.value5, object.value7, Tornado_table42)
+			object.value7++
+			GetTableValue(object.value6, object.value7, Tornado_table42)
+			object.value7++
+		end if
+		object.value7 &= 15
+	else
+		object.value6--
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+	DrawSprite(4)
+	DrawSprite(object.value5)
+	if object.state >= 7
+		DrawSprite(12)
+		if object.value9 == 1
+			temp0 = oscillation
+			temp0 &= 1
+			temp0 += 13
+			DrawSprite(temp0)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(21, 8, 4, 24, 378, 215)
+	SpriteFrame(21, 11, 4, 18, 383, 218)
+	SpriteFrame(21, 16, 4, 8, 388, 223)
+	SpriteFrame(21, 11, 4, 18, 393, 218)
+	SpriteFrame(-95, -16, 116, 64, 261, 191)
+	SpriteFrame(-45, -8, 21, 16, 261, 174)
+	SpriteFrame(-45, -8, 21, 16, 283, 174)
+	SpriteFrame(-45, -8, 21, 16, 305, 174)
+	SpriteFrame(-45, -8, 21, 16, 327, 174)
+	SpriteFrame(-47, -8, 23, 16, 349, 174)
+	SpriteFrame(-50, -8, 24, 16, 294, 157)
+	SpriteFrame(-50, -8, 24, 16, 319, 157)
+	SpriteFrame(-39, 32, 56, 16, 375, 90)
+	SpriteFrame(-55, 32, 16, 16, 386, 107)
+	SpriteFrame(-71, 32, 32, 16, 386, 124)
+	if playerCount > 1
+		object[1].type = TypeName[Blank Object]
+		playerCount = 1
+	end if
+	foreach (TypeName[Tornado], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].xvel = 0x10000
+			object[arrayPos0].value0 = 192
+		else
+			//if options.gameMode == 2
+			//	ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+			//else
+				object[arrayPos0].state = 4
+			//end if
+		end if
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

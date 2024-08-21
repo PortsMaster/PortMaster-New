@@ -1,0 +1,158 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Horizontal Door Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HorizontalDoor_Setup
+reserve function HorizontalDoor_DebugDraw
+reserve function HorizontalDoor_DebugSpawn
+
+
+// ========================
+// Events
+// ========================
+
+private function HorizontalDoor_Setup
+	object[arrayPos0].priority 	= PRIORITY_ACTIVE
+	object[arrayPos0].timer 	= 0
+	object[arrayPos0].xpos 	= object[arrayPos0].startPos.x
+
+	if object[arrayPos0].direction == FLIP_X
+		object[arrayPos0].xpos -= 0x400000
+	end if
+end function
+
+
+private function HorizontalDoor_DebugDraw
+	temp1 = object.xpos
+	if object.direction == FACING_LEFT
+		temp1 -= 0x400000
+	end if
+	DrawSpriteXY(0, temp1, object.ypos)
+end function
+
+
+private function HorizontalDoor_DebugSpawn
+	CreateTempObject(TypeName[Horizontal Door], 0, object.xpos, object.ypos)
+
+	// Door direction is based on the direction of the player when entering Debug Mode
+	object[tempObjectPos].direction = object.direction
+
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].startPos.x = object.xpos
+	CallFunction(HorizontalDoor_Setup)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = false
+
+	temp1 = object.xpos
+
+	// Check to see if any players have stepped within range for the door activation
+	object.xpos = object.startPos.x
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -16, 96, 64, currentPlayer, -1, -1, 1, 1)
+			if checkResult == true
+				temp0 = true
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -160, -16, -32, 64, currentPlayer, -1, -1, 1, 1)
+			if checkResult == true
+				temp0 = true
+			end if
+		end if
+	next
+
+	object.xpos = temp1
+
+	// A player has stepped within range, move the door
+	if temp0 == true
+		if object.timer < 4
+			object.timer++
+			if object.direction == FLIP_NONE
+				object.xpos -= 0x100000
+			else
+				object.xpos += 0x100000
+			end if
+		end if
+	else
+		if object.timer > 0
+			object.timer--
+			if object.direction == FLIP_NONE
+				object.xpos += 0x100000
+			else
+				object.xpos -= 0x100000
+			end if
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].yvel >= 0
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -12, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+
+	// Horizontal Door Frame
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
+	foreach (TypeName[Horizontal Door], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		CallFunction(HorizontalDoor_Setup)
+	next
+
+	SetTableValue(TypeName[Horizontal Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HorizontalDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HorizontalDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
+	// Note that this object actually uses the `direction` variable for its direction, rather than property value
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

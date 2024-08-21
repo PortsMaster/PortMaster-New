@@ -1,0 +1,251 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: C Ledge Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.delay
+
+private alias 0 : CLEDGE_ACTIVE
+private alias 1 : CLEDGE_COLLAPSE
+private alias 2 : CLEDGE_COLLAPSED
+private alias 3 : CLEDGE_NONE
+private alias 4 : CLEDGE_TILEDELAY
+private alias 5 : CLEDGE_TILEFALL
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CLedge_DebugDraw
+reserve function CLedge_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table CLedge_tileFrameTable
+	1, 2, 3, 4, 5, 6
+end table
+
+private table CLedge_collapseTable
+	2, 6, 10, 14, 18, 22
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function CLedge_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function CLedge_DebugSpawn
+	CreateTempObject(TypeName[C Ledge], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CLEDGE_ACTIVE
+		break
+
+	case CLEDGE_COLLAPSE
+		if object.timer < 10
+			object.timer++
+		else
+			temp0 = 0
+			while temp0 < 6
+				GetTableValue(temp1, temp0, CLedge_tileFrameTable)
+				CreateTempObject(TypeName[C Ledge], temp1, object.xpos, object.ypos)
+				object[tempObjectPos].state = CLEDGE_TILEDELAY
+				object[tempObjectPos].direction = object.direction
+				GetTableValue(object[tempObjectPos].delay, temp0, CLedge_collapseTable)
+				temp0++
+			loop
+			PlaySfx(SfxName[Ledge Break], false)
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CLEDGE_COLLAPSED
+		// During this state, the object is invisible, but it's still providing collision for a brief moment before it truly disappears
+		if object.timer < 20
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CLEDGE_NONE
+		break
+
+	case CLEDGE_TILEDELAY
+		if object.timer < object.delay
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CLEDGE_TILEFALL
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+
+	if object.state < CLEDGE_TILEDELAY
+		if object.outOfBounds == true
+			object.state = CLEDGE_ACTIVE
+			object.timer = 0
+			object.priority = PRIORITY_BOUNDS
+		end if
+	end if
+
+	if object.state < CLEDGE_NONE
+		// In one of the platform states, so act like one and provide collision to the player
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -24, 32, -8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			if checkResult == true
+				if object.state == CLEDGE_ACTIVE
+					object.state = CLEDGE_COLLAPSE
+					object.priority = PRIORITY_ACTIVE
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case CLEDGE_ACTIVE
+	case CLEDGE_COLLAPSE
+		// Full platform - simply draw the entire sprite
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CLEDGE_COLLAPSED
+	case CLEDGE_NONE
+		break
+
+	case CLEDGE_TILEDELAY
+	case CLEDGE_TILEFALL
+		// Tile fragment, draw whatever sprite's assigned to this object
+		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+
+	SpriteFrame(-32, -24, 64, 48, 136, 66) // 0 - Full platform
+
+	SpriteFrame(  8,  -8, 24, 32, 176, 82) // 1-6 - Individual platform strips
+	SpriteFrame(-16,  -8, 24, 32, 152, 82) // (for when it falls apart)
+	SpriteFrame( 16, -24, 16, 16, 184, 66)
+	SpriteFrame(  0, -24, 16, 16, 168, 66)
+	SpriteFrame(-16, -24, 16, 16, 152, 66)
+	SpriteFrame(-32, -24, 16, 16, 136, 66)
+
+	// Huh? Blank Object?
+	// Prolly meant to be [C Ledge], but it might be [C Floor] or something in the original source instead
+	foreach (TypeName[Blank Object], arrayPos0, ALL_ENTITIES)
+		// This uses Property Value as direction, though that isn't the case for this object
+		// -> Interestingly, there are a few C Ledges that do have their prop val set to 1, the majority are
+		//    right-facing ones, though there is a single left-facing one with it too
+		// -> Once again though, this doesn't matter anyway - check out down below
+		
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+	next
+	
+	// The above is meant to set up the directions of all C Ledges in the scene, but thanks to an erroneous TypeName
+	// it doesn't function correctly
+	// However this still works by chance, because the direction attribute is already set from the scene
+	// There are many ledges that have something in their property value, but that value isn't used by the game
+	
+	SetTableValue(TypeName[C Ledge], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CLedge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CLedge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.direction
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			object.direction = editor.variableValue
+			object.direction &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-32, -24, 64, 48, 136, 66)
+	
+	// Redundant to the actual direction attribute, but this helps to highlight this over property value
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+	
+	// May as well chuck this here too, y'know?
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

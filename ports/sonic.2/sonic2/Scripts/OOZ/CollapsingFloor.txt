@@ -1,0 +1,250 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: C Floor Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.delay
+private alias object.value2 : object.collapseTable
+
+private alias 0 : CFLOOR_ACTIVE
+private alias 1 : CFLOOR_COLLAPSE
+private alias 2 : CFLOOR_COLLAPSED
+private alias 3 : CFLOOR_NONE
+private alias 4 : CFLOOR_TILEDELAY
+private alias 5 : CFLOOR_TILEFALL
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CFloor_DebugDraw
+reserve function CFloor_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table CFloor_tileFramesFlipX
+	1, 2, 3, 4
+	5, 6, 7, 8
+end table
+
+// Unused, same table as the one in ARZ though...
+private table CFloor_tileFramesNoFlip
+	4, 3, 2, 1
+	8, 7, 6, 5
+end table
+
+private table CFloor_collapseTableL
+	30, 22, 14, 6
+	26, 18, 10, 2
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function CFloor_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function CFloor_DebugSpawn
+	CreateTempObject(TypeName[C Floor], 0, object.xpos, object.ypos)
+	object[tempObjectPos].collapseTable = CFloor_collapseTableL
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	default
+	case CFLOOR_ACTIVE
+		break
+
+	case CFLOOR_COLLAPSE
+		if object.timer < 10
+			object.timer++
+		else
+			temp5 = 0
+			temp0 = 0
+			temp3 = object.ypos
+			temp3 -= 0x80000
+			temp4 = 10
+			while temp0 < 2
+				temp1 = 0
+				temp2 = object.xpos
+				if object.direction == FLIP_NONE
+					temp2 -= 0x300000
+				else
+					temp2 += 0x300000
+				end if
+
+				while temp1 < 4
+					GetTableValue(temp6, temp5, CFloor_tileFramesFlipX)
+					
+					CreateTempObject(TypeName[C Floor], temp6, temp2, temp3)
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].state = CFLOOR_TILEDELAY
+					GetTableValue(object[tempObjectPos].delay, temp5, object.collapseTable)
+					temp5++
+					temp6++
+					temp1++
+					if object.direction == FLIP_NONE
+						temp2 += 0x200000
+					else
+						temp2 -= 0x200000
+					end if
+					temp4 += 4
+				loop
+				temp4 -= 26
+				object.frame += 2
+				temp0++
+				temp3 += 0x180000
+			loop
+			PlaySfx(SfxName[Ledge Break], false)
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_COLLAPSED
+		if object.timer < 20
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_NONE
+		break
+
+	case CFLOOR_TILEDELAY
+		if object.timer < object.delay
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_TILEFALL
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state < CFLOOR_TILEDELAY
+		if object.outOfBounds == true
+			object.state = CFLOOR_ACTIVE
+			object.timer = 0
+			object.priority = PRIORITY_BOUNDS
+		end if
+	end if
+
+	if object.state < CFLOOR_NONE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.propertyValue < 2
+				if player[currentPlayer].yvel >= 0
+					BoxCollisionTest(C_PLATFORM, object.entityPos, -64, -24, 64, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				else
+					checkResult = COL_NONE
+				end if
+			else
+				BoxCollisionTest(C_SOLID, object.entityPos, -64, -16, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			end if
+
+			if checkResult == COL_TOP
+				if object.state == CFLOOR_ACTIVE
+					object.state = CFLOOR_COLLAPSE
+					object.priority = PRIORITY_ACTIVE
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case CFLOOR_ACTIVE
+	case CFLOOR_COLLAPSE
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CFLOOR_COLLAPSED
+	case CFLOOR_NONE
+		break
+
+	case CFLOOR_TILEDELAY
+	case CFLOOR_TILEFALL
+		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64, -24, 128, 48, 1, 207)
+	SpriteFrame(-16, -16, 32, 32, 1, 207)
+	SpriteFrame(-16, -16, 32, 32, 33, 207)
+	SpriteFrame(-16, -16, 32, 32, 65, 207)
+	SpriteFrame(-16, -16, 32, 32, 97, 207)
+	SpriteFrame(-16, -8, 32, 16, 1, 239)
+	SpriteFrame(-16, -8, 32, 16, 33, 239)
+	SpriteFrame(-16, -8, 32, 16, 65, 239)
+	SpriteFrame(-16, -8, 32, 16, 97, 239)
+
+	foreach (TypeName[C Floor], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].collapseTable = CFloor_collapseTableL
+	next
+
+	SetTableValue(TypeName[C Floor], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CFloor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CFloor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64, -24, 128, 48, 1, 207)
+	
+	// even if flipped platforms have it set, dir attr is used in favour instead
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

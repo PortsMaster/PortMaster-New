@@ -1,0 +1,434 @@
+
+// ----------------------------------
+
+//-------Aliases-------//
+private alias object.value0 : object.targetx
+private alias object.value1 : object.targety
+private alias object.value2 : object.enforcementlevel
+private alias object.value3 : object.spawntimer
+private alias object.value4 : object.spawnpoint
+private alias object.value5 : object.shottaken
+private alias object.value6 : object.inplace
+
+// Function declarations
+reserve function Agent_DebugDraw
+reserve function Agent_DebugSpawn
+reserve function Agent_TargetAcquired
+reserve function Agent_Down
+reserve function Agent_PlayerCheck
+reserve function Agent_EnforcementCheck
+// Static Values
+
+// Tables
+
+
+
+function Agent_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Agent_DebugSpawn
+	CreateTempObject(TypeName[Enforcement Agent], 0, object.xpos, object.ypos)
+	object[tempObjectPos].state = 2
+	PlaySfx(SfxName[Enforcement], 0)
+end function
+
+function Agent_PlayerCheck
+	CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
+	temp0 = checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_SPINDASH)
+	temp0 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+	temp0 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+	temp0 |= checkResult
+	CheckNotEqual(object[currentPlayer].value7, 0)
+	temp0 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_FLYING)
+	temp1 = checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_FLYINGTIRED)
+	temp1 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_UP)
+	temp1 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_DOWN)
+	temp1 |= checkResult
+	CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_TIRED)
+	temp1 |= checkResult
+	if temp1 == 1
+		CheckGreater(object[currentPlayer].ypos, object.ypos)
+		temp0 |= checkResult
+	end if
+end function
+
+function Agent_Down
+	CallFunction(Agent_PlayerCheck)
+	if temp0 == 1
+		Rand(checkResult, 32)
+		if checkResult > 15
+			CreateTempObject(animalType1, TypeName[Blank Object], object.xpos, object.ypos)
+		else
+			CreateTempObject(animalType2, TypeName[Blank Object], object.xpos, object.ypos)
+		end if
+		object[tempObjectPos].priority = PRIORITY_UNKNOWN
+		CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+		object[tempObjectPos].drawOrder = 4
+		CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
+		object[tempObjectPos].drawOrder = 4
+		PlaySfx(SfxName[Destroy], 0)
+		if object[currentPlayer].yvel > 0
+			if object[currentPlayer].ypos >= object.ypos
+				object[currentPlayer].yvel -= 0x10000
+			else
+				object[currentPlayer].yvel += object[currentPlayer].value25
+				object[currentPlayer].yvel += object[currentPlayer].value25
+				FlipSign(object[currentPlayer].yvel)
+			end if
+		else
+			object[currentPlayer].yvel += 0x10000
+		end if
+		switch object[currentPlayer].value19
+		case 0
+			player.score += 100
+			break
+		case 1
+			player.score += 200
+			break
+		case 2
+			player.score += 500
+			break
+		case 3
+		case 4
+		case 5
+		case 6
+		case 7
+		case 8
+		case 9
+		case 10
+		case 11
+		case 12
+		case 13
+		case 14
+			player.score += 1000
+			break
+		case 15
+			player.score += 0x2710
+			break
+		end switch
+		if object[currentPlayer].value19 < 15
+			object[currentPlayer].value19++
+		end if
+		
+		object.state = 0
+		object.xpos = 0
+		object.ypos = 0
+	else
+		if object[currentPlayer].state != PlayerObject_Death
+			if object[currentPlayer].value7 == 0
+				if object[currentPlayer].value8 == 0
+					object[currentPlayer].state = PlayerObject_Hurt
+					if object[currentPlayer].xpos > object.xpos
+						object[currentPlayer].speed = 0x20000
+					else
+						object[currentPlayer].speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+	end if
+end function
+
+function Agent_EnforcementCheck
+	if object[0].value0 < 0
+		object.enforcementlevel = object[0].value0
+		abs(object.enforcementlevel)
+		object.enforcementlevel /= 100
+		object.enforcementlevel++
+		if object.enforcementlevel >= 10
+			object.enforcementlevel = 10
+		end if
+	else
+		object.enforcementlevel = 0
+		object.spawntimer = 0
+	end if
+	
+	switch object.enforcementlevel
+		case 0
+			break
+		default
+			object.spawnpoint = 10
+			object.spawnpoint -= object.enforcementlevel
+			if object.spawnpoint < 0
+				object.spawnpoint = 0
+			end if
+			object.spawnpoint *= 60
+			object.spawnpoint *= 5
+			break
+	end switch
+end function
+
+function Agent_TargetAcquired
+	object.angle += 4
+	object.angle &= 511
+	currentPlayer = 0
+	CallFunction(Agent_PlayerCheck)
+	if object[currentPlayer].state == PlayerObject_Knockback
+		temp0 = 1
+	end if
+	if object[currentPlayer].value8 > 0
+		temp0 = 1
+	end if
+	if object[currentPlayer].type == TypeName[Debug Mode]
+		temp0 = 1
+	end if
+	if object[0].state == SlotMachine_PlayerBlank
+		temp0 = 2
+	end if
+	
+	object.targety = object[currentPlayer].ypos
+	object.targetx = object[currentPlayer].xpos
+	switch temp0
+		case 0 //attackable
+			object.shottaken = 0
+			break
+		case 1 //defended
+			Sin(object.targetx, object.angle)
+			object.targetx *= 0x2800
+			object.targetx += object[currentPlayer].xpos
+			object.targety -= 0x500000
+			object.shottaken = 0
+			break
+		case 2 //Gambling
+			if object.xpos > object[currentPlayer].xpos
+				object.targetx += 0x800000
+			else
+				object.targetx -= 0x800000
+			end if
+			
+			if object.inplace == 1
+				object.shottaken++
+				if object.shottaken == 60
+					CreateTempObject(TypeName[Agent Shot], 0, object.xpos, object.ypos)
+					PlaySfx(SfxName[Pew], 0)
+					object[tempObjectPos].drawOrder = 4
+					object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+					if object.direction == FLIP_X
+						object[tempObjectPos].xvel = 0x80000
+					else				
+						object[tempObjectPos].xvel = -0x80000
+					end if
+				end if
+			else
+				object.shottaken = 0
+			end if
+			break
+	end switch
+end function
+
+event ObjectMain
+	CallFunction(Agent_TargetAcquired)
+	object.inplace = 0
+	switch object.state
+	case 0
+		CallFunction(Agent_EnforcementCheck)
+		if object.enforcementlevel > 0
+			object.spawntimer = 0
+			object.state++
+		end if
+		break
+	case 1
+		CallFunction(Agent_EnforcementCheck)
+		if object[0].value0 >= 0
+			object.state = 0
+			object.spawntimer = 0
+			object.enforcementlevel = 0
+		else
+			CheckNotEqual(object[0].state, SlotMachine_PlayerBlank)
+			temp0 = checkResult
+			CheckGreater(object.spawntimer, object.spawnpoint)
+			temp0 &= checkResult
+			if temp0 == 1
+				PlaySfx(SfxName[Enforcement], 0)
+				object.xpos = screen.xsize
+				object.xpos *= 3
+				object.xpos += screen.xoffset
+				object.xpos <<= 16
+								
+				object.ypos = screen.ysize
+				object.ypos *= 3
+				FlipSign(object.ypos)
+				object.ypos += screen.yoffset
+				object.ypos <<= 16				
+				object.spawntimer = 0
+				object.spawnpoint = 0
+				object.state++
+			else
+				object.spawntimer++
+			end if
+		end if
+		break
+	case 2
+		//movement in x
+		//Stop if close and slow enough
+		temp2 = 0
+		temp0 = object.xpos
+		temp0 -= object.targetx
+		abs(temp0)
+		if temp0 < 0x20000
+			temp1 = object.xvel
+			abs(temp1)
+			if temp1 < 0x20000
+				object.xpos = object.targetx
+				object.xvel = 0
+				temp2 = 1
+			end if
+		end if
+		
+		//if not, move towards target
+		if temp2 == 0
+			if object.xpos < object.targetx
+				if object.xvel < 0
+					object.xvel += 0x8000
+				else
+					object.xvel += 0x4000
+				end if
+			else
+				if object.xvel > 0
+					object.xvel -= 0x8000
+				else
+					object.xvel -= 0x4000
+				end if
+			end if			
+		end if		
+		
+		//Max speeds
+		if object.xvel > 0x40000
+			object.xvel = 0x40000
+		end if
+		if object.xvel < -0x40000
+			object.xvel = -0x40000
+		end if
+		
+		object.xpos += object.xvel
+		
+		
+		//same for y
+		//Stop if close and slow enough
+		temp3 = 0
+		temp0 = object.ypos
+		temp0 -= object.targety
+		abs(temp0)
+		if temp0 < 0x20000
+			temp1 = object.yvel
+			abs(temp1)
+			if temp1 < 0x20000
+				object.ypos = object.targety
+				object.yvel = 0
+				temp3 = 1
+			end if
+		end if
+		
+		//if not, move towards target
+		if temp3 == 0
+			if object.ypos < object.targety
+				if object.yvel < 0
+					object.yvel += 0x8000
+				else
+					object.yvel += 0x4000
+				end if
+			else
+				if object.yvel > 0
+					object.yvel -= 0x8000
+				else
+					object.yvel -= 0x4000
+				end if
+			end if			
+		end if
+		
+		if temp2 == 1
+			if temp3 == 1
+				object.inplace = 1
+			end if
+		end if
+		
+		//Max speeds
+		if object.yvel > 0x40000
+			object.yvel = 0x40000
+		end if
+		if object.yvel < -0x40000
+			object.yvel = -0x40000
+		end if
+		
+		object.ypos += object.yvel
+				
+		if object.xpos < object[0].xpos
+			object.direction = FLIP_X
+		else
+			object.direction = FLIP_NONE
+		end if
+		CallFunction(PlayerObject_EnemyPop)
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -20, -8, 20, 32, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				CallFunction(Agent_Down)
+			end if
+		next
+		break
+	end switch
+	object.animationTimer++
+	if object.animationTimer >= 32
+		object.frame++
+		object.frame &= 3
+		object.animationTimer = 0
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state == 2
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		temp0 = object.frame
+		temp0 += 2
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		temp0 = object.animationTimer
+		temp0 &= 1
+		if temp0 == 0
+			DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects2.gif")
+	SpriteFrame(-20, -8, 40, 48, 1, 1) //0 Main
+	SpriteFrame(-44, -8, 32, 24, 42, 1) //1 Gun hand
+	SpriteFrame(-24, 32, 24, 24, 75, 1) //2 legs 1
+	SpriteFrame(-24, 32, 24, 24, 100, 1) //3 legs 2
+	SpriteFrame(-24, 32, 24, 26, 125, 1) //4 legs 3
+	SpriteFrame(-24, 32, 24, 24, 100, 1) //5 legs 2
+	SpriteFrame(4, 24, 24, 24, 150, 1) //6 rocket
+	
+	SpriteFrame(-1, -1, 2, 2, 50, 29) //7 dot
+	
+	if options.gameMode == 5
+		ResetObjectEntity(15, TypeName[Enforcement Agent], 0, 0, 0)
+		object[15].priority = PRIORITY_ACTIVE
+		object[15].drawOrder = 5
+	end if
+	
+	SetTableValue(TypeName[Enforcement Agent], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Agent_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Agent_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

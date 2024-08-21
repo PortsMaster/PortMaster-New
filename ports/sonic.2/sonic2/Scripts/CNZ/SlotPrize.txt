@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Slot Prize Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.originPos.x
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.timer
+
+// States
+private alias 0 : SLOTPRIZE_WINNER
+private alias 1 : SLOTPRIZE_LOSER
+
+// Player Aliases
+private alias object.value0  : player.rings
+private alias object.value16 : player.isSidekick
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias  2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Static Values
+// ========================
+
+private value SlotPrize_SpikeSfxTimer = 0
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.xpos
+	temp0 -= object.originPos.x
+	temp0 >>= 4
+	object.xpos -= temp0
+
+	temp0 = object.ypos
+	temp0 -= object.originPos.y
+	temp0 >>= 4
+	object.ypos -= temp0
+
+	if object.alpha < 0x100
+		object.alpha += 0x20
+	end if
+
+	if object.state == SLOTPRIZE_WINNER
+		object.frame++
+		object.frame &= 7
+	end if
+
+	object.timer--
+	if object.timer == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if player[currentPlayer].isSidekick == true
+				if object.type != TypeName[Slot Prize]
+					checkResult = false
+				end if
+			end if
+
+			if checkResult == true
+				if object.state == SLOTPRIZE_WINNER
+					player[currentPlayer].rings++
+					if player[currentPlayer].rings > 999
+						player[currentPlayer].rings = 999
+					end if
+
+					if player[0].rings >= ringExtraLife
+						if options.gameMode != MODE_TIMEATTACK
+#platform: USE_STANDALONE
+							player.lives++
+#endplatform
+#platform: USE_ORIGINS
+							if game.coinMode == false
+								player.lives++
+							else
+								CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+							end if
+#endplatform
+							PlaySfx(SfxName[Life], false)
+							PauseMusic()
+							ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+							object[25].priority = PRIORITY_ACTIVE
+						end if
+
+						ringExtraLife += 100
+						if ringExtraLife > 300
+							ringExtraLife = 1000
+						end if
+					end if
+
+					if ringPan == 0
+						PlaySfx(SfxName[Ring L], false)
+						SetSfxAttributes(SfxName[Ring L], -1, -100)
+						ringPan = 1
+					else
+						PlaySfx(SfxName[Ring R], false)
+						SetSfxAttributes(SfxName[Ring R], -1, 100)
+						ringPan = 0
+					end if
+					
+					ResetObjectEntity(object.entityPos, TypeName[Ring Sparkle], 0, object.xpos, object.ypos)
+				else
+					if player[currentPlayer].rings > 0
+						player[currentPlayer].rings--
+					end if
+
+					if SlotPrize_SpikeSfxTimer == 0
+						PlaySfx(SfxName[Spike], false)
+					end if
+
+					SlotPrize_SpikeSfxTimer++
+					SlotPrize_SpikeSfxTimer %= 3
+					object.type = TypeName[Blank Object]
+				end if
+			else
+				if object.type == TypeName[Slot Prize]
+					object.type = TypeName[Blank Object]
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	
+	// 0-7 - Ring frames :D
+	SpriteFrame(-8, -8, 16, 16, 110, 256)
+	SpriteFrame(-8, -8, 16, 16, 110, 273)
+	SpriteFrame(-8, -8, 16, 16, 110, 290)
+	SpriteFrame(-8, -8, 16, 16, 110, 307)
+	SpriteFrame(-8, -8, 16, 16, 110, 324)
+	SpriteFrame(-8, -8, 16, 16, 110, 341)
+	SpriteFrame(-8, -8, 16, 16, 110, 358)
+	SpriteFrame(-8, -8, 16, 16, 110, 375)
+	
+	// 8 - Spike ball frame D:
+	SpriteFrame(-8, -8, 15, 15, 226, 34)
+
+	SlotPrize_SpikeSfxTimer = 0
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 110, 256)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event
