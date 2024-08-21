@@ -13,7 +13,7 @@ The following instructions are for a right-facing character.
 |Left Analogue Stick | Move Mouse|
 |A| Left Mouse |
 |B| Slow Mouse |
-| HK + X| Refresh (F5)
+| HK + X| Refresh (F5)|
 | L2 | Home| 
 | DPAD | Arrow Keys | 
 
