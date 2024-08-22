@@ -44,9 +44,6 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [ -n "$(pgrep sway)" ]; then
-  timeout 7 watch swaymsg '[app_id=sonic2013] fullscreen enable' &
-
 # Permissions
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
