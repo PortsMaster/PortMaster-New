@@ -35,7 +35,7 @@ fi
 cd $GAMEDIR
 
 # Exports
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
 
 # Permissions
 $ESUDO chmod 666 /dev/tty0
@@ -67,7 +67,7 @@ fi
 # Run the game
 echo "Loading, please wait!" > $CUR_TTY
 $GPTOKEYB "sonicmania" xbox360 & 
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 ./sonicmania
 
 $ESUDO kill -9 $(pidof gptokeyb)

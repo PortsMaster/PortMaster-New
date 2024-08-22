@@ -35,7 +35,7 @@ fi
 cd $GAMEDIR
 
 # Exports
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
 
 # Setup gl4es environment
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -90,7 +90,7 @@ fi
 # Run the game
 echo "Loading, please wait!" > $CUR_TTY
 $GPTOKEYB $GAME -c "sonic.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 ./$GAME
 
 $ESUDO kill -9 $(pidof gptokeyb)
