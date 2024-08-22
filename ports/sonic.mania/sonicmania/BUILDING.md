@@ -1,5 +1,5 @@
 ## Building Sonic Mania & RSDKv5
-This guide assumes you will be using WSL2 or similar with debian bullseye chroot.
+This guide assumes you will be using WSL2 or similar with debian bullseye chroot. The Plus content is disabled in distributions and must be built by the end user.
 
 To build Mania:
 ```
