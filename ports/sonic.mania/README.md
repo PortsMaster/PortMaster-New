@@ -15,6 +15,7 @@ Plus DLC requires a custom built RSDKv5, not meant for distribution. See the [BU
 
 ## Thanks
 TheGammaSqueeze -- the original port  
+[Rubberduckycooly](https://github.com/Rubberduckycooly/RSDKv5-Decompilation) -- for the decompilation work that makes this possible  
 Testers and Devs from the PortMaster Discord  
 
 
