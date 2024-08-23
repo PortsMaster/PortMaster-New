@@ -1,0 +1,192 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Air Bubbler Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.numDuds
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.bubbleType2
+private alias object.value2 : object.bubbleType1
+private alias object.value3 : object.bubbleFlags
+private alias object.value4 : object.dudsRemaining
+
+// AirBubble object aliases
+private alias object.value1 : airBubble.originPos.y
+private alias object.value2 : airBubble.targetPlayer
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function AirBubbler_DebugDraw
+reserve function AirBubbler_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table AirBubbler_bubbleSizes
+	2, 4, 2, 2, 2, 2, 4, 2, 4, 2, 2, 4, 2, 4, 2, 2, 4, 2
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function AirBubbler_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function AirBubbler_DebugSpawn
+	CreateTempObject(TypeName[Air Bubbler], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+	object[tempObjectPos].dudsRemaining = 0
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.frame++
+	object.frame %= 48
+	
+	if object.iypos > stage.waterLevel
+		CheckCameraProximity(object.ixpos, object.iypos, screen.xcenter, screen.ycenter)
+		if checkResult == true
+			temp1 = 0
+			if object.bubbleFlags == 0
+				object.timer--
+				if object.timer < 0
+					SetBit(object.bubbleFlags, 0, true)
+
+					Rand(object.bubbleType1, 0xFFFF)
+					object.bubbleType2 = object.bubbleType1
+					object.bubbleType1 %= 6
+					object.bubbleType2 &= 12
+					object.dudsRemaining--
+					if object.dudsRemaining < 0
+						object.dudsRemaining = object.numDuds
+						SetBit(object.bubbleFlags, 1, true)
+					end if
+
+					temp1 = true
+				end if
+			else
+				object.timer--
+				if object.timer < 0
+					temp1 = true
+				end if
+			end if
+
+			if temp1 == true
+				Rand(object.timer, 32)
+
+				Rand(temp0, 17)
+				temp0 -= 8
+				temp0 <<= 16
+				temp0 += object.xpos
+				CreateTempObject(TypeName[Air Bubble], 2, temp0, object.ypos)
+				airBubble[tempObjectPos].originPos.y = object[tempObjectPos].xpos
+				Rand(object[tempObjectPos].angle, 256)
+				object[tempObjectPos].angle <<= 1
+				object[tempObjectPos].drawOrder = 4
+				object[tempObjectPos].yvel = -0x8800
+				airBubble[tempObjectPos].targetPlayer = 0xFFFF
+				temp0 = object.bubbleType2
+				temp0 += object.bubbleType1
+				GetTableValue(object[tempObjectPos].propertyValue, temp0, AirBubbler_bubbleSizes)
+
+				GetBit(temp0, object.bubbleFlags, 1)
+				if temp0 == true
+					Rand(temp0, 4)
+
+					temp1 = false
+					if temp0 == false
+						GetBit(temp0, object.bubbleFlags, 2)
+						if temp0 == false
+							temp1 = true
+						end if
+					end if
+
+					if object.bubbleType1 == 0
+						GetBit(temp0, object.bubbleFlags, 2)
+						if temp0 == false
+							temp1 = true
+						end if
+					end if
+
+					if temp1 == true
+						object[tempObjectPos].propertyValue = 6
+						SetBit(object.bubbleFlags, 2, true)
+					end if
+				end if
+
+				object.bubbleType1--
+				if object.bubbleType1 < 0
+					Rand(temp0, 128)
+					temp0 += 128
+					object.timer += temp0
+					object.bubbleFlags = 0
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.iypos >= stage.waterLevel
+		temp0 = object.frame
+		temp0 >>= 4
+		DrawSprite(temp0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CPZ/Objects3.gif")
+
+	// Bubbler frames
+	SpriteFrame(-8, -8, 16, 16, 103, 1)
+	SpriteFrame(-8, -8, 16, 16, 120, 1)
+	SpriteFrame(-8, -8, 16, 16, 137, 1)
+
+	foreach (TypeName[Air Bubbler], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].dudsRemaining = object[arrayPos0].numDuds
+	next
+
+	SetTableValue(TypeName[Air Bubbler], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(AirBubbler_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(AirBubbler_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("CPZ/Objects3.gif")
+	SpriteFrame(-8, -8, 16, 16, 103, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "numDuds")
+end event

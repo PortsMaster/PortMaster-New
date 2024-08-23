@@ -1,0 +1,189 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: V Platform 2 Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.centerPos.y
+private alias object.value1 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VPlatform2_DebugDraw
+reserve function VPlatform2_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function VPlatform2_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function VPlatform2_DebugSpawn
+	CreateTempObject(TypeName[V Platform 2], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.y = object.ypos
+	object[tempObjectPos].propertyValue = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp7 = object.ypos
+
+	GetTableValue(temp0, 12, StageSetup_oscillationTable)
+	if object.propertyValue == 1
+		FlipSign(temp0)
+		temp0 += 0x4000
+	else
+		temp0 -= 0x4000
+	end if
+	temp0 <<= 7
+
+	object.ypos = object.centerPos.y
+	object.ypos -= temp0
+	temp1 = object.ypos
+	temp7 &= 0xFFFF0000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp7
+	object.ypos = temp7
+	
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -46, 32, -26, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+	
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -52, 64, 96, 127, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -46, 64, 96, 1, 305)
+	end if
+
+	foreach (TypeName[V Platform 2], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[V Platform 2], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VPlatform2_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VPlatform2_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	// Because of how tall this object is its movement path doesn't look too good
+	// I hope you'll find it fine enough though...
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw the Platform's ghosts
+		
+		object.inkEffect = INK_BLEND
+		
+		temp0 = object.ypos
+		temp0 += 0x1F0000
+		DrawSpriteFX(0, FX_INK, object.xpos, temp0)
+		
+		temp1 = object.ypos
+		temp1 -= 0x210000
+		DrawSpriteFX(0, FX_INK, object.xpos, temp1)
+		
+		object.inkEffect = INK_NONE
+		
+		editor.drawingOverlay = false
+	end if
+	
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw the Platform's range, using those values from earlier
+		
+		DrawArrow(object.xpos, temp0, object.xpos, temp1, 255, 255, 255)
+		DrawArrow(object.xpos, temp1, object.xpos, temp0, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -52, 64, 96, 127, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -46, 64, 96, 1, 305)
+	end if
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end event

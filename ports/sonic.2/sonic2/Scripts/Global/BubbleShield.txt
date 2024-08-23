@@ -1,0 +1,172 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Bubble Shield Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : BUBBLESHIELD_IDLE_SETUP
+private alias 1 : BUBBLESHIELD_IDLE
+private alias 2 : BUBBLESHIELD_BOUNCE_SETUP
+private alias 3 : BUBBLESHIELD_BOUNCE
+private alias 4 : BUBBLESHIELD_RECOIL_SETUP
+private alias 5 : BUBBLESHIELD_RECOIL
+
+private alias -1 : DRAWORDER_PLAYER
+
+// Player aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias 1 : SUPERSTATE_SUPER
+
+
+// ========================
+// Tables
+// ========================
+
+private table BubbleShield_frameTable
+	2, 0, 2, 0, 2, 0, 3, 1, 3, 1, 3, 1, 4, 0, 4, 0
+	4, 0, 5, 1, 5, 1, 5, 1, 6, 0, 6, 0, 6, 0, 5, 1
+	5, 1, 5, 1, 4, 0, 4, 0, 4, 0, 3, 1, 3, 1, 3, 1
+	2, 0, 2, 0, 2, 0
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Remove the shield if the player shouldn't have it
+	if player[-playerCount].state == Player_State_Death
+		object.type = TypeName[Blank Object]
+	end if
+	
+	if player[-playerCount].state == Player_State_Drown
+		object.type = TypeName[Blank Object]
+	end if
+	
+	object.drawOrder = DRAWORDER_PLAYER
+	
+	switch object.state
+	case BUBBLESHIELD_IDLE_SETUP
+		object.animationTimer = 0
+		object.timer = 0
+		GetTableValue(object.frame, object.timer, BubbleShield_frameTable)
+		object.state++
+		// [FallThrough]
+	case BUBBLESHIELD_IDLE
+		object.animationTimer++
+		if object.animationTimer >= 2
+			object.animationTimer = 0
+			object.timer++
+			if object.timer >= 54
+				object.timer = 0
+			end if
+			GetTableValue(object.frame, object.timer, BubbleShield_frameTable)
+		end if
+		break
+		
+	case BUBBLESHIELD_BOUNCE_SETUP
+		object.animationTimer = 0
+		object.timer = 0
+		object.frame = 0
+		object.state++
+		// [FallThrough]
+	case BUBBLESHIELD_BOUNCE
+		if object.timer == 0
+			object.animationTimer++
+			if object.animationTimer >= 5
+				object.frame = 8
+				object.animationTimer = 0
+				object.timer++
+			end if
+		else
+			object.animationTimer++
+			if object.animationTimer >= 19
+				object.state = BUBBLESHIELD_IDLE_SETUP
+			end if
+		end if
+		break
+		
+	case BUBBLESHIELD_RECOIL_SETUP
+		object.animationTimer = 0
+		object.timer = 0
+		object.frame = 7
+		object.state++
+		// [FallThrough]
+	case BUBBLESHIELD_RECOIL
+		if object.timer == 0
+			object.animationTimer++
+			if object.animationTimer >= 13
+				object.frame = 8
+				object.animationTimer = 0
+				object.timer++
+			end if
+		else
+			object.animationTimer++
+			if object.animationTimer >= 7
+				object.state = BUBBLESHIELD_IDLE_SETUP
+			end if
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if Player_superState != SUPERSTATE_SUPER
+		object.direction = FLIP_NONE
+		if object.timer >= 30
+			if object.frame > 1
+				object.direction = FLIP_Y
+			end if
+		end if
+
+		// Draw at the player's position
+		DrawSpriteFX(object.frame, FX_FLIP, player[-playerCount].xpos, player[-playerCount].ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	// Bubble shield frames
+	SpriteFrame(-24, -24, 48, 48, 1, 1)
+	SpriteFrame(-24, -24, 48, 48, 50, 1)
+	SpriteFrame(-16, -23, 32, 7, 99, 1)
+	SpriteFrame(-20, -22, 40, 12, 99, 9)
+	SpriteFrame(-22, -22, 44, 20, 99, 22)
+	SpriteFrame(-23, -20, 46, 19, 144, 1)
+	SpriteFrame(-23, -15, 46, 30, 144, 21)
+	SpriteFrame(-36, -16, 72, 32, 1, 50)
+	SpriteFrame(-28, -20, 56, 40, 74, 50)
+	SpriteFrame(0, 0, 1, 1, 1, 1) // (Empty)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

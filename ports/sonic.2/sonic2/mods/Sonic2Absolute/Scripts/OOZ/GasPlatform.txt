@@ -1,0 +1,232 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Gas Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 44 : TYPE_GASPLATFORM
+
+// Function declarations
+reserve function GasPlatform_DebugDraw
+reserve function GasPlatform_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function GasPlatform_DebugDraw
+	DrawSprite(7)
+end function
+
+
+function GasPlatform_DebugSpawn
+	CreateTempObject(TypeName[Gas Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object.ypos
+end function
+
+
+event ObjectMain
+	temp6 = object.ypos
+	switch object.state
+	case 0
+		object.value0++
+		if object.value0 == 120
+			object.value0 = 0
+			object.yvel = -0x96800
+			PlaySfx(SfxName[Gas Pop], 0)
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE
+			end if
+			object.state++
+		end if
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.ypos >= object.value1
+			object.ypos = object.value1
+			if object.yvel < 0x10000
+				object.state = 0
+				object.yvel = 0
+			else
+				object.yvel >>= 2
+				FlipSign(object.yvel)
+			end if
+		end if
+		break
+	case 2
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE
+		end if
+		break
+	case 3
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.ypos <= object.value3
+			object.ypos = object.value3
+			object.state++
+			PlaySfx(SfxName[Spring], 0)
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -10, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object[currentPlayer].xpos = object.xpos
+					object[currentPlayer].state = PlayerObject_Blank
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object[currentPlayer].value1 = 0
+					object[currentPlayer].speed = 0
+					object[currentPlayer].xvel = 0
+					object[currentPlayer].yvel = -0x100000
+					object[currentPlayer].animation = ANI_JUMPING
+					object[currentPlayer].animationSpeed = 240
+					object[currentPlayer].value5 = 240
+				end if
+			next
+		end if
+		break
+	end switch
+	temp0 = object.value1
+	temp0 -= object.ypos
+	if temp0 > 0x180000
+		object.value4 = 1
+	else
+		object.value4 = 0
+	end if
+	temp0 = object.ypos
+	temp6 &= -0x10000
+	object.value2 = object.ypos
+	object.value2 &= -0x10000
+	object.value2 -= temp6
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		object.ypos = object.value1
+		BoxCollisionTest(C_BOX, object.entityPos, -32, 8, 32, 48, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_BOX, object.entityPos, -16, 0, 16, 24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if object.value4 == 1
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				CallFunction(PlayerObject_FireHit)
+			end if
+		end if
+		if object.yvel < -0x60000
+			temp7 = object[currentPlayer].yvel
+			temp7 -= 0x20000
+		else
+			temp7 = -0x80000
+		end if
+		if object.yvel < temp7
+			object.ypos = temp0
+			temp7 = object[currentPlayer].yvel
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -10, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object[currentPlayer].yvel = 0x10000
+			end if
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					if object.yvel > 0
+						CallFunction(PlayerObject_Kill)
+					end if
+				end if
+				break
+			end switch
+			object[currentPlayer].yvel = temp7
+		else
+			object.ypos = temp6
+			BoxCollisionTest(C_BOX2, object.entityPos, -24, -8, 24, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 0
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				break
+			case 1
+				object[currentPlayer].ypos += object.value2
+				if object.state == 2
+					object[currentPlayer].speed = 0
+					object[currentPlayer].xvel = 0
+					object.yvel = -0x96800
+					PlaySfx(SfxName[Gas Pop], 0)
+					object.state++
+				end if
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					if object.yvel > 0
+						CallFunction(PlayerObject_Kill)
+					end if
+				end if
+				break
+			end switch
+		end if
+		object.ypos = object.value1
+		BoxCollisionTest(C_BOX, object.entityPos, -16, 0, 16, 24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+	next
+	object.ypos = temp0
+	object.frame = object.animationTimer
+	object.frame /= 3
+	object.animationTimer++
+	object.animationTimer %= 21
+	if object.outOfBounds == 1
+		temp0 = object.ypos
+		object.ypos = object.value1
+		if object.outOfBounds == 1
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.value0 = 0
+				object.animationTimer = 0
+				object.value4 = 0
+				object.xvel = 0
+				object.yvel = 0
+				if object.propertyValue == 1
+					object.state = 2
+				else
+					object.state = 0
+				end if
+			end if
+		else
+			object.ypos = temp0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.value4 == 1
+		DrawSpriteXY(object.frame, object.xpos, object.value1)
+	end if
+	DrawSprite(7)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-14, -15, 28, 15, 104, 191)
+	SpriteFrame(-15, -24, 30, 24, 102, 133)
+	SpriteFrame(-14, -15, 28, 15, 104, 191)
+	SpriteFrame(-15, -24, 30, 24, 102, 133)
+	SpriteFrame(-14, -15, 28, 15, 104, 191)
+	SpriteFrame(-15, -24, 30, 24, 102, 133)
+	SpriteFrame(-15, -32, 30, 32, 102, 158)
+	SpriteFrame(-24, -8, 48, 12, 84, 108)
+	foreach (TypeName[Gas Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = 2
+			object[arrayPos0].value3 = object[arrayPos0].ypos
+			object[arrayPos0].value3 -= 0x780000
+		end if
+	next
+	SetTableValue(TypeName[Gas Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(GasPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(GasPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

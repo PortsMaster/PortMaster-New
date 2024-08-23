@@ -1,0 +1,561 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Rail Rocket Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.startPos.x
+private alias object.value2  : object.startPos.y
+private alias object.value3  : object.handlePos.x
+private alias object.value4  : object.handlePos.y
+private alias object.value5  : object.handleAngle
+private alias object.value6  : object.chainPos.x
+private alias object.value7  : object.chainPos.y
+private alias object.value8  : object.grabDelay
+private alias object.value9  : object.targetPos.y
+private alias object.value10 : object.hasPlayer
+private alias object.value11 : object.rocketDir
+private alias object.value12 : object.handleAngleVel
+private alias object.value13 : object.flameAnimTimer
+
+// States
+private alias 0 : RAILROCKET_AWAITPLAYER
+private alias 1 : RAILROCKET_MOVETOTARGET
+private alias 2 : RAILROCKET_REACHEDTARGET
+private alias 3 : RAILROCKET_RETURNTOSTART
+private alias 4 : RAILROCKET_FINISHED
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.collisionTop : player.collisionTop
+private alias object.jumpPress : player.jumpPress
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RailRocket_DebugDraw
+reserve function RailRocket_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RailRocket_DebugDraw
+	DrawSprite(object.direction)
+end function
+
+
+private function RailRocket_DebugSpawn
+	CreateTempObject(TypeName[Rail Rocket], 0, object.xpos, object.ypos)
+	object[tempObjectPos].rocketDir = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case RAILROCKET_AWAITPLAYER
+		if object.handleAngle > 0
+			if object.handleAngleVel > 0
+				object.handleAngleVel -= 16
+			else
+				object.handleAngleVel -= 8
+			end if
+		else
+			if object.handleAngleVel < 0
+				object.handleAngleVel += 16
+			else
+				object.handleAngleVel += 8
+			end if
+		end if
+		object.handleAngle += object.handleAngleVel
+
+		if object.hasPlayer == true
+			object.speed = -0x80000
+			object.state = RAILROCKET_MOVETOTARGET
+			PlaySfx(SfxName[Launch], false)
+		end if
+		break
+
+	case RAILROCKET_MOVETOTARGET
+		object.ypos += object.speed
+		temp0 = object.speed
+		temp0 >>= 1
+		if object.rocketDir == FLIP_NONE
+			object.xpos += temp0
+			object.handleAngle += 0x20
+			if object.handleAngle >= 0x200
+				object.handleAngle = 0x200
+			end if
+		else
+			object.xpos -= temp0
+			object.handleAngle -= 0x20
+			if object.handleAngle <= -0x200
+				object.handleAngle = -0x200
+			end if
+		end if
+
+		if object.ypos <= object.targetPos.y
+			object.speed = 0
+			object.ypos = object.targetPos.y
+			if object.rocketDir == FLIP_NONE
+				object.handleAngleVel = -0x80
+			else
+				object.handleAngleVel = 0x80
+			end if
+			object.state = RAILROCKET_REACHEDTARGET
+		end if
+
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		temp0 = object.speed
+		Abs(temp0)
+		temp0 >>= 16
+		object.animationTimer += temp0
+		object.animationTimer &= 15
+		object.flameAnimTimer++
+		object.flameAnimTimer &= 3
+
+		if ringTimer == 0
+			CreateTempObject(TypeName[Dust Puff], 0, object.xpos, object.ypos)
+			if object.rocketDir == FLIP_NONE
+				object[tempObjectPos].ixpos += 10
+			else
+				object[tempObjectPos].ixpos -= 10
+			end if
+			object[tempObjectPos].iypos += 22
+		end if
+		break
+
+	case RAILROCKET_REACHEDTARGET
+		if object.handleAngle > 0
+			if object.handleAngleVel > 0
+				object.handleAngleVel -= 16
+			else
+				object.handleAngleVel -= 8
+			end if
+		else
+			if object.handleAngleVel < 0
+				object.handleAngleVel += 16
+			else
+				object.handleAngleVel += 8
+			end if
+		end if
+
+		object.handleAngle += object.handleAngleVel
+		object.timer++
+		if object.timer == 60
+			object.timer = 0
+			object.state = RAILROCKET_RETURNTOSTART
+		end if
+
+		object.flameAnimTimer++
+		object.flameAnimTimer &= 3
+		break
+
+	case RAILROCKET_RETURNTOSTART
+		object.speed += 0x1800
+		if object.speed > 0x80000
+			object.speed = 0x80000
+		end if
+		object.ypos += object.speed
+
+		temp0 = object.speed
+		temp0 >>= 1
+		if object.rocketDir == FLIP_NONE
+			object.xpos += temp0
+			object.handleAngle -= 0x20
+			if object.handleAngle <= -0x200
+				object.handleAngle = -0x200
+			end if
+		else
+			object.xpos -= temp0
+			object.handleAngle += 0x20
+			if object.handleAngle >= 0x200
+				object.handleAngle = 0x200
+			end if
+		end if
+
+		if object.ypos >= object.startPos.y
+			object.speed = 0
+			object.xpos = object.startPos.x
+			object.ypos = object.startPos.y
+			if object.rocketDir == FLIP_NONE
+				object.handleAngleVel = 0x80
+			else
+				object.handleAngleVel = -0x80
+			end if
+			object.state = RAILROCKET_FINISHED
+		end if
+
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		temp0 = object.speed
+		Abs(temp0)
+		temp0 >>= 16
+		object.animationTimer += temp0
+		object.animationTimer &= 15
+		break
+
+	case RAILROCKET_FINISHED
+		if object.handleAngle > 0
+			if object.handleAngleVel > 0
+				object.handleAngleVel -= 16
+			else
+				object.handleAngleVel -= 8
+			end if
+		else
+			if object.handleAngleVel < 0
+				object.handleAngleVel += 16
+			else
+				object.handleAngleVel += 8
+			end if
+		end if
+		object.handleAngle += object.handleAngleVel
+
+		if object.hasPlayer == false
+			object.state = RAILROCKET_AWAITPLAYER
+		end if
+		break
+		
+	end switch
+
+	temp0 = 0
+	temp4 = object.handleAngle
+	object.handlePos.x = object.xpos
+	object.handlePos.y = object.ypos
+	while temp0 < 8
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 0x1FF
+
+		Sin(temp2, temp5)
+		temp2 *= 0x312
+		object.handlePos.x += temp2
+
+		Cos(temp3, temp5)
+		temp3 *= 0x312
+		object.handlePos.y += temp3
+
+		temp0++
+		temp4 += object.handleAngle
+	loop
+
+	if object.grabDelay > 0
+		object.grabDelay--
+	end if
+	object.hasPlayer = false
+
+	temp0 = object.xpos
+	temp1 = object.ypos
+	object.xpos = object.handlePos.x
+	object.ypos = object.handlePos.y
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].state != Player_State_Static
+			if object.grabDelay == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -10, 16, 10, 24, currentPlayer, C_BOX, 0, C_BOX, 0)
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						player[currentPlayer].state = Player_State_Static
+						player[currentPlayer].animation = ANI_HANGING
+						player[currentPlayer].speed = 0
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].yvel = 0
+						player[currentPlayer].xpos = object.xpos
+						player[currentPlayer].ypos = player[currentPlayer].collisionTop
+						FlipSign(player[currentPlayer].ypos)
+						player[currentPlayer].ypos += 8
+						player[currentPlayer].ypos <<= 16
+						player[currentPlayer].ypos += object.ypos
+
+						PlaySfx(SfxName[Catch], false)
+						object.hasPlayer = true
+					end if
+				end if
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -4, 8, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				if player[currentPlayer].jumpPress == true
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].yvel = -0x40000
+					player[currentPlayer].gravity = GRAVITY_AIR
+					object.grabDelay = 30
+				else
+					player[currentPlayer].xpos = object.xpos
+					player[currentPlayer].ypos = player[currentPlayer].collisionTop
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos += 8
+					player[currentPlayer].ypos <<= 16
+					player[currentPlayer].ypos += object.ypos
+					object.hasPlayer = true
+				end if
+			end if
+		end if
+	next
+
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp4 = object.handleAngle
+	object.chainPos.x = object.xpos
+	object.chainPos.y = object.ypos
+
+	// Draw Handle Chain
+	while temp0 < 7
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 0x1FF
+
+		Sin(temp2, temp5)
+		temp2 *= 0x312
+		object.chainPos.x += temp2
+
+		Cos(temp3, temp5)
+		temp3 *= 0x312
+		object.chainPos.y += temp3
+
+		DrawSpriteXY(2, object.chainPos.x, object.chainPos.y)
+
+		temp0++
+		temp4 += object.handleAngle
+	loop
+
+	// Draw Handle
+	DrawSpriteXY(3, object.handlePos.x, object.handlePos.y)
+
+	// Draw Flame
+	switch object.state
+	default
+	case RAILROCKET_AWAITPLAYER
+	case RAILROCKET_RETURNTOSTART
+	case RAILROCKET_FINISHED
+		break
+
+	case RAILROCKET_MOVETOTARGET
+	case RAILROCKET_REACHEDTARGET
+		object.direction = object.rocketDir
+		temp0 = object.flameAnimTimer
+		temp0 >>= 1
+		temp0 += 4
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+
+	object.direction = object.rocketDir
+	object.direction ^= object.frame
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-20, -27, 40, 54, 66, 168) 	// rocket body L - #0
+	SpriteFrame(-20, -27, 40, 54, 140, 57) 	// rocket body R - #1
+	SpriteFrame(-3, -3, 6, 6, 198, 50)		// handle chain - #2
+	SpriteFrame(-8, -3, 16, 16, 193, 57) 	// handle - #3
+	SpriteFrame(4, 11, 12, 16, 210, 46) 	// flame (big) - #4
+	SpriteFrame(5, 11, 8, 12, 184, 57) 		// flame (small) - #5
+
+	foreach (TypeName[Rail Rocket], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].rocketDir = object[arrayPos0].propertyValue
+		object[arrayPos0].rocketDir >>= 7
+		temp0 = object[arrayPos0].propertyValue
+		temp0 &= 0x7F
+		if temp0 == 0
+			object[arrayPos0].targetPos.y = object[arrayPos0].ypos
+			object[arrayPos0].targetPos.y -= 0x1000000
+		else
+			temp0 <<= 21
+			object[arrayPos0].targetPos.y = object[arrayPos0].ypos
+			object[arrayPos0].targetPos.y -= temp0
+		end if
+	next
+
+	SetTableValue(TypeName[Rail Rocket], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RailRocket_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RailRocket_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		case 1 // distance
+			checkResult = object.propertyValue
+			checkResult &= 0x7F
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		case 1 // distance
+			object.propertyValue &= 0x80
+			editor.variableValue &= 0x7F
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.rocketDir, object.propertyValue, 7)
+	
+	temp0 = 0
+	temp4 = object.handleAngle
+	object.handlePos.x = object.xpos
+	object.handlePos.y = object.ypos
+	while temp0 < 8
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 0x1FF
+
+		Sin(temp2, temp5)
+		temp2 *= 0x312
+		object.handlePos.x += temp2
+
+		Cos(temp3, temp5)
+		temp3 *= 0x312
+		object.handlePos.y += temp3
+
+		temp0++
+		temp4 += object.handleAngle
+	loop
+
+	temp0 = 0
+	temp4 = object.handleAngle
+	object.chainPos.x = object.xpos
+	object.chainPos.y = object.ypos
+
+	// Draw Handle Chain
+	while temp0 < 7
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 0x1FF
+
+		Sin(temp2, temp5)
+		temp2 *= 0x312
+		object.chainPos.x += temp2
+
+		Cos(temp3, temp5)
+		temp3 *= 0x312
+		object.chainPos.y += temp3
+
+		DrawSpriteXY(2, object.chainPos.x, object.chainPos.y)
+
+		temp0++
+		temp4 += object.handleAngle
+	loop
+
+	// Draw Handle
+	DrawSpriteXY(3, object.handlePos.x, object.handlePos.y)
+
+	object.direction = object.rocketDir
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+
+	if editor.showGizmos == true
+		// Draw arrow of where and how far the rocket will go
+		
+		temp0 = object.propertyValue
+		temp0 &= 0x7F
+		if temp0 == 0
+			object.targetPos.y = object.ypos
+			object.targetPos.y -= 0x1000000
+		else
+			temp0 <<= 21
+			object.targetPos.y = object.ypos
+			object.targetPos.y -= temp0
+		end if
+		
+		temp0 = object.xpos
+		temp1 = object.ypos
+		temp2 = -0x80000
+		temp2 >>= 1
+
+		while temp1 > object.targetPos.y
+			temp1 += -0x80000
+			if object.rocketDir == 0
+				temp0 += temp2
+			else
+				temp0 -= temp2
+			end if
+		loop
+
+		DrawArrow(object.xpos, object.ypos, temp0, temp1, 0x00, 0xFF, 0x00)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-20, -27, 40, 54, 66, 168) 	// rocket body L - #0
+	SpriteFrame(-20, -27, 40, 54, 140, 57) 	// rocket body R - #1
+	SpriteFrame(-3, -3, 6, 6, 198, 50)		// handle chain - #2
+	SpriteFrame(-8, -3, 16, 16, 193, 57) 	// handle - #3
+	SpriteFrame(4, 11, 12, 16, 210, 46) 	// flame (big) - #4
+	SpriteFrame(5, 11, 8, 12, 184, 57) 		// flame (small) - #5
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+
+	AddEditorVariable("distance")
+	SetActiveVariable("distance")
+end event

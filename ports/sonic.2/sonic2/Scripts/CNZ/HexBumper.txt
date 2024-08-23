@@ -1,0 +1,318 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Hex Bumper Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.offset.x
+private alias object.value2 : object.offset.y
+private alias object.value3 : object.boundsL
+private alias object.value4 : object.boundsR
+private alias object.value5 : object.playerTimers
+
+// States
+private alias 0 : HEXBUMPER_IDLE
+private alias 1 : HEXBUMPER_BUMPED
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.tileCollisions : player.tileCollisions
+
+private alias object.value1  : player.timer
+private alias object.value36 : player.flyCarryTimer		// Tails assist lockout timer
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HexBumper_DebugDraw
+reserve function HexBumper_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HexBumper_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function HexBumper_DebugSpawn
+	CreateTempObject(TypeName[Hex Bumper], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state > HEXBUMPER_IDLE
+		object.frame = object.timer
+		object.frame /= 5
+		object.frame++
+
+		object.timer++
+		if object.timer > 15
+			object.timer = 0
+			object.state = HEXBUMPER_IDLE
+			object.frame = 0
+		end if
+	end if
+
+	if object.outOfBounds == true
+		object.priority = PRIORITY_BOUNDS
+	end if
+
+	if object.xvel != 0
+		object.xpos += object.xvel
+		if object.xvel > 0
+			if object.xpos >= object.boundsR
+				object.xpos = object.boundsR
+				FlipSign(object.xvel)
+			end if
+		else
+			if object.xpos <= object.boundsL
+				object.xpos = object.boundsL
+				FlipSign(object.xvel)
+			end if
+		end if
+	end if
+
+	temp7 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp6 = object.playerTimers
+		temp6 >>= temp7
+		temp6 &= 0xFF
+		if temp6 == 0
+			if player[currentPlayer].animation != ANI_HURT
+				BoxCollisionTest(C_TOUCH, object.entityPos, -12, -8, 12, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					if object.state == HEXBUMPER_IDLE
+						PlaySfx(SfxName[Bumper], false)
+					end if
+
+					if object.timer > 5
+						PlaySfx(SfxName[Bumper], false)
+					end if
+
+					object.state = HEXBUMPER_BUMPED
+					object.priority = PRIORITY_ACTIVE
+
+					temp0 = player[currentPlayer].xpos
+					temp0 -= object.xpos
+					temp1 = player[currentPlayer].ypos
+					temp1 -= object.ypos
+					ATan2(temp2, temp0, temp1)
+					temp2 += 32
+					temp2 &= 255
+					temp2 >>= 6
+					switch temp2
+					case 0
+						temp0 = 0x80000
+						temp1 = player[currentPlayer].yvel
+						object.offset.x = -0x40000
+						object.offset.y = 0
+						break
+
+					case 1
+						if player[currentPlayer].xpos < object.xpos
+							temp0 = -0x20000
+						else
+							temp0 = 0x20000
+						end if
+						temp1 = 0x80000
+						object.offset.x = 0
+						object.offset.y = -0x40000
+						break
+
+					case 2
+						temp0 = -0x80000
+						temp1 = player[currentPlayer].yvel
+						object.offset.x = 0x40000
+						object.offset.y = 0
+						break
+
+					case 3
+						if player[currentPlayer].xpos < object.xpos
+							temp0 = -0x20000
+						else
+							temp0 = 0x20000
+						end if
+						temp1 = -0x80000
+						object.offset.x = 0
+						object.offset.y = 0x40000
+						break
+						
+					end switch
+
+					if player[currentPlayer].state == Player_State_Carried
+						player[1].flyCarryTimer = 30
+					end if
+
+					CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
+					temp2 = checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
+					temp2 |= checkResult
+					CheckEqual(player[currentPlayer].animation, ANI_FLYING)
+					temp2 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+					temp2 |= checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+					temp2 |= checkResult
+					if temp2 == false
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						// Bug Details:
+						// This code wasn't updated in Origins Plus to include ANI_HAMMER_JUMP, so
+						//  Amy will always start walking if she hits a Bumper with her hammer out
+						if player[currentPlayer].animation != ANI_JUMPING
+							if player[currentPlayer].animation != ANI_RUNNING
+								player[currentPlayer].animation = ANI_WALKING
+							end if
+						end if
+					end if
+
+					if player[currentPlayer].animation != ANI_GLIDING
+						player[currentPlayer].xvel += temp0
+						player[currentPlayer].speed = player[currentPlayer].xvel
+						player[currentPlayer].timer = 0
+					end if
+
+					player[currentPlayer].yvel = temp1
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].tileCollisions = true
+					temp6 = 3
+					temp6 <<= temp7
+					object.playerTimers |= temp6
+				end if
+			end if
+		else
+			temp5 = 1
+			temp5 <<= temp7
+			object.playerTimers -= temp5
+		end if
+
+		temp7 += 8
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = object.frame
+	temp0 &= 1
+	if temp0 == 0
+		DrawSprite(0)
+	else
+		temp1 = object.xpos
+		temp1 += object.offset.x
+		temp2 = object.ypos
+		temp2 += object.offset.y
+		DrawSpriteXY(0, temp1, temp2)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 99, 99)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 581, 343)
+	end if
+
+	foreach (TypeName[Hex Bumper], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].xvel 		= 0x10000
+			object[arrayPos0].boundsL 	= object[arrayPos0].xpos
+			object[arrayPos0].boundsL 	-= 0x600000
+			object[arrayPos0].boundsR 	= object[arrayPos0].xpos
+			object[arrayPos0].boundsR 	+= 0x600000
+		end if
+	next
+
+	SetTableValue(TypeName[Hex Bumper], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HexBumper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HexBumper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // moveType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // moveType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 99, 99)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 32, 581, 343)
+	end if
+
+	AddEditorVariable("moveType")
+	SetActiveVariable("moveType")
+	AddEnumVariable("Static", 0)
+	AddEnumVariable("Moving", 1)
+end event

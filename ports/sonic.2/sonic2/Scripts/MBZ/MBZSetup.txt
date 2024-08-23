@@ -1,0 +1,536 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: MBZ Setup Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1  : object.lavaPalTimer
+private alias object.value2  : object.paletteTimer
+private alias object.value3  : object.lavaPalIndex1
+private alias object.value4  : object.lavaPalIndex2
+private alias object.value5  : object.lavaPalIndex3
+private alias object.value6  : object.lavaPalIndex4
+private alias object.value7  : object.oilAniTileDelay
+private alias object.value8  : object.oilAniTileFrame
+private alias object.value9  : object.deformTimer
+private alias object.value10 : object.isDimming
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.iypos : player.iypos
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.drawOrder : player.drawOrder
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.pushing : player.pushing
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.controlLock : player.controlLock
+private alias object.angle : player.angle
+private alias object.frame : player.frame
+private alias object.animation : player.animation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.collisionMode : player.collisionMode
+private alias object.collisionBottom : player.collisionBottom
+private alias object.tileCollisions : player.tileCollisions
+
+private alias object.value1  : player.timer
+private alias object.value14 : player.skidding
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value37 : player.shield
+
+// Shield Aliases
+private alias 3 : SHIELD_FIRE
+
+// Tile Flag Aliases
+private alias 0 : TILE_NORMAL
+private alias 1 : TILE_OILPOOL
+private alias 3 : TILE_LAVA
+
+// Tile Info ID Aliases
+private alias 8 : TILEINFO_ANGLEB
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+private alias 7 : TRACK_SUPER
+
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+// Music Events
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MBZSetup_State_OilPool
+
+// These two are unused
+reserve function MBZSetup_SpeedUpMusic
+reserve function MBZSetup_SlowDownMusic
+
+
+// ========================
+// Static Values
+// ========================
+
+// Values here are named this way because the idea is to "mimic" CPZSetup for the CPZ objs in the stage
+public value CPZSetup_rotatingStairTimer 	= 0
+public value Water_flashTimer 				= 0
+public value CPZSetup_hasAchievement 		= 0
+public value CPZSetup_enteredWater 			= 0
+
+// As the name suggests, these are not used
+private value MBZSetup_unused1 				= 0
+private value MBZSetup_unused2 				= 0
+private value MBZSetup_unused3 				= 0
+private value MBZSetup_unused4 				= 0
+private value MBZSetup_unknownTimer 		= 0 // This is used to count, but not actually used in any meaningful way
+
+
+// ========================
+// Tables
+// ========================
+
+// Palette cycle for the stage
+private table MBZSetup_lavaPalCycle
+	0xE00000, 0xE06000, 0xE0A000, 0xE0E000
+	0xE0E000, 0xE00000, 0xE06000, 0xE0A000
+	0xE0C020, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0E040, 0xE0E080, 0xE02000
+	0xE04000, 0xE08000, 0xE0E060, 0xE0E0A0
+	0xE0E080, 0xE02000, 0xE06000, 0xE0E040
+	0xE0C020, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0C020, 0xE0E000, 0xE00000
+	0xE00000, 0xE06000, 0xE0A000, 0xE0E000
+	0xE0C000, 0xC00000, 0xE04000, 0xE08000
+	0xE06000, 0xC0A000, 0xA00000, 0xE02000
+	0xC00000, 0xC04000, 0xE08000, 0x800000
+	0xA00000, 0xE02000, 0xE06000, 0xC0A000
+	0xE0C000, 0xC00000, 0xE04000, 0xE08000
+	0xE0A000, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0A000, 0xE0E000, 0xE00000
+end table
+
+// Stage deformation data, used for animating the water
+private table MBZSetup_deformationTable
+	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
+	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
+	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+// Modified version of Player_State_Ground
+private function MBZSetup_State_OilPool
+	if player.animation != ANI_SKIDDING
+		temp7 = true
+	else
+		temp7 = false
+	end if
+
+	CallFunction(Player_HandleGroundMovement)
+
+	if player.gravity == GRAVITY_AIR
+#platform: USE_STANDALONE
+		player.state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = Player_State_Air_NoDropDash
+#endplatform
+		CallFunction(Player_HandleAirMovement)
+	else
+		CallFunction(Player_HandleOnGround)
+
+		if player.speed == 0
+			if player.collisionMode == CMODE_FLOOR
+				if player.timer < 240
+					player.animation = ANI_STOPPED
+					player.timer++
+				else
+					player.animation = ANI_WAITING
+					if stage.playerListPos == PLAYER_KNUCKLES_A
+						player.timer++
+						if player.timer == 834
+							player.timer = 0
+							player.animation = ANI_STOPPED
+						end if
+					end if
+				end if
+			end if
+		else
+			player.timer = 0
+			if player.speed > 0
+				if player.speed < 0x5F5C2
+					player.animation = ANI_WALKING
+					CallFunction(Player_HandleWalkAnimSpeed)
+				else
+					if player.speed > 0x9FFFF
+						player.animation = ANI_PEELOUT
+					else
+						player.animation = ANI_RUNNING
+					end if
+					CallFunction(Player_HandleRunAnimSpeed)
+				end if
+			else
+				if player.speed > -0x5F5C2
+					player.animation = ANI_WALKING
+					CallFunction(Player_HandleWalkAnimSpeed)
+				else
+					if player.speed < -0x9FFFF
+						player.animation = ANI_PEELOUT
+					else
+						player.animation = ANI_RUNNING
+					end if
+					CallFunction(Player_HandleRunAnimSpeed)
+				end if
+			end if
+		end if
+
+		if player.skidding > 0
+			if temp7 == true
+				PlaySfx(SfxName[Skidding], false)
+			end if
+
+			player.animation = ANI_SKIDDING
+			player.animationSpeed = 0
+			player.skidding--
+			if ringTimer == 0
+				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
+				object[tempObjectPos].iypos += player.collisionBottom
+				object[tempObjectPos].drawOrder = player.sortedDrawOrder
+			end if
+
+			if player.speed > 0
+				player.direction = FACING_RIGHT
+			else
+				player.direction = FACING_LEFT
+			end if
+		end if
+
+		if player.collisionMode == CMODE_FLOOR
+			if player.pushing == 2
+				player.animation = ANI_PUSHING
+				player.animationSpeed = 0
+			end if
+		end if
+
+		if player.jumpPress == true
+			CallFunction(Player_Action_Jump)
+		end if
+	end if
+end function
+
+
+// Unused - would've been used to speed up stage music
+// Interestingly, it calls for "MarathonBase_F.ogg" - a song that isn't in the RSDK
+// Could this have been the stage's original name..?
+private function MBZSetup_SpeedUpMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
+			SwapMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294, 7920)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436, 8000)
+			break
+
+		case TRACK_BOSS
+			SetMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
+			break
+			
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
+	end if
+end function
+
+
+// Unused - would've been used to slow down stage music
+// Interestingly, it calls for "MarathonBase.ogg" - this song isn't in the RSDK either
+private function MBZSetup_SlowDownMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+			SwapMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970, 12650)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528, 12500)
+			break
+
+		case TRACK_BOSS
+			SetMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+			break
+			
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Pulsing palette, for the lava
+	object.lavaPalTimer++
+	if object.lavaPalTimer == 12
+		object.lavaPalTimer = 0
+
+		object.lavaPalIndex1 += 4
+		object.lavaPalIndex1 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex1, MBZSetup_lavaPalCycle)
+		SetPaletteEntry(0, 96, temp0)
+
+		object.lavaPalIndex2 += 4
+		object.lavaPalIndex2 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex2, MBZSetup_lavaPalCycle)
+		SetPaletteEntry(0, 97, temp0)
+
+		object.lavaPalIndex3 += 4
+		object.lavaPalIndex3 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex3, MBZSetup_lavaPalCycle)
+		SetPaletteEntry(0, 98, temp0)
+
+		object.lavaPalIndex4 += 4
+		object.lavaPalIndex4 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex4, MBZSetup_lavaPalCycle)
+		SetPaletteEntry(0, 99, temp0)
+	end if
+
+	// Cycling palette
+	object.paletteTimer++
+	if object.paletteTimer == 4
+		object.paletteTimer = 0
+		RotatePalette(0, 100, 105, false)
+	end if
+
+	// Ani Tiles, for the oil
+	if object.oilAniTileDelay < 2
+		temp0 = object.oilAniTileFrame
+		temp0 += 462
+		Copy16x16Tile(408, temp0)
+
+		temp0++
+		Copy16x16Tile(409, temp0)
+
+		temp0++
+		Copy16x16Tile(410, temp0)
+
+		temp0++
+		Copy16x16Tile(411, temp0)
+
+		temp0 += 21
+		Copy16x16Tile(412, temp0)
+
+		temp0++
+		Copy16x16Tile(413, temp0)
+
+		temp0++
+		Copy16x16Tile(414, temp0)
+
+		temp0++
+		Copy16x16Tile(415, temp0)
+
+		object.oilAniTileDelay = 18
+		object.oilAniTileFrame += 4
+		object.oilAniTileFrame %= 24
+	else
+		object.oilAniTileDelay--
+	end if
+	
+	// Water shining
+	object.deformTimer++
+	if object.deformTimer > 7
+		tileLayer[1].deformationOffset++
+		object.deformTimer = 0
+	end if
+	
+	// Update some value, though this value never really does anything beyond this
+	// This looks similar to how CPZ Setup's CPZSetup_rotatingStairTimer updating works, but this script's CPZSetup_rotatingStairTimer is never changed
+	GetTableValue(temp0, 21, StageSetup_oscillationTable)
+	if temp0 == 0 // (this updates the value every 180 frames)
+		MBZSetup_unknownTimer++
+		MBZSetup_unknownTimer &= 3
+	end if
+
+	// Randomize the animals, looping around all the animals in the game
+	temp0 = oscillation
+	temp0 &= 15
+	if temp0 > 11
+		temp0 = 5
+	end if
+	temp0 += TypeName[Flicky] // In the object type list, all the animals are listed right after one another, starting from the Flicky
+	animalType1 = temp0
+	animalType2 = temp0
+
+	// Check interaction with players
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].animation == ANI_TWIRL
+			player[currentPlayer].frame %= 24
+		end if
+
+		temp1 = player[currentPlayer].xpos
+		temp1 >>= 16
+
+		temp2 = player[currentPlayer].ypos
+		temp2 >>= 16
+		temp2 += 6
+
+		// Get the B-plane "angle" of the tile the player is on
+		// "Angle" is actually used to hold flags and such, same goes for other stages
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
+		switch temp0
+		default
+		case TILE_NORMAL
+			break
+
+		case TILE_OILPOOL
+			if player[currentPlayer].yvel > -1
+				player[currentPlayer].state = MBZSetup_State_OilPool
+				if player[currentPlayer].animation == ANI_JUMPING
+					player[currentPlayer].animation = ANI_WALKING
+				end if
+				player[currentPlayer].gravity = GRAVITY_GROUND
+				player[currentPlayer].yvel = 0
+				player[currentPlayer].ypos += 0x10000
+			end if
+			break
+
+		case TILE_LAVA
+			// Lava tile
+			// Only harm the player if they don't have a flame shield
+			if player[currentPlayer].shield != SHIELD_FIRE
+				CallFunction(Player_Hit)
+			end if
+			break
+			
+		end switch
+	next
+	
+	// object.isDimming is set by a BG Dimmer object placed in the scene
+	if object.isDimming == true
+		// Fade in, with a max of halfway full
+		if object.alpha < 0x80
+			object.alpha += 4
+		end if
+	else
+		// Fade out, if not fading in
+		if object.alpha > 0
+			object.alpha -= 4
+		end if
+	end if
+	
+	// Reset it for the next frame
+	object.isDimming = false
+end event
+
+
+event ObjectDraw
+	// Draw a tint in the background, right between the BG and the FG
+	// -> This is always drawn, it's just that object.alpha is 0 most of the time so nothing is really seen
+	DrawRect(0, 0, 512, 240, 0x00, 0x20, 0x50, object.alpha)
+end event
+
+
+event ObjectStartup
+	SetMusicTrack("DeathEgg.ogg", TRACK_STAGE, true)
+	
+	// Reset the black color used in boss flashes
+	SetPaletteEntry(0, 192, 0x000000)
+
+	object[SLOT_ZONESETUP].type 		 = TypeName[MBZ Setup]
+	object[SLOT_ZONESETUP].priority 	 = PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].lavaPalIndex1 = 0
+	object[SLOT_ZONESETUP].lavaPalIndex2 = 1
+	object[SLOT_ZONESETUP].lavaPalIndex3 = 2
+	object[SLOT_ZONESETUP].lavaPalIndex4 = 3
+	
+	// Most Zone Setups don't have a Draw Order specified, but this one needs it for the black fade in places like the MCZ boss
+	object[SLOT_ZONESETUP].drawOrder 	 = 1
+
+	// While this is primarily meant for the little snippit water in the normal background,
+	//  it's worth noting that the third background layer has deformation enabled for its entirety, rather than just its water
+	arrayPos0 = 0
+	while arrayPos0 < 576
+		temp0 = arrayPos0
+		temp0 &= 0x3F
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, MBZSetup_deformationTable)
+		arrayPos0++
+	loop
+
+	CPZSetup_rotatingStairTimer = 0
+	Water_flashTimer 			= 0
+	CPZSetup_hasAchievement 	= false
+	CPZSetup_enteredWater 		= 0
+	MBZSetup_unused1 			= 0
+	MBZSetup_unused2 			= 0
+	MBZSetup_unused3 			= 0
+	MBZSetup_unused4 			= 0
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

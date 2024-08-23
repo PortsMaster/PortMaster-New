@@ -1,0 +1,214 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Girder Door Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.buttonPressed
+
+// States
+private alias 0 : GIRDERDOOR_IDLE
+private alias 1 : GIRDERDOOR_WAITFORACTIVE
+private alias 2 : GIRDERDOOR_MOVE
+private alias 3 : GIRDERDOOR_DELAY
+private alias 4 : GIRDERDOOR_RETURNTOSTART
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Button Aliases
+private alias object.value0 : pushButton.stood
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function GirderDoor_DebugDraw
+reserve function GirderDoor_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private function GirderDoor_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function GirderDoor_DebugSpawn
+	CreateTempObject(TypeName[Girder Door], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case GIRDERDOOR_IDLE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+
+	case GIRDERDOOR_WAITFORACTIVE
+		object.priority = PRIORITY_BOUNDS
+		if pushButton[-1].stood == true
+			if object.buttonPressed == false
+				object.buttonPressed = true
+				object.state++
+			end if
+		else
+			object.buttonPressed = false
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+
+	case GIRDERDOOR_MOVE
+		object.xpos += object.xvel
+		object.timer++
+		if object.timer == 64
+			object.timer = 0
+			object.state++
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].xpos += object.xvel
+			end if
+		next
+		break
+
+	case GIRDERDOOR_DELAY
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
+			object.state++
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+
+	case GIRDERDOOR_RETURNTOSTART
+		object.xpos -= object.xvel
+		object.timer++
+		if object.timer == 64
+			object.timer = 0
+			object.state = GIRDERDOOR_WAITFORACTIVE
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].xpos -= object.xvel
+			end if
+		next
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 383, 140)
+	
+	foreach (TypeName[Girder Door], arrayPos0, ALL_ENTITIES)
+		switch object[arrayPos0].propertyValue
+		default
+		case 0
+			break
+
+		case 1
+			object[arrayPos0].state = GIRDERDOOR_WAITFORACTIVE
+			object[arrayPos0].xvel = 0x20000
+			break
+
+		case 2
+			object[arrayPos0].state = GIRDERDOOR_WAITFORACTIVE
+			object[arrayPos0].xvel = -0x20000
+			break
+			
+		end switch
+		
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+	next
+
+	SetTableValue(TypeName[Girder Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(GirderDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(GirderDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 383, 140)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("No movement", 0)
+	AddEnumVariable("Move Right", 1)
+	AddEnumVariable("Move Left", 2)
+end event

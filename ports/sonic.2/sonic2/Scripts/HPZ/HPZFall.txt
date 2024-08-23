@@ -1,0 +1,129 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: HPZ Fall Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.targetPlayer
+
+private alias 0 : HPZFALL_STAGE
+private alias 1 : HPZFALL_SPAWNED
+
+// Player Aliases
+private alias object.state 		: player.state
+private alias object.animation 	: player.animation
+private alias object.direction 	: player.direction
+private alias object.gravity 	: player.gravity
+private alias object.value26 	: player.flightVelocity
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == HPZFALL_STAGE
+		// Object as placed in level
+
+		if recAnimation != 0
+			temp0 = recAnimation
+		else
+			temp0 = ANI_WATERSLIDE
+			temp0 <<= 16
+			temp0 |= ANI_WATERSLIDE
+			temp0 <<= 8
+		end if
+
+		// Cycle through each player
+		currentPlayer = 0
+		while currentPlayer < playerCount
+
+			// Create a personalized HPZFall object for the current player
+			CreateTempObject(TypeName[HPZ Fall], 0, object.xpos, object.ypos)
+
+			object[tempObjectPos].state = HPZFALL_SPAWNED
+
+			object[tempObjectPos].targetPlayer = currentPlayer
+
+			object[tempObjectPos].direction = temp0
+			object[tempObjectPos].direction &= 0xFF
+			temp0 >>= 8
+
+			object[tempObjectPos].animation = temp0
+			object[tempObjectPos].animation &= 0xFF
+			temp0 >>= 8
+
+			currentPlayer++
+		loop
+
+		// Erase this object
+		object.type = TypeName[Blank Object]
+	else
+		currentPlayer = object.targetPlayer
+
+		// If the player has landed, then reset this object
+		if player[currentPlayer].gravity == GRAVITY_GROUND
+			object.type = TypeName[Blank Object]
+		else
+			player[currentPlayer].direction = object.direction
+			player[currentPlayer].animation = object.animation
+
+			// Below animation checks should never be true, but they are here just in case
+
+			if player[currentPlayer].animation == ANI_JUMPING
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_FLYING
+				player[currentPlayer].state = Player_State_Fly
+				player[currentPlayer].flightVelocity = 0x800
+
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_GLIDING
+				if player[currentPlayer].direction == FACING_LEFT
+					player[currentPlayer].state = Player_State_GlideLeft
+				else
+					player[currentPlayer].state = Player_State_GlideRight
+				end if
+
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
+
+				object.type = TypeName[Blank Object]
+			end if
+		end if
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

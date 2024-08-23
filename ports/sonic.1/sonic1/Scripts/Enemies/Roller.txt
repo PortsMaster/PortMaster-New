@@ -1,0 +1,338 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Roller Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.onGround
+private alias object.value2 : object.hasTarget
+private alias object.value3 : object.startPos.x
+private alias object.value4 : object.startPos.y
+
+private alias 0 : ROLLER_FINDTARGET
+private alias 1 : ROLLER_ROLLING
+private alias 2 : ROLLER_FALLING
+private alias 3 : ROLLER_STANDING
+
+private alias 0 : ROLLER_ANI_HIDDEN
+private alias 1 : ROLLER_ANI_ROLLING
+private alias 2 : ROLLER_ANI_ENDROLL
+private alias 3 : ROLLER_ANI_STANDING
+private alias 4 : ROLLER_ANI_BEGINROLL
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Tile Info ID Aliases
+private alias 6 : TILEINFO_ANGLEA
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ROLLER_FINDTARGET
+		object.priority = PRIORITY_ACTIVE
+
+		temp0 = true
+		temp1 = false
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -212, -120, 212, 120, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = false
+			end if
+
+			temp2 = player[currentPlayer].xpos
+			temp2 -= object.xpos
+			if temp2 >= 0x1000000
+				if temp2 < 0x2400000
+					temp2 = player[currentPlayer].ypos
+					temp2 -= object.ypos
+					if temp2 >= -0xF00000
+						if temp2 < 0xF00000
+							temp1 = true
+						end if
+					end if
+				end if
+			end if
+		next
+
+		temp0 &= temp1
+		if temp0 != false
+			object.animation = ROLLER_ANI_ROLLING
+			object.xvel = 0x70000
+			object.state = ROLLER_ROLLING
+		end if
+		break
+
+	case ROLLER_ROLLING
+		object.xpos += object.xvel
+		temp0 = false
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, PATH_A)
+		ObjectTileGrip(CSIDE_FLOOR, 0, 14, PATH_A)
+
+		if object.onGround == false
+			if checkResult == false
+				temp0 = true
+			else
+				temp2 = object.xpos
+				temp3 = object.ypos
+				if object.xvel < 0
+					ObjectTileCollision(CSIDE_RWALL, -32, 0, PATH_A)
+					if checkResult == true
+						temp2 >>= 16
+						temp3 >>= 16
+						temp2 -= 32
+						temp3 += 0
+						Get16x16TileInfo(temp5, temp2, temp3, TILEINFO_ANGLEA)
+						temp5 &= 255
+						if temp5 == 0
+							temp0 = true
+						else
+							temp2 += 32
+							object.xpos = temp2
+							object.xpos <<= 16
+							object.ypos = temp3
+							object.ypos <<= 16
+						end if
+					end if
+				else
+					ObjectTileCollision(CSIDE_LWALL, 32, 0, PATH_A)
+					if checkResult == true
+						temp2 >>= 16
+						temp3 >>= 16
+						temp2 += 32
+						temp3 += 0
+						Get16x16TileInfo(temp5, temp2, temp3, TILEINFO_ANGLEA)
+						temp5 &= 255
+						if temp5 == 0
+							temp0 = true
+						else
+							temp2 -= 32
+							object.xpos = temp2
+							object.xpos <<= 16
+							object.ypos = temp3
+							object.ypos <<= 16
+						end if
+					end if
+				end if
+			end if
+		end if
+
+		if temp0 == true
+			object.yvel = -0x60000
+			object.onGround = true
+			object.state = ROLLER_FALLING
+		else
+			if object.hasTarget == false
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					temp0 = player[currentPlayer].xpos
+					temp0 -= object.xpos
+					if temp0 < 0x300000
+						if temp0 >= 0
+							temp0 = player[currentPlayer].ypos
+							temp0 -= object.ypos
+							if temp0 >= -0x600000
+								if temp0 < 0x600000
+									temp1 = true
+								end if
+							end if
+						end if
+					end if
+				next
+
+				if temp1 == true
+					object.hasTarget = true
+					object.animationTimer = 0
+					object.animation = ROLLER_ANI_ENDROLL
+					object.frame = 2
+					object.timer = 120
+					object.state = ROLLER_STANDING
+				end if
+			end if
+		end if
+		break
+
+	case ROLLER_FALLING
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 14, PATH_A)
+			if checkResult == true
+				object.state = ROLLER_ROLLING
+			end if
+		end if
+		break
+
+	case ROLLER_STANDING
+		object.timer--
+		if object.timer == 0
+			object.animation = ROLLER_ANI_BEGINROLL
+			object.animationTimer = 0
+		end if
+		break
+		
+	end switch
+
+	if object.outOfBounds == true
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
+			object.animation = ROLLER_ANI_HIDDEN
+			object.onGround  = false
+			object.hasTarget = false
+			object.priority  = PRIORITY_BOUNDS
+			object.state     = ROLLER_FINDTARGET
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+
+	if object.animation != ROLLER_ANI_HIDDEN
+		if object.frame < 2
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, -15, 15, 15, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CallFunction(Player_BadnikBreak)
+				end if
+			next
+		else
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -15, -15, 15, 15, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+			next
+		end if
+	end if
+
+	switch object.animation
+	case ROLLER_ANI_HIDDEN
+		break
+
+	case ROLLER_ANI_ROLLING
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		object.frame += 2
+		object.animationTimer++
+		if object.animationTimer >= 12
+			object.animationTimer = 0
+		end if
+		break
+
+	case ROLLER_ANI_ENDROLL
+		object.animationTimer++
+		if object.animationTimer >= 16
+			object.frame--
+			if object.frame == 0
+				object.animation = ROLLER_ANI_STANDING
+			end if
+			object.animationTimer = 0
+		end if
+		break
+
+	case ROLLER_ANI_STANDING
+		break
+
+	case ROLLER_ANI_BEGINROLL
+		object.animationTimer++
+		if object.animationTimer >= 16
+			object.frame++
+			if object.frame == 3
+				object.animation = ROLLER_ANI_ROLLING
+				object.state = ROLLER_ROLLING
+			end if
+			object.animationTimer = 0
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.animation != ROLLER_ANI_HIDDEN
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-16, -33, 29, 47, 1, 179)
+		SpriteFrame(-16, -25, 29, 39, 31, 187)
+		SpriteFrame(-14, -14, 28, 28, 1, 227)
+		SpriteFrame(-14, -14, 28, 28, 31, 227)
+		SpriteFrame(-14, -14, 28, 28, 60, 227)
+	end if
+
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -33, 29, 47, 105, 30)
+		SpriteFrame(-16, -25, 29, 39, 75, 59)
+		SpriteFrame(-14, -14, 28, 28, 74, 1)
+		SpriteFrame(-14, -14, 28, 28, 104, 1)
+		SpriteFrame(-14, -14, 28, 28, 76, 30)
+	end if
+
+	foreach (TypeName[Roller], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+	next
+	
+	// This badnik isn't featured in Debug Mode...
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -33, 29, 47, 105, 30)
+		SpriteFrame(-16, -25, 29, 39, 75, 59)
+		SpriteFrame(-14, -14, 28, 28, 74, 1)
+		SpriteFrame(-14, -14, 28, 28, 104, 1)
+		SpriteFrame(-14, -14, 28, 28, 76, 30)
+	else
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-16, -33, 29, 47, 1, 179)
+		SpriteFrame(-16, -25, 29, 39, 31, 187)
+		SpriteFrame(-14, -14, 28, 28, 1, 227)
+		SpriteFrame(-14, -14, 28, 28, 31, 227)
+		SpriteFrame(-14, -14, 28, 28, 60, 227)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,916 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Config Screen Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.bgBoxSize.x
+private alias object.value2 : object.bgBoxSize.y
+private alias object.value3 : object.selection
+private alias object.value4 : object.playerID
+
+private alias object.value5  : object.prevPlayerSelected
+private alias object.value6  : object.prevItemsSelected
+private alias object.value7  : object.nextPlayerSelected
+private alias object.value8  : object.nextItemsSelected
+private alias object.value9  : object.flightOnSelected
+private alias object.value10 : object.spdCapOnSelected
+private alias object.value11 : object.flightOffSelected
+private alias object.value12 : object.spdCapOffSelected
+private alias object.value13 : object.okSelected
+
+// States
+private alias 0 : CONFIGSCREEN_SETUP
+private alias 1 : CONFIGSCREEN_ENTERMENU
+private alias 2 : CONFIGSCREEN_APPEAR
+private alias 3 : CONFIGSCREEN_SELECTING
+private alias 4 : CONFIGSCREEN_SELECTEDDELAY
+private alias 5 : CONFIGSCREEN_DISAPPEAR
+private alias 6 : CONFIGSCREEN_EXITMENU
+
+// Selection IDs
+private alias 0 : CONFIGSCREEN_SEL_NONE
+private alias 1 : CONFIGSCREEN_SEL_PLAYER
+private alias 2 : CONFIGSCREEN_SEL_ITEMS
+private alias 3 : CONFIGSCREEN_SEL_FLIGHT
+private alias 4 : CONFIGSCREEN_SEL_SPDCAP
+private alias 5 : CONFIGSCREEN_SEL_OK
+
+// Player IDs
+private alias 0 : CONFIGSCREEN_PLAYER_ST
+private alias 1 : CONFIGSCREEN_PLAYER_S
+private alias 2 : CONFIGSCREEN_PLAYER_T
+private alias 3 : CONFIGSCREEN_PLAYER_K
+private alias 4 : CONFIGSCREEN_PLAYER_KT
+
+// Origins Plus Player IDs
+private alias 4 : CONFIGSCREEN_PLAYER_A
+private alias 5 : CONFIGSCREEN_PLAYER_KT_O
+private alias 6 : CONFIGSCREEN_PLAYER_AT
+
+// Shield Types Aliases
+private alias 0 : SHIELDTYPE_S2
+private alias 1 : SHIELDTYPE_S3
+private alias 2 : SHIELDTYPE_RAND_S2
+private alias 3 : SHIELDTYPE_RAND_S3
+
+// Player List Pos Aliases
+private alias 0 : PLAYER_SONIC_A
+private alias 1 : PLAYER_TAILS_A
+private alias 2 : PLAYER_KNUCKLES_A
+private alias 3 : PLAYER_SONIC_TAILS_A
+private alias 4 : PLAYER_KNUCKLES_TAILS_A
+private alias 5 : PLAYER_AMY_A
+private alias 6 : PLAYER_AMY_TAILS_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function ConfigScreen_SetPlayer
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function ConfigScreen_SetPlayer
+#platform: USE_ORIGINS
+	// Introduced in Origins Plus
+	
+	switch object.playerID
+	case CONFIGSCREEN_PLAYER_ST
+		stage.playerListPos = PLAYER_SONIC
+		stage.player2Enabled = true
+		break
+		
+	case CONFIGSCREEN_PLAYER_S
+		stage.playerListPos = PLAYER_SONIC
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_T
+		stage.playerListPos = PLAYER_TAILS
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_K
+		stage.playerListPos = PLAYER_KNUCKLES
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_KT_O
+		stage.playerListPos = PLAYER_KNUCKLES
+		stage.player2Enabled = true
+		break
+		
+	case CONFIGSCREEN_PLAYER_A
+		stage.playerListPos = PLAYER_AMY
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_AT
+		stage.playerListPos = PLAYER_AMY
+		stage.player2Enabled = true
+		break
+	end switch
+#endplatform
+end function
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CONFIGSCREEN_SETUP
+		object.inkEffect = INK_ALPHA
+		object.alpha 	 = 0x00
+		object.drawOrder = 6
+		object.state++
+		break
+
+	case CONFIGSCREEN_ENTERMENU
+		temp0 = 198
+		temp0 -= object.bgBoxSize.x
+		temp0 >>= 3
+		object.bgBoxSize.x += temp0
+
+		temp0 = 216
+		temp0 -= object.bgBoxSize.y
+		temp0 >>= 3
+		object.bgBoxSize.y += temp0
+
+		if object.bgBoxSize.x >= 188
+			object.bgBoxSize.x = 188
+			object.bgBoxSize.y = 208
+			object.state++
+		end if
+		break
+
+	case CONFIGSCREEN_APPEAR
+		if object.alpha < 0x100
+			object.alpha += 0x10
+		else
+			if options.physicalControls == true
+				object.selection = CONFIGSCREEN_SEL_PLAYER
+			else
+				object.selection = CONFIGSCREEN_SEL_NONE
+			end if
+			object.state++
+		end if
+		break
+
+	case CONFIGSCREEN_SELECTING
+		if options.physicalControls == true
+			if keyPress[0].up == true
+				object.selection--
+				if object.selection < CONFIGSCREEN_SEL_PLAYER
+					object.selection = CONFIGSCREEN_SEL_OK
+				end if
+				PlaySfx(SfxName[Menu Move], false)
+			end if
+
+			if keyPress[0].down == true
+				object.selection++
+				if object.selection > CONFIGSCREEN_SEL_OK
+					object.selection = CONFIGSCREEN_SEL_PLAYER
+				end if
+
+				PlaySfx(SfxName[Menu Move], false)
+			end if
+
+			switch object.selection
+			case CONFIGSCREEN_SEL_PLAYER
+				if keyPress[0].left == true
+					object.playerID--
+					
+#platform: USE_STANDALONE
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_KT
+					end if
+#endplatform
+					
+#platform: USE_ORIGINS
+					if object.playerID == CONFIGSCREEN_PLAYER_A
+						if game.hasPlusDLC == false
+							object.playerID--
+						end if
+					end if
+					
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						if game.hasPlusDLC == true
+							object.playerID = CONFIGSCREEN_PLAYER_AT
+						else
+							object.playerID = CONFIGSCREEN_PLAYER_KT_O
+						end if
+					end if
+#endplatform
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if keyPress[0].right == true
+					object.playerID++
+					
+#platform: USE_STANDALONE
+					if object.playerID > CONFIGSCREEN_PLAYER_KT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+#endplatform
+					
+#platform: USE_ORIGINS
+					if object.playerID == CONFIGSCREEN_PLAYER_A
+						if game.hasPlusDLC == false
+							object.playerID++
+						end if
+					end if
+					
+					if object.playerID == CONFIGSCREEN_PLAYER_AT
+						if game.hasPlusDLC == false
+							object.playerID++
+						end if
+					end if
+					
+					if object.playerID > CONFIGSCREEN_PLAYER_AT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+#endplatform
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+				
+#platform: USE_STANDALONE
+				switch object.playerID
+				case CONFIGSCREEN_PLAYER_ST
+					stage.playerListPos  = PLAYER_SONIC_A
+					stage.player2Enabled = true
+					break
+
+				case CONFIGSCREEN_PLAYER_S
+					stage.playerListPos  = PLAYER_SONIC_A
+					stage.player2Enabled = false
+					break
+
+				case CONFIGSCREEN_PLAYER_T
+					stage.playerListPos  = PLAYER_TAILS_A
+					stage.player2Enabled = false
+					break
+
+				case CONFIGSCREEN_PLAYER_K
+					stage.playerListPos  = PLAYER_KNUCKLES_A
+					stage.player2Enabled = false
+					break
+
+				case CONFIGSCREEN_PLAYER_KT
+					stage.playerListPos  = PLAYER_KNUCKLES_A
+					stage.player2Enabled = true
+					break
+				end switch
+#endplatform
+				
+#platform: USE_ORIGINS
+				CallFunction(ConfigScreen_SetPlayer)
+#endplatform
+				break
+
+			case CONFIGSCREEN_SEL_ITEMS
+				if keyPress[0].left == true
+					options.shieldType--
+					if options.shieldType < SHIELDTYPE_S2
+						options.shieldType = SHIELDTYPE_RAND_S3
+					end if
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if keyPress[0].right == true
+					options.shieldType++
+					if options.shieldType > SHIELDTYPE_RAND_S3
+						options.shieldType = SHIELDTYPE_S2
+					end if
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+				break
+
+			case CONFIGSCREEN_SEL_FLIGHT
+				if keyPress[0].left == true
+					options.tailsFlight ^= 1
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if keyPress[0].right == true
+					options.tailsFlight ^= 1
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+				break
+
+			case CONFIGSCREEN_SEL_SPDCAP
+				if keyPress[0].left == true
+					options.airSpeedCap ^= 1
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if keyPress[0].right == true
+					options.airSpeedCap ^= 1
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+				break
+
+			case CONFIGSCREEN_SEL_OK
+				if keyPress[0].buttonA == true
+					object.state = CONFIGSCREEN_SELECTEDDELAY
+					PlaySfx(SfxName[Menu Select], false)
+				end if
+
+				if keyPress[0].start == true
+					object.state = CONFIGSCREEN_SELECTEDDELAY
+					PlaySfx(SfxName[Menu Select], false)
+				end if
+				break
+			end switch
+
+			if keyPress[0].buttonB == true
+				object.state = CONFIGSCREEN_DISAPPEAR
+				PlaySfx(SfxName[Menu Back], false)
+			end if
+
+			if object.state == CONFIGSCREEN_SELECTING
+				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+				if checkResult > -1
+					options.physicalControls = false
+					object.selection = CONFIGSCREEN_SEL_NONE
+				end if
+			end if
+		else
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			if checkResult > -1
+				// Prev Player & Item Mode
+				temp0 = screen.xcenter
+				temp0 -= 26
+				temp1 = temp0
+				temp1 += 38
+				CheckTouchRect(temp0, 36, temp1, 68)
+				if checkResult > -1
+					object.prevPlayerSelected = true
+				else
+					object.prevPlayerSelected = false
+				end if
+				
+				CheckTouchRect(temp0, 76, temp1, 108)
+				if checkResult > -1
+					object.prevItemsSelected = true
+				else
+					object.prevItemsSelected = false
+				end if
+
+				// Next Player & Item Mode
+				temp0 = screen.xcenter
+				temp0 += 58
+				temp1 = temp0
+				temp1 += 38
+				CheckTouchRect(temp0, 36, temp1, 68)
+				if checkResult > -1
+					object.nextPlayerSelected = true
+				else
+					object.nextPlayerSelected = false
+				end if
+				
+				CheckTouchRect(temp0, 76, temp1, 108)
+				if checkResult > -1
+					object.nextItemsSelected = true
+				else
+					object.nextItemsSelected = false
+				end if
+
+				// Flight on/Speed Cap on
+				temp0 = screen.xcenter
+				temp0 -= 16
+				temp1 = temp0
+				temp1 += 54
+				CheckTouchRect(temp0, 116, temp1, 148)
+				if checkResult > -1
+					object.flightOnSelected = true
+				else
+					object.flightOnSelected = false
+				end if
+				
+				CheckTouchRect(temp0, 156, temp1, 188)
+				if checkResult > -1
+					object.spdCapOnSelected = true
+				else
+					object.spdCapOnSelected = false
+				end if
+
+				// Flight on/Speed Cap off
+				temp0 = screen.xcenter
+				temp0 += 38
+				temp1 = temp0
+				temp1 += 54
+				CheckTouchRect(temp0, 116, temp1, 148)
+				if checkResult > -1
+					object.flightOffSelected = true
+				else
+					object.flightOffSelected = false
+				end if
+				
+				CheckTouchRect(temp0, 156, temp1, 188)
+				if checkResult > -1
+					object.spdCapOffSelected = true
+				else
+					object.spdCapOffSelected = false
+				end if
+
+				// OK button
+				temp0 = screen.xcenter
+				temp0 -= 27
+				temp1 = temp0
+				temp1 += 54
+				CheckTouchRect(temp0, 192, temp1, 218)
+				if checkResult > -1
+					object.okSelected = true
+				else
+					object.okSelected = false
+				end if
+			else
+				if object.prevPlayerSelected == true
+					object.prevPlayerSelected = false
+					object.playerID--
+
+#platform: USE_STANDALONE
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_KT
+					end if
+
+					switch object.playerID
+					case CONFIGSCREEN_PLAYER_ST
+						stage.playerListPos  = PLAYER_SONIC_A
+						stage.player2Enabled = true
+						break
+
+					case CONFIGSCREEN_PLAYER_S
+						stage.playerListPos  = PLAYER_SONIC_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_T
+						stage.playerListPos  = PLAYER_TAILS_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_K
+						stage.playerListPos  = PLAYER_KNUCKLES_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_KT
+						stage.playerListPos  = PLAYER_KNUCKLES_A
+						stage.player2Enabled = true
+						break
+					end switch
+#endplatform
+
+#platform: USE_ORIGINS
+					// Uh... there's no DLC checks here...
+					// Yeah, Origins doesn't have touch controls, but why did they edit this at all at that point?
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_AT
+					end if
+					
+					CallFunction(ConfigScreen_SetPlayer)
+#endplatform
+
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.prevItemsSelected == true
+					object.prevItemsSelected = false
+					options.shieldType--
+					if options.shieldType < SHIELDTYPE_S2
+						options.shieldType = SHIELDTYPE_RAND_S3
+					end if
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+				
+				if object.nextPlayerSelected == true
+					object.nextPlayerSelected = false
+					object.playerID++
+					if object.playerID > CONFIGSCREEN_PLAYER_KT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+
+#platform: USE_STANDALONE
+					switch object.playerID
+					case CONFIGSCREEN_PLAYER_ST
+						stage.playerListPos  = PLAYER_SONIC_A
+						stage.player2Enabled = true
+						break
+
+					case CONFIGSCREEN_PLAYER_S
+						stage.playerListPos  = PLAYER_SONIC_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_T
+						stage.playerListPos  = PLAYER_TAILS_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_K
+						stage.playerListPos  = PLAYER_KNUCKLES_A
+						stage.player2Enabled = false
+						break
+
+					case CONFIGSCREEN_PLAYER_KT
+						stage.playerListPos  = PLAYER_KNUCKLES_A
+						stage.player2Enabled = true
+						break
+					end switch
+#endplatform
+
+#platform: USE_ORIGINS
+					// Uh... there's no DLC checks here...
+					// Yeah, Origins doesn't have touch controls, but why did they edit this at all at that point?
+					if object.playerID > CONFIGSCREEN_PLAYER_AT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+					
+					CallFunction(ConfigScreen_SetPlayer)
+#endplatform
+
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.nextItemsSelected == true
+					object.nextItemsSelected = false
+					options.shieldType++
+					if options.shieldType > SHIELDTYPE_RAND_S3
+						options.shieldType = SHIELDTYPE_S2
+					end if
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.flightOnSelected == true
+					object.flightOnSelected = false
+					options.tailsFlight = true
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.flightOffSelected == true
+					object.flightOffSelected = false
+					options.tailsFlight = false
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.spdCapOnSelected == true
+					object.spdCapOnSelected = false
+					options.airSpeedCap = true
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.spdCapOffSelected == true
+					object.spdCapOffSelected = false
+					options.airSpeedCap = false
+					PlaySfx(SfxName[Menu Move], false)
+				end if
+
+				if object.okSelected == true
+					object.okSelected = false
+					object.state = CONFIGSCREEN_SELECTEDDELAY
+					PlaySfx(SfxName[Menu Select], false)
+				end if
+			end if
+
+			if keyPress[0].buttonB == true
+				object.state = CONFIGSCREEN_DISAPPEAR
+				PlaySfx(SfxName[Menu Back], false)
+			end if
+
+			if object.state == CONFIGSCREEN_SELECTING
+				if keyPress[0].up == true
+					options.physicalControls = true
+					object.selection = CONFIGSCREEN_SEL_OK
+				end if
+
+				if keyPress[0].down == true
+					options.physicalControls = true
+					object.selection = CONFIGSCREEN_SEL_PLAYER
+				end if
+			end if
+		end if
+		break
+
+	case CONFIGSCREEN_SELECTEDDELAY
+		if object.timer < 32
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CONFIGSCREEN_DISAPPEAR
+		if object.alpha > 0
+			object.alpha -= 16
+		else
+			object.state++
+		end if
+		break
+
+	case CONFIGSCREEN_EXITMENU
+		temp0 = 0
+		temp0 -= object.bgBoxSize.x
+		temp0 >>= 3
+		object.bgBoxSize.x += temp0
+
+		temp0 = 0
+		temp0 -= object.bgBoxSize.y
+		temp0 >>= 3
+		object.bgBoxSize.y += temp0
+
+		if object.bgBoxSize.x < 4
+			object.bgBoxSize.x = 0
+			object.bgBoxSize.y = 0
+			MenuControl_optionsMenuOpen = false
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	temp0 = object.bgBoxSize.x
+	temp0 >>= 1
+	FlipSign(temp0)
+	temp0 += screen.xcenter
+	temp1 = object.bgBoxSize.y
+	temp1 >>= 1
+	FlipSign(temp1)
+	temp1 += screen.ycenter
+	DrawRect(temp0, temp1, object.bgBoxSize.x, object.bgBoxSize.y, 0x00, 0x00, 0x60, 0xFF)
+
+	temp0 += 2
+	temp1 += 2
+	temp2 = object.bgBoxSize.x
+	temp2 -= 4
+	temp3 = object.bgBoxSize.y
+	temp3 -= 4
+	DrawRect(temp0, temp1, temp2, temp3, 0x00, 0x20, 0xC0, 0xFF)
+
+	DrawSpriteScreenFX(0, FX_INK, screen.xcenter, 25)
+	if object.selection == CONFIGSCREEN_SEL_PLAYER
+		DrawSpriteScreenFX(2, FX_INK, screen.xcenter, 49)
+	else
+		DrawSpriteScreenFX(1, FX_INK, screen.xcenter, 49)
+	end if
+
+	if object.selection == CONFIGSCREEN_SEL_ITEMS
+		DrawSpriteScreenFX(4, FX_INK, screen.xcenter, 89)
+	else
+		DrawSpriteScreenFX(3, FX_INK, screen.xcenter, 89)
+	end if
+
+	if object.selection == CONFIGSCREEN_SEL_FLIGHT
+		DrawSpriteScreenFX(6, FX_INK, screen.xcenter, 129)
+	else
+		DrawSpriteScreenFX(5, FX_INK, screen.xcenter, 129)
+	end if
+
+	if object.selection == CONFIGSCREEN_SEL_SPDCAP
+		DrawSpriteScreenFX(8, FX_INK, screen.xcenter, 169)
+	else
+		DrawSpriteScreenFX(7, FX_INK, screen.xcenter, 169)
+	end if
+
+	if object.prevPlayerSelected == true
+		DrawSpriteScreenFX(10, FX_INK, screen.xcenter, 43)
+	else
+		DrawSpriteScreenFX(9, FX_INK, screen.xcenter, 43)
+	end if
+
+	if object.nextPlayerSelected == true
+		DrawSpriteScreenFX(12, FX_INK, screen.xcenter, 43)
+	else
+		DrawSpriteScreenFX(11, FX_INK, screen.xcenter, 43)
+	end if
+	
+	if object.prevItemsSelected == true
+		DrawSpriteScreenFX(10, FX_INK, screen.xcenter, 83)
+	else
+		DrawSpriteScreenFX(9, FX_INK, screen.xcenter, 83)
+	end if
+
+	if object.nextItemsSelected == true
+		DrawSpriteScreenFX(12, FX_INK, screen.xcenter, 83)
+	else
+		DrawSpriteScreenFX(11, FX_INK, screen.xcenter, 83)
+	end if
+
+	if object.flightOnSelected == true
+		DrawSpriteScreenFX(14, FX_INK, screen.xcenter, 123)
+	else
+		DrawSpriteScreenFX(13, FX_INK, screen.xcenter, 123)
+	end if
+
+	if object.flightOffSelected == true
+		DrawSpriteScreenFX(16, FX_INK, screen.xcenter, 123)
+	else
+		DrawSpriteScreenFX(15, FX_INK, screen.xcenter, 123)
+	end if
+
+	if options.tailsFlight == true
+		DrawSpriteScreenFX(19, FX_INK, screen.xcenter, 123)
+	else
+		DrawSpriteScreenFX(20, FX_INK, screen.xcenter, 123)
+	end if
+
+	if object.spdCapOnSelected == true
+		DrawSpriteScreenFX(14, FX_INK, screen.xcenter, 163)
+	else
+		DrawSpriteScreenFX(13, FX_INK, screen.xcenter, 163)
+	end if
+
+	if object.spdCapOffSelected == true
+		DrawSpriteScreenFX(16, FX_INK, screen.xcenter, 163)
+	else
+		DrawSpriteScreenFX(15, FX_INK, screen.xcenter, 163)
+	end if
+
+	if options.airSpeedCap == true
+		DrawSpriteScreenFX(19, FX_INK, screen.xcenter, 163)
+	else
+		DrawSpriteScreenFX(20, FX_INK, screen.xcenter, 163)
+	end if
+
+	temp0 = object.timer
+	temp0 >>= 1
+	temp0 &= 1
+	temp0 += 17
+	if object.okSelected == true
+		temp0 = 18
+	end if
+	DrawSpriteScreenFX(temp0, FX_INK, screen.xcenter, 195)
+
+	if options.physicalControls == true
+		if object.selection == CONFIGSCREEN_SEL_OK
+			if object.state != CONFIGSCREEN_SELECTEDDELAY
+				DrawSpriteScreenFX(21, FX_INK, screen.xcenter, 195)
+			end if
+		end if
+	end if
+
+	switch object.playerID
+	case CONFIGSCREEN_PLAYER_ST
+		DrawSpriteScreenFX(22, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(23, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_S
+		DrawSpriteScreenFX(24, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_T
+		DrawSpriteScreenFX(25, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_K
+		DrawSpriteScreenFX(26, FX_INK, screen.xcenter, 41)
+		break
+		
+#platform: USE_STANDALONE
+	case CONFIGSCREEN_PLAYER_KT
+		DrawSpriteScreenFX(27, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(28, FX_INK, screen.xcenter, 41)
+		break
+#endplatform
+		
+#platform: USE_ORIGINS
+	case CONFIGSCREEN_PLAYER_KT_O
+		DrawSpriteScreenFX(27, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(28, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_A
+		DrawSpriteScreenFX(29, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_AT
+		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(31, FX_INK, screen.xcenter, 41)
+		break
+#endplatform
+	end switch
+
+#platform: USE_STANDALONE
+	switch options.shieldType
+	case SHIELDTYPE_S2
+		DrawSpriteScreenFX(29, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_S3
+		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 78)
+		break
+
+	case SHIELDTYPE_RAND_S2
+		DrawSpriteScreenFX(31, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_RAND_S3
+		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 78)
+		DrawSpriteScreenFX(32, FX_INK, screen.xcenter, 78)
+		break
+	end switch
+#endplatform
+
+#platform: USE_ORIGINS
+	switch options.shieldType
+	case SHIELDTYPE_S2
+		DrawSpriteScreenFX(32, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_S3
+		DrawSpriteScreenFX(33, FX_INK, screen.xcenter, 78)
+		break
+
+	case SHIELDTYPE_RAND_S2
+		DrawSpriteScreenFX(34, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_RAND_S3
+		DrawSpriteScreenFX(33, FX_INK, screen.xcenter, 78)
+		DrawSpriteScreenFX(35, FX_INK, screen.xcenter, 78)
+		break
+	end switch
+#endplatform
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-52, 0, 104, 7, 103, 430)	// GAME CONFIG text - #0
+
+	SpriteFrame(-82, 0, 48, 7, 158, 454)	// PLAYER text 				- #1
+	SpriteFrame(-82, 0, 48, 7, 207, 454)	// PLAYER text (Selected)	- #2
+	SpriteFrame(-82, 0, 40, 7, 158, 446)	// ITEMS text 				- #3
+	SpriteFrame(-82, 0, 40, 7, 207, 446)	// ITEMS text (Selected) 	- #4
+	SpriteFrame(-82, 0, 48, 7, 158, 438)	// FLIGHT text 				- #5
+	SpriteFrame(-82, 0, 48, 7, 207, 438)	// FLIGHT text (Selected) 	- #6
+	SpriteFrame(-82, 0, 56, 7, 46, 378)		// AIR CAP text 			- #7
+	SpriteFrame(-82, 0, 56, 7, 199, 462)	// AIR CAP text (Selected) 	- #8
+
+	SpriteFrame(-16, 0, 20, 20, 138, 22)	// Left				- #9
+	SpriteFrame(-16, 0, 20, 20, 138, 64)	// Left (Selected)	- #10
+	SpriteFrame(64, 0, 20, 20, 159, 22)		// Right			- #11
+	SpriteFrame(64, 0, 20, 20, 159, 64)		// Right (Selected)	- #12
+
+	SpriteFrame(-8, 0, 40, 20, 1, 411)		// ON 				- #13
+	SpriteFrame(-8, 0, 40, 20, 42, 411)		// ON (Selected) 	- #14
+	SpriteFrame(44, 0, 40, 20, 1, 432)		// OFF 				- #15
+	SpriteFrame(44, 0, 40, 20, 42, 432)		// OFF (Selected) 	- #16
+	SpriteFrame(-20, 0, 40, 20, 1, 320) 	// OK 				- #17
+	SpriteFrame(-20, 0, 40, 20, 42, 320) 	// OK (Selected) 	- #18
+	SpriteFrame(-10, -2, 42, 22, 1, 362)	// Back 			- #19
+	SpriteFrame(42, -2, 42, 22, 1, 362) 	// Back (Selected) 	- #20
+	SpriteFrame(-22, -2, 42, 22, 1, 362)	// Selection Box	- #21
+
+	SpriteFrame(16, 0, 16, 23, 46, 386)		// Sonic (Alone) 		- #22
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails (Alone) 		- #23
+	SpriteFrame(26, 0, 16, 23, 46, 386)		// Sonic (& Tails) 		- #24
+	SpriteFrame(26, 0, 16, 23, 63, 386)		// Tails 	(& Sonic) 	- #25
+	SpriteFrame(26, 0, 16, 23, 80, 386)		// Knuckles (Alone) 	- #26
+	SpriteFrame(16, 0, 16, 23, 80, 386)		// Knuckles (& Tails) 	- #27
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails 	(& Knux) 	- #28
+#platform: USE_ORIGINS
+	SpriteFrame(25, 1, 17, 22, 83, 410)		// Amy (Alone) 			- #29
+	SpriteFrame(17, 1, 17, 22, 83, 410)		// Amy (& Tails) 		- #30
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails (& Amy) 		- #31
+#endplatform
+	
+	SpriteFrame(26, 0, 16, 14, 207, 314)	// Shields (S2)	- #29/32
+	SpriteFrame(17, 0, 34, 30, 207, 314)	// Shields (S3)	- #30/33
+	SpriteFrame(26, 0, 16, 14, 228, 299)	// Random (S2)	- #31/34
+	SpriteFrame(17, 0, 16, 14, 228, 299)	// Random (S3)	- #32/35
+end event
+
+
+// ========================
+// Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

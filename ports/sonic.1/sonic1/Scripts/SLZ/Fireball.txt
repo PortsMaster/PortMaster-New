@@ -1,0 +1,510 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Fireball Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.interval
+private alias object.value2 : object.fireballDir
+private alias object.value3 : object.finalY
+
+private alias 0 : FIREBALL_SPAWNER
+private alias 1 : FIREBALL_MOVE_GRAVITY
+private alias 2 : FIREBALL_MOVE_UP
+private alias 3 : FIREBALL_MOVE_DOWN
+private alias 4 : FIREBALL_MOVE_LEFT
+private alias 5 : FIREBALL_MOVE_RIGHT
+private alias 6 : FIREBALL_DISSIPATE
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Fireball_DebugDraw
+reserve function Fireball_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Fireball_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Fireball_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Fireball_startDebugID
+	temp1 = object.direction
+
+	switch temp0
+	case 0
+		object.direction = FLIP_Y
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 1
+		if object.direction == FLIP_NONE
+			object.direction = FLIP_Y
+		end if
+
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 2
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+	object.direction = temp1
+end function
+
+
+private function Fireball_DebugSpawn
+	CreateTempObject(TypeName[Fireball], 0, object.xpos, object.ypos)
+	object[tempObjectPos].interval = 60
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Fireball_startDebugID
+	switch temp0
+	case 0
+		object[tempObjectPos].propertyValue = FIREBALL_MOVE_GRAVITY
+		object[tempObjectPos].yvel = -0x40000
+		object[tempObjectPos].fireballDir = FLIP_Y
+		break
+
+	case 1
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].propertyValue = FIREBALL_MOVE_UP
+			object[tempObjectPos].yvel = -0x20000
+			object[tempObjectPos].fireballDir = FLIP_Y
+		else
+			object[tempObjectPos].propertyValue = 3
+			object[tempObjectPos].yvel = 0x20000
+			object[tempObjectPos].fireballDir = FLIP_NONE
+		end if
+		break
+
+	case 2
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].propertyValue = FIREBALL_MOVE_RIGHT
+			object[tempObjectPos].xvel = 0x20000
+			object[tempObjectPos].fireballDir = FLIP_NONE
+		else
+			object[tempObjectPos].propertyValue = FIREBALL_MOVE_LEFT
+			object[tempObjectPos].xvel = -0x20000
+			object[tempObjectPos].fireballDir = FLIP_X
+		end if
+		break
+		
+	end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case FIREBALL_SPAWNER
+		object.timer++
+		if object.timer == object.interval
+			object.timer = 0
+			temp0 = object.ixpos
+			temp0 -= camera[0].xpos
+			Abs(temp0)
+			if temp0 < screen.xcenter
+				temp0 = object.iypos
+				temp0 -= camera[0].ypos
+				Abs(temp0)
+				if temp0 < screen.ycenter
+					CreateTempObject(TypeName[Fireball], 0, object.xpos, object.ypos)
+					object[tempObjectPos].state = object.propertyValue
+					object[tempObjectPos].xvel = object.xvel
+					object[tempObjectPos].yvel = object.yvel
+					object[tempObjectPos].finalY = object.ypos
+					object[tempObjectPos].fireballDir = object.fireballDir
+					PlaySfx(SfxName[Small Fireball], false)
+				end if
+			end if
+		end if
+		break
+
+	case FIREBALL_MOVE_GRAVITY
+		object.yvel += 0x1800
+		object.ypos += object.yvel
+		if object.yvel > 0
+			object.fireballDir = FLIP_NONE
+		end if
+
+		if object.ypos > object.finalY
+			object.type = TypeName[Blank Object]
+		end if
+
+		object.frame = object.animationTimer
+		object.frame /= 12
+		object.direction = object.animationTimer
+		object.direction /= 6
+		object.direction &= FLIP_X
+		object.direction += object.fireballDir
+		object.animationTimer++
+		object.animationTimer %= 24
+		break
+
+	case FIREBALL_MOVE_UP
+		object.ypos += object.yvel
+		object.frame = object.animationTimer
+		object.frame /= 12
+		object.direction = object.animationTimer
+		object.direction /= 6
+		object.direction &= FLIP_X
+		object.direction += object.fireballDir
+		object.animationTimer++
+		object.animationTimer %= 24
+
+		ObjectTileCollision(CSIDE_ROOF, 0, -8, PATH_A)
+		if checkResult == true
+			object.state = FIREBALL_DISSIPATE
+			object.frame = 2 // dissipate (V)
+		end if
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case FIREBALL_MOVE_DOWN
+		object.ypos += object.yvel
+		object.frame = object.animationTimer
+		object.frame /= 12
+		object.direction = object.animationTimer
+		object.direction /= 6
+		object.direction &= FLIP_X
+		object.direction += object.fireballDir
+		object.animationTimer++
+		object.animationTimer %= 24
+
+		ObjectTileCollision(CSIDE_FLOOR, 0, 8, PATH_A)
+		if checkResult == true
+			object.state = FIREBALL_DISSIPATE
+			object.frame = 2 // dissipate (V)
+		end if
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case FIREBALL_MOVE_LEFT
+		object.xpos += object.xvel
+		object.frame = object.animationTimer
+		object.frame /= 12
+		object.frame += 3
+		object.direction = object.animationTimer
+		object.direction /= 6
+		object.direction &= FLIP_X
+		object.direction <<= 1 // turn it into either FLIP_Y or FLIP_NONE
+		object.direction += object.fireballDir
+		object.animationTimer++
+		object.animationTimer %= 24
+
+		ObjectTileCollision(CSIDE_RWALL, -8, 0, PATH_A)
+		if checkResult == true
+			object.state = FIREBALL_DISSIPATE
+			object.frame = 5 // dissipate (H)
+		end if
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case FIREBALL_MOVE_RIGHT
+		object.xpos += object.xvel
+		object.frame = object.animationTimer
+		object.frame /= 12
+		object.frame += 3
+		object.direction = object.animationTimer
+		object.direction /= 6
+		object.direction &= FLIP_X
+		object.direction <<= 1 // turn it into either FLIP_Y or FLIP_NONE
+		object.direction += object.fireballDir
+		object.animationTimer++
+		object.animationTimer %= 24
+		
+		ObjectTileCollision(CSIDE_LWALL, 8, 0, PATH_A)
+		if checkResult == true
+			object.state = FIREBALL_DISSIPATE
+			object.frame = 5 // dissipate (H)
+		end if
+		
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	case FIREBALL_DISSIPATE
+		object.timer++
+		if object.timer == 8
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state > FIREBALL_SPAWNER
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_FireHit)
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state > FIREBALL_SPAWNER
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-7, -23, 15, 31, 1, 1)   // Vertical 1 - #0
+	SpriteFrame(-8, -24, 16, 32, 17, 1)  // Vertical 2 - #1
+	SpriteFrame(-8, -15, 16, 23, 34, 1)  // Vertical Dissipate - #2
+	SpriteFrame(-23, -8, 31, 15, 2, 34)  // Horizontal 1 - #3
+	SpriteFrame(-24, -8, 32, 15, 1, 50)  // Horizontal 2 - #4
+	SpriteFrame(-15, -8, 23, 16, 10, 66) // Horizontal Dissipate - #5
+
+	foreach (TypeName[Fireball], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].interval = object[arrayPos0].propertyValue
+		object[arrayPos0].interval >>= 4
+		object[arrayPos0].interval *= 30
+		object[arrayPos0].interval += 30
+
+		object[arrayPos0].propertyValue &= 7
+		switch object[arrayPos0].propertyValue
+		case 0
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_GRAVITY
+			object[arrayPos0].yvel = -0x40000
+			object[arrayPos0].fireballDir = FLIP_Y
+			break
+
+		case 1
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_GRAVITY
+			object[arrayPos0].yvel = -0x50000
+			object[arrayPos0].fireballDir = FLIP_Y
+			break
+
+		case 2
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_GRAVITY
+			object[arrayPos0].yvel = -0x60000
+			object[arrayPos0].fireballDir = FLIP_Y
+			break
+
+		case 3
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_GRAVITY
+			object[arrayPos0].yvel = -0x70000
+			object[arrayPos0].fireballDir = FLIP_Y
+			break
+
+		case 4
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_UP
+			object[arrayPos0].yvel = -0x20000
+			object[arrayPos0].fireballDir = FLIP_Y
+			break
+
+		case 5
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_DOWN
+			object[arrayPos0].yvel = 0x20000
+			object[arrayPos0].fireballDir = FLIP_NONE
+			break
+
+		case 6
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_LEFT
+			object[arrayPos0].xvel = -0x20000
+			object[arrayPos0].fireballDir = FLIP_X
+			break
+
+		case 7
+			object[arrayPos0].propertyValue = FIREBALL_MOVE_RIGHT
+			object[arrayPos0].xvel = 0x20000
+			object[arrayPos0].fireballDir = FLIP_NONE
+			break
+			
+		end switch
+	next
+
+	temp0 = 0
+	Fireball_startDebugID = DebugMode_ObjCount
+	while temp0 < 3
+		SetTableValue(TypeName[Fireball], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Fireball_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Fireball_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+			
+		case 1 // interval
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0x0F
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			temp0 = 7
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			editor.variableValue &= 7
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // interval
+			object.propertyValue &= 0x0F
+
+			editor.variableValue &= 15
+			object.propertyValue |= editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp1 = object.direction
+		
+	temp0 = object.propertyValue
+	temp0 &= 7
+	switch temp0
+	case 0
+		object.frame = 0
+		object.direction = FLIP_Y
+		break
+
+	case 1
+		object.frame = 0
+		object.direction = FLIP_Y
+		break
+
+	case 2
+		object.frame = 0
+		object.direction = FLIP_Y
+		break
+
+	case 3
+		object.frame = 0
+		object.direction = FLIP_Y
+		break
+
+	case 4
+		object.frame = 0
+		object.direction = FLIP_Y
+		break
+
+	case 5
+		object.frame = 0
+		object.direction = FLIP_NONE
+		break
+
+	case 6
+		object.frame = 3
+		object.direction = FLIP_X
+		break
+
+	case 7
+		object.frame = 3
+		object.direction = FLIP_NONE
+		break
+		
+	end switch
+
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	object.direction = temp1
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-7, -23, 15, 31, 1, 1) 		// Vertical 1 - #0
+	SpriteFrame(-8, -24, 16, 32, 17, 1)  	// Vertical 2 - #1
+	SpriteFrame(-8, -15, 16, 23, 34, 1)  	// Vertical Dissipate - #2
+	SpriteFrame(-23, -8, 31, 15, 2, 34)  	// Horizontal 1 - #3
+	SpriteFrame(-24, -8, 32, 15, 1, 50)  	// Horizontal 2 - #4
+	SpriteFrame(-15, -8, 23, 16, 10, 66) 	// Horizontal Dissipate - #5
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Eject Up (Slowest)", 0)
+	AddEnumVariable("Eject Up (Slow)", 1)
+	AddEnumVariable("Eject Up (Fast)", 2)
+	AddEnumVariable("Eject Up (Fastest)", 3)
+	AddEnumVariable("Travel Up", 4)
+	AddEnumVariable("Travel Down", 5)
+	AddEnumVariable("Travel Left", 6)
+	AddEnumVariable("Travel Right", 7)
+
+	AddEditorVariable("interval")
+	SetActiveVariable("interval")
+	AddEnumVariable("Every 30 Frames", 0)
+	AddEnumVariable("Every 60 Frames", 1)
+	AddEnumVariable("Every 90 Frames", 2)
+	AddEnumVariable("Every 120 Frames", 3)
+	AddEnumVariable("Every 150 Frames", 4)
+	AddEnumVariable("Every 180 Frames", 5)
+	AddEnumVariable("Every 210 Frames", 6)
+	AddEnumVariable("Every 240 Frames", 7)
+	AddEnumVariable("Every 270 Frames", 8)
+	AddEnumVariable("Every 300 Frames", 9)
+	AddEnumVariable("Every 330 Frames", 10)
+	AddEnumVariable("Every 360 Frames", 11)
+	AddEnumVariable("Every 390 Frames", 12)
+	AddEnumVariable("Every 420 Frames", 13)
+	AddEnumVariable("Every 450 Frames", 14)
+	AddEnumVariable("Every 480 Frames", 15)
+end event

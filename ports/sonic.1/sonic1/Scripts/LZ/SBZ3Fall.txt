@@ -1,0 +1,115 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: SBZ3 Fall Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.playerID
+
+private alias 0 : SBZ3FALL_SETUP
+private alias 1 : SBZ3FALL_HANDLEFALL
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+private alias object.gravity   : player.gravity
+private alias object.value26   : player.flightVelocity
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == SBZ3FALL_SETUP
+		if recAnimation != 0
+			temp0 = recAnimation
+		else
+			temp0 = ANI_HURT
+			temp0 <<= 16
+			temp0 |= ANI_HURT
+			temp0 <<= 8
+		end if
+
+		// Create an SBZ3 Fall object for every player
+		currentPlayer = 0
+		while currentPlayer < playerCount
+			CreateTempObject(TypeName[SBZ3 Fall], 0, object.xpos, object.ypos)
+			object[tempObjectPos].state = SBZ3FALL_HANDLEFALL
+			object[tempObjectPos].playerID = currentPlayer
+			object[tempObjectPos].direction = temp0
+			object[tempObjectPos].direction &= 0xFF
+			temp0 >>= 8
+			object[tempObjectPos].animation = temp0
+			object[tempObjectPos].animation &= 0xFF
+			temp0 >>= 8
+
+			currentPlayer++
+		loop
+
+		object.type = TypeName[Blank Object]
+	else
+		currentPlayer = object.playerID
+
+		if player[currentPlayer].gravity == GRAVITY_GROUND
+			object.type = TypeName[Blank Object]
+		else
+			player[currentPlayer].direction = object.direction
+			player[currentPlayer].animation = object.animation
+
+			if player[currentPlayer].animation == ANI_JUMPING
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_FLYING
+				player[currentPlayer].state = Player_State_Fly
+				player[currentPlayer].flightVelocity = 0x800
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_GLIDING
+				if player[currentPlayer].direction == 1
+					player[currentPlayer].state = Player_State_GlideLeft
+				else
+					player[currentPlayer].state = Player_State_GlideRight
+				end if
+
+				object.type = TypeName[Blank Object]
+			end if
+
+			if player[currentPlayer].animation == ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
+				object.type = TypeName[Blank Object]
+			end if
+		end if
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

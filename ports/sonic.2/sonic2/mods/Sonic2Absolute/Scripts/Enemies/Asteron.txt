@@ -1,0 +1,203 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Asteron Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 44 : TYPE_ASTERON
+
+// Function declarations
+reserve function Asteron_Function108
+reserve function Asteron_DebugDraw
+reserve function Asteron_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Asteron_Function108
+	object[arrayPos0].frame = 0
+	object[arrayPos0].value0 = 0
+	object[arrayPos0].state = 0
+	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+end function
+
+
+function Asteron_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Asteron_DebugSpawn
+	CreateTempObject(TypeName[Asteron], 0, object.xpos, object.ypos)
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].value1 = object.xpos
+	object[arrayPos0].value2 = object.ypos
+	object[arrayPos0].drawOrder = 5
+	CallFunction(Asteron_Function108)
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		temp0 = 0
+		temp1 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -64, 96, 64, currentPlayer, -1, -1, 1, 1)
+			if checkResult == 0
+				temp0++
+			end if
+			temp1++
+		next
+		if temp0 == temp1
+			object.priority = PRIORITY_ACTIVE
+			object.state = 1
+		end if
+		break
+	case 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.state == 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -96, -96, 96, 96, currentPlayer, -1, -1, 1, 1)
+				if checkResult == 1
+					temp1 = 0
+					temp0 = object.xpos
+					temp0 -= object[currentPlayer].xpos
+					Abs(temp0)
+					if temp0 >= 0x100000
+						temp1 = 1
+						if object.xpos > object[currentPlayer].xpos
+							object.xvel = -0x4000
+						else
+							object.xvel = 0x4000
+						end if
+					end if
+					temp0 = object.ypos
+					temp0 -= object[currentPlayer].ypos
+					Abs(temp0)
+					if temp0 >= 0x100000
+						temp1 = 1
+						if object.ypos > object[currentPlayer].ypos
+							object.yvel = -0x4000
+						else
+							object.yvel = 0x4000
+						end if
+					end if
+					if temp1 == 1
+						object.priority = PRIORITY_ACTIVE
+						object.value0 = 65
+						object.state = 2
+					end if
+				end if
+			end if
+		next
+		break
+	case 2
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		object.value0--
+		if object.value0 == 0
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+			CreateTempObject(TypeName[Asteron Spike], 0, object.xpos, object.ypos)
+			object[tempObjectPos].ypos -= 0x80000
+			object[tempObjectPos].yvel = -0x40000
+			object[tempObjectPos].drawOrder = 5
+			CreateTempObject(TypeName[Asteron Spike], 1, object.xpos, object.ypos)
+			object[tempObjectPos].xpos += 0x80000
+			object[tempObjectPos].ypos -= 0x40000
+			object[tempObjectPos].xvel = 0x30000
+			object[tempObjectPos].yvel = -0x10000
+			object[tempObjectPos].drawOrder = 5
+			CreateTempObject(TypeName[Asteron Spike], 2, object.xpos, object.ypos)
+			object[tempObjectPos].xpos += 0x80000
+			object[tempObjectPos].ypos += 0x80000
+			object[tempObjectPos].xvel = 0x30000
+			object[tempObjectPos].yvel = 0x30000
+			object[tempObjectPos].drawOrder = 5
+			CreateTempObject(TypeName[Asteron Spike], 2, object.xpos, object.ypos)
+			object[tempObjectPos].xpos -= 0x80000
+			object[tempObjectPos].ypos += 0x80000
+			object[tempObjectPos].xvel = -0x30000
+			object[tempObjectPos].yvel = 0x30000
+			object[tempObjectPos].direction = FLIP_X
+			object[tempObjectPos].drawOrder = 5
+			CreateTempObject(TypeName[Asteron Spike], 1, object.xpos, object.ypos)
+			object[tempObjectPos].xpos -= 0x80000
+			object[tempObjectPos].ypos -= 0x40000
+			object[tempObjectPos].xvel = -0x30000
+			object[tempObjectPos].yvel = -0x10000
+			object[tempObjectPos].direction = FLIP_X
+			object[tempObjectPos].drawOrder = 5
+			CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+			object[tempObjectPos].ypos += 0x20000
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Destroy], 0)
+		end if
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		object.ypos += object.value31
+		if object.outOfBounds == 1
+			arrayPos0 = object.entityPos
+			CallFunction(Asteron_Function108)
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == 1
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-16, -14, 32, 28, 223, 1)
+		SpriteFrame(-16, -14, 32, 28, 190, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -14, 32, 28, 843, 289)
+		SpriteFrame(-16, -14, 32, 28, 876, 289)
+	end if
+	foreach (TypeName[Asteron], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].drawOrder = 5
+		CallFunction(Asteron_Function108)
+	next
+	SetTableValue(TypeName[Asteron], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Asteron_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Asteron_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

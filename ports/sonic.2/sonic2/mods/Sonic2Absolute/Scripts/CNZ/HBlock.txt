@@ -1,0 +1,102 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: H Block Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 50 : TYPE_HBLOCK
+
+// Function declarations
+reserve function HBlock_DebugDraw
+reserve function HBlock_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function HBlock_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function HBlock_DebugSpawn
+	CreateTempObject(TypeName[H Block], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object.xpos
+	object[tempObjectPos].propertyValue = object.direction
+	if object[tempObjectPos].propertyValue == 0
+		object[tempObjectPos].xpos -= 0x600000
+	else
+		object[tempObjectPos].xpos += 0x600000
+	end if
+end function
+
+
+event ObjectMain
+	temp6 = object.xpos
+	if Slots.Power == 0
+		if object.xpos >= object.value1
+			object.xvel -= 0x400
+		else
+			object.xvel += 0x400
+		end if
+		object.xpos += object.xvel
+	end if
+	temp0 = object.xpos
+	temp6 &= -0x10000
+	object.value2 = object.xpos
+	object.value2 &= -0x10000
+	object.value2 -= temp6
+	object.xpos = temp6
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		switch checkResult
+		case 1
+			object[currentPlayer].xpos += object.value2
+			break
+		case 2
+		case 3
+			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
+				object[currentPlayer].value1 = 0
+				object[currentPlayer].animation = ANI_GLIDING_DROP
+				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+			end if
+			break
+		end switch
+	next
+	object.xpos = temp0
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-32, -32, 64, 64, 82, 34)
+	foreach (TypeName[H Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].xpos -= 0x600000
+		else
+			object[arrayPos0].xpos += 0x600000
+		end if
+		object[arraypos0].priority = PRIORITY_ACTIVE
+	next
+	SetTableValue(TypeName[H Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

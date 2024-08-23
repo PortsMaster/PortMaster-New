@@ -1,0 +1,171 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Flicky Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 41 : TYPE_FLICKY
+
+// Function declarations
+reserve function Flicky_DebugDraw
+reserve function Flicky_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Flicky_DebugDraw
+	DrawSprite(2)
+end function
+
+
+function Flicky_DebugSpawn
+	CreateTempObject(TypeName[Flicky], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].state = 3
+		object[tempObjectPos].xvel = 0x30000
+		object[tempObjectPos].yvel = -0x40000
+		Rand(checkResult, 32)
+		if checkResult < 16
+			object[tempObjectPos].direction = FLIP_X
+			FlipSign(object[tempObjectPos].xvel)
+		end if
+	else
+		object[tempObjectPos].state = 4
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.value0 < object.propertyValue
+			object.value0++
+		else
+			object.xvel = 0x30000
+			if object.value1 == 1
+				object.drawOrder = 4
+				Rand(checkResult, 32)
+				if checkResult < 16
+					object.direction = FLIP_X
+					FlipSign(object.xvel)
+				end if
+			else
+				object.direction = FLIP_X
+				FlipSign(object.xvel)
+			end if
+			object.yvel = -0x40000
+			object.state++
+		end if
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == 1
+				object.yvel = -0x40000
+				object.state++
+			end if
+		end if
+		break
+	case 4
+		if object[0].xpos < object.xpos
+			object.direction = FLIP_X
+		else
+			object.direction = FLIP_NONE
+		end if
+	case 2
+	case 3
+	case 5
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == 1
+				if object.state == 3
+					if object.value0 == 1
+						FlipSign(object.xvel)
+						object.direction ^= FLIP_X
+					end if
+					object.value0 ^= 1
+				end if
+				object.yvel = -0x40000
+			end if
+		end if
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		break
+	end switch
+	if object.state < 3
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSprite(2)
+		break
+	case 2
+	case 3
+	case 4
+	case 5
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-8, -7, 16, 15, 66, 239)
+	SpriteFrame(-8, -8, 16, 15, 83, 239)
+	SpriteFrame(-6, -8, 11, 20, 50, 213)
+	foreach (TypeName[Flicky], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = 3
+			object[arrayPos0].xvel = 0x30000
+			object[arrayPos0].yvel = -0x40000
+			Rand(checkResult, 32)
+			if checkResult < 16
+				object[arrayPos0].direction = FLIP_X
+				FlipSign(object[arrayPos0].xvel)
+			end if
+		else
+			if object[arrayPos0].propertyValue == 2
+				object[arrayPos0].state = 4
+			end if
+			if object[arrayPos0].propertyValue == 3
+				object[arrayPos0].state = 5
+				object[arrayPos0].xvel = 0x30000
+				FlipSign(object[arrayPos0].xvel)
+				object[arrayPos0].direction = FLIP_X
+			end if
+		end if
+		object[arrayPos0].propertyValue = 0
+	next
+	SetTableValue(TypeName[Flicky], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Flicky_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Flicky_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

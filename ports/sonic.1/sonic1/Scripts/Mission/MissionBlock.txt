@@ -1,0 +1,190 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: MissionBlock Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.disableCrush
+
+private alias object.value0 : object.ledgePullFlag // set from editor - determines if knuckles is able to pull himself up onto a block
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.speed : player.speed
+private alias object.xvel  : player.xvel
+private alias object.yvel  : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.frame	: player.frame
+
+private alias object.value1  : player.timer
+private alias object.value44 : player.missionBlockID
+
+// Reserved Object Slot Aliases
+private alias 0 : SLOT_PLAYER1
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_Drown) // drowning is checked against but not death? if you really wanna, ig
+	temp0 = checkResult
+	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_LPullUp_Mission)
+	temp0 &= checkResult
+	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_LedgePullUp)
+	checkResult &= temp0
+	if checkResult == true
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, SLOT_PLAYER1, C_BOX, C_BOX, C_BOX, C_BOX)
+		if player[SLOT_PLAYER1].state == Player_State_Climb_Mission
+			checkResult = COL_NONE
+		end if
+		if player[SLOT_PLAYER1].state == Player_State_Climb
+			checkResult = COL_NONE
+		end if
+		
+		if checkResult == COL_BOTTOM
+			if object.disableCrush == false // value set from editor
+				// ...it looks like this crush code was copied from SYZ's VBlock for some reason? it's not too hard to just make your own...
+				
+				if player[currentPlayer].gravity == GRAVITY_GROUND // btw currentPlayer is never set in this script
+					if object.angle > 384 // this object's angle is never set???
+						CallFunction(Player_Kill)
+					end if
+					
+					if object.angle < 128 // This object's angle is always 0 so this check always passes
+						CallFunction(Player_Kill)
+					end if
+				end if
+			end if
+		end if
+		
+		// Store what collision type the block got
+		temp0 = checkResult
+		
+		// See if the Player hit the left side of a block, while gliding right
+		CheckEqual(temp0, COL_LEFT)
+		temp1 = checkResult
+		CheckEqual(player[SLOT_PLAYER1].state, Player_State_GlideRight)
+		temp1 &= checkResult
+		
+		// And then see if the Player hit the right side of a block, while gliding left
+		CheckEqual(temp0, COL_RIGHT)
+		temp2 = checkResult
+		CheckEqual(player[SLOT_PLAYER1].state, Player_State_GlideLeft)
+		temp2 &= checkResult
+		
+		// See if either checks passed
+		temp1 |= temp2
+		if temp1 != false
+			CheckEqual(object.ledgePullFlag, false) // value set from editor
+			temp0 = checkResult
+			
+			temp1 = object.ypos
+			temp1 -= 0x100000
+			CheckLower(temp1, object[SLOT_PLAYER1].ypos)
+			checkResult |= temp0
+			
+			if checkResult != false
+				// Allow Knuckles to pull himself up this block
+				
+				player[SLOT_PLAYER1].animation = ANI_CLIMBING
+				player[SLOT_PLAYER1].frame = 0
+				player[SLOT_PLAYER1].missionBlockID = TypeName[MissionBlock]
+				player[SLOT_PLAYER1].state = Player_State_Climb_Mission
+				player[SLOT_PLAYER1].speed = 0
+				player[SLOT_PLAYER1].xvel = 0
+				player[SLOT_PLAYER1].yvel = 0
+				player[SLOT_PLAYER1].timer = 0
+				
+				PlaySfx(SfxName[Catch], false)
+			end if
+		end if
+	end if
+	
+	// Little bit of code added in Origins Plus to make extra sure that the player's Mission Block ID is set
+	BoxCollisionTest(C_TOUCH, object.entityPos, -20, -20, 20, 20, SLOT_PLAYER1, C_BOX, C_BOX, C_BOX, C_BOX)
+	if checkResult != false
+		player[SLOT_PLAYER1].missionBlockID = TypeName[MissionBlock]
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	// Load what's essentially the Labyrinth Zone sheet...
+	LoadSpriteSheet("Mission/Objects.gif")
+	
+	// And of course, only use a tiny portion of it
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // disableCrush
+			CheckNotEqual(object.disableCrush, false)
+			break
+			
+		case 1 // ledgePullFlag
+			CheckNotEqual(object.ledgePullFlag, false)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // disableCrush
+			object.disableCrush = editor.variableValue
+			break
+			
+		case 1 // ledgePullFlag
+			object.ledgePullFlag = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Mission/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
+	
+	AddEditorVariable("disableCrush")
+	SetActiveVariable("disableCrush")
+	AddEnumVariable("False", false)
+	AddEnumVariable("True",  true)
+	
+	AddEditorVariable("ledgePullFlag")
+	SetActiveVariable("ledgePullFlag")
+	AddEnumVariable("False", false)
+	AddEnumVariable("True",  true)
+end event

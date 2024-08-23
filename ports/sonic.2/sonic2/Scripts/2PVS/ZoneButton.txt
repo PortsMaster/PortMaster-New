@@ -1,0 +1,222 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Zone Button Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.zoneID
+
+private alias object.value1 : object.zoneDetailsWidth
+private alias object.value2 : object.disabled
+private alias object.value3 : object.zoneIconFrame
+private alias object.value4 : object.detailsFrameL
+private alias object.value5 : object.detailsFrameM
+private alias object.value6 : object.detailsFrameR
+private alias object.value7 : object.zoneTextFrame
+private alias object.value8 : object.buttonID
+
+private alias 0 : ZONEBUTTON_SETUP
+private alias 1 : ZONEBUTTON_ACTIVE
+private alias 2 : ZONEBUTTON_NONE
+
+// 2P VS Menu 3 Aliases
+private alias 3 : 2PVSMENU3_SELECTING
+
+// StageMenu aliases
+private alias object.value3 : stageMenu.selectedIcon
+private alias object.value4 : stageMenu.zoneTimer
+
+private alias 4 : STAGEMENU_EXITZONES
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ZONEBUTTON_SETUP
+		object.zoneIconFrame = object.zoneID
+		object.zoneIconFrame += 7
+		object.zoneTextFrame = object.zoneID
+		object.zoneTextFrame += 20
+		
+		object.inkEffect = INK_ALPHA
+		object.zoneDetailsWidth = 64
+		object.buttonID = object.entityPos
+		object.buttonID -= 9
+		
+		if object[1].type == TypeName[2P VS Menu 3]
+			if object[1].state == 2PVSMENU3_SELECTING
+				object.alpha = 0x100
+			else
+				object.alpha = 0x80
+			end if
+			GetBit(object.disabled, vs.stageMask, object.zoneID)
+		else
+			object.alpha = 0x100
+			
+			if object.zoneID == 13 // if we're HPZ zone icon button
+				if saveRAM[46] == false // and it's not unlocked
+					// we're disabled! sorry!
+					object.disabled = true
+				end if
+			end if
+		end if
+		
+		object.state = ZONEBUTTON_ACTIVE
+		break
+
+	case ZONEBUTTON_ACTIVE
+		if options.physicalControls == false
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			if checkResult > -1
+				temp0 = screen.xcenter
+				temp0 += object.xpos
+				temp0 -= 32
+				temp1 = temp0
+				temp1 += 64
+				temp2 = object.ypos
+				temp2 += 148
+				temp2 -= 28
+				temp3 = temp2
+				temp3 += 56
+				CheckTouchRect(temp0, temp2, temp1, temp3)
+				if checkResult > -1
+					stageMenu[1].selectedIcon = object.buttonID
+				end if
+			end if
+		end if
+		break
+
+	case ZONEBUTTON_NONE
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if stageMenu[1].selectedIcon == object.buttonID
+		temp0 = stageMenu[1].zoneTimer
+		temp0 >>= 1
+		temp0 &= 1
+		if object[1].state < STAGEMENU_EXITZONES
+			temp0 = true
+		end if
+	else
+		temp0 = false
+	end if
+
+	if temp0 == true
+		object.detailsFrameL = 3
+		object.detailsFrameM = 4
+		object.detailsFrameR = 5
+		temp3 = 200
+	else
+		object.detailsFrameL = 0
+		object.detailsFrameM = 1
+		object.detailsFrameR = 2
+		temp3 = 151
+	end if
+
+	temp0 = object.zoneDetailsWidth
+	temp0 >>= 1
+	temp0 -= 4
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += screen.xcenter
+	temp1 = object.ypos
+	temp1 += 148
+	DrawSpriteScreenFX(object.detailsFrameL, FX_INK, temp0, temp1)
+
+	temp2 = object.zoneDetailsWidth
+	temp2 -= 8
+	EditFrame(object.detailsFrameM, 0, -24, temp2, 48, 5, temp3)
+	DrawSpriteScreenFX(object.detailsFrameM, FX_INK, temp0, temp1)
+
+	temp0 += 7
+	if object.disabled == false
+		DrawSpriteScreenFX(6, FX_INK, temp0, temp1)
+		DrawSpriteScreenFX(object.zoneIconFrame, FX_INK, temp0, temp1)
+	else
+		DrawSpriteScreenFX(7, FX_INK, temp0, temp1)
+	end if
+
+	temp0--
+	temp0 += object.zoneDetailsWidth
+	temp0 -= 14
+	DrawSpriteScreenFX(object.detailsFrameR, FX_INK, temp0, temp1)
+	if object.zoneDetailsWidth == 224
+		temp0 -= object.zoneDetailsWidth
+		temp0 += 60
+		DrawSpriteScreenFX(object.zoneTextFrame, FX_INK, temp0, temp1)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-4, -24, 4, 48, 1, 151)		// Details Border L Unhighlighted - #0
+	SpriteFrame(0, -24, 40, 48, 5, 151)		// Details Border M Unhighlighted - #1
+	SpriteFrame(0, -24, 4, 48, 221, 151)	// Details Border R Unhighlighted - #2
+
+	SpriteFrame(-4, -24, 4, 48, 1, 200)		// Details Border L Highlighted - #3
+	SpriteFrame(0, -24, 40, 48, 5, 200)		// Details Border M Highlighted - #4
+	SpriteFrame(0, -24, 4, 48, 221, 200)	// Details Border R Highlighted - #5
+
+	SpriteFrame(0, -17, 42, 34, 164, 314)	// Blank Icon - #6
+	SpriteFrame(0, -17, 42, 34, 54, 50)		// Red X Icon - #7
+
+	SpriteFrame(4, -13, 32, 24, 1, 85)		// EHZ Icon - #8
+	SpriteFrame(4, -13, 32, 24, 34, 85)		// CPZ Icon - #9
+	SpriteFrame(4, -13, 32, 24, 67, 85)		// ARZ Icon - #10
+	SpriteFrame(4, -13, 32, 24, 100, 85)	// CNZ Icon - #11
+	SpriteFrame(4, -13, 32, 24, 133, 85)	// HTZ Icon - #12
+	SpriteFrame(4, -13, 32, 24, 166, 85)	// MCZ Icon - #13
+	SpriteFrame(4, -13, 32, 24, 180, 1)		// OOZ Icon - #14
+	SpriteFrame(4, -13, 32, 24, 213, 51)	// Special Stage Icon - #15
+	SpriteFrame(4, -13, 32, 24, 213, 1)		// MPZ Icon - #16
+	SpriteFrame(4, -13, 32, 24, 180, 26)	// SCZ Icon - #17
+	SpriteFrame(4, -13, 32, 24, 213, 26)	// WFZ Icon - #18
+	SpriteFrame(4, -13, 32, 24, 180, 51)	// DEZ Icon - #19
+	SpriteFrame(4, -13, 32, 24, 199, 85)	// HPZ Icon - #20
+
+	SpriteFrame(4, -3, 136, 7, 103, 350)	// EHZ Text - #21
+	SpriteFrame(4, -3, 152, 7, 103, 358)	// CPZ Text - #22
+	SpriteFrame(4, -3, 136, 7, 103, 366)	// ARZ Text - #23
+	SpriteFrame(4, -3, 136, 7, 103, 374)	// CNZ Text - #24
+	SpriteFrame(4, -3, 104, 7, 103, 382)	// HTZ Text - #25
+	SpriteFrame(4, -3, 128, 7, 103, 390)	// MCZ Text - #26
+	SpriteFrame(4, -3, 112, 7, 103, 398)	// OOZ Text - #27
+	SpriteFrame(4, -3, 104, 7, 103, 406)	// Special Stage Text - #28
+	SpriteFrame(4, -3, 120, 7, 103, 470)	// MPZ Text - #29
+	SpriteFrame(4, -3, 112, 7, 103, 478)	// SCZ Text - #30
+	SpriteFrame(4, -3, 144, 7, 103, 486)	// WFZ Text - #31
+	SpriteFrame(4, -3, 112, 7, 103, 494)	// DEZ Text - #32
+	SpriteFrame(4, -3, 144, 7, 103, 502)	// HPZ Text - #33
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(4, -13, 32, 24, 1, 85)	// EHZ Icon
+	
+	// Although used by the object, it's not to be set from the editor
+	// Instead, it's set when this object is spawned by a 2PVSMenu3/Stage Menu object
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

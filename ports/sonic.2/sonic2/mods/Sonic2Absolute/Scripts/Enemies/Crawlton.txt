@@ -1,0 +1,211 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Crawlton Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 56 : TYPE_CRAWLTON
+
+// Function declarations
+reserve function Crawlton_DebugDraw
+reserve function Crawlton_DebugSpawn
+reserve function Crawlton_Function136
+
+// Static Values
+
+// Tables
+
+function Crawlton_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Crawlton_DebugSpawn
+	CreateTempObject(TypeName[Crawlton], 0, object.xpos, object.ypos)
+end function
+
+
+function Crawlton_Function136
+	temp0 = object[currentPlayer].xpos
+	temp0 -= object.xpos
+	temp0 >>= 16
+	object.value6 = temp0
+	object.value6 *= temp0
+	temp0 = object[currentPlayer].ypos
+	temp0 -= object.ypos
+	temp0 >>= 16
+	temp1 = temp0
+	temp1 *= temp0
+	object.value6 += temp1
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.state == 0
+				if object[currentPlayer].xpos < object.xpos
+					object.direction = FLIP_NONE
+				else
+					object.direction = FLIP_X
+				end if
+				CallFunction(Crawlton_Function136)
+				if object.value6 < 0x4000
+					object.value7 = currentPlayer
+					object.state = 1
+				end if
+			end if
+		next
+		break
+	case 1
+		currentPlayer = object.value7
+		if object[currentPlayer].xpos < object.xpos
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+		object.value0++
+		if object.value0 == 32
+			CallFunction(Crawlton_Function136)
+			if object.value6 < 0x4000
+				object.value2 = object[currentPlayer].xpos
+				object.value2 -= object.xpos
+				object.value2 /= 0x12000
+				object.value3 = object[currentPlayer].ypos
+				object.value3 -= object.ypos
+				object.value3 /= 0x12000
+			else
+				temp0 = object[currentPlayer].xpos
+				temp0 -= object.xpos
+				temp1 = object[currentPlayer].ypos
+				temp1 -= object.ypos
+				ATan2(temp2, temp0, temp1)
+				Cos256(object.value2, temp2)
+				Sin256(object.value3, temp2)
+				object.value2 *= 224
+				object.value3 *= 224
+				object.value2 >>= 9
+				object.value3 >>= 9
+			end if
+			object.value0 = 0
+			object.state = 2
+		end if
+		break
+	case 2
+		if object.value1 < 0x1C0000
+			object.value1 += 0x10000
+		else
+			object.state = 3
+		end if
+		break
+	case 3
+		object.value0++
+		if object.value0 == 32
+			object.value0 = 0
+			object.state = 4
+		end if
+		break
+	case 4
+		if object.value1 > 0
+			object.value1 -= 0x10000
+		else
+			object.state = 0
+		end if
+		break
+	end switch
+	object.value4 = object.value2
+	object.value4 *= object.value1
+	object.value4 /= 28
+	object.value4 += object.xpos
+	object.value5 = object.value3
+	object.value5 *= object.value1
+	object.value5 /= 28
+	object.value5 += object.ypos
+	temp6 = object.xpos
+	temp7 = object.ypos
+	object.xpos = object.value4
+	object.ypos = object.value5
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -8, 10, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+	if object.type == TypeName[Crawlton]
+		object.xpos = temp6
+		object.ypos = temp7
+		if object.outOfBounds == 1
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+	switch object.state
+	case 2
+		temp0 = object.value1
+		temp0 &= 0x3FFFF
+		while temp0 < object.value1
+			temp1 = object.value2
+			temp1 *= temp0
+			temp1 /= 28
+			temp1 += object.xpos
+			temp2 = object.value3
+			temp2 *= temp0
+			temp2 /= 28
+			temp2 += object.ypos
+			DrawSpriteFX(1, FX_FLIP, temp1, temp2)
+			temp0 += 0x40000
+		loop
+		break
+	case 3
+	case 4
+		temp0 = 0x40000
+		while temp0 < object.value1
+			temp1 = object.value2
+			temp1 *= temp0
+			temp1 /= 28
+			temp1 += object.xpos
+			temp2 = object.value3
+			temp2 *= temp0
+			temp2 /= 28
+			temp2 += object.ypos
+			DrawSpriteFX(1, FX_FLIP, temp1, temp2)
+			temp0 += 0x40000
+		loop
+		break
+	end switch
+	DrawSpriteFX(0, FX_FLIP, object.value4, object.value5)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == 1
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-16, -8, 24, 16, 152, 114)
+		SpriteFrame(-8, -8, 16, 15, 135, 114)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 24, 16, 152, 114)
+		SpriteFrame(-8, -8, 16, 15, 135, 114)
+	end if
+	SetTableValue(TypeName[Crawlton], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Crawlton_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Crawlton_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

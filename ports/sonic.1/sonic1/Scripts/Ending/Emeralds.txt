@@ -1,0 +1,147 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Emeralds Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.radius
+
+// States
+private alias 0 : EMERALDS_ASCEND
+private alias 1 : EMERALDS_SPIN
+
+// Ending Pose Aliases
+private alias  9 : ENDINGPOSE_EMERALDSFLASH_B
+
+
+// ========================
+// Tables
+// ========================
+
+private table Emeralds_throwAngles6
+	0
+	0, 85, 171, 256, 341, 427
+end table
+
+private table Emeralds_throwAngles7
+	0
+	0, 73, 146, 219, 293, 365, 438
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EMERALDS_ASCEND
+		object.ypos -= 0x10000
+		object.timer++
+		if object.timer == 112
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case EMERALDS_SPIN
+		if object.speed == 512
+			// Increase P1's Ending Pose state to what should hopefully be ENDINGPOSE_EMERALDSFLASH_A
+			object[0].state++
+		end if
+		
+		// Once the screen is completely white, take that time to unload the object
+		if object[0].state == ENDINGPOSE_EMERALDSFLASH_B
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.radius < 0x1000
+		object.radius += 16
+	end if
+
+	if object.speed < 0x400
+		object.speed += 2
+	end if
+
+	object.angle += object.speed
+	object.rotation = object.angle
+	object.rotation >>= 4
+end event
+
+
+event ObjectDraw
+	if specialStage.emeralds == 0x3F // If the Player has 6 emeralds
+		temp0 = 6
+	else
+		temp0 = 7
+	end if
+
+	while temp0 > 0
+		if specialStage.emeralds == 0x3F // (Six emeralds check again)
+			GetTableValue(temp3, temp0, Emeralds_throwAngles6)
+		else
+			GetTableValue(temp3, temp0, Emeralds_throwAngles7)
+		end if
+		temp3 += object.rotation
+
+		Cos(temp1, temp3)
+		temp1 *= object.radius
+		temp1 += object.xpos
+
+		Sin(temp2, temp3)
+		temp2 *= object.radius
+		temp2 += object.ypos
+
+		DrawSpriteXY(temp0, temp1, temp2)
+		temp0--
+	loop
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Ending/Objects.gif")
+
+	SpriteFrame(-6, -6, 12, 12, 1, 1)		// 0 - White emerald flash frame
+
+	SpriteFrame(-6, -6, 12, 12, 14, 1)		// 1 - Blue emerald
+	SpriteFrame(-6, -6, 12, 12, 27, 1)		// 2 - Orange emerald
+
+	if options.superStates == false
+		SpriteFrame(-6, -6, 12, 12, 40, 1) 	// 3 - Pink emerald
+	else
+		SpriteFrame(-6, -6, 12, 12, 105, 1)	// 3 - Purple emerald
+	end if
+
+	SpriteFrame(-6, -6, 12, 12, 53, 1) 		// 4 - Green emerald
+	SpriteFrame(-6, -6, 12, 12, 66, 1)		// 5 - Red emerald
+	SpriteFrame(-6, -6, 12, 12, 79, 1)		// 6 - Grey emerald
+	SpriteFrame(-6, -6, 12, 12, 92, 1)		// 7 - Light blue emerald
+	
+	// The dark orange emerald at (118, 1) is unused
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Ending/Objects.gif")
+	SpriteFrame(-6, -6, 12, 12, 1, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

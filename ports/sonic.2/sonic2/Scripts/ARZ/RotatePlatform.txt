@@ -1,0 +1,407 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Rotate Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.rotateAngle
+private alias object.value1  : object.drawPos.x
+private alias object.value2  : object.drawPos.y
+private alias object.value3  : object.collisionOffset.x
+private alias object.value4  : object.collisionOffset.y
+private alias object.value5  : object.length // Always 3
+private alias object.value6  : object.rotateSpeed
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatePlatform_DebugDraw
+reserve function RotatePlatform_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RotatePlatform_DebugDraw
+	temp7 = 3
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+private function RotatePlatform_DebugSpawn
+	// Bug Details:
+	// -> Only the last Rotate Platform spawned here is given the PRIORITY_XBOUNDS_DESTROY priority, while the first two aren't
+	// -> Because of this, if you go make these go off screen and then return to them later,
+	//     it'll only be a set of 2 platforms rather than the usual 3
+	// (yeah this really isn't too big of a bug but hey, it's worth noting anyway)
+	
+	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0x0000
+
+	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0x5500
+
+	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0xAB00
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp2 = object.xpos
+	temp3 = object.ypos
+	object.rotateAngle += object.rotateSpeed
+	object.rotateAngle &= 0x1FFFF
+
+	temp0 = object.rotateAngle
+	temp0 >>= 8
+	temp1 = object.length
+	temp1++
+	temp1 <<= 4
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos256(object.collisionOffset.x, temp0)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 8
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= 0xFFFF0000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin256(object.collisionOffset.y, temp0)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 8
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= 0xFFFF0000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX) // 24 length on both sides? The sprite's width is 64, and other scripts' uses of this platform sprite use -32,32 hitboxes too...
+		if checkResult == true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp1 = 16
+
+	temp4 = object.rotateAngle
+	temp4 >>= 8
+	while temp0 < object.length
+		Cos256(temp2, temp4)
+		temp2 *= temp1
+		temp2 <<= 8
+		temp2 += object.xpos
+
+		Sin256(temp3, temp4)
+		temp3 *= temp1
+		temp3 <<= 8
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	Cos256(object.drawPos.x, temp4)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 8
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000
+
+	Sin256(object.drawPos.y, temp4)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 8
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-15, -12, 30, 20, 160, 235)
+	SpriteFrame(-8, -8, 16, 16, 174, 218)
+	SpriteFrame(-32, -8, 64, 16, 126, 191)
+
+	SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RotatePlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+
+	foreach (TypeName[Rotate Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].length = 3
+		
+		object[arrayPos0].rotateSpeed = object[arrayPos0].propertyValue
+		object[arrayPos0].rotateSpeed &= 0xF0
+		if object[arrayPos0].rotateSpeed >= 0x80
+			object[arrayPos0].rotateSpeed -= 0x80
+			FlipSign(object[arrayPos0].rotateSpeed)
+		end if
+		object[arrayPos0].rotateSpeed <<= 3
+
+		object[arrayPos0].rotateAngle = object[arrayPos0].propertyValue
+		object[arrayPos0].rotateAngle &= 3
+		object[arrayPos0].rotateAngle <<= 15
+
+		temp5 = object[arrayPos0].propertyValue
+		temp5 >>= 2
+		temp5 &= 3
+		if temp5 == 1
+			object[arrayPos0].rotateAngle += 0x5500
+		end if
+
+		if temp5 == 2
+			object[arrayPos0].rotateAngle -= 0x5500
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // angle
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		case 1 // offset
+			checkResult = object.propertyValue
+			checkResult >>= 2
+			checkResult &= 3
+			break
+			
+		case 2 // rotateSpeed
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0xF
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // angle
+			editor.variableValue &= 3
+
+			temp0 = 3
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // offset
+			editor.variableValue &= 3
+			editor.variableValue <<= 2
+
+			temp0 = 3
+			temp0 <<= 2
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 2 // rotateSpeed
+			editor.variableValue &= 0xF
+			editor.variableValue <<= 4
+
+			temp0 = 0x0F
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.length = 3
+
+	object.rotateSpeed = object.propertyValue
+	object.rotateSpeed &= 0xF0
+	if object.rotateSpeed >= 0x80
+		object.rotateSpeed -= 0x80
+		FlipSign(object.rotateSpeed)
+	end if
+
+	object.rotateAngle = object.propertyValue
+	object.rotateAngle &= 3
+	object.rotateAngle <<= 15
+
+	temp5 = object.propertyValue
+	temp5 >>= 2
+	temp5 &= 3
+	if temp5 == 1
+		object.rotateAngle += 0x5500
+	end if
+
+	if temp5 == 2
+		object.rotateAngle -= 0x5500
+	end if
+
+	temp2 = object.xpos
+	temp3 = object.ypos
+	object.rotateAngle &= 0x1FFFF
+
+	temp0 = object.rotateAngle
+	temp0 >>= 8
+	temp1 = object.length
+	temp1++
+	temp1 <<= 4
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos256(object.collisionOffset.x, temp0)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 8
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= 0xFFFF0000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin256(object.collisionOffset.y, temp0)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 8
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= 0xFFFF0000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	object.xpos = temp2
+	object.ypos = temp3
+
+	temp0 = 0
+	temp1 = 16
+	
+	temp4 = object.rotateAngle
+	temp4 >>= 8
+	while temp0 < object.length
+		Cos256(temp2, temp4)
+		temp2 *= temp1
+		temp2 <<= 8
+		temp2 += object.xpos
+
+		Sin256(temp3, temp4)
+		temp3 *= temp1
+		temp3 <<= 8
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	Cos256(object.drawPos.x, temp4)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 8
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000
+
+	Sin256(object.drawPos.y, temp4)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 8
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-15, -12, 30, 20, 160, 235)
+	SpriteFrame(-8, -8, 16, 16, 174, 218)
+	SpriteFrame(-32, -8, 64, 16, 126, 191)
+
+	AddEditorVariable("angle")
+	SetActiveVariable("angle")
+
+	AddEditorVariable("offset")
+	SetActiveVariable("offset")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+
+	AddEditorVariable("rotateSpeed")
+	SetActiveVariable("rotateSpeed")
+end event

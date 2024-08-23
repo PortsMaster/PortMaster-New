@@ -1,0 +1,121 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Vertical Door Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.movePos.y
+
+private alias 0 : VERTICALDOOR_IDLE
+private alias 1 : VERTICALDOOR_OPENING
+private alias 2 : VERTICALDOOR_OPENED
+
+// PushButton aliases
+private alias object.propertyValue : pushButton.stood
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VerticalDoor_DebugDraw
+reserve function VerticalDoor_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private function VerticalDoor_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function VerticalDoor_DebugSpawn
+	CreateTempObject(TypeName[Vertical Door], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case VERTICALDOOR_IDLE
+		if pushButton[-1].stood == true
+			object.state = VERTICALDOOR_OPENING
+		end if
+		break
+
+	case VERTICALDOOR_OPENING
+		if object.movePos.y < 0x400000
+			object.movePos.y += 0x20000
+			object.ypos -= 0x20000
+		else
+			object.state++
+		end if
+		break
+
+	case VERTICALDOOR_OPENED
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -32, 32, 64, 119, 34)
+
+	SetTableValue(TypeName[Vertical Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VerticalDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VerticalDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw an arrow from this object's activator button
+		DrawArrow(object[-1].xpos, object[-1].ypos, object.xpos, object.ypos, 255, 255, 255)
+		
+		// Draw the door's destination
+		temp0 = object.xpos; temp0 -= 0x100000
+		temp1 = object.ypos; temp1 -= 0x500000
+		DrawRectOutline(temp0, temp1, 0x200000, 0x400000, 255, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -32, 32, 64, 119, 34)
+	
+	// set to 160 once in syz3 for some reason, only to never be seen again...
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

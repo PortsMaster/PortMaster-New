@@ -1,0 +1,137 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Fall Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 69 : TYPE_FALLPLATFORM
+
+// Function declarations
+reserve function FallPlatform_DebugDraw
+reserve function FallPlatform_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function FallPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function FallPlatform_DebugSpawn
+	CreateTempObject(TypeName[Fall Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object[tempObjectPos].ypos
+end function
+
+
+event ObjectMain
+	temp0 = object.ypos
+	temp0 &= -0x10000
+	switch object.state
+	case 0
+		if object.propertyValue == 0
+			if object.value0 != 0
+				object.value0--
+				if object.value0 == 0
+					object.state++
+					object.value0 = 32
+				end if
+			end if
+		end if
+		break
+	case 1
+		object.value0--
+		if object.value0 == 0
+			object.state++
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object[currentPlayer].ypos += object.yvel
+					object[currentPlayer].yvel = object.yvel
+					object[currentPlayer].yvel -= 0x3800
+					object[currentPlayer].gravity = GRAVITY_AIR
+				end if
+			next
+		end if
+	case 2
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.outOfBounds == 1
+			object.ypos = object.value1
+			object.ypos += object.value31
+			object.yvel = 0
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 3
+		if object.outOfBounds == 1
+			object.state = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+		break
+	end switch
+	temp7 = object.ypos
+	temp7 &= -0x10000
+	temp7 -= temp0
+	if object.state < 2
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp0, object.value2, temp2)
+			if temp0 == 1
+				object[currentPlayer].ypos += temp7
+			end if
+			SetBit(object.value2, temp2, 0)
+			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 1
+				SetBit(object.value2, temp2, 1)
+				if object.value0 == 0
+					if object.state == 0
+						object.priority = PRIORITY_ACTIVE
+						object.value0 = 30
+					end if
+				end if
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+				break
+			end switch
+			temp2++
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < 3
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+	foreach (TypeName[Fall Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+	next
+	SetTableValue(TypeName[Fall Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(FallPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(FallPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

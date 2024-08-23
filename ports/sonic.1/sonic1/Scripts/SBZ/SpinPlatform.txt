@@ -1,0 +1,249 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Spin Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.duration
+private alias object.value2 : object.interval
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SpinPlatform_DebugDraw
+reserve function SpinPlatform_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value SpinPlatform_startDebugID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table SpinPlatform_frameTable
+	0, 1, 2, 3, 4, 3, 2, 1
+end table
+
+private table SpinPlatform_directionTable
+	0, 	0, 	0, 	0
+	0, 	2, 	2, 	2
+	2, 	3, 	3, 	3
+	3, 	1, 	1, 	1
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SpinPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SpinPlatform_DebugSpawn
+	CreateTempObject(TypeName[Spin Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].interval = debugMode[0].currentSelection
+	object[tempObjectPos].interval -= SpinPlatform_startDebugID
+	object[tempObjectPos].interval <<= 4
+	object[tempObjectPos].interval += 16
+	object[tempObjectPos].interval <<= 2
+	object[tempObjectPos].interval--
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = SBZSetup_platformTimer
+	temp0 &= object.interval
+	if temp0 == 0
+		object.state = 1
+		object.priority = PRIORITY_ACTIVE
+	end if
+
+	temp0 = false
+	if object.state != 0
+		object.timer--
+		if object.timer < 0
+			temp0 = true
+			object.timer = object.duration
+			object.state = 0
+		end if
+	end if
+
+	if object.rotation != 0
+		object.rotation++
+		object.rotation &= 31
+	else
+		if temp0 != false
+			object.rotation++
+		end if
+	end if
+
+	temp0 = object.rotation
+	temp0 >>= 1
+	GetTableValue(object.direction, temp0, SpinPlatform_directionTable)
+	temp0 &= 7
+	GetTableValue(object.frame, temp0, SpinPlatform_frameTable)
+
+	if object.rotation == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -7, 16, 7, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-16, -7, 32, 14, 413, 166)
+	SpriteFrame(-16, -12, 32, 25, 446, 169)
+	SpriteFrame(-15, -15, 30, 30, 480, 166)
+	SpriteFrame(-13, -16, 25, 32, 449, 198)
+	SpriteFrame(-7, -16, 14, 32, 480, 198)
+	
+	foreach (TypeName[Spin Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+		object[arrayPos0].drawOrder = 4
+
+		object[arrayPos0].duration = object[arrayPos0].propertyValue
+		object[arrayPos0].duration &= 0x0F
+		object[arrayPos0].duration *= 6
+		object[arrayPos0].timer = object[arrayPos0].duration
+
+		object[arrayPos0].interval = object[arrayPos0].propertyValue
+		object[arrayPos0].interval &= 0x70
+		object[arrayPos0].interval += 16
+		object[arrayPos0].interval <<= 2
+		object[arrayPos0].interval--
+	next
+	
+	temp0 = 0
+	SpinPlatform_startDebugID = DebugMode_ObjCount
+	while temp0 < 8
+		SetTableValue(TypeName[Spin Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SpinPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SpinPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // duration
+			checkResult = object.propertyValue
+			checkResult &= 0x0F
+			break
+			
+		case 1 // interval
+			checkResult = object.propertyValue
+			checkResult &= 0x70
+			checkResult >>= 4
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // duration
+			editor.variableValue &= 0x0F
+
+			object.propertyValue &= 0xF0
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // interval
+			editor.variableValue &= 7
+			editor.variableValue <<= 4
+			
+			object.propertyValue &= 0x0F
+			object.propertyValue |= temp0
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-16, -7, 32, 14, 413, 166)
+	SpriteFrame(-16, -12, 32, 25, 446, 169)
+	SpriteFrame(-15, -15, 30, 30, 480, 166)
+	SpriteFrame(-13, -16, 25, 32, 449, 198)
+	SpriteFrame(-7, -16, 14, 32, 480, 198)
+
+	AddEditorVariable("duration")
+	SetActiveVariable("duration")
+	AddEnumVariable("Every Frame", 0)
+	AddEnumVariable("Every 6 Frames", 1)
+	AddEnumVariable("Every 12 Frames", 2)
+	AddEnumVariable("Every 18 Frames", 3)
+	AddEnumVariable("Every 24 Frames", 4)
+	AddEnumVariable("Every 30 Frames", 5)
+	AddEnumVariable("Every 36 Frames", 6)
+	AddEnumVariable("Every 42 Frames", 7)
+	AddEnumVariable("Every 48 Frames", 8)
+	AddEnumVariable("Every 54 Frames", 9)
+	AddEnumVariable("Every 60 Frames", 10)
+	AddEnumVariable("Every 66 Frames", 11)
+	AddEnumVariable("Every 72 Frames", 12)
+	AddEnumVariable("Every 78 Frames", 13)
+	AddEnumVariable("Every 84 Frames", 14)
+	AddEnumVariable("Every 90 Frames", 15)
+
+	AddEditorVariable("interval")
+	SetActiveVariable("interval")
+	AddEnumVariable("Every 64 Frames", 0)
+	AddEnumVariable("Every 128 Frames", 1)
+	AddEnumVariable("Every 192 Frames", 2)
+	AddEnumVariable("Every 256 Frames", 3)
+	AddEnumVariable("Every 320 Frames", 4)
+	AddEnumVariable("Every 384 Frames", 5)
+	AddEnumVariable("Every 448 Frames", 6)
+	AddEnumVariable("Every 512 Frames", 7)
+end event

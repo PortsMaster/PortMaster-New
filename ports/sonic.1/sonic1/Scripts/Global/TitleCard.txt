@@ -1,0 +1,397 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Title Card Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.displayOffset
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.circlePos
+private alias object.value2 : object.actNamePos
+private alias object.value3 : object.zoneTextPos
+private alias object.value4 : object.actNumPos
+
+private alias 0 : TITLECARD_SETUP
+private alias 1 : TITLECARD_DELAY
+private alias 2 : TITLECARD_ENTERTITLECARD
+private alias 3 : TITLECARD_SHOWTITLECARD
+private alias 4 : TITLECARD_SHOWSTAGE
+private alias 5 : TITLECARD_STARTSTAGE
+private alias 6 : TITLECARD_EXITTITLECARD
+private alias 7 : TITLECARD_CREDITSFADEIN
+private alias 8 : TITLECARD_FADETOTITLE
+
+// Track ID Aliases
+private alias 0 : TRACK_STAGE
+
+// Player Aliases
+private alias object.up : player.up
+private alias object.down : player.down
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.controlMode : player.controlMode
+private alias object.value1 : player.timer
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Hide touch controls
+	options.touchControls = false
+
+	switch object.state
+	case TITLECARD_SETUP
+		// Init values and such
+		object.alpha = 0xFF
+
+		object.circlePos = screen.xcenter
+		object.circlePos += 128
+
+		object.actNamePos = screen.xcenter
+		FlipSign(object.actNamePos)
+		object.actNamePos -= 160
+
+		object.zoneTextPos = screen.xcenter
+		FlipSign(object.zoneTextPos)
+		object.zoneTextPos -= 96
+
+		object.actNumPos = screen.xcenter
+		object.actNumPos += 32
+		
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_MISSION
+			PlayMusic(TRACK_STAGE)
+			game.missionCondition = 0
+			game.missionEnd = false
+			object.state = TITLECARD_CREDITSFADEIN
+			object.timer = 0
+			stage.timeEnabled = true
+			stage.state = STAGE_RUNNING
+			SetScreenFade(0, 0, 0, 0)
+		else
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				PlayMusic(TRACK_STAGE)
+				game.missionCondition = 0
+				game.missionEnd = false
+				object.state = TITLECARD_CREDITSFADEIN
+				object.timer = 0
+				stage.timeEnabled = true
+				stage.state = STAGE_RUNNING
+				SetScreenFade(0, 0, 0, 0)
+			else
+				if credits.screen > 0
+					object.state = TITLECARD_CREDITSFADEIN
+					object.timer = 272
+					stage.state = STAGE_RUNNING
+					SetScreenFade(0, 0, 0, 0xFF)
+				else
+					object.state++
+				end if
+			end if
+		end if
+#endplatform
+
+#platform: USE_STANDALONE
+		if credits.screen > 0
+			object.state = TITLECARD_CREDITSFADEIN
+			object.timer = 272
+			stage.state = STAGE_RUNNING
+			SetScreenFade(0, 0, 0, 0xFF)
+		else
+			object.state++
+		end if
+#endplatform
+		break
+
+	case TITLECARD_DELAY
+		// Wait for half a second
+		if object.timer < 30
+			object.timer++
+		else
+			object.timer = 0
+			PlayMusic(TRACK_STAGE)
+			object.state++
+		end if
+		break
+
+	case TITLECARD_ENTERTITLECARD
+		// Slide stuff in
+		if object.circlePos > 0
+			object.circlePos -= 16
+			if object.circlePos < 0
+				object.circlePos = 0
+			end if
+		end if
+
+		if object.actNamePos < 0
+			object.actNamePos += 16
+			if object.actNamePos > 0
+				object.actNamePos = 0
+			end if
+		else
+			if object.zoneTextPos < 0
+				object.zoneTextPos += 16
+				if object.zoneTextPos > 0
+					object.zoneTextPos = 0
+				end if
+			else
+				if object.actNumPos > 0
+					object.actNumPos -= 16
+					if object.actNumPos < 0
+						object.actNumPos = 0
+					end if
+				else
+					object.state++
+				end if
+			end if
+		end if
+		break
+
+	case TITLECARD_SHOWTITLECARD
+		if object.timer < 60
+			object.timer++
+		else
+			object.timer = 0
+			object.alpha = 0xF8
+			stage.state = STAGE_RUNNING
+
+			currentPlayer = 0
+			while currentPlayer < playerCount
+				player[currentPlayer].controlMode 	= CONTROLMODE_NONE
+				player[currentPlayer].up 			= false
+				player[currentPlayer].down 			= false
+				player[currentPlayer].left 			= false
+				player[currentPlayer].right 		= false
+				player[currentPlayer].jumpPress 	= false
+				player[currentPlayer].jumpHold 		= false
+				player[currentPlayer].timer 		= 0
+				currentPlayer++
+			loop
+			object.state++
+		end if
+		break
+
+	case TITLECARD_SHOWSTAGE
+		if object.alpha > 0
+			object.alpha -= 8
+		else
+			object.state++
+			
+			currentPlayer = 0
+			while currentPlayer < playerCount
+#platform: USE_STANDALONE
+				player[currentPlayer].controlMode = CONTROLMODE_P1
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].controlMode = currentPlayer
+#endplatform
+				currentPlayer++
+			loop
+		end if
+		break
+
+	case TITLECARD_STARTSTAGE
+		if object.timer < 60
+			object.timer++
+		else
+			object.timer = 0
+			stage.timeEnabled = true
+			object.state++
+		end if
+		break
+
+	case TITLECARD_EXITTITLECARD
+		object.circlePos += 32
+		object.actNumPos += 32
+		object.actNamePos -= 32
+		object.zoneTextPos -= 32
+		if object.timer < 20
+			object.timer++
+		else
+			object.timer = 0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case TITLECARD_CREDITSFADEIN
+		if object.timer > 0
+			object.timer -= 16
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			currentPlayer = 0
+			while currentPlayer < playerCount
+#platform: USE_STANDALONE
+				player[currentPlayer].controlMode = CONTROLMODE_P1
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].controlMode = currentPlayer
+#endplatform
+				currentPlayer++
+			loop
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+
+	case TITLECARD_FADETOTITLE
+		// This state is set from the Player Object, when a replay is finished
+		
+		if object.timer < 300
+			object.timer += 5
+			if credits.screen == 0
+				music.volume -= 2
+			end if
+		else
+			stage.activeList = PRESENTATION_STAGE
+			if credits.screen > 0 // fade to credits scene instead if credits are active
+				stage.listPos = 2
+			else
+				stage.listPos = 0
+				StopMusic()
+			end if
+			LoadStage()
+		end if
+		
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state < TITLECARD_CREDITSFADEIN
+		SetActivePalette(0, 0, screen.ysize)
+		DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, object.alpha)
+
+		// Draw Blue Circle
+		temp0 = screen.xcenter
+		temp0 -= 28
+		temp0 += object.circlePos
+		temp0 += object.displayOffset
+		DrawSpriteScreenXY(26, temp0, 76)
+
+		// Draw Act Name
+		temp0 = screen.xcenter
+		temp0 += 22
+		temp0 += object.actNamePos
+		temp0 += object.displayOffset
+		DrawActName(0, temp0, 80, 0, 0, 16, 1)
+
+		// Draw Zone Text
+		temp0 = screen.xcenter
+		temp0 -= 57
+		temp0 += object.zoneTextPos
+		temp0 += object.displayOffset
+		DrawSpriteScreenXY(27, temp0, 100)
+
+		// Draw Act Name
+		temp0 = screen.xcenter
+		temp0 -= 21
+		temp0 += object.actNumPos
+		temp0 += object.displayOffset
+
+		// The only act in the game that should cause this check to fail is Final Zone
+		// It uses 5 instead of 4 because SBZ Act 3 is internally LZ Act 4
+		if stage.actNum < 5
+			// Get the appropriate act number sprite
+			temp1 = 27
+			temp1 += stage.actNum
+			
+			// If this is the Act 4 sprite, no it isn't it's Act 3
+			if temp1 > 30
+				temp1 = 30
+			end if
+			
+			DrawSpriteScreenXY(temp1, temp0, 102)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+
+	// Title card frames
+
+	// These first 26 are just the alphabet for the title card letters
+	SpriteFrame(0, 0, 15, 16, 37, 73)	// #0  - Letter A
+	SpriteFrame(0, 0, 15, 16, 53, 73)	// #1  - Letter B
+	SpriteFrame(0, 0, 15, 16, 69, 73)	// #2  - Letter C
+	SpriteFrame(0, 0, 15, 16, 85, 73)	// #3  - Letter D
+	SpriteFrame(0, 0, 14, 16, 101, 73)	// #4  - Letter E
+	SpriteFrame(0, 0, 14, 16, 116, 73)	// #5  - Letter F
+	SpriteFrame(0, 0, 16, 16, 131, 73)	// #6  - Letter G
+	SpriteFrame(0, 0, 15, 16, 148, 73)	// #7  - Letter H
+	SpriteFrame(0, 0, 6, 16, 164, 73)	// #8  - Letter I
+	SpriteFrame(0, 0, 14, 16, 171, 73)	// #9  - Letter J
+	SpriteFrame(0, 0, 16, 16, 186, 73)	// #10 - Letter K
+	SpriteFrame(0, 0, 15, 16, 203, 73)	// #11 - Letter L
+	SpriteFrame(0, 0, 16, 16, 219, 73)	// #12 - Letter M
+	SpriteFrame(0, 0, 15, 16, 236, 73)	// #13 - Letter N
+	SpriteFrame(0, 0, 16, 16, 37, 90)	// #14 - Letter O
+	SpriteFrame(0, 0, 15, 16, 54, 90)	// #15 - Letter P
+	SpriteFrame(0, 0, 16, 16, 70, 90)	// #16 - Letter Q
+	SpriteFrame(0, 0, 15, 16, 87, 90)	// #17 - Letter R
+	SpriteFrame(0, 0, 14, 16, 103, 90)	// #18 - Letter S
+	SpriteFrame(0, 0, 14, 16, 118, 90)	// #19 - Letter T
+	SpriteFrame(0, 0, 15, 16, 133, 90)	// #20 - Letter U
+	SpriteFrame(0, 0, 15, 16, 149, 90)	// #21 - Letter V
+	SpriteFrame(0, 0, 22, 16, 165, 90)	// #22 - Letter W
+	SpriteFrame(0, 0, 16, 16, 188, 90)	// #23 - Letter X
+	SpriteFrame(0, 0, 16, 16, 205, 90)	// #24 - Letter Y
+	SpriteFrame(0, 0, 15, 16, 222, 90)	// #25 - Letter Z
+
+	SpriteFrame(0, 0, 56, 56, 41, 1)	// #26 - Big Blue circle
+
+	if stage.actNum >= 5
+		SpriteFrame(16, 0, 62, 16, 98, 26) // #27 - Zone text (With different offset, as there's no act number)
+	else
+		SpriteFrame(0, 0, 62, 16, 98, 26)  // #27 - Zone text (Standard offset)
+	end if
+
+	SpriteFrame(0, 0, 39, 24, 98, 1)	// #28 - Act 1 text
+	SpriteFrame(0, 0, 43, 24, 138, 1)	// #29 - Act 2 text
+	SpriteFrame(0, 0, 43, 24, 182, 1)	// #30 - Act 3 text
+
+	// Cycle through all objects and filter out title cards
+	// (Pretend this is a foreach, this object was made before foreaches were brought into existence)
+	arrayPos0 = 32
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[Title Card]
+			object[arrayPos0].priority = PRIORITY_ALWAYS
+			object[arrayPos0].alpha = 0xFF
+			object[arrayPos0].drawOrder = 6
+			
+			stage.state = STAGE_PAUSED
+		end if
+		
+		arrayPos0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "displayOffset")
+end event

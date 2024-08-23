@@ -1,0 +1,134 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Speed Booster Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 52 : TYPE_SPEEDBOOSTER
+
+// Function declarations
+reserve function SpeedBooster_DebugDraw
+reserve function SpeedBooster_DebugSpawn
+
+// Static Values
+public value SpeedBooster_value43 = 0;
+
+// Tables
+
+function SpeedBooster_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function SpeedBooster_DebugSpawn
+	CreateTempObject(TypeName[Speed Booster], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].direction = FLIP_NONE
+	else
+		object[tempObjectPos].direction = FLIP_X
+	end if
+	temp0 = object[0].value17
+	temp0 -= SpeedBooster_value43
+	if temp0 == 0
+		object[tempObjectPos].value0 = 0x100000
+	else
+		object[tempObjectPos].value0 = 0xA0000
+	end if
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+event ObjectMain
+	if object.value1 != 0
+		object.value1--
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, 0, 0, 0, 0)
+		if checkResult == 1
+			if object[currentPlayer].gravity == GRAVITY_GROUND
+				if object.value1 == 0
+					object.value1 = 2
+					PlaySfx(SfxName[Spring], 0)
+				end if
+				temp1 = 0
+				temp0 = object.value0
+				if object.direction == FLIP_X
+					FlipSign(object.value0)
+					if object[currentPlayer].speed > temp0
+						temp1 = 1
+					end if
+				else
+					if object[currentPlayer].speed < temp0
+						temp1 = 1
+					end if
+				end if
+				if temp1 == 1
+					object[currentPlayer].state = PlayerObject_HandleGround
+					if object[currentPlayer].animation != ANI_JUMPING
+						if object[currentPlayer].animation != ANI_RUNNING
+							object[currentPlayer].animation = ANI_WALKING
+						end if
+					end if
+					object[currentPlayer].value1 = 0
+					object[currentPlayer].controlLock = 0
+					object[currentPlayer].value14 = 0
+					object[currentPlayer].controlLock = 15
+					object[currentPlayer].speed = object.value0
+					object[currentPlayer].direction = object.direction
+					if object.direction == FLIP_X
+						FlipSign(object[currentPlayer].speed)
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	GetBit(temp0, oscillation, 1)
+	if temp0 == 0
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 91, 25)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 474, 321)
+	end if
+	foreach (TypeName[Speed Booster], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].value0 = 0x100000
+		else
+			object[arrayPos0].value0 = 0xA0000
+		end if
+		object[arrayPos0].drawOrder = 5
+	next
+	temp0 = 0
+	SpeedBooster_value43 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Speed Booster], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SpeedBooster_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SpeedBooster_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

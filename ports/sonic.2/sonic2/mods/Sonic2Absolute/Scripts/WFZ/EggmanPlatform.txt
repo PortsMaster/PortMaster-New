@@ -1,0 +1,133 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Eggman Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 82 : TYPE_EGGMANPLATFORM
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	temp1 = object.ypos
+	temp1 &= -0x10000
+	switch object.state
+	case 0
+		object.ypos += 0x10000
+		object.value0++
+		if object.value0 >= 119
+			object.value0 = 96
+			object.xvel = -0x10000
+			object.yvel = 0x10000
+			object.value1 = object.ypos
+			object.state = 1
+		end if
+		break
+	case 1
+		if object.value0 == 0
+			object.value0 = 192
+			FlipSign(object.xvel)
+		end if
+		if object.ypos >= object.value1
+			object.yvel -= 0x400
+		else
+			object.yvel += 0x400
+		end if
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.value0--
+		break
+	case 2
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		object.value3++
+		break
+	end switch
+	FlipSign(temp1)
+	temp0 = object.ypos
+	temp0 &= -0x10000
+	temp1 += temp0
+	if object.state < 2
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		object.animationTimer++
+		if object.animationTimer >= 24
+			object.animationTimer = 0
+		end if
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp0, object.value2, temp2)
+			if temp0 == 1
+				object[currentPlayer].xpos += object.xvel
+				object[currentPlayer].ypos += temp1
+			end if
+			SetBit(object.value2, temp2, 0)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				SetBit(object.value2, temp2, 1)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -4, 8, 4, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_Hit)
+				end if
+			end if
+			temp2++
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state == 2
+		temp0 = -16
+		temp0 -= object.value3
+		EditFrame(6, temp0, -8, 16, 22, 409, 18)
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+		object.direction ^= FLIP_X
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+	else
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == 1
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 376, 18)
+		SpriteFrame(-16, -8, 32, 23, 376, 43)
+		SpriteFrame(-16, -8, 32, 22, 376, 67)
+		SpriteFrame(-16, -8, 32, 22, 409, 18)
+		SpriteFrame(-16, -8, 32, 22, 409, 41)
+		SpriteFrame(-16, -8, 32, 23, 409, 64)
+		SpriteFrame(-16, -8, 16, 22, 409, 18)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 397, 18)
+		SpriteFrame(-16, -8, 32, 23, 397, 43)
+		SpriteFrame(-16, -8, 32, 22, 397, 67)
+		SpriteFrame(-16, -8, 32, 22, 430, 18)
+		SpriteFrame(-16, -8, 32, 22, 430, 41)
+		SpriteFrame(-16, -8, 32, 23, 430, 64)
+		SpriteFrame(-16, -8, 16, 22, 430, 18)
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

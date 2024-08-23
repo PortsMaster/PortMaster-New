@@ -1,0 +1,136 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Tilt Platform H Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : TILTPLATFORM_H_IDLE
+private alias 1 : TILTPLATFORM_H_FLIPPING
+private alias 2 : TILTPLATFORM_H_FLIPPED
+private alias 3 : TILTPLATFORM_H_REVERT
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TiltPlatformH_DebugDraw
+reserve function TiltPlatformH_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TiltPlatformH_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function TiltPlatformH_DebugSpawn
+	CreateTempObject(TypeName[Tilt Platform H], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case TILTPLATFORM_H_IDLE
+		temp0 = oscillation
+		temp0 &= 0xF0
+		if temp0 == object.propertyValue
+			object.priority 		= PRIORITY_ACTIVE
+			object.animationTimer 	= 0
+			object.frame 			= 1
+			object.state 			= TILTPLATFORM_H_FLIPPING
+		end if
+		break
+
+	case TILTPLATFORM_H_FLIPPING
+		object.animationTimer++
+		if object.animationTimer == 4
+			object.frame 	= 2
+			object.timer 	= 74
+			object.state 	= TILTPLATFORM_H_FLIPPED
+		end if
+		break
+
+	case TILTPLATFORM_H_FLIPPED
+		object.timer--
+		if object.timer == 0
+			object.animationTimer = 0
+			object.frame = 1
+			object.state = TILTPLATFORM_H_REVERT
+		end if
+		break
+
+	case TILTPLATFORM_H_REVERT
+		object.animationTimer++
+		if object.animationTimer == 4
+			object.frame = 0
+			object.state = TILTPLATFORM_H_IDLE
+		end if
+		break
+		
+	end switch
+
+	if object.frame == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -2, 24, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+	end if
+
+	if object.outOfBounds == true
+		object.frame 	= 0
+		object.state 	= TILTPLATFORM_H_IDLE
+		object.priority = PRIORITY_BOUNDS
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24, -4, 48, 8, 320, 99)	// Flat (H) 				- #0
+	SpriteFrame(-16, -16, 32, 32, 320, 108)	// Diagonal (Down Right) 	- #1
+	SpriteFrame(-4, -24, 8, 48, 311, 99)	// Diagonal (Down Left) 	- #2
+	SpriteFrame(-16, -16, 32, 32, 353, 108)	// Flat (V)					- #3
+
+	SetTableValue(TypeName[Tilt Platform H], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(TiltPlatformH_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(TiltPlatformH_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24, -4, 48, 8, 320, 99)	// Flat (H)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "intervalOffset")
+end event

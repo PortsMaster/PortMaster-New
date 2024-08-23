@@ -1,0 +1,143 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: C Ledge Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 43 : TYPE_CLEDGE
+
+// Function declarations
+reserve function CLedge_DebugDraw
+reserve function CLedge_DebugSpawn
+
+// Static Values
+
+// Tables
+public table CLedge_table39
+	1, 2, 3, 4, 5, 6
+end table
+
+public table CLedge_table40
+	2, 6, 10, 14, 18, 22
+end table
+
+
+function CLedge_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function CLedge_DebugSpawn
+	CreateTempObject(TypeName[C Ledge], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 1
+		if object.value0 < 10
+			object.value0++
+		else
+			temp0 = 0
+			while temp0 < 6
+				GetTableValue(temp1, temp0, CLedge_table39)
+				CreateTempObject(TypeName[C Ledge], temp1, object.xpos, object.ypos)
+				object[tempObjectPos].state = 4
+				object[tempObjectPos].direction = object.direction
+				GetTableValue(object[tempObjectPos].value1, temp0, CLedge_table40)
+				temp0++
+			loop
+			PlaySfx(SfxName[Ledge Break], 0)
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		if object.value0 < 20
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 4
+		if object.value0 < object.value1
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 5
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	if object.state < 4
+		if object.outOfBounds == 1
+			object.state = 0
+			object.value0 = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+	end if
+	if object.state < 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -24, 32, -8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				if object.state == 0
+					object.state = 1
+					object.priority = PRIORITY_ACTIVE
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 4
+	case 5
+		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-32, -24, 64, 48, 136, 66)
+	SpriteFrame(8, -8, 24, 32, 176, 82)
+	SpriteFrame(-16, -8, 24, 32, 152, 82)
+	SpriteFrame(16, -24, 16, 16, 184, 66)
+	SpriteFrame(0, -24, 16, 16, 168, 66)
+	SpriteFrame(-16, -24, 16, 16, 152, 66)
+	SpriteFrame(-32, -24, 16, 16, 136, 66)
+	foreach (TypeName[Blank Object], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+	next
+	SetTableValue(TypeName[C Ledge], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CLedge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CLedge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

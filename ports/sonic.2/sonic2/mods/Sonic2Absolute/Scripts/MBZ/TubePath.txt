@@ -1,0 +1,108 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Tube Path Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 153 : TYPE_TUBEPATH
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	switch object.propertyValue
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].state != PlayerObject_Blank
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object[currentPlayer].xpos = object.xpos
+					object[currentPlayer].state = PlayerObject_Blank
+					object[currentPlayer].tileCollisions = 0
+					if object[currentPlayer].animation != ANI_JUMPING
+						PlaySfx(SfxName[Rolling], 0)
+						object[currentPlayer].animation = ANI_JUMPING
+					end if
+					CreateTempObject(TypeName[Tube Path], 2, object.xpos, object.ypos)
+					object[tempObjectPos].value1 = currentPlayer
+					object[tempObjectPos].value2 = object.entityPos
+					object[tempObjectPos].value2++
+				end if
+			end if
+		next
+		break
+	case 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].state == PlayerObject_Blank
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, 0, 0, 0, 0)
+				if checkResult == 1
+					object[currentPlayer].state = PlayerObject_HandleAir
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object[currentPlayer].xpos = object.xpos
+					object[currentPlayer].ypos = object.ypos
+					object[currentPlayer].yvel = -0xA0000
+					object[currentPlayer].speed = 0
+					object[currentPlayer].xvel = 0
+					object[currentPlayer].tileCollisions = 1
+					PlaySfx(SfxName[Release], 0)
+				end if
+			end if
+		next
+		break
+	case 2
+		currentPlayer = object.value1
+		if object[currentPlayer].state == PlayerObject_Blank
+			arrayPos0 = object.value2
+			temp0 = object[currentPlayer].xpos
+			temp0 -= object[arrayPos0].xpos
+			temp0 >>= 16
+			temp1 = object[currentPlayer].ypos
+			temp1 -= object[arrayPos0].ypos
+			temp1 >>= 16
+			ATan2(temp2, temp0, temp1)
+			Cos256(object[currentPlayer].xvel, temp2)
+			Sin256(object[currentPlayer].yvel, temp2)
+			object[currentPlayer].xvel *= -0xC00
+			object[currentPlayer].yvel *= -0xC00
+			temp2 = object[currentPlayer].xvel
+			Abs(temp2)
+			temp3 = object[currentPlayer].yvel
+			Abs(temp3)
+			if temp2 > temp3
+				object[currentPlayer].yvel = 0
+			else
+				object[currentPlayer].xvel = 0
+			end if
+			if object[arrayPos0].type == TypeName[Blank Object]
+				temp2 = temp0
+				temp2 *= temp0
+				temp0 = temp1
+				temp0 *= temp1
+				temp0 += temp2
+				if temp0 < 256
+					object[currentPlayer].xpos = object[arrayPos0].xpos
+					object[currentPlayer].ypos = object[arrayPos0].ypos
+					object[currentPlayer].xvel = 0
+					object[currentPlayer].yvel = 0
+					object.value2++
+				end if
+			end if
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

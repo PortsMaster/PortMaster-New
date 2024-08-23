@@ -1,0 +1,167 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: H Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.centerPos.x
+private alias object.value1 : object.stoodPlayers
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+
+private alias object.value1 : player.timer
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HPlatform_DebugDraw
+reserve function HPlatform_DebugSpawn
+
+
+// ========================
+// Function Defintions
+// ========================
+
+private function HPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function HPlatform_DebugSpawn
+	CreateTempObject(TypeName[H Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.x 	= object.xpos
+	object[tempObjectPos].propertyValue = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.xpos
+	GetTableValue(temp0, 4, StageSetup_oscillationTable)
+	if object.propertyValue == 1
+		FlipSign(temp0)
+		temp0 += 0x4000
+	end if
+	temp0 <<= 8
+
+	object.xpos = object.centerPos.x
+	object.xpos -= temp0
+	temp6 &= 0xFFFF0000
+	temp7 = object.xpos
+	temp7 &= 0xFFFF0000
+	temp7 -= temp6
+
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.stoodPlayers, temp2)
+		if temp0 == true
+			player[currentPlayer].xpos += temp7
+		end if
+
+		SetBit(object.stoodPlayers, temp2, false)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -12, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		switch checkResult
+		case COL_TOP
+			SetBit(object.stoodPlayers, temp2, true)
+			break
+
+		case COL_LEFT
+		case COL_RIGHT
+			if player[currentPlayer].state == Player_State_Climb
+				player[currentPlayer].timer 	= 0
+				player[currentPlayer].animation = ANI_GLIDING_DROP
+				player[currentPlayer].state 	= Player_State_GlideDrop
+			end if
+			break
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			end if
+			break
+			
+		end switch
+		
+		temp2++
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
+	foreach (TypeName[H Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.x = object[arrayPos0].xpos
+	next
+
+	SetTableValue(TypeName[H Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

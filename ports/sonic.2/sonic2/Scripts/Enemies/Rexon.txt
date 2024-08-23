@@ -1,0 +1,649 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Rexon Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias object.value1  : object.head.magnitude
+private alias object.value2  : object.head.amplitude
+private alias object.value3  : object.head.x
+private alias object.value4  : object.head.y
+
+// Piece order is desending in height (IE piece 1 is right next to the head, piece 4 is right next to the shell)
+
+private alias object.value5  : object.piece1.magnitude
+private alias object.value6  : object.piece1.amplitude
+private alias object.value7  : object.piece1.x
+private alias object.value8  : object.piece1.y
+
+private alias object.value9  : object.piece2.magnitude
+private alias object.value10 : object.piece2.amplitude
+private alias object.value11 : object.piece2.x
+private alias object.value12 : object.piece2.y
+
+private alias object.value13 : object.piece3.magnitude
+private alias object.value14 : object.piece3.amplitude
+private alias object.value15 : object.piece3.x
+private alias object.value16 : object.piece3.y
+
+private alias object.value17 : object.piece4.magnitude
+private alias object.value18 : object.piece4.amplitude
+private alias object.value19 : object.piece4.x
+private alias object.value20 : object.piece4.y
+
+private alias object.value21 : object.head.direction
+private alias object.value22 : object.piece1.direction
+private alias object.value23 : object.piece2.direction
+private alias object.value24 : object.piece3.direction
+
+private alias object.value25 : object.startPos.x
+
+// Fragment alias, holds the entityPos of the Rexon it originated from
+private alias object.value0 : object.parentRexon
+
+private alias 0 : REXON_AWAITPLAYER
+private alias 1 : REXON_RISE1
+private alias 2 : REXON_RISE2
+private alias 3 : REXON_RISE3
+private alias 4 : REXON_RISE4
+private alias 5 : REXON_RISE5
+private alias 6 : REXON_SHOOT
+private alias 7 : REXON_SHELL
+private alias 8 : REXON_FRAGMENT
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Rexon_Reset
+reserve function Rexon_DebugDraw
+reserve function Rexon_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Rexon_Reset
+	temp0 = object[arrayPos0].startPos.x
+	temp1 = object[arrayPos0].ypos
+	ResetObjectEntity(object[arrayPos0].entityPos, TypeName[Rexon], 0, temp0, temp1)
+	object[arrayPos0].startPos.x 		= temp0
+	object[arrayPos0].xvel 				= -0x2000
+	object[arrayPos0].timer 			= 128
+	object[arrayPos0].head.amplitude 	= 368
+	object[arrayPos0].piece1.amplitude 	= 368
+	object[arrayPos0].piece2.amplitude 	= 368
+	object[arrayPos0].piece3.amplitude 	= 368
+	object[arrayPos0].piece4.amplitude 	= 368
+end function
+
+
+private function Rexon_DebugDraw
+	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Rexon_DebugSpawn
+	CreateTempObject(TypeName[Rexon], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.x = object.xpos
+	arrayPos0 = object[tempObjectPos].entityPos
+
+	CallFunction(Rexon_Reset)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case REXON_AWAITPLAYER
+		// Swimming around, waiting for the player
+		object.priority = PRIORITY_ACTIVE
+
+		object.xpos += object.xvel
+		object.timer--
+		if object.timer == 0
+			object.timer = 128
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+		end if
+
+		// Check if the player's in range
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.direction == FLIP_NONE
+				BoxCollisionTest(C_TOUCH, object.entityPos, -160, -256, 96, 256, currentPlayer, -1, -1, 1, 1)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 160, 256, currentPlayer, -1, -1, 1, 1)
+			end if
+
+			if checkResult == true
+				if player[currentPlayer].xpos > object.xpos
+					object.direction = FLIP_X
+				else
+					object.direction = FLIP_NONE
+				end if
+				object.state++
+			end if
+		next
+		break
+
+	case REXON_RISE1
+		if object.head.magnitude >= 3200
+			object.state++
+			object.head.magnitude = 3200
+		end if
+
+		object.head.magnitude += 640
+		break
+
+	case REXON_RISE2
+		if object.piece1.magnitude >= 3200
+			object.state++
+			object.piece1.magnitude = 3200
+		end if
+
+		object.piece1.magnitude += 640
+		object.head.amplitude   += 2
+		break
+
+	case REXON_RISE3
+		if object.piece2.magnitude >= 3200
+			object.state++
+			object.piece2.magnitude = 3200
+		end if
+
+		object.piece2.magnitude += 640
+		object.head.amplitude   += 2
+		object.piece1.amplitude += 2
+		break
+
+	case REXON_RISE4
+		if object.piece3.magnitude >= 3200
+			object.state++
+			object.piece3.magnitude = 3200
+		end if
+
+		object.piece3.magnitude += 640
+		object.head.amplitude   += 2
+		object.piece1.amplitude += 2
+		object.piece2.amplitude += 2
+		break
+
+	case REXON_RISE5
+		if object.piece4.magnitude >= 2688
+			object.state++
+			object.piece4.magnitude = 2688
+		end if
+		
+		object.piece4.magnitude += 640
+		object.head.amplitude   += 2
+		object.piece1.amplitude += 2
+		object.piece2.amplitude += 2
+		object.piece3.amplitude += 2
+		break
+
+	case REXON_SHOOT
+		if object.head.direction == FLIP_NONE
+			object.head.amplitude++
+			if object.head.amplitude == 384
+				object.frame = 0 // Close the Rexon's mouth
+			end if
+
+			if object.head.amplitude >= 416
+				object.head.direction = FLIP_X
+			end if
+		else
+			object.head.amplitude--
+			if object.head.amplitude == 368
+				object.frame = 1 // Make the Rexon open wide
+			end if
+
+			if object.head.amplitude <= 352
+				object.head.direction = FLIP_NONE
+				CreateTempObject(TypeName[Rexon Shot], 0, object.head.x, object.head.y)
+				if object.direction == FLIP_NONE
+					object[tempObjectPos].xvel = -0x10000
+					object[tempObjectPos].xpos -= 0x100000
+				else
+					object[tempObjectPos].xvel = 0x10000
+					object[tempObjectPos].xpos += 0x100000
+				end if
+				object[tempObjectPos].yvel = 0x8000
+				object[tempObjectPos].ypos += 0x40000
+			end if
+		end if
+
+		if object.piece1.direction == FLIP_NONE
+			object.piece1.amplitude++
+			if object.piece1.amplitude >= 416
+				object.piece1.direction = FLIP_X
+			end if
+		else
+			object.piece1.amplitude--
+			if object.piece1.amplitude <= 352
+				object.piece1.direction = FLIP_NONE
+			end if
+		end if
+
+		if object.piece2.direction == FLIP_NONE
+			object.piece2.amplitude++
+			if object.piece2.amplitude >= 416
+				object.piece2.direction = FLIP_X
+			end if
+		else
+			object.piece2.amplitude--
+			if object.piece2.amplitude <= 352
+				object.piece2.direction = FLIP_NONE
+			end if
+		end if
+
+		if object.piece3.direction == FLIP_NONE
+			object.piece3.amplitude++
+			if object.piece3.amplitude >= 416
+				object.piece3.direction = FLIP_X
+			end if
+		else
+			object.piece3.amplitude--
+			if object.piece3.amplitude <= 352
+				object.piece3.direction = FLIP_NONE
+			end if
+		end if
+		break
+
+	case REXON_SHELL
+		// Just a lone shell, don't do anything
+		break
+
+	case REXON_FRAGMENT
+		arrayPos0 = object.parentRexon
+		if object[arrayPos0].state != REXON_SHELL
+			// If the Rexon isn't actually defeated, then despawn
+			object.type = TypeName[Blank Object]
+		end if
+
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	// Calculate the positions of all body fragments in this (rather lengthy) process
+
+	temp0 = object.xpos
+	if object.direction == FLIP_NONE
+		temp0 -= 0x1C0000
+	else
+		temp0 += 0x1C0000
+	end if
+
+	temp1 = object.ypos
+	temp1 += 0x110000
+
+	temp2 = object.piece4.amplitude
+	temp2 >>= 1
+	if object.direction == FLIP_X
+		temp2 -= 0xC0
+		FlipSign(temp2)
+		temp2 += 0xC0
+		temp2 &= 0xFF
+	end if
+	Cos256(object.piece4.x, temp2)
+	object.piece4.x *= object.piece4.magnitude
+	object.piece4.x += temp0
+	Sin256(object.piece4.y, temp2)
+	object.piece4.y *= object.piece4.magnitude
+	object.piece4.y += temp1
+
+	temp2 = object.piece3.amplitude
+	temp2 >>= 1
+	if object.direction == FLIP_X
+		temp2 -= 0xC0
+		FlipSign(temp2)
+		temp2 += 0xC0
+		temp2 &= 0xFF
+	end if
+	Cos256(object.piece3.x, temp2)
+	object.piece3.x *= object.piece3.magnitude
+	object.piece3.x += object.piece4.x
+	Sin256(object.piece3.y, temp2)
+	object.piece3.y *= object.piece3.magnitude
+	object.piece3.y += object.piece4.y
+
+	temp2 = object.piece2.amplitude
+	temp2 >>= 1
+	if object.direction == FLIP_X
+		temp2 -= 0xC0
+		FlipSign(temp2)
+		temp2 += 0xC0
+		temp2 &= 0xFF
+	end if
+	Cos256(object.piece2.x, temp2)
+	object.piece2.x *= object.piece2.magnitude
+	object.piece2.x += object.piece3.x
+	Sin256(object.piece2.y, temp2)
+	object.piece2.y *= object.piece2.magnitude
+	object.piece2.y += object.piece3.y
+
+	temp2 = object.piece1.amplitude
+	temp2 >>= 1
+	if object.direction == FLIP_X
+		temp2 -= 0xC0
+		FlipSign(temp2)
+		temp2 += 0xC0
+		temp2 &= 0xFF
+	end if
+	Cos256(object.piece1.x, temp2)
+	object.piece1.x *= object.piece1.magnitude
+	object.piece1.x += object.piece2.x
+	Sin256(object.piece1.y, temp2)
+	object.piece1.y *= object.piece1.magnitude
+	object.piece1.y += object.piece2.y
+
+	temp2 = object.head.amplitude
+	temp2 >>= 1
+	if object.direction == FLIP_X
+		temp2 -= 0xC0
+		FlipSign(temp2)
+		temp2 += 0xC0
+		temp2 &= 0xFF
+	end if
+	Cos256(object.head.x, temp2)
+	object.head.x *= object.head.magnitude
+	object.head.x += object.piece1.x
+	Sin256(object.head.y, temp2)
+	object.head.y *= object.head.magnitude
+	object.head.y += object.piece1.y
+
+	if object.state != REXON_FRAGMENT
+		if object.outOfBounds == true
+			temp0 = object.xpos
+			object.xpos = object.startPos.x
+			if object.outOfBounds == true
+				arrayPos0 = object.entityPos
+				CallFunction(Rexon_Reset)
+			else
+				object.xpos = temp0
+			end if
+		end if
+
+		temp6 = object.xpos
+		temp7 = object.ypos
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Provide a shell box for players to stand on
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -8, 16, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if object.state != REXON_SHELL
+				// Check if the head's been hit
+				object.xpos = object.head.x
+				object.ypos = object.head.y
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					// Create neck fragment pieces to make the Rexon fall apart
+					CreateTempObject(TypeName[Rexon], 0, object.piece1.x, object.piece1.y)
+					object[tempObjectPos].xvel = -0x8000
+					object[tempObjectPos].state = REXON_FRAGMENT
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].parentRexon = object.entityPos
+
+					CreateTempObject(TypeName[Rexon], 0, object.piece2.x, object.piece2.y)
+					object[tempObjectPos].xvel = 0x10000
+					object[tempObjectPos].state = REXON_FRAGMENT
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].parentRexon = object.entityPos
+
+					CreateTempObject(TypeName[Rexon], 0, object.piece3.x, object.piece3.y)
+					object[tempObjectPos].xvel = -0x10000
+					object[tempObjectPos].state = REXON_FRAGMENT
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].parentRexon = object.entityPos
+
+					CreateTempObject(TypeName[Rexon], 0, object.piece4.x, object.piece4.y)
+					object[tempObjectPos].xvel = 0x8000
+					object[tempObjectPos].state = REXON_FRAGMENT
+					object[tempObjectPos].direction = object.direction
+					object[tempObjectPos].parentRexon = object.entityPos
+
+					temp4 = object.startPos.x
+					temp5 = object.direction
+					CallFunction(Player_BadnikBreak)
+					if object.type != TypeName[Rexon]
+						// If the Rexon has been destroyed, turn it back into a Rexon so that its shell platform stays
+						object.type = TypeName[Rexon]
+						object.startPos.x = temp4
+						object.direction = temp5
+						object.priority = PRIORITY_ACTIVE
+						object.state = REXON_SHELL
+					end if
+				end if
+
+				// Check hitboxes for all body parts individually, too
+				object.xpos = object.piece1.x
+				object.ypos = object.piece1.y
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+
+				object.xpos = object.piece2.x
+				object.ypos = object.piece2.y
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+
+				object.xpos = object.piece3.x
+				object.ypos = object.piece3.y
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+
+				object.xpos = object.piece4.x
+				object.ypos = object.piece4.y
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
+				end if
+			end if
+		next
+
+		object.xpos = temp6
+		object.ypos = temp7
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case REXON_RISE1
+	case REXON_RISE2
+	case REXON_RISE3
+	case REXON_RISE4
+	case REXON_RISE5
+	case REXON_SHOOT
+		DrawSpriteFX(2, FX_FLIP, object.piece4.x, object.piece4.y)
+		DrawSpriteFX(2, FX_FLIP, object.piece3.x, object.piece3.y)
+		DrawSpriteFX(2, FX_FLIP, object.piece2.x, object.piece2.y)
+		DrawSpriteFX(2, FX_FLIP, object.piece1.x, object.piece1.y)
+		DrawSpriteFX(object.frame, FX_FLIP, object.head.x, object.head.y)
+		// [Fallthrough to shell drawing]
+	case REXON_AWAITPLAYER
+	case REXON_SHELL
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case REXON_FRAGMENT
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == true
+		LoadSpriteSheet("HTZ/Objects.gif")
+		
+		// Head Frame, Mouth Closed
+		SpriteFrame(-19, -6, 23, 16, 143, 123)
+		
+		// Head Frame, Mouth Open
+		SpriteFrame(-19, -6, 23, 16, 45, 55)
+		
+		// Neck Frame
+		SpriteFrame(-8, -8, 16, 16, 52, 38)
+		
+		// Body Frame
+		SpriteFrame(-16, -8, 32, 16, 91, 105)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Duplicate data of HTZ sheet data, appears broken in-game
+		
+		// Head Frame, Mouth Closed
+		SpriteFrame(-19, -6, 23, 16, 143, 123)
+		
+		// Head Frame, Mouth Open
+		SpriteFrame(-19, -6, 23, 16, 45, 55)
+		
+		// Neck Frame
+		SpriteFrame(-8, -8, 16, 16, 52, 38)
+		
+		// Body Frame
+		SpriteFrame(-16, -8, 32, 16, 91, 105)
+	end if
+
+	foreach (TypeName[Rexon], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		CallFunction(Rexon_Reset)
+	next
+
+	SetTableValue(TypeName[Rexon], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Rexon_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Rexon_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.head.amplitude = 368
+	object.head.magnitude = 3200
+
+	object.piece1.amplitude = 368
+	object.piece1.magnitude = 3200
+
+	object.piece2.amplitude = 368
+	object.piece2.magnitude = 3200
+
+	object.piece3.amplitude = 368
+	object.piece3.magnitude = 3200
+
+	object.piece4.amplitude = 368
+	object.piece4.magnitude = 3200
+
+	temp0 = object.xpos
+	temp0 -= 0x1C0000
+
+	temp1 = object.ypos
+	temp1 += 0x110000
+
+	temp2 = object.piece4.amplitude
+	temp2 >>= 1
+	Cos256(object.piece4.x, temp2)
+	object.piece4.x *= object.piece4.magnitude
+	object.piece4.x += temp0
+	Sin256(object.piece4.y, temp2)
+	object.piece4.y *= object.piece4.magnitude
+	object.piece4.y += temp1
+
+	temp2 = object.piece3.amplitude
+	temp2 >>= 1
+	Cos256(object.piece3.x, temp2)
+	object.piece3.x *= object.piece3.magnitude
+	object.piece3.x += object.piece4.x
+	Sin256(object.piece3.y, temp2)
+	object.piece3.y *= object.piece3.magnitude
+	object.piece3.y += object.piece4.y
+
+	temp2 = object.piece2.amplitude
+	temp2 >>= 1
+	Cos256(object.piece2.x, temp2)
+	object.piece2.x *= object.piece2.magnitude
+	object.piece2.x += object.piece3.x
+	Sin256(object.piece2.y, temp2)
+	object.piece2.y *= object.piece2.magnitude
+	object.piece2.y += object.piece3.y
+
+	temp2 = object.piece1.amplitude
+	temp2 >>= 1
+	Cos256(object.piece1.x, temp2)
+	object.piece1.x *= object.piece1.magnitude
+	object.piece1.x += object.piece2.x
+	Sin256(object.piece1.y, temp2)
+	object.piece1.y *= object.piece1.magnitude
+	object.piece1.y += object.piece2.y
+
+	temp2 = object.head.amplitude
+	temp2 >>= 1
+	Cos256(object.head.x, temp2)
+	object.head.x *= object.head.magnitude
+	object.head.x += object.piece1.x
+	Sin256(object.head.y, temp2)
+	object.head.y *= object.head.magnitude
+	object.head.y += object.piece1.y
+
+	DrawSpriteXY(1, object.piece4.x, object.piece4.y)
+	DrawSpriteXY(1, object.piece3.x, object.piece3.y)
+	DrawSpriteXY(1, object.piece2.x, object.piece2.y)
+	DrawSpriteXY(1, object.piece1.x, object.piece1.y)
+	DrawSpriteXY(0, object.head.x, object.head.y)
+	DrawSpriteXY(2, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == true
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-19, -6, 23, 16, 143, 123)
+		SpriteFrame(-8, -8, 16, 16, 52, 38)
+		SpriteFrame(-16, -8, 32, 16, 91, 105)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-19, -6, 23, 16, 143, 123)
+		SpriteFrame(-8, -8, 16, 16, 52, 38)
+		SpriteFrame(-16, -8, 32, 16, 91, 105)
+	end if
+	
+	// Ported Rexons have it set, but new ones don't
+	// While it probably meant something in the original game, in this game it doesn't do anything
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

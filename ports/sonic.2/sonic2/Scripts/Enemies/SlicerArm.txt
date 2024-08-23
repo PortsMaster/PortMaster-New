@@ -1,0 +1,150 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Slicer Arm Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.parent
+
+// States
+private alias 0 : SLICERARM_THROWN
+private alias 1 : SLICERARM_FALLING
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+
+	if object.state == SLICERARM_THROWN
+		temp2 = 0x7FFFFFFF
+		arrayPos0 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			if temp0 < 0
+				FlipSign(temp0)
+			end if
+			
+			if temp0 < temp2
+				temp2 = temp0
+				arrayPos0 = currentPlayer
+			end if
+		next
+
+		if object[arrayPos0].xpos < object.xpos
+			object.xvel -= 0x1000
+			if object.xvel < -0x20000
+				object.xvel = -0x20000
+			end if
+		else
+			object.xvel += 0x1000
+			if object.xvel > 0x20000
+				object.xvel = 0x20000
+			end if
+		end if
+
+		if object[arrayPos0].ypos < object.ypos
+			object.yvel -= 0x1000
+			if object.yvel < -0x20000
+				object.yvel = -0x20000
+			end if
+		else
+			object.yvel += 0x1000
+			if object.yvel > 0x20000
+				object.yvel = 0x20000
+			end if
+		end if
+
+		object.timer++
+		if object.timer >= 120
+			object.state++
+		end if
+
+		arrayPos0 = object.parent
+		if object[arrayPos0].type != TypeName[Slicer]
+			object.state++
+		end if
+	else
+		object.yvel += 0x3800
+	end if
+
+	temp0 = screen.xcenter
+	temp0 += 32
+	temp1 = screen.ycenter
+	temp1 += 32
+	CheckCameraProximity(object.ixpos, object.iypos, temp0, temp1)
+	if checkResult == false
+		object.type = TypeName[Blank Object]
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+
+	object.frame = object.animationTimer
+	object.frame >>= 2
+	object.animationTimer++
+	object.animationTimer &= 15
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(0, -16, 16, 16, 75, 51)
+		SpriteFrame(0, 0, 16, 16, 58, 51)
+		SpriteFrame(-16, 0, 16, 16, 75, 34)
+		SpriteFrame(-16, -16, 16, 16, 58, 34)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(0, -16, 16, 16, 926, 306)
+		SpriteFrame(0, 0, 16, 16, 909, 306)
+		SpriteFrame(-16, 0, 16, 16, 926, 289)
+		SpriteFrame(-16, -16, 16, 16, 909, 289)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(0, -16, 16, 16, 75, 51)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(0, -16, 16, 16, 926, 306)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

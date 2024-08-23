@@ -1,0 +1,643 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// Using EHZEggman as a prefix here because there's like 12 "Eggman" objects in the game so it's less confusing this way
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value2  : object.exploding
+private alias object.value3  : object.heliAnim
+private alias object.value4  : object.heliAnimTimer
+private alias object.value6  : object.heliSfxTimer
+private alias object.value8  : object.health
+private alias object.value9  : object.invincibilityTimer
+private alias object.value10 : object.didHitPlayer
+
+// Eggman States
+private alias 0 : EHZEGGMAN_AWAITPLAYER
+private alias 1 : EHZEGGMAN_FLYIN
+private alias 2 : EHZEGGMAN_ENTERCAR
+private alias 3 : EHZEGGMAN_STARTCAR
+private alias 4 : EHZEGGMAN_INCAR
+private alias 5 : EHZEGGMAN_EXPLODE
+private alias 6 : EHZEGGMAN_EXITCAR
+private alias 7 : EHZEGGMAN_FLEE
+private alias 8 : EHZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : EHZEGGANI_INVISIBLE
+private alias 1 : EHZEGGANI_IDLE
+private alias 2 : EHZEGGANI_LAUGH
+private alias 3 : EHZEGGANI_HIT
+private alias 4 : EHZEGGANI_DEFEATED
+private alias 5 : EHZEGGANI_TOASTED
+private alias 6 : EHZEGGANI_PANIC
+
+// Eggman Heli Animations
+private alias 0 : HELIANI_ACTIVE
+private alias 1 : HELIANI_ENTERCAR
+private alias 2 : HELIANI_RETRACTING
+private alias 3 : HELIANI_NONE
+private alias 4 : HELIANI_EXTENDING
+private alias 5 : HELIANI_EXITCAR
+
+// Car Wheel Aliases
+private alias object.value0 : eggmanWheel.timer
+private alias object.value1 : eggmanWheel.xOffset
+private alias object.value2 : eggmanWheel.parent
+
+// Car Aliases
+private alias object.value1 : eggmanCar.drawPos.y
+private alias object.value2 : eggmanCar.boundsL
+private alias object.value3 : eggmanCar.boundsR
+
+// Car Drill States
+private alias 0 : EHZEGGMANDRILL_ATTATCHED
+private alias 2 : EHZEGGMANDRILL_FIRED
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.collisionRight : player.collisionRight
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias  0 : MUSICEVENT_FADETOBOSS
+private alias  1 : MUSICEVENT_FADETOSTAGE
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function EHZEggman_PlayHeliSfx
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function EHZEggman_PlayHeliSfx
+	if object.heliSfxTimer == 0
+		PlaySfx(SfxName[Helicopter], false)
+	end if
+	object.heliSfxTimer++
+	object.heliSfxTimer &= 31
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EHZEGGMAN_AWAITPLAYER
+		temp0 = object.ixpos
+		temp0 -= 200
+		stage.newXBoundary1 = temp0
+
+		temp0 = object.ixpos
+		temp0 += 200
+		stage.newXBoundary2 = temp0
+
+		if player[0].xpos > object.xpos
+			object.animation = EHZEGGANI_IDLE
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
+			// The Car!!!!
+			object[+1].type = TypeName[Eggman Car]
+			object[+1].xpos = object.xpos
+			object[+1].xpos += 0x1590000
+			object[+1].ypos = object.ypos
+			eggmanCar[+1].boundsL = object.xpos
+			eggmanCar[+1].boundsL -= 0x1180000
+			temp0 = object.ixpos
+			temp0 -= 200
+			temp0 += screen.xcenter
+			if camera[0].xpos < temp0
+				temp0 -= camera[0].xpos
+				temp0 <<= 16
+				eggmanCar[+1].boundsL -= temp0
+			end if
+
+			eggmanCar[+1].boundsR = object.xpos
+			eggmanCar[+1].boundsR += 0x1500000
+			object[+1].priority = PRIORITY_ACTIVE
+
+			// Drrrrrill
+			object[+2].type = TypeName[Eggman Drill]
+			object[+2].priority = PRIORITY_ACTIVE
+
+			// Back Wheel
+			object[-1].type = TypeName[Eggman Wheel]
+			eggmanWheel[-1].xOffset = -0x2C0000
+			eggmanWheel[-1].parent = object[+1].entityPos
+			object[-1].priority = PRIORITY_ACTIVE
+
+			// Front Wheel 1
+			object[+3].type = TypeName[Eggman Wheel]
+			eggmanWheel[+3].xOffset = -0xC0000
+			eggmanWheel[+3].parent = object[+1].entityPos
+			object[+3].priority = PRIORITY_ACTIVE
+
+			// Front Wheel 2
+			object[+4].type = TypeName[Eggman Wheel]
+			eggmanWheel[+4].xOffset = 0x1C0000
+			eggmanWheel[+4].parent = object[+1].entityPos
+			object[+4].priority = PRIORITY_ACTIVE
+
+			object.xpos += 0x1580000
+			object.ypos -= 0x13F0000
+			object.priority = PRIORITY_ACTIVE
+			object.state++
+		end if
+		break
+
+	case EHZEGGMAN_FLYIN
+		CallFunction(EHZEggman_PlayHeliSfx)
+		object.xpos -= 0x10000
+		object.ypos += 0x10000
+		object.timer++
+		if object.timer == 320
+			object.heliAnim = HELIANI_ENTERCAR
+			object.heliAnimTimer = 0
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case EHZEGGMAN_ENTERCAR
+		break
+		
+	case EHZEGGMAN_STARTCAR
+		object.timer++
+		if object.timer == 24
+			object.timer = 0
+			
+#platform: USE_STANDALONE
+			object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+			if game.bossOneLife == false
+				object.health = 8
+			else
+				object.health = 1
+			end if
+#endplatform
+
+			object.state++
+			object[+1].xvel = -0x20000
+			object[+1].state++
+		end if
+		break
+
+	case EHZEGGMAN_INCAR
+		break
+
+	case EHZEGGMAN_EXPLODE
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
+			object.heliAnim = HELIANI_EXTENDING
+			object.animation = EHZEGGANI_TOASTED
+			object.exploding = false
+			object.state++
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+		end if
+		break
+
+	case EHZEGGMAN_EXITCAR
+		break
+
+	case EHZEGGMAN_FLEE
+		CallFunction(EHZEggman_PlayHeliSfx)
+		object.ypos -= 0x10000
+
+		object.timer++
+		if object.timer == 96
+			object.timer = 0
+			object.direction = FLIP_X
+			object.animation = EHZEGGANI_PANIC
+			object.state++
+		end if
+		break
+
+	case EHZEGGMAN_ESCAPE
+		if object.outOfBounds == false
+			CallFunction(EHZEggman_PlayHeliSfx)
+		end if
+		object.xpos += 0x60000
+
+		temp0 = stage.newXBoundary2
+		temp0 += 128
+		temp0 <<= 16
+		if object.xpos >= temp0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true // Palette flashing when hit
+				SetPaletteEntry(0, 192, 0xE0E0E0)
+			else
+				SetPaletteEntry(0, 192, 0x000000)
+			end if
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.invincibilityTimer == 0 // Invulnerable?
+				CheckEqual(player[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+				if temp0 != false
+					if object.animation != EHZEGGANI_LAUGH
+						object.animation = EHZEGGANI_LAUGH
+						object.animationTimer = 0
+					end if
+
+					if currentPlayer == 0
+						object.didHitPlayer = true
+					end if
+				end if
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CallFunction(Player_CheckHit)
+					if checkResult == true
+						object.health--
+						if object.health == 0
+#platform: USE_ORIGINS
+							CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+							CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+							
+							player.score += 1000
+							object.animation = EHZEGGANI_DEFEATED
+							object.animationTimer = 0
+							object.exploding = true
+							object.state++
+
+							// The Car!!!!
+							object[+1].state++
+							object[+1].yvel = -0x18000
+							object[+1].ypos = eggmanCar[+1].drawPos.y
+
+							if object[+2].state == EHZEGGMANDRILL_ATTATCHED
+								object[+2].state = EHZEGGMANDRILL_FIRED
+								if object.direction == FLIP_NONE
+									object[+2].xvel = -0x30000
+								else
+									object[+2].xvel = 0x30000
+								end if
+							end if
+						else
+							object.animation = EHZEGGANI_HIT
+							object.animationTimer = 0
+							object.invincibilityTimer = 32
+							PlaySfx(SfxName[Boss Hit], false)
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	// R Boundary
+	if object.state != EHZEGGMAN_ESCAPE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+
+	if object.exploding == true
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 96)
+			temp0 -= 48
+			temp0 <<= 16
+			temp0 += object.xpos
+
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.animation != EHZEGGANI_INVISIBLE
+		switch object.heliAnim
+		case HELIANI_ACTIVE
+			temp0 = object.heliAnimTimer
+			temp0 >>= 1
+			temp0 += 12
+
+			object.heliAnimTimer++
+			object.heliAnimTimer &= 3
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+			break
+
+		case HELIANI_ENTERCAR
+			temp0 = object.heliAnimTimer
+			temp0 /= 6
+			temp0 += 8
+
+			object.heliAnimTimer++
+			if object.heliAnimTimer == 24
+				object.heliAnimTimer = 0
+				object.heliAnim = HELIANI_RETRACTING
+			end if
+
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+			break
+
+		case HELIANI_RETRACTING
+			temp0 = object.heliAnimTimer
+			temp0 <<= 16
+			temp0 += object.ypos
+			DrawSpriteFX(7, FX_FLIP, object.xpos, temp0)
+
+			object.heliAnimTimer++
+			if object.heliAnimTimer == 12
+				object.state++
+				object.heliAnim = HELIANI_NONE
+			end if
+			break
+
+		case HELIANI_NONE
+			break
+
+		case HELIANI_EXTENDING
+			object.heliAnimTimer--
+			if object.heliAnimTimer > 0
+				temp0 = object.heliAnimTimer
+			else
+				temp0 = 0
+			end if
+
+			temp0 <<= 16
+			temp0 += object.ypos
+			DrawSpriteFX(7, FX_FLIP, object.xpos, temp0)
+
+			if object.heliAnimTimer == -12
+				object.heliAnimTimer = 24
+				object.heliAnim = HELIANI_EXITCAR
+			end if
+			break
+
+		case HELIANI_EXITCAR
+			object.heliAnimTimer--
+
+			temp0 = object.heliAnimTimer
+			temp0 /= 6
+			temp0 += 8
+
+			if object.heliAnimTimer == 0
+				object.heliAnim = HELIANI_ACTIVE
+				object.state++
+			end if
+
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+			break
+			
+		end switch
+
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+	end if
+	
+	switch object.animation
+	default
+	case EHZEGGANI_INVISIBLE
+		break
+
+	case EHZEGGANI_IDLE
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EHZEGGANI_LAUGH
+		temp0 = object.animationTimer
+		temp0 &= 15
+		temp0 >>= 3
+		temp0 += 2
+
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			if player[0].animation != ANI_DYING
+				object.animation = EHZEGGANI_IDLE
+			end if
+		end if
+
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EHZEGGANI_HIT
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			object.animation = EHZEGGANI_IDLE
+		end if
+
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EHZEGGANI_DEFEATED
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		temp0 %= 5
+
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EHZEGGANI_TOASTED
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EHZEGGANI_PANIC
+		temp0 = object.animationTimer
+		temp0 >>= 3
+
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 &= 1
+		if temp0 == 1
+			DrawSpriteFX(14, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	// Check if in EHZ
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		// Load EHZ stuff
+		LoadSpriteSheet("EHZ/Objects.gif")
+		
+		// Eggman Frames
+		SpriteFrame(-28, -28, 60, 20, 70, 155)
+		SpriteFrame(-28, -28, 60, 20, 131, 155)
+		SpriteFrame(-28, -28, 60, 20, 70, 176)
+		SpriteFrame(-28, -28, 60, 20, 131, 176)
+		SpriteFrame(-28, -28, 60, 20, 70, 197)
+		SpriteFrame(-28, -28, 60, 20, 131, 197)
+		
+		// Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 0, 209)
+		
+		// Boss Helicopter Frames
+		SpriteFrame(2, -40, 16, 16, 65, 239)
+		SpriteFrame(-62, -40, 144, 16, 1, 239)
+		SpriteFrame(-46, -40, 112, 16, 17, 239)
+		SpriteFrame(-30, -40, 80, 16, 33, 239)
+		SpriteFrame(-14, -40, 48, 16, 49, 239)
+		SpriteFrame(2, -40, 80, 16, 65, 222)
+		SpriteFrame(-62, -40, 79, 16, 1, 239)
+		
+		// Sweat Frame
+		SpriteFrame(-3, -28, 11, 8, 27, 53)
+
+		// Erase the boss in VS mode
+		if options.vsMode == true
+			foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].type = TypeName[Blank Object]
+			next
+		end if
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Eggman Frames
+		SpriteFrame(-28, -28, 60, 20, 1, 1)
+		SpriteFrame(-28, -28, 60, 20, 62, 1)
+		SpriteFrame(-28, -28, 60, 20, 1, 22)
+		SpriteFrame(-28, -28, 60, 20, 62, 22)
+		SpriteFrame(-28, -28, 60, 20, 1, 43)
+		SpriteFrame(-28, -28, 60, 20, 62, 43)
+		
+		// Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 415, 170)
+		
+		// Boss Helicopter Frames
+		SpriteFrame(2, -40, 16, 16, 169, 91)
+		SpriteFrame(-62, -40, 144, 16, 105, 91)
+		SpriteFrame(-46, -40, 112, 16, 121, 91)
+		SpriteFrame(-30, -40, 80, 16, 137, 91)
+		SpriteFrame(-14, -40, 48, 16, 153, 91)
+		SpriteFrame(2, -40, 80, 16, 42, 64)
+		SpriteFrame(-62, -40, 79, 16, 105, 91)
+		
+		// Sweat Frame
+		SpriteFrame(-3, -28, 11, 8, 45, 88)
+
+		// No need to erase the boss in VS mode when in MBZ since it should never even be active there anyway
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw lines connecting the whole network of boss objects
+		DrawArrow(object.xpos, object.ypos, object[-1].xpos, object[-1].ypos, 255, 255, 0) // Back Wheel
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 255, 255, 0) // Car
+		DrawArrow(object.xpos, object.ypos, object[+2].xpos, object[+2].ypos, 255, 255, 0) // Drill
+		DrawArrow(object.xpos, object.ypos, object[+3].xpos, object[+3].ypos, 255, 255, 0) // Front Wheel 1
+		DrawArrow(object.xpos, object.ypos, object[+4].xpos, object[+4].ypos, 255, 255, 0) // Front Wheel 2
+		
+		// Draw arena bounds
+		// Left bounds depends on screen size, this is a rough estimation
+		temp0 = 224; temp1 = 208; temp2 = 200; temp3 = 32;
+		CallFunction(EditorHelpers_DrawHitbox)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-28, -28, 60, 20, 70, 155)
+		SpriteFrame(-32, -8, 64, 29, 0, 209)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-28, -28, 60, 20, 1, 1)
+		SpriteFrame(-32, -8, 64, 29, 415, 170)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

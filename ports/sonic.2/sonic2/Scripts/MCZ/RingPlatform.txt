@@ -1,0 +1,242 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Ring Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.store.x
+private alias object.value1 : object.store.y
+private alias object.value2 : object.roundedPos // no subpixel position
+
+// Player aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RingPlatform_DebugDraw
+reserve function RingPlatform_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+// Unused table, possibly meant to hold values before this object was optimized
+// Coincidentally this object is made out of 6 rings, 6*2 = 12, it maybe means something if you squint hard enough
+private table RingPlatform_unusedTable[12]
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RingPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function RingPlatform_DebugSpawn
+	CreateTempObject(TypeName[Ring Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.angle
+
+	// Rotate the object based on which direction it's facing
+	if object.direction == FLIP_NONE
+		object.angle++
+	else
+		object.angle--
+	end if
+	
+	// Backup the object's position
+	temp6 = object.xpos
+	temp7 = object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+		// Setup some useful numbers
+		temp0 >>= 1
+		temp5 = object.angle
+		temp5 >>= 1
+		Cos256(temp2, temp0)
+		temp2 <<= 12
+		Sin256(temp3, temp0)
+		temp3 <<= 12
+		Cos256(temp0, temp5)
+		temp0 <<= 12
+		Sin256(temp1, temp5)
+		temp1 <<= 12
+
+		object.store.x = object.xpos
+		object.store.y = object.ypos
+
+		// This object uses every temp available (and even then some more!) so here's a short list of what they all are
+		// - temp0:
+		//   - curCos
+		// - temp1:
+		//   - curSin
+		// - temp2:
+		//   - prevCos
+		// - temp3:
+		//   - prevSin
+		// - temp4:
+		//   - pieceNum
+		// - temp5:
+		//   - curAngle
+		// - temp6:
+		//   - backupPos.x
+		// - temp7:
+		//   - backupPos.y
+		// - object.roundedPos
+		//   - temporary in spirit, holds the rounded position of the object in calculations
+
+		temp4 = 0
+		while temp4 < 6
+			BoxCollisionTest(C_SOLID, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				temp5 = object.store.x
+				temp5 &= 0xFFFF0000
+				object.roundedPos = object.xpos
+				object.roundedPos &= 0xFFFF0000
+				temp5 -= object.roundedPos
+				player[currentPlayer].xpos += temp5
+
+				temp5 = object.store.y
+				temp5 &= 0xFFFF0000
+				object.roundedPos = object.ypos
+				object.roundedPos &= 0xFFFF0000
+				temp5 -= object.roundedPos
+				player[currentPlayer].ypos += temp5
+			end if
+
+			object.xpos += temp2
+			object.ypos += temp3
+			object.store.x += temp0
+			object.store.y += temp1
+			temp4++
+		loop
+
+		// Restore the object's position
+		object.xpos = temp6
+		object.ypos = temp7
+	next
+end event
+
+
+event ObjectDraw
+	temp5 = object.angle
+	temp5 >>= 1
+	temp0 = object.xpos
+	temp1 = object.ypos
+	Cos256(temp2, temp5)
+	temp2 <<= 12
+
+	Sin256(temp3, temp5)
+	temp3 <<= 12
+
+	temp4 = 0
+	while temp4 < 6
+		DrawSpriteXY(0, temp0, temp1)
+		temp0 += temp2
+		temp1 += temp3
+		temp4++
+	loop
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	foreach (TypeName[Ring Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+	
+	// 0 - First frame of the ring animation
+	// You don't see that many scripts where the foreach is between the LoadSpriteSheet and SpriteFrames, this is one of the few that does it in v4
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	
+	// Add this Object to the Debug Item list
+	SetTableValue(TypeName[Ring Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // rotateDir
+			checkResult = object.direction
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // rotateDir
+			object.direction = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp5 = 64
+
+	temp0 = object.xpos
+	temp1 = object.ypos
+	Cos256(temp2, temp5)
+	temp2 <<= 12
+
+	Sin256(temp3, temp5)
+	temp3 <<= 12
+
+	temp4 = 0
+	while temp4 < 6
+		DrawSpriteXY(0, temp0, temp1)
+		temp0 += temp2
+		temp1 += temp3
+		temp4++
+	loop
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+
+	AddEditorVariable("rotateDir")
+	SetActiveVariable("rotateDir")
+	AddEnumVariable("Clockwise",          0)
+	AddEnumVariable("Counter-Clockwise",  1)
+end event

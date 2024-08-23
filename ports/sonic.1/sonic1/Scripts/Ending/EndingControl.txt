@@ -1,0 +1,243 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Ending Control Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : ENDINGCONTROL_INIT
+private alias 1 : ENDINGCONTROL_FADEIN
+private alias 2 : ENDINGCONTROL_MAIN
+private alias 3 : ENDINGCONTROL_NONE
+
+private alias  5 : ENDINGPOSE_HOLDEMERALDS
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.speed : player.speed
+private alias object.controlMode : player.controlMode
+private alias object.up : player.up
+private alias object.down: player.down
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.value1 : player.timer
+
+// Ending Pose Aliases
+private alias object.value1 : object.logoPos
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ENDINGCONTROL_INIT
+		PlayMusic(0)
+		
+		object.state++
+		// [Fallthrough]
+	case ENDINGCONTROL_FADEIN
+		player[0].controlMode = CONTROLMODE_NONE
+		player[0].up = false
+		player[0].down = false
+		player[0].left = true
+		player[0].right = false
+		player[0].jumpHold = false
+		player[0].jumpPress = false
+		
+		if options.superStates == false
+			// Six emeralds
+			temp0 = 0x3F
+		else
+			// Seven emeralds
+			temp0 = 0x7F
+		end if
+		
+		if specialStage.emeralds >= temp0
+			// If this is the good ending, then make the player start closer to the final ending position
+			// (object[+1] is a node on the closer hill in the scene, normally a Blank Object can it can be whatever if you really wanna)
+			player[0].xpos = object[+1].xpos
+			player[0].ypos = object[+1].ypos
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if currentPlayer == 0
+				player[currentPlayer].speed = -0x60000
+			else
+				// For all non-P1 players, start them to the right side of P1, hehind them
+				player[currentPlayer].speed = -0x60000
+				player[currentPlayer].xpos = player[0].xpos
+				player[currentPlayer].xpos += 0x400000
+				player[currentPlayer].ypos = player[0].ypos
+				
+				StopSfx(SfxName[Skidding])
+			end if
+		next
+
+		if object.timer > 0
+			object.timer -= 16
+		else
+			temp0 = 424
+			temp0 += screen.xcenter
+			stage.newXBoundary2 = temp0
+			object.state++
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case ENDINGCONTROL_MAIN
+		temp0 = object.xpos
+		temp0 -= 0x180000
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].speed < -0x60000
+				// Enforce a minimum speed of 6 pixels per second, even if Sonic's on an uphill slope or all that stuff
+				player[currentPlayer].speed = -0x60000
+			end if
+
+			if player[currentPlayer].xpos < temp0
+				// Sonic accidentally ran past the ending position, make him skid and turn around for a little bit now
+				player[currentPlayer].left = false
+				player[currentPlayer].right = true
+			end if
+
+			if player[currentPlayer].xpos > object.xpos
+				if player[currentPlayer].right == true
+					// Sonic's turned around at reached the ending point, so now let's stop him and do all the fancy stuff
+					
+					player[currentPlayer].right = false
+					player[currentPlayer].speed = 0x00000
+					
+					if currentPlayer == playerCount
+						// Huh? currentPlayer should never match playerCount, but if it is, then increase state to ENDINGCONTROL_NONE?
+						// Not quite sure why this exists, this is really strange...
+						object.state++
+					else
+						if currentPlayer == 0
+							ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, object.xpos, object.ypos)
+							object[currentPlayer].controlMode = CONTROLMODE_NONE
+							object[currentPlayer].drawOrder = 6
+
+							if options.superStates == false
+								// Six emeralds
+								temp0 = 0x3F
+							else
+								// Seven emeralds
+								temp0 = 0x7F
+							end if
+
+							if specialStage.emeralds < temp0
+								// Normal Ending Frames
+								
+								switch stage.playerListPos
+								case PLAYER_SONIC_A
+								case PLAYER_SONIC_TAILS_A
+									object[currentPlayer].frame = 0
+									break
+									
+								case PLAYER_TAILS_A
+									object[currentPlayer].frame = 13
+									break
+									
+								case PLAYER_KNUCKLES_A
+									object[currentPlayer].frame = 24
+									break
+#platform: USE_ORIGINS
+								case PLAYER_AMY_A
+									object[currentPlayer].frame = 45
+									break
+#endplatform
+									
+								end switch
+							else
+								// Good Ending Frames
+								
+								switch stage.playerListPos
+								case PLAYER_SONIC_A
+								case PLAYER_SONIC_TAILS_A
+									object[currentPlayer].frame = 4
+									break
+									
+								case PLAYER_TAILS_A
+									object[currentPlayer].frame = 16
+									break
+									
+								case PLAYER_KNUCKLES_A
+									object[currentPlayer].frame = 27
+									break
+#platform: USE_ORIGINS
+								case PLAYER_AMY_A
+									object[currentPlayer].frame += 45
+									object[currentPlayer].frame += 4
+									break
+#endplatform
+								end switch
+								
+								// Put them in the Good Ending state too, looks like the Emeralds are starting to do something
+								object[currentPlayer].state = ENDINGPOSE_HOLDEMERALDS
+							end if
+
+							object[currentPlayer].logoPos = 224
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+		
+	// State 3 (dubbed ENDINGCONTROL_NONE here) doesn't do anything
+	// The object shouldn't even get to that state, unless something's *really* wrong
+	
+	end switch
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Ending Control], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].timer = 272
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		if TypeName[Player Object] > 0
+			object.type = TypeName[Player Object]
+			object.inkEffect = INK_BLEND
+			// object.direction = FACING_LEFT // You can't use ink effects and flip at the same time :(
+			DrawSpriteFX(0, FX_INK, object[+1].xpos, object[+1].ypos)
+		end if
+		
+		// Draw a line from this object to the start position teleport node
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

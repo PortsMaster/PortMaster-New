@@ -1,0 +1,336 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Jellygnite Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 69 : TYPE_JELLYGNITE
+
+// Function declarations
+reserve function Jellygnite_DebugDraw
+reserve function Jellygnite_DebugSpawn
+reserve function Jellygnite_Function145
+
+// Static Values
+
+// Tables
+
+function Jellygnite_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Jellygnite_DebugSpawn
+	CreateTempObject(TypeName[Jellygnite], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object[tempObjectPos].xpos
+	object[tempObjectPos].value2 = object[tempObjectPos].ypos
+	object[tempObjectPos].value12 = 0x7FFFFFFF
+end function
+
+
+function Jellygnite_Function145
+	if object.value12 != 0x7FFFFFFF
+		currentPlayer = object.value12
+		if object.value15 != 0
+			object.value13--
+			if object.value13 == 0
+				object.value14 = 0
+				object.value15 = 0
+			end if
+			temp0 = 0
+			if object[currentPlayer].left != 0
+				temp0 |= 1
+			end if
+			if object[currentPlayer].right != 0
+				temp0 |= 2
+			end if
+			if temp0 != 0
+				if temp0 != 3
+					if temp0 != object.value15
+						object.value15 = temp0
+						object.value14++
+						if object.value14 >= 4
+							object[currentPlayer].state = PlayerObject_HandleAir
+							object.value12 = 0x7FFFFFFF
+						else
+							object.value13 = 32
+						end if
+					end if
+				end if
+			end if
+		else
+			if object[currentPlayer].left != 0
+				object.value15 |= 1
+				object.value13 = 32
+			end if
+			if object[currentPlayer].right != 0
+				object.value15 |= 2
+				object.value13 = 32
+			end if
+		end if
+		object[currentPlayer].xpos = object.xpos
+		object[currentPlayer].ypos = object.ypos
+		object[currentPlayer].ypos += 0xC0000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE
+		end if
+		object.angle += 4
+		object.angle &= 511
+		Sin(object.value3, object.angle)
+		object.value3 <<= 1
+		object.value8++
+		object.value8 &= 511
+		Sin(object.xpos, object.value8)
+		object.xpos <<= 11
+		object.xpos += object.value1
+		temp1 = 0x7FFFFFFF
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object.xpos
+			temp0 -= object[currentPlayer].xpos
+			Abs(temp0)
+			if temp0 < temp1
+				temp1 = temp0
+				temp2 = currentPlayer
+			end if
+		next
+		currentPlayer = temp2
+		if object[currentPlayer].ypos > stage.newWaterLevel
+			temp2 = object[currentPlayer].ypos
+			temp2 -= 0x200000
+			if object.ypos > temp2
+				object.yvel -= 0x800
+				if object.yvel < -0xC000
+					object.yvel = -0xC000
+				end if
+			else
+				object.yvel += 0x800
+				if object.yvel > 0xC000
+					object.yvel = 0xC000
+				end if
+			end if
+		else
+			object.yvel >>= 1
+		end if
+		object.ypos += object.yvel
+		break
+	case 1
+		if object.value3 < 0x600
+			object.value3 += 128
+		else
+			object.state = 2
+			object.animation = 2
+			PlaySfx(SfxName[Electricity], 0)
+		end if
+		currentPlayer = object.value12
+		object[currentPlayer].xpos = object.xpos
+		object[currentPlayer].ypos = object.ypos
+		object[currentPlayer].ypos += 0xC0000
+		object[currentPlayer].frame = 0
+		object[currentPlayer].animationTimer = 0
+		break
+	case 2
+		CallFunction(Jellygnite_Function145)
+		object.value0++
+		if object.value0 == 60
+			if object.value12 != 0x7FFFFFFF
+				currentPlayer = object.value12
+				if object[currentPlayer].state != PlayerObject_Drown
+					object[currentPlayer].state = PlayerObject_HandleAir
+					CallFunction(PlayerObject_Hit)
+				end if
+				object.value12 = 0x7FFFFFFF
+			end if
+			ResetObjectEntity(object.entityPos, TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+			object.drawOrder = 4
+			PlaySfx(SfxName[Destroy], 0)
+		end if
+		break
+	end switch
+	if object.type == TypeName[Jellygnite]
+		if object.outOfBounds == 1
+			temp0 = object.xpos
+			temp1 = object.ypos
+			object.xpos = object.value1
+			object.ypos = object.value2
+			if object.outOfBounds == 1
+				object.animation = 0
+				if object.priority != PRIORITY_XBOUNDS_DESTROY
+					object.priority = PRIORITY_ACTIVE_BOUNDS
+				end if
+				object.state = 0
+			else
+				object.xpos = temp0
+				object.ypos = temp1
+			end if
+		end if
+		temp7 = object.value12
+		CallFunction(PlayerObject_EnemyPop)
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if currentPlayer != temp7
+				BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+				if checkResult == 1
+					if object.state == 0
+						if object[currentPlayer].ypos < object.ypos
+							CallFunction(PlayerObject_BadnikBreak)
+						else
+							if object[currentPlayer].value7 > 0
+								CallFunction(PlayerObject_BadnikBreak)
+							else
+								object.state = 1
+								object.animation = 1
+								object.value12 = currentPlayer
+								object[currentPlayer].xvel = 0
+								object[currentPlayer].yvel = 0
+								object[currentPlayer].speed = 0
+								object[currentPlayer].value1 = 0
+								object[currentPlayer].state = PlayerObject_Blank
+								object[currentPlayer].gravity = GRAVITY_AIR
+								object[currentPlayer].animation = ANI_GRABBED
+							end if
+						end if
+					else
+						if object[currentPlayer].ypos < object.ypos
+							CallFunction(PlayerObject_BadnikBreak)
+						end if
+					end if
+				end if
+			end if
+		next
+		if object.type == TypeName[Jellygnite]
+			switch object.animation
+			case 0
+				object.frame = 0
+				object.value9 = 3
+				object.value10 = 5
+				break
+			case 1
+				object.frame = 1
+				object.value9 = 3
+				object.value10 = 5
+				break
+			case 2
+				object.frame = object.animationTimer
+				object.frame >>= 5
+				object.value9 = object.frame
+				object.value9 += 3
+				object.value10 = object.frame
+				object.value10 += 5
+				object.frame++
+				object.animationTimer += object.value0
+				object.animationTimer &= 63
+				break
+			end switch
+		else
+			if temp7 != 0x7FFFFFFF
+				currentPlayer = temp7
+				if object[currentPlayer].state == PlayerObject_Blank
+					object[currentPlayer].state = PlayerObject_HandleAir
+				end if
+			end if
+		end if
+	else
+		if object.value12 != 0x7FFFFFFF
+			currentPlayer = object.value12
+			if object[currentPlayer].state == PlayerObject_Blank
+				object[currentPlayer].state = PlayerObject_HandleAir
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.value11 == 0
+		temp1 = object.angle
+		temp1 &= 511
+		temp0 = 0
+		temp2 = object.ypos
+		temp2 += 0x70000
+		while temp0 < 4
+			Cos(object.value6, temp1)
+			object.value6 <<= 9
+			object.value6 += object.xpos
+			Sin(object.value7, temp1)
+			object.value7 <<= 8
+			object.value7 += temp2
+			DrawSpriteXY(object.value10, object.value6, object.value7)
+			temp0++
+			temp1 += 32
+			temp1 &= 511
+			temp2 += 0x60000
+		loop
+		AddDrawListEntityRef(4, object.entityPos)
+	else
+		temp0 = 0
+		temp4 = object.value3
+		object.value4 = 0
+		object.value5 = 0
+		while temp0 < 4
+			temp5 = temp4
+			temp5 >>= 7
+			temp5 &= 511
+			Sin(temp2, temp5)
+			temp2 *= 786
+			object.value4 += temp2
+			Cos(temp3, temp5)
+			temp3 *= 786
+			object.value5 += temp3
+			object.value6 = object.value4
+			object.value6 += object.xpos
+			object.value6 -= 0xD0000
+			object.value7 = object.value5
+			object.value7 += object.ypos
+			object.value7 += 0x10000
+			DrawSpriteXY(object.value9, object.value6, object.value7)
+			object.value6 = object.value4
+			FlipSign(object.value6)
+			object.value6 += object.xpos
+			object.value6 += 0xD0000
+			DrawSpriteXY(object.value9, object.value6, object.value7)
+			temp0++
+			temp4 += object.value3
+		loop
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+	object.value11 ^= 1
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 20, 33, 123)
+	SpriteFrame(-16, -16, 32, 20, 66, 123)
+	SpriteFrame(-16, -16, 32, 20, 40, 144)
+	SpriteFrame(-3, -3, 6, 6, 198, 50)
+	SpriteFrame(-3, -3, 6, 6, 131, 97)
+	SpriteFrame(-3, -3, 6, 6, 33, 144)
+	SpriteFrame(-3, -3, 6, 6, 131, 90)
+	foreach (TypeName[Jellygnite], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].value12 = 0x7FFFFFFF
+	next
+	SetTableValue(TypeName[Jellygnite], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Jellygnite_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Jellygnite_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

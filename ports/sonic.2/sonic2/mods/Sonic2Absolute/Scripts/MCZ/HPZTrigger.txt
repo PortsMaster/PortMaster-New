@@ -1,0 +1,107 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: HPZ Trigger Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 61 : TYPE_HPZTRIGGER
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -68, 512, 68, 0x1400, currentPlayer, 0, 0, 0, 0)
+		if checkResult == 1
+			object[currentPlayer].animation = ANI_WATERSLIDE
+			object[currentPlayer].state = PlayerObject_HandleAir
+			if object[currentPlayer].yvel >= 0x100000
+				object[currentPlayer].yvel = 0x100000
+				object[currentPlayer].yvel -= object[currentPlayer].value25
+			end if
+			if currentPlayer == 0
+				if object.state == 0
+					object.state = 1
+				end if
+			end if
+		end if
+	next
+	switch object.state
+	case 1
+		object.value0++
+		if object.value0 == 60
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		music.volume -= 2
+		object.value0 += 8
+		SetScreenFade(0, 0, 0, object.value0)
+		if object.value0 == 384
+			starPostID = 0
+			stage.listPos = 20
+			StopMusic()
+			if options.gameMode == 1
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				arrayPos1 += 1000
+				if stage.player2Enabled == 1
+					saveRAM[arrayPos1] = 3
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				temp0 = stage.listPos
+				temp0++
+				if saveRAM[arrayPos1] != 22
+					saveRAM[arrayPos1] = temp0
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+				arrayPos1++
+				saveRAM[arrayPos1] = player.continues
+				WriteSaveRAM()
+			end if
+			LoadStage()
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[HPZ Trigger], arrayPos0, ALL_ENTITIES)
+		if options.gameMode == 2
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		else
+			if options.vsMode == 0
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+			else
+				ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,162 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Turret Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : TURRET_SEARCHING
+private alias 1 : TURRET_ACTIVATED
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Turret_DebugDraw
+reserve function Turret_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Turret_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Turret_DebugSpawn
+	CreateTempObject(TypeName[Turret], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == TURRET_SEARCHING
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].ypos >= object.ypos
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+				Abs(temp0)
+				if temp0 < 0x600000
+					temp0 = player[currentPlayer].ypos
+					temp0 -= object.ypos
+					if temp0 < 0x900000
+						object.timer = 2
+						object.state++
+					end if
+				end if
+			end if
+		next
+	else
+		// Pick a direction based on closest player
+		temp1 = 0x7FFFFFFF
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			Abs(temp0)
+			if temp0 < temp1
+				if temp0 >= 0x200000
+					if player[currentPlayer].xpos < object.xpos
+						object.frame = 1
+					else
+						object.frame = 2
+					end if
+				else
+					object.frame = 0
+				end if
+			end if
+		next
+
+		object.timer--
+		if object.timer == 0
+			object.timer = 96
+			PlaySfx(SfxName[Octus Shot], false)
+			CreateTempObject(TypeName[Turret Bullet], 0, object.xpos, object.ypos)
+			switch object.frame
+			case 0
+				object[tempObjectPos].ypos += 0x180000
+				object[tempObjectPos].yvel = 0x10000
+				break
+
+			case 1
+				object[tempObjectPos].xpos -= 0x110000
+				object[tempObjectPos].ypos += 0x100000
+				object[tempObjectPos].xvel = -0x10000
+				object[tempObjectPos].yvel = 0x10000
+				break
+
+			case 2
+				object[tempObjectPos].xpos += 0x110000
+				object[tempObjectPos].ypos += 0x100000
+				object[tempObjectPos].xvel = 0x10000
+				object[tempObjectPos].yvel = 0x10000
+				break
+			end switch
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 431, 88)
+		SpriteFrame(-17, -16, 33, 32, 430, 127)
+		SpriteFrame(-16, -16, 33, 32, 430, 160)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 934, 574)
+		SpriteFrame(-17, -16, 33, 32, 933, 613)
+		SpriteFrame(-16, -16, 33, 32, 933, 646)
+	end if
+
+	SetTableValue(TypeName[Turret], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Turret_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Turret_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 431, 88)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 934, 574)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "delay")
+end event

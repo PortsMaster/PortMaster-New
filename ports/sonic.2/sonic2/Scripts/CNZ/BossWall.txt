@@ -1,0 +1,200 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Boss Wall Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.startClosed
+
+private alias object.value2 : object.startPos.y
+private alias object.value3 : object.targetPos.y
+
+// States
+private alias 0 : CNZBOSSWALL_IDLE
+private alias 1 : CNZBOSSWALL_APPEAR
+private alias 2 : CNZBOSSWALL_ADDWALL
+private alias 3 : CNZBOSSWALL_DELWALL
+private alias 4 : CNZBOSSWALL_DISAPPEAR
+
+
+// ========================
+// Static Values
+// ========================
+
+private value BossWall_wallChunkID  = 0
+private value BossWall_blankChunkID = 0
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CNZBOSSWALL_IDLE
+		object.priority = PRIORITY_BOUNDS
+		break
+
+	case CNZBOSSWALL_APPEAR
+		object.yvel += 0x6000
+		object.ypos += object.yvel
+		if object.ypos > object.targetPos.y
+			object.ypos = object.targetPos.y
+			object.state++
+		end if
+		break
+
+	case CNZBOSSWALL_ADDWALL
+		temp0 = object.xpos
+		temp0 >>= 23
+		temp1 = object.ypos
+		temp1 >>= 23
+		SetTileLayerEntry(BossWall_wallChunkID, 0, temp0, temp1)
+		object.state = CNZBOSSWALL_IDLE
+		break
+
+	case CNZBOSSWALL_DELWALL
+		temp0 = object.xpos
+		temp0 >>= 23
+		temp1 = object.ypos
+		temp1 >>= 23
+		SetTileLayerEntry(BossWall_blankChunkID, 0, temp0, temp1)
+		object.state++
+		break
+
+	case CNZBOSSWALL_DISAPPEAR
+		object.yvel -= 0x6000
+		object.ypos += object.yvel
+		if object.ypos < object.startPos.y
+			object.ypos = object.startPos.y
+			object.state = CNZBOSSWALL_IDLE
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	default
+	case CNZBOSSWALL_IDLE
+	case CNZBOSSWALL_DELWALL
+		break
+
+	case CNZBOSSWALL_APPEAR
+	case CNZBOSSWALL_ADDWALL
+	case CNZBOSSWALL_DISAPPEAR
+		DrawSprite(0)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-64, -64, 128, 128, 127, 256)
+		BossWall_wallChunkID  = 249
+		BossWall_blankChunkID = 221
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-64, -64, 128, 128, 716, 358)
+		BossWall_wallChunkID  = 191
+		BossWall_blankChunkID = 162
+	end if
+
+	foreach (TypeName[Boss Wall], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].targetPos.y = object[arrayPos0].ypos
+		object[arrayPos0].targetPos.y += 0x800000
+
+		if object[arrayPos0].startClosed == true
+			object[arrayPos0].ypos = object[arrayPos0].targetPos.y
+			temp0 = object[arrayPos0].xpos
+			temp0 >>= 23
+			temp1 = object[arrayPos0].ypos
+			temp1 >>= 23
+			SetTileLayerEntry(BossWall_wallChunkID, 0, temp0, temp1)
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw where the Boss Wall will be when it's in its closed state
+		
+		object.inkEffect = INK_BLEND
+		
+		temp0 = object.ypos
+		temp0 += 0x800000
+		DrawSpriteFX(0, FX_INK, object.xpos, temp0)
+		
+		// Draw an arrow to indicate the Wall's movement
+		object.inkEffect = INK_NONE
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-64, -64, 128, 128, 127, 256)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-64, -64, 128, 128, 716, 358)
+	end if
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Start Open", 0)
+	AddEnumVariable("Start Closed", 1)
+end event

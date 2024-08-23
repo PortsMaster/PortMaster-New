@@ -1,0 +1,152 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Pull Vine Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 51 : TYPE_PULLVINE
+
+// Function declarations
+reserve function PullVine_DebugDraw
+reserve function PullVine_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function PullVine_DebugDraw
+	DrawSprite(1)
+end function
+
+
+function PullVine_DebugSpawn
+	CreateTempObject(TypeName[Pull Vine], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object[tempObjectPos].ypos
+	object[tempObjectPos].yvel = 0x20000
+	object[tempObjectPos].value2 = object[tempObjectPos].ypos
+end function
+
+
+event ObjectMain
+	if object.propertyValue == 1
+		if object.value0 < 88
+			object.value0++
+			object.ypos += object.yvel
+		end if
+	else
+		if object.value0 > 0
+			object.value0--
+			object.ypos -= object.yvel
+		end if
+	end if
+	object.propertyValue = 0
+	if object.value3 > 0
+		object.value3--
+	end if
+	temp0 = object.ypos
+	temp0 += 0x380000
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object[currentPlayer].state != PlayerObject_Blank
+			if object[currentPlayer].down == 0
+				if object.value3 == 0
+					if object[currentPlayer].ypos < temp0
+						BoxCollisionTest(C_TOUCH, object.entityPos, -8, 88, 8, 96, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					else
+						BoxCollisionTest(C_TOUCH, object.entityPos, -8, 40, 8, 48, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					end if
+					if checkResult == 1
+						if object[currentPlayer].gravity == GRAVITY_AIR
+							object[currentPlayer].state = PlayerObject_Blank
+							object[currentPlayer].animation = ANI_HANGING
+							object[currentPlayer].speed = 0
+							object[currentPlayer].xvel = 0
+							object[currentPlayer].yvel = 0
+							object[currentPlayer].xpos = object.xpos
+							object[currentPlayer].ypos = object[currentPlayer].collisionTop
+							FlipSign(object[currentPlayer].ypos)
+							object[currentPlayer].ypos += 36
+							object[currentPlayer].ypos <<= 16
+							object[currentPlayer].ypos += object.ypos
+							object.propertyValue |= 1
+						end if
+					end if
+				end if
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -4, 8, 72, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				if object[currentPlayer].jumpPress == 1
+					object[currentPlayer].animation = ANI_JUMPING
+					PlaySfx(SfxName[Jump], 0)
+					object[currentPlayer].value35 = 1
+					object[currentPlayer].state = PlayerObject_HandleAir
+					object[currentPlayer].yvel = -0x40000
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object.value3 = 30
+				else
+					object[currentPlayer].xpos = object.xpos
+					object[currentPlayer].ypos = object[currentPlayer].collisionTop
+					FlipSign(object[currentPlayer].ypos)
+					object[currentPlayer].ypos += 36
+					object[currentPlayer].ypos <<= 16
+					object[currentPlayer].ypos += object.ypos
+					object.propertyValue |= 1
+				end if
+			end if
+		end if
+	next
+	if object.frame == 0
+		if object.propertyValue == 1
+			PlaySfx(SfxName[Catch], 0)
+		end if
+	end if
+	object.frame = object.propertyValue
+end event
+
+
+event ObjectDraw	
+	temp0 = object.ypos
+	temp0 -= object.value2
+	temp0 >>= 16
+	temp1 = 176
+	temp1 -= temp0
+	temp2 = -40
+	temp2 -= temp0
+	temp0 += 80
+	
+	EditFrame(0, -12, temp2, 24, temp0, 232, temp1)
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-12, -40, 24, 80, 232, 176)
+	SpriteFrame(-12, -40, 24, 80, 232, 176)
+	foreach (TypeName[Pull Vine], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].yvel = 0x20000
+		else
+			object[arrayPos0].yvel = -0x20000
+			object[arrayPos0].ypos += 0xB00000
+		end if
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].propertyValue = 0
+	next
+	SetTableValue(TypeName[Pull Vine], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(PullVine_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(PullVine_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

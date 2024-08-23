@@ -1,0 +1,97 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: One Way Door Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 53 : TYPE_ONEWAYDOOR
+
+// Function declarations
+reserve function OneWayDoor_DebugDraw
+reserve function OneWayDoor_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function OneWayDoor_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function OneWayDoor_DebugSpawn
+	CreateTempObject(TypeName[One Way Door], object.direction, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	if object.state == 0
+		if object.value0 > 0
+			object.value0 -= 0x80000
+		end if
+	else
+		if object.value0 < 0x400000
+			object.value0 += 0x80000
+		end if
+	end if
+	object.ypos -= object.value0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -8, -32, 8, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+	next
+	object.ypos += object.value0
+	object.state = 0
+	if object.propertyValue == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].xvel < 0x60000
+				BoxCollisionTest(C_TOUCH, object.entityPos, -64, -32, 8, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -88, -32, 8, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			end if
+			object.state |= checkResult
+		next
+	else
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].xvel > -0x60000
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 64, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 88, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			end if
+			object.state |= checkResult
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.value0
+	FlipSign(temp0)
+	temp0 += object.ypos
+	DrawSpriteFX(0, FX_FLIP, object.xpos, temp0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-8, -32, 16, 64, 1, 78)
+	foreach (TypeName[One Way Door], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].direction = FLIP_X
+		end if
+	next
+	SetTableValue(TypeName[One Way Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(OneWayDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(OneWayDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

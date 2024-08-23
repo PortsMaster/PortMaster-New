@@ -1,0 +1,127 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Raft Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 51 : TYPE_RAFT
+
+// Function declarations
+reserve function Raft_DebugDraw
+reserve function Raft_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Raft_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function Raft_DebugSpawn
+	CreateTempObject(TypeName[Raft], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	temp0 = object.xpos
+	temp0 &= -0x10000
+	temp1 = object.ypos
+	temp1 &= -0x10000
+	temp7 = stage.waterLevel
+	temp7 <<= 16
+	if object.state == 1
+		object.ypos = temp7
+	else
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		if object.ypos >= temp7
+			if object.direction == FLIP_NONE
+				if object.xvel > 0x10000
+					object.xvel = 0x10000
+				end if
+			else
+				if object.xvel < -0x10000
+					object.xvel = -0x10000
+				end if
+			end if
+			object.state++
+		end if
+	end if
+	object.xpos += object.xvel
+	if object.direction == FLIP_NONE
+		ObjectTileCollision(CSIDE_LWALL, 32, 12, 0)
+	else
+		ObjectTileCollision(CSIDE_RWALL, -32, 12, 0)
+	end if
+	temp4 = object.xpos
+	temp5 = object.ypos
+	temp2 = object.xpos
+	temp2 &= -0x10000
+	temp2 -= temp0
+	temp3 = object.ypos
+	temp3 &= -0x10000
+	temp3 -= temp1
+	object.xpos = temp0
+	object.ypos = temp1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			if object.xvel == 0
+				if object.direction == FLIP_NONE
+					object.xvel = 0x10000
+				else
+					object.xvel = -0x10000
+				end if
+			end if
+			object[currentPlayer].xpos += temp2
+			object[currentPlayer].ypos += temp3
+		end if
+	next
+	object.xpos = temp4
+	object.ypos = temp5
+	if object.outOfBounds == 1
+		if object.value0 == 0
+			object.type = TypeName[Blank Object]
+		else
+			object.xpos = object.value0
+			object.ypos = object.value1
+			if object.outOfBounds == 0
+				object.xpos = temp4
+				object.ypos = temp5
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-32, -8, 64, 16, 126, 191)
+	SetTableValue(TypeName[Raft], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Raft_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Raft_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+	foreach (TypeName[Raft], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,1277 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Halfpipe Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1  : object.moveStep
+private alias object.value2  : object.transformIDHalfpipe
+private alias object.value3  : object.nextTransformIDHalfpipe
+private alias object.value4  : object.halfpipeTranslation.x
+private alias object.value5  : object.halfpipeTranslation.y
+private alias object.value6  : object.halfpipeTranslation.z
+private alias object.value7  : object.halfpipeRotation.x
+private alias object.value8  : object.halfpipeRotation.y
+private alias object.value9  : object.halfpipeRotation.z
+private alias object.value10 : object.newHalfpipeRotation.x
+private alias object.value11 : object.newHalfpipeRotation.y
+private alias object.value12 : object.newHalfpipeRotation.z
+private alias object.value13 : object.playerPos.z
+private alias object.value14 : object.worldTranslation.x
+private alias object.value15 : object.worldTranslation.y
+private alias object.value16 : object.worldTranslation.z
+private alias object.value17 : object.worldRotation.x
+private alias object.value18 : object.worldRotation.y
+private alias object.value19 : object.worldRotation.z
+private alias object.value20 : object.transformIDWorld
+private alias object.value21 : object.nextTransformIDWorld
+private alias object.value22 : object.localPos.z
+private alias object.value23 : object.moveSpeed
+
+// Stage Object Aliases
+// value0 isn't used here
+private alias object.value1  : stageObject.localPos.x
+private alias object.value2  : stageObject.localPos.y
+private alias object.value3  : stageObject.localPos.z
+private alias object.value4  : stageObject.worldPos.x
+private alias object.value5  : stageObject.worldPos.y
+private alias object.value6  : stageObject.worldPos.z
+
+private alias object.value7  : stageObject.shadowsEnabled
+private alias object.value8  : stageObject.localShadowPos.x
+private alias object.value9  : stageObject.localShadowPos.y
+// value10 isn't used here
+private alias object.value11 : stageObject.worldShadowPos.x
+private alias object.value12 : stageObject.worldShadowPos.y
+private alias object.value13 : stageObject.worldShadowPos.z
+private alias object.value14 : stageObject.worldShadowPos.u
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Tile Flag Aliases
+private alias 1 : TILE_ENDMARKER
+
+// Tile Info ID Aliases
+private alias 6 : TILEINFO_ANGLEA
+
+// Face Buffer Flag Aliases
+private alias 4 : FACE_FADED
+private alias 5 : FACE_TEXTURED_C
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Halfpipe_SetupVertices
+reserve function Halfpipe_SetupFaces
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Halfpipe_vertexInfoTable		= 0
+private value Halfpipe_vertexCount 			= 0
+private value Halfpipe_faceInfoTable 		= 0
+private value Halfpipe_vertexTableID 		= 0
+private value Halfpipe_prevVertexCount 		= 0
+private value Halfpipe_faceCount 			= 0
+private value Halfpipe_rotateOffset.x 		= 0
+private value Halfpipe_rotateOffset.y 		= 0
+private value Halfpipe_rotateOffset.z 		= 0
+private value Halfpipe_tempTranslate.x 		= 0
+private value Halfpipe_tempTranslate.y 		= 0
+private value Halfpipe_tempTranslate.z 		= 0
+private value Halfpipe_worldRotate.x		= 0
+private value Halfpipe_worldRotate.y		= 0
+private value Halfpipe_worldRotate.z		= 0
+private value Halfpipe_transformPos 		= 0
+private value Halfpipe_checkpointTexCount 	= 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table Halfpipe_translateXTable[40]
+private table Halfpipe_translateYTable[40]
+private table Halfpipe_translateZTable[40]
+
+private table Halfpipe_rotateXTable[40]
+private table Halfpipe_rotateYTable[40]
+private table Halfpipe_rotateZTable[40]
+
+public table Halfpipe_checkpointFaceTable[4]
+
+private table Halfpipe_vertexOffsetTable
+	19, 19, 19, 19, 17, 17, 45, 17
+end table
+
+// These values correspond to tile angles in the scene
+// (Do note, TILE_ENDMARKER is separate from these, even if it has a numerical angle value of 1)
+private table Halfpipe_matTransformTable
+	 0
+	 2,  4,  6,  8,  10,  12,  14,  16
+	-2, -4, -6, -8, -10, -12, -14, -16
+end table
+
+private table Halfpipe_vertexTablePtrs[8]
+
+private table Halfpipe_vertexTable1
+    38
+    -0x4000,  0x1100,  0x0000
+    -0x4400,   0xD00,  0x0000
+    -0x3C00,   0xD00,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+     0x4000,  0x1100,  0x0000
+     0x3C00,   0xD00,  0x0000
+     0x4400,   0xD00,  0x0000
+    -0x4000,  0x1100,  0x0000
+    -0x4400,   0xD00,  0x0000
+    -0x3C00,   0xD00,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+     0x4000,  0x1100,  0x0000
+     0x3C00,   0xD00,  0x0000
+     0x4400,   0xD00,  0x0000
+end table
+
+private table Halfpipe_faceTable1
+    22
+    0,  1,  3,  2,  3
+    0,  1,  20, 19, 2
+    0,  2,  21, 19, 2
+    1,  20, 22, 3,  2
+    2,  21, 22, 3,  2
+    3,  22, 23, 4,  1
+    4,  23, 24, 5,  0
+    5,  24, 25, 6,  0
+    6,  25, 26, 7,  0
+    7,  26, 27, 8,  1
+    8,  27, 28, 9,  0
+    9,  28, 29, 10, 0
+    10, 29, 30, 11, 1
+    11, 30, 31, 12, 0
+    12, 31, 32, 13, 0
+    13, 32, 33, 14, 0
+    14, 33, 34, 15, 1
+    16, 17, 15, 18, 3
+    16, 35, 36, 17, 2
+    17, 36, 15, 34, 2
+    16, 35, 37, 18, 2
+    18, 37, 34, 15, 2
+end table
+
+private table Halfpipe_faceTable2
+    20
+    0,  1,  20, 19, 2
+    0,  2,  21, 19, 2
+    1,  20, 22, 3,  2
+    2,  21, 22, 3,  2
+    3,  22, 23, 4,  1
+    4,  23, 24, 5,  0
+    5,  24, 25, 6,  0
+    6,  25, 26, 7,  0
+    7,  26, 27, 8,  1
+    8,  27, 28, 9,  0
+    9,  28, 29, 10, 0
+    10, 29, 30, 11, 1
+    11, 30, 31, 12, 0
+    12, 31, 32, 13, 0
+    13, 32, 33, 14, 0
+    14, 33, 34, 15, 1
+    16, 35, 36, 17, 2
+    17, 36, 15, 34, 2
+    16, 35, 37, 18, 2
+    18, 37, 34, 15, 2
+end table
+
+private table Halfpipe_vertexTable2
+    34
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x2059, -0x36DE,  0x0000
+    -0x1449, -0x3C5D,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x1449, -0x3C5D,  0x0000
+     0x2059, -0x36DE,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1ED7, -0x378F,  0x0000
+    -0x15CB, -0x3BAF,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x15CB, -0x3BAF,  0x0000
+     0x1ED7, -0x378F,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+end table
+
+private table Halfpipe_faceTable3
+    16
+    0,  17, 18, 1,  1
+    1,  18, 19, 2,  0
+    2,  19, 20, 3,  0
+    3,  20, 21, 4,  0
+    4,  21, 22, 5,  1
+    5,  22, 23, 6,  2
+    6,  23, 24, 7,  1
+    7,  24, 25, 8,  0
+    8,  25, 26, 9,  0
+    9,  26, 27, 10, 1
+    10, 27, 28, 11, 2
+    11, 28, 29, 12, 1
+    12, 29, 30, 13, 0
+    13, 30, 31, 14, 0
+    14, 31, 32, 15, 0
+    15, 32, 33, 16, 1
+end table
+
+private table Halfpipe_vertexTable3
+    51
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1ED7, -0x378F,  0x0000
+    -0x15CB, -0x3BAF,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x15CB, -0x3BAF,  0x0000
+     0x1ED7, -0x378F,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1E46, -0x37D1,  0x0000
+    -0x165C, -0x3B6D,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x165C, -0x3B6D,  0x0000
+     0x1E46, -0x37D1,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1D55, -0x383F,  0x0000
+    -0x174D, -0x3AFF,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x174D, -0x3AFF,  0x0000
+     0x1D55, -0x383F,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+end table
+
+private table Halfpipe_faceTable4
+    32
+    0,  17, 18, 1,  1
+    1,  18, 19, 2,  0
+    2,  19, 20, 3,  0
+    3,  20, 21, 4,  0
+    4,  21, 22, 5,  1
+    5,  22, 23, 6,  2
+    6,  23, 24, 7,  1
+    7,  24, 25, 8,  0
+    8,  25, 26, 9,  0
+    9,  26, 27, 10, 1
+    10, 27, 28, 11, 2
+    11, 28, 29, 12, 1
+    12, 29, 30, 13, 0
+    13, 30, 31, 14, 0
+    14, 31, 32, 15, 0
+    15, 32, 33, 16, 1
+    17, 34, 35, 18, 1
+    18, 35, 36, 19, 1
+    19, 36, 37, 20, 1
+    20, 37, 38, 21, 1
+    21, 38, 39, 22, 1
+    22, 39, 40, 23, 2
+    23, 40, 41, 24, 1
+    24, 41, 42, 25, 1
+    25, 42, 43, 26, 1
+    26, 43, 44, 27, 1
+    27, 44, 45, 28, 2
+    28, 45, 46, 29, 1
+    29, 46, 47, 30, 1
+    30, 47, 48, 31, 1
+    31, 48, 49, 32, 1
+    32, 49, 50, 33, 1
+end table
+
+private table Halfpipe_vertexTable4
+    79
+    -0x3800,   0xA00,  0x0000
+    -0x3800,   0xA00,  0x0000
+    -0x3800,   0xA00,  0x0000
+    -0x3800,   0xA00,  0x0000
+    -0x2E00,  0x2400,  0x0000
+    -0x2E00,  0x2400,  0x0000
+    -0x2E00,  0x2400,  0x0000
+    -0x2E00,  0x2400,  0x0000
+    -0x1A00,  0x3600,  0x0000
+    -0x1A00,  0x3600,  0x0000
+    -0x1A00,  0x3600,  0x0000
+    -0x1A00,  0x3600,  0x0000
+     0x0000,  0x4000,  0x0000
+     0x0000,  0x4000,  0x0000
+     0x0000,  0x4000,  0x0000
+     0x0000,  0x4000,  0x0000
+     0x1A00,  0x3600,  0x0000
+     0x1A00,  0x3600,  0x0000
+     0x1A00,  0x3600,  0x0000
+     0x1A00,  0x3600,  0x0000
+     0x2E00,  0x2400,  0x0000
+     0x2E00,  0x2400,  0x0000
+     0x2E00,  0x2400,  0x0000
+     0x2E00,  0x2400,  0x0000
+     0x3800,   0xA00,  0x0000
+     0x3800,   0xA00,  0x0000
+     0x3800,   0xA00,  0x0000
+     0x3800,   0xA00,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1D55, -0x383F,  0x0000
+    -0x174D, -0x3AFF,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x174D, -0x3AFF,  0x0000
+     0x1D55, -0x383F,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1C64, -0x38AD,  0x0000
+    -0x183E, -0x3A91,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x183E, -0x3A91,  0x0000
+     0x1C64, -0x38AD,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1BD3, -0x38EF,  0x0000
+    -0x18CF, -0x3A50,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x18CF, -0x3A50,  0x0000
+     0x1BD3, -0x38EF,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+end table
+
+private table Halfpipe_faceTable5
+    39
+    0,  1,  2,  3,  5
+    4,  5,  6,  7,  5
+    8,  9,  10, 11, 5
+    12, 13, 14, 15, 5
+    16, 17, 18, 19, 5
+    20, 21, 22, 23, 5
+    24, 25, 26, 27, 5
+    28, 45, 46, 29, 1
+    29, 46, 47, 30, 1
+    30, 47, 48, 31, 1
+    31, 48, 49, 32, 1
+    32, 49, 50, 33, 1
+    33, 50, 51, 34, 2
+    34, 51, 52, 35, 1
+    35, 52, 53, 36, 1
+    36, 53, 54, 37, 1
+    37, 54, 55, 38, 1
+    38, 55, 56, 39, 2
+    39, 56, 57, 40, 1
+    40, 57, 58, 41, 1
+    41, 58, 59, 42, 1
+    42, 59, 60, 43, 1
+    43, 60, 61, 44, 1
+    45, 62, 63, 46, 1
+    46, 63, 64, 47, 0
+    47, 64, 65, 48, 0
+    48, 65, 66, 49, 0
+    49, 66, 67, 50, 1
+    50, 67, 68, 51, 2
+    51, 68, 69, 52, 1
+    52, 69, 70, 53, 0
+    53, 70, 71, 54, 0
+    54, 71, 72, 55, 1
+    55, 72, 73, 56, 2
+    56, 73, 74, 57, 1
+    57, 74, 75, 58, 0
+    58, 75, 76, 59, 0
+    59, 76, 77, 60, 0
+    60, 77, 78, 61, 1
+end table
+
+private table Halfpipe_vertexTable5
+    34
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1BD3, -0x38EF,  0x0000
+    -0x18CF, -0x3A50,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x18CF, -0x3A50,  0x0000
+     0x1BD3, -0x38EF,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+    -0x4000,   0x900,  0x0000
+    -0x4000,  -0x91C,  0x0000
+    -0x3A37, -0x1A96,  0x0000
+    -0x305E, -0x29E9,  0x0000
+    -0x2298, -0x35D7,  0x0000
+    -0x1A51, -0x39A0,  0x0000
+    -0x1A51, -0x39A0,  0x0000
+    -0x1208, -0x3D68,  0x0000
+     0x0000, -0x4000,  0x0000
+     0x1208, -0x3D68,  0x0000
+     0x1A51, -0x39A0,  0x0000
+     0x1A51, -0x39A0,  0x0000
+     0x2298, -0x35D7,  0x0000
+     0x305E, -0x29E9,  0x0000
+     0x3A37, -0x1A96,  0x0000
+     0x4000,  -0x91C,  0x0000
+     0x4000,   0x900,  0x0000
+end table
+
+private table Halfpipe_faceTable6
+    16
+    0,  17, 18, 1,  1
+    1,  18, 19, 2,  0
+    2,  19, 20, 3,  0
+    3,  20, 21, 4,  0
+    4,  21, 22, 5,  1
+    5,  22, 23, 6,  2
+    6,  23, 24, 7,  1
+    7,  24, 25, 8,  0
+    8,  25, 26, 9,  0
+    9,  26, 27, 10, 1
+    10, 27, 28, 11, 2
+    11, 28, 29, 12, 1
+    12, 29, 30, 13, 0
+    13, 30, 31, 14, 0
+    14, 31, 32, 15, 0
+    15, 32, 33, 16, 1
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Halfpipe_SetupVertices
+	temp1 = object[0].xpos
+	temp1 >>= 16
+	temp1 += 376
+	temp2 = object[0].ypos
+	temp2 >>= 16
+
+	Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+	if temp0 == TILE_ENDMARKER
+		temp2 += 128
+		temp2 &= 0xFF80
+		object[0].iypos = temp2
+	end if
+	temp1 += 16
+
+	temp3 = Halfpipe_worldRotate.y
+	temp3 += 0x40
+	temp3 &= 0x1FF
+	temp3 >>= 7
+	switch temp3
+	case 0
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.x, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.y, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.z, temp0, Halfpipe_matTransformTable)
+		break
+
+	case 1
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.z, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.y, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.x, temp0, Halfpipe_matTransformTable)
+		break
+
+	case 2
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.x, temp0, Halfpipe_matTransformTable)
+		FlipSign(Halfpipe_rotateOffset.x)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.y, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.z, temp0, Halfpipe_matTransformTable)
+		FlipSign(Halfpipe_rotateOffset.z)
+		break
+
+	case 3
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.z, temp0, Halfpipe_matTransformTable)
+		FlipSign(Halfpipe_rotateOffset.z)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.y, temp0, Halfpipe_matTransformTable)
+		temp1 += 16
+
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEA)
+		GetTableValue(Halfpipe_rotateOffset.x, temp0, Halfpipe_matTransformTable)
+		FlipSign(Halfpipe_rotateOffset.x)
+		break
+		
+	end switch
+
+	temp0 = stage.curYBoundary2
+	temp0 <<= 16
+
+	object[0].ypos += 0x80000
+	if object[0].ypos >= temp0
+		object[0].ypos -= temp0
+	end if
+
+	object[0].localPos.z += 0x80000
+	if object[0].localPos.z >= temp0
+		object[0].localPos.z -= temp0
+	end if
+
+	MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+	MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+	MatrixMultiply(MAT_WORLD, MAT_TEMP)
+
+	temp0 = true
+	while temp0 == true
+		if object[arrayPos5].ypos < object[0].ypos
+			object[arrayPos5].priority = PRIORITY_ACTIVE
+			if stageObject[arrayPos5].shadowsEnabled == true
+				vertexBuffer[4094].x = stageObject[arrayPos5].localPos.x
+				vertexBuffer[4094].y = stageObject[arrayPos5].localPos.y
+				vertexBuffer[4094].z = 0
+				vertexBuffer[4095].x = stageObject[arrayPos5].localShadowPos.x
+				vertexBuffer[4095].y = stageObject[arrayPos5].localShadowPos.y
+				vertexBuffer[4095].z = 0
+				TransformVertices(MAT_WORLD, 0xFFE, 0x1000)
+
+				stageObject[arrayPos5].localPos.z = object[0].localPos.z
+				stageObject[arrayPos5].worldPos.x = vertexBuffer[4094].x
+				stageObject[arrayPos5].worldPos.y = vertexBuffer[4094].y
+				stageObject[arrayPos5].worldPos.z = vertexBuffer[4094].z
+				stageObject[arrayPos5].worldShadowPos.x = vertexBuffer[4095].x
+				stageObject[arrayPos5].worldShadowPos.y = vertexBuffer[4095].y
+				stageObject[arrayPos5].worldShadowPos.z = vertexBuffer[4095].z
+			else
+				vertexBuffer[4095].x = stageObject[arrayPos5].localPos.x
+				vertexBuffer[4095].y = stageObject[arrayPos5].localPos.y
+				vertexBuffer[4095].z = 0
+				TransformVertices(MAT_WORLD, 0xFFF, 0x1000)
+
+				stageObject[arrayPos5].localPos.z = object[0].localPos.z
+				stageObject[arrayPos5].worldPos.x = vertexBuffer[4095].x
+				stageObject[arrayPos5].worldPos.y = vertexBuffer[4095].y
+				stageObject[arrayPos5].worldPos.z = vertexBuffer[4095].z
+			end if
+
+			arrayPos5++
+		else
+			temp0 = false
+		end if
+	loop
+
+	temp2 = Halfpipe_vertexTableID
+	temp2 &= 7
+	GetTableValue(Halfpipe_vertexInfoTable, temp2, Halfpipe_vertexTablePtrs)
+	Halfpipe_vertexTableID++
+
+	temp0 = 0
+	arrayPos0 = Halfpipe_vertexCount
+	GetTableValue(temp1, temp0, Halfpipe_vertexInfoTable)
+	temp0++
+	while temp1 > 0
+		GetTableValue(vertexBuffer[arrayPos0].x, temp0, Halfpipe_vertexInfoTable)
+		temp0++
+		GetTableValue(vertexBuffer[arrayPos0].y, temp0, Halfpipe_vertexInfoTable)
+		temp0++
+		GetTableValue(vertexBuffer[arrayPos0].z, temp0, Halfpipe_vertexInfoTable)
+		temp0++
+		arrayPos0++
+		temp1--
+	loop
+
+	SetTableValue(Halfpipe_tempTranslate.x, Halfpipe_transformPos, Halfpipe_translateXTable)
+	SetTableValue(Halfpipe_tempTranslate.y, Halfpipe_transformPos, Halfpipe_translateYTable)
+	SetTableValue(Halfpipe_tempTranslate.z, Halfpipe_transformPos, Halfpipe_translateZTable)
+	SetTableValue(Halfpipe_worldRotate.x, Halfpipe_transformPos, Halfpipe_rotateXTable)
+	SetTableValue(Halfpipe_worldRotate.y, Halfpipe_transformPos, Halfpipe_rotateYTable)
+	SetTableValue(Halfpipe_worldRotate.z, Halfpipe_transformPos, Halfpipe_rotateZTable)
+
+	switch temp2
+	case 0
+	case 1
+	case 2
+	case 3
+	case 4
+	case 7
+		GetTableValue(temp0, temp2, Halfpipe_vertexOffsetTable)
+		temp0 += Halfpipe_vertexCount
+		TransformVertices(MAT_WORLD, Halfpipe_vertexCount, temp0)
+		vertexBuffer[4095].x = 0
+		vertexBuffer[4095].y = 0
+		vertexBuffer[4095].z = 0x2000
+		TransformVertices(MAT_WORLD, 0xFFF, 0x1000)
+
+		Halfpipe_tempTranslate.x = vertexBuffer[4095].x
+		Halfpipe_tempTranslate.y = vertexBuffer[4095].y
+		Halfpipe_tempTranslate.z = vertexBuffer[4095].z
+		Halfpipe_worldRotate.x += Halfpipe_rotateOffset.x
+		Halfpipe_worldRotate.y += Halfpipe_rotateOffset.y
+		Halfpipe_worldRotate.z += Halfpipe_rotateOffset.z
+		MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+		MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+		MatrixMultiply(MAT_WORLD, MAT_TEMP)
+		TransformVertices(MAT_WORLD, temp0, arrayPos0)
+		break
+
+	case 5
+		GetTableValue(temp0, temp2, Halfpipe_vertexOffsetTable)
+		temp0 += Halfpipe_vertexCount
+		TransformVertices(MAT_WORLD, Halfpipe_vertexCount, temp0)
+		vertexBuffer[4094].x = 0
+		vertexBuffer[4094].y = 0
+		vertexBuffer[4094].z = 0xC00
+		vertexBuffer[4095].x = 0
+		vertexBuffer[4095].y = 0
+		vertexBuffer[4095].z = 0x2000
+		TransformVertices(MAT_WORLD, 0xFFE, 0x1000)
+
+		Halfpipe_tempTranslate.x = vertexBuffer[4094].x
+		Halfpipe_tempTranslate.y = vertexBuffer[4094].y
+		Halfpipe_tempTranslate.z = vertexBuffer[4094].z
+		temp3 = Halfpipe_rotateOffset.x
+		temp3 *= 12
+		temp3 >>= 5
+		Halfpipe_worldRotate.x += temp3
+		temp3 = Halfpipe_rotateOffset.y
+		temp3 *= 12
+		temp3 >>= 5
+		Halfpipe_worldRotate.y += temp3
+		temp3 = Halfpipe_rotateOffset.z
+		temp3 *= 12
+		temp3 >>= 5
+		Halfpipe_worldRotate.z += temp3
+		MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+		MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+		MatrixMultiply(MAT_WORLD, MAT_TEMP)
+		temp1 = temp0
+		temp1 += 17
+		TransformVertices(MAT_WORLD, temp0, temp1)
+
+		Halfpipe_tempTranslate.x = vertexBuffer[4095].x
+		Halfpipe_tempTranslate.y = vertexBuffer[4095].y
+		Halfpipe_tempTranslate.z = vertexBuffer[4095].z
+		GetTableValue(Halfpipe_worldRotate.x, Halfpipe_transformPos, Halfpipe_rotateXTable)
+		GetTableValue(Halfpipe_worldRotate.y, Halfpipe_transformPos, Halfpipe_rotateYTable)
+		GetTableValue(Halfpipe_worldRotate.z, Halfpipe_transformPos, Halfpipe_rotateZTable)
+		Halfpipe_worldRotate.x += Halfpipe_rotateOffset.x
+		Halfpipe_worldRotate.y += Halfpipe_rotateOffset.y
+		Halfpipe_worldRotate.z += Halfpipe_rotateOffset.z
+		MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+		MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+		MatrixMultiply(MAT_WORLD, MAT_TEMP)
+		TransformVertices(MAT_WORLD, temp1, arrayPos0)
+		break
+
+	case 6
+		GetTableValue(temp0, temp2, Halfpipe_vertexOffsetTable)
+		temp0 += Halfpipe_vertexCount
+		TransformVertices(MAT_WORLD, Halfpipe_vertexCount, temp0)
+
+		vertexBuffer[4094].x = 0
+		vertexBuffer[4094].y = 0
+		vertexBuffer[4094].z = 0x1400
+		vertexBuffer[4095].x = 0
+		vertexBuffer[4095].y = 0
+		vertexBuffer[4095].z = 0x2000
+		TransformVertices(MAT_WORLD, 0xFFE, 0x1000)
+
+		Halfpipe_tempTranslate.x = vertexBuffer[4094].x
+		Halfpipe_tempTranslate.y = vertexBuffer[4094].y
+		Halfpipe_tempTranslate.z = vertexBuffer[4094].z
+		temp3 = Halfpipe_rotateOffset.x
+		temp3 *= 20
+		temp3 >>= 5
+		Halfpipe_worldRotate.x += temp3
+		temp3 = Halfpipe_rotateOffset.y
+		temp3 *= 20
+		temp3 >>= 5
+		Halfpipe_worldRotate.y += temp3
+		temp3 = Halfpipe_rotateOffset.z
+		temp3 *= 20
+		temp3 >>= 5
+		Halfpipe_worldRotate.z += temp3
+		MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+		MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+		MatrixMultiply(MAT_WORLD, MAT_TEMP)
+		temp1 = temp0
+		temp1 += 17
+		TransformVertices(MAT_WORLD, temp0, temp1)
+
+		Halfpipe_tempTranslate.x = vertexBuffer[4095].x
+		Halfpipe_tempTranslate.y = vertexBuffer[4095].y
+		Halfpipe_tempTranslate.z = vertexBuffer[4095].z
+		GetTableValue(Halfpipe_worldRotate.x, Halfpipe_transformPos, Halfpipe_rotateXTable)
+		GetTableValue(Halfpipe_worldRotate.y, Halfpipe_transformPos, Halfpipe_rotateYTable)
+		GetTableValue(Halfpipe_worldRotate.z, Halfpipe_transformPos, Halfpipe_rotateZTable)
+		Halfpipe_worldRotate.x += Halfpipe_rotateOffset.x
+		Halfpipe_worldRotate.y += Halfpipe_rotateOffset.y
+		Halfpipe_worldRotate.z += Halfpipe_rotateOffset.z
+		MatrixRotateXYZ(MAT_WORLD, Halfpipe_worldRotate.x, Halfpipe_worldRotate.y, Halfpipe_worldRotate.z)
+		MatrixTranslateXYZ(MAT_TEMP, Halfpipe_tempTranslate.x, Halfpipe_tempTranslate.y, Halfpipe_tempTranslate.z)
+		MatrixMultiply(MAT_WORLD, MAT_TEMP)
+		TransformVertices(MAT_WORLD, temp1, arrayPos0)
+		break
+		
+	end switch
+
+	Halfpipe_transformPos++
+	Halfpipe_transformPos %= 40
+	Halfpipe_vertexCount = arrayPos0
+	if Halfpipe_vertexCount >= Halfpipe_prevVertexCount
+		Halfpipe_vertexCount = 0
+	end if
+end function
+
+
+private function Halfpipe_SetupFaces
+	temp0 = 0
+	arrayPos0 = scene3D.faceCount
+	GetTableValue(temp1, temp0, Halfpipe_faceInfoTable)
+	temp0++
+	while temp1 > 0
+		GetTableValue(faceBuffer[arrayPos0].a, temp0, Halfpipe_faceInfoTable)
+		faceBuffer[arrayPos0].a += Halfpipe_vertexCount
+		temp0++
+		
+		GetTableValue(faceBuffer[arrayPos0].b, temp0, Halfpipe_faceInfoTable)
+		faceBuffer[arrayPos0].b += Halfpipe_vertexCount
+		temp0++
+
+		GetTableValue(faceBuffer[arrayPos0].c, temp0, Halfpipe_faceInfoTable)
+		faceBuffer[arrayPos0].c += Halfpipe_vertexCount
+		temp0++
+
+		GetTableValue(faceBuffer[arrayPos0].d, temp0, Halfpipe_faceInfoTable)
+		faceBuffer[arrayPos0].d += Halfpipe_vertexCount
+		temp0++
+
+		GetTableValue(temp2, temp0, Halfpipe_faceInfoTable)
+		temp0++
+
+		switch temp2
+		case 0
+			faceBuffer[arrayPos0].flag = FACE_FADED
+			faceBuffer[arrayPos0].color = SpecialSetup_StageColor1
+			break
+
+		case 1
+			faceBuffer[arrayPos0].flag = FACE_FADED
+			faceBuffer[arrayPos0].color = SpecialSetup_StageColor2
+			break
+
+		case 2
+			faceBuffer[arrayPos0].flag = FACE_FADED
+			faceBuffer[arrayPos0].color = 0xFFE0E000
+			break
+
+		case 3
+			faceBuffer[arrayPos0].flag = FACE_FADED
+			faceBuffer[arrayPos0].color = 0xFFE0A020
+			break
+
+		case 5
+			faceBuffer[arrayPos0].flag = FACE_TEXTURED_C
+			arrayPos1 = faceBuffer[arrayPos0].a
+			vertexBuffer[arrayPos1].u = 17
+			vertexBuffer[arrayPos1].v = 17
+
+			arrayPos2 = Halfpipe_checkpointTexCount
+			arrayPos2 %= 7
+			if arrayPos2 == 0
+				arrayPos2 = Halfpipe_checkpointTexCount
+				arrayPos2 /= 7
+				SetTableValue(arrayPos1, arrayPos2, Halfpipe_checkpointFaceTable)
+			end if
+
+			Halfpipe_checkpointTexCount++
+
+			arrayPos1 = faceBuffer[arrayPos0].b
+			vertexBuffer[arrayPos1].u = 0x800
+			vertexBuffer[arrayPos1].v = 0x800
+
+			arrayPos1 = faceBuffer[arrayPos0].c
+			vertexBuffer[arrayPos1].u = 16
+			vertexBuffer[arrayPos1].v = 16
+			break
+			
+		end switch
+
+		arrayPos0++
+		scene3D.faceCount++
+		temp1--
+	loop
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	scene3D.vertexCount = Halfpipe_prevVertexCount
+	scene3D.faceCount = Halfpipe_faceCount
+	
+	// Yep, this check has absolutely no chance of failing
+	// This is likely a leftover from development, probably checking if a button was held down or something
+	// Anyway, this handles progressing forwards through the stage
+	if true == true
+		object.moveStep += object.moveSpeed
+		temp0 = object.moveSpeed
+		temp0 <<= 13
+		object.playerPos.z += temp0
+		if object.moveStep > 63
+			object.moveStep -= 64
+			CallFunction(Halfpipe_SetupVertices)
+			object.transformIDHalfpipe++
+			object.transformIDHalfpipe %= 40
+			object.nextTransformIDHalfpipe++
+			object.nextTransformIDHalfpipe %= 40
+			object.transformIDWorld++
+			object.transformIDWorld %= 40
+			object.nextTransformIDWorld++
+			object.nextTransformIDWorld %= 40
+		end if
+	end if
+
+	// ------------------------
+	// HALFPIPE TRANSFORMATIONS
+	// ------------------------
+
+	// Translation
+
+	GetTableValue(object.halfpipeTranslation.x, object.transformIDHalfpipe, Halfpipe_translateXTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_translateXTable)
+	temp0 -= object.halfpipeTranslation.x
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.halfpipeTranslation.x += temp0
+	FlipSign(object.halfpipeTranslation.x)
+
+	GetTableValue(object.halfpipeTranslation.y, object.transformIDHalfpipe, Halfpipe_translateYTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_translateYTable)
+	temp0 -= object.halfpipeTranslation.y
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.halfpipeTranslation.y += temp0
+	FlipSign(object.halfpipeTranslation.y)
+
+	GetTableValue(object.halfpipeTranslation.z, object.transformIDHalfpipe, Halfpipe_translateZTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_translateZTable)
+	temp0 -= object.halfpipeTranslation.z
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.halfpipeTranslation.z += temp0
+	FlipSign(object.halfpipeTranslation.z)
+
+	// Rotation
+
+	GetTableValue(temp1, object.transformIDHalfpipe, Halfpipe_rotateXTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_rotateXTable)
+	temp0 -= temp1
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	temp1 += temp0
+	temp1 <<= 1
+	if object.newHalfpipeRotation.x != temp1
+		temp0 = temp1
+		temp0 -= object.newHalfpipeRotation.x
+		temp0 >>= 1
+		if temp0 == 0
+			if object.newHalfpipeRotation.x < temp1
+				object.newHalfpipeRotation.x++
+			else
+				object.newHalfpipeRotation.x--
+			end if
+		else
+			object.newHalfpipeRotation.x += temp0
+		end if
+	end if
+	
+	GetTableValue(temp1, object.transformIDHalfpipe, Halfpipe_rotateYTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_rotateYTable)
+	temp0 -= temp1
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	temp1 += temp0
+	temp1 <<= 1
+	if object.newHalfpipeRotation.y != temp1
+		temp0 = temp1
+		temp0 -= object.newHalfpipeRotation.y
+		temp0 >>= 2
+		if temp0 == 0
+			if object.newHalfpipeRotation.y < temp1
+				object.newHalfpipeRotation.y++
+			else
+				object.newHalfpipeRotation.y--
+			end if
+		else
+			object.newHalfpipeRotation.y += temp0
+		end if
+	end if
+
+	GetTableValue(temp1, object.transformIDHalfpipe, Halfpipe_rotateZTable)
+	GetTableValue(temp0, object.nextTransformIDHalfpipe, Halfpipe_rotateZTable)
+	temp0 -= temp1
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	temp1 += temp0
+	temp1 <<= 1
+	if object.newHalfpipeRotation.z != temp1
+		temp0 = temp1
+		temp0 -= object.newHalfpipeRotation.z
+		temp0 >>= 1
+		if temp0 == 0
+			if object.newHalfpipeRotation.z < temp1
+				object.newHalfpipeRotation.z++
+			else
+				object.newHalfpipeRotation.z--
+			end if
+		else
+			object.newHalfpipeRotation.z += temp0
+		end if
+	end if
+
+	object.halfpipeRotation.x = object.newHalfpipeRotation.x
+	object.halfpipeRotation.y = object.newHalfpipeRotation.y
+	object.halfpipeRotation.z = object.newHalfpipeRotation.z
+	object.halfpipeRotation.x >>= 1
+	object.halfpipeRotation.y >>= 1
+	object.halfpipeRotation.z >>= 1
+
+	// ------------------------
+	// WORLD TRANSFORMATIONS
+	// ------------------------
+
+	// Translation
+
+	GetTableValue(object.worldTranslation.x, object.transformIDWorld, Halfpipe_translateXTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_translateXTable)
+	temp0 -= object.worldTranslation.x
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldTranslation.x += temp0
+
+	GetTableValue(object.worldTranslation.y, object.transformIDWorld, Halfpipe_translateYTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_translateYTable)
+	temp0 -= object.worldTranslation.y
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldTranslation.y += temp0
+
+	GetTableValue(object.worldTranslation.z, object.transformIDWorld, Halfpipe_translateZTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_translateZTable)
+	temp0 -= object.worldTranslation.z
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldTranslation.z += temp0
+
+	// Rotation
+
+	GetTableValue(object.worldRotation.x, object.transformIDWorld, Halfpipe_rotateXTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_rotateXTable)
+	temp0 -= object.worldRotation.x
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldRotation.x += temp0
+
+	GetTableValue(object.worldRotation.y, object.transformIDWorld, Halfpipe_rotateYTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_rotateYTable)
+	temp0 -= object.worldRotation.y
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldRotation.y += temp0
+
+	GetTableValue(object.worldRotation.z, object.transformIDWorld, Halfpipe_rotateZTable)
+	GetTableValue(temp0, object.nextTransformIDWorld, Halfpipe_rotateZTable)
+	temp0 -= object.worldRotation.z
+	temp0 *= object.moveStep
+	temp0 >>= 6
+	object.worldRotation.z += temp0
+end event
+
+
+event ObjectDraw
+	MatrixTranslateXYZ(MAT_WORLD, object.halfpipeTranslation.x, object.halfpipeTranslation.y, object.halfpipeTranslation.z)
+	MatrixRotateXYZ(MAT_VIEW, object.halfpipeRotation.x, object.halfpipeRotation.y, object.halfpipeRotation.z)
+	MatrixInverse(MAT_VIEW)
+	MatrixRotateXYZ(MAT_TEMP, -8, 0, 0)
+	MatrixMultiply(MAT_VIEW, MAT_TEMP)
+
+#platform: USE_STANDALONE
+	// In Standalone, we're only looking at the main player's position
+	
+	temp0 = player[2].xpos
+	temp0 *= -0x40
+	temp0 >>= 9
+
+	temp1 = player[2].ypos
+	temp1 *= -0x60
+	temp1 >>= 9
+	temp1 -= 0x200
+#endplatform
+
+#platform: USE_ORIGINS
+	// In Origins, however, the routine was rearranged so that...
+	
+	temp0 = player[2].xpos
+	temp1 = player[2].ypos
+	
+	// ...we can take the average between P1 and P2's positions in multiplayer
+	if options.vsMode == true
+		temp0 += player[3].xpos
+		temp1 += player[3].ypos
+		temp0 >>= 1
+		temp1 >>= 1
+	end if
+	
+	temp0 *= -0x40
+	temp0 >>= 9
+	
+	temp1 *= -0x60
+	temp1 >>= 9
+	temp1 -= 0x200
+#endplatform
+
+	MatrixTranslateXYZ(MAT_TEMP, temp0, temp1, 0)
+	MatrixMultiply(MAT_VIEW, MAT_TEMP)
+	Draw3DScene()
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	object[0].type 						= TypeName[Halfpipe]
+	object[0].priority 					= PRIORITY_ACTIVE
+	object[0].xpos 						= 0x1C00000
+	object[0].ypos 						= 0
+	object[0].playerPos.z 				= 0
+	object[0].localPos.z				= 0
+	object[0].moveStep 					= 0
+	object[0].transformIDHalfpipe 		= 0
+	object[0].nextTransformIDHalfpipe 	= 1
+	object[0].transformIDWorld 			= 2
+	object[0].nextTransformIDWorld 		= 3
+	object[0].moveSpeed 				= 17
+
+	Halfpipe_vertexCount 		= 0
+	Halfpipe_vertexTableID 		= 0
+	Halfpipe_transformPos 		= 0
+	Halfpipe_prevVertexCount 	= 0x1000
+	Halfpipe_tempTranslate.x 	= 0
+	Halfpipe_tempTranslate.y 	= 0
+	Halfpipe_tempTranslate.z 	= 0
+#platform: USE_DECOMP
+	// Not in the original, probably should be though
+	// This fixes the special stage warping bug
+	Halfpipe_worldRotate.x 		= 0
+	Halfpipe_worldRotate.y 		= 0
+	Halfpipe_worldRotate.z 		= 0
+	
+	// (Origins doesn't fix this either, which is why Special Stages appear weird for a moment when restarting one)
+#endplatform
+
+	arrayPos5 = 32
+	SetTableValue(Halfpipe_vertexTable1, 0, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable1, 1, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable1, 2, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable1, 3, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable2, 4, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable3, 5, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable4, 6, Halfpipe_vertexTablePtrs)
+	SetTableValue(Halfpipe_vertexTable5, 7, Halfpipe_vertexTablePtrs)
+	Halfpipe_checkpointTexCount = 0
+	scene3D.faceCount = 0
+
+	temp7 = 0
+	while temp7 < 4
+		Halfpipe_faceInfoTable = Halfpipe_faceTable1
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable2
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable2
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable2
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable3
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable4
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable5
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		Halfpipe_faceInfoTable = Halfpipe_faceTable6
+		CallFunction(Halfpipe_SetupFaces)
+		CallFunction(Halfpipe_SetupVertices)
+
+		temp7++
+	loop
+
+	scene3D.vertexCount 		= Halfpipe_vertexCount
+	Halfpipe_prevVertexCount 	= Halfpipe_vertexCount
+	Halfpipe_faceCount 			= scene3D.faceCount
+	Halfpipe_vertexCount 		= 0
+	scene3D.projectionX 		= 216
+	scene3D.projectionY 		= 216
+	scene3D.fogStrength 		= 0x50
+	scene3D.fogColor 			= 0x000000
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

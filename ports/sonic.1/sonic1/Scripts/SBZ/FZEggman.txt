@@ -1,0 +1,525 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: FZ Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.invincibilityTimer
+private alias object.value2 : object.health // health counts up instead of down this time...
+private alias object.value3 : object.boundsR
+private alias object.value4 : object.isVulnerable
+private alias object.value5 : object.floorPos
+
+// Piston aliases
+private alias object.value0 : fzPiston.fzEggmanSlot
+private alias object.propertyValue : fzPiston.hasEggman
+
+// Piston States
+private alias 0 : FZPISTON_IDLE
+private alias 1 : FZPISTON_SETUP_CRUSHING
+
+// Plasma Emitter Aliases
+private alias object.xpos   : plasmaEmitter.xpos
+private alias object.ypos   : plasmaEmitter.ypos
+private alias object.state  : plasmaEmitter.emitting
+private alias object.value0 : plasmaEmitter.timer
+
+// Plasma Ball Aliases
+private alias object.value1 : plasmaBall.targetPos.x
+
+// EggMobile aliases
+private alias object.xpos   : eggmobile.xpos
+private alias object.ypos   : eggmobile.ypos
+private alias object.state  : eggmobile.state
+private alias object.value6 : eggmobile.playerStopPos
+
+// Eggman States
+private alias 0 : FZEGGMAN_AWAITPLAYER
+private alias 1 : FZEGGMAN_STARTFIGHT
+private alias 2 : FZEGGMAN_SETUP_PISTONATTACK
+private alias 3 : FZEGGMAN_PISTONATTACK
+private alias 4 : FZEGGMAN_SETUP_PLASMAATTACK
+private alias 5 : FZEGGMAN_PLASMAATTACK
+private alias 6 : FZEGGMAN_FLEE
+private alias 7 : FZEGGMAN_RUNNINGAWAY
+private alias 8 : FZEGGMAN_JUMPED
+
+// Eggman Animations
+private alias 0 : FZEGGANI_INVISIBLE
+private alias 1 : FZEGGANI_IDLE
+private alias 2 : FZEGGANI_LAUGH
+private alias 3 : FZEGGANI_HIT
+private alias 4 : FZEGGANI_DEFEATED
+private alias 5 : FZEGGANI_TOASTED
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.value16 : player.isSidekick
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function FZEggman_CheckBossHit
+
+// ========================
+// Tables
+// ========================
+
+private table FZEggman_destroyFrameTable
+	8, 4, 9, 4
+end table
+
+// in pairs of 2
+// so entities +1 & +2 would go, then +2 & +3, etc etc
+private table FZEggman_pistonAttackSlots
+	1, 2
+	2, 3
+	3, 4
+	4, 1
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function FZEggman_CheckBossHit
+	CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+	temp0 = checkResult
+	CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
+	temp0 |= checkResult
+	CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
+	temp0 |= checkResult
+#platform: USE_ORIGINS
+	if stage.playerListPos == PLAYER_AMY
+		if player[currentPlayer].isSidekick == false
+			CheckEqual(player[currentPlayer].animation, ANI_HAMMER_JUMP)
+			temp0 |= checkResult
+			CheckEqual(player[currentPlayer].animation, ANI_HAMMER_DASH)
+			temp0 |= checkResult
+		end if
+	end if
+#endplatform
+
+	if temp0 == true
+		player[currentPlayer].xvel = 0x30000
+		if player[currentPlayer].xpos < object.xpos
+			FlipSign(player[currentPlayer].xvel)
+		end if
+
+		player[currentPlayer].speed = player[currentPlayer].xvel
+		if player[currentPlayer].animation == ANI_GLIDING
+			player[currentPlayer].animation = ANI_GLIDING_DROP
+			player[currentPlayer].state = Player_State_GlideDrop
+		end if
+		checkResult = true
+	else
+		checkResult = false
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case FZEGGMAN_AWAITPLAYER
+		temp1 = screen.xcenter
+		temp2 = temp1
+		if temp1 == 160
+			temp1 += 16
+		end if
+
+		temp0 = object.ixpos
+		temp0 -= temp1
+		stage.newXBoundary1 = temp0
+		temp0 += temp1
+		temp0 += temp2
+		stage.newXBoundary2 = temp0
+		temp0 = object.entityPos
+		fzPiston[+1].fzEggmanSlot = temp0
+		fzPiston[+2].fzEggmanSlot = temp0
+		fzPiston[+3].fzEggmanSlot = temp0
+		fzPiston[+4].fzEggmanSlot = temp0
+		object.boundsR = object.ixpos
+		object.boundsR += 656
+		object.floorPos = object.ypos
+		object.floorPos -= 0x400000
+		object.state++
+		break
+
+	case FZEGGMAN_STARTFIGHT
+		if player[0].xpos >= object.xpos
+			object.xpos = 0
+			object.ypos = 0
+			object.isVulnerable = true
+			object.state++
+		end if
+		break
+
+	case FZEGGMAN_SETUP_PISTONATTACK
+		object.animation = FZEGGANI_IDLE
+		Rand(temp0, 8)
+		temp1 = temp0
+		temp1 &= 1
+		temp0 &= 6
+		GetTableValue(temp2, temp0, FZEggman_pistonAttackSlots)
+		temp0++
+		GetTableValue(temp3, temp0, FZEggman_pistonAttackSlots)
+
+		arrayPos0 = object.entityPos
+		arrayPos0 += temp2
+		object[arrayPos0].state = FZPISTON_SETUP_CRUSHING
+		if temp1 == 0
+			fzPiston[arrayPos0].hasEggman = true
+		end if
+
+		arrayPos0 = object.entityPos
+		arrayPos0 += temp3
+		object[arrayPos0].state = FZPISTON_SETUP_CRUSHING
+		if temp1 == 1
+			fzPiston[arrayPos0].hasEggman = true
+		end if
+
+		PlaySfx(SfxName[Large Wall], false)
+		object.timer = 160
+		object.state++
+		break
+
+	case FZEGGMAN_PISTONATTACK
+		object.timer--
+		if object.timer <= 0
+			if object.health == 8
+				temp1 = screen.xcenter
+				temp0 = object.boundsR
+				temp0 -= temp1
+				stage.newXBoundary1 = temp0
+				temp0 += temp1
+				temp0 += temp1
+				stage.newXBoundary2 = temp0
+				object.xpos = plasmaEmitter[+5].xpos
+				object.xpos += 0x380000
+				object.ypos = plasmaEmitter[+5].ypos
+				eggmobile[+7].playerStopPos = object.boundsR
+				eggmobile[+7].playerStopPos <<= 16
+				object.direction = FLIP_X
+				arrayPos0 = object.entityPos
+				arrayPos0 += 5
+				ResetObjectEntity(arrayPos0, TypeName[Explosion], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
+				object.isVulnerable = false // you can't underflow the value if it counts up AND you disable attacks :bigthinker:
+				object.animation = FZEGGANI_TOASTED
+				object.state = FZEGGMAN_FLEE
+			else
+				object.state++
+			end if
+		end if
+		break
+
+	case FZEGGMAN_SETUP_PLASMAATTACK
+		plasmaEmitter[+5].emitting = true
+		plasmaEmitter[+5].timer = 330
+
+		temp0 = 0
+		temp1 = 0
+		while temp0 < 4
+			CreateTempObject(TypeName[Plasma Ball], 0, plasmaEmitter[+5].xpos, plasmaEmitter[+5].ypos)
+			object[tempObjectPos].inkEffect = INK_ADD
+			object[tempObjectPos].alpha = 0x00
+			plasmaBall[tempObjectPos].targetPos.x = 4
+			temp0++
+			plasmaBall[tempObjectPos].targetPos.x = temp1
+			plasmaBall[tempObjectPos].targetPos.x += plasmaEmitter[+5].xpos
+			plasmaBall[tempObjectPos].targetPos.x -= 0x100000
+			Rand(temp2, 32)
+			temp2 -= 16
+			temp2 <<= 16
+			plasmaBall[tempObjectPos].targetPos.x += temp2
+			temp1 -= 0x4F0000
+		loop
+
+		object.timer = 330
+		object.state++
+		break
+
+	case FZEGGMAN_PLASMAATTACK
+		object.timer--
+		if object.timer <= 0
+			object.state = FZEGGMAN_SETUP_PISTONATTACK
+		end if
+		break
+
+	case FZEGGMAN_FLEE
+		object.ypos += object.yvel
+		object.yvel += 0x1000
+
+		if object.ypos >= object.floorPos
+			ObjectTileCollision(CSIDE_FLOOR, 0, 28, PATH_A)
+			if checkResult == true
+				object.animation = FZEGGANI_INVISIBLE
+				object.xvel = 0x10000
+				object.yvel = -0x10000
+				object.timer = 0
+				object.animation = FZEGGANI_TOASTED
+				object.state++
+			end if
+		end if
+		break
+
+	case FZEGGMAN_RUNNINGAWAY
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		ObjectTileCollision(CSIDE_FLOOR, 0, 28, PATH_A)
+		if checkResult == false
+			object.yvel += 0x1000
+		else
+			object.yvel = 0
+		end if
+
+		temp1 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].xpos > temp1
+				temp1 = player[currentPlayer].xpos
+			end if
+		next
+
+		// fun code
+		temp0 = object.xpos
+		temp0 -= temp1
+		if temp0 < 0
+			object.xvel = 0x50000
+		else
+			object.xvel = 0x40000
+			temp0 -= 0x700000
+			if temp0 >= 0
+				object.xvel -= 0x10000
+				temp0 -= 0x80000
+				if temp0 >= 0
+					object.xvel -= 0x10000
+					temp0 -= 0x80000
+					if temp0 >= 0
+						object.xvel -= 0x8000
+						temp0 -= 0x80000
+						if temp0 >= 0
+							object.xvel -= 0x8000
+							temp0 -= 0x80000
+							if temp0 >= 0
+								object.xvel -= 0x8000
+								temp0 -= 0x380000
+								if temp0 >= 0
+									object.xvel = 0
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		end if
+
+		temp0 = eggmobile[+7].xpos
+		temp0 -= 0x300000
+		if object.xpos >= temp0
+			object.xvel = 0x24000
+			object.yvel = -0x4C000
+			object.state++
+		end if
+		break
+
+	case FZEGGMAN_JUMPED
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3400
+
+		if object.xpos >= eggmobile[+7].xpos
+			object.xpos = eggmobile[+7].xpos
+			object.xvel = 0
+		end if
+
+		if object.yvel > 0
+			if object.ypos >= eggmobile[+7].ypos
+				object.ypos = eggmobile[+7].ypos
+				object.yvel = 0
+				eggmobile[+7].state++
+				object.type = TypeName[Blank Object]
+			end if
+		end if
+		break
+
+	end switch
+
+	switch object.animation
+	case FZEGGANI_INVISIBLE
+		object.frame = 0
+		break
+
+	case FZEGGANI_IDLE
+		object.animationTimer++
+		if object.animationTimer == 14
+			object.animationTimer = 0
+		end if
+		object.frame = object.animationTimer
+		object.frame /= 7
+		object.frame++
+		break
+
+	case FZEGGANI_LAUGH
+		if object.yvel == 0
+			object.frame = 3
+		else
+			object.frame = 4
+		end if
+		break
+
+	case FZEGGANI_HIT
+		object.frame = object.invincibilityTimer
+		object.frame &= 1
+		object.frame += 5
+		break
+
+	case FZEGGANI_DEFEATED
+		object.frame = 7
+		break
+
+	case FZEGGANI_TOASTED
+		object.timer++
+		if object.timer >= 28
+			object.timer = 0
+		end if
+		temp0 = object.timer
+		temp0 /= 7
+		GetTableValue(object.frame, temp0, FZEggman_destroyFrameTable)
+		break
+		
+	end switch
+
+	if object.invincibilityTimer != 0
+		object.invincibilityTimer--
+	end if
+
+	if object.isVulnerable == true
+		if player[0].xpos < object.xpos
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -33, -37, 33, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+			BoxCollisionTest(C_TOUCH, object.entityPos, -33, -37, 33, 6, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
+			if checkResult == true
+				CallFunction(FZEggman_CheckBossHit)
+				if checkResult == true
+					if object.invincibilityTimer == 0
+						if object.health < 8
+							object.animation = FZEGGANI_HIT
+							object.invincibilityTimer = 100
+							PlaySfx(SfxName[Boss Hit], false)
+#platform: USE_STANDALONE
+							object.health++
+#endplatform
+#platform: USE_ORIGINS
+							if game.bossOneLife == false
+								object.health++
+							else
+								object.health = 8
+							end if
+							
+							if object.health == 8
+								// Nothing. There's literally nothing here LMAO
+							end if
+#endplatform
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	// Handle Stage right boundary
+	// -> This doesn't do anything most of the time, since there's already the wall on the right of the arena
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = player[currentPlayer].collisionRight
+		temp0 <<= 16
+		temp0 += player[currentPlayer].xpos
+		temp1 = stage.curXBoundary2
+		temp1 <<= 16
+		if temp0 > temp1
+			player[currentPlayer].xvel = 0
+			player[currentPlayer].speed = 0
+			player[currentPlayer].xpos = temp1
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			player[currentPlayer].xpos -= temp0
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.state >= FZEGGMAN_PISTONATTACK
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-22, -23, 38, 51, 1, 209)
+	SpriteFrame(-22, -24, 38, 52, 42, 208)
+	SpriteFrame(-22, -23, 38, 51, 84, 209)
+	SpriteFrame(-16, -16, 46, 44, 350, 165)
+	SpriteFrame(-16, -23, 46, 55, 350, 210)
+	SpriteFrame(-22, -24, 42, 52, 225, 266)
+	SpriteFrame(-22, -32, 42, 64, 225, 319)
+	SpriteFrame(-30, -24, 60, 44, 289, 165)
+	SpriteFrame(-24, -23, 54, 43, 236, 221)
+	SpriteFrame(-21, -25, 51, 52, 296, 213)
+
+	foreach (TypeName[FZ Eggman], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		
+		// Normally boss health would be set here, as with other bosses, but this boss's health counts up rather that counting down
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-22, -23, 38, 51, 1, 209)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

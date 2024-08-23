@@ -1,0 +1,551 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: SeeSaw Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.orbTimer // Always 0, its functionality is leftover from S1's SLZ
+private alias object.value1  : object.tiltTimerL
+private alias object.value2  : object.tiltTimerM
+private alias object.value3  : object.tiltTimerR
+private alias object.value4  : object.tilt
+private alias object.value5  : object.prevTilt
+private alias object.value6  : object.targetTilt
+private alias object.value7  : object.launchVelocity
+private alias object.value8  : object.orbTargetPos.x
+private alias object.value9  : object.orbTargetPos.y
+private alias object.value10 : object.orbFrame
+private alias object.value11 : object.orbSide
+private alias object.value12 : object.stood // it gets set a couple of times but otherwise it's unused
+
+private alias 0 : SEESAW_ORB_IDLE
+private alias 1 : SEESAW_NONE
+private alias 2 : SEESAW_ORB_LAUNCHED
+private alias 3 : SEESAW_NO_ORB
+
+private alias 0 : SEESAW_TILT_L
+private alias 1 : SEESAW_TILT_M
+private alias 2 : SEESAW_TILT_R
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value1 : player.timer
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SeeSaw_DebugDraw
+reserve function SeeSaw_DebugSpawn
+reserve function SeeSaw_SetupHitbox
+
+
+// ========================
+// Tables
+// ========================
+
+private table SeeSaw_tiltHeightTable
+	36, 36, 38, 40, 42, 44, 42, 40, 38, 36, 35, 34, 33, 32, 31, 30
+	29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14
+	13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  2,  2,  2,  2
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SeeSaw_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SeeSaw_DebugSpawn
+	CreateTempObject(TypeName[SeeSaw], 0, object.xpos, object.ypos)
+	object[tempObjectPos].orbTargetPos.x = object.xpos
+	object[tempObjectPos].orbTargetPos.x += 0x280000
+	object[tempObjectPos].orbTargetPos.y = object.ypos
+	object[tempObjectPos].orbTargetPos.y -= 8 // Simply "8" is the wrong value, 0x80000 is actually what's needed. It doesn't matter, though, as the orb pos gets reset when the object updates anyway
+	object[tempObjectPos].orbFrame = 2
+	object[tempObjectPos].tilt = SEESAW_TILT_R
+	object[tempObjectPos].targetTilt = SEESAW_TILT_R
+	if object[tempObjectPos].propertyValue != 0 // A propertyValue check for a newly created temp object? This won't do much...
+		object[tempObjectPos].state = SEESAW_NO_ORB
+	end if
+end function
+
+
+private function SeeSaw_SetupHitbox
+	temp2 = 0
+	if temp7 == SEESAW_TILT_M
+		temp0 = -21
+		temp1 = -6
+		temp2 = 48
+	else
+		temp1 = player[currentPlayer].xpos
+		temp1 -= object.xpos
+		temp1 >>= 16
+		temp1 += 48
+		temp3 = temp1
+		if temp1 >= 0
+			if temp1 < 96
+				temp1 >>= 1
+				if temp7 == SEESAW_TILT_L
+					FlipSign(temp1)
+					temp1 += 47
+				end if
+				GetTableValue(temp0, temp1, SeeSaw_tiltHeightTable)
+				FlipSign(temp0)
+				temp1 = temp0
+				temp1 += 18
+				temp2 = 40
+			end if
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.tiltTimerL
+	temp0 |= object.tiltTimerR
+	if temp0 == 0
+		if object.tiltTimerM != SEESAW_TILT_L
+			object.targetTilt = SEESAW_TILT_M
+		end if
+	else
+		if object.tiltTimerL == object.tiltTimerR
+			object.targetTilt = SEESAW_TILT_M
+		else
+			if object.tiltTimerL > object.tiltTimerR
+				object.targetTilt = SEESAW_TILT_L
+			else
+				object.targetTilt = SEESAW_TILT_R
+			end if
+		end if
+	end if
+
+	if object.tilt != object.targetTilt
+		if object.tilt > object.targetTilt
+			object.tilt--
+		else
+			object.tilt++
+		end if
+
+		if object.state == SEESAW_NONE
+			if object.targetTilt == SEESAW_TILT_M
+				temp0 = -0x11400
+				temp1 = -0x81800
+			else
+				if object.orbTimer == 0
+					if object.launchVelocity >= 0xA0000
+						temp0 = -0xA000
+						temp1 = -0xE0000
+					else
+						temp0 = -0xCC00
+						temp1 = -0xAF000
+					end if
+				else
+					if object.launchVelocity >= 0x9C000
+						temp0 = -0x8000
+						temp1 = -0xA2000
+					else
+						temp0 = -0xF400
+						temp1 = -0x96000
+					end if
+				end if
+			end if
+
+			if object.orbTargetPos.x < object.xpos
+				FlipSign(temp0)
+			end if
+			object.xvel = temp0
+			object.yvel = temp1
+			object.state++
+			object.priority = PRIORITY_ACTIVE
+		end if
+	end if
+
+	if object.orbTargetPos.x < object.xpos
+		switch object.tilt
+		case SEESAW_TILT_L
+			temp0 = -0x280000
+			temp1 = -0x80000
+			break
+
+		case SEESAW_TILT_M
+			temp0 = -0x280000
+			temp1 = -0x1C0000
+			break
+
+		case SEESAW_TILT_R
+			temp0 = -0x280000
+			temp1 = -0x2F0000
+			break
+			
+		end switch
+	else
+		switch object.tilt
+		case SEESAW_TILT_L
+			temp0 = 0x280000
+			temp1 = -0x2F0000
+			break
+
+		case SEESAW_TILT_M
+			temp0 = 0x280000
+			temp1 = -0x1C0000
+			break
+
+		case SEESAW_TILT_R
+			temp0 = 0x280000
+			temp1 = -0x80000
+			break
+			
+		end switch
+	end if
+
+	switch object.state
+	case SEESAW_ORB_IDLE
+		object.orbTargetPos.x = object.xpos
+		object.orbTargetPos.x += temp0
+		object.orbTargetPos.y = object.ypos
+		object.orbTargetPos.y += temp1
+		object.launchVelocity = 0
+		break
+
+	case SEESAW_NONE
+		break
+
+	case SEESAW_ORB_LAUNCHED
+		object.orbTargetPos.x += object.xvel
+		object.orbTargetPos.y += object.yvel
+		object.yvel += 0x3800
+		if object.yvel > 0
+			temp1 += object.ypos
+			if object.orbTargetPos.y >= temp1
+				object.orbTargetPos.y = temp1
+				object.state = SEESAW_ORB_IDLE
+				if object.orbTimer != 0
+					if object.xvel != 0
+						CreateTempObject(TypeName[Smoke Puff], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+						PlaySfx(SfxName[Explosion], false)
+						object.state = SEESAW_NO_ORB
+						object.orbTimer = 0
+					end if
+				end if
+				if object.orbTargetPos.x < object.xpos
+					object.targetTilt = SEESAW_TILT_L
+					object.orbSide = 1
+				else
+					object.targetTilt = SEESAW_TILT_R
+					object.orbSide = 2
+				end if
+				object.priority = PRIORITY_BOUNDS
+			end if
+		end if
+		break
+
+	case SEESAW_NO_ORB
+		break
+
+	end switch
+
+	object.tiltTimerL = 0
+	object.tiltTimerM = 0
+	object.tiltTimerR = 0
+	object.stood = false
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp7 = object.prevTilt
+		CallFunction(SeeSaw_SetupHitbox)
+		if temp2 != 0
+			temp3 = temp2
+			FlipSign(temp3)
+			if player[currentPlayer].yvel > object.launchVelocity
+				temp4 = player[currentPlayer].yvel
+				temp4 += 0x7000
+			else
+				temp4 = object.launchVelocity
+			end if
+
+			BoxCollisionTest(C_PLATFORM, object.entityPos, temp3, temp0, temp2, temp1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+				if object.tilt != object.prevTilt
+					temp6 = temp0
+					temp7 = object.tilt
+					CallFunction(SeeSaw_SetupHitbox)
+					temp0 -= temp6
+					temp0 <<= 16
+					player[currentPlayer].ypos += temp0
+				end if
+
+				player[currentPlayer].ypos += 0x20000
+				if object.orbSide == 0
+					if object.state == SEESAW_ORB_IDLE
+						object.state = SEESAW_NONE
+					else
+						if object.state == SEESAW_ORB_LAUNCHED
+							temp4 = object.launchVelocity
+						end if
+					end if
+
+					temp0 = player[currentPlayer].xpos
+					temp0 -= object.xpos
+					Abs(temp0)
+					if temp0 < 0x80000
+						object.tiltTimerM++
+					else
+						if player[currentPlayer].xpos < object.xpos
+							object.tiltTimerL++
+							if object.targetTilt != SEESAW_TILT_L
+								object.launchVelocity = temp4
+							end if
+						else
+							object.tiltTimerR++
+							if object.targetTilt != SEESAW_TILT_R
+								object.launchVelocity = temp4
+							end if
+						end if
+					end if
+				else
+					temp0 = player[currentPlayer].xpos
+					temp0 -= object.xpos
+					Abs(temp0)
+					temp4 = object.yvel
+					if temp0 >= 0x80000
+						if player[currentPlayer].xpos < object.xpos
+							if object.orbSide == 1
+								temp4 = 0
+							end if
+						else
+							if object.orbSide == 2
+								temp4 = 0
+							end if
+						end if
+					end if
+
+					if temp4 != 0
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						player[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].speed = player[currentPlayer].xvel
+						if object.state == SEESAW_NO_ORB
+							player[currentPlayer].animation = ANI_JUMPING
+						else
+							if object.orbTimer != 0
+								player[currentPlayer].animation = ANI_JUMPING
+							else
+								player[currentPlayer].animation = ANI_BOUNCING
+							end if
+						end if
+						player[currentPlayer].timer = 0
+						PlaySfx(SfxName[Spring], false)
+						player[currentPlayer].yvel = temp4
+						FlipSign(player[currentPlayer].yvel)
+					end if
+				end if
+			end if
+		end if
+	next
+
+	object.orbSide = 0
+	object.prevTilt = object.tilt
+
+	object.frame = object.tilt
+	object.frame &= 1
+	object.direction = object.tilt
+	object.direction >>= 1
+	object.direction ^= FLIP_X
+
+	if object.orbTimer != 0
+		object.animationTimer--
+		if object.animationTimer <= 0
+			object.orbFrame ^= 1
+			if object.orbTimer > 120
+				object.animationTimer = 10
+			else
+				if object.orbTimer > 60
+					object.animationTimer = 5
+				else
+					object.animationTimer = 2
+				end if
+			end if
+		end if
+
+		if object.state == SEESAW_ORB_IDLE
+			object.orbTimer--
+			if object.orbTimer == 0
+				CreateTempObject(TypeName[Smoke Puff], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+
+				// ???
+				// Seems like they just dummied out SLZ's orb explosion rather than actually removing it
+				// The [Bomb Shrapnel] object type doesn't exist in HTZ, so this effectively creates a bunch of useless Blank Objects
+				
+				CreateTempObject(TypeName[Bomb Shrapnel], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+				object[tempObjectPos].xvel = -0x10000
+				object[tempObjectPos].yvel = -0x34000
+
+				CreateTempObject(TypeName[Bomb Shrapnel], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+				object[tempObjectPos].xvel = -0xA000
+				object[tempObjectPos].yvel = -0x24000
+
+				CreateTempObject(TypeName[Bomb Shrapnel], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+				object[tempObjectPos].xvel =  0x10000
+				object[tempObjectPos].yvel = -0x34000
+
+				CreateTempObject(TypeName[Bomb Shrapnel], 0, object.orbTargetPos.x, object.orbTargetPos.y)
+				object[tempObjectPos].xvel =  0xA000
+				object[tempObjectPos].yvel = -0x24000
+
+				PlaySfx(SfxName[Explosion], false)
+				object.state = SEESAW_NO_ORB
+			end if
+		end if
+	else
+		object.animationTimer++
+		object.animationTimer &= 7
+		object.orbFrame = object.animationTimer
+		object.orbFrame >>= 2
+		object.orbFrame += 2
+	end if
+
+	if object.state < SEESAW_NO_ORB
+		temp0 = object.xpos
+		temp1 = object.ypos
+
+		object.xpos = object.orbTargetPos.x
+		object.ypos = object.orbTargetPos.y
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -7, -7, 7, 7, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+		next
+
+		object.xpos = temp0
+		object.ypos = temp1
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < SEESAW_NO_ORB
+		temp0 = object.direction
+		if player[0].xpos < object.orbTargetPos.x
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+		
+		DrawSpriteFX(object.orbFrame, FX_FLIP, object.orbTargetPos.x, object.orbTargetPos.y)
+		object.direction = temp0
+	end if
+
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HTZ/Objects.gif")
+	SpriteFrame(-44, -44, 91, 56, 164, 1)	// SeeSaw (Tilted) - #0
+	SpriteFrame(-48, -24, 96, 36, 159, 58)	// SeeSaw (Flat) - #1
+	SpriteFrame(-8, -8, 16, 16, 91, 222)	// Orb (Red) - #2
+	SpriteFrame(-8, -8, 16, 16, 91, 239)	// Orb (Yellow) - #3
+
+	foreach (TypeName[SeeSaw], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].orbTargetPos.x = object[arrayPos0].xpos
+		object[arrayPos0].orbTargetPos.x += 0x280000
+		object[arrayPos0].orbTargetPos.y = object[arrayPos0].ypos
+		object[arrayPos0].orbTargetPos.y -= 8 // Just 8, that's it? This is supposed to be a 16-shifted position...
+		object[arrayPos0].orbFrame = 2
+		object[arrayPos0].tilt = SEESAW_TILT_R
+		object[arrayPos0].targetTilt = SEESAW_TILT_R
+		if object[arrayPos0].propertyValue != 0
+			object[arrayPos0].state = SEESAW_NO_ORB
+		end if
+	next
+
+	SetTableValue(TypeName[SeeSaw], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SeeSaw_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SeeSaw_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // orbType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // orbType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if object.propertyValue == 0
+		temp0 = object.xpos
+		temp0 += 0x280000
+		temp1 = object.ypos
+		temp1 -= 0x80000
+		DrawSpriteXY(2, temp0, temp1)
+	end if
+	
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("HTZ/Objects.gif")
+	SpriteFrame(-44, -44, 91, 56, 164, 1)
+	SpriteFrame(-48, -24, 96, 36, 159, 58)
+	SpriteFrame(-8, -8, 16, 16, 91, 222)
+	SpriteFrame(-8, -8, 16, 16, 91, 239)
+
+	AddEditorVariable("orbType")
+	SetActiveVariable("orbType")
+	AddEnumVariable("Has Orb", 0)
+	AddEnumVariable("No Orb", 255)
+end event

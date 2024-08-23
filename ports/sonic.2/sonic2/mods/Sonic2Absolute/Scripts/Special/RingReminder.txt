@@ -1,0 +1,330 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Rings Reminder Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+
+
+reserve function DrawYellow
+reserve function DrawBlue
+
+//-------Aliases-------//
+private alias 14 : TYPE_RINGSREMINDER
+
+private alias object.value1 : drawpoint.x
+private alias object.value2 : drawpoint.y
+private alias object.value3 : pause.fadeout
+private alias object.value4 : resume.time
+
+// Static Values
+
+// Tables
+
+
+event ObjectMain
+	switch object.propertyValue
+		case 10 //Pause
+			switch object.state
+				case 0 //just pause
+					if inputPress.start == 1
+						if stage.pauseEnabled == 1
+							object.drawOrder = 6
+							PauseMusic()
+							object.state = 1
+							PlaySfx(SfxName[Score Add], 0)
+							stage.state = 3
+						end if
+					end if
+					break
+				case 1 //pause yellow in
+					drawpoint.y += 4
+					if drawpoint.y > 30
+						drawpoint.y = 30
+						object.state++
+					end if
+					break
+				case 2 //pause blue in		
+					drawpoint.x += 12
+					if drawpoint.x > 114
+						drawpoint.x = 114
+						object.state++
+					end if
+					break
+				case 3 //highlighted resume				
+					temp0 = inputPress.down
+					temp0 |= inputPress.up
+					if temp0 == 1
+						PlaySfx(SfxName[Score Add], 0)
+						object.state = 6
+					end if
+					if inputPress.buttonB == 1
+						object.state = 7
+					else
+						temp1 = inputPress.start
+						temp1 |= inputPress.buttonA
+						if temp1 == 1
+							PlaySfx(SfxName[Star Post], 0)
+							object.state += 4
+						end if
+					end if
+					break
+				case 6 // highlighted exit					
+					temp0 = inputPress.down
+					temp0 |= inputPress.up
+					if temp0 == 1
+						PlaySfx(SfxName[Score Add], 0)
+						object.state = 3
+					end if
+					
+					if inputPress.buttonB == 1
+						object.state = 7
+					else
+						temp1 = inputPress.start
+						temp1 |= inputPress.buttonA
+						if temp1 == 1
+							PlaySfx(SfxName[Star Post], 0)
+							object.state += 4
+						end if
+					end if
+					break
+				case 7 // resuming
+					drawpoint.x -= 12
+					if drawpoint.x <= 0
+						drawpoint.x = 0
+						drawpoint.y -= 4
+						if drawpoint.y <= 0
+							drawpoint.y = 0
+						end if
+					end if
+					resume.time++
+					if resume.time >= 20				
+						ResumeMusic()
+						stage.state = STAGE_RUNNING
+						object.state = 0
+						resume.time = 0
+					end if
+					break
+				case 10 // exiting
+					if pause.fadeout < 320
+						pause.fadeout += 8
+					else
+						StopMusic()
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 6							
+						switch options.gameMode
+							case 3 //Handle score save and back to Arcade menu
+								saveRAM[630] = player.score
+								temp0 = stage.playerListPos
+								temp0++
+								saveRAM[640] = temp0
+								saveRAM[650] = specialStage.nextZone
+								stage.activeList = PRESENTATION_STAGE
+								stage.listPos = 8
+								break
+							default
+								player.score = 0
+								break
+						end switch 				
+						options.attractMode = 0
+						player.lives = 3
+						player.continues = 0
+						player.scoreBonus = 0xC350
+						starPostID = 0
+						specialStage.listPos = 0
+						specialStage.emeralds = 0
+						specialStage.nextZone = 0	
+						
+						//Unload saved stage data
+						arrayPos0 = 32
+						arrayPos1 = 7168
+						
+						while arrayPos0 < 1056
+							saveRAM[arrayPos1] = 0
+							arrayPos0++
+							arrayPos1++
+						loop	
+							
+						recRings = 0
+						recShield = 0
+						recRingBonus = 0
+						recGoggles = 0
+						
+						WriteSaveRAM()
+						LoadStage()
+					end if
+					break
+			end switch
+			break
+		default
+			foreach (TypeName[Player Object], currentPlayer, ACTIVE_ENTITIES)
+				temp1 = object.value3
+				temp1 -= 0x20000
+				temp2 = object.value3
+				temp2 += 0x20000
+				if object[currentPlayer].value14 > temp1
+					if object[currentPlayer].value14 < temp2
+						ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+						ResetObjectEntity(11, TypeName[Text Message], 3, 0, 0)
+						object[11].priority = PRIORITY_ACTIVE
+						object[11].drawOrder = 5
+					end if
+				end if
+			next
+			break
+	end switch
+end event
+
+function DrawYellow
+	temp0 = 0
+	temp1 = screen.ysize
+	temp1 -= drawpoint.y
+	while temp0 < screen.xsize
+		DrawSpriteScreenXY(6, temp0, temp1)
+		temp0 += 32				
+	loop
+	temp1 += 16
+	DrawSpriteScreenXY(7, 16, temp1)
+	temp1 -= 3
+	
+	temp2 = 0
+	while temp2 < 7
+		temp3 = temp2
+		temp3 <<= 4
+		temp3 += screen.xsize
+		temp3 -= 120
+		temp3 -= 106
+		DrawSpriteScreenXY(22, temp3, temp1)
+		GetBit(temp4, specialStage.emeralds, temp2)
+		if temp4 == 1
+			temp4 = 23
+			temp4 += temp2
+			DrawSpriteScreenXY(temp4, temp3, temp1)
+		end if
+		temp2++
+	loop
+end function
+
+function DrawBlue
+	temp0 = screen.xsize
+	temp0 -= drawpoint.x
+	DrawSpriteScreenXY(5, temp0, 0)
+	temp0 += 8
+	if stage.playerListPos == 2
+		DrawRect(temp0, 0, 106, screen.ysize, 0, 145, 0, 255)
+	else
+		DrawRect(temp0, 0, 106, screen.ysize, color1, color2, color6, 255)
+	end if
+	DrawRect(temp0, 0, 106, 42, color7, 0, 0, 255)
+	DrawRect(temp0, 43, 106, 2, color7, 0, 0, 255)
+	
+	DrawSpriteScreenXY(0, temp0, 13)
+	DrawSpriteScreenXY(1, temp0, 71)
+	DrawSpriteScreenXY(4, temp0, 103)
+end function
+
+event ObjectDraw
+	if object.propertyValue == 10
+		SetActivePalette(6, 0, screen.ysize)
+		
+		switch object.state
+			case 0 //just pause
+				break
+			case 1 //pause yellow in
+				CallFunction(DrawYellow)
+				break
+			case 2 //pause blue in				
+				CallFunction(DrawYellow)
+				CallFunction(DrawBlue)
+				break
+			case 3 //highlighted resume	
+				CallFunction(DrawYellow)
+				CallFunction(DrawBlue)
+				DrawSpriteScreenXY(8, temp0, 71)
+				break
+			case 6 // highlighted exit	
+				CallFunction(DrawYellow)
+				CallFunction(DrawBlue)
+				DrawSpriteScreenXY(11, temp0, 103)
+				break
+			case 7 // resuming	
+				CallFunction(DrawYellow)
+				CallFunction(DrawBlue)
+				temp2 = resume.time
+				temp2 /= 3
+				temp2 %= 2
+				if temp2 == 1
+					DrawSpriteScreenXY(8, temp0, 71)
+				end if
+				break
+			case 10 // exiting	
+				CallFunction(DrawYellow)
+				CallFunction(DrawBlue)
+				DrawSpriteScreenXY(11, temp0, 103)
+				break	
+		end switch
+		DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, pause.fadeout)
+		
+		//DrawNumbers(12, screen.xcenter, screen.ycenter, object.state, 6, 8, 0)
+		SetActivePalette(0, 0, screen.ysize)
+	end if
+end event
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Pause.gif")
+	LoadPalette("Pause.act", 6, 0, 0, 256)
+	if stage.playerListPos == 2
+		SetPaletteEntry(6, 6, 0x009100)
+	end if	
+	
+	ResetObjectEntity(12, TypeName[Rings Reminder], 10, 0, 0)
+	object[12].priority = PRIORITY_ACTIVE_PAUSED
+	
+	SpriteFrame(14, 0, 78, 16, 1, 191) //0 Pause Header
+	
+	SpriteFrame(27, 0, 51, 11, 1, 208) //1 Resume
+	SpriteFrame(24, 0, 57, 11, 1, 220) //2 Restart
+	SpriteFrame(12, 0, 81, 11, 1, 232) //3 Checkpoint
+	SpriteFrame(38, 0, 30, 11, 1, 244) //4 Exit	
+	SpriteFrame(0, 0, 8, 256, 248, 0) //5 Side Zigzag
+	
+	SpriteFrame(0, 0, 32, 30, 215, 226) //6 Bottom Zigzag
+	SpriteFrame(0, 0, 140, 5, 37, 73) //7 Sonky Hog
+	
+	//Highlighted	
+	SpriteFrame(27, 0, 51, 11, 59, 220) //8 Resume
+	SpriteFrame(24, 0, 57, 11, 53, 208) //9 Restart
+	SpriteFrame(12, 0, 81, 11, 32, 244) //10 Checkpoint
+	SpriteFrame(38, 0, 30, 11, 83, 232) //11 Exit	
+	
+	SpriteFrame(0, 0, 8, 11, 1, 50) //12
+	SpriteFrame(0, 0, 8, 11, 10, 50)
+	SpriteFrame(0, 0, 8, 11, 19, 50)
+	SpriteFrame(0, 0, 8, 11, 28, 50)
+	SpriteFrame(0, 0, 8, 11, 1, 62)
+	SpriteFrame(0, 0, 8, 11, 10, 62)
+	SpriteFrame(0, 0, 8, 11, 19, 62)
+	SpriteFrame(0, 0, 8, 11, 28, 62)
+	SpriteFrame(0, 0, 8, 11, 1, 74)
+	SpriteFrame(0, 0, 8, 11, 10, 74)
+	
+	//Emeralds
+	SpriteFrame(-3, -3, 14, 16, 84, 22) //22 Socket
+	SpriteFrame(0, 0, 8, 10, 99, 22)  //23 Emerald
+	SpriteFrame(0, 0, 8, 10, 108, 22) //24 Emerald
+	SpriteFrame(0, 0, 8, 10, 117, 22) //25 Emerald
+	SpriteFrame(0, 0, 8, 10, 126, 22) //26 Emerald
+	SpriteFrame(0, 0, 8, 10, 135, 22) //27 Emerald
+	SpriteFrame(0, 0, 8, 10, 144, 22) //28 Emerald
+	SpriteFrame(0, 0, 8, 10, 153, 22) //29 Emerald
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

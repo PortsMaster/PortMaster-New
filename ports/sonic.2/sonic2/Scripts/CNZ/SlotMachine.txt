@@ -1,0 +1,817 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Slot Machine Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.spinSpeedL
+private alias object.value2  : object.spinSpeedM
+private alias object.value3  : object.spinSpeedR
+private alias object.value4  : object.prizeTablePosL
+private alias object.value5  : object.prizeTablePosM
+private alias object.value6  : object.prizeTablePosR
+private alias object.value7  : object.targetSpinSpeedL
+private alias object.value8  : object.targetSpinSpeedM
+private alias object.value9  : object.targetSpinSpeedR
+private alias object.value10 : object.activeSlot
+private alias object.value11 : object.slotSpinTimer
+private alias object.value12 : object.rewardRingCount
+
+// States
+private alias 0 : SLOTMACHINE_IDLE
+private alias 1 : SLOTMACHINE_READY
+private alias 2 : SLOTMACHINE_HOLD
+private alias 3 : SLOTMACHINE_UNUSED
+private alias 4 : SLOTMACHINE_REWARD
+private alias 5 : SLOTMACHINE_WAIT
+
+// Active Slots
+private alias 0 : SLOTMACHINE_SLOT_L
+private alias 1 : SLOTMACHINE_SLOT_M
+private alias 2 : SLOTMACHINE_SLOT_R
+
+// Slot Spin Timer Aliases
+private alias 0 : SLOTMACHINE_SLOTTIMER_SPIN // Spinning, attempting to stop
+private alias 3 : SLOTMACHINE_SLOTTIMER_SLOW // Stopping in progress, Bounce it back for a few frames
+private alias 6 : SLOTMACHINE_SLOTTIMER_STOP // Stop Slot Movement all together
+private alias 7 : SLOTMACHINE_SLOTTIMER_CALC // Calculating Rewards (Only happens on slot R)
+
+// SlotDisplay FrameIDs
+private alias 0 : SLOTPRIZE_SONIC
+private alias 1 : SLOTPRIZE_TAILS
+private alias 2 : SLOTPRIZE_RING
+private alias 3 : SLOTPRIZE_BAR
+private alias 4 : SLOTPRIZE_JACKPOT
+private alias 5 : SLOTPRIZE_EGGMAN
+private alias 6 : SLOTPRIZE_KNUX  // Only Sonic OR Knux can appear at any one time
+private alias 7 : SLOTPRIZE_SUPER // (Unused)
+
+// SlotPrize Aliases
+private alias object.value0 : slotPrize.originPos.x
+private alias object.value1 : slotPrize.originPos.y
+private alias object.value2 : slotPrize.timer
+
+// SlotPrize States
+private alias 0 : SLOTPRIZE_WINNER
+private alias 1 : SLOTPRIZE_LOSER
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
+private alias object.value17 : debugMode.currentSelection
+
+// Global Variable ID Aliases
+private alias 22 : GLOBAL_PLAYERSCORE
+
+// Achievement Aliases
+private alias 4 : ACHIEVEMENT_HITITBIG
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SlotMachine_PlayRingSfx
+reserve function SlotMachine_DebugDraw
+reserve function SlotMachine_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+public value SlotMachine_slotPrizeL 	= 0
+public value SlotMachine_slotPrizeM 	= 0
+public value SlotMachine_slotPrizeR 	= 0
+private value SlotMachine_startDebugID 	= 0
+
+
+// ========================
+// Tables
+// ========================
+
+public table SlotMachine_prizeLTable
+	3 // SLOTPRIZE_BAR
+	5 // SLOTPRIZE_EGGMAN
+	2 // SLOTPRIZE_RING
+	1 // SLOTPRIZE_TAILS
+	0 // SLOTPRIZE_SONIC
+	4 // SLOTPRIZE_JACKPOT
+	1 // SLOTPRIZE_TAILS
+	2 // SLOTPRIZE_RING
+end table
+
+public table SlotMachine_prizeMTable
+	3 // SLOTPRIZE_BAR
+	5 // SLOTPRIZE_EGGMAN
+	2 // SLOTPRIZE_RING
+	1 // SLOTPRIZE_TAILS
+	0 // SLOTPRIZE_SONIC
+	4 // SLOTPRIZE_JACKPOT
+	5 // SLOTPRIZE_EGGMAN
+	0 // SLOTPRIZE_SONIC
+end table
+
+public table SlotMachine_prizeRTable
+	3 // SLOTPRIZE_BAR
+	5 // SLOTPRIZE_EGGMAN
+	2 // SLOTPRIZE_RING
+	1 // SLOTPRIZE_TAILS
+	0 // SLOTPRIZE_SONIC
+	4 // SLOTPRIZE_JACKPOT
+	1 // SLOTPRIZE_TAILS
+	2 // SLOTPRIZE_RING
+end table
+
+public table SlotMachine_slotRewardTable
+	30  // SLOTPRIZE_SONIC
+	25  // SLOTPRIZE_TAILS
+	10  // SLOTPRIZE_RING
+	20  // SLOTPRIZE_BAR
+	150 // SLOTPRIZE_JACKPOT
+	-1  // SLOTPRIZE_EGGMAN
+end table
+
+// (note for the above table - Knuckles is Sonic, and Amy is ring)
+
+private table SlotMachine_randomizeTable
+	8, 0, 0, 0, 18, 4, 4, 4, 18, 3, 3, 3, 36, 2, 2, 2
+	30, 5, 5, 5, 30, 1, 1, 1, 0xFF, 15, 15, 15
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SlotMachine_PlayRingSfx
+	if ringPan == 0
+		PlaySfx(SfxName[Ring L], false)
+		SetSfxAttributes(SfxName[Ring L], -1, -100)
+		ringPan = 1
+	else
+		PlaySfx(SfxName[Ring R], false)
+		SetSfxAttributes(SfxName[Ring R], -1, 100)
+		ringPan = 0
+	end if
+end function
+
+
+private function SlotMachine_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SlotMachine_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= SlotMachine_startDebugID
+	CreateTempObject(TypeName[Slot Machine], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SLOTMACHINE_IDLE
+		object.frame = 0
+		break
+		
+	case SLOTMACHINE_READY
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+
+		temp0 = object.timer
+		temp0 &= 0xF
+		if temp0 == 0xF
+			CreateTempObject(TypeName[Object Score], 0, object.xpos, object.ypos)
+			object[tempObjectPos].drawOrder = 4
+			PlaySfx(SfxName[Slot Machine], false)
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if player[currentPlayer].state == Player_State_Static
+					BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						// global variable "array" (yes, this is actually how its done)
+						arrayPos0 = GLOBAL_PLAYERSCORE
+#platform: USE_DECOMP
+						arrayPos0 = VarName[player.score]
+#endplatform
+						if player[currentPlayer].isSidekick == false
+							arrayPos0 += currentPlayer
+						end if
+						global[arrayPos0] += 100
+					end if
+				end if
+			next
+		end if
+
+		object.timer++
+		if object.timer == 128
+			object.timer = 0
+			object.state = SLOTMACHINE_WAIT
+			object.priority = PRIORITY_BOUNDS
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if player[currentPlayer].state == Player_State_Static
+					BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						player[currentPlayer].gravity = GRAVITY_AIR
+					end if
+				end if
+			next
+		end if
+		break
+
+	case SLOTMACHINE_HOLD
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+
+		temp0 = oscillation
+		temp0 &= 0xF
+		if temp0 == 0xF
+			PlaySfx(SfxName[Slot Machine], false)
+		end if
+
+		temp0 &= 7
+		if temp0 == 0
+			if object.spinSpeedL < object.targetSpinSpeedL
+				object.spinSpeedL++
+			end if
+
+			if object.spinSpeedM < object.targetSpinSpeedM
+				object.spinSpeedM++
+			end if
+
+			if object.spinSpeedR < object.targetSpinSpeedR
+				object.spinSpeedR++
+			end if
+		end if
+
+		SlotMachine_slotPrizeL += object.spinSpeedL
+		SlotMachine_slotPrizeL &= 0xFF
+		SlotMachine_slotPrizeM += object.spinSpeedM
+		SlotMachine_slotPrizeM &= 0xFF
+		SlotMachine_slotPrizeR += object.spinSpeedR
+		SlotMachine_slotPrizeR &= 0xFF
+
+		if object.timer != 0
+			object.timer--
+		else
+			if object.slotSpinTimer != 0
+				object.slotSpinTimer++
+			end if
+
+			switch object.activeSlot
+			case SLOTMACHINE_SLOT_L
+				switch object.slotSpinTimer
+				case SLOTMACHINE_SLOTTIMER_SPIN
+					temp0 = SlotMachine_slotPrizeL
+					temp0 >>= 5
+					if temp0 == object.prizeTablePosL
+						temp0 = SlotMachine_slotPrizeL
+						temp0 &= 0x1F
+						if temp0 < object.spinSpeedL
+							object.spinSpeedL 		= 2
+							object.targetSpinSpeedL = 2
+							PlaySfx(SfxName[Catch], false)
+							object.slotSpinTimer++
+						end if
+					end if
+					break
+
+				case SLOTMACHINE_SLOTTIMER_SLOW
+					object.spinSpeedL 		= -2
+					object.targetSpinSpeedL = -2
+					break
+
+				case SLOTMACHINE_SLOTTIMER_STOP
+					object.spinSpeedL 		= 0
+					object.targetSpinSpeedL = 0
+					object.slotSpinTimer 	= 0
+					object.activeSlot++
+					break
+				end switch
+				break
+
+			case SLOTMACHINE_SLOT_M
+				switch object.slotSpinTimer
+				case SLOTMACHINE_SLOTTIMER_SPIN
+					GetBit(temp0, SlotMachine_slotPrizeL, 4)
+					if temp0 == true
+						SlotMachine_slotPrizeL += 0x20
+						SlotMachine_slotPrizeL &= 0xFF
+					end if
+					SlotMachine_slotPrizeL &= 0xE0
+
+					temp0 = SlotMachine_slotPrizeM
+					temp0 >>= 5
+					if temp0 == object.prizeTablePosM
+						temp0 = SlotMachine_slotPrizeM
+						temp0 &= 0x1F
+						if temp0 < object.spinSpeedM
+							object.spinSpeedM 		= 2
+							object.targetSpinSpeedM = 2
+							PlaySfx(SfxName[Catch], false)
+							object.slotSpinTimer++
+						end if
+					end if
+					break
+
+				case SLOTMACHINE_SLOTTIMER_SLOW
+					object.spinSpeedM 		= -2
+					object.targetSpinSpeedM = -2
+					break
+
+				case SLOTMACHINE_SLOTTIMER_STOP
+					object.spinSpeedM 		= 0
+					object.targetSpinSpeedM = 0
+					object.slotSpinTimer 	= 0
+					object.activeSlot++
+					break
+				end switch
+				break
+				
+			case SLOTMACHINE_SLOT_R
+				switch object.slotSpinTimer
+				case SLOTMACHINE_SLOTTIMER_SPIN
+					GetBit(temp0, SlotMachine_slotPrizeM, 4)
+					if temp0 == true
+						SlotMachine_slotPrizeM += 0x20
+						SlotMachine_slotPrizeM &= 0xFF
+					end if
+					SlotMachine_slotPrizeM &= 0xE0
+
+					temp0 = SlotMachine_slotPrizeR
+					temp0 >>= 5
+					if temp0 == object.prizeTablePosR
+						temp0 = SlotMachine_slotPrizeR
+						temp0 &= 0x1F
+						if temp0 < object.spinSpeedR
+							object.spinSpeedR 		= 2
+							object.targetSpinSpeedR = 2
+							PlaySfx(SfxName[Catch], false)
+							object.slotSpinTimer++
+						end if
+					end if
+					break
+
+				case SLOTMACHINE_SLOTTIMER_SLOW
+					object.spinSpeedR 		= -2
+					object.targetSpinSpeedR = -2
+					break
+
+				case SLOTMACHINE_SLOTTIMER_STOP
+					object.spinSpeedR 		= 0
+					object.targetSpinSpeedR = 0
+					break
+
+				case SLOTMACHINE_SLOTTIMER_CALC
+					GetBit(temp0, SlotMachine_slotPrizeR, 4)
+					if temp0 == true
+						SlotMachine_slotPrizeR += 0x20
+						SlotMachine_slotPrizeR &= 0xFF
+					end if
+					SlotMachine_slotPrizeR &= 0xE0
+
+					// All Slots Stopped, its prize time!
+					object.slotSpinTimer	= 0
+					object.activeSlot		= SLOTMACHINE_SLOT_L
+					object.state 			= SLOTMACHINE_REWARD
+
+					GetTableValue(temp1, object.prizeTablePosL, SlotMachine_prizeLTable)	// temp1 == prizeL
+					GetTableValue(temp2, object.prizeTablePosM, SlotMachine_prizeMTable)	// temp2 == prizeM
+					GetTableValue(temp3, object.prizeTablePosR, SlotMachine_prizeRTable)	// temp3 == prizeR
+
+					// 3 Jackpots, You've hit it big!
+#platform: USE_STANDALONE
+					if stage.debugMode == false
+						if temp1 == temp2
+							if temp2 == temp3
+								if temp1 == SLOTPRIZE_JACKPOT
+									// Grant the "Hit it Big" Achievement
+									CallNativeFunction2(SetAchievement, ACHIEVEMENT_HITITBIG, 100)
+								end if
+							end if
+						end if
+					end if
+#endplatform
+#platform: USE_ORIGINS
+					// origins removed the debug mode check LOL
+					if temp1 == temp2
+						if temp2 == temp3
+							if temp1 == SLOTPRIZE_JACKPOT
+								CallNativeFunction4(NotifyCallback, NOTIFY_STATS_PARAM_1, 1, 0, 0)
+							end if
+						end if
+					end if
+#endplatform
+
+					object.rewardRingCount = 0
+					if temp1 == temp2 // PrizeL == PrizeM
+						if temp2 == temp3 // PrizeM == PrizeR
+							GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
+						else
+							if temp1 == SLOTPRIZE_JACKPOT	 // PrizeM != PrizeR && PrizeL == Jackpot
+								GetTableValue(object.rewardRingCount, temp3, SlotMachine_slotRewardTable)
+								object.rewardRingCount <<= 2
+							else
+								if temp3 == SLOTPRIZE_JACKPOT	 // PrizeM != PrizeR && PrizeR == Jackpot
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
+									object.rewardRingCount <<= 1
+								end if
+							end if
+						end if
+					else
+						if temp1 == temp3 // PrizeL == PrizeR
+							if temp1 == SLOTPRIZE_JACKPOT	 // PrizeL == PrizeR && PrizeL != PrizeM && PrizeL == Jackpot
+								GetTableValue(object.rewardRingCount, temp2, SlotMachine_slotRewardTable)
+								object.rewardRingCount <<= 2
+							else
+								if temp2 == SLOTPRIZE_JACKPOT	 // PrizeL == PrizeR && PrizeL != PrizeM && PrizeR == Jackpot
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
+									object.rewardRingCount <<= 1
+								end if
+							end if
+						else
+							if temp2 == temp3 // PrizeM == PrizeR
+								if temp2 == SLOTPRIZE_JACKPOT	 // PrizeM == PrizeR && PrizeL != PrizeM && PrizeL != PrizeR && PrizeM == Jackpot
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
+									object.rewardRingCount <<= 2
+								else
+									if temp1 == SLOTPRIZE_JACKPOT	 // PrizeM == PrizeR && PrizeL != PrizeM && PrizeL != PrizeR && PrizeL == Jackpot
+										GetTableValue(object.rewardRingCount, temp2, SlotMachine_slotRewardTable)
+										object.rewardRingCount <<= 1
+									end if
+								end if
+							end if
+						end if
+					end if
+
+					// if no jackpot at all, but we have a BAR...
+					if object.rewardRingCount == 0
+						if temp1 == SLOTPRIZE_BAR
+							object.rewardRingCount += 2
+						end if
+
+						if temp2 == SLOTPRIZE_BAR
+							object.rewardRingCount += 2
+						end if
+
+						if temp3 == SLOTPRIZE_BAR
+							object.rewardRingCount += 2
+						end if
+					end if
+
+					// Eggman...
+					if object.rewardRingCount < 0
+						object.rewardRingCount = -100
+					end if
+
+
+					// No Rings...?
+					if object.rewardRingCount == 0
+						object.timer = 1
+					else
+						if object.rewardRingCount > 0 // Winner!!!
+							object.timer = 26
+						else	// Loser...
+							object.timer = 30
+						end if
+					end if
+					break
+				end switch
+				break
+			end switch
+		end if
+		break
+
+	case SLOTMACHINE_REWARD
+		object.frame = object.animationTimer
+		object.frame >>= 1
+		object.animationTimer++
+		object.animationTimer &= 3
+		if object.rewardRingCount == 0
+			object.timer--
+			if object.timer <= 0
+				object.angle = 0
+				object.priority = PRIORITY_BOUNDS
+				object.state = SLOTMACHINE_WAIT
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					if player[currentPlayer].state == Player_State_Static
+						BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+						if checkResult == true
+#platform: USE_STANDALONE
+							player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+							player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+							player[currentPlayer].gravity = GRAVITY_AIR
+						end if
+					end if
+				next
+			end if
+		else
+			GetBit(temp0, oscillation, 0)
+			if temp0 == false
+				Cos256(temp0, object.angle)
+				temp0 <<= 15
+				temp0 += object.xpos
+
+				Sin256(temp1, object.angle)
+				temp1 <<= 15
+				temp1 += object.ypos
+
+				CreateTempObject(TypeName[Slot Prize], 0, temp0, temp1)
+				slotPrize[tempObjectPos].originPos.x 	= object.xpos
+				slotPrize[tempObjectPos].originPos.y 	= object.ypos
+				object[tempObjectPos].inkEffect 		= INK_ALPHA
+				if object.rewardRingCount > 0
+					slotPrize[tempObjectPos].timer = 26
+					object.angle += 0x89
+					object.rewardRingCount--
+				else
+					slotPrize[tempObjectPos].timer = 30
+					object[tempObjectPos].state = SLOTPRIZE_LOSER
+					object[tempObjectPos].frame = 8
+					object.angle += 0x90
+					object.rewardRingCount++
+				end if
+				object.angle &= 0xFF
+			end if
+		end if
+		break
+
+	case SLOTMACHINE_WAIT
+		object.frame = 0
+		object.timer++
+		if object.timer == 30
+			object.timer = 0
+			object.state  = SLOTMACHINE_IDLE
+		end if
+		break
+		
+	end switch
+
+	if object.state == SLOTMACHINE_WAIT
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -20, -17, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			BoxCollisionTest(C_SOLID, object.entityPos, 17, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+	else
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -20, 24, 20, currentPlayer, C_BOX, -12, C_BOX, 12)
+			switch checkResult
+			case COL_TOP
+			case COL_BOTTOM
+				if object.state == SLOTMACHINE_IDLE
+					object.priority = PRIORITY_ACTIVE
+					if object.propertyValue == 0
+						object.state = SLOTMACHINE_READY
+					else
+						object.state = SLOTMACHINE_HOLD
+						if options.vsMode == false
+							Rand(object.targetSpinSpeedL, 4)
+							object.targetSpinSpeedL += 2
+							Rand(object.targetSpinSpeedM, 4)
+							object.targetSpinSpeedM += 2
+							Rand(object.targetSpinSpeedR, 4)
+							object.targetSpinSpeedR += 2
+							Rand(object.timer, 16)
+						else
+							vs.randomValue *= 1103515245
+							vs.randomValue += 12345
+							vs.randomValue &= 0x7FFFFFFF
+							object.targetSpinSpeedL = vs.randomValue
+							object.targetSpinSpeedL >>= 16
+							object.targetSpinSpeedL &= 3
+							object.targetSpinSpeedL += 2
+
+							vs.randomValue *= 1103515245
+							vs.randomValue += 12345
+							vs.randomValue &= 0x7FFFFFFF
+							object.targetSpinSpeedM = vs.randomValue
+							object.targetSpinSpeedM >>= 16
+							object.targetSpinSpeedM &= 3
+							object.targetSpinSpeedM += 2
+
+							vs.randomValue *= 1103515245
+							vs.randomValue += 12345
+							vs.randomValue &= 0x7FFFFFFF
+							object.targetSpinSpeedR = vs.randomValue
+							object.targetSpinSpeedR >>= 16
+							object.targetSpinSpeedR &= 3
+							object.targetSpinSpeedR += 2
+
+							vs.randomValue *= 1103515245
+							vs.randomValue += 12345
+							vs.randomValue &= 0x7FFFFFFF
+							object.timer = vs.randomValue
+							object.timer >>= 16
+							object.timer &= 15
+						end if
+						object.timer += 14
+						object.timer *= 3
+
+						temp0 = 0
+						temp1 = 0
+						temp2 = oscillation
+						temp2 &= 0xFF
+						while temp1 != 0xFF
+							GetTableValue(temp1, temp0, SlotMachine_randomizeTable)
+							temp2 -= temp1
+							if temp2 >= 0
+								temp0 += 4
+							else
+								temp1 = 0xFF
+							end if
+						loop
+
+						GetTableValue(temp1, temp0, SlotMachine_randomizeTable)
+						if temp1 != 0xFF
+							temp0++
+							GetTableValue(object.prizeTablePosL, temp0, SlotMachine_randomizeTable)
+
+							temp0++
+							GetTableValue(object.prizeTablePosM, temp0, SlotMachine_randomizeTable)
+
+							temp0++
+							GetTableValue(object.prizeTablePosR, temp0, SlotMachine_randomizeTable)
+						else
+							if options.vsMode == false
+								Rand(object.prizeTablePosL, 8)
+								Rand(object.prizeTablePosM, 8)
+								Rand(object.prizeTablePosR, 8)
+							else
+								vs.randomValue *= 1103515245
+								vs.randomValue += 2758389
+								vs.randomValue &= 0x7FFFFFFF
+								object.prizeTablePosL = vs.randomValue
+								object.prizeTablePosL >>= 16
+								object.prizeTablePosL &= 7
+
+								vs.randomValue *= 1103515245
+								vs.randomValue += 12568
+								vs.randomValue &= 0x7FFFFFFF
+								object.prizeTablePosM = vs.randomValue
+								object.prizeTablePosM >>= 16
+								object.prizeTablePosM &= 7
+
+								vs.randomValue *= 1103515245
+								vs.randomValue += 1284239
+								vs.randomValue &= 0x7FFFFFFF
+								object.prizeTablePosR = vs.randomValue
+								object.prizeTablePosR >>= 16
+								object.prizeTablePosR &= 7
+							end if
+						end if
+					end if
+				end if
+
+				player[currentPlayer].state 		 = Player_State_Static
+				player[currentPlayer].animation 	 = ANI_JUMPING
+				player[currentPlayer].gravity 		 = 1
+				player[currentPlayer].animationSpeed = 40
+				player[currentPlayer].speed 		 = 0
+				player[currentPlayer].xvel 			 = 0
+				player[currentPlayer].yvel 			 = 1 // just 1? that's a really small yvel..
+				player[currentPlayer].xpos 			 = object.xpos
+				player[currentPlayer].ypos 			 = object.ypos
+				break
+			end switch
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -20, 48, 40, 1, 99)
+	SpriteFrame(-24, -20, 48, 40, 50, 99)
+
+	foreach (TypeName[Slot Machine], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+	next
+
+	// Randomize the initial slot prize displays
+	if options.vsMode == false
+		Rand(SlotMachine_slotPrizeL, 8)
+		SlotMachine_slotPrizeL <<= 5
+		Rand(SlotMachine_slotPrizeM, 8)
+		SlotMachine_slotPrizeM <<= 5
+		Rand(SlotMachine_slotPrizeR, 8)
+		SlotMachine_slotPrizeR <<= 5
+	else
+		vs.randomValue *= 1103515245
+		vs.randomValue += 12345
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_slotPrizeL = vs.randomValue
+		SlotMachine_slotPrizeL >>= 16
+		SlotMachine_slotPrizeL &= 7
+		SlotMachine_slotPrizeL <<= 5
+
+		vs.randomValue *= 1103515245
+		vs.randomValue += 12345
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_slotPrizeM = vs.randomValue
+		SlotMachine_slotPrizeM >>= 16
+		SlotMachine_slotPrizeM &= 7
+		SlotMachine_slotPrizeM <<= 5
+
+		vs.randomValue *= 1103515245
+		vs.randomValue += 12345
+		vs.randomValue &= 0x7FFFFFFF
+		SlotMachine_slotPrizeR = vs.randomValue
+		SlotMachine_slotPrizeR >>= 16
+		SlotMachine_slotPrizeR &= 7
+		SlotMachine_slotPrizeR <<= 5
+	end if
+
+	temp0 = 0
+	SlotMachine_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Slot Machine], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SlotMachine_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SlotMachine_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -20, 48, 40, 1, 99)
+	
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Slot Combo Machine", 0)
+	AddEnumVariable("Slot Prize Machine", 1)
+end event

@@ -1,0 +1,148 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Cork Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.ypos	 : player.ypos
+private alias object.yvel	 : player.yvel
+private alias object.gravity : player.gravity
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Cork_DebugDraw
+reserve function Cork_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Cork_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Cork_DebugSpawn
+	CreateTempObject(TypeName[Cork], 0, object.xpos, object.ypos)
+	object[tempObjectPos].ypos &= 0xFFFF0000
+	GetBit(temp0, object.ypos, 16)
+	if temp0 == true
+		object[tempObjectPos].ypos++
+	end if
+	
+	// As with the foreach in the ObjectStartup, this line was similarly only added after initial release, in an update
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp4 = stage.waterLevel
+	temp4 <<= 16
+	temp3 = object.ypos
+	if temp3 != temp4
+		if temp3 < temp4
+			temp3 += 0x10000
+			if temp3 < temp4
+				temp3 += 0x10000
+			end if
+		else
+			temp3 -= 0x10000
+			if temp3 > temp4
+				temp3 -= 0x10000
+			end if
+		end if
+	end if
+
+	object.yvel = temp3
+	object.yvel -= object.ypos
+	if object.yvel > 0
+		ObjectTileCollision(CSIDE_FLOOR, 0,  16, PATH_A)
+	else
+		ObjectTileCollision(CSIDE_ROOF, 0, -16, PATH_A)
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		if checkResult == COL_TOP
+			player[currentPlayer].ypos += object.yvel
+		end if
+
+		if checkResult == COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			end if
+		end if
+	next
+
+	object.ypos += object.yvel
+end event
+
+
+event ObjectDraw
+	// this part is kinda weird..
+	// - in mobile S1, the number in the check is 39
+	// - in Origins 1.0.0, it's 43
+	// - in Origins 1.0.4, it's 46
+	// - in Origins 2.0.0 and later, it's 48
+	
+	// maybe it's a function ID? 39/43/46 all match Player_HandleSuperPalette_Sonic in their respective game versions... but then Plus's 48 is Player_HandleAmyHitbox??
+	// if that's somehow what it is, then why is stage state being compared to a function anyways?? and where's that arrayPos0 even coming from??
+	// so many unanswered questions...
+	
+	if stage.state == 48
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	end if
+	
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 51)
+
+	// Interesting note - this wasn't in the initial versions of S1, this was only introduced later in an update
+	foreach (TypeName[Cork], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+
+	SetTableValue(TypeName[Cork], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Cork_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Cork_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 51)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

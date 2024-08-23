@@ -1,0 +1,110 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Lava Jump Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+	object.yvel += 0x3800
+
+	if object.yvel >= 0
+		// If going downwards, go ahead and Y-flip the sprite
+		object.direction |= FLIP_Y
+	end if
+
+	// Check if the object's hit the floor
+	ObjectTileCollision(CSIDE_FLOOR, 0, 8, PATH_A)
+	if checkResult == true
+		// Create Flames along the Ground upon impact
+		PlaySfx(SfxName[Flame Thrower], false)
+		CreateTempObject(TypeName[Ground Flame], 0, object.xpos, object.ypos)
+		object[tempObjectPos].timer = 3
+		if object.xvel < 0
+			object[tempObjectPos].direction = FACING_RIGHT
+			object[tempObjectPos].xpos -= 0x20000
+		else
+			object[tempObjectPos].direction = FACING_LEFT
+			object[tempObjectPos].xpos += 0x20000
+		end if
+		object.type = TypeName[Blank Object]
+	end if
+	
+	// Animate the object
+	object.frame = object.animationTimer
+	object.frame >>= 2
+	object.animationTimer++
+	object.animationTimer &= 7
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		if checkResult == true
+			CallFunction(Player_FireHit)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == true
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-8, -8, 15, 15, 91, 123)
+		SpriteFrame(-8, -8, 13, 15, 91, 140)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Duplicate of HTZ sheet frames, don't quite look right on the MBZ sheet
+		SpriteFrame(-8, -8, 15, 15, 91, 123)
+		SpriteFrame(-8, -8, 13, 15, 91, 140)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == true
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-8, -8, 15, 15, 91, 123)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 15, 15, 91, 123)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

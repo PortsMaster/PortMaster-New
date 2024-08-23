@@ -1,0 +1,346 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Tube Spring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.springPower
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.collisionPlane : player.collisionPlane
+private alias object.tileCollisions : player.tileCollisions
+private alias object.value1  : player.timer
+private alias object.value10 : player.animationReserve
+private alias object.value17 : debugMode.currentSelection
+private alias object.value25 : player.gravityStrength
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TubeSpring_DebugDraw
+reserve function TubeSpring_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value TubeSpring_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TubeSpring_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function TubeSpring_DebugSpawn
+	CreateTempObject(TypeName[Tube Spring], 0, object.xpos, object.ypos)
+	
+	temp0 = debugMode[0].currentSelection
+	temp0 -= TubeSpring_startDebugID
+	if temp0 == 0
+		object[tempObjectPos].springPower = -0x100000
+	else
+		object[tempObjectPos].springPower = -0xA8000
+	end if
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 48, currentPlayer, 1, 1, 1, 1)
+		if checkResult == true
+			if object.animation == 0
+				object.timer = 0
+			end if
+			object.animation = 1
+		end if
+
+		if object.animation == 0
+			BoxCollisionTest(C_SOLID, object.entityPos, -14, -8, 14, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].animationReserve = ANI_WALKING
+				if player[currentPlayer].animation == ANI_RUNNING
+					player[currentPlayer].animationReserve = ANI_RUNNING
+				end if
+
+				if player[currentPlayer].animation == ANI_PEELOUT
+					player[currentPlayer].animationReserve = ANI_PEELOUT
+				end if
+
+				if object.animation == 0
+					object.timer = 1
+				end if
+				
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				player[currentPlayer].tileCollisions = true
+				player[currentPlayer].gravity = GRAVITY_AIR
+				player[currentPlayer].speed = player[currentPlayer].xvel
+				player[currentPlayer].yvel = object.springPower
+				player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+
+				GetBit(temp0, object[arrayPos0].propertyValue, 7)
+				if temp0 == true
+					player[currentPlayer].xvel = 0
+				end if
+
+				GetBit(temp0, object[arrayPos0].propertyValue, 0)
+				if temp0 == true
+					player[currentPlayer].animation = ANI_TWIRL
+				else
+					player[currentPlayer].animation = ANI_BOUNCING
+				end if
+
+				player[currentPlayer].timer = 0
+
+				GetBit(temp0, object[arrayPos0].propertyValue, 2)
+				if temp0 == true
+					player[currentPlayer].collisionPlane = 0
+				end if
+
+				GetBit(temp0, object[arrayPos0].propertyValue, 3)
+				if temp0 == true
+					player[currentPlayer].collisionPlane = 1
+				end if
+
+				PlaySfx(SfxName[Spring], false)
+			end if
+		end if
+	next
+
+	switch object.animation
+	case 0
+		if object.timer != 0
+			switch object.timer
+			case 0
+			case 2
+			case 3
+				object.frame = 0
+				break
+				
+			case 1
+				object.frame = 1
+				break
+				
+			case 4
+			case 5
+			case 6
+			case 7
+			case 8
+			case 9
+				object.frame = 2
+				break
+			end switch
+
+			object.timer++
+			if object.timer >= 10
+				object.timer = 0
+			end if
+		else
+			object.frame = 0
+		end if
+		break
+
+	case 1
+		if object.timer < 6
+			object.frame = 3
+		else
+			object.frame = 4
+			if object.timer == 23
+				object.timer = 0
+				object.animation = 2
+			end if
+		end if
+		object.timer++
+		break
+
+	case 2
+		object.frame = 3
+		object.timer++
+		if object.timer == 6
+			object.timer = 0
+			object.animation = 0
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 16, 191, 1)
+		SpriteFrame(-16, -10, 32, 10, 191, 81)
+		SpriteFrame(-16, -32, 32, 32, 191, 92)
+		SpriteFrame(-16, -29, 32, 29, 191, 18)
+		SpriteFrame(-16, -32, 32, 32, 191, 48)
+		SpriteFrame(-16, -29, 32, 29, 191, 18)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 16, 99, 377)
+		SpriteFrame(-16, -10, 32, 10, 99, 457)
+		SpriteFrame(-16, -32, 32, 32, 99, 468)
+		SpriteFrame(-16, -29, 32, 29, 99, 394)
+		SpriteFrame(-16, -32, 32, 32, 99, 424)
+		SpriteFrame(-16, -29, 32, 29, 99, 394)
+	end if
+
+	foreach (TypeName[Tube Spring], arrayPos0, ALL_ENTITIES)
+		GetBit(temp0, object[arrayPos0].propertyValue, 1)
+		if temp0 == 0
+			object[arrayPos0].springPower = -0x100000
+		else
+			object[arrayPos0].springPower = -0xA8000
+		end if
+		object[arrayPos0].drawOrder = 5
+	next
+
+	temp0 = 0
+	TubeSpring_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Tube Spring], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(TubeSpring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(TubeSpring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // useTwirlAnim
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		case 1 // springPower
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+			
+		case 2 // newCPlane
+			checkResult = object.propertyValue
+			checkResult >>= 2
+			checkResult %= 3
+			break
+			
+		case 3 // killXVelocity
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // useTwirlAnim
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		case 1 // springPower
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+			
+		case 2 // newCPlane
+			SetBit(object.propertyValue, 2, false)
+			SetBit(object.propertyValue, 3, false)
+
+			editor.variableValue %= 3
+			editor.variableValue <<= 2
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 3 // killXVelocity
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 16, 191, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 16, 99, 377)
+	end if
+
+	AddEditorVariable("useTwirlAnim")
+	SetActiveVariable("useTwirlAnim")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("springPower")
+	SetActiveVariable("springPower")
+	AddEnumVariable("Weak", false)
+	AddEnumVariable("Strong", true)
+
+	AddEditorVariable("newCPlane")
+	SetActiveVariable("newCPlane")
+	AddEnumVariable("Don't Set New Collision Plane", 0)
+	AddEnumVariable("Collision Plane A", 1)
+	AddEnumVariable("Collision Plane B", 2)
+
+	AddEditorVariable("killXVelocity")
+	SetActiveVariable("killXVelocity")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

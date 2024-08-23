@@ -1,0 +1,338 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Rotate Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.startPos.x
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.drawPos.x
+private alias object.value3 : object.drawPos.y
+private alias object.value4 : object.hitbox.left
+private alias object.value5 : object.hitbox.right
+private alias object.value6 : object.stoodPlayers
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatePlatform_DebugDraw
+reserve function RotatePlatform_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RotatePlatform_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RotatePlatform_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatePlatform_startDebugID
+	temp0 >>= 2
+	DrawSprite(temp0)
+end function
+
+
+private function RotatePlatform_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatePlatform_startDebugID
+
+	temp2 = temp0
+	temp0 &= 3
+	temp2 >>= 2
+	temp0 <<= 4
+	temp1 = object.direction
+	temp1 <<= 6
+	temp0 += temp1
+	CreateTempObject(TypeName[Rotate Platform], temp0, object.xpos, object.ypos)
+
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].startPos.y = object.ypos
+	object[tempObjectPos].frame = temp2
+	if temp2 == 0
+		object[tempObjectPos].hitbox.left = -32
+		object[tempObjectPos].hitbox.right = 32
+	else
+		object[tempObjectPos].hitbox.left = -24
+		object[tempObjectPos].hitbox.right = 24
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp4 = object.drawPos.x
+	temp5 = object.drawPos.y
+
+	GetTableValue(temp0, 28, StageSetup_oscillationTable)
+	temp0 <<= 8
+	temp0 &= 0xFFFF0000
+	temp0 -= 0x400000
+
+	GetTableValue(temp1, 30, StageSetup_oscillationTable)
+	temp1 <<= 8
+	temp1 &= 0xFFFF0000
+	temp1 -= 0x400000
+
+	GetBit(temp2, object.propertyValue, 5)
+	if temp2 == true
+		FlipSign(temp0)
+		FlipSign(temp1)
+	end if
+
+	GetBit(temp2, object.propertyValue, 6)
+	if temp2 == true
+		FlipSign(temp0)
+	end if
+
+	GetBit(temp2, object.propertyValue, 4)
+	if temp2 == false
+		object.drawPos.x = temp0
+		object.drawPos.y = temp1
+	else
+		FlipSign(temp0)
+		object.drawPos.x = temp1
+		object.drawPos.y = temp0
+	end if
+	
+	object.drawPos.x += object.startPos.x
+	object.drawPos.y += object.startPos.y
+
+	temp6 = object.drawPos.x
+	temp6 -= temp4
+	temp7 = object.drawPos.y
+	temp7 -= temp5
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.stoodPlayers, temp2)
+		if temp0 == true
+			player[currentPlayer].xpos += temp6
+			player[currentPlayer].ypos += temp7
+		end if
+
+		SetBit(object.stoodPlayers, temp2, false)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitbox.left, -16, object.hitbox.right, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			SetBit(object.stoodPlayers, temp2, true)
+		end if
+		temp2++
+	next
+
+	object.xpos = object.startPos.x
+	object.ypos = object.startPos.y
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(object.frame, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 24, 381, 178)	// Small Platform 	- #0
+		SpriteFrame(-32, -16, 64, 24, 1, 146)	// Wide Platform 	- #1
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 24, 529, 999)	// Small Platform 	- #0
+		SpriteFrame(-32, -16, 64, 24, 464, 999) // Wide Platform 	- #1
+	end if
+
+	foreach (TypeName[Rotate Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+
+		object[arrayPos0].frame = object[arrayPos0].propertyValue
+		object[arrayPos0].frame &= 0xF
+
+		if object[arrayPos0].frame == 0
+			object[arrayPos0].hitbox.left = -32
+			object[arrayPos0].hitbox.right = 32
+		else
+			object[arrayPos0].hitbox.left = -24
+			object[arrayPos0].hitbox.right = 24
+		end if
+	next
+
+	temp0 = 0
+	RotatePlatform_startDebugID = DebugMode_ObjCount
+	while temp0 < 8
+		SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatePlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		case 1 // flipMoveX
+			GetBit(checkResult, object.propertyValue, 6)
+			break
+			
+		case 2 // flipMoveY
+			GetBit(checkResult, object.propertyValue, 5)
+			break
+			
+		case 3 // flipMoveXY
+			GetBit(checkResult, object.propertyValue, 4)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 1 // flipMoveX
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 6, checkResult)
+			break
+			
+		case 2 // flipMoveY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 5, checkResult)
+			break
+			
+		case 3 // flipMoveXY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 4, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.frame = object.propertyValue
+	object.frame &= 0xF
+	
+	temp6 = object.xpos
+	temp7 = object.ypos
+
+	temp0 = 0
+	temp0 &= 0xFFFF0000
+	temp0 -= 0x500000
+
+	temp1 = 0
+	temp1 &= 0xFFFF0000
+	temp1 -= 0x500000
+
+	GetBit(temp2, object.propertyValue, 4)
+	if temp2 == true
+		FlipSign(temp0)
+		FlipSign(temp1)
+	end if
+
+	GetBit(temp2, object.propertyValue, 6)
+	if temp2 == true
+		FlipSign(temp0)
+	end if
+
+	GetBit(temp2, object.propertyValue, 5)
+	if temp2 == false
+		object.drawPos.x = temp0
+		object.drawPos.y = temp1
+	else
+		FlipSign(temp0)
+		object.drawPos.x = temp1
+		object.drawPos.y = temp0
+	end if
+	object.drawPos.x += temp6
+	object.drawPos.y += temp7
+
+	// Where the player will see it
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		object.inkEffect = INK_BLEND
+		DrawSpriteFX(0, FX_INK, object.drawPos.x, object.drawPos.y)
+		
+		editor.drawingOverlay = false
+	end if
+
+	// Actual Position
+	object.inkEffect = INK_NONE
+	DrawSprite(object.frame)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 24, 381, 178)	// Small Platform 	- #0
+		SpriteFrame(-32, -16, 64, 24, 1, 146)	// Wide Platform 	- #1
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -16, 48, 24, 529, 999)	// Small Platform 	- #0
+		SpriteFrame(-32, -16, 64, 24, 464, 999) // Wide Platform 	- #1
+	end if
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small Platform", 0)
+	AddEnumVariable("Wide Platform", 1)
+
+	AddEditorVariable("flipMoveX")
+	SetActiveVariable("flipMoveX")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("flipMoveY")
+	SetActiveVariable("flipMoveY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("flipMoveXY")
+	SetActiveVariable("flipMoveXY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

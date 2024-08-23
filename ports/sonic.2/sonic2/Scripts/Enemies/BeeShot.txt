@@ -1,0 +1,188 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Bee Shot Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Bridge Aliases
+private alias object.value2 : bridge.stoodPos
+private alias object.value4 : bridge.bridgeDepth
+private alias object.value6 : bridge.startPos
+private alias object.value7 : bridge.endPos
+
+// Burning Log aliases
+private alias object.value0 : burningLog.timer
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_ProjectileHit)
+		end if
+	next
+
+	// Check if we touched a bridge... and if we did, burn that sucka to the ground
+	foreach (TypeName[Bridge], arrayPos0, ACTIVE_ENTITIES)
+		if object.xpos > bridge[arrayPos0].startPos
+			if object.xpos < bridge[arrayPos0].endPos
+				temp0 = object[arrayPos0].ypos
+				temp0 -= 0x80000
+				if object.ypos >= temp0
+					temp0 += 0x100000
+					if object.ypos <= temp0
+						temp7 = object.xpos
+						temp7 -= bridge[arrayPos0].startPos
+						temp7 >>= 20
+						temp7 *= 15
+						temp7 -= 15
+						temp6 = -15
+
+						temp0 = 0
+						temp1 = bridge[arrayPos0].startPos
+						temp1 += 0x80000
+						temp4 = 0x80000
+						temp5 = bridge[arrayPos0].stoodPos
+						temp5 >>= 20
+						while temp0 < temp5
+							temp3 = temp4
+							temp3 <<= 7
+							temp3 /= bridge[arrayPos0].stoodPos
+							Sin(temp2, temp3)
+							temp2 *= bridge[arrayPos0].bridgeDepth
+							temp2 >>= 9
+							temp2 += object[arrayPos0].ypos
+
+							CreateTempObject(TypeName[Burning Log], 0, temp1, temp2)
+							burningLog[tempObjectPos].timer = temp7
+
+							temp7 += temp6
+							if temp7 == 15
+								FlipSign(temp6)
+							end if
+
+							temp1 += 0x100000
+							temp4 += 0x100000
+							temp0++
+						loop
+
+						temp2 = bridge[arrayPos0].bridgeDepth
+						temp2 += object[arrayPos0].ypos
+						CreateTempObject(TypeName[Burning Log], 0, temp1, temp2)
+						burningLog[tempObjectPos].timer = temp7
+
+						temp7 += temp6
+						if temp7 == 15
+							FlipSign(temp6)
+						end if
+						temp1 += 0x100000
+
+						temp0++
+						temp5 = bridge[arrayPos0].endPos
+						temp5 -= bridge[arrayPos0].startPos
+						temp5 -= bridge[arrayPos0].stoodPos
+						temp1 = bridge[arrayPos0].endPos
+						temp1 -= 0x80000
+						temp4 = 0x80000
+						temp7 = object[arrayPos0].propertyValue
+						temp7 -= temp0
+						temp7 *= 15
+						temp6 = -15
+						while temp0 < object[arrayPos0].propertyValue
+							temp3 = temp4
+							temp3 <<= 7
+							temp3 /= temp5
+							Sin(temp2, temp3)
+							temp2 *= bridge[arrayPos0].bridgeDepth
+							temp2 >>= 9
+							temp2 += object[arrayPos0].ypos
+
+							CreateTempObject(TypeName[Burning Log], 0, temp1, temp2)
+							burningLog[tempObjectPos].timer = temp7
+
+							temp7 += temp6
+							if temp7 == 15
+								FlipSign(temp6)
+							end if
+							temp1 -= 0x100000
+							temp4 += 0x100000
+							temp0++
+						loop
+
+						object[arrayPos0].type = TypeName[Blank Object]
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	// Interestingly this object checks for both of its folders explicitly, while most other objects instead check for their primary zone and then MBZ's within a simple `else` instead
+	// Given that the MBZ frame data is a duplicate of the EHZ frame data, it is kinda confusing why it's structered like this...
+	// Perhaps this object was based off an S1 badnik shot, where individual checks are the norm?
+	
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-12, -3, 8, 10, 1, 50)
+		SpriteFrame(-12, -3, 8, 10, 10, 50)
+		SpriteFrame(-8, -8, 16, 24, 110, 19)
+	end if
+
+	CheckCurrentStageFolder("ZoneM")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// This is just duplicated EHZ frame data, so it doesn't quite look right in-game
+		// (The correct sprites are present on the MBZ sheet, though, and those sprites are even used by the MBZ Buzzer too!)
+		SpriteFrame(-12, -3, 8, 10, 1, 50)
+		SpriteFrame(-12, -3, 8, 10, 10, 50)
+		SpriteFrame(-8, -8, 16, 24, 110, 19)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-12, -3, 8, 10, 1, 50)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12, -3, 8, 10, 66, 302) // Decomp note - using fixed frame here
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

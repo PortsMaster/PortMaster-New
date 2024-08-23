@@ -1,0 +1,296 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Bumping Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.platformPos1.x
+private alias object.value1 : object.platformPos2.x
+private alias object.value2 : object.boundsL
+private alias object.value3 : object.boundsR
+
+private alias 0 : BUMPINGPLATFORM_USE1PLATFORM
+private alias 1 : BUMPINGPLATFORM_USE2PLATFORM
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BumpingPlatform_DebugDraw
+reserve function BumpingPlatform_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table BumpingPlatform_stateTable
+	0 // BUMPINGPLATFORM_USE1PLATFORM
+	1 // BUMPINGPLATFORM_USE2PLATFORM
+	1 // BUMPINGPLATFORM_USE2PLATFORM
+	0 // BUMPINGPLATFORM_USE1PLATFORM
+end table
+
+private table BumpingPlatform_boundsTable
+	0x680000
+	0xA80000
+	0xE80000
+	0x680000
+end table
+
+private table BumpingPlatform_offsetTable
+	-0x680000, 0x000000
+	-0xB00000, 0x400000
+	-0x780000, 0x800000
+	 0x670000, 0x000000
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BumpingPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function BumpingPlatform_DebugSpawn
+	CreateTempObject(TypeName[Bumping Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].state = BUMPINGPLATFORM_USE1PLATFORM
+	object[tempObjectPos].boundsL = object.xpos
+	object[tempObjectPos].boundsL -= 0x680000
+	object[tempObjectPos].boundsR = object.xpos
+	object[tempObjectPos].boundsR += 0x680000
+	object[tempObjectPos].platformPos1.x = object.xpos
+	object[tempObjectPos].platformPos1.x += -0x680000
+	object[tempObjectPos].platformPos2.x = object.xpos
+	object[tempObjectPos].platformPos2.x += 0x000000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.platformPos1.x
+	temp7 = object.platformPos2.x
+
+	GetBit(temp0, object.direction, 0)
+	if temp0 == FLIP_NONE
+		object.platformPos1.x += 0x10000
+		if object.platformPos1.x >= object.boundsR
+			SetBit(object.direction, 0, FLIP_X)
+		end if
+	else
+		object.platformPos1.x -= 0x10000
+		if object.platformPos1.x <= object.boundsL
+			SetBit(object.direction, 0, FLIP_NONE)
+		end if
+	end if
+
+	if object.state == BUMPINGPLATFORM_USE2PLATFORM
+		// Check Platform 1 Bumping
+		if object.direction == FLIP_Y
+			temp0 = object.platformPos1.x
+			temp0 += 0x180000
+			temp1 = object.platformPos2.x
+			temp1 -= 0x180000
+			if temp0 == temp1
+				object.direction ^= FLIP_XY
+			end if
+		end if
+
+		if object.direction == FLIP_X
+			temp0 = object.platformPos1.x
+			temp0 -= 0x180000
+			temp1 = object.platformPos2.x
+			temp1 += 0x180000
+			if temp0 == temp1
+				object.direction ^= FLIP_XY
+			end if
+		end if
+
+		// Move Platform 2
+		GetBit(temp0, object.direction, 1)
+		if temp0 == FLIP_NONE
+			object.platformPos2.x += 0x10000
+			if object.platformPos2.x >= object.boundsR
+				SetBit(object.direction, 1, FLIP_X)
+			end if
+		else
+			object.platformPos2.x -= 0x10000
+			if object.platformPos2.x <= object.boundsL
+				SetBit(object.direction, 1, FLIP_NONE)
+			end if
+		end if
+
+		// Check Platform 2 Bumping
+		if object.direction == FLIP_Y
+			temp0 = object.platformPos1.x
+			temp0 += 0x180000
+			temp1 = object.platformPos2.x
+			temp1 -= 0x180000
+			if temp0 == temp1
+				object.direction ^= FLIP_XY
+			end if
+		end if
+
+		if object.direction == FLIP_X
+			temp0 = object.platformPos1.x
+			temp0 -= 0x180000
+			temp1 = object.platformPos2.x
+			temp1 += 0x180000
+			if temp0 == temp1
+				object.direction ^= FLIP_XY
+			end if
+		end if
+	end if
+
+	temp4 = object.platformPos1.x
+	temp5 = object.platformPos2.x
+	temp4 -= temp6
+	temp5 -= temp7
+	temp0 = object.xpos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		object.xpos = temp6
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += temp4
+		end if
+
+		if object.state == BUMPINGPLATFORM_USE2PLATFORM
+			object.xpos = temp7
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].xpos += temp5
+			end if
+		end if
+	next
+	object.xpos = temp0
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(0, object.platformPos1.x, object.ypos)
+	if object.state == BUMPINGPLATFORM_USE2PLATFORM
+		DrawSpriteXY(0, object.platformPos2.x, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 14, 6, 204)
+
+	foreach (TypeName[Bumping Platform], arrayPos0, ALL_ENTITIES)
+		temp0 = object[arrayPos0].propertyValue
+
+		GetTableValue(object[arrayPos0].state, temp0, BumpingPlatform_stateTable)
+
+		GetTableValue(temp1, temp0, BumpingPlatform_boundsTable)
+		object[arrayPos0].boundsL = object[arrayPos0].xpos
+		object[arrayPos0].boundsL -= temp1
+		object[arrayPos0].boundsR = object[arrayPos0].xpos
+		object[arrayPos0].boundsR += temp1
+		temp0 <<= 1
+
+		GetTableValue(temp1, temp0, BumpingPlatform_offsetTable)
+		object[arrayPos0].platformPos1.x = object[arrayPos0].xpos
+		object[arrayPos0].platformPos1.x += temp1
+		temp0++
+
+		GetTableValue(temp1, temp0, BumpingPlatform_offsetTable)
+		object[arrayPos0].platformPos2.x = object[arrayPos0].xpos
+		object[arrayPos0].platformPos2.x += temp1
+
+		if object[arrayPos0].propertyValue == 2
+			object[arrayPos0].direction = FLIP_X
+		end if
+
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+
+	SetTableValue(TypeName[Bumping Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(BumpingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(BumpingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp0 = object.propertyValue
+	temp0 <<= 1
+
+	GetTableValue(temp1, temp0, BumpingPlatform_offsetTable)
+	// using temp2 as a object.platformPos1.x stand-in
+	temp2 = object.xpos
+	temp2 += temp1
+	temp0++
+
+	GetTableValue(temp1, temp0, BumpingPlatform_offsetTable)
+	// and using temp3 as a object.platformPos2.x stand-in
+	temp3 = object.xpos
+	temp3 += temp1
+
+	DrawSpriteXY(0, temp2, object.ypos)
+	if object.state == BUMPINGPLATFORM_USE2PLATFORM
+		DrawSpriteXY(0, temp3, object.ypos)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 14, 6, 204)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small Gap (1 Platform, Moving Right)", 0)
+	AddEnumVariable("Large Gap (2 Platforms)", 1)
+	AddEnumVariable("Large Gap (2 Platforms)", 2)
+	AddEnumVariable("Small Gap (1 Platform, Moving Left)", 3)
+end event

@@ -1,0 +1,332 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Buzzsaw Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.startPos.x
+private alias object.value1 : object.startPos.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Buzzsaw_DebugDraw
+reserve function Buzzsaw_DebugSpawn
+reserve function Buzzsaw_ProcessCollisions
+reserve function Buzzsaw_IsOnScreen
+reserve function Buzzsaw_ProcessLogic
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Buzzsaw_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Buzzsaw_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Buzzsaw_startDebugID
+	temp0--
+	DrawSprite(temp0)
+end function
+
+
+private function Buzzsaw_DebugSpawn
+	CreateTempObject(TypeName[Buzzsaw], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].startPos.y = object.ypos
+	object[tempObjectPos].inkEffect = INK_ALPHA
+	object[tempObjectPos].propertyValue = debugMode[0].currentSelection
+	object[tempObjectPos].propertyValue -= Buzzsaw_startDebugID
+end function
+
+
+private function Buzzsaw_ProcessCollisions
+	object.animationTimer--
+	if object.animationTimer < 0
+		object.animationTimer = 2
+		object.frame ^= 1
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+end function
+
+
+private function Buzzsaw_IsOnScreen
+	checkResult = false
+	temp0 = camera[0].xpos
+	temp0 -= object.ixpos
+	temp0 -= 8
+	Abs(temp0)
+	if temp0 <= screen.xcenter
+		temp0 = camera[0].ypos
+		temp0 -= object.iypos
+		temp0 -= 32
+		Abs(temp0)
+		if temp0 <= screen.ycenter
+			checkResult = true
+		end if
+	end if
+end function
+
+
+private function Buzzsaw_ProcessLogic
+	if object.alpha < 0x100
+		object.alpha += 0x10
+	end if
+
+	object.xpos += object.xvel
+	CallFunction(Buzzsaw_ProcessCollisions)
+
+	// Out of bounds?
+	if object.outOfBounds == true
+
+		// Check if at least main X is in bounds
+		temp0 = object.xpos
+		object.xpos = object.startPos.x
+
+		// Still out of bounds?
+		if object.outOfBounds == true
+			// Reset stuff
+			object.xpos = object.startPos.x
+			object.xvel = 0
+			object.state = 0
+			object.alpha = 0
+			object.animationTimer = 0
+			object.priority = PRIORITY_BOUNDS
+		else
+			// Main X is in bounds, return to the previous X pos and stay active
+			object.xpos = temp0
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.propertyValue
+	case 0
+		// Static variant, do nothing
+		break
+
+	case 1 // Horizontally moving variant
+		GetTableValue(temp0, 6, StageSetup_oscillationTable)
+		GetBit(temp1, object.direction, 0)
+		if temp1 == FLIP_X
+			FlipSign(temp0)
+			temp0 += 0x6000
+		end if
+		temp0 <<= 8
+		object.xpos = object.startPos.x
+		object.xpos -= temp0
+		CallFunction(Buzzsaw_ProcessCollisions)
+
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 0
+			CallFunction(Buzzsaw_IsOnScreen)
+			if checkResult == true
+				PlaySfx(SfxName[Buzzsaw], false)
+			end if
+		end if
+		break
+
+	case 2 // Vertically moving variant
+		GetTableValue(temp0, 2, StageSetup_oscillationTable)
+		GetBit(temp1, object.direction, 0)
+		if temp1 == FLIP_X
+			FlipSign(temp0)
+			temp0 += 0x8000
+		end if
+		temp0 <<= 8
+		object.ypos = object.startPos.y
+		object.ypos -= temp0
+		CallFunction(Buzzsaw_ProcessCollisions)
+
+		GetTableValue(temp0, 2, StageSetup_oscillationTable)
+		temp0 >>= 8
+		if temp0 == 24
+			CallFunction(Buzzsaw_IsOnScreen)
+			if checkResult == true
+				PlaySfx(SfxName[Buzzsaw], false)
+			end if
+		end if
+		break
+
+	case 3 // Stray (Moving Right)
+		if object.state == 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object.state == 0
+					temp0 = player[currentPlayer].xpos
+					temp0 -= 0xC00000
+					if temp0 >= 0
+						temp0 -= object.xpos
+						if temp0 >= 0
+							temp0 = player[currentPlayer].ypos
+							temp0 -= 0x800000
+							if temp0 < object.ypos
+								temp0 += 0x1000000
+								if temp0 >= object.ypos
+									object.state = 1
+									object.xvel = 0x60000
+									object.frame = 2
+									object.priority = PRIORITY_ACTIVE
+									PlaySfx(SfxName[Buzzsaw], false)
+								end if
+							end if
+						end if
+					end if
+				end if
+			next
+		else
+			CallFunction(Buzzsaw_ProcessLogic)
+		end if
+		break
+
+	case 4 // Stray (Moving Left)
+		if object.state == 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object.state == 0
+					temp0 = player[currentPlayer].xpos
+					temp0 += 0xE00000
+					temp0 -= object.xpos
+					if temp0 < 0
+						temp0 = player[currentPlayer].ypos
+						temp0 -= 0x800000
+						if temp0 < object.ypos
+							temp0 += 0x1000000
+							if temp0 >= object.ypos
+								object.state = 1
+								object.xvel = -0x60000
+								object.frame = 2
+								object.priority = PRIORITY_ACTIVE
+								PlaySfx(SfxName[Buzzsaw], false)
+							end if
+						end if
+					end if
+				end if
+			next
+		else
+			CallFunction(Buzzsaw_ProcessLogic)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.propertyValue < 3
+		DrawSprite(object.frame)
+	else
+		if object.state != 0
+			DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-32, -60, 64, 92, 189, 1)
+	SpriteFrame(-32, -60, 64, 92, 254, 1)
+	SpriteFrame(-32, -32, 64, 64, 319, 50)
+	SpriteFrame(-32, -32, 64, 64, 384, 50)
+
+	foreach (TypeName[Buzzsaw], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].inkEffect = INK_ALPHA
+	next
+
+	temp0 = 0
+	Buzzsaw_startDebugID = DebugMode_ObjCount
+	Buzzsaw_startDebugID--
+	while temp0 < 3
+		SetTableValue(TypeName[Buzzsaw], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Buzzsaw_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Buzzsaw_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-32, -60, 64, 92, 189, 1)
+	SpriteFrame(-32, -60, 64, 92, 189, 1)
+	SpriteFrame(-32, -60, 64, 92, 189, 1)
+	SpriteFrame(-32, -32, 64, 64, 319, 50)
+	SpriteFrame(-32, -32, 64, 64, 319, 50)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("Move Horizontally", 1)
+	AddEnumVariable("Move Vertically", 2)
+	AddEnumVariable("Stray Buzzsaw (From Left)", 3)
+	AddEnumVariable("Stray Buzzsaw (From Right)", 4)
+end event

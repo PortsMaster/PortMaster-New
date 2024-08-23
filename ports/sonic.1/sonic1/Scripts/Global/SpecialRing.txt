@@ -1,0 +1,211 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Special Ring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias 0 : SPECIALRING_FLOATING
+private alias 1 : SPECIALRING_DISAPPEARING
+
+// Player Aliases
+private alias object.type 			: player.type
+private alias object.direction 		: player.direction
+private alias object.controlMode 	: player.controlMode
+private alias object.jumpPress 		: player.jumpPress
+private alias object.jumpHold 		: player.jumpHold
+private alias object.up 			: player.up
+private alias object.down 			: player.down
+private alias object.left 			: player.left
+private alias object.right 			: player.right
+private alias object.value0 		: player.rings
+private alias object.value16 		: player.isSidekick
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == SPECIALRING_FLOATING
+		// Are 50 or more rings collected?
+		if player[0].rings > 49
+			// Did P1 collide with the special ring?
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Make P1 and their shield "disappear"
+				player[0].type = TypeName[Blank Object]
+				object[playerCount].type = TypeName[Blank Object]
+				player[0].controlMode = CONTROLMODE_NONE
+				player[0].direction = FACING_RIGHT
+				
+				// Huh? What object is this supposed to be?
+				// Slot 4's never used in normal gameplay at all, so this shouldn't do anything
+				// If there are 4 players active then slot 4 would have P1's shield, but I doubt that's what this is meant to be for though...
+				ResetObjectEntity(4, TypeName[Blank Object], 0, 0, 0)
+				
+				object.drawOrder = 4
+				object.state = SPECIALRING_DISAPPEARING
+				object.frame = 32
+
+				StopSfx(SfxName[Flying])
+				StopSfx(SfxName[Tired])
+				PlaySfx(SfxName[Special Ring], false)
+
+				player[0].left = false
+				player[0].right = false
+
+				if stage.player2Enabled == true
+					if player[1].isSidekick == true
+						player[1].controlMode = CONTROLMODE_NONE
+						player[1].up = false
+						player[1].down = false
+						player[1].left = false
+						player[1].right = false
+						player[1].jumpPress = false
+						player[1].jumpHold = false
+					end if
+				end if
+			end if
+		end if
+	end if
+
+	// If the player is Super, don't show up
+	// -> This should only happen in Debug Mode, since special rings are unloaded
+	//    if the player has max emeralds during startup
+	if Player_superState == SUPERSTATE_SUPER
+		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case SPECIALRING_FLOATING
+		// Only show up if there are 50 or more rings collected
+		if player[0].rings >= 50
+			temp0 = object.frame
+			temp0 >>= 2
+			if temp0 > 3
+				object.direction = FLIP_X
+			else
+				object.direction = FLIP_NONE
+			end if
+			
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+			object.frame++
+			if object.frame > 31
+				object.frame = 0
+			end if
+		end if
+		break
+
+	case SPECIALRING_DISAPPEARING
+		// Determine whether to flip the sprite or not based on current frame
+		temp0 = object.frame
+		temp0 >>= 2
+		if temp0 > 11
+			object.direction = FLIP_X
+		else
+			object.direction = FLIP_NONE
+		end if
+
+		// Draw the sprite
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+		if temp0 == 11
+			object.direction = FLIP_X
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		else
+			if temp0 == 15
+				object.direction = FLIP_X
+				DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+			end if
+		end if
+
+		object.frame++
+		if object.frame > 63 // Time to disappear?
+			// Clear this object
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+
+	// Sprite frames
+
+	// Special Ring Spinning - #0-7
+	SpriteFrame(-32, -32, 64, 64, 83, 1)
+	SpriteFrame(-28, -32, 56, 64, 199, 131)
+	SpriteFrame(-24, -32, 48, 64, 148, 1)
+	SpriteFrame(-16, -32, 32, 64, 223, 66)
+	SpriteFrame(-12, -32, 24, 64, 197, 1)
+	SpriteFrame(-16, -32, 32, 64, 223, 66)
+	SpriteFrame(-24, -32, 48, 64, 148, 1)
+	SpriteFrame(-28, -32, 56, 64, 199, 131)
+
+	// Special Ring Warping - #8-15
+	SpriteFrame(0, -32, 32, 64, 222, 1)
+	SpriteFrame(-16, -32, 48, 64, 101, 66)
+	SpriteFrame(-24, -32, 56, 64, 150, 66)
+	SpriteFrame(0, -32, 32, 64, 156, 131)
+	SpriteFrame(-24, -32, 56, 64, 150, 66)
+	SpriteFrame(-16, -32, 48, 64, 101, 66)
+	SpriteFrame(0, -32, 32, 64, 222, 1)
+	SpriteFrame(-32, -32, 32, 64, 124, 131)
+
+	// Find max emerald count
+	if options.superStates == false
+		temp0 = 0x3F // 6 emeralds
+	else
+		temp0 = 0x7F // 7 emeralds
+	end if
+
+	// Are all emeralds already gathered?
+	if specialStage.emeralds >= temp0
+		// Big rings aren't needed anymore, delete them
+		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		next
+	end if
+
+	if options.gameMode == MODE_TIMEATTACK
+		// Delete every big ring, they shouldn't be in time attack
+		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		next
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-32, -32, 64, 64, 83, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

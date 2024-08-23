@@ -1,0 +1,475 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Eggmobile Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.legAnim
+private alias object.value1 : object.legAnimTimer
+private alias object.value2 : object.flameAnim
+private alias object.value3 : object.flameAnimTimer
+private alias object.value4 : object.timer
+private alias object.value5 : object.explosionTimer
+private alias object.value6 : object.playerStopPos
+private alias object.value7 : object.fadeTimer
+
+private alias 0 : EGGMOBILE_WAITING
+private alias 1 : EGGMOBILE_ACTIVATE
+private alias 2 : EGGMOBILE_RISE
+private alias 3 : EGGMOBILE_FLEE
+private alias 4 : EGGMOBILE_HIT
+private alias 5 : EGGMOBILE_SEAT
+private alias 5 : EGGMOBILE_BOSSRUSH
+
+private alias 0 : EGGMOBILE_ANI_IDLE
+private alias 1 : EGGMOBILE_ANI_SEAT
+private alias 2 : EGGMOBILE_ANI_FLYING
+private alias 3 : EGGMOBILE_ANI_WASHIT
+
+private alias 0 : LEGS_IDLE
+private alias 1 : LEGS_RETRACT
+private alias 2 : LEGS_NONE
+
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.controlMode : player.controlMode
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_SAVEGAME
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+// Reserved Object Slot Aliases
+private alias 30 : SLOT_ACTFINISH
+
+// Achievement Aliases
+private alias 10 : ACHIEVEMENT_ONEFORTHEROAD
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EGGMOBILE_WAITING
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -96, 24, 96, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+
+	case EGGMOBILE_ACTIVATE
+		object.priority = PRIORITY_ACTIVE
+		object.animation = EGGMOBILE_ANI_FLYING
+		object.legAnim = LEGS_RETRACT
+		object.yvel = -0x18000
+		object.state++
+		break
+
+	case EGGMOBILE_RISE
+		object.ypos += object.yvel
+		object.timer++
+		if object.timer >= 52
+			object.flameAnim = FLAME_ACTIVE
+			object.xvel = 0x18000
+			object.yvel = -0x1800
+			object.state++
+		end if
+		break
+
+	case EGGMOBILE_HIT
+		object.explosionTimer++
+		temp0 = object.explosionTimer
+		temp0 &= 7
+		if temp0 == 4
+			Rand(temp0, 96)
+			temp0 -= 48
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 4
+			if object.fadeTimer < 256
+				PlaySfx(SfxName[Explosion], false)
+			end if
+		end if
+
+		if object.fadeTimer < 256
+			object.timer++
+			if object.timer >= 30
+				PlaySfx(SfxName[Boss Hit], false)
+				object.yvel = 0x6000
+				object.timer = 0
+			end if
+		end if
+		// [Fall-through]
+	case EGGMOBILE_FLEE
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		temp0 = stage.newXBoundary2
+		temp0 += 212 // (screen.xcenter with the standard screen width of 424)
+		temp0 <<= 16
+		if object.xpos >= temp0
+#platform: USE_ORIGINS
+			CheckNotEqual(options.gameMode, MODE_TIMEATTACK)
+			temp0 = checkResult
+			CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+			temp0 &= checkResult
+			if temp0 != 0
+				CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, true)
+				StopMusic()
+				object.state = EGGMOBILE_BOSSRUSH
+				object.fadeTimer = 0
+			else
+#endplatform
+#platform: USE_STANDALONE
+				if options.gameMode == MODE_TIMEATTACK
+#endplatform
+#platform: USE_ORIGINS
+				CheckEqual(options.gameMode, MODE_TIMEATTACK)
+				temp0 = checkResult
+				CheckNotEqual(game.oneStageFlag, false)
+				temp0 |= checkResult
+				if temp0 != false
+#endplatform
+					object.type = TypeName[Blank Object]
+					ResetObjectEntity(SLOT_ACTFINISH, TypeName[Act Finish], 0, 0, 0)
+					object[SLOT_ACTFINISH].drawOrder = 6
+					object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+					stage.timeEnabled = false
+					PlayMusic(TRACK_ACTFINISH)
+				else
+					object.fadeTimer += 4
+					music.volume -= 2
+					SetScreenFade(0, 0, 0, object.fadeTimer)
+					if object.fadeTimer == 384
+					
+#platform: USE_ORIGINS
+						// This variable isn't used anywhere in Final Zone, perhaps a scrapped achievement?
+						temp0 = StageStatsUsabilityParam5
+						temp0 &= 1
+						temp1 = StageStatsUsabilityParam5
+						temp1 &= 2
+						temp2 = StageStatsUsabilityParam5
+						temp2 &= 4
+						
+						CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, temp0, temp1, temp2)
+						CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+						
+						StageStatsUsabilityParam1 = 0
+						StageStatsUsabilityParam2 = 0
+						StageStatsUsabilityParam3 = 0
+						StageStatsUsabilityParam4 = 0
+						StageStatsUsabilityParam5 = 0
+						StatsUsabilityParam1 = 0
+						StatsUsabilityParam2 = 0
+						StatsUsabilityParam3 = 0
+						StatsUsabilityParam4 = 0
+						StatsUsabilityParam5 = 0
+#endplatform
+
+						if stage.debugMode == false
+							if options.stageSelectFlag == false
+								CallNativeFunction2(SetLeaderboard, 19, player.score)
+							end if
+						end if
+
+						if options.gameMode == MODE_SAVEGAME
+							arrayPos1 = options.saveSlot
+							arrayPos1 <<= 3
+							arrayPos1 += 4
+							saveRAM[arrayPos1] = 20
+							WriteSaveRAM()
+						end if
+
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 1
+						LoadStage()
+					end if
+				end if
+#platform: USE_ORIGINS
+			end if
+#endplatform
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].xpos >= object.playerStopPos
+				CheckEqual(player[currentPlayer].state, Player_State_Ground)
+				temp0 = checkResult
+#platform: USE_ORIGINS
+				CheckEqual(player[currentPlayer].state, Player_State_Air_NoDropDash)
+				temp0 |= checkResult
+#endplatform
+				CheckEqual(player[currentPlayer].state, Player_State_Air)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Fly)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_GlideRight)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Roll)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_RollJump)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Static)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Spindash)
+				temp0 |= checkResult
+
+				if temp0 == true
+					player[currentPlayer].state = Player_State_Static
+					player[currentPlayer].direction = FACING_RIGHT
+					player[currentPlayer].controlMode = CONTROLMODE_NONE
+					if player[currentPlayer].gravity == 0
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].speed = 0
+						if object.state == EGGMOBILE_FLEE
+							player[currentPlayer].animation = ANI_LOOKINGUP
+						else
+							player[currentPlayer].animation = ANI_STOPPED
+						end if
+					else
+						player[currentPlayer].speed = player[currentPlayer].xvel
+						player[currentPlayer].yvel += 0x3800
+					end if
+				else
+					if player[currentPlayer].state == Player_State_GlideSlide
+						player[currentPlayer].speed = 0
+					end if
+				end if
+			end if
+		next
+		break
+
+	case EGGMOBILE_SEAT
+		// position == eggmobile.position
+		object.xpos = object[+10].xpos
+		object.ypos = object[+10].ypos
+		if object[+1].type == TypeName[Blank Object]
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state == EGGMOBILE_FLEE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+			BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
+
+			if checkResult == true
+				CallFunction(Player_CheckHit)
+				if checkResult == true
+					object.state 	 = EGGMOBILE_HIT
+					object.animation = EGGMOBILE_ANI_WASHIT
+					PlaySfx(SfxName[Boss Hit], false)
+					object.timer = 0
+					if stage.debugMode == false
+						if currentPlayer == 0
+							// Grant the "One For the Road" Achievement
+							CallNativeFunction2(SetAchievement, ACHIEVEMENT_ONEFORTHEROAD, 100)
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	case EGGMOBILE_ANI_IDLE
+		DrawSpriteFX(16, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(17, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EGGMOBILE_ANI_SEAT
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EGGMOBILE_ANI_FLYING
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 += 1
+		object.animationTimer++
+		object.animationTimer &= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case EGGMOBILE_ANI_WASHIT
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 += 3
+		object.animationTimer++
+		object.animationTimer &= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+
+	switch object.legAnim
+	case LEGS_IDLE
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	case LEGS_RETRACT
+		object.legAnimTimer++
+		if object.legAnimTimer >= 60
+			object.legAnim = LEGS_NONE
+		else
+			temp0 = object.legAnimTimer
+			temp0 /= 20
+			temp0 += 5
+			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+		
+	case LEGS_NONE
+		break
+
+	end switch
+
+	if object.flameAnim != FLAME_INACTIVE
+		temp0 = object.flameAnimTimer
+		temp0 /= 3
+		temp0 += 8
+		object.flameAnimTimer++
+		if object.flameAnimTimer > 21
+			object.flameAnimTimer = 18
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 21, 131, 172)
+	SpriteFrame(-28, -32, 64, 56, 131, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 172)
+	SpriteFrame(-28, -32, 64, 56, 66, 172)
+	SpriteFrame(-20, 16, 40, 21, 131, 115)
+	SpriteFrame(-20, 8, 48, 19, 172, 115)
+	SpriteFrame(-20, 8, 40, 16, 172, 135)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(-28, -32, 27, 21, 131, 172)
+	SpriteFrame(-28, -11, 64, 35, 131, 193)
+
+	foreach (TypeName[Eggmobile], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = FACING_LEFT
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state 	= EGGMOBILE_SEAT
+			object[arrayPos0].animation = EGGMOBILE_ANI_SEAT
+			object[arrayPos0].legAnim 	= LEGS_NONE
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.direction = FACING_LEFT
+
+	if object.propertyValue == 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	else
+		DrawSpriteFX(16, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(17, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 21, 131, 172)
+	SpriteFrame(-28, -32, 64, 56, 131, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 172)
+	SpriteFrame(-28, -32, 64, 56, 66, 172)
+	SpriteFrame(-20, 16, 40, 21, 131, 115)
+	SpriteFrame(-20, 8, 48, 19, 172, 115)
+	SpriteFrame(-20, 8, 40, 16, 172, 135)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(-28, -32, 27, 21, 131, 172)
+	SpriteFrame(-28, -11, 64, 35, 131, 193)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("EggMobile", 0)
+	AddEnumVariable("Seat", 1)
+end event

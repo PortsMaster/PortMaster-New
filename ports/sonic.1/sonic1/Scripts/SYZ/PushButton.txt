@@ -1,0 +1,118 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Push Button Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.stood
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.collisionBottom : player.collisionBottom
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PushButton_DebugDraw
+reserve function PushButton_DebugSpawn
+
+
+private function PushButton_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function PushButton_DebugSpawn
+	CreateTempObject(TypeName[Push Button], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.stood = false
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.frame == 0
+			BoxCollisionTest(C_SOLID, object.entityPos, -14, -4, 14, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				object.stood = true
+				player[currentPlayer].ypos += 0x60000
+				PlaySfx(SfxName[Button Press], false)
+			end if
+		else
+			if player[currentPlayer].yvel >= 0
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -4, 14, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					object.stood = true
+					player[currentPlayer].ypos += 0x20000
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -20, -12, 20, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						player[currentPlayer].ypos = player[currentPlayer].collisionBottom
+						FlipSign(player[currentPlayer].ypos)
+						player[currentPlayer].ypos <<= 16
+						player[currentPlayer].ypos += object.ypos
+						player[currentPlayer].ypos -= 0x20000
+						player[currentPlayer].gravity = GRAVITY_AIR
+					end if
+				end if
+			end if
+		end if
+	next
+
+	foreach (TypeName[Push Block], arrayPos0, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 8, arrayPos0, -16, -16, 16, 16)
+		if checkResult == true
+			object.stood = true
+			if object.frame == 0
+				PlaySfx(SfxName[Button Press], false)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	object.frame = object.stood
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 1, 161)
+	SpriteFrame(-16, -2, 32, 10, 34, 167)
+
+	SetTableValue(TypeName[Push Button], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(PushButton_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(PushButton_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 1, 161)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event
