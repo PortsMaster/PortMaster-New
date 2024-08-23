@@ -29,7 +29,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "bitsybox.${DEVICE_ARCH}" &
+$GPTOKEYB "bitsybox.${DEVICE_ARCH}" -c "bitsybox.gptk" &
 
 ./bitsybox.${DEVICE_ARCH} 2>&1
 
