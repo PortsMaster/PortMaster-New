@@ -28,7 +28,14 @@ cd $GAMEDIR
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Setup gl4es environment
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 # Permissions
 $ESUDO chmod 666 /dev/tty0
