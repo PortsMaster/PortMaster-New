@@ -58,7 +58,7 @@ fi
 
 # Run the game
 echo "Loading, please wait!" > $CUR_TTY
-$GPTOKEYB "sonicmania" xbox360 & 
+$GPTOKEYB "sonicmania" & 
 ./sonicmania
 
 $ESUDO kill -9 $(pidof gptokeyb)
