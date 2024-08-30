@@ -57,9 +57,15 @@ fi
 
 [ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && [ -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
 ifconfig lo up
+if [ "$CFW_NAME" = "ROCKNIX" ]; then
+	swaymsg seat seat0 hide_cursor 0
+fi
 chmod +x ./bin/minetest
 $GPTOKEYB "minetest" -c "$GAMEDIR/minetest.gptk.$ANALOG_STICKS" &
 ./bin/minetest
+if [ "$CFW_NAME" = "ROCKNIX" ]; then
+	swaymsg seat seat0 hide_cursor 1000
+fi
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
