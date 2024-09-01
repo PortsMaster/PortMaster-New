@@ -1,0 +1,195 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: EggmanSignPost Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases (As Eggman Watcher)
+private alias object.value0 : object.eggmanID
+
+// Aliases (As Sign Post)
+private alias object.value0 : object.spinCount
+private alias object.value1 : object.spinTimer
+// value2 is unused
+private alias object.value3 : object.landingYPos
+
+// States
+private alias 0 : EGGMANSIGNPOST_AWAITEGGMAN
+private alias 1 : EGGMANSIGNPOST_AWAITDEFEAT
+private alias 2 : EGGMANSIGNPOST_FALLTOGROUND
+private alias 3 : EGGMANSIGNPOST_SPINNINGONGROUND
+private alias 4 : EGGMANSIGNPOST_MISSIONCOMPLETE
+
+// Eggman Aliases
+private alias 4 : EGGMAN_EXPLODE
+
+// Reserved Object Slot Aliases
+private alias 30 : SLOT_ACTFINISH
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EGGMANSIGNPOST_AWAITEGGMAN
+		foreach (TypeName[Eggman], arrayPos0, ACTIVE_ENTITIES)
+			object.eggmanID = arrayPos0
+			object.state = EGGMANSIGNPOST_AWAITDEFEAT
+		next
+		break
+		
+	case EGGMANSIGNPOST_AWAITDEFEAT
+		arrayPos0 = object.eggmanID
+		if object[arrayPos0].state == EGGMAN_EXPLODE
+			stage.timeEnabled = false
+		end if
+		
+		if object[arrayPos0].type == TypeName[Blank Object]
+			object.frame = 1
+			object.spinCount = 16
+			object.priority = PRIORITY_XBOUNDS
+			object.landingYPos = object.ypos
+			object.ypos = screen.cameraY
+			object.ypos -= screen.ycenter
+			object.ypos -= 32
+			object.ypos <<= 16
+			screen.cameraEnabled = false
+			object.state = EGGMANSIGNPOST_FALLTOGROUND
+		end if
+		break
+		
+	case EGGMANSIGNPOST_FALLTOGROUND
+		object.ypos += object.yvel
+		object.yvel += 0xC00
+		if object.ypos >= object.landingYPos
+			object.ypos = object.landingYPos
+			PlaySfx(SfxName[Sliding], false)
+			object.spinCount = 4
+			object.state = EGGMANSIGNPOST_SPINNINGONGROUND
+		end if
+		
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
+			object.frame++
+			if object.frame == 5
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+			
+			if object.frame == 9
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+		end if
+		break
+		
+	case EGGMANSIGNPOST_SPINNINGONGROUND
+		music.volume -= 2
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
+			object.frame++
+			if object.frame == 5
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+			
+			if object.frame == 9
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				object.spinCount--
+				if object.spinCount == 0
+					object.frame = 5
+					object.state = EGGMANSIGNPOST_MISSIONCOMPLETE
+				end if
+			end if
+		end if
+		break
+		
+	case EGGMANSIGNPOST_MISSIONCOMPLETE
+		CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
+		object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+		object[SLOT_ACTFINISH].drawOrder = 6
+		object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state > EGGMANSIGNPOST_AWAITDEFEAT
+		DrawSprite(0)
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 214)
+	SpriteFrame(-24, -16, 48, 32, 34, 182)
+	SpriteFrame(-16, -16, 32, 32, 1, 150)
+	SpriteFrame(-4, -16, 8, 32, 189, 131)
+	SpriteFrame(-16, -16, 32, 32, 1, 183)
+	SpriteFrame(-24, -16, 48, 32, 34, 83)
+	SpriteFrame(-16, -16, 32, 32, 1, 150)
+	SpriteFrame(-4, -16, 8, 32, 189, 131)
+	SpriteFrame(-16, -16, 32, 32, 1, 183)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 214)
+	SpriteFrame(-24, -16, 48, 32, 34, 182)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

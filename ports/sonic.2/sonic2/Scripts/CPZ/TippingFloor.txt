@@ -1,0 +1,296 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Tipping Floor Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.duration
+private alias object.value2 : object.intervalOffset
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+private alias 0 : TIPPINGFLOOR_IDLE
+private alias 1 : TIPPINGFLOOR_TIPPING
+private alias 2 : TIPPINGFLOOR_STATIC
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TippingFloor_DebugDraw
+reserve function TippingFloor_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value TippingFloor_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TippingFloor_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function TippingFloor_DebugSpawn
+	CreateTempObject(TypeName[Tipping Floor], 0, object.xpos, object.ypos)
+	object[tempObjectPos].duration = 127
+	object[tempObjectPos].timer = 127
+	object[tempObjectPos].intervalOffset = debugMode[0].currentSelection
+	object[tempObjectPos].intervalOffset -= TippingFloor_startDebugID
+	object[tempObjectPos].intervalOffset <<= 4
+	object[tempObjectPos].intervalOffset += 16
+	object[tempObjectPos].intervalOffset--
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == TIPPINGFLOOR_IDLE
+		temp0 = oscillation
+		temp0 += object.intervalOffset
+		temp0 &= 0xFF
+		if temp0 == 0
+			object.state = TIPPINGFLOOR_TIPPING
+			object.priority = PRIORITY_ACTIVE
+		end if
+	end if
+
+	if object.state == TIPPINGFLOOR_TIPPING
+		object.timer--
+		if object.timer < 0
+			if object.animation == 0
+				object.timer = object.duration
+			else
+				object.timer = 127
+			end if
+			
+			object.animation ^= 1
+		end if
+
+		if object.animation == 0
+			if object.frame < 4
+				object.animationTimer++
+				if object.animationTimer == 8
+					object.animationTimer = 0
+					object.frame++
+				end if
+			end if
+		else
+			if object.frame > 0
+				object.animationTimer++
+				if object.animationTimer == 8
+					object.animationTimer = 0
+					object.frame--
+				end if
+			end if
+		end if
+	end if
+
+	if object.frame == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, -8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+	end if
+
+	if options.vsMode == false
+		temp0 = camera[0].xpos
+		temp0 -= object.ixpos
+		Abs(temp0)
+		temp0 -= 128
+		if temp0 > screen.xcenter
+			object.state = TIPPINGFLOOR_IDLE
+			object.timer = object.duration
+			object.priority = PRIORITY_XBOUNDS
+			object.animation = 0
+			object.frame = 0
+			object.animationTimer = 0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 222)
+		SpriteFrame(-16, -21, 32, 37, 34, 218)
+		SpriteFrame(-16, -12, 32, 32, 67, 223)
+		SpriteFrame(-16, -8, 32, 37, 99, 218)
+		SpriteFrame(-16, -8, 32, 32, 132, 223)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 34, 692)
+		SpriteFrame(-16, -21, 32, 37, 34, 725)
+		SpriteFrame(-16, -12, 32, 32, 34, 763)
+		SpriteFrame(-16, -8, 32, 37, 34, 796)
+		SpriteFrame(-16, -8, 32, 32, 34, 834)
+	end if
+
+	foreach (TypeName[Tipping Floor], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+		CheckGreater(object[arrayPos0].propertyValue, 0x7F)
+		temp0 = checkResult
+		CheckEqual(options.vsMode, true)
+		temp0 &= checkResult
+		if temp0 == true
+			object[arrayPos0].state = TIPPINGFLOOR_STATIC
+		else
+			object[arrayPos0].intervalOffset = object[arrayPos0].propertyValue
+			object[arrayPos0].intervalOffset &= 0x0F
+			object[arrayPos0].intervalOffset++
+			object[arrayPos0].intervalOffset <<= 4
+			object[arrayPos0].duration = object[arrayPos0].propertyValue
+			object[arrayPos0].duration &= 0x70
+			object[arrayPos0].duration += 16
+			object[arrayPos0].duration--
+			object[arrayPos0].timer = object[arrayPos0].duration
+		end if
+	next
+
+	temp0 = 0
+	TippingFloor_startDebugID = DebugMode_ObjCount
+	while temp0 < 16
+		SetTableValue(TypeName[Tipping Floor], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(TippingFloor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(TippingFloor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // duration
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 3
+			break
+			
+		case 1 // intervalOffset
+			checkResult = object.propertyValue
+			checkResult &= 0x0F
+			break
+			
+		case 2 // vsDisable
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // duration
+			temp0 = 0x70
+			Not(temp0)
+			object.propertyValue &= temp0
+			editor.variableValue &= 3
+			editor.variableValue <<= 4
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // intervalOffset
+			object.propertyValue &= 0xF0
+			editor.variableValue &= 0x0F
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 2 // vsDisable
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 222)
+		SpriteFrame(-16, -21, 32, 37, 34, 218)
+		SpriteFrame(-16, -12, 32, 32, 67, 223)
+		SpriteFrame(-16, -8, 32, 37, 99, 218)
+		SpriteFrame(-16, -8, 32, 32, 132, 223)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 34, 692)
+		SpriteFrame(-16, -21, 32, 37, 34, 725)
+		SpriteFrame(-16, -12, 32, 32, 34, 763)
+		SpriteFrame(-16, -8, 32, 37, 34, 796)
+		SpriteFrame(-16, -8, 32, 32, 34, 834)
+	end if
+
+	AddEditorVariable("duration")
+	SetActiveVariable("duration")
+	AddEnumVariable("15 Frames", 0)
+	AddEnumVariable("31 Frames", 1)
+	AddEnumVariable("47 Frames", 2)
+	AddEnumVariable("63 Frames", 3)
+
+	AddEditorVariable("intervalOffset")
+	SetActiveVariable("intervalOffset")
+	AddEnumVariable("0% through the interval", 0)
+	AddEnumVariable("6.25% through the interval", 1)
+	AddEnumVariable("12.5% through the interval", 2)
+	AddEnumVariable("18.75% through the interval", 3)
+	AddEnumVariable("25% through the interval", 4)
+	AddEnumVariable("31.25% through the interval", 5)
+	AddEnumVariable("37.5% through the interval", 6)
+	AddEnumVariable("43.75% through the interval", 7)
+	AddEnumVariable("50% through the interval", 8)
+	AddEnumVariable("56.25% through the interval", 9)
+	AddEnumVariable("62.5% through the interval", 10)
+	AddEnumVariable("68.75% through the interval", 11)
+	AddEnumVariable("75% through the interval", 12)
+	AddEnumVariable("81.25% through the interval", 13)
+	AddEnumVariable("87.5% through the interval", 14)
+	AddEnumVariable("93.75% through the interval", 15)
+
+	AddEditorVariable("vsDisable")
+	SetActiveVariable("vsDisable")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

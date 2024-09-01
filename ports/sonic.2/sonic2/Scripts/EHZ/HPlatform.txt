@@ -1,0 +1,224 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: H Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.stood
+private alias object.value1 : object.centerPos.x
+private alias object.value2 : object.centerPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.stoodAngle
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HPlatform_DebugDraw
+reserve function HPlatform_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function HPlatform_DebugSpawn
+	CreateTempObject(TypeName[H Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.x = object.xpos
+	object[tempObjectPos].centerPos.y = object.ypos
+	object[tempObjectPos].propertyValue = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = object.xpos
+	temp7 = object.ypos
+
+	GetTableValue(temp0, 12, StageSetup_oscillationTable)
+	if object.propertyValue == 1
+		FlipSign(temp0)
+		temp0 += 0x4000
+	else
+		temp0 -= 0x4000
+	end if
+	temp0 <<= 8
+	object.xpos = object.centerPos.x
+	object.xpos -= temp0
+
+	if object.stood == true
+		if object.stoodAngle < 64
+			object.stoodAngle += 4
+		end if
+	else
+		if object.stoodAngle > 0
+			object.stoodAngle -= 4
+		end if
+	end if
+
+	temp0 = object.stoodAngle
+	temp0 <<= 1
+	Sin(temp1, temp0)
+	temp1 <<= 9
+	object.ypos = object.centerPos.y
+	object.ypos += temp1
+
+	object.stood = false
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp6 &= 0xFFFF0000
+	temp7 &= 0xFFFF0000
+	object.collisionOffset.x = object.xpos
+	object.collisionOffset.x &= 0xFFFF0000
+	object.collisionOffset.x -= temp6
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp7
+	
+	object.xpos = temp6
+	object.ypos = temp7
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			object.stood = true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	foreach (TypeName[H Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.x = object[arrayPos0].xpos
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[H Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw ghosts of the platform's destination, notably *before* the main platform sprite is drawn
+		
+		object.inkEffect = INK_BLEND
+		
+		// Right end
+		temp0 = object.xpos
+		temp0 += 0x408000
+		
+		// Left end
+		temp1 = object.xpos
+		temp1 -= 0x408000
+		
+		DrawSpriteFX(0, FX_INK, temp0, object.ypos)
+		DrawSpriteFX(0, FX_INK, temp1, object.ypos)
+		
+		object.inkEffect = INK_NONE
+		
+		editor.drawingOverlay = false
+	end if
+	
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Now draw some arrows, pulling from the temp values calculated before
+		DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 255)
+		DrawArrow(object.xpos, object.ypos, temp1, object.ypos, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

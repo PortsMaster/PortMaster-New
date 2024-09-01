@@ -1,0 +1,368 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Swing Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.length
+
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.recoilDir
+private alias object.value6 : object.collided
+
+private alias 0 : SWINGPLAT_RECOILDIR_LEFT
+private alias 1 : SWINGPLAT_RECOILDIR_RIGHT
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SwingPlatform_DebugDraw
+reserve function SwingPlatform_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value SwingPlatform_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SwingPlatform_DebugDraw
+
+	temp7 = debugMode[0].currentSelection
+	temp7 -= SwingPlatform_startDebugID
+
+	// Draw the chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+
+	// Draw the post
+	DrawSprite(0)
+
+	// Draw the platform itself
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+private function SwingPlatform_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= SwingPlatform_startDebugID
+	CreateTempObject(TypeName[Swing Platform], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].recoilDir = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Backup the object's position
+	temp2 = object.xpos
+	temp3 = object.ypos
+
+	// Oscillate in accordance with the rest of the stage's objects (namely other swinging platforms)
+	GetTableValue(object.angle, 12, StageSetup_oscillationTable)
+	object.angle >>= 8
+
+	if object.recoilDir == SWINGPLAT_RECOILDIR_LEFT // As in, is the object is going to bounce back to the left?
+		if object.angle <= 0x40
+			object.angle = 0x40
+			if object.collided == false
+				object.collided = true
+				PlaySfx(SfxName[Plat Collide], false)
+			end if
+		else
+			object.collided = false
+		end if
+	else
+		if object.angle >= 0x40
+			object.angle = 0x40
+			if object.collided == false
+				object.collided = true
+				PlaySfx(SfxName[Plat Collide], false)
+			end if
+		else
+			object.collided = false
+		end if
+	end if
+
+	if object.direction == FLIP_X
+		object.angle ^= 0xFF
+		object.angle += 0x81
+	end if
+
+	object.angle <<= 1
+
+	temp1 = object.length
+	temp1++
+	temp1 <<= 4
+	temp1 -= 8
+
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 7
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= 0xFFFF0000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 7
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= 0xFFFF0000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	// Restore object position
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	// First draw the chains...
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.length
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+
+	// Then calculate platform position...
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000
+
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000
+
+	// Then draw the base rock anchor...
+	DrawSprite(0)
+
+	// And finally draw the platform
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-12, -12, 23, 33, 152, 131) // 0 - Anchor frame
+	SpriteFrame( -8,  -8, 16, 16, 135, 148) // 1 - Link frame
+	SpriteFrame(-24,  -8, 48, 16, 141, 165) // 2 - Platform frame
+
+	foreach (TypeName[Swing Platform], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].length > 0
+			object[arrayPos0].length--
+		end if
+
+		object[arrayPos0].collided = true
+
+		// Get the fourth bit of the property/length value
+		object[arrayPos0].recoilDir = object[arrayPos0].length
+		object[arrayPos0].recoilDir >>= 3
+		object[arrayPos0].recoilDir &= 1
+
+		// Limit max chain length to 7
+		object[arrayPos0].length &= 7
+		object[arrayPos0].length++
+	next
+
+	// Add this object to the debug mode object list a few times for the different chain lengths
+	temp0 = 0
+	SwingPlatform_startDebugID = DebugMode_ObjCount
+	SwingPlatform_startDebugID--
+	while temp0 < 8
+		SetTableValue(TypeName[Swing Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SwingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SwingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // length
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+			
+		case 1 // swingDir
+			GetBit(checkResult, object.propertyValue, 4)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // length
+			temp0 = 7
+			Not(temp0)
+			object.propertyValue &= temp0
+			editor.variableValue &= 7
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // swingDir
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 4, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp7 = object.propertyValue
+	if temp7 > 0
+		temp7--
+	end if
+	temp7 &= 7
+	temp7++
+	
+	// Draw the chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+
+	// Draw the post
+	DrawSprite(0)
+
+	// Draw the platform itself
+	DrawSpriteXY(2, temp2, temp3)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-12, -12, 23, 33, 152, 131) // 0 - Anchor frame
+	SpriteFrame( -8,  -8, 16, 16, 135, 148) // 1 - Link frame
+	SpriteFrame(-24,  -8, 48, 16, 141, 165) // 2 - Platform frame
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+
+	AddEditorVariable("swingDir")
+	SetActiveVariable("swingDir")
+	AddEnumVariable("Left", SWINGPLAT_RECOILDIR_LEFT)
+	AddEnumVariable("Right", SWINGPLAT_RECOILDIR_RIGHT)
+end event

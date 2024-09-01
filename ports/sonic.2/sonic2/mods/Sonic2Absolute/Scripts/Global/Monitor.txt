@@ -1,0 +1,346 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Monitor Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 13 : TYPE_MONITOR
+public alias saveRAM[285] : saved.randomMonitor
+public alias saveRAM[275] : saved.elemental
+
+// Function declarations
+reserve function Monitor_DebugDraw
+reserve function Monitor_DebugSpawn
+reserve function Monitor_SolidBox
+
+// Static Values
+public value Monitor_value26 = 0;
+
+// Tables
+public table Monitor_table15
+	1, 2, 3, 4, 5, 12, 13, 1, 2, 1
+end table
+
+public table Monitor_table14
+	1, 2, 3, 4, 5, 9, 10, 11, 12, 13
+end table
+
+
+function Monitor_DebugDraw
+	DrawSprite(0)
+	temp0 = object[0].value17
+	temp0 -= Monitor_value26
+	if temp0 == 5
+		temp0 += stage.playerListPos
+	else
+		if temp0 > 5
+			temp0 += 2
+		end if
+	end if
+	temp0 += 2
+	DrawSprite(temp0)
+end function
+
+
+function Monitor_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= Monitor_value26
+	if temp0 == 5
+		temp0 += stage.playerListPos
+	else
+		if temp0 > 5
+			temp0 += 2
+		end if
+	end if
+	CreateTempObject(TypeName[Monitor], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = object[tempObjectPos].propertyValue
+	object[tempObjectPos].frame += 2
+end function
+
+function Monitor_SolidBox
+	temp0 = object[currentPlayer].xpos
+	temp1 = object[currentPlayer].ypos
+	BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+	object[currentPlayer].xpos = temp0
+	object[currentPlayer].ypos = temp1
+	switch checkResult
+	case 4
+		if object[currentPlayer].gravity == GRAVITY_AIR
+			object.state = 1
+			object.yvel = -0x20000
+			object[currentPlayer].yvel = 0x20000
+		end if
+	case 2
+	case 3		
+		BoxCollisionTest(C_BOX, object.entityPos, -15, -10, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		break
+	case 1
+		BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		break
+	end switch
+end function
+
+
+event ObjectMain
+	if object.state == 1
+		object.yvel += 0x3800
+		object.ypos += object.yvel
+		if object.yvel >= 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+			if checkResult == 1
+				object.yvel = 0
+				object.state = 0
+			end if
+		end if
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckGreater(object[currentPlayer].yvel, -1)
+		temp0 = checkResult
+		CheckEqual(object[currentPlayer].gravity, GRAVITY_GROUND)
+		temp0 |= checkResult
+		if temp0 == 1
+			CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
+			temp0 = checkResult
+			CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+			temp0 |= checkResult
+			CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+			temp0 |= checkResult
+			if temp0 == 1
+				if object[currentPlayer].value16 == 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+					if checkResult == 1
+						object.state = 0
+						CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+						object[tempObjectPos].drawOrder = 4
+						object[currentPlayer].yvel += object[currentPlayer].value25
+						object[currentPlayer].yvel += object[currentPlayer].value25
+						FlipSign(object[currentPlayer].yvel)
+						object.type = TypeName[Broken Monitor]
+						object.value3 = currentPlayer
+						if object.priority != PRIORITY_XBOUNDS_DESTROY
+							object.priority = PRIORITY_ACTIVE
+						end if
+						object.alpha = 255
+						object.value0 = object.ypos
+						object.value1 = -0x30000						
+						if object.propertyValue == 14
+							vs.randomValue *= 0x41C64E6D
+							vs.randomValue += 0x3039
+							vs.randomValue &= 0x7FFFFFFF
+							temp0 = vs.randomValue
+							temp0 >>= 16
+							temp0 %= 10
+							if options.vsMode == 1
+								if object[currentPlayer].propertyValue == 0
+									GetTableValue(object.propertyValue, temp0, Monitor_table14)
+								else
+									GetTableValue(object.propertyValue, temp0, Monitor_table15)
+								end if
+								if object.propertyValue == 13
+									if object[0].controlMode == -1
+										object.propertyValue = 2
+									end if
+									if object[1].controlMode == -1
+										object.propertyValue = 2
+									end if
+									if object[0].state == PlayerObject_Blank
+										object.propertyValue = 1
+									end if
+									if object[1].state == PlayerObject_Blank
+										object.propertyValue = 1
+									end if
+								end if
+							else
+								if saved.elemental == 1
+									GetTableValue(object.propertyValue, temp0, Monitor_table14)
+								else
+									GetTableValue(object.propertyValue, temp0, Monitor_table15)
+								end if
+								if object.propertyValue == 13
+									object.propertyValue = 1
+								end if
+							end if
+						end if
+						if options.vsMode == 1
+							if vs.playerID == 0
+								if currentPlayer == 0
+									vs.items1P++
+								else
+									vs.items2P++
+								end if
+							else
+								if currentPlayer == 1
+									vs.items1P++
+								else
+									vs.items2P++
+								end if
+							end if
+						end if
+						PlaySfx(SfxName[Destroy], 0)
+					end if
+				else
+					CallFunction(Monitor_SolidBox)
+				end if
+			else
+				CallFunction(Monitor_SolidBox)
+			end if
+		else
+			CallFunction(Monitor_SolidBox)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	switch StageSetup_value22
+	case 0
+	case 1
+		break
+	case 6
+	case 7
+		DrawSprite(1)
+		break
+	case 12
+	case 13
+		DrawSprite(2)
+		break
+	default
+		DrawSprite(object.frame)
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, -16, 32, 32, 18, 1)
+	SpriteFrame(-8, -9, 16, 14, 18, 51)
+	SpriteFrame(-8, -9, 16, 14, 35, 51) 
+	SpriteFrame(-8, -9, 16, 14, 18, 66)
+	SpriteFrame(-8, -9, 16, 14, 35, 66)
+	SpriteFrame(-8, -9, 16, 14, 18, 81)
+	SpriteFrame(-8, -9, 16, 14, 35, 81)
+	if options.gameMode == 3
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+	else
+		SpriteFrame(-8, -9, 16, 14, 18, 96)
+		SpriteFrame(-8, -9, 16, 14, 35, 96)
+		SpriteFrame(-8, -9, 16, 14, 18, 111)
+	end if
+	SpriteFrame(-8, -9, 16, 14, 35, 111)
+	SpriteFrame(-8, -9, 16, 14, 18, 141)
+	SpriteFrame(-8, -9, 16, 14, 35, 126)
+	SpriteFrame(-8, -9, 16, 14, 18, 126)
+	SpriteFrame(-8, -9, 16, 14, 35, 141)
+	SpriteFrame(-8, -9, 16, 14, 18, 156)
+	SpriteFrame(-8, -9, 16, 14, 35, 156)
+	SpriteFrame(-8, -9, 16, 14, 18, 171)
+	SpriteFrame(-8, -9, 16, 14, 35, 171)
+	temp0 = 0
+	Monitor_value26 = DebugMode_ObjCount
+	Monitor_value26--
+	while temp0 < 16
+		temp2 = 1
+		if temp0 >= 4
+			if temp0 <= 6
+				temp1 = temp0
+				temp1 -= 4
+				if stage.playerListPos != temp1
+					temp2 = 0
+				end if
+			end if
+		end if
+		if temp2 == 1
+			SetTableValue(TypeName[Monitor], DebugMode_ObjCount, DebugMode_TypesTable)
+			SetTableValue(Monitor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+			SetTableValue(Monitor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+			DebugMode_ObjCount++
+		end if
+		temp0++
+	loop
+	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value31 = object[arrayPos0].propertyValue
+		object[arrayPos0].value31 >>= 4
+		object[arrayPos0].propertyValue &= 15
+	next
+	
+	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 5
+			switch stage.playerListPos
+				case 1
+					object[arrayPos0].propertyValue = 6
+					break
+				case 2
+					object[arrayPos0].propertyValue = 7
+					break
+			end switch
+			if options.gameMode == 2
+				object[arrayPos0].type = TypeName[Blank Object]
+			end if
+		end if
+	next
+	
+	if options.vsMode == 1
+		switch vs.itemMode
+		case 1
+			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].propertyValue = 14
+			next
+			break
+		case 2
+			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].propertyValue = 13
+			next
+			break
+		end switch
+	else
+		if saved.lives == 1
+			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+				//if object[arrayPos0].propertyValue == 5
+				switch object[arrayPos0].propertyValue
+					case 5
+					case 6
+					case 7
+						object[arrayPos0].propertyValue = 1
+				end switch
+				//end if
+			next
+		end if
+		if saved.randomMonitor == 1
+			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].propertyValue = 14
+			next
+		else
+			if saved.elemental == 0
+				foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+					if object[arrayPos0].propertyValue >= 9
+						if object[arrayPos0].propertyValue <= 11
+							if object[arrayPos0].value31 == 0
+								object[arrayPos0].type = TypeName[Blank Object]
+							else
+								object[arrayPos0].propertyValue = object[arrayPos0].value31
+							end if
+						end if
+					end if
+				next
+			end if
+		end if
+	end if
+	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].frame = object[arrayPos0].propertyValue
+		object[arrayPos0].frame += 2
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

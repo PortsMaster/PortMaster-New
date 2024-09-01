@@ -1,0 +1,214 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Rotating Stair Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 49 : TYPE_ROTATINGSTAIR
+
+// Function declarations
+reserve function RotatingStair_DebugDraw
+reserve function RotatingStair_DebugSpawn
+reserve function RotatingStair_Function120
+
+// Static Values
+public value RotatingStair_value41 = 0;
+
+// Tables
+
+function RotatingStair_DebugDraw
+	temp0 = object.xpos
+	temp0 -= 0x300000
+	temp1 = object.ypos
+	temp1 -= 0x300000
+	temp3 = object[0].value17
+	temp3 -= RotatingStair_value41
+	if temp3 < 2
+		temp2 = 0
+		while temp2 < 4
+			DrawSpriteXY(0, temp0, temp1)
+			temp0 += 0x200000
+			temp1 += 0x200000
+			temp2++
+		loop
+	else
+		DrawSpriteXY(0, temp0, temp1)
+		temp0 += 0x600000
+		temp1 += 0x600000
+		DrawSpriteXY(0, temp0, temp1)
+	end if
+end function
+
+
+function RotatingStair_DebugSpawn
+	CreateTempObject(TypeName[Rotating Stair], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value16 = object.xpos
+	object[tempObjectPos].value17 = object.ypos
+	object[tempObjectPos].propertyValue = object[0].value17
+	object[tempObjectPos].propertyValue -= RotatingStair_value41
+end function
+
+
+function RotatingStair_Function120
+	temp1 = temp5
+	GetTableValue(temp0, temp3, StageSetup_table9)
+	temp0 <<= 8
+	if temp3 == 20
+		temp0 >>= 1
+	end if
+	switch temp4
+	case 0
+		temp0 -= temp1
+		temp0 += object.value16
+		temp6 = temp0
+		FlipSign(temp1)
+		temp1 += object.value17
+		temp7 = temp1
+		break
+	case 1
+		temp0 -= temp1
+		FlipSign(temp0)
+		temp0 += object.value17
+		temp7 = temp0
+		temp1 += object.value16
+		temp6 = temp1
+		break
+	case 2
+		temp0 -= temp1
+		FlipSign(temp0)
+		temp0 += object.value16
+		temp6 = temp0
+		temp1 += object.value17
+		temp7 = temp1
+		break
+	case 3
+		temp0 -= temp1
+		temp0 += object.value17
+		temp7 = temp0
+		FlipSign(temp1)
+		temp1 += object.value16
+		temp6 = temp1
+		break
+	end switch
+	temp6 &= -0x10000
+	temp7 &= -0x10000
+	temp0 = temp6
+	temp0 -= object.xpos
+	temp1 = temp7
+	temp1 -= object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		switch checkResult
+		case 1
+			object[currentPlayer].xpos += temp0
+			object[currentPlayer].ypos += temp1
+			break
+		case 2
+		case 3
+			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
+				object[currentPlayer].value1 = 0
+				object[currentPlayer].animation = ANI_GLIDING_DROP
+				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+			end if
+			break
+		case 4
+			if object[currentPlayer].gravity == GRAVITY_GROUND
+				if temp1 >= 0
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+			break
+		end switch
+	next
+end function
+
+
+event ObjectMain
+	temp4 = ZoneSetup_value33
+	GetBit(temp0, object.propertyValue, 0)
+	if temp0 == 1
+		temp4 ^= 1
+	end if
+	GetBit(temp0, object.propertyValue, 1)
+	if temp0 == 0
+		temp5 = 0x100000
+		temp3 = 20
+		object.xpos = object.value0
+		object.ypos = object.value1
+		CallFunction(RotatingStair_Function120)
+		object.value0 = temp6
+		object.value1 = temp7
+		temp4 ^= 2
+		object.xpos = object.value2
+		object.ypos = object.value3
+		CallFunction(RotatingStair_Function120)
+		object.value2 = temp6
+		object.value3 = temp7
+		temp4 ^= 2
+	end if
+	temp5 = 0x300000
+	temp3 = 22
+	object.xpos = object.value4
+	object.ypos = object.value5
+	CallFunction(RotatingStair_Function120)
+	object.value4 = temp6
+	object.value5 = temp7
+	temp4 ^= 2
+	object.xpos = object.value6
+	object.ypos = object.value7
+	CallFunction(RotatingStair_Function120)
+	object.value6 = temp6
+	object.value7 = temp7
+	temp4 ^= 2
+	temp5 = 0x500000
+	temp3 = 24
+	object.xpos = object.value16
+	object.ypos = object.value17
+end event
+
+
+event ObjectDraw
+	GetBit(temp0, object.propertyValue, 1)
+	if temp0 == 0
+		DrawSpriteXY(0, object.value0, object.value1)
+		DrawSpriteXY(0, object.value2, object.value3)
+	end if
+	DrawSpriteXY(0, object.value4, object.value5)
+	DrawSpriteXY(0, object.value6, object.value7)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("CPZ/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 62)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 130, 829)
+	end if
+	foreach (TypeName[Rotating Stair], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value16 = object[arrayPos0].xpos
+		object[arrayPos0].value17 = object[arrayPos0].ypos
+	next
+	temp0 = 0
+	RotatingStair_value41 = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Rotating Stair], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatingStair_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatingStair_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,278 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Fan Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.isOn
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+private alias object.value17 : debugMode.currentSelection
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Fan_DebugDraw
+reserve function Fan_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value Fan_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Fan_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Fan_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Fan_startDebugID
+	CreateTempObject(TypeName[Fan], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	GetBit(temp0, object.propertyValue, 1) // Bit 1 is true if the object should always be on
+	if temp0 == false
+		object.timer--
+		if object.timer <= 0
+			if object.isOn == false
+				object.timer = 120
+			else
+				object.timer = 180
+			end if
+			
+			object.isOn ^= true
+		end if
+	end if
+
+	if object.isOn == false
+		// Check if the object should be activated
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+			// Some special Knux exceptions, don't blow him away if he's supposed to be static for right now
+			CheckEqual(player[currentPlayer].state, Player_State_Climb)
+			temp0 = checkResult
+			CheckEqual(player[currentPlayer].state, Player_State_LedgePullUp)
+			temp0 |= checkResult
+
+			if temp0 == false
+				temp0 = player[currentPlayer].xpos
+				temp0 &= 0xFFFF0000
+				temp0 -= object.xpos
+				GetBit(temp2, object.direction, 0)
+				if temp2 == FLIP_NONE
+					FlipSign(temp0)
+				end if
+
+				temp0 += 0x500000
+				if temp0 >= 0
+					if temp0 < 0xF00000
+						temp1 = player[currentPlayer].ypos
+						temp1 &= 0xFFFF0000
+						temp1 -= object.ypos
+						
+						// See if Y flip bit is set
+						GetBit(temp2, object.direction, 1)
+						if temp2 == true
+							FlipSign(temp1)
+						end if
+						temp1 += 0x600000
+
+						// See if this object should have a taller hitbox height
+						GetBit(temp2, object.propertyValue, 2)
+						if temp2 == true
+							temp3 = 0x900000
+						else
+							temp3 = 0x700000
+						end if
+
+						if temp1 >= 0
+							if temp1 < temp3
+								temp0 -= 0x500000
+								if temp0 < 0
+									temp0 ^= 0xFFFF0000
+									temp0 <<= 1
+								end if
+								temp0 += 0x600000
+								if object.direction == FLIP_NONE
+									FlipSign(temp0)
+								end if
+								temp0 ^= 0xFF0000
+								temp0 += 0x10000
+								temp0 >>= 4
+								GetBit(temp1, object.propertyValue, 0)
+								if temp1 != false
+									FlipSign(temp0)
+								end if
+								
+								player[currentPlayer].xpos += temp0
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+
+		object.animationTimer++
+		if object.animationTimer >= 3
+			object.animationTimer = 0
+		end if
+		object.frame = object.animationTimer
+
+		GetBit(temp0, object.propertyValue, 0)
+		if temp0 != false
+			object.frame += 2
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+
+	// Fan frames
+	SpriteFrame(-11, -16, 27, 32, 6, 223)
+	SpriteFrame(-12, -15, 28, 31, 38, 224)
+	SpriteFrame(-11, -14, 27, 30, 72, 225)
+	SpriteFrame(-12, -15, 28, 31, 38, 224)
+	SpriteFrame(-11, -16, 27, 32, 6, 223)
+
+	temp0 = 0
+	Fan_startDebugID = DebugMode_ObjCount
+	Fan_startDebugID--
+	while temp0 < 4
+		SetTableValue(TypeName[Fan], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Fan_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Fan_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+			
+		case 0 // forceDir
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		case 1 // alwaysOn
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+			
+		case 2 // force
+			GetBit(checkResult, object.propertyValue, 2)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+			
+		case 0 // forceDir
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		case 1 // alwaysOn
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+			
+		case 2 // force
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 2, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.frame, object.propertyValue, 0)
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// TODO: we're just drawing a dir arrow, but showing the complete hitbox would be cool
+		
+		temp1 = object.xpos
+		if object.frame == 1
+			temp1 -= 0x200000
+		else
+			temp1 += 0x200000
+		end if
+		DrawArrow(object.xpos, object.ypos, temp1, object.ypos, 0x00, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-11, -16, 27, 32, 6, 223)
+	SpriteFrame(-11, -14, 27, 30, 72, 225)
+
+	// Not the same as direction, idk why but it is what it is
+	AddEditorVariable("forceDir")
+	SetActiveVariable("forceDir")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
+
+	AddEditorVariable("alwaysOn")
+	SetActiveVariable("alwaysOn")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("force") // TODO: idk what to call it but this should be hitbox height
+	SetActiveVariable("force")
+	AddEnumVariable("Weak", 0)
+	AddEnumVariable("Strong", 1)
+end event

@@ -1,0 +1,275 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Snail Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.startPos.y
+
+// States
+private alias 0 : SNAIL_MOVING
+private alias 1 : SNAIL_STOPPED
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Snail_DebugDraw
+reserve function Snail_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Snail_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Snail_DebugSpawn
+	CreateTempObject(TypeName[Snail], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == FACING_RIGHT
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x8000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x8000
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SNAIL_MOVING
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, PATH_A)
+		if checkResult == false
+			object.xpos -= object.xvel
+			if object.direction == FLIP_X
+				object.xvel = -0x8000
+			else
+				object.xvel = 0x8000
+			end if
+
+			object.state = SNAIL_STOPPED
+		end if
+		
+		temp0 = object.xvel
+		Abs(temp0)
+		if temp0 == 0x8000
+			temp0 = 6
+		else
+			// The Snail's going faster, meaning it should animate faster as well
+			temp0 = 3
+		end if
+		
+		object.animationTimer++
+		if object.animationTimer >= temp0
+			object.animationTimer = 0
+			object.frame ^= 1
+		end if
+		break
+		
+	case SNAIL_STOPPED
+		if object.timer < 59
+			object.timer++
+		else
+			object.timer = 0
+			object.state = SNAIL_MOVING
+			object.direction ^= FLIP_X
+		end if
+		break
+		
+	end switch
+
+	if object.outOfBounds == true
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		
+		if object.outOfBounds == true
+			if object.propertyValue == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x8000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x8000
+			end if
+			
+			object.animationTimer = 0
+			object.frame = 0
+			object.priority = PRIORITY_BOUNDS
+			object.state = SNAIL_MOVING
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Try Detect Player
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -96, 0, 96, currentPlayer, 0, 0, 0, 0)
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -96, 96, 96, currentPlayer, 0, 0, 0, 0)
+		end if
+		
+		if checkResult == true
+			// If we're detected, dash until we hit an edge
+			if object.direction == FLIP_NONE
+				object.xvel = -0x20000
+			else
+				object.xvel = 0x20000
+			end if
+		end if
+		
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -16, 12, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+
+	// Going fast means we should have boosters on
+	temp0 = object.xvel
+	Abs(temp0)
+	if temp0 != 0x8000
+		temp0 = object.frame
+		temp0 += 3
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	end if
+	
+	foreach (TypeName[Snail], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		
+		GetBit(temp0, object[arrayPos0].propertyValue, 0)
+		if temp0 == FLIP_NONE
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x8000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x8000
+		end if
+	next
+	
+	SetTableValue(TypeName[Snail], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Snail_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Snail_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.direction, object.propertyValue, 0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

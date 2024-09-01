@@ -1,0 +1,287 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Current Tunnel Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.isEnd
+
+private alias object.value0 : object.startPos.x
+private alias object.value1 : object.endPos.x
+private alias object.value2 : object.startPos.y
+private alias object.value3 : object.endPos.y
+private alias object.value4 : object.waterfallLoopTimer
+
+// Player Aliases
+private alias object.state			: player.state
+private alias object.animation		: player.animation
+private alias object.tileCollisions	: player.tileCollisions
+private alias object.xpos			: player.xpos
+private alias object.ypos			: player.ypos
+private alias object.xvel 			: player.xvel
+private alias object.yvel 			: player.yvel
+private alias object.speed			: player.speed
+
+
+// ========================
+// Static Values
+// ========================
+
+public value CurrentTunnel_activateDelay = 0
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = PRIORITY_BOUNDS
+	temp7 = false
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckLower(player[currentPlayer].xpos, object.startPos.x)
+		temp0 = checkResult
+		CheckGreater(player[currentPlayer].xpos, object.endPos.x)
+		temp0 |= checkResult
+		CheckLower(player[currentPlayer].ypos, object.startPos.y)
+		temp0 |= checkResult
+		CheckGreater(player[currentPlayer].ypos, object.endPos.y)
+		temp0 |= checkResult
+
+		if temp0 == false
+			temp7 = true
+
+			if CurrentTunnel_activateDelay == 0
+				temp6 = PRIORITY_ACTIVE
+
+				CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Hurt)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Death)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Drown)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, Player_State_Clinging)
+				temp0 |= checkResult
+
+				if temp0 == false
+					player[currentPlayer].state = Player_State_Clinging
+					player[currentPlayer].animation = ANI_FANROTATE
+					player[currentPlayer].tileCollisions = true
+				end if
+
+				if player[currentPlayer].animation == ANI_FANROTATE
+					if player[currentPlayer].xvel == 0
+						temp1 = object.endPos.y
+						temp1 -= object.startPos.y
+						temp1 >>= 1
+						temp1 += object.startPos.y
+						if player[currentPlayer].ypos < temp1
+							player[currentPlayer].ypos += 0x40000
+						else
+							player[currentPlayer].ypos -= 0x40000
+						end if
+					end if
+				end if
+			else
+				CurrentTunnel_activateDelay--
+
+				if player[currentPlayer].state == Player_State_Clinging
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].xvel = 0x40000
+					player[currentPlayer].speed = 0x40000
+				end if
+			end if
+		else
+			if player[currentPlayer].state == Player_State_Clinging
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				player[currentPlayer].xvel = 0x40000
+				player[currentPlayer].speed = 0x40000
+			end if
+		end if
+	next
+
+	object.priority = temp6
+	if object.isEnd == false
+		object[+1].priority = temp6
+	else
+		object[-1].priority = temp6
+	end if
+
+	if temp7 == false
+		object.waterfallLoopTimer = 0
+	end if
+
+	if object.waterfallLoopTimer != 0
+		object.waterfallLoopTimer--
+
+		if temp7 == true
+			if object.waterfallLoopTimer <= 0
+				if object.isEnd == false
+					temp0 = object[+1].waterfallLoopTimer
+				else
+					temp0 = object[-1].waterfallLoopTimer
+				end if
+
+				if temp0 == false
+					StopSfx(SfxName[Waterfall])
+					PlaySfx(SfxName[Waterfall Loop], false)
+					object.waterfallLoopTimer = 31
+				end if
+			end if
+		end if
+	else
+		if temp7 == true
+			if object.isEnd == false
+				temp0 = object[+1].waterfallLoopTimer
+			else
+				temp0 = object[-1].waterfallLoopTimer
+			end if
+
+			if temp0 == false
+				PlaySfx(SfxName[Waterfall], false)
+				object.waterfallLoopTimer = 31
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	CurrentTunnel_activateDelay = 0
+
+	foreach (TypeName[Current Tunnel], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].isEnd == false
+			arrayPos1 = arrayPos0
+			arrayPos1++
+			object[arrayPos0].startPos.x = object[arrayPos0].xpos
+			object[arrayPos0].endPos.x = object[arrayPos1].xpos
+			temp1 = object[arrayPos0].ypos
+			temp2 = object[arrayPos0].ypos
+		else
+			arrayPos1 = arrayPos0
+			arrayPos1--
+			object[arrayPos0].startPos.x = object[arrayPos1].xpos
+			object[arrayPos0].endPos.x = object[arrayPos0].xpos
+			temp1 = object[arrayPos0].ypos
+			temp2 = object[arrayPos0].ypos
+		end if
+
+		if temp1 < temp2
+			object[arrayPos0].startPos.y = temp1
+			object[arrayPos0].endPos.y   = temp2
+		else
+			object[arrayPos0].startPos.y = temp2
+			object[arrayPos0].endPos.y   = temp1
+		end if
+
+		object[arrayPos0].startPos.y -= 0x600000
+		object[arrayPos0].endPos.y   += 0x600000
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // isEnd
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // isEnd
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		if object.isEnd == false
+			DrawLine(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0xFF, 0xFF, 0x00)
+		else
+			DrawLine(object.xpos, object.ypos, object[-1].xpos, object[-1].ypos, 0xFF, 0xFF, 0x00)
+		end if
+
+#platform: DUMMY
+		// TODO: draw box idk
+		
+		if object.isEnd == false
+			object.startPos.x = object.xpos
+			object.endPos.x = object[+1].xpos
+			temp1 = object.ypos
+			temp2 = object.ypos
+		else
+			object.startPos.x = object[-1].xpos
+			object.endPos.x = object.xpos
+			temp1 = object.ypos
+			temp2 = object.ypos
+		end if
+
+		if temp1 < temp2
+			object.startPos.y = temp1
+			object.endPos.y   = temp2
+		else
+			object.startPos.y = temp2
+			object.endPos.y   = temp1
+		end if
+
+		object.startPos.y -= 0x600000
+		object.endPos.y   += 0x600000
+#endplatform
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 165, 141)
+
+	AddEditorVariable("isEnd")
+	SetActiveVariable("isEnd")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

@@ -1,0 +1,200 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Grass Fireball Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.parentSlot
+private alias object.value2 : object.platformPos
+private alias object.value3 : object.parentType
+private alias object.value4 : object.spawnLimit
+
+private alias 0 : GRASSFIREBALL_SETUP
+private alias 1 : GRASSFIREBALL_MOVING
+private alias 2 : GRASSFIREBALL_IDLE
+
+// Large Platform Aliases
+private alias object.value1 : largePlatform.drawPos.y
+private alias object.value3 : largePlatform.spawnedFireballs
+
+private alias 0 : LARGEPLATFORM_TYPE_ARCH
+private alias 1 : LARGEPLATFORM_TYPE_CURVE
+private alias 2 : LARGEPLATFORM_TYPE_RECT
+
+// ========================
+// Static Values
+// ========================
+
+// ========================
+// Tables
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case GRASSFIREBALL_SETUP
+		temp0 = object.platformPos
+		temp0 >>= 1
+		switch object.parentType
+		case LARGEPLATFORM_TYPE_ARCH
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableArch)
+			object.ypos <<= 16
+			object.spawnLimit = 7
+			break
+
+		case LARGEPLATFORM_TYPE_CURVE
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableCurved)
+			object.ypos <<= 16
+			object.spawnLimit = 7
+			break
+
+		case LARGEPLATFORM_TYPE_RECT
+			object.ypos = -0x300000
+			object.spawnLimit = 3
+			break
+			
+		end switch
+
+		arrayPos0 = object.parentSlot
+		object.ypos += largePlatform[arrayPos0].drawPos.y
+		if object.propertyValue == 0
+			CreateTempObject(TypeName[Grass Fireball], object.propertyValue, object.xpos, object.ypos)
+			object[tempObjectPos].propertyValue++
+			object[tempObjectPos].parentSlot 	 = object.parentSlot
+			object[tempObjectPos].drawOrder 	 = 5
+			object[tempObjectPos].platformPos 	 = object.platformPos
+			object[tempObjectPos].parentType 	 = object.parentType
+			object[tempObjectPos].spawnLimit 	 = object.spawnLimit
+			object[tempObjectPos].state 		 = GRASSFIREBALL_MOVING
+			object[tempObjectPos].animationTimer = object.animationTimer
+			object.animationTimer = 0
+			object.state = GRASSFIREBALL_IDLE
+			PlaySfx(SfxName[Fire Burn], false)
+		else
+			object.state++
+		end if
+		break
+
+	case GRASSFIREBALL_MOVING
+		object.timer++
+		object.xpos += 0x10000
+		object.platformPos++
+		temp0 = object.platformPos
+		temp0 >>= 1
+		switch object.parentType
+		case LARGEPLATFORM_TYPE_ARCH
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableArch)
+			object.ypos <<= 16
+			break
+			
+		case LARGEPLATFORM_TYPE_CURVE
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableCurved)
+			object.ypos <<= 16
+			break
+			
+		case LARGEPLATFORM_TYPE_RECT
+			object.ypos = -0x300000
+			break
+			
+		end switch
+
+		arrayPos0 = object.parentSlot
+		object.ypos += largePlatform[arrayPos0].drawPos.y
+		if object.timer == 16
+			object.state++
+			if object.propertyValue < object.spawnLimit
+				CreateTempObject(TypeName[Grass Fireball], object.propertyValue, object.xpos, object.ypos)
+				object[tempObjectPos].propertyValue++
+				object[tempObjectPos].parentSlot 	= object.parentSlot
+				object[tempObjectPos].drawOrder 	= 5
+				object[tempObjectPos].platformPos 	= object.platformPos
+				object[tempObjectPos].parentType 	= object.parentType
+				object[tempObjectPos].spawnLimit 	= object.spawnLimit
+				if object.propertyValue == 7
+					object[tempObjectPos].state = GRASSFIREBALL_IDLE
+				else
+					object[tempObjectPos].state = GRASSFIREBALL_MOVING
+				end if
+				object[tempObjectPos].animationTimer = object.animationTimer
+				object.animationTimer = 0
+				PlaySfx(SfxName[Fire Burn], false)
+			end if
+		end if
+		break
+
+	case GRASSFIREBALL_IDLE
+		temp0 = object.platformPos
+		temp0 >>= 1
+		switch object.parentType
+		case LARGEPLATFORM_TYPE_ARCH
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableArch)
+			object.ypos <<= 16
+			break
+
+		case LARGEPLATFORM_TYPE_CURVE
+			GetTableValue(object.ypos, temp0, LargePlatform_heightTableCurved)
+			object.ypos <<= 16
+			break
+
+		case LARGEPLATFORM_TYPE_RECT
+			object.ypos = -0x300000
+			break
+			
+		end switch
+		arrayPos0 = object.parentSlot
+		object.ypos += largePlatform[arrayPos0].drawPos.y
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -14, 6, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_FireHit)
+		end if
+	next
+
+	object.frame = object.animationTimer
+	object.frame /= 12
+	object.direction = object.animationTimer
+	object.direction /= 6
+	object.direction &= 1
+	object.animationTimer++
+	object.animationTimer %= 24
+
+	arrayPos0 = object.parentSlot
+	if object[arrayPos0].outOfBounds == true
+		object.type = TypeName[Blank Object]
+		largePlatform[arrayPos0].spawnedFireballs = false
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-7, -23, 15, 31, 52, 114)
+	SpriteFrame(-8, -24, 16, 32, 68, 114)
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-7, -23, 15, 31, 52, 114)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

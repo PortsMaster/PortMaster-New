@@ -1,0 +1,198 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Nebula Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value2 : object.firedShot
+
+// States
+private alias 0 : NEBULA_AWAITPLAYER
+private alias 1 : NEBULA_RISING
+
+// Player aliases
+private alias object.xpos : player.xpos
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Nebula_DebugDraw
+reserve function Nebula_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Nebula_DebugDraw
+	DrawSprite(2)
+end function
+
+
+private function Nebula_DebugSpawn
+	CreateTempObject(TypeName[Nebula], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.xpos += object.xvel
+	object.xpos += SCZSetup_scrollVelocity.x
+	object.ypos += SCZSetup_scrollVelocity.y
+	
+	switch object.state
+	case NEBULA_AWAITPLAYER
+		temp0 = object.xpos
+		temp0 -= player[0].xpos
+		Abs(temp0)
+		if temp0 < 0x800000
+			object.yvel = -0xA000
+			object.state++
+		end if
+		break
+
+	case NEBULA_RISING
+		object.yvel += 0x100
+		object.ypos += object.yvel
+		if object.firedShot == false
+			temp0 = object.xpos
+			temp0 -= player[0].xpos
+			Abs(temp0)
+			if temp0 < 0x100000
+				object.firedShot = true
+				CreateTempObject(TypeName[Nebula Bomb], 0, object.xpos, object.ypos)
+				object[tempObjectPos].drawOrder = 2
+				object[tempObjectPos].ypos += 0x180000
+			end if
+		end if
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+
+	object.frame = object.animationTimer
+	object.frame >>= 1
+	object.animationTimer++
+	object.animationTimer &= 7
+
+	temp0 = object.xpos
+	temp0 -= SCZSetup_scrollPos.x
+	if temp0 < -0x200000
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone10")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-24, -20, 48, 40, 72, 1)
+		SpriteFrame(-16, -20, 32, 40, 121, 1)
+		SpriteFrame(-16, -20, 32, 40, 154, 1)
+		SpriteFrame(-16, -20, 32, 40, 187, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -20, 48, 40, 72, 1)
+		SpriteFrame(-16, -20, 32, 40, 121, 1)
+		SpriteFrame(-16, -20, 32, 40, 154, 1)
+		SpriteFrame(-16, -20, 32, 40, 187, 1)
+	end if
+
+	foreach (TypeName[Nebula], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].xvel = -0xC000
+		if object[arrayPos0].propertyValue > 0
+			object[arrayPos0].priority = PRIORITY_INACTIVE
+		end if
+	next
+
+	SetTableValue(TypeName[Nebula], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Nebula_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Nebula_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // initialState
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // initialState
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(2)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone10")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-24, -20, 48, 40, 72, 1)
+		SpriteFrame(-16, -20, 32, 40, 121, 1)
+		SpriteFrame(-16, -20, 32, 40, 154, 1)
+		SpriteFrame(-16, -20, 32, 40, 187, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -20, 48, 40, 72, 1)
+		SpriteFrame(-16, -20, 32, 40, 121, 1)
+		SpriteFrame(-16, -20, 32, 40, 154, 1)
+		SpriteFrame(-16, -20, 32, 40, 187, 1)
+	end if
+
+	AddEditorVariable("initialState")
+	SetActiveVariable("initialState")
+	AddEnumVariable("Active", 0)
+	AddEnumVariable("Inactive", 1)
+end event

@@ -1,0 +1,245 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Eggman Balloon Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 80 : TYPE_EGGMANBALLOON
+
+
+// Static Values
+
+// Tables
+public table EggmanBalloon_table54
+	0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 3, 4, 3, 4, 5, 6, 7, 8
+end table
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.angle += 4
+		object.angle &= 255
+		object.value1 += 4
+		object.value1 &= 255
+		if object.angle == 128
+			object.drawOrder = 3
+		else
+			if object.angle == 0
+				object.drawOrder = 2
+			end if
+		end if
+		object.frame = object.angle
+		object.frame -= 32
+		object.frame &= 255
+		object.frame >>= 6
+		if object.frame == 3
+			object.frame = 1
+		end if
+		arrayPos0 = object.value0
+		temp0 = object.angle
+		Cos256(object.xpos, temp0)
+		object.xpos *= object[arrayPos0].value17
+		object.xpos <<= 8
+		object.xpos += object[arrayPos0].xpos
+		temp0 += object.value1
+		temp0 &= 255
+		Sin256(object.ypos, temp0)
+		object.ypos *= object[arrayPos0].value18
+		object.ypos <<= 8
+		object.ypos += object[arrayPos0].ypos
+		object.ypos += object[arrayPos0].value19
+		break
+	case 1
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		if object.yvel >= 0x18000
+			object.yvel = 0x18000
+		end if
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+			if checkResult == 1
+				if object[0].xpos < object.xpos
+					object.xvel = -0x8000
+					object.direction = FLIP_NONE
+				else
+					object.xvel = 0x8000
+					object.direction = FLIP_X
+				end if
+				FlipSign(object.yvel)
+				object.state = 2
+			end if
+		end if
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		GetTableValue(object.frame, temp0, EggmanBalloon_table54)
+		if object.frame != 8
+			object.animationTimer++
+		end if
+		break
+	case 2
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x480
+		if object.yvel >= 0x18000
+			object.yvel = 0x18000
+		end if
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+			if checkResult == 1
+				if object[0].xpos < object.xpos
+					object.xvel = -0x8000
+					object.direction = FLIP_NONE
+				else
+					object.xvel = 0x8000
+					object.direction = FLIP_X
+				end if
+				FlipSign(object.yvel)
+			end if
+		end if
+		break
+	case 3
+		object.animationTimer--
+		if object.animationTimer == 0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	if object.state < 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.frame < 6
+				BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_Hit)
+				end if
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+				if checkResult == 1
+					CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
+					temp0 = checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_SPINDASH)
+					temp0 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+					temp0 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+					temp0 |= checkResult
+					CheckNotEqual(object[currentPlayer].value7, 0)
+					temp0 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLYING)
+					temp1 = checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLYINGTIRED)
+					temp1 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_UP)
+					temp1 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_DOWN)
+					temp1 |= checkResult
+					CheckEqual(object[currentPlayer].animation, ANI_FLY_LIFT_TIRED)
+					temp1 |= checkResult
+					if temp1 == 1
+						CheckGreater(object[currentPlayer].ypos, object.ypos)
+						temp0 |= checkResult
+					end if
+					if temp0 == 1
+						PlaySfx(SfxName[Explosion], 0)
+						object.state = 3
+						object.frame = 9
+						object.animationTimer = 3
+						arrayPos0 = object.value0
+						object[arrayPos0].value20--
+						if object[arrayPos0].value20 < 0
+							object[arrayPos0].value20 = 0
+						end if
+						if object[currentPlayer].gravity == GRAVITY_AIR
+							FlipSign(object[currentPlayer].xvel)
+							object[currentPlayer].speed = object[currentPlayer].xvel
+							object[currentPlayer].yvel += object[currentPlayer].value25
+							object[currentPlayer].yvel += object[currentPlayer].value25
+							FlipSign(object[currentPlayer].yvel)
+						end if
+						if object[currentPlayer].animation == ANI_GLIDING
+							object[currentPlayer].animation = ANI_GLIDING_DROP
+							object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+						end if
+					else
+						if object[currentPlayer].state != PlayerObject_Death
+							if object[currentPlayer].value8 == 0
+								if object[currentPlayer].value7 == 0
+									object[currentPlayer].state = PlayerObject_Hurt
+									if object[currentPlayer].xpos > object.xpos
+										object[currentPlayer].speed = 0x20000
+									else
+										object[currentPlayer].speed = -0x20000
+									end if
+								end if
+								PlaySfx(SfxName[Explosion], 0)
+								object.state = 3
+								object.frame = 9
+								object.animationTimer = 3
+								arrayPos0 = object.value0
+								object[arrayPos0].value20--
+								if object[arrayPos0].value20 < 0
+									object[arrayPos0].value20 = 0
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == 1
+		if stage.playerListPos == 2
+			if saveRAM[284] == 1
+				LoadSpriteSheet("MPZ/ObjectsRobo.gif")
+			else
+				LoadSpriteSheet("MPZ/Objects.gif")
+			end if
+		else
+			LoadSpriteSheet("MPZ/Objects.gif")
+		end if
+		SpriteFrame(-8, -8, 16, 16, 302, 138)
+		SpriteFrame(-10, -10, 20, 20, 281, 134)
+		SpriteFrame(-12, -12, 24, 24, 256, 130)
+		SpriteFrame(-6, -12, 12, 23, 319, 133)
+		SpriteFrame(-11, -5, 22, 10, 332, 133)
+		SpriteFrame(-8, -8, 16, 18, 355, 133)
+		SpriteFrame(-12, -12, 24, 23, 372, 133)
+		SpriteFrame(-16, -16, 32, 32, 397, 133)
+		SpriteFrame(-24, -24, 48, 47, 430, 133)
+		SpriteFrame(-21, -24, 42, 48, 277, 207)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 371, 239)
+		SpriteFrame(-10, -10, 20, 20, 350, 235)
+		SpriteFrame(-12, -12, 24, 24, 325, 231)
+		SpriteFrame(-6, -12, 12, 23, 375, 214)
+		SpriteFrame(-11, -5, 22, 10, 388, 245)
+		SpriteFrame(-8, -8, 16, 18, 411, 237)
+		SpriteFrame(-12, -12, 24, 23, 428, 232)
+		SpriteFrame(-16, -16, 32, 32, 453, 223)
+		SpriteFrame(-24, -24, 48, 47, 486, 208)
+		SpriteFrame(-21, -24, 42, 48, 312, 182)
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

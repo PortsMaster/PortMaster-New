@@ -1,0 +1,217 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Nut Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 54 : TYPE_NUT
+
+// Function declarations
+reserve function Nut_DebugDraw
+reserve function Nut_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Nut_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function Nut_DebugSpawn
+	CreateTempObject(TypeName[Nut], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object.ypos
+	object[tempObjectPos].value0 = 0x7FFF0000
+end function
+
+
+event ObjectMain
+	temp0 = object.ypos
+	temp0 &= -0x10000
+	object.ypos += object.yvel
+	if object.yvel >= 0
+		ObjectTileCollision(CSIDE_FLOOR, 0, 12, 0)
+		if checkResult == 1
+			object.value5 = 1
+			object.value7 = 0
+			object.yvel = 0
+		end if
+	else
+		object.value5 = 0
+	end if
+	temp1 = object.ypos
+	temp1 &= -0x10000
+	temp1 -= temp0
+	if object.state == 0
+		GetBit(temp6, object.propertyValue, 7)
+		if temp6 == 1
+			if object.ypos > object.value0
+				object.state = 1
+				object.value7 = object.yvel
+			end if
+		end if
+		object.value6 += object.yvel
+		temp0 = object.value6
+		temp0 >>= 17
+		temp0 &= 3
+		object.frame = 3
+		object.frame -= temp0
+		object.yvel = 0
+		temp7 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp5 = object.value5
+			GetBit(temp6, object.value2, temp7)
+			if temp6 == 1
+				object[currentPlayer].ypos += temp1
+			else
+				SetBit(object.value4, temp7, 0)
+			end if
+			if object.value5 == 1
+				if object[currentPlayer].xvel < 0
+					SetBit(object.value4, temp7, 0)
+				else
+					temp5 = 0
+				end if
+			end if
+			SetBit(object.value2, temp7, 0)
+			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 1
+				SetBit(object.value2, temp7, 1)
+				if temp6 == 0
+					GetBit(temp6, object.value4, temp7)
+					temp6 |= temp5
+					if temp6 == 0
+						temp2 = object[currentPlayer].xpos
+						temp2 &= -0x10000
+						temp3 = object.xpos
+						temp3 &= -0x10000
+						if temp2 == temp3
+							SetBit(object.value4, temp7, 1)
+							object.priority = PRIORITY_ACTIVE
+						else
+							if object[currentPlayer].xpos > object.xpos
+								SetBit(object.value3, temp7, 0)
+							else
+								SetBit(object.value3, temp7, 1)
+							end if
+						end if
+					end if
+				else
+					GetBit(temp6, object.value4, temp7)
+					if temp6 == 0
+						if temp5 == 1
+							if object[currentPlayer].xvel > 0
+								SetBit(object.value3, temp7, 0)
+							else
+								SetBit(object.value3, temp7, 1)
+							end if
+						else
+							GetBit(temp6, object.value3, temp7)
+							if temp6 == 0
+								if object[currentPlayer].xpos < object.xpos
+									SetBit(object.value4, temp7, 1)
+									object[currentPlayer].xpos = object.xpos
+									object.priority = PRIORITY_ACTIVE
+								end if
+							else
+								if object[currentPlayer].xpos > object.xpos
+									SetBit(object.value4, temp7, 1)
+									object[currentPlayer].xpos = object.xpos
+									object.priority = PRIORITY_ACTIVE
+								end if
+							end if
+						end if
+					else
+						object[currentPlayer].xpos = object.xpos
+						object.yvel += object[currentPlayer].xvel
+					end if
+				end if
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+				break
+			end switch
+			temp7++
+		next
+		FlipSign(object.yvel)
+		object.yvel >>= 3
+	else
+		object.yvel += 0x3800
+		object.value6 += object.value7
+		temp0 = object.value6
+		temp0 >>= 17
+		temp0 &= 3
+		object.frame = 3
+		object.frame -= temp0
+		temp7 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp6, object.value2, temp7)
+			if temp6 == 1
+				object[currentPlayer].ypos += temp1
+			end if
+			SetBit(object.value2, temp7, 0)
+			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				SetBit(object.value2, temp7, 1)
+			end if
+			temp7++
+		next
+	end if
+	if object.outOfBounds == 1
+		temp1 = object.ypos
+		object.ypos = object.value1
+		object.ypos += object.value31
+		if object.outOfBounds == 1
+			object.value2 = 0
+			object.value3 = 0
+			object.value4 = 0
+			object.value5 = 0
+			object.value6 = 0
+			object.value7 = 0
+			object.state = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		else
+			object.ypos = temp1
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 130, 156)
+	SpriteFrame(-32, -12, 64, 24, 130, 181)
+	SpriteFrame(-32, -12, 64, 24, 130, 206)
+	SpriteFrame(-32, -12, 64, 24, 130, 231)
+	foreach (TypeName[Nut], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].value0 = object[arrayPos0].propertyValue
+		object[arrayPos0].value0 &= 127
+		object[arrayPos0].value0 <<= 19
+		object[arrayPos0].value0 += object[arrayPos0].ypos
+	next
+	SetTableValue(TypeName[Nut], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Nut_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Nut_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

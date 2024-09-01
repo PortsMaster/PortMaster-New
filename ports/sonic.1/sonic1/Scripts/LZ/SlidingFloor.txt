@@ -1,0 +1,203 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Sliding Floor Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.collisionOffset.x
+private alias object.value2 : object.collisionOffset.y
+
+private alias 0 : SLIDINGFLOOR_AWAITBUTTON
+private alias 1 : SLIDINGFLOOR_SLIDING
+private alias 2 : SLIDINGFLOOR_FINISHEDSLIDING
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ixpos : player.ixpos
+private alias object.ypos : player.ypos
+private alias object.iypos : player.iypos
+private alias object.right : player.right
+private alias object.pushing: player.pushing
+private alias object.collisionRight: player.collisionRight
+private alias object.collisionBottom: player.collisionBottom
+
+// Push Button aliases
+private alias object.value0 : pushButton.stood
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SlidingFloor_DebugDraw
+reserve function SlidingFloor_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private function SlidingFloor_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function SlidingFloor_DebugSpawn
+	CreateTempObject(TypeName[Sliding Floor], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SLIDINGFLOOR_AWAITBUTTON
+		if pushButton[+1].stood == true
+			object.state++
+			object.timer = 256
+		end if
+
+	case SLIDINGFLOOR_FINISHEDSLIDING
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -128, -64, 128, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -64, 128, 64, currentPlayer, 2, 2, 2, 2)
+			if checkResult == true
+				if player[currentPlayer].ypos > object.ypos
+					player[currentPlayer].ixpos = player[currentPlayer].collisionRight
+					FlipSign(player[currentPlayer].xpos)
+					player[currentPlayer].xpos -= 0x800000
+					player[currentPlayer].xpos += object.xpos
+				else
+					player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos -= 0x400000
+					player[currentPlayer].ypos += object.ypos
+				end if
+			end if
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -130, -63, 130, 63, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				if player[currentPlayer].xpos < object.xpos
+					if player[currentPlayer].right == true
+						player[currentPlayer].pushing = 2
+						player[currentPlayer].ixpos = player[currentPlayer].collisionRight
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos -= 0x800000
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].ypos == 0x16D0000
+							player[currentPlayer].ypos -= 0x10000
+						end if
+						if player[currentPlayer].ypos == 0x1710000
+							player[currentPlayer].ypos -= 0x10000
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case SLIDINGFLOOR_SLIDING
+		temp0 = object.xpos
+		temp0 &= 0xFFFF0000
+		temp1 = object.ypos
+		temp1 &= 0xFFFF0000
+		object.xpos -= 0x10000
+		object.ypos += 0x8000
+		object.timer--
+		if object.timer < 0
+			object.state++
+		end if
+
+		object.collisionOffset.x = object.xpos
+		object.collisionOffset.x &= 0xFFFF0000
+		object.collisionOffset.x -= temp0
+		object.collisionOffset.y = object.ypos
+		object.collisionOffset.y &= 0xFFFF0000
+		object.collisionOffset.y -= temp1
+
+		temp2 = object.xpos
+		object.xpos = temp0
+		temp3 = object.ypos
+		object.ypos = temp1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -128, -64, 128, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].xpos += object.collisionOffset.x
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -64, 128, 64, currentPlayer, 2, 2, 2, 2)
+			if checkResult == true
+				if player[currentPlayer].ypos > object.ypos
+					player[currentPlayer].ixpos = player[currentPlayer].collisionRight
+					FlipSign(player[currentPlayer].xpos)
+					player[currentPlayer].xpos -= 0x800000
+					player[currentPlayer].xpos += object.xpos
+				else
+					player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos -= 0x400000
+					player[currentPlayer].ypos += object.ypos
+				end if
+			end if
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -130, -63, 130, 63, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				if player[currentPlayer].xpos < object.xpos
+					if player[currentPlayer].right == true
+						player[currentPlayer].pushing = 2
+						player[currentPlayer].ixpos = player[currentPlayer].collisionRight
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos -= 0x800000
+						player[currentPlayer].xpos += object.xpos
+					end if
+				end if
+			end if
+		next
+
+		object.xpos = temp2
+		object.ypos = temp3
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects2.gif")
+	SpriteFrame(-128, -64, 256, 125, 0, 0)
+
+	SetTableValue(TypeName[Sliding Floor], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SlidingFloor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SlidingFloor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LZ/Objects2.gif")
+	SpriteFrame(-128, -64, 256, 125, 0, 0)
+end event

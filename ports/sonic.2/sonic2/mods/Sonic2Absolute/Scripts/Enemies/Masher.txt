@@ -1,0 +1,92 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Masher Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 53 : TYPE_MASHER
+
+// Function declarations
+reserve function Masher_DebugDraw
+reserve function Masher_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Masher_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Masher_DebugSpawn
+	CreateTempObject(TypeName[Masher], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	object[tempObjectPos].direction = temp0
+	object[tempObjectPos].value1 = object.ypos
+	object[tempObjectPos].yvel = -0x50000
+end function
+
+
+event ObjectMain
+	object.ypos += object.yvel
+	object.yvel += 0x1800
+	if object.ypos > object.value1
+		object.ypos = object.value1
+		object.yvel = -0x50000
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+	if object.yvel < 0
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+	else
+		object.frame = 0
+		object.animationTimer = 0
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == 1
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 106, 67)
+		SpriteFrame(-11, -16, 26, 30, 100, 100)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 66, 313)
+		SpriteFrame(-11, -16, 26, 30, 66, 346)
+	end if
+	foreach (TypeName[Masher], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].yvel = -0x50000
+	next
+	SetTableValue(TypeName[Masher], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Masher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Masher_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

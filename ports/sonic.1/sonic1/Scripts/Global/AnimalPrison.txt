@@ -1,0 +1,313 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Animal Prison Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : ANIMALPRISON_AWAITOPEN
+private alias 1 : ANIMALPRISON_OPENED
+private alias 2 : ANIMALPRISON_EXPLODE
+private alias 3 : ANIMALPRISON_HANDLEACTCLEAR
+private alias 4 : ANIMALPRISON_FINISHED
+
+// Animal aliases
+private alias object.value1 : animal.randomizeDir
+
+// Player aliases
+private alias object.animation	 : player.animation
+private alias object.xpos		 : player.xpos
+private alias object.ypos		 : player.ypos
+private alias object.xvel		 : player.xvel
+private alias object.yvel		 : player.yvel
+private alias object.speed		 : player.speed
+private alias object.gravity	 : player.gravity
+private alias object.jumpPress	 : player.jumpPress
+private alias object.jumpHold	 : player.jumpHold
+private alias object.up			 : player.up
+private alias object.down		 : player.down
+private alias object.left		 : player.left
+private alias object.right		 : player.right
+private alias object.controlMode : player.controlMode
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_SAVEGAME
+private alias 2 : MODE_TIMEATTACK
+
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+private alias 2 : SUPERSTATE_UNTRANSFORM
+
+// Reserved Object Slot Aliases
+private alias 30 : SLOT_ACTFINISH
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function AnimalPrison_DebugDraw
+reserve function AnimalPrison_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function AnimalPrison_DebugDraw
+	DrawSprite(2)
+	DrawSprite(0)
+end function
+
+
+private function AnimalPrison_DebugSpawn
+	CreateTempObject(TypeName[Animal Prison], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ANIMALPRISON_AWAITOPEN
+		temp0 = object.ixpos
+		temp0 -= screen.xcenter
+		stage.newXBoundary1 = temp0
+		temp0 = object.ixpos
+		temp0 += screen.xcenter
+		stage.newXBoundary2 = temp0
+		object.frame = object.animationTimer
+		object.frame /= 3
+		object.frame += 2
+		object.animationTimer++
+		object.animationTimer %= 6
+		break
+
+	case ANIMALPRISON_OPENED
+		if player[0].controlMode == CONTROLMODE_NONE
+			// Make the player start running to the right
+			player[0].left     = false
+			player[0].right    = true
+			player[0].up       = false
+			player[0].down     = false
+			player[0].jumpHold = false
+		end if
+
+		object.timer++
+		temp0 = object.timer
+		temp0 &= 7
+		if temp0 == 4
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 4
+			PlaySfx(SfxName[Explosion], false)
+		end if
+
+		if object.timer == 60
+			temp1 = object.ypos
+			temp1 += 0x40000
+			temp2 = 0
+			temp3 = 30
+			while temp2 < 32
+				Rand(temp0, 48)
+				temp0 >>= 2
+				temp0 <<= 18
+				temp0 -= 0x180000
+				temp0 += object.xpos
+				temp4 = temp2
+				temp4 &= 1
+				if temp4 == 0
+					CreateTempObject(animalType1, temp3, temp0, temp1)
+				else
+					CreateTempObject(animalType2, temp3, temp0, temp1)
+				end if
+				animal[tempObjectPos].randomizeDir = true
+				temp0 += 0x40000
+				temp2++
+				temp3 += 5
+			loop
+			object.drawOrder = 4
+			object.timer = 4
+			object.state++
+		end if
+		object.frame = object.animationTimer
+		object.frame /= 3
+		object.frame += 4
+		object.animationTimer++
+		object.animationTimer %= 6
+		break
+
+	case ANIMALPRISON_EXPLODE
+		object.timer++
+		temp0 = object.timer
+		temp0 &= 7
+		if temp0 == 4
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 4
+			PlaySfx(SfxName[Explosion], false)
+		end if
+
+		if object.timer == 34
+			object.timer = 0
+			object.state++
+		end if
+
+		object.frame = object.animationTimer
+		object.frame /= 3
+		object.frame += 4
+		object.animationTimer++
+		object.animationTimer %= 6
+		break
+
+	case ANIMALPRISON_HANDLEACTCLEAR
+		if object.timer < 300
+			object.timer++
+		else
+			PlayMusic(TRACK_ACTFINISH)
+			object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+			object[SLOT_ACTFINISH].drawOrder = 6
+			object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case ANIMALPRISON_FINISHED
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		switch object.state
+		case ANIMALPRISON_AWAITOPEN
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -24, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			BoxCollisionTest(C_SOLID, object.entityPos, -11, -48, 11, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				object.state = ANIMALPRISON_OPENED
+				stage.timeEnabled = false
+
+				if player[currentPlayer].animation == ANI_JUMPING
+					player[currentPlayer].animation = ANI_WALKING
+				end if
+
+				if Player_superState == SUPERSTATE_SUPER
+					Player_superState = SUPERSTATE_UNTRANSFORM
+				end if
+
+				player[0].controlMode = CONTROLMODE_NONE
+				
+#platform: USE_ORIGINS
+				// A fallback in case the Player somehow gets to this capsule without beating the boss, for the Boss Rush
+				// -> Every individual boss calls this function already, but it doesn't hurt to play it safe
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, true)
+#endplatform
+			end if
+			break
+
+		case ANIMALPRISON_OPENED
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -24, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			BoxCollisionTest(C_SOLID, object.entityPos, -11, -40, 11, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			break
+			
+		end switch
+
+		temp0 = screen.xcenter
+		temp0 += 40
+		temp0 <<= 16
+		temp1 = object.xpos
+		temp1 += temp0
+		if player[currentPlayer].xpos > temp1
+			player[currentPlayer].xpos = temp1
+			player[currentPlayer].speed = 0
+			player[currentPlayer].xvel = 0
+			if player[currentPlayer].gravity == 0
+				player[currentPlayer].yvel = 0
+			end if
+		end if
+
+	next
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case ANIMALPRISON_AWAITOPEN
+	case ANIMALPRISON_OPENED
+		DrawSprite(object.frame)
+		DrawSprite(0)
+		break
+
+	case ANIMALPRISON_EXPLODE
+	case ANIMALPRISON_HANDLEACTCLEAR
+	case ANIMALPRISON_FINISHED
+		DrawSprite(1)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	// Prison frames
+	SpriteFrame(-32, -32, 64, 62, 109, 166)
+	SpriteFrame(-32, -2, 64, 32, 35, 202)
+	SpriteFrame(-11, -48, 22, 16, 84, 166)
+	SpriteFrame(-11, -48, 22, 16, 35, 236)
+	SpriteFrame(-11, -40, 22, 16, 84, 166)
+	SpriteFrame(-11, -40, 22, 16, 35, 236)
+
+	// Add the Animal Prison to the debug object list
+	SetTableValue(TypeName[Animal Prison], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(AnimalPrison_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(AnimalPrison_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-32, -32, 64, 62, 109, 166)
+	SpriteFrame(-11, -48, 22, 16, 84, 166)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,162 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Pull Switch Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.pulled
+
+// Player Aliases
+private alias object.state 			: player.state
+private alias object.animation 		: player.animation
+private alias object.gravity 		: player.gravity
+private alias object.collisionTop 	: player.collisionTop
+private alias object.xpos 			: player.xpos
+private alias object.ypos 			: player.ypos
+private alias object.xvel 			: player.xvel
+private alias object.yvel 			: player.yvel
+private alias object.speed 			: player.speed
+private alias object.jumpPress 		: player.jumpPress
+private alias object.down 			: player.down
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PullSwitch_DebugDraw
+reserve function PullSwitch_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function PullSwitch_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function PullSwitch_DebugSpawn
+	CreateTempObject(TypeName[Pull Switch], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.pulled = false
+
+	temp0 = object.ypos
+	temp0 += 0x300000
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].state != Player_State_Static
+			if player[currentPlayer].down == false // Can't grab the switch while holding down
+
+				// Different boxes depending on if the player is higher than or lower than the switch
+				if player[currentPlayer].ypos < temp0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, 64, 8, 68, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, 46, 8, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				end if
+
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						// Make the player grab on
+						player[currentPlayer].state = Player_State_Static
+						player[currentPlayer].animation = ANI_HANGING
+						player[currentPlayer].speed = 0
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].yvel = 0
+						player[currentPlayer].xpos = object.xpos
+						player[currentPlayer].ypos = player[currentPlayer].collisionTop
+						FlipSign(player[currentPlayer].ypos)
+						player[currentPlayer].ypos += 26
+						player[currentPlayer].ypos <<= 16
+						player[currentPlayer].ypos += object.ypos
+						object.pulled |= true
+					end if
+				end if
+			end if
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, 0, 8, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			if checkResult == true
+				if player[currentPlayer].jumpPress == true
+					// Jump off
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].yvel = -0x40000
+					player[currentPlayer].gravity = GRAVITY_AIR
+				else
+					// Keep the player hanging on
+					player[currentPlayer].xpos = object.xpos
+					player[currentPlayer].ypos = player[currentPlayer].collisionTop
+					FlipSign(player[currentPlayer].ypos)
+					player[currentPlayer].ypos += 26
+					player[currentPlayer].ypos <<= 16
+					player[currentPlayer].ypos += object.ypos
+					object.pulled |= true
+				end if
+			end if
+		end if
+	next
+
+	// The only time the sprite frame and pull state aren't synced is the frame when the switch has just been grabbed,
+	// so it's safe to play the SFX like this
+	if object.frame == 0
+		if object.pulled == true
+			PlaySfx(SfxName[Pull Switch], false)
+		end if
+	end if
+
+	// Make the sprite correspond with the pull state
+	object.frame = object.pulled
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-8, -48, 16, 95, 215, 161) // 0 - Normal frame
+	SpriteFrame(-8, -44, 16, 95, 215, 161) // 1 - Pulled frame (same graphic, different offset)
+
+	// Add this object to the debug item list
+	SetTableValue(TypeName[Pull Switch], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(PullSwitch_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(PullSwitch_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-8, -48, 16, 95, 215, 161)
+	
+	// Although used by the object, it's not to be set from editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

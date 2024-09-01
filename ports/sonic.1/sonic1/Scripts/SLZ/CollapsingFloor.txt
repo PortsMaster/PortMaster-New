@@ -1,0 +1,278 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: C Floor Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.delay
+private alias object.value2 : object.collapseTable
+
+private alias 0 : CFLOOR_ACTIVE
+private alias 1 : CFLOOR_COLLAPSE
+private alias 2 : CFLOOR_COLLAPSED
+private alias 3 : CFLOOR_NONE
+private alias 4 : CFLOOR_TILEDELAY
+private alias 5 : CFLOOR_TILEFALL
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CFloor_DebugDraw
+reserve function CFloor_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table CFloor_collapseTableL
+	30, 22, 14, 6, 26, 18, 10, 2
+end table
+
+private table CFloor_collapseTableB
+	22, 30, 26, 18, 6, 14, 10, 2
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function CFloor_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function CFloor_DebugSpawn
+	CreateTempObject(TypeName[C Floor], 0, object.xpos, object.ypos)
+	object[tempObjectPos].collapseTable = CFloor_collapseTableL
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].direction = FACING_RIGHT
+	else
+		object[tempObjectPos].direction = FACING_LEFT
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CFLOOR_ACTIVE
+		break
+
+	case CFLOOR_COLLAPSE
+		if object.timer < 10
+			object.timer++
+		else
+			temp5 = 0
+			if object.direction == 1
+				object.frame = 1
+			else
+				object.frame = 2
+			end if
+			
+			temp0 = 0
+			temp3 = object.ypos
+			temp4 = 10
+			while temp0 < 2
+				temp1 = 0
+				temp2 = object.xpos
+				if object.direction == 1
+					temp2 -= 0x180000
+				else
+					temp2 += 0x180000
+				end if
+				
+				while temp1 < 4
+					CreateTempObject(TypeName[C Floor], object.frame, temp2, temp3)
+					object[tempObjectPos].state = CFLOOR_TILEDELAY
+					GetTableValue(object[tempObjectPos].delay, temp5, object.collapseTable)
+					temp5++
+					object.frame -= 1
+					object.frame ^= 1
+					object.frame += 1
+					temp1++
+					if object.direction == 1
+						temp2 += 0x100000
+					else
+						temp2 -= 0x100000
+					end if
+					temp4 += 4
+				loop
+				temp4 -= 26
+				object.frame += 2
+				temp0++
+				temp3 += 0x100000
+			loop
+			
+			PlaySfx(SfxName[Ledge Break L], false)
+			SetSfxAttributes(SfxName[Ledge Break L], -1, -100)
+			PlaySfx(SfxName[Ledge Break R], false)
+			SetSfxAttributes(SfxName[Ledge Break R], -1, 100)
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_COLLAPSED
+		if object.timer < 20
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_NONE
+		break
+
+	case CFLOOR_TILEDELAY
+		if object.timer < object.delay
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CFLOOR_TILEFALL
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.state < CFLOOR_TILEDELAY
+		if object.outOfBounds == true
+			object.state = CFLOOR_ACTIVE
+			object.timer = 0
+			object.priority = PRIORITY_BOUNDS
+		end if
+	end if
+
+	if object.state < CFLOOR_NONE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].yvel >= 0
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if object.state == CFLOOR_ACTIVE
+						object.state = CFLOOR_COLLAPSE
+						object.priority = PRIORITY_ACTIVE
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case CFLOOR_ACTIVE
+	case CFLOOR_COLLAPSE
+		DrawSprite(0)
+		break
+
+	case CFLOOR_COLLAPSED
+	case CFLOOR_NONE
+		break
+
+	case CFLOOR_TILEDELAY
+	case CFLOOR_TILEFALL
+		DrawSprite(object.propertyValue)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-32, -8, 64, 32, 67, 26)
+	SpriteFrame(-8, -8, 16, 16, 67, 26)
+	SpriteFrame(-8, -8, 16, 16, 83, 26)
+	SpriteFrame(-8, -8, 16, 16, 67, 42)
+	SpriteFrame(-8, -8, 16, 16, 83, 42)
+
+	foreach (TypeName[C Floor], arrayPos0, ALL_ENTITIES)
+		GetBit(temp5, object[arrayPos0].propertyValue, 0)
+		if temp5 == false
+			object[arrayPos0].collapseTable = CFloor_collapseTableL
+		else
+			object[arrayPos0].collapseTable = CFloor_collapseTableB
+		end if
+	next
+
+	SetTableValue(TypeName[C Floor], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CFloor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CFloor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // type
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // type
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-32, -8, 64, 32, 67, 26)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Bottom", 1)
+end event

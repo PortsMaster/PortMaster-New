@@ -1,0 +1,188 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Breakoff Pillar Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.offset.y
+private alias object.value1 : object.shakePos.x
+private alias object.value2 : object.timer
+
+// States
+private alias 0 : BREAKOFFPILLAR_AWAITPLAYER
+private alias 1 : BREAKOFFPILLAR_SHAKING
+private alias 2 : BREAKOFFPILLAR_FALLING
+private alias 3 : BREAKOFFPILLAR_FALLEN
+
+// Player Aliases
+private alias object.gravity : player.gravity
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BreakoffPillar_DebugDraw
+reserve function BreakoffPillar_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private table BreakoffPillar_shakePosTable
+	0, 0x10000, -0x10000, 0x10000, 0, -0x10000, 0, 0x10000
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BreakoffPillar_DebugDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end function
+
+
+private function BreakoffPillar_DebugSpawn
+	CreateTempObject(TypeName[Breakoff Pillar], 0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = 2
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BREAKOFFPILLAR_AWAITPLAYER
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -256, 128, 256, currentPlayer, -1, -1, 1, 1)
+			if checkResult == true
+				object.priority = PRIORITY_ACTIVE
+				object.timer = 8
+				object.state = BREAKOFFPILLAR_SHAKING
+			end if
+		next
+		break
+
+	case BREAKOFFPILLAR_SHAKING
+		object.timer--
+		if object.timer >= 0
+			GetTableValue(object.shakePos.x, object.timer, BreakoffPillar_shakePosTable)
+		else
+			object.state = BREAKOFFPILLAR_FALLING
+		end if
+		break
+
+	case BREAKOFFPILLAR_FALLING
+		object.offset.y += object.yvel
+		object.yvel += 0x3800
+
+		temp0 = object.ypos
+		object.ypos += object.offset.y
+		temp1 = object.ypos
+		ObjectTileCollision(CSIDE_FLOOR, 0, 65, PATH_A)
+		if checkResult == true
+			object.state = BREAKOFFPILLAR_FALLEN
+			object.frame++
+		end if
+		temp1 -= object.ypos
+		object.ypos = temp0
+
+		object.offset.y -= temp1
+		break
+
+	case BREAKOFFPILLAR_FALLEN
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		temp0 = object.ypos
+		object.ypos += object.offset.y
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, 32, 16, 65, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			end if
+		end if
+		object.ypos = temp0
+	next
+
+	temp0 = screen.xcenter
+	temp0 += 184
+	CheckCameraProximity(object.ixpos, 0, temp0, -1)
+	if checkResult == false
+		object.offset.y = 0
+		object.shakePos.x = 0
+		object.yvel = 0
+		object.timer = 0
+		object.frame = 2
+		object.state = BREAKOFFPILLAR_AWAITPLAYER
+		object.priority = PRIORITY_BOUNDS
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	temp0 = object.xpos
+	temp0 += object.shakePos.x
+	temp1 = object.ypos
+	temp1 += object.offset.y
+	DrawSpriteXY(object.frame, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-28, -32, 56, 56, 59, 42)
+	SpriteFrame(-16, 24, 32, 8, 140, 80)
+	SpriteFrame(-16, 32, 32, 37, 173, 38)
+	SpriteFrame(-16, 32, 32, 41, 140, 38)
+
+	SetTableValue(TypeName[Breakoff Pillar], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(BreakoffPillar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(BreakoffPillar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+
+	foreach (TypeName[Breakoff Pillar], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].frame = 2
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-28, -32, 56, 56, 59, 42)
+	SpriteFrame(-16, 24, 32, 8, 140, 80)
+	SpriteFrame(-16, 32, 32, 37, 173, 38)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,351 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Start Message Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.fadeClr.r
+private alias object.value2 : object.fadeClr.g
+private alias object.value3 : object.fadeClr.b
+private alias object.value4 : object.scaleSpeed
+private alias object.value5 : object.rotateSpeed
+private alias object.value6 : object.vsReady
+private alias object.value7 : object.sentReadyFlag
+
+// States
+private alias 0 : STARTMESSAGE_SETUP
+private alias 1 : STARTMESSAGE_DELAY
+private alias 2 : STARTMESSAGE_SENDDELAY
+private alias 3 : STARTMESSAGE_STARTFADEIN
+private alias 4 : STARTMESSAGE_FADEIN
+private alias 5 : STARTMESSAGE_ENTERMSG
+private alias 6 : STARTMESSAGE_SHOWMSG
+private alias 7 : STARTMESSAGE_SETUPCHAR
+private alias 8 : STARTMESSAGE_MOVECHAR
+private alias 9 : STARTMESSAGE_SETUPNEXTMSG
+
+// Text Message Property Values
+private alias 2 : TEXTMESSAGE_GETRINGS
+private alias 4 : TEXTMESSAGE_PLAYERPLAYER
+private alias 5 : TEXTMESSAGE_MOSTRINGSWIN
+
+// Text Message Aliases
+private alias object.value4 : textMessage.number
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case STARTMESSAGE_SETUP
+		options.touchControls = false
+
+		object.fadeClr.r = fadeColor
+		object.fadeClr.r >>= 16
+
+		object.fadeClr.g = fadeColor
+		object.fadeClr.g &= 0xFF00
+		object.fadeClr.g >>= 8
+
+		object.fadeClr.b = fadeColor
+		object.fadeClr.b &= 255
+
+		if options.vsMode == true
+			object.vsReady = false
+			object.sentReadyFlag = true
+			object.timer = 0
+			object.state++
+		else
+			object.vsReady = true
+			object.sentReadyFlag = false
+
+			object.state = STARTMESSAGE_STARTFADEIN
+			object.timer = 256
+			SetScreenFade(object.fadeClr.r, object.fadeClr.g, object.fadeClr.b, object.timer)
+		end if
+		break
+
+	case STARTMESSAGE_DELAY
+		if object.timer < 15
+			object.timer++
+		else
+			CallNativeFunction2(SendEntity, object.entityPos, false)
+			if options.vsMode == true
+				if ReceiveValue == -1
+					object.vsReady = true
+				else
+					CallNativeFunction2(ReceiveEntity, 0x400, true)
+					object.vsReady = object[0x400].sentReadyFlag
+					ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
+				end if
+			end if
+
+			if object.vsReady == true
+				object.timer = 0
+				object.state++
+			end if
+		end if
+		break
+
+	case STARTMESSAGE_SENDDELAY
+		options.touchControls = false
+
+		CallNativeFunction2(SendEntity, object.entityPos, false)
+		if object.timer < 30
+			object.timer++
+		else
+			object.timer = 256
+			object.state++
+		end if
+		break
+
+	case STARTMESSAGE_STARTFADEIN
+		options.touchControls = false
+
+		stage.state = STAGE_RUNNING
+#platform: USE_ORIGINS
+		object.drawOrder = 6
+#endplatform
+		object.state++
+		if options.vsMode == true
+			CreateTempObject(TypeName[Text Message], TEXTMESSAGE_PLAYERPLAYER, 0, 0)
+#platform: USE_STANDALONE
+			object[tempObjectPos].drawOrder = 5
+#endplatform
+#platform: USE_ORIGINS
+			object[tempObjectPos].drawOrder = 6
+#endplatform
+		end if
+		SetScreenFade(object.fadeClr.r, object.fadeClr.g, object.fadeClr.b, object.timer)
+		PlayMusic(0)
+		break
+
+	case STARTMESSAGE_FADEIN
+		options.touchControls = false
+
+		if object.timer > 0
+			object.timer -= 8
+		else
+			if options.vsMode == true
+				object.ypos = -75
+			else
+				object.ypos = -15
+			end if
+			object.state++
+		end if
+
+		SetScreenFade(object.fadeClr.r, object.fadeClr.g, object.fadeClr.b, object.timer)
+		break
+
+	case STARTMESSAGE_ENTERMSG
+		options.touchControls = false
+
+		if object.ypos < 108
+			object.ypos++
+		else
+			object.state++
+		end if
+		break
+
+	case STARTMESSAGE_SHOWMSG
+		options.touchControls = false
+
+		if object.timer < 30
+			object.timer++
+		else
+			object.timer = 0
+			temp0 = -0x380000
+			temp1 = object.ypos
+			temp1 <<= 16
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 1
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = 72
+			temp0 += 0x180000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 2
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = 48
+			temp0 += 0x100000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 3
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = 24
+			temp0 += 0x100000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 4
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = 0
+			temp0 += 0x100000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 5
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = -24
+			temp0 += 0x100000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 6
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = -48
+			temp0 += 0x180000
+
+			CreateTempObject(TypeName[Start Message], 0, temp0, temp1)
+			object[tempObjectPos].frame = 7
+			object[tempObjectPos].state = STARTMESSAGE_SETUPCHAR
+			object[tempObjectPos].angle = -72
+			object.state = STARTMESSAGE_SETUPNEXTMSG
+		end if
+		break
+
+	case STARTMESSAGE_SETUPCHAR
+		object.angle &= 0x1FF
+		object.scale = 0x200
+		object.speed = -0x10000
+		object.scaleSpeed = 16
+		Rand(object.rotateSpeed, 32)
+		object.rotateSpeed -= 16
+		object.state++
+#platform: USE_ORIGINS
+		object.drawOrder = 6
+#endplatform
+		break
+
+	case STARTMESSAGE_MOVECHAR
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+
+		object.scale += object.scaleSpeed
+		object.speed -= 0x8000
+		object.scaleSpeed++
+		object.rotation += object.rotateSpeed
+		object.rotation &= 0x1FF
+
+		Cos(object.yvel, object.angle)
+		object.yvel *= object.speed
+		object.yvel >>= 9
+
+		Sin(object.xvel, object.angle)
+		object.xvel *= object.speed
+		object.xvel >>= 9
+
+		if object.timer < 120
+			object.timer++
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case STARTMESSAGE_SETUPNEXTMSG
+		if object.timer < 40
+			object.timer++
+		else
+			if options.vsMode == false
+				CreateTempObject(TypeName[Text Message], TEXTMESSAGE_GETRINGS, 0, 0)
+			else
+				CreateTempObject(TypeName[Text Message], TEXTMESSAGE_MOSTRINGSWIN, 0, 0)
+			end if
+
+#platform: USE_STANDALONE
+			object[tempObjectPos].drawOrder = 5
+#endplatform
+#platform: USE_ORIGINS
+			object[tempObjectPos].drawOrder = 6
+#endplatform
+			GetTableValue(textMessage[tempObjectPos].number, SpecialSetup_checkpointID, SpecialSetup_ringCountTable)
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case STARTMESSAGE_SETUP
+	case STARTMESSAGE_DELAY
+	case STARTMESSAGE_SENDDELAY
+		DrawRect(0, 0, screen.xsize, screen.ysize, object.fadeClr.r, object.fadeClr.g, object.fadeClr.b, 0xFF)
+#platform: USE_STANDALONE
+		if options.vsMode == true
+			// Waiting...
+			DrawSpriteScreenXY(8, screen.xsize, screen.ysize)
+		end if
+#endplatform
+		break
+
+	case STARTMESSAGE_ENTERMSG
+	case STARTMESSAGE_SHOWMSG
+		DrawSpriteScreenXY(0, screen.xcenter, object.ypos)
+		break
+
+	case STARTMESSAGE_SETUPCHAR
+	case STARTMESSAGE_MOVECHAR
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 += screen.xcenter
+		temp1 = object.ypos
+		temp1 >>= 16
+		DrawSpriteScreenFX(object.frame, FX_ROTOZOOM, temp0, temp1)
+		break
+
+	case STARTMESSAGE_SETUPNEXTMSG
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-72, -15, 144, 30, 367, 91) // Full "Start" Sprite 	- #0
+	SpriteFrame(-16, -15, 32, 30, 367, 91) 	// Flag L				- #1
+	SpriteFrame(-8, -15, 16, 30, 399, 91) 	// "S" character		- #2
+	SpriteFrame(-8, -15, 16, 30, 415, 91) 	// "T" character		- #3
+	SpriteFrame(-8, -15, 16, 30, 431, 91) 	// "A" character		- #4
+	SpriteFrame(-8, -15, 16, 30, 447, 91) 	// "R" character		- #5
+	SpriteFrame(-8, -15, 16, 30, 463, 91) 	// "T" character		- #6
+	SpriteFrame(-16, -15, 32, 30, 479, 91)  // Flag R				- #7
+	if vs.playerID == 0
+		SpriteFrame(-160, -16, 136, 7, 326, 369) // Waiting for 2P...	- #8
+	else
+		SpriteFrame(-160, -16, 136, 7, 326, 361) // Waiting for 1P...	- #9
+	end if
+
+	if options.vsMode == true
+		stage.state = STAGE_PAUSED
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-72, -15, 144, 30, 367, 91)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+	SetVariableAlias(ALIAS_VAR_VAL0, "ringCount2P")
+	SetVariableAlias(ALIAS_VAR_VAL1, "ringCountSonic")
+	SetVariableAlias(ALIAS_VAR_VAL2, "ringCountKnux")
+	SetVariableAlias(ALIAS_VAR_VAL3, "unused")
+end event

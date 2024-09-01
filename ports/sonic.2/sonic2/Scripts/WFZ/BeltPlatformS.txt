@@ -1,0 +1,144 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Belt Platform S Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.beltID
+
+// BeltPlatform Aliases
+private alias object.value0 : beltPlatform.timer
+
+// BeltPlatform States
+private alias 1 : BELTPLATFORM_APPEARING
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.timer == 0
+		object.priority = PRIORITY_ACTIVE
+		object.timer = 64
+
+		arrayPos0 = object.entityPos
+		arrayPos0 += object.beltID
+		arrayPos0++
+		object[arrayPos0].xpos 		= object.xpos
+		object[arrayPos0].ypos 		= object.ypos
+		object[arrayPos0].state 	= BELTPLATFORM_APPEARING
+		object[arrayPos0].priority 	= PRIORITY_ACTIVE
+		object[arrayPos0].frame 	= 2
+
+		GetBit(temp0, object.propertyValue, 1)
+		if temp0 == false
+			object[arrayPos0].yvel = -0x10000
+		else
+			object[arrayPos0].yvel = 0x10000
+		end if
+
+		object.beltID++
+		GetBit(temp0, object.propertyValue, 0)
+		if temp0 == false
+			beltPlatform[arrayPos0].timer = 199
+			object.beltID &= 3
+		else
+			beltPlatform[arrayPos0].timer = 455
+			object.beltID &= 7
+		end if
+	else
+		object.timer--
+	end if
+
+	temp0 = object.xpos
+	temp0 >>= 16
+	temp0 -= camera[0].xpos
+	Abs(temp0)
+	temp0 -= 128
+	if temp0 > screen.xcenter
+		object.timer 	= 0
+		object.beltID 	= 0
+		object.priority = PRIORITY_XBOUNDS
+	end if
+end event
+
+
+event ObjectDraw
+	// Did this Draw Something at one point??
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Belt Platform S], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		case 1 // direction
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		case 1 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Quick Interval", 0)
+	AddEnumVariable("Slow Interval", 1)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end event

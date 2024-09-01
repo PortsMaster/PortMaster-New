@@ -1,0 +1,203 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Tube Path Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.targetPlayer
+private alias object.value2 : object.nextNode
+
+private alias 0 : TUBEPATH_ENTRY
+private alias 1 : TUBEPATH_EXIT
+private alias 2 : TUBEPATH_CONTROL
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.tileCollisions : player.tileCollisions
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.propertyValue
+	case TUBEPATH_ENTRY
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_Static
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					player[currentPlayer].xpos = object.xpos
+					player[currentPlayer].state = Player_State_Static
+					player[currentPlayer].tileCollisions = 0
+					if player[currentPlayer].animation != ANI_JUMPING
+						PlaySfx(SfxName[Rolling], false)
+						player[currentPlayer].animation = ANI_JUMPING
+					end if
+					CreateTempObject(TypeName[Tube Path], TUBEPATH_CONTROL, object.xpos, object.ypos)
+					object[tempObjectPos].targetPlayer = currentPlayer
+					object[tempObjectPos].nextNode = object.entityPos
+					object[tempObjectPos].nextNode++
+				end if
+			end if
+		next
+		break
+
+	case TUBEPATH_EXIT
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state == Player_State_Static
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, 0, 0, 0, 0)
+				if checkResult == true
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].xpos = object.xpos
+					player[currentPlayer].ypos = object.ypos
+					player[currentPlayer].yvel = -0xA0000
+					player[currentPlayer].speed = 0
+					player[currentPlayer].xvel = 0
+					player[currentPlayer].tileCollisions = true
+					PlaySfx(SfxName[Release], false)
+				end if
+			end if
+		next
+		break
+
+	case TUBEPATH_CONTROL
+		currentPlayer = object.targetPlayer
+		if player[currentPlayer].state == Player_State_Static
+			arrayPos0 = object.nextNode
+			
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object[arrayPos0].xpos
+			temp0 >>= 16
+
+			temp1 = player[currentPlayer].ypos
+			temp1 -= object[arrayPos0].ypos
+			temp1 >>= 16
+			ATan2(temp2, temp0, temp1)
+
+			Cos256(player[currentPlayer].xvel, temp2)
+			Sin256(player[currentPlayer].yvel, temp2)
+			player[currentPlayer].xvel *= -0xC00
+			player[currentPlayer].yvel *= -0xC00
+			temp2 = player[currentPlayer].xvel
+			Abs(temp2)
+			temp3 = player[currentPlayer].yvel
+			Abs(temp3)
+
+			if temp2 > temp3
+				player[currentPlayer].yvel = 0
+			else
+				player[currentPlayer].xvel = 0
+			end if
+
+			if object[arrayPos0].type == TypeName[Blank Object]
+				temp2 = temp0
+				temp2 *= temp0
+				temp0 = temp1
+				temp0 *= temp1
+				temp0 += temp2
+				if temp0 < 256
+					player[currentPlayer].xpos = object[arrayPos0].xpos
+					player[currentPlayer].ypos = object[arrayPos0].ypos
+					player[currentPlayer].xvel = 0
+					player[currentPlayer].yvel = 0
+					object.nextNode++
+				end if
+			end if
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // isExit
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // isExit
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw all the nodes that make up the path
+		
+		arrayPos0 = object.entityPos
+		arrayPos1 = object[+1].entityPos
+		
+		while object[arrayPos1].type == 0
+			DrawArrow(object[arrayPos0].xpos, object[arrayPos0].ypos, object[arrayPos1].xpos, object[arrayPos1].ypos, 0xFF, 0xFF, 0x00)
+			arrayPos0++
+			arrayPos1++
+		loop
+		
+		// Final one;
+		// no checks for type to match in-game behvaiour, but it should be a Tube Path obj with a prop val of 1
+		DrawArrow(object[arrayPos0].xpos, object[arrayPos0].ypos, object[arrayPos1].xpos, object[arrayPos1].ypos, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 168, 18)
+	
+	AddEditorVariable("isExit")
+	SetActiveVariable("isExit")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

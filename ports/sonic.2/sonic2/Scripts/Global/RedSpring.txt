@@ -1,0 +1,852 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Red Spring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.active
+private alias object.value2 : object.stoodPlayers
+private alias object.value7 : object.enabledInAir
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.angle : player.angle
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.frame : player.frame
+private alias object.prevAnimation : player.prevAnimation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.pushing : player.pushing
+private alias object.controlLock : player.controlLock
+private alias object.collisionMode : player.collisionMode
+private alias object.collisionTop : player.collisionTop
+private alias object.collisionBottom : player.collisionBottom
+private alias object.tileCollisions : player.tileCollisions
+private alias object.value1  : player.timer
+private alias object.value10 : player.animationReserve
+private alias object.value17 : debugMode.currentSelection
+private alias object.value25 : player.gravityStrength
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RedSpring_DebugDraw
+reserve function RedSpring_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RedSpring_startDebugID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table RedSpring_directionTable
+	0, 0, 0, 0
+	0, 0, 2, 2
+	0, 0, 1, 2
+	0, 1, 2, 3
+	0, 0, 1, 2
+	0, 1, 2, 3
+end table
+
+private table RedSpring_heightsTable
+	16, 16, 16, 16, 16, 16, 14, 12, 10, 8, 6, 4, 2, 0, -2, -4
+end table
+
+private table RedSpring_collisionTypes
+	1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RedSpring_DebugDraw
+	temp1 = object.direction
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RedSpring_startDebugID
+	GetTableValue(object.direction, temp0, RedSpring_directionTable)
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	object.direction = temp1
+end function
+
+
+private function RedSpring_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RedSpring_startDebugID
+	CreateTempObject(TypeName[Red Spring], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp2 = 0
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp1 = object.propertyValue
+		temp1 &= 0x7F
+		switch temp1
+		case 0 // Up
+			temp0 = object.active
+			if player[currentPlayer].gravity == GRAVITY_AIR
+				temp0 = true
+			end if
+
+			if player[currentPlayer].collisionMode > CMODE_FLOOR
+				if player[currentPlayer].yvel < 0
+					temp0 = true
+				end if
+			end if
+
+			if temp0 == false
+				BoxCollisionTest(C_SOLID, object.entityPos, -14, -8, 14, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if player[currentPlayer].gravity == GRAVITY_AIR
+					BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, -6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -14, -12, 14, -6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				end if
+
+				if checkResult == true
+					player[currentPlayer].animationReserve = ANI_WALKING
+					if player[currentPlayer].animation == ANI_RUNNING
+						player[currentPlayer].animationReserve = ANI_RUNNING
+					end if
+
+					if player[currentPlayer].animation == ANI_PEELOUT
+						player[currentPlayer].animationReserve = ANI_PEELOUT
+					end if
+
+					object.timer = 1
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = -0x100000
+					player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+
+					if object.propertyValue >= 0x80
+						player[currentPlayer].animation = ANI_TWIRL
+						player[currentPlayer].prevAnimation = ANI_TWIRL
+						player[currentPlayer].frame = 0
+						player[currentPlayer].animationSpeed = 40
+					else
+						player[currentPlayer].animation = ANI_BOUNCING
+					end if
+					player[currentPlayer].timer = 0
+					PlaySfx(SfxName[Spring], false)
+				end if
+			else
+				if player[currentPlayer].yvel >= 0
+					BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -8, 14, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+					BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, -6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						player[currentPlayer].animationReserve = ANI_WALKING
+						if player[currentPlayer].animation == ANI_RUNNING
+							player[currentPlayer].animationReserve = ANI_RUNNING
+						end if
+
+						if player[currentPlayer].animation == ANI_PEELOUT
+							player[currentPlayer].animationReserve = ANI_PEELOUT
+						end if
+
+						object.timer = 1
+#platform: USE_STANDALONE
+						player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+						player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+						player[currentPlayer].tileCollisions = true
+						player[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].speed = player[currentPlayer].xvel
+						player[currentPlayer].yvel = -0x100000
+						if object.propertyValue >= 0x80
+							player[currentPlayer].animation = ANI_TWIRL
+							player[currentPlayer].prevAnimation = ANI_TWIRL
+							player[currentPlayer].frame = 0
+							player[currentPlayer].animationSpeed = 40
+						else
+							player[currentPlayer].animation = ANI_BOUNCING
+						end if
+
+						player[currentPlayer].timer = 0
+						PlaySfx(SfxName[Spring], false)
+					end if
+				end if
+			end if
+			break
+
+		case 1 // Right
+			BoxCollisionTest(C_SOLID, object.entityPos, -8, -14, 8, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				BoxCollisionTest(C_TOUCH, object.entityPos, 6, -14, 11, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+
+					object.timer = 1
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].angle = 0
+					player[currentPlayer].speed = 0x100000
+					player[currentPlayer].collisionMode = CMODE_FLOOR
+					player[currentPlayer].pushing = false
+					player[currentPlayer].direction = FACING_RIGHT
+					player[currentPlayer].controlLock = 12
+
+					PlaySfx(SfxName[Spring], false)
+					if player[currentPlayer].state != Player_State_Roll
+						player[currentPlayer].state = Player_State_Ground
+						player[currentPlayer].animation = ANI_RUNNING
+					end if
+				end if
+			else
+				if object.enabledInAir == true
+					BoxCollisionTest(C_TOUCH, object.entityPos, 6, -4, 11, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						object.timer = 1
+
+						player[currentPlayer].tileCollisions = true
+						player[currentPlayer].angle = 0
+						player[currentPlayer].speed = 0x100000
+						player[currentPlayer].yvel = 0
+						player[currentPlayer].collisionMode = CMODE_FLOOR
+						player[currentPlayer].pushing = false
+						player[currentPlayer].direction = FACING_RIGHT
+						player[currentPlayer].controlLock = 12
+
+						PlaySfx(SfxName[Spring], false)
+						if player[currentPlayer].state != Player_State_RollJump
+							player[currentPlayer].animation = ANI_BOUNCING
+							if player[currentPlayer].animation != ANI_JUMPING
+								player[currentPlayer].animation = ANI_RUNNING
+							end if
+							object.animationSpeed = object.speed
+							player[currentPlayer].animationSpeed *= 80
+							player[currentPlayer].animationSpeed /= 0x60000
+						end if
+					end if
+				end if
+			end if
+			break
+
+		case 2 // Left
+			BoxCollisionTest(C_SOLID, object.entityPos, -8, -14, 8, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				BoxCollisionTest(C_TOUCH, object.entityPos, -10, -14, -6, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					object.timer = 1
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].speed = -0x100000
+					player[currentPlayer].collisionMode = CMODE_FLOOR
+					player[currentPlayer].pushing = 0
+					player[currentPlayer].direction = FACING_LEFT
+					player[currentPlayer].controlLock = 15
+					PlaySfx(SfxName[Spring], false)
+					if player[currentPlayer].state != Player_State_Roll
+						player[currentPlayer].state = Player_State_Ground
+						player[currentPlayer].animation = ANI_RUNNING
+					end if
+				end if
+			else
+				if object.enabledInAir == true
+					BoxCollisionTest(C_TOUCH, object.entityPos, -10, -14, -6, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						object.timer = 1
+
+						player[currentPlayer].tileCollisions = true
+						player[currentPlayer].speed = -0x100000
+						player[currentPlayer].yvel = 0
+						player[currentPlayer].collisionMode = CMODE_FLOOR
+						player[currentPlayer].pushing = 0
+						player[currentPlayer].direction = FACING_LEFT
+						player[currentPlayer].controlLock = 15
+
+						PlaySfx(SfxName[Spring], false)
+						if player[currentPlayer].state != Player_State_RollJump
+							player[currentPlayer].animation = ANI_BOUNCING
+							if player[currentPlayer].animation != ANI_JUMPING
+								player[currentPlayer].animation = ANI_RUNNING
+							end if
+							object.animationSpeed = object.speed
+							FlipSign(player[currentPlayer].animationSpeed)
+							player[currentPlayer].animationSpeed *= 80
+							player[currentPlayer].animationSpeed /= 0x60000
+						end if
+					end if
+				end if
+			end if
+			break
+
+		case 3 // Down
+			BoxCollisionTest(C_SOLID, object.entityPos, -14, -8, 14, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if player[currentPlayer].yvel <= 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -14, 6, 14, 10, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if player[currentPlayer].collisionMode == CMODE_ROOF
+						FlipSign(player[currentPlayer].speed)
+						FlipSign(player[currentPlayer].xvel)
+					end if
+
+					object.timer = 1
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = 0x100000
+					player[currentPlayer].timer = 0
+
+					PlaySfx(SfxName[Spring], false)
+				end if
+			end if
+			break
+
+		case 4 // Up Right
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			temp0 += 0x100000
+			temp0 >>= 17
+			if temp0 < 0
+				temp0 = 0
+			end if
+			if temp0 > 15
+				temp0 = 15
+			end if
+
+			GetTableValue(temp1, temp0, RedSpring_heightsTable)
+			FlipSign(temp1)
+			GetTableValue(temp4, temp0, RedSpring_collisionTypes)
+			BoxCollisionTest(temp4, object.entityPos, -16, temp1, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult != COL_TOP
+				GetBit(temp3, object.stoodPlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 16
+						if player[currentPlayer].yvel >= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = COL_TOP
+						end if
+					end if
+				end if
+			end if
+
+			if checkResult == COL_TOP
+				if temp0 >= 6
+					player[currentPlayer].animationReserve = ANI_WALKING
+
+					if player[currentPlayer].animation == ANI_RUNNING
+						player[currentPlayer].animationReserve = ANI_RUNNING
+					end if
+
+					if player[currentPlayer].animation == ANI_PEELOUT
+						player[currentPlayer].animationReserve = ANI_PEELOUT
+					end if
+
+					object.timer = 1
+					if player[currentPlayer].collisionMode == CMODE_ROOF
+						FlipSign(player[currentPlayer].speed)
+						FlipSign(player[currentPlayer].xvel)
+					end if
+					
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].xvel = 0x100000
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = -0x100000
+					player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+					player[currentPlayer].timer = 0
+					player[currentPlayer].direction = FACING_RIGHT
+
+					if object.propertyValue >= 0x80
+						player[currentPlayer].animation = ANI_TWIRL
+					else
+						player[currentPlayer].animation = ANI_BOUNCING
+					end if
+					PlaySfx(SfxName[Spring], false)
+
+					SetBit(object.stoodPlayers, temp2, false)
+				else
+					SetBit(object.stoodPlayers, temp2, true)
+				end if
+			else
+				SetBit(object.stoodPlayers, temp2, false)
+			end if
+			break
+
+		case 5 // Up Left
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			temp0 += 0x100000
+			temp0 >>= 17
+			if temp0 < 0
+				temp0 = 0
+			end if
+
+			if temp0 > 15
+				temp0 = 15
+			end if
+			temp0 -= 15
+			Abs(temp0)
+
+			GetTableValue(temp1, temp0, RedSpring_heightsTable)
+			FlipSign(temp1)
+
+			GetTableValue(temp4, temp0, RedSpring_collisionTypes)
+			BoxCollisionTest(temp4, object.entityPos, -16, temp1, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult != COL_TOP
+				GetBit(temp3, object.stoodPlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 16
+						if player[currentPlayer].yvel >= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = COL_TOP
+						end if
+					end if
+				end if
+			end if
+
+			if checkResult == COL_TOP
+				if temp0 >= 6
+					player[currentPlayer].animationReserve = ANI_WALKING
+					if player[currentPlayer].animation == ANI_RUNNING
+						player[currentPlayer].animationReserve = ANI_RUNNING
+					end if
+
+					if player[currentPlayer].animation == ANI_PEELOUT
+						player[currentPlayer].animationReserve = ANI_PEELOUT
+					end if
+
+					object.timer = 1
+					if player[currentPlayer].collisionMode == CMODE_ROOF
+						FlipSign(player[currentPlayer].speed)
+						FlipSign(player[currentPlayer].xvel)
+					end if
+					
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].xvel = -0x100000
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = -0x100000
+					player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+					player[currentPlayer].timer = 0
+					player[currentPlayer].direction = FACING_LEFT
+
+					if object.propertyValue >= 0x80
+						player[currentPlayer].animation = ANI_TWIRL
+					else
+						player[currentPlayer].animation = ANI_BOUNCING
+					end if
+
+					PlaySfx(SfxName[Spring], false)
+					SetBit(object.stoodPlayers, temp2, false)
+				else
+					SetBit(object.stoodPlayers, temp2, true)
+				end if
+			else
+				SetBit(object.stoodPlayers, temp2, false)
+			end if
+			break
+
+		case 6 // Down Right
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			temp0 += 0x100000
+			temp0 >>= 17
+			if temp0 < 0
+				temp0 = 0
+			end if
+
+			if temp0 > 15
+				temp0 = 15
+			end if
+
+			GetTableValue(temp1, temp0, RedSpring_heightsTable)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, temp1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult != COL_BOTTOM
+				GetBit(temp3, object.stoodPlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 16
+						if player[currentPlayer].yvel <= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionTop
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = COL_TOP
+						end if
+					end if
+				end if
+			end if
+
+			if checkResult == COL_BOTTOM
+				if temp0 >= 6
+					object.timer = 1
+					if player[currentPlayer].collisionMode == CMODE_ROOF
+						FlipSign(player[currentPlayer].speed)
+						FlipSign(player[currentPlayer].xvel)
+					end if
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].xvel = 0x100000
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = 0x100000
+					player[currentPlayer].timer = 0
+					player[currentPlayer].direction = FACING_RIGHT
+					PlaySfx(SfxName[Spring], false)
+					SetBit(object.stoodPlayers, temp2, false)
+				else
+					SetBit(object.stoodPlayers, temp2, true)
+				end if
+			else
+				SetBit(object.stoodPlayers, temp2, false)
+			end if
+			break
+
+		case 7 // Down Left
+			temp0 = player[currentPlayer].xpos
+			temp0 -= object.xpos
+			temp0 += 0x100000
+			temp0 >>= 17
+			if temp0 < 0
+				temp0 = 0
+			end if
+
+			if temp0 > 15
+				temp0 = 15
+			end if
+			temp0 -= 15
+			Abs(temp0)
+
+			GetTableValue(temp1, temp0, RedSpring_heightsTable)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, temp1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult != COL_BOTTOM
+				GetBit(temp3, object.stoodPlayers, temp2)
+				if temp3 == true
+					temp3 = player[currentPlayer].xpos
+					temp3 -= object.xpos
+					temp3 >>= 16
+					Abs(temp3)
+					if temp3 < 16
+						if player[currentPlayer].yvel <= 0
+							player[currentPlayer].iypos = player[currentPlayer].collisionTop
+							FlipSign(player[currentPlayer].ypos)
+							temp1 <<= 16
+							player[currentPlayer].ypos += temp1
+							player[currentPlayer].ypos += object.ypos
+							checkResult = COL_TOP
+						end if
+					end if
+				end if
+			end if
+
+			if checkResult == COL_BOTTOM
+				if temp0 >= 6
+					object.timer = 1
+					if player[currentPlayer].collisionMode == CMODE_ROOF
+						FlipSign(player[currentPlayer].speed)
+						FlipSign(player[currentPlayer].xvel)
+					end if
+					
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					player[currentPlayer].tileCollisions = true
+					player[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].xvel = -0x100000
+					player[currentPlayer].speed = player[currentPlayer].xvel
+					player[currentPlayer].yvel = 0x100000
+					player[currentPlayer].timer = 0
+					player[currentPlayer].direction = FACING_LEFT
+					PlaySfx(SfxName[Spring], false)
+
+					SetBit(object.stoodPlayers, temp2, false)
+				else
+					SetBit(object.stoodPlayers, temp2, true)
+				end if
+			else
+				SetBit(object.stoodPlayers, temp2, false)
+			end if
+			break
+			
+		end switch
+
+		temp2++
+	next
+
+	object.frame = object.propertyValue
+	object.frame &= 0x7F
+
+	if object.timer != 0
+		switch object.timer
+		case 2
+		case 3
+			break
+
+		case 1
+			object.frame += 8
+			break
+
+		case 4
+		case 5
+		case 6
+		case 7
+		case 8
+		case 9
+			object.frame += 16
+			break
+			
+		end switch
+
+		object.timer++
+		if object.timer >= 10
+			object.timer = 0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	GetTableValue(object.direction, object.frame, RedSpring_directionTable)
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+
+	LoadSpriteSheet("Global/Items.gif")
+
+	foreach (TypeName[Red Spring], arrayPos0, ALL_ENTITIES)
+		temp0 = object[arrayPos0].propertyValue
+		temp0 &= 0x7F
+		if temp0 > 8
+			object[arrayPos0].propertyValue -= 8
+			object[arrayPos0].enabledInAir = true
+		end if
+	next
+
+	// Spring frames
+	SpriteFrame(-16, -8, 32, 16, 52, 1)
+	SpriteFrame(-8, -16, 16, 32, 85, 1)
+	SpriteFrame(-8, -16, 16, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 16, 157, 116)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, 0, 32, 8, 52, 1)
+	SpriteFrame(-8, -16, 8, 32, 93, 1)
+	SpriteFrame(0, -16, 8, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 8, 157, 124)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+
+	temp0 = 0
+	RedSpring_startDebugID = DebugMode_ObjCount
+	while temp0 < 8
+		SetTableValue(TypeName[Red Spring], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RedSpring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RedSpring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // flipFlags
+			checkResult = object.propertyValue
+			checkResult &= 0x7
+			break
+			
+		case 1 // useTwirlAnim
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		case 2 // enabledInAir
+			GetBit(checkResult, object.propertyValue, 3)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // flipFlags
+			temp0 = editor.variableValue
+			temp0 &= 0x7
+
+			temp1 = 7
+			Not(temp1)
+
+			object.propertyValue &= temp1
+			object.propertyValue |= temp0
+			break
+			
+		case 1 // useTwirlAnim
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		case 2 // enabledInAir
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 3, checkResult)
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.frame = object.propertyValue
+	object.frame &= 7
+
+	GetTableValue(object.direction, object.frame, RedSpring_directionTable)
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+
+	LoadSpriteSheet("Global/Items.gif")
+
+	// Spring frames
+	SpriteFrame(-16, -8, 32, 16, 52, 1)
+	SpriteFrame(-8, -16, 16, 32, 85, 1)
+	SpriteFrame(-8, -16, 16, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 16, 157, 116)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, 0, 32, 8, 52, 1)
+	SpriteFrame(-8, -16, 8, 32, 93, 1)
+	SpriteFrame(0, -16, 8, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 8, 157, 124)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+
+	AddEditorVariable("flipFlags")
+	SetActiveVariable("flipFlags")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Down", 3)
+	AddEnumVariable("Up Right", 4)
+	AddEnumVariable("Up Left", 5)
+	AddEnumVariable("Down Right", 6)
+	AddEnumVariable("Down Left", 7)
+
+	AddEditorVariable("useTwirlAnim")
+	SetActiveVariable("useTwirlAnim")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("enabledInAir")
+	SetActiveVariable("enabledInAir")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

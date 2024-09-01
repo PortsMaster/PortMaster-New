@@ -1,0 +1,190 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Spiker Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 51 : TYPE_SPIKER
+
+// Function declarations
+reserve function Spiker_Function121
+reserve function Spiker_DebugDraw
+reserve function Spiker_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Spiker_Function121
+	object[arrayPos0].direction = object[arrayPos0].propertyValue
+	GetBit(temp0, object[arrayPos0].direction, 0)
+	if temp0 == 0
+		object[arrayPos0].xvel = -0x8000
+	else
+		object[arrayPos0].xvel = 0x8000
+	end if
+	object[arrayPos0].yvel = 0
+	object[arrayPos0].value0 = 64
+	object[arrayPos0].frame = 0
+	object[arrayPos0].animation = 0
+	object[arrayPos0].animationTimer = 0
+	object[arrayPos0].value2 = 1
+	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+end function
+
+
+function Spiker_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Spiker_DebugSpawn
+	CreateTempObject(TypeName[Spiker], object.direction, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object.xpos
+	arrayPos0 = object[tempObjectPos].entityPos
+	CallFunction(Spiker_Function121)
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		object.value0--
+		if object.value0 == 0
+			object.value0 = 16
+			object.state = 1
+		end if
+		object.frame = object.animationTimer
+		object.frame /= 10
+		object.animationTimer++
+		if object.animationTimer == 20
+			object.animationTimer = 0
+		end if
+		break
+	case 1
+		object.value0--
+		if object.value0 < 0
+			object.value0 = 64
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+			object.state = 0
+		end if
+		break
+	case 2
+		object.value3--
+		if object.value3 < 0
+			object.value2 = 0
+			CreateTempObject(TypeName[Spiker], 0, object.xpos, object.ypos)
+			object[tempObjectPos].value2 = 1
+			object[tempObjectPos].state = 3
+			object[tempObjectPos].direction = object.direction
+			GetBit(temp0, object.direction, 1)
+			if temp0 == 0
+				object[tempObjectPos].yvel = -0x20000
+			else
+				object[tempObjectPos].yvel = 0x20000
+			end if
+			object.state = object.value4
+		end if
+		break
+	case 3
+		object.ypos += object.yvel
+		object.direction ^= FLIP_X
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		object.xpos = object.value1
+		if object.outOfBounds == 1
+			arrayPos0 = object.entityPos
+			CallFunction(Spiker_Function121)
+		else
+			object.xpos = temp0
+		end if
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state != 3
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 10, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				CallFunction(PlayerObject_BadnikBreak)
+			end if
+			if object.type != TypeName[Blank Object]
+				if object.value2 == 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -32, -128, 32, 128, currentPlayer, -1, -1, 1, 1)
+					if checkResult == 1
+						object.value2 = 2
+						object.value3 = 8
+						object.value4 = object.state
+						object.state = 2
+					end if
+				end if
+			end if
+		end if
+		if object.value2 >= 1
+			GetBit(temp0, object.direction, 1)
+			if temp0 == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 8, 0, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, 0, 8, 32, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			end if
+			if checkResult == 1
+				CallFunction(PlayerObject_Hit)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.state != 3
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+	if object.value2 >= 1
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == 1
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-12, -8, 23, 24, 66, 206)
+		SpriteFrame(-12, -8, 24, 24, 66, 231)
+		SpriteFrame(-12, -32, 24, 32, 66, 173)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12, -8, 23, 24, 67, 781)
+		SpriteFrame(-12, -8, 24, 24, 67, 806)
+		SpriteFrame(-12, -32, 24, 32, 67, 748)
+	end if
+	foreach (TypeName[Spiker], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		GetBit(temp0, object[arrayPos0].propertyValue, 1)
+		if temp0 == 0
+			object[arrayPos0].ypos += 0x80000
+		else
+			object[arrayPos0].ypos -= 0x80000
+		end if
+		CallFunction(Spiker_Function121)
+	next
+	SetTableValue(TypeName[Spiker], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Spiker_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Spiker_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,884 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Mecha Sonic Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.movementCycle
+private alias object.value2  : object.spriteIndex
+private alias object.value3  : object.moveDir
+
+// value4 actually has two seaparate uses in this script, so for clarity's sake there are just two aliases for it
+private alias object.value4  : object.turns 		// Used when boosting across the ground to count how many turns to make are left
+private alias object.value4  : object.firedSpikes 	// Used when jumping to determine whether spikes have bene fired yet or not
+
+private alias object.value5  : object.health
+private alias object.value6  : object.invincibilityTimer
+private alias object.value7  : object.exploding
+
+// Constant values, set upon init
+private alias object.value8  : object.gndStartSpeed // How fast Mecha Sonic should go when on the ground
+private alias object.value9  : object.gndAcceleration
+private alias object.value10 : object.airStartSpeed
+
+// The sprite the rockets should use, kept to 15 when no rockets are to be displayed
+private alias object.value11 : object.rocketsFrame
+
+// States
+private alias 0  : MECHASONIC_AWAITPLAYER
+private alias 1  : MECHASONIC_INITPAUSE
+private alias 2  : MECHASONIC_DESCENDING
+private alias 3  : MECHASONIC_STANDING
+
+private alias 4  : MECHASONIC_GROUNDROLL_START
+private alias 5  : MECHASONIC_GROUNDROLL_CHARGE
+private alias 6  : MECHASONIC_GROUNDROLL_MAIN
+
+private alias 7  : MECHASONIC_ROCKETBOOST_START
+private alias 8  : MECHASONIC_ROCKETBOOST_CHARGE
+private alias 9  : MECHASONIC_ROCKETBOOST_MAIN
+
+private alias 10 : MECHASONIC_JUMPNORMAL_START
+private alias 11 : MECHASONIC_JUMPNORMAL_CHARGE
+private alias 12 : MECHASONIC_JUMPNORMAL_MAIN
+
+private alias 13 : MECHASONIC_JUMPSPIKES_START
+private alias 14 : MECHASONIC_JUMPSPIKES_CHARGE
+private alias 15 : MECHASONIC_JUMPSPIKES_MAIN
+
+private alias 16 : MECHASONIC_UNCURL
+private alias 17 : MECHASONIC_EXPLODING
+private alias 18 : MECHASONIC_DISSAPPEAR
+
+// Animations
+private alias 0 : MECHASONICANI_NONE
+private alias 1 : MECHASONICANI_IDLE
+private alias 2 : MECHASONICANI_ROCKETBOOST
+private alias 3 : MECHASONICANI_TURN
+private alias 4 : MECHASONICANI_CURL
+private alias 5 : MECHASONICANI_ROLLING
+private alias 6 : MECHASONICANI_UNCURL
+
+// Eggman Window (object[-9]) Aliases
+private alias 0 : EGGMANWINDOWANI_WINDOWCLOSED
+private alias 1 : EGGMANWINDOWANI_OPENWINDOW
+private alias 2 : EGGMANWINDOWANI_IDLE
+private alias 3 : EGGMANWINDOWANI_LAUGH
+private alias 4 : EGGMANWINDOWANI_STUNNED
+private alias 5 : EGGMANWINDOWANI_CLOSEWINDOW
+
+// One Way Door alias
+private alias object.state : object.isOpen
+
+// Player aliases
+private alias object.state 			: player.state
+private alias object.xpos 			: player.xpos
+private alias object.xvel 			: player.xvel
+private alias object.speed 			: player.speed
+private alias object.animation 		: player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.value38 		: player.hitboxTop
+private alias object.value39 		: player.hitboxBottom
+private alias object.value40 		: player.hitboxLeft
+private alias object.value41 		: player.hitboxRight
+
+// Reserved object slots
+private alias 0  : SLOT_PLAYER1
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+// Music Events
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MechaSonic_CheckEggmanChuckle
+reserve function MechaSonic_Reset
+
+
+// ========================
+// Tables
+// ========================
+
+// Values to apply to projectile spikes in order of:
+// - xoffset,   yoffset,   xvel,     yvel
+private table MechaSonic_spikeSpawnData
+	 0x000000, -0x180000,  0x00000, -0x30000
+	-0x100000, -0x100000, -0x20000, -0x20000
+	-0x180000,  0x000000, -0x30000,  0x00000
+	-0x100000,  0x100000, -0x20000,  0x20000
+	 0x000000,  0x180000,  0x00000,  0x30000
+	 0x100000,  0x100000,  0x20000,  0x20000
+	 0x180000,  0x000000,  0x30000,  0x00000
+	 0x100000, -0x100000,  0x20000, -0x20000
+end table
+
+
+// Below three tables are used for animations, each entry corresponds to a Mecha Sonic SpriteFrame
+
+// The last 252 value is unused, it's actually a control code from the original S2 Mecha Sonic animation bank
+// (that means they grabbed this ani data from the original ROM, really interesting stuff)
+private table MechaSonic_animation_turn
+	4, 5, 4, 3, 252
+end table
+
+private table MechaSonic_animation_curl
+	3, 3, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 7, 7, 8, 8, 6, 7, 8
+end table
+
+private table MechaSonic_animation_uncurl
+	8, 7, 6, 8, 8, 7, 7, 6, 6, 8, 8, 8, 7, 7, 7, 6, 6, 6, 3, 3
+end table
+
+// Table to hold the pattern Mecha Sonic will follow
+// All the values are set in ObjectStartup, as aliases values can't be put in table declarations
+private table MechaSonic_movementCycleStates[16]
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function MechaSonic_CheckEggmanChuckle
+	// Called to check if Robotnik should start chuckling after the player's been hit
+	if object[-9].animation > EGGMANWINDOWANI_OPENWINDOW
+		CheckEqual(player[currentPlayer].animation, ANI_HURT)
+		temp0 = checkResult
+		CheckEqual(player[currentPlayer].animation, ANI_DYING)
+		temp0 |= checkResult
+		CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+		temp0 |= checkResult
+		if temp0 != false
+			if object[-9].animation != EGGMANWINDOWANI_LAUGH
+				// If not already laughing, then start doing so
+				object[-9].animation = EGGMANWINDOWANI_LAUGH
+				object[-9].animationTimer = 0
+			end if
+		end if
+	end if
+end function
+
+
+private function MechaSonic_Reset
+	// Called to make the object return to its initial Standing state
+	object.timer = 100
+	PlaySfx(SfxName[Saw], false)
+	object.animation = MECHASONICANI_IDLE
+	object.state = MECHASONIC_STANDING
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case MECHASONIC_AWAITPLAYER
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 += 30
+		temp1 = screen.xcenter
+		temp1 -= 160
+		temp0 += temp1
+		stage.newXBoundary2 = temp0
+
+		temp0 -= 320
+		temp0 -= temp1
+		stage.newXBoundary1 = temp0
+
+		temp0 = object.xpos
+		temp0 -= 0x880000
+		if player[SLOT_PLAYER1].xpos >= temp0
+			// Set Mecha Sonic's movement values
+			if temp1 > 32
+				temp1 = 32
+			end if
+			temp2 = temp1
+			temp1 += 160
+
+			object.gndStartSpeed = 0x80000
+			object.gndStartSpeed *= temp1
+			object.gndStartSpeed /= 160
+			temp2 <<= 8
+			object.gndStartSpeed += temp2
+			temp2 >>= 2
+			object.gndStartSpeed += temp2
+			temp2 >>= 6
+
+			object.gndAcceleration = 0x2000
+			object.gndAcceleration *= temp1
+			object.gndAcceleration /= 160
+
+			object.airStartSpeed = 0x40000
+			object.airStartSpeed *= temp1
+			object.airStartSpeed /= 160
+			temp2 <<= 8
+			object.airStartSpeed += temp2
+			temp2 >>= 2
+			object.airStartSpeed += temp2
+			temp2 >>= 6
+			temp2 <<= 16
+
+			object.xpos += temp2
+
+#platform: USE_STANDALONE
+			object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+			if game.bossOneLife == false
+				object.health = 8
+			else
+				object.health = 1
+			end if
+#endplatform
+
+			object.ypos -= 0xC40000
+
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			object.state = MECHASONIC_INITPAUSE
+		end if
+		break
+
+	case MECHASONIC_INITPAUSE
+		// Just chilling above screen for a moment before starting to actually come down
+		object.timer++
+		if object.timer >= 45
+			object.timer = 0
+			PlaySfx(SfxName[Thruster], false)
+			object.state = MECHASONIC_DESCENDING
+		end if
+		break
+
+	case MECHASONIC_DESCENDING
+		object.timer++
+		if object.timer == 60
+			PlaySfx(SfxName[Thruster], false)
+		end if
+
+		if object.timer == 120
+			PlaySfx(SfxName[Thruster], false)
+		end if
+
+		object.rocketsFrame = oscillation
+		object.rocketsFrame &= 3
+		object.rocketsFrame >>= 1
+		object.rocketsFrame += 11
+		object.ypos += 0x10000
+
+		// If landed on the floor, start the fight proper
+		ObjectTileCollision(CSIDE_FLOOR, 0, 28, PATH_A)
+		if checkResult == true
+			object[-9].animation = EGGMANWINDOWANI_OPENWINDOW
+			object.rocketsFrame = 15 // Blank frame, no rockets thrusting just yet
+			CallFunction(MechaSonic_Reset)
+		end if
+		break
+
+	case MECHASONIC_STANDING
+		object.timer--
+		if object.timer == 50
+			// You'd think there'd be a space in its name, but there isn't...
+			PlaySfx(SfxName[Saw2], false)
+		end if
+
+		if object.timer == 0
+			GetTableValue(object.state, object.movementCycle, MechaSonic_movementCycleStates)
+			object.movementCycle++
+			object.movementCycle &= 15
+		end if
+		break
+
+	case MECHASONIC_GROUNDROLL_START
+	case MECHASONIC_JUMPNORMAL_START
+	case MECHASONIC_JUMPSPIKES_START
+		object.animation = MECHASONICANI_CURL
+		object.animationTimer = 1
+		object.spriteIndex = 0
+		object.timer = 148
+		object.state++
+		break
+
+	case MECHASONIC_GROUNDROLL_CHARGE
+		object.timer--
+		if object.timer < 0
+			object.timer = 64
+			object.xvel = object.gndStartSpeed
+			if object.moveDir == 0
+				FlipSign(object.xvel)
+			end if
+			object.moveDir ^= 1
+			object.state++
+		end if
+		break
+
+	case MECHASONIC_JUMPNORMAL_CHARGE
+	case MECHASONIC_JUMPSPIKES_CHARGE
+		object.timer--
+		if object.timer < 0
+			object.timer = 64
+			object.xvel = object.airStartSpeed
+			if object.moveDir == 0
+				FlipSign(object.xvel)
+			end if
+			object.moveDir ^= 1
+			object.state++
+		end if
+		break
+
+	case MECHASONIC_GROUNDROLL_MAIN
+		object.xpos += object.xvel
+		object.timer--
+		if object.timer < 0
+			object.animation = MECHASONICANI_UNCURL
+			object.animationTimer = 1
+			object.spriteIndex = 8
+			object.direction ^= FLIP_X
+			object.state = MECHASONIC_UNCURL
+		end if
+
+		if object.moveDir == 0
+			object.xvel -= object.gndAcceleration
+		else
+			object.xvel += object.gndAcceleration
+		end if
+		break
+
+	case MECHASONIC_UNCURL
+		break
+
+	case MECHASONIC_JUMPNORMAL_MAIN
+		object.xpos += object.xvel
+
+		if object.yvel != 0
+			object.ypos += object.yvel
+			object.yvel += 0x3800
+			if object.yvel > 0
+				ObjectTileCollision(CSIDE_FLOOR, 0, 28, PATH_A)
+				if checkResult == true
+					object.yvel = 0
+				end if
+			end if
+		end if
+
+		object.timer--
+		if object.timer == 60
+			object.yvel = -0x60000
+		end if
+
+		if object.timer < 0
+			object.animation = MECHASONICANI_UNCURL
+			object.animationTimer = 1
+			object.spriteIndex = 8
+			object.direction ^= FLIP_X
+			object.state = MECHASONIC_UNCURL
+		end if
+		break
+
+	case MECHASONIC_JUMPSPIKES_MAIN
+		object.xpos += object.xvel
+		if object.yvel != 0
+			object.ypos += object.yvel
+			object.yvel += 0x3800
+			if object.yvel > 0
+				if object.firedSpikes == false
+					temp0 = 0
+					temp7 = 0
+					arrayPos0 = object[-8].entityPos
+					while temp7 < 8
+						object[arrayPos0].type = TypeName[MechaSonicSpike]
+						object[arrayPos0].xpos = object.xpos
+						GetTableValue(temp1, temp0, MechaSonic_spikeSpawnData)
+						temp0++
+						object[arrayPos0].xpos += temp1
+						object[arrayPos0].ypos = object.ypos
+						GetTableValue(temp1, temp0, MechaSonic_spikeSpawnData)
+						temp0++
+						object[arrayPos0].ypos += temp1
+						GetTableValue(object[arrayPos0].xvel, temp0, MechaSonic_spikeSpawnData)
+						temp0++
+						GetTableValue(object[arrayPos0].yvel, temp0, MechaSonic_spikeSpawnData)
+						temp0++
+						object[arrayPos0].frame = temp7
+						arrayPos0++
+
+						temp7++
+					loop
+
+					PlaySfx(SfxName[Spikes Move], false)
+					object.firedSpikes = true
+				end if
+
+				ObjectTileCollision(CSIDE_FLOOR, 0, 28, PATH_A)
+				if checkResult == true
+					object.yvel = 0
+				end if
+			end if
+		end if
+
+		object.timer--
+		if object.timer == 60
+			object.yvel = -0x60000
+		end if
+
+		if object.timer < 0
+			object.firedSpikes = false
+			object.animation = MECHASONICANI_UNCURL
+			object.animationTimer = 1
+			object.spriteIndex = 8
+			object.direction ^= FLIP_X
+			object.state = MECHASONIC_UNCURL
+		end if
+		break
+
+	case MECHASONIC_ROCKETBOOST_START
+		object.animation = MECHASONICANI_ROCKETBOOST
+		object.timer = 32
+		object.turns = 2
+		object.state = MECHASONIC_ROCKETBOOST_CHARGE
+		break
+
+	case MECHASONIC_ROCKETBOOST_CHARGE
+		object.timer--
+		if object.timer < 0
+			object.timer = 64
+			object.xvel = object.gndStartSpeed
+			if object.moveDir == 0
+				FlipSign(object.xvel)
+			end if
+			object.moveDir ^= 1
+			PlaySfx(SfxName[Release], false)
+			object.state++
+		end if
+		break
+
+	case MECHASONIC_ROCKETBOOST_MAIN
+		object.xpos += object.xvel
+		object.timer--
+		if object.timer == 32
+			object.animationTimer = 0
+			object.spriteIndex = 0
+			object.rocketsFrame = 15
+			object.animation = MECHASONICANI_TURN
+		end if
+
+		if object.timer < 0
+			object.turns--
+			if object.turns > 0
+				object.timer = 32
+				object.animation = MECHASONICANI_ROCKETBOOST
+				object.state = MECHASONIC_ROCKETBOOST_CHARGE
+			else
+				CallFunction(MechaSonic_Reset)
+			end if
+		end if
+
+		if object.moveDir == 0
+			object.xvel -= object.gndAcceleration
+		else
+			object.xvel += object.gndAcceleration
+		end if
+		break
+
+	case MECHASONIC_EXPLODING
+		object.timer++
+		if object.timer == 240
+			object.timer = 0
+			object.exploding = false
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+			object.frame = 15
+			object.state = MECHASONIC_DISSAPPEAR
+		end if
+		break
+
+	case MECHASONIC_DISSAPPEAR
+		object.timer++
+		if object.timer == 60
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+
+	// Animate the object here
+	// Notably different front other boss objects, since those animate themselves in ObjectDraw instead
+	// However, since Mecha Sonic should pause upon death, animation is done here
+	switch object.animation
+	case MECHASONICANI_NONE
+		break
+
+	case MECHASONICANI_IDLE
+		object.animationTimer++
+		if object.animationTimer >= 3
+			object.animationTimer = 0
+			object.frame++
+			if object.frame >= 3
+				object.frame = 0
+			end if
+		end if
+		break
+
+	case MECHASONICANI_ROCKETBOOST
+		// This is the animation for boosting across the stage, with the rockets on Mecha Sonic's back
+
+		// Mecha Sonic's frame is constant...
+		object.frame = 3
+
+		// ...but still update the rockets' sprite
+		object.rocketsFrame = oscillation
+		object.rocketsFrame &= 3
+		object.rocketsFrame >>= 1
+		if object.state == MECHASONIC_ROCKETBOOST_MAIN
+			// Rockets
+			object.rocketsFrame += 9
+		else
+			// Sparks
+			object.rocketsFrame += 13
+		end if
+		break
+
+	case MECHASONICANI_TURN
+		object.animationTimer--
+		if object.animationTimer <= 0
+			object.animationTimer = 4
+			GetTableValue(object.frame, object.spriteIndex, MechaSonic_animation_turn)
+			object.spriteIndex++
+			if object.frame == 5
+				object.direction ^= FLIP_X
+			end if
+
+			if object.frame == 3
+				object.spriteIndex = 0
+				object.animationTimer = 255
+			end if
+		end if
+		break
+
+	case MECHASONICANI_CURL
+		object.animationTimer--
+		if object.animationTimer <= 0
+			object.animationTimer = 4
+			GetTableValue(object.frame, object.spriteIndex, MechaSonic_animation_curl)
+			object.spriteIndex++
+			if object.spriteIndex == 21
+				PlaySfx(SfxName[Buzzsaw], false)
+				object.spriteIndex = 0
+				object.frame = 6
+				object.animationTimer = 0
+				object.animation = MECHASONICANI_ROLLING
+			end if
+		end if
+		break
+
+	case MECHASONICANI_ROLLING
+		object.animationTimer++
+		if object.animationTimer >= 3
+			object.animationTimer = 0
+			object.frame++
+			if object.frame >= 9
+				object.frame = 6
+			end if
+		end if
+		break
+
+	case MECHASONICANI_UNCURL
+		object.animationTimer--
+		if object.animationTimer <= 0
+			object.animationTimer = 4
+			GetTableValue(object.frame, object.spriteIndex, MechaSonic_animation_uncurl)
+			object.spriteIndex++
+			if object.spriteIndex == 21
+				object.spriteIndex = 0
+				CallFunction(MechaSonic_Reset)
+			end if
+		end if
+		break
+
+	end switch
+
+	// Make sure the door for exiting the arena is closed, as long as Mecha Sonic is alive
+	object[+1].isOpen = false
+
+	if object.state > MECHASONIC_DESCENDING
+		if object.health != 0
+			if object.invincibilityTimer > 0
+				object.invincibilityTimer--
+
+				// Update the flashing black color
+				GetBit(temp0, object.invincibilityTimer, 0)
+				if temp0 == true
+					SetPaletteEntry(0, 192, 0xE0E0E0)
+				else
+					SetPaletteEntry(0, 192, 0x000000)
+				end if
+			end if
+
+			// Frames 6-8 are the jumping frames, where Mecha Sonic is completely wrapped with spikes (and undamagable as a result)
+			CheckEqual(object.frame, 6)
+			temp0 = checkResult
+			CheckEqual(object.frame, 7)
+			temp0 |= checkResult
+			CheckEqual(object.frame, 8)
+			temp0 |= checkResult
+			if temp0 != false
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					CallFunction(MechaSonic_CheckEggmanChuckle)
+					BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						CallFunction(Player_Hit)
+					end if
+				next
+			else
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					CallFunction(MechaSonic_CheckEggmanChuckle)
+					if object.animation == MECHASONICANI_IDLE
+						if object.direction == FLIP_NONE
+							if player[currentPlayer].xpos >= object.xpos
+								BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+								if checkResult == true
+									CallFunction(Player_Hit)
+								end if
+							end if
+						else
+							if player[currentPlayer].xpos <= object.xpos
+								BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+								if checkResult == true
+									CallFunction(Player_Hit)
+								end if
+							end if
+						end if
+					end if
+
+					if object.invincibilityTimer == 0
+						if player[currentPlayer].state != Player_State_GotHit
+							BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+							if checkResult == true
+								CallFunction(Player_CheckHit)
+								if checkResult == true
+									object.health--
+									if object.health == 0
+#platform: USE_ORIGINS
+										CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+#endplatform
+
+										// None of the special global variable array stuff done here, since there's no multiplayer in DEZ
+										player.score += 1000
+
+										// Make Window Robotnik start running
+										object[-9].frame = 4
+										object[-9].animationTimer = 0
+										object[-9].animation = EGGMANWINDOWANI_CLOSEWINDOW
+
+										object.exploding = true
+										object.state = MECHASONIC_EXPLODING
+										object.timer = 0
+
+										StopSfx(SfxName[Saw])
+										StopSfx(SfxName[Release])
+										StopSfx(SfxName[Buzzsaw])
+
+										object.animation = MECHASONICANI_NONE
+										object.rocketsFrame = 15
+									else
+										object.invincibilityTimer = 32
+										// Even through a window, Eggman will still recoil when his machines are hit
+										if object[-9].animation > EGGMANWINDOWANI_OPENWINDOW
+											object[-9].animationTimer = 0
+											object[-9].animation = EGGMANWINDOWANI_STUNNED
+										end if
+										PlaySfx(SfxName[Boss Hit], false)
+									end if
+								end if
+							end if
+						end if
+					end if
+				next
+			end if
+		end if
+	end if
+
+	if object.state != MECHASONIC_DISSAPPEAR
+		// Sonic should never be able to reach the right side of the screen anyway - there's already a wall there - but enforce right bounds regardless
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+
+	if object.exploding == true
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// Unlike other boss objects, Mecha Sonic's animation is kept in ObjectUpdate rather than being done here
+
+	if object.state > MECHASONIC_AWAITPLAYER
+		DrawSpriteFX(object.rocketsFrame, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+
+		// 0 - 2: Idle Frames
+		SpriteFrame(-20, -28, 40, 56, 1, 1)
+		SpriteFrame(-20, -28, 40, 56, 42, 1)
+		SpriteFrame(-20, -28, 40, 56, 83, 1)
+
+		// 3: Rocket Thrusting Frame
+		SpriteFrame(-20, -27, 40, 55, 124, 1)
+
+		// 4 - 5: Turning Frames
+		SpriteFrame(-22, -27, 42, 55, 165, 1)
+		SpriteFrame(-22, -27, 44, 55, 208, 1)
+		
+		// 6 - 8: Jumping Frames
+		SpriteFrame(-24, -18, 48, 48, 255, 1)
+		SpriteFrame(-24, -18, 48, 48, 304, 1)
+		SpriteFrame(-24, -18, 48, 48, 353, 1)
+
+		// 9 - 10: Back Rocket Frames
+		SpriteFrame(14, 4, 24, 24, 402, 1)
+		SpriteFrame(14, 5, 24, 22, 427, 1)
+
+		// 11 - 12: Vertical Flame Sprites
+		SpriteFrame(-12, 28, 16, 8, 402, 26)
+		SpriteFrame(-12, 28, 16, 22, 419, 26)
+
+		// 13 - 14: Sparks Frames
+		SpriteFrame(19, 20, 19, 8, 452, 1)
+		SpriteFrame(20, 20, 18, 7, 452, 10)
+
+		// 15: Blank Frame (Used when rockets shouldn't show up)
+		SpriteFrame(0, 0, 1, 1, 1, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+
+		// 0 - 2: Idle Frames
+		SpriteFrame(-20, -28, 40, 56, 513, 1)
+		SpriteFrame(-20, -28, 40, 56, 554, 1)
+		SpriteFrame(-20, -28, 40, 56, 595, 1)
+
+		// 3: Rocket Thrusting Frame
+		SpriteFrame(-20, -27, 40, 55, 636, 1)
+
+		// 4 - 5: Turning Frames
+		SpriteFrame(-22, -27, 42, 55, 677, 1)
+		SpriteFrame(-22, -27, 44, 55, 720, 1)
+
+		// 6 - 8: Jumping Frames
+		SpriteFrame(-24, -18, 48, 48, 767, 1)
+		SpriteFrame(-24, -18, 48, 48, 816, 1)
+		SpriteFrame(-24, -18, 48, 48, 865, 1)
+
+		// 9 - 10: Back Rocket Frames
+		SpriteFrame(14, 4, 24, 24, 914, 1)
+		SpriteFrame(14, 5, 24, 22, 939, 1)
+
+		// 11 - 12: Vertical Flame Sprites
+		SpriteFrame(-12, 28, 16, 8, 914, 26)
+		SpriteFrame(-12, 28, 16, 22, 931, 26)
+
+		// 13 - 14: Sparks Frames
+		SpriteFrame(19, 20, 19, 8, 964, 1)
+		SpriteFrame(20, 20, 18, 7, 964, 10)
+
+		// 15: Blank Frame (Interestingly, even for being blank this frame was still updated for MBZ despite being, well, blank)
+		SpriteFrame(0, 0, 1, 1, 513, 1)
+	end if
+
+	// Set all the movement cycle states into the table
+	// The compiler doesn't allow for aliased values to be in tables, which is why they're all set here instead
+	// (Though, it would've been far better for us if they just updated the compiler to allow for such instead...)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  0,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_ROCKETBOOST_START, 1,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPNORMAL_START,  2,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  3,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  4,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPSPIKES_START,  5,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_ROCKETBOOST_START, 6,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPNORMAL_START,  7,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  8,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  9,  MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPNORMAL_START,  10, MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  11, MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_ROCKETBOOST_START, 12, MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_GROUNDROLL_START,  13, MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPNORMAL_START,  14, MechaSonic_movementCycleStates)
+	SetTableValue(MECHASONIC_JUMPSPIKES_START,  15, MechaSonic_movementCycleStates)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-20, -28, 40, 56, 1, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20, -28, 40, 56, 513, 1)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

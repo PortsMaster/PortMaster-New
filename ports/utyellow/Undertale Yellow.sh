@@ -37,42 +37,63 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
-$ESUDO chmod 777 "$GAMEDIR/lib/7za"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 # Run the installer file if it hasn't been run yet
-if [ ! -f "$GAMEDIR/installed" ]; then	
-    echo "Performing first-run setup..." > $CUR_TTY
-	# Redirect output to install.log only for the commands within the if condition
-	(
-		exec > >(tee -a "$GAMEDIR/install.log") 2>&1
+install-apk() {
+    if [ ! -f "$GAMEDIR/installed" ]; then
+        echo "Performing first-run setup..." > $CUR_TTY
+        PATCHFILE="patch-droid.xdelta"
+        # Extract the APK, replace game.droid, and repack
+        mkdir -p "$GAMEDIR/assets"
+        ./utils/unzip "yellow.apk" -d "$GAMEDIR/assets/"
+        mv "$GAMEDIR/assets/assets/game.droid" "$GAMEDIR/game.droid"
+        apply_patch
+        mv "$GAMEDIR/game.droid" "$GAMEDIR/assets/assets/game.droid"
+        ./utils/zip -r -0 "yellow.apk" "assets"
+        rm -rf "$GAMEDIR/assets"
+        rm -rf game.apk
+        mv yellow.apk game.apk
+        touch "$GAMEDIR/installed"
+    fi
+}
+install-win() {
+    if [ ! -f "$GAMEDIR/installed" ]; then	
+        echo "Performing first-run setup..." > $CUR_TTY
+        PATCHFILE="patch-win.xdelta"
         # Purge unneeded files
         rm -rf assets/*.ini assets/*.exe
-		# Rename data.win
+        # Rename data.win
         echo "Moving the game file..." > $CUR_TTY
-		mv "./assets/data.win" "./game.droid"
-
-		# Create a new zip file game.apk from specified directories
-		echo "Zipping assets into apk..." > $CUR_TTY
-		./libs/7za a -mx=0 -r "./game.apk" "./assets"
+        mv "./assets/data.win" "./game.droid"
+        # Create a new zip file game.apk from specified directories
+        echo "Zipping assets into apk..." > $CUR_TTY
+        ./utils/zip -r -0 "game.apk" "assets"
         rm -rf "$GAMEDIR/assets"
-	
-		# Create 'installed' file to indicate successful installation
-		touch "$GAMEDIR/installed"
-	)
-    if [ -f "utyellow.xdelta" ]; then
-    $controlfolder/xdelta3 -d -s "$GAMEDIR/game.droid" "$GAMEDIR/utyellow.xdelta" "$GAMEDIR/game2.droid"
-    rm -rf game.droid
-    rm -rf utyellow.xdelta
-    mv game2.droid game.droid
-fi
-    echo "Done! Loading game..." > $CUR_TTY
+        apply_patch
+    fi
+}
+apply_patch() {
+    if [ -f "$PATCHFILE" ]; then
+        echo "Applying patch..." > $CUR_TTY
+        $controlfolder/xdelta3 -d -s "$GAMEDIR/game.droid" "$GAMEDIR/$PATCHFILE" "$GAMEDIR/game2.droid"
+        rm -rf game.droid
+        rm -rf *.xdelta
+        mv game2.droid game.droid
+    fi
+}
+
+if [ -f "$GAMEDIR/yellow.apk" ]; then
+    install-apk
+else
+    install-win
 fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "control.gptk" &
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 ./gmloadernext game.apk
 
 # Kill processes

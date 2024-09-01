@@ -1,0 +1,157 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: HPZ Trigger Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : HPZTRIGGER_BLANK
+private alias 1 : HPZTRIGGER_PAUSE
+private alias 2 : HPZTRIGGER_FADEOUT
+
+// Player Aliases
+private alias object.state 		: player.state
+private alias object.yvel 		: player.yvel
+private alias object.animation 	: player.animation
+private alias object.value0 	: player.rings
+private alias object.value25 	: player.gravityStrength
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Check if the camera bounds should change now
+	BoxCollisionTest(C_TOUCH, object.entityPos, -68, 0, 68, 5120, 0, 0, 0, 0, 0)
+	if checkResult == true
+		stage.curYBoundary2 = 0x1000
+		stage.deathBoundary = 0x1400
+		stage.deathBoundary <<= 16
+	else
+		stage.curYBoundary2 = 0x800
+		stage.deathBoundary = stage.curYBoundary2
+		stage.deathBoundary <<= 16
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Check player collision
+		BoxCollisionTest(C_TOUCH, object.entityPos, -68, 512, 68, 5120, currentPlayer, 0, 0, 0, 0)
+
+		if checkResult == true
+			// Player has touched this object, start the transition
+
+			// Make the player start flailing
+			player[currentPlayer].animation = ANI_WATERSLIDE
+
+			// The player might be flying or gliding or climbing or a variety of not-free-falling states, so let's make sure they're falling normally
+#platform: USE_STANDALONE
+			player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+			player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+
+			// Enforce maximum Y velocity
+			if player[currentPlayer].yvel >= 0x100000
+				player[currentPlayer].yvel = 0x100000
+				player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
+			end if
+
+			// If P1, switch to main state
+			if currentPlayer == 0
+				if object.state == HPZTRIGGER_BLANK
+					object.state = HPZTRIGGER_PAUSE
+				end if
+			end if
+		end if
+	next
+
+	switch object.state
+	case HPZTRIGGER_PAUSE
+		// Letting the player fall for a second
+		object.timer++
+		if object.timer == 60
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case HPZTRIGGER_FADEOUT
+		// Fading out to go to HPZ
+		music.volume -= 2
+		object.timer += 8
+		SetScreenFade(0, 0, 0, object.timer)
+		if object.timer == 384
+#platform: USE_ORIGINS
+			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, player[0].rings)
+			game.stageskipped = true // Set this temporarily
+			CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 1)
+			game.stageskipped = false // See? Temporary!
+#endplatform
+			starPostID = 0
+			stage.listPos = 20
+			StopMusic()
+			LoadStage()
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	// Cycle through all HPZ Trigger objects and...
+	foreach (TypeName[HPZ Trigger], arrayPos0, ALL_ENTITIES)
+		if options.gameMode == MODE_TIMEATTACK
+			// Erase it if in time attack, turning this pit into just a normal bottomless pit
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		else
+			if options.vsMode == false
+				// Give it the XBOUNDS priority if in single player
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+			else
+				// Erase it if in 2P mode
+				ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw this object's giant hitbox, a lone "T" icon doesn't do this object justice
+		
+		temp0 = 68; temp1 = 512; temp2 = 68; temp3 = 5120;
+		CallFunction(EditorHelpers_DrawHitbox)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 168, 18) // "trigger" - #0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

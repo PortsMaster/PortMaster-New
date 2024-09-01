@@ -1,0 +1,302 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: H Push Spring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.pushOffset
+private alias object.value2 : object.beingPushed
+
+// States
+private alias 0 : HPUSHSPRING_AWAITPUSH
+private alias 1 : HPUSHSPRING_PUSHING
+private alias 2 : HPUSHSPRING_RELEASE
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+private alias object.pushing : player.pushing
+private alias object.controlLock : player.controlLock
+private alias object.collisionMode : player.collisionMode
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HPushSpring_DebugDraw
+reserve function HPushSpring_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HPushSpring_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function HPushSpring_DebugSpawn
+	CreateTempObject(TypeName[H Push Spring], 0, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= 0xFFFF0000
+	object[tempObjectPos].ypos &= 0xFFFF0000
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case HPUSHSPRING_AWAITPUSH
+		if object.beingPushed == true
+			object.state = HPUSHSPRING_PUSHING
+		end if
+		break
+
+	case HPUSHSPRING_PUSHING
+		object.pushOffset += 0x4000
+		if object.pushOffset > 0x120000
+			object.pushOffset = 0x120000
+		end if
+
+		if object.beingPushed == false
+			object.state = HPUSHSPRING_RELEASE
+		end if
+		break
+
+	case HPUSHSPRING_RELEASE
+		object.pushOffset -= 0x40000
+		if object.pushOffset <= 0
+			object.pushOffset = 0
+			object.state = HPUSHSPRING_AWAITPUSH
+		end if
+
+		if object.beingPushed == true
+			object.state = HPUSHSPRING_PUSHING
+		end if
+		break
+		
+	end switch
+
+	if object.direction == FLIP_NONE
+		temp0 = -20
+		temp1 = object.pushOffset
+		temp1 >>= 16
+		FlipSign(temp1)
+		temp1 += 22
+	else
+		temp0 = object.pushOffset
+		temp0 >>= 16
+		temp0 -= 22
+		temp1 = 20
+	end if
+
+	object.beingPushed = false
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, temp0, -16, temp1, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		switch checkResult
+		case COL_LEFT
+			if object.direction == FLIP_X
+				if player[currentPlayer].direction == FACING_RIGHT
+					player[currentPlayer].xpos += 0x20000
+				end if
+
+				if player[currentPlayer].pushing > 0
+					object.beingPushed |= true
+				end if
+
+				if object.state == HPUSHSPRING_RELEASE
+					if object.pushOffset > 0x10000
+						player[currentPlayer].speed = -12
+						player[currentPlayer].speed *= object.pushOffset
+						player[currentPlayer].speed /= 18
+						player[currentPlayer].collisionMode = CMODE_FLOOR
+						player[currentPlayer].pushing = 0
+						player[currentPlayer].direction = object.direction
+						player[currentPlayer].controlLock = 15
+						if player[currentPlayer].state != Player_State_Roll
+							player[currentPlayer].state = Player_State_Ground
+							player[currentPlayer].animation = ANI_RUNNING
+						end if
+						PlaySfx(SfxName[Spring], false)
+					end if
+				end if
+			end if
+			break
+
+		case COL_RIGHT
+			if object.direction == FLIP_NONE
+				if player[currentPlayer].direction == FACING_LEFT
+					player[currentPlayer].xpos -= 0x20000
+				end if
+
+				if player[currentPlayer].pushing > 0
+					object.beingPushed |= true
+				end if
+
+				if object.state == HPUSHSPRING_RELEASE
+					if object.pushOffset > 0x10000
+						player[currentPlayer].speed = 12
+						player[currentPlayer].speed *= object.pushOffset
+						player[currentPlayer].speed /= 18
+						player[currentPlayer].collisionMode = CMODE_FLOOR
+						player[currentPlayer].pushing = 0
+						player[currentPlayer].direction = object.direction
+						player[currentPlayer].controlLock = 15
+						if player[currentPlayer].state != Player_State_Roll
+							player[currentPlayer].state = Player_State_Ground
+							player[currentPlayer].animation = ANI_RUNNING
+						end if
+						PlaySfx(SfxName[Spring], false)
+					end if
+				end if
+			end if
+			break
+			
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	if object.pushOffset == 0
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	else
+		if object.direction == FLIP_NONE
+			temp0 = object.pushOffset
+			FlipSign(temp0)
+			temp0 += object.xpos
+			DrawSpriteFX(1, FX_FLIP, temp0, object.ypos)
+
+			temp0 = object.pushOffset
+			temp0 *= -2
+			temp0 /= 3
+			temp0 += object.xpos
+			DrawSpriteFX(2, FX_FLIP, temp0, object.ypos)
+
+			temp0 = object.pushOffset
+			temp0 /= -3
+			temp0 += object.xpos
+			DrawSpriteFX(3, FX_FLIP, temp0, object.ypos)
+
+			DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		else
+			temp0 = object.pushOffset
+			temp0 += object.xpos
+			DrawSpriteFX(1, FX_FLIP, temp0, object.ypos)
+
+			temp0 = object.pushOffset
+			temp0 *= 2
+			temp0 /= 3
+			temp0 += object.xpos
+			DrawSpriteFX(2, FX_FLIP, temp0, object.ypos)
+
+			temp0 = object.pushOffset
+			temp0 /= 3
+			temp0 += object.xpos
+			DrawSpriteFX(3, FX_FLIP, temp0, object.ypos)
+
+			DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-20, -16, 40, 32, 272, 223)
+		SpriteFrame(4, -16, 16, 32, 296, 223)
+		SpriteFrame(-4, -16, 8, 32, 288, 223)
+		SpriteFrame(-12, -16, 8, 32, 280, 223)
+		SpriteFrame(-20, -16, 8, 32, 272, 223)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20, -16, 40, 32, 756, 778)
+		SpriteFrame(4, -16, 16, 32, 780, 778)
+		SpriteFrame(-4, -16, 8, 32, 772, 778)
+		SpriteFrame(-12, -16, 8, 32, 764, 778)
+		SpriteFrame(-20, -16, 8, 32, 756, 778)
+	end if
+
+	foreach (TypeName[H Push Spring], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+		object[arrayPos0].xpos &= 0xFFFF0000
+		object[arrayPos0].ypos &= 0xFFFF0000
+	next
+
+	SetTableValue(TypeName[H Push Spring], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HPushSpring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HPushSpring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			editor.variableValue &= 1
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.direction, object.propertyValue, 0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-20, -16, 40, 32, 272, 223)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20, -16, 40, 32, 756, 778)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
+end event

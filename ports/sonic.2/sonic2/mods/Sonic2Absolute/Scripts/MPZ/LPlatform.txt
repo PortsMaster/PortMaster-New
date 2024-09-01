@@ -1,0 +1,119 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: L Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 74 : TYPE_LPLATFORM
+
+// Function declarations
+reserve function LPlatform_DebugDraw
+reserve function LPlatform_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function LPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function LPlatform_DebugSpawn
+	CreateTempObject(TypeName[L Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value1 = object[tempObjectPos].ypos
+end function
+
+
+event ObjectMain
+	temp0 = object.ypos
+	temp0 &= -0x10000
+	switch object.state
+	case 0
+		GetTableValue(temp6, 0, StageSetup_table9)
+		temp6 <<= 7
+		object.ypos = object.value1
+		object.ypos -= temp6
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x800
+		if object.outOfBounds == 1
+			object.ypos = object.value1
+			object.ypos += object.value31
+			object.yvel = 0
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		if object.outOfBounds == 1
+			object.state = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+		break
+	end switch
+	temp7 = object.ypos
+	temp7 &= -0x10000
+	temp7 -= temp0
+	if object.state < 2
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp0, object.value2, temp2)
+			if temp0 == 1
+				object[currentPlayer].ypos += temp7
+			end if
+			SetBit(object.value2, temp2, 0)
+			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 1
+				SetBit(object.value2, temp2, 1)
+				if object.value0 == 0
+					if object.state == 0
+						object.priority = PRIORITY_ACTIVE
+						object.state++
+					end if
+				end if
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+				break
+			end switch
+			temp2++
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < 2
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+	foreach (TypeName[L Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].ypos += 0x100000
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+	next
+	SetTableValue(TypeName[L Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(LPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(LPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

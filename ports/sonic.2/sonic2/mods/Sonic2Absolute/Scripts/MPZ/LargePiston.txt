@@ -1,0 +1,142 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Large Piston Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 65 : TYPE_LARGEPISTON
+
+// Function declarations
+reserve function LargePiston_Function143
+reserve function LargePiston_DebugDraw
+reserve function LargePiston_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function LargePiston_Function143
+	object[arrayPos0].ypos = object[arrayPos0].value1
+	object[arrayPos0].ypos += object[arrayPos0].value31
+	object[arrayPos0].ypos += 0x400000
+	object[arrayPos0].value0 = 90
+	object[arrayPos0].value2 = 0
+	object[arrayPos0].state = 2
+	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+end function
+
+
+function LargePiston_DebugDraw
+	temp0 = object.direction
+	object.direction <<= FLIP_X
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	object.direction = temp0
+end function
+
+
+function LargePiston_DebugSpawn
+	CreateTempObject(TypeName[Large Piston], 0, object.xpos, object.ypos)
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].value1 = object.ypos
+	object[arrayPos0].direction = object.direction
+	object[arrayPos0].direction <<= FLIP_X
+	CallFunction(LargePiston_Function143)
+end function
+
+
+event ObjectMain
+	temp0 = object.ypos
+	switch object.state
+	case 0
+		object.value0--
+		if object.value0 == 0
+			object.priority = PRIORITY_ACTIVE
+			object.value0 = 8
+			object.state = 1
+		end if
+		break
+	case 1
+		object.ypos += 0x80000
+		object.value0--
+		if object.value0 == 0
+			object.value0 = 90
+			object.state = 2
+		end if
+		break
+	case 2
+		object.value0--
+		if object.value0 == 0
+			object.value0 = 8
+			object.state = 3
+		end if
+		break
+	case 3
+		object.ypos -= 0x80000
+		object.value0--
+		if object.value0 == 0
+			object.value0 = 90
+			object.state = 0
+		end if
+		break
+	end switch
+	temp1 = object.ypos
+	temp1 -= temp0
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.value2, temp2)
+		if temp0 == 1
+			object[currentPlayer].ypos += temp1
+		end if
+		SetBit(object.value2, temp2, 0)
+		if object[currentPlayer].state == PlayerObject_Crouching		
+			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 12, currentPlayer, -10, -20, 10, 20)
+		else
+			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		end if
+		switch checkResult
+			case 1
+				SetBit(object.value2, temp2, 1)
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+				end if
+				break
+		end switch
+		temp2++
+	next
+	if object.outOfBounds == 1
+		arrayPos0 = object.entityPos
+		CallFunction(LargePiston_Function143)
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 120, 1, 135)
+	foreach (TypeName[Large Piston], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		CallFunction(LargePiston_Function143)
+	next
+	SetTableValue(TypeName[Large Piston], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(LargePiston_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(LargePiston_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

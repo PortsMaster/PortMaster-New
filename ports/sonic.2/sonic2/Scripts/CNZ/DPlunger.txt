@@ -1,0 +1,244 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: D Plunger Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.compression
+private alias object.value2 : object.active
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.scrollTracking : player.scrollTracking
+private alias object.jumpHold : player.jumpHold
+
+private alias object.value1  : player.timer
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function DPlunger_DebugDraw
+reserve function DPlunger_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function DPlunger_DebugDraw
+	DrawSprite(5)
+end function
+
+
+private function DPlunger_DebugSpawn
+	CreateTempObject(TypeName[D Plunger], 1, object.xpos, object.ypos)
+	object[tempObjectPos].ypos &= 0xFFFF0000
+	object[tempObjectPos].inkEffect = INK_ALPHA
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.active == true
+		if object.compression < 0x100000
+			object.compression += 0x4000
+		end if
+	else
+		if object.compression > 0
+			object.compression -= 0x20000
+			if object.compression < 0
+				object.compression = 0
+			end if
+		else
+			object.priority = PRIORITY_BOUNDS
+		end if
+	end if
+
+	temp2 = object.active
+	object.active = false
+	temp0 = object.xpos
+	temp1 = object.ypos
+	object.xpos -= object.compression
+	object.ypos += object.compression
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckEqual(player[currentPlayer].state, Player_State_Death)
+		temp7 = checkResult
+		CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+		temp7 |= checkResult
+		if temp7 == false
+			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -19, 19, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].state 			= Player_State_Static
+				player[currentPlayer].gravity 			= 0
+				player[currentPlayer].scrollTracking 	= false
+				player[currentPlayer].animation 		= ANI_JUMPING
+				player[currentPlayer].xpos 				= object.xpos
+				player[currentPlayer].xpos 			   += 0x1B0000
+				player[currentPlayer].ypos 				= object.ypos
+				player[currentPlayer].ypos 			   -= 0x1B0000
+				player[currentPlayer].xvel 				= -1
+				player[currentPlayer].yvel 				= 1
+				object.active 						   |= player[currentPlayer].jumpHold
+			end if
+		end if
+	next
+
+	if object.compression > 0x60000
+		if temp2 == true
+			if object.active == false
+				object.priority = PRIORITY_ACTIVE
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					CheckEqual(player[currentPlayer].state, Player_State_Death)
+					temp7 = checkResult
+					CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+					temp7 |= checkResult
+					if temp7 == false
+						if player[currentPlayer].state == Player_State_Static
+							BoxCollisionTest(C_TOUCH, object.entityPos, 0, -19, 19, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+							if checkResult == true
+								if object.propertyValue == 0
+									player[currentPlayer].state = CNZSetup_Player_TubeRoll
+									player[currentPlayer].gravity = GRAVITY_GROUND
+								else
+#platform: USE_STANDALONE
+									player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+									player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+									player[currentPlayer].gravity = GRAVITY_AIR
+								end if
+
+								player[currentPlayer].timer 	= 0
+								player[currentPlayer].direction = FACING_RIGHT
+								player[currentPlayer].xvel 		= object.compression
+								player[currentPlayer].speed 	= object.compression
+								player[currentPlayer].yvel 		= object.compression
+								FlipSign(player[currentPlayer].yvel)
+								PlaySfx(SfxName[Plunger], false)
+							end if
+						end if
+					end if
+				next
+			end if
+		end if
+	end if
+	object.xpos = temp0
+	object.ypos = temp1
+
+	// Fading for yellow plunger
+	temp0 = object.compression
+	temp0 >>= 14
+	object.angle += temp0
+	Sin(temp1, object.angle)
+
+	temp1 >>= 4
+	temp0 = object.compression
+	temp0 >>= 12
+	temp0 -= 64
+	temp0 += temp1
+	object.alpha = temp0
+end event
+
+
+event ObjectDraw
+	// Spring & Base
+	temp0 = object.compression
+	temp0 >>= 20
+	DrawSprite(temp0)
+
+	// Plunger (Red)
+	temp0 = object.xpos
+	temp0 -= object.compression
+	temp1 = object.ypos
+	temp1 += object.compression
+	DrawSpriteXY(3, temp0, temp1)
+
+	// Plunger (Yellow)
+	DrawSpriteFX(4, FX_INK, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -8, 32, 32, 219, 51)	// Spring & Base			- #0
+	SpriteFrame(-24, -1, 25, 25, 219, 58)	// Spring & Base (Shorter)	- #1
+	SpriteFrame(-24, -1, 25, 25, 219, 58)	// Base						- #2
+	SpriteFrame(-3, -24, 27, 27, 199, 6)	// Plunger (Red)			- #3
+	SpriteFrame(-3, -24, 27, 27, 227, 6)	// Plunger (Yellow)			- #4
+	SpriteFrame(-24, -24, 48, 48, 170, 51)	// Plunger (Full Sprite)	- #5
+
+	foreach (TypeName[D Plunger], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].inkEffect = INK_ALPHA
+	next
+
+	SetTableValue(TypeName[D Plunger], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(DPlunger_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DPlunger_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // releaseType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // releaseType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -24, 48, 48, 170, 51)	// Plunger (Full Sprite)
+	
+	AddEditorVariable("releaseType")
+	SetActiveVariable("releaseType")
+	AddEnumVariable("Lock Controls", 0)
+	AddEnumVariable("Release Controls", 1)
+end event

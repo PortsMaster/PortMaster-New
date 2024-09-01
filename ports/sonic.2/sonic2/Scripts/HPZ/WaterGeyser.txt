@@ -1,0 +1,181 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Water Geyser Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.maxHeight
+private alias object.value3 : object.eggmanHeight
+private alias object.value4 : object.parent
+
+// States
+private alias 0 : WATERGEYSER_SETUP
+private alias 1 : WATERGEYSER_RISE
+private alias 2 : WATERGEYSER_FALL
+private alias 3 : WATERGEYSER_RISE_BOSS
+private alias 4 : WATERGEYSER_FALL_BOSS
+
+// EggmanAliases
+private alias object.value13 : B08Eggman.flameAnimation
+
+// Eggman States
+private alias 10 : HPZEGGMAN_GEYSERHIT
+private alias 11 : HPZEGGMAN_GEYSERFALL
+private alias 13 : HPZEGGMAN_EXPLODE
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case WATERGEYSER_SETUP
+		object.startPos.y = object.ypos
+		object.maxHeight = object.ypos
+		object.maxHeight -= 0x1000000
+		object.eggmanHeight = object.ypos
+		object.eggmanHeight -= 0x900000
+		if object.propertyValue == 0
+			object.state++
+		else
+			object.parent = 0xFFFFFF
+			object.state = WATERGEYSER_RISE_BOSS
+		end if
+		object.yvel = -0x100000
+		break
+
+	case WATERGEYSER_RISE
+		object.yvel += 0x3800
+		object.ypos += object.yvel
+
+		if object.ypos <= object.maxHeight
+			object.ypos = object.maxHeight
+			object.state++
+		end if
+		break
+
+	case WATERGEYSER_FALL
+		object.yvel += 0x3800
+		if object.yvel > 0
+			object.ypos += object.yvel
+		end if
+
+		if object.ypos >= object.startPos.y
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	case WATERGEYSER_RISE_BOSS
+		object.yvel += 0x3800
+		object.ypos += object.yvel
+
+		foreach (TypeName[B08 Eggman], arrayPos0, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -14, -18, 14, 18, arrayPos0, -12, -24, 12, 24)
+			if checkResult == true
+				object.maxHeight = object.eggmanHeight
+				object.parent = arrayPos0
+				// Bug Details:
+				// This check is faulty, it allows geysers to hit Eggman during his escape sequence
+				// The check should probably be `< HPZEGGMAN_EXPLODE`, rather than `!=`
+				if object[arrayPos0].state != HPZEGGMAN_EXPLODE
+					object[arrayPos0].state = HPZEGGMAN_GEYSERHIT
+				end if
+			end if
+		next
+
+		if object.ypos <= object.maxHeight
+			object.ypos = object.maxHeight
+			object.state++
+		end if
+		break
+
+	case WATERGEYSER_FALL_BOSS
+		object.yvel += 0x3800
+
+		if object.yvel > 0
+			object.ypos += object.yvel
+			if object.parent != 0xFFFFFF
+				arrayPos0 = object.parent
+				if object[arrayPos0].state != HPZEGGMAN_EXPLODE
+					object[arrayPos0].state = HPZEGGMAN_GEYSERFALL
+				end if
+				object[arrayPos0].yvel = 0
+				B08Eggman[arrayPos0].flameAnimation = 0
+				object.parent = 0xFFFFFF
+			end if
+		else
+			if object.parent != 0xFFFFFF
+				foreach (TypeName[B08 Eggman], arrayPos0, ACTIVE_ENTITIES)
+					BoxCollisionTest(C_TOUCH, object.entityPos, -14, -18, 14, 18, arrayPos0, -12, -24, 12, 24)
+					if checkResult == true
+						object.maxHeight = object.eggmanHeight
+						object.parent = arrayPos0
+						// Bug Details: See above
+						if object[arrayPos0].state != HPZEGGMAN_EXPLODE
+							object[arrayPos0].state = HPZEGGMAN_GEYSERHIT
+						end if
+					end if
+				next
+			end if
+		end if
+
+		if object.ypos >= object.startPos.y
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	temp0 = object.startPos.y
+	temp0 -= object.ypos
+	temp0 >>= 16
+	EditFrame(0, -14, 0, 28, temp0, 484, 0)
+
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-14, 0, 28, 256, 484, 256)
+	SpriteFrame(-24, -20, 48, 24, 174, 231)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.maxHeight = object.ypos
+	object.maxHeight -= 0x1000000
+
+	temp0 = object.ypos
+	temp0 -= object.maxHeight
+	temp0 >>= 16
+	EditFrame(0, -14, 0, 28, temp0, 484, 0)
+
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-14, 0, 28, 256, 484, 256)
+	SpriteFrame(-24, -20, 48, 24, 174, 231)
+	
+	// used for the boss, not in the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

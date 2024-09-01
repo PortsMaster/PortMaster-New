@@ -1,0 +1,205 @@
+
+
+//-------Aliases-------//
+private alias object.value0 : rock.ypos
+
+// Function declarations
+reserve function HollowLog_DebugDraw
+reserve function HollowLog_DebugSpawn
+reserve function HollowLog_Smash
+reserve function HollowLog_Hurt
+
+// Static Values
+
+// Tables
+
+
+function HollowLog_DebugDraw
+	DrawSprite(18)
+end function
+
+
+function HollowLog_DebugSpawn
+	CreateTempObject(TypeName[Hollow Log], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+	object[tempObjectPos].state = 5
+end function
+
+function HollowLog_Smash
+	PlaySfx(SfxName[Ledge Break], 0)
+	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -49, -24, 48, 25, arrayPos0, -16, -14, 16, 16)
+		if checkResult == 1
+			object[arrayPos0].state = 1
+			object[arrayPos0].yvel = -0x80000
+		end if
+	next
+	foreach (TypeName[Broken Monitor], arrayPos0, ALL_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -49, -24, 48, 25, arrayPos0, -16, -14, 16, 16)
+		if checkResult == 1
+			object[arrayPos0].type = TypeName[Blank Object]
+		end if
+	next
+	temp0 = 0
+	temp1 = -0x50000
+	temp2 = -0x80000
+	while temp0 < 18
+		CreateTempObject(TypeName[Hollow Log], temp0, object.xpos, object.ypos)
+		object[tempObjectPos].state = 2
+		object[tempObjectPos].draworder = 4
+		object[tempObjectPos].xvel = temp1
+		object[tempObjectPos].yvel = temp2
+		temp1 += 0x20000
+		if temp1 > 0x50000
+			temp1 = -0x50000
+			temp2 += 0x10000
+		end if
+		temp0++
+	loop
+	object.state = 3
+end function
+
+event ObjectMain
+	switch object.state
+		case 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_BOX, object.entityPos, -41, -24, 41, -20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_BOX, object.entityPos, -49, 24, 48, 25, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			next
+			//if stage.debugMode == 0
+				//if specialStage.emeralds >= 127
+					//if options.gameMode < 2
+						if object[+2].type == TypeName[Pull Vine]
+							if object[+2].value7 > 0
+								object.state++
+								stage.curYBoundary2 = 2432
+								stage.deathBoundary = stage.curYBoundary2
+								stage.deathBoundary <<= 16
+								rock.ypos = object.ypos
+								rock.ypos -= 0x12C0000
+								object.yvel = 0
+								foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+									object[currentPlayer].controlLock = 30
+								next
+								
+							end if
+						end if
+					//end if
+				//end if
+			//end if
+			break
+		case 1
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_BOX, object.entityPos, -41, -24, 41, -20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_BOX, object.entityPos, -49, 24, 48, 25, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			next
+			rock.ypos += object.yvel
+			object.yvel += 0x3800
+			temp0 = object.ypos
+			temp0 -= 0x180000
+			if rock.ypos >= temp0
+				CallFunction(HollowLog_Smash)
+				PlaySfx(SfxName[Ledge Break], 0)				
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					object[currentPlayer].controlLock = 0
+				next
+			end if
+			break
+		case 2
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+			object.yvel += 0x3800
+			if object.ypos >= stage.deathBoundary
+				object.type = TypeName[Blank Object]
+			end if
+			break
+		case 3
+			rock.ypos += object.yvel
+			object.yvel += 0x3800			
+			if rock.ypos >= stage.deathBoundary
+				object.state++
+			end if
+		case 4
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -48, 50, 48, 60, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object[currentPlayer].animation = ANI_HURT
+					object[currentPlayer].value10 = ANI_HURT
+				end if
+			next
+			break
+		case 5
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_BOX, object.entityPos, -41, -24, 41, -20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_BOX, object.entityPos, -49, 24, 48, 25, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			next
+			break
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+		case 0
+		case 5
+			DrawSprite(18)
+			break
+		case 1
+			DrawSprite(18)
+			DrawSpriteXY(19, object.xpos, rock.ypos)
+			break
+		case 2			
+			DrawSprite(object.propertyValue)
+			break
+		case 3
+			DrawSpriteXY(19, object.xpos, rock.ypos)
+			break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects3.gif")	
+	temp0 = 2
+	temp1 = 46
+	while temp1 < 94
+		while temp0 < 97
+			temp2 = temp0
+			temp2 -= 50
+			temp3 = temp1
+			temp3 -= 70
+			SpriteFrame(temp2, temp3, 16, 16, temp0, temp1)
+			temp0 += 16
+		loop
+		temp0 = 2
+		temp1 += 16
+	loop	
+	SpriteFrame(-49, -24, 97, 48, 1, 46) //18 log
+	SpriteFrame(-16, -37, 32, 37, 152, 26) //19 rock
+	
+	foreach (TypeName[Hollow Log], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		stage.curYBoundary2 = 1920
+		stage.deathBoundary = stage.curYBoundary2
+		stage.deathBoundary <<= 16
+	next
+	
+	SetTableValue(TypeName[Hollow Log], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HollowLog_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HollowLog_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event
+
+
+//6112
+//1592

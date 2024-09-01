@@ -1,0 +1,166 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Arrow Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.targetPos.x
+private alias object.value1 : object.parent
+private alias object.value2 : object.timer
+
+// States
+private alias 0 : EGGMANARROW_MOVING
+private alias 1 : EGGMANARROW_STUCK
+private alias 2 : EGGMANARROW_FALLING
+
+
+// ========================
+// Tables
+// ========================
+
+private table EggmanArrow_frameTable
+	0, 0, 1, 1, 0, 0, 2, 2
+end table
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case EGGMANARROW_MOVING
+		if object.direction == FLIP_NONE
+			object.xpos += object.xvel
+			if object.xpos >= object.targetPos.x
+				object.xpos = object.targetPos.x
+
+				arrayPos0 = object.parent
+				object[arrayPos0].state = 2
+				PlaySfx(SfxName[Arrow Hit], false)
+
+				object.animation = 1
+				object.state++
+			end if
+		else
+			object.xpos -= object.xvel
+			if object.xpos <= object.targetPos.x
+				object.xpos = object.targetPos.x
+
+				arrayPos0 = object.parent
+				object[arrayPos0].state = 2
+				PlaySfx(SfxName[Arrow Hit], false)
+
+				object.animation = 1
+				object.state++
+			end if
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -1, 16, 1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+		next
+		break
+
+	case EGGMANARROW_STUCK
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -1, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if currentPlayer == 0
+				if checkResult == true
+					if object.timer == 0
+						object.timer = 30
+					end if
+				end if
+			end if
+		next
+
+		if object.timer != 0
+			object.timer--
+			if object.timer == 0
+				object.state = EGGMANARROW_FALLING
+			end if
+		end if
+		break
+
+	case EGGMANARROW_FALLING
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		break
+		
+	end switch
+
+	if object.animation == 1
+		if object.animationTimer == 32
+			object.frame = 0
+			object.animation = 0
+		else
+			temp0 = object.animationTimer
+			temp0 &= 7
+			GetTableValue(object.frame, temp0, EggmanArrow_frameTable)
+			object.animationTimer++
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("ARZ/Objects.gif")
+		
+		// Normal Arrow Frame
+		SpriteFrame(-16, -3, 29, 6, 194, 1)
+		
+		// Arrow Wobble Up Frame
+		SpriteFrame(-15, -4, 28, 7, 195, 8)
+		
+		// Arrow Wobble Down Frame
+		SpriteFrame(-15, -3, 28, 7, 195, 16)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// Normal Arrow Frame
+		SpriteFrame(-16, -3, 29, 6, 298, 31)
+		
+		// Arrow Wobble Up Frame
+		SpriteFrame(-15, -4, 28, 7, 299, 38)
+		
+		// Arrow Wobble Down Frame
+		SpriteFrame(-15, -3, 28, 7, 299, 46)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("ARZ/Objects.gif")
+		SpriteFrame(-16, -3, 29, 6, 194, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -3, 29, 6, 298, 31)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

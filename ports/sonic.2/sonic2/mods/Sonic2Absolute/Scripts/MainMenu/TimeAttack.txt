@@ -1,0 +1,762 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Sonic Team Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+
+//-------Aliases-------//
+public alias 20 : charspeed
+
+private value draw.new.save = 0;
+
+private alias object.value0 : displaymins
+private alias object.value1 : displaysecs
+private alias object.value2 : displaymillis
+private alias object.value3 : menufade
+private alias object.value4 : BGTick
+private alias object.value5 : FadeinComplete
+private alias object.value6 : tickeroffset
+
+private alias object.value10 : select.char
+private alias object.value11 : select.level
+
+private alias object.value12 : listtime.xoffset
+
+
+private alias object.value13 : total.mins
+private alias object.value14 : total.secs
+private alias object.value15 : total.millis
+
+
+private alias object.value16 : achieve.checked
+private alias object.value17 : achieve.active
+private alias object.value18 : achieve.yoffset
+private alias object.value19 : achieve.timer
+private alias object.value20 : hold.time
+private alias object.value21 : time.slide
+private alias object.value22 : menu.zigzagscroll
+private alias object.value23 : menu.zigzag.yoffset
+private alias object.value24 : menu.zigzag.ytarget
+
+
+public alias saveRAM[257] : saved.spindash
+
+
+public alias saveRAM[260] : saved.spikeBehavior
+public alias saveRAM[261] : saved.shieldType
+public alias saveRAM[262] : saved.Title
+public alias saveRAM[263] : saved.Jumplock
+public alias saveRAM[264] : saved.Supermusic
+public alias saveRAM[265] : saved.Dropdash
+public alias saveRAM[266] : saved.Instashield
+public alias saveRAM[267] : saved.Peelout
+public alias saveRAM[268] : saved.FlightCancel
+public alias saveRAM[269] : saved.PeeloutAnim
+public alias saveRAM[270] : saved.Speen
+public alias saveRAM[271] : saved.Supercancel
+public alias saveRAM[272] : saved.Drowning
+public alias saveRAM[273] : saved.Timer
+public alias saveRAM[274] : saved.region
+public alias saveRAM[275] : saved.elemental
+public alias saveRAM[276] : saved.rotate
+public alias saveRAM[277] : saved.invincibilityType
+public alias saveRAM[278] : saved.speedCap
+public alias saveRAM[279] : saved.airSpeedCap
+public alias saveRAM[280] : saved.GoGoPlus
+public alias saveRAM[281] : saved.lives
+public alias saveRAM[282] : saved.bubble
+
+
+reserve function BackgroundHandle
+reserve function TimeSplitter
+reserve function AllTimesList
+reserve function VersionNumber
+reserve function CheckAchieve
+reserve function menu.holdmovement
+reserve function ta.sound
+
+//-------Tables--------//
+
+function ta.sound	
+	temp0 = inputPress.left
+	temp0 |= inputPress.right
+	temp0 |= inputPress.up
+	temp0 |= inputPress.down
+	temp0 |= inputPress.buttonL
+	temp0 |= inputPress.buttonR
+	if temp0 == 1
+		PlaySfx(SfxName[Score Add], 0)
+	end if
+end function
+
+function menu.holdmovement
+		if inputDown.up == 1
+			hold.time++
+			if hold.time >= 20
+				inputPress.up = 1
+				hold.time = 12
+			end if
+		else	
+			if inputDown.down == 1
+				hold.time++
+				if hold.time >= 20
+					inputPress.down = 1
+					hold.time = 12
+				end if
+			else
+				if inputDown.right == 1
+					hold.time++
+					if hold.time >= 20
+						inputPress.right = 1
+						hold.time = 12
+					end if		
+				else
+					if inputDown.left == 1
+						hold.time++
+						if hold.time >= 20
+							inputPress.left = 1
+							hold.time = 12
+						end if		
+					else
+						hold.time = 0
+					end if
+				end if
+			end if
+		end if
+end function 
+
+function CheckAchieve
+	if FadeinComplete == 1
+		if achieve.checked == 0
+			if saveRAM[410] == 0
+			
+				temp0 = 0
+				arrayPos0 = 500
+				while arrayPos0 < 519
+					temp0 += saveRAM[arrayPos0]
+					arrayPos0++			
+				loop
+				temp1 = 30
+				temp1 *= 60
+				temp1 *= 100
+				
+				if temp0 <= temp1
+					saveRAM[410] = 1
+					achieve.active = 1
+					WriteSaveRAM()
+				end if
+			end if	
+			achieve.checked = 1
+		end if
+		
+		switch achieve.active
+			case 0
+				break
+			case 1
+				PlaySfx(SfxName[Event], 0)
+				achieve.yoffset = 0
+				achieve.active++
+				break
+			case 2
+				if achieve.yoffset < 30
+					achieve.yoffset += 2
+				end if
+				if achieve.yoffset >= 30
+					achieve.yoffset = 30
+					achieve.timer = 0
+					achieve.active++
+				end if
+				break
+			case 3
+				if achieve.timer < 180
+					achieve.timer++
+				else
+					achieve.active++
+				end if
+				break
+			case 4
+				if achieve.yoffset > 0
+					achieve.yoffset -= 2
+				end if
+				if achieve.yoffset <= 0
+					achieve.yoffset = 0
+					achieve.active++
+				end if
+				break
+			case 5
+				achieve.active = 0
+				break
+		end switch
+	end if
+end function
+
+function VersionNumber
+	temp2 = screen.ysize
+	temp2 -= 10
+	temp3 = screen.xsize
+	temp3 -= 110
+	
+	if versionone > 9
+		temp3 += 8
+	end if	
+	DrawNumbers(0, temp3, temp2, versionone, 2, 8, 0)
+	temp3 += 9
+	DrawSpriteScreenXY(16, temp3, temp2)
+	
+	temp3 += 3
+	
+	if versiontwo > 9
+		temp3 += 8
+	end if		
+	DrawNumbers(0, temp3, temp2, versiontwo, 2, 8, 0)
+	temp3 += 9
+	DrawSpriteScreenXY(16, temp3, temp2)
+	
+	temp3 += 3
+	
+	if versionthree > 9
+		temp3 += 8
+	end if	
+	DrawNumbers(0, temp3, temp2, versionthree, 2, 8, 0)
+	temp3 += 9
+	DrawSpriteScreenXY(16, temp3, temp2)
+	
+	temp3 += 67
+	
+	DrawNumbers(0, temp3, temp2, versionsub, 9, 8, 1)
+end function
+
+function AllTimesList
+
+	total.mins = 0
+	total.secs = 0
+	total.millis = 0
+	
+	arrayPos0 = 30
+	arrayPos0 *= select.char
+	arrayPos0 += 500
+	
+	
+	temp7 = screen.xsize
+
+	temp7 -= 130
+
+	temp7 += listtime.xoffset
+	
+	DrawSpriteScreenXY(14, temp7, 35)		
+	temp0 = 0
+	while temp0 < 19
+		temp2 = 9
+		temp2 *= temp0
+		temp2 += 35
+		//while temp2 > 215
+		//	temp7 -= 125
+		//	temp2 -= 100
+		//end if
+		
+		temp3 = temp7
+		temp3 += 70
+		CallFunction(TimeSplitter)
+		DrawNumbers(0, temp3, temp2, displaymins, 1, 8, 1)
+		total.mins += displaymins
+		DrawSpriteScreenXY(15, temp3, temp2)
+		temp3 += 20
+		DrawNumbers(0, temp3, temp2, displaysecs, 2, 8, 1)
+		total.secs += displaysecs
+		temp3 += 22
+		DrawNumbers(0, temp3, temp2, displaymillis, 2, 8, 1)
+		total.millis += displaymillis
+		
+		arrayPos0++
+		temp0++
+	loop
+	
+	while total.millis >= 100
+		total.secs++
+		total.millis -= 100	
+	loop
+	
+	while total.secs >= 60
+		total.mins++
+		total.secs -= 60
+	loop
+	
+	
+	temp2 += 16
+	temp3 = temp7
+	temp3 += 70
+	
+	DrawNumbers(0, temp3, temp2, total.mins, 4, 8, 0)
+	DrawSpriteScreenXY(15, temp3, temp2)
+	temp3 += 20
+	DrawNumbers(0, temp3, temp2, total.secs, 2, 8, 1)
+	temp3 += 22
+	DrawNumbers(0, temp3, temp2, total.millis, 2, 8, 1)
+
+	if select.char == 3
+		DrawRect(temp7, 195, 126, 12, 0,0,255, 255)
+	end if
+end function
+
+function BackgroundHandle
+	BGTick++
+	if BGTick > 7
+		tileLayer[2].deformationOffset++
+		BGTick = 0
+	end if
+	
+	temp0 = 105
+	temp0 <<= 16
+	if hParallax[1].scrollPos > temp0
+		hParallax[1].scrollSpeed = 0
+		hParallax[2].scrollSpeed = 0
+		hParallax[1].scrollPos = temp0
+		hParallax[2].scrollPos = temp0
+	end if
+	
+	temp0 = screen.xcenter
+	FlipSign(temp0)
+	temp0 += 256
+	screen.xoffset = temp0
+	
+end function
+
+function TimeSplitter
+	displaymillis = saveRAM[arrayPos0]
+	displaysecs = 0
+	displaymins = 0
+	
+	while displaymillis >= 6000
+		displaymins++
+		displaymillis -= 6000
+	loop
+	
+	while displaymillis >= 100
+		displaysecs++
+		displaymillis -= 100
+	loop	
+end function
+
+event ObjectMain
+	CallFunction(menu.holdmovement)
+	CallFunction(BackgroundHandle)
+	CallFunction(CheckAchieve)
+	CallFunction(ta.sound)
+	switch object.state
+		case 0 // Character Select
+			temp0 = inputPress.up
+			temp0 |= inputPress.left
+			if temp0 == 1
+				select.char--
+				while select.char < 0
+				if saveRAM[414] == 1
+					select.char += 4
+				else
+					select.char += 3
+				end if	
+				loop
+				
+			else
+				temp1 = inputPress.down
+				temp1 |= inputPress.right
+				if temp1 == 1
+					select.char++
+					if saveRAM[414] == 1
+						select.char %= 4
+					else
+						select.char %= 3
+					end if			
+				end if			
+			end if
+			
+			temp0 = inputPress.buttonA
+			temp0 |= inputPress.start
+			if temp0 == 1
+				PlaySfx(SfxName[Star Post], 0)
+				object.state++
+			end if
+			if inputPress.buttonB == 1
+				object.state = 100
+			end if
+			break
+		case 1 //Level Select
+			if inputPress.left == 1
+				time.slide = 150
+				select.level--
+				while select.level < 0
+				if select.char == 3
+					select.level += 18
+				else
+					select.level += 19
+				end if
+				loop
+			else
+				if inputPress.right == 1
+				time.slide = 150
+				select.level++
+				if select.char == 3
+					select.level %= 18
+				else
+					select.level %= 19
+				end if	
+				else
+					if inputPress.up == 1
+						time.slide = 150
+						switch select.level
+							case 16
+								select.level = 13
+								break
+							case 17
+								select.level = 14
+								break
+							case 18
+								select.level--
+								break
+							default
+								select.level -= 2
+								if select.level < 0
+									if select.char == 3
+										select.level = 17
+									else
+										select.level = 18
+									end if	
+								end if					
+						end switch
+					else
+						if inputPress.down == 1
+							time.slide = 150
+							switch select.level
+								case 14
+								case 15
+								case 16
+									select.level = 17
+									break
+								case 17
+									if select.char == 3
+										select.level = 0
+									else
+										select.level = 18
+									end if	
+									break
+								case 18
+									select.level = 0
+									break
+								default
+									select.level += 2			
+							end switch
+						end if			
+					end if
+				end if			
+			end if		
+						
+			temp0 = inputPress.buttonA
+			temp0 |= inputPress.start
+				if select.char == 3
+					if select.level == 18
+						select.level = 0
+					end if
+				end if	
+			if temp0 == 1		
+				PlaySfx(SfxName[Release], 0)
+				object.state++
+			end if
+			if inputPress.buttonB == 1
+				object.state--
+			end if
+			break
+		case 2 //Level Loading
+			if menufade < 320
+				menufade += 16
+				music.volume -= 2
+			else
+				saveRAM[615] = select.char
+				saveRAM[616] = select.level
+				WriteSaveRAM()
+				StopMusic()
+				options.gameMode = 2
+				options.attractMode = 0
+				starPostID = 0
+				stage.debugMode = 0
+				stage.playerListPos = select.char
+				if select.char == 3
+					stage.playerListPos = 100
+				end if
+				player.lives = 3
+				player.continues = 0
+				player.score = 0
+				player.scoreBonus = 50000
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = select.level
+				if select.level > 16
+					stage.listPos++
+				end if
+				specialStage.emeralds = 0
+				specialStage.listPos = 0
+				
+				stage.player2Enabled = 0
+				LoadStage()
+			end if
+			SetScreenFade(0, 0, 0, menufade)					
+			break
+		case 100 // Exiting
+			if menufade < 320
+				menufade += 16
+				music.volume -= 2
+			else
+				saveRAM[615] = select.char
+				saveRAM[616] = select.level
+				WriteSaveRAM()
+				
+				StopMusic()
+				options.attractMode = 0
+				player.lives = 3
+				player.continues = 0
+				player.score = 0
+				player.scoreBonus = 0xC350
+				starPostID = 0
+				specialStage.listPos = 0
+				specialStage.emeralds = 0
+				specialStage.nextZone = 0
+				stage.activeList = PRESENTATION_STAGE
+				stage.listPos = 6
+				LoadStage()
+			end if
+			SetScreenFade(0, 0, 0, menufade)					
+			break
+	end switch
+end event
+
+event ObjectDraw
+	menu.zigzagscroll++
+	menu.zigzagscroll %= 20
+	temp0 = menu.zigzagscroll
+	temp0 >>= 1
+	temp0 += screen.xsize
+	temp1 = -280
+	temp1 -= screen.ysize
+	temp1 += 55
+	temp1 += menu.zigzag.yoffset
+	temp2 = 1
+	temp4 = screen.ysize
+	temp4 <<= 1
+	temp5 = 0
+	while temp0 >= 0
+		temp4+=1
+		DrawRect(temp0, temp1, 1, temp4, 255, 255, 255, 255)
+		temp4-=1
+		DrawRect(temp0, temp1, 1, temp4, 255, 255, 0, 255)
+		temp0--
+		temp5++
+		temp1 += temp2
+		temp3 = temp5
+		temp3 %= 5
+		if temp3 == 0
+			FlipSign(temp2)
+		end if
+	loop
+	
+	switch object.state
+		case 0
+		case 100	
+			if listtime.xoffset > 0
+				listtime.xoffset -= charspeed
+			else
+				listtime.xoffset = 0
+			end if
+
+			if time.slide < 450
+				time.slide += charspeed
+			else
+				time.slide = 450
+			end if
+			break
+		case 1
+		case 2		
+			if listtime.xoffset < 360
+				listtime.xoffset += charspeed
+			else
+				listtime.xoffset = 360
+			end if
+
+			if time.slide > 0
+				time.slide -= charspeed
+			else
+				time.slide = 0
+			end if
+						
+			//DrawNumbers(0, 36, 122, select.level, 2, 7, 1)
+			
+			
+			arrayPos0 = 30
+			arrayPos0 *= select.char
+			arrayPos0 += 500
+			arrayPos0 += select.level
+			break			
+	end switch
+
+	CallFunction(TimeSplitter)
+	temp0 = screen.xcenter
+	if screen.xsize == 320
+		temp0 += 40
+	else
+		temp0 += 55
+	end if
+	temp1 = screen.ysize
+	temp1 += time.slide
+	temp1 -= 46
+	DrawSpriteScreenXY(31, temp0, temp1)
+	temp0 += 43
+	DrawNumbers(20, temp0, temp1, displaymins, 2, 9, 0)
+	DrawSpriteScreenXY(30, temp0, temp1)
+	temp0 += 23
+	DrawNumbers(20, temp0, temp1, displaysecs, 2, 9, 1)
+	temp0 += 25
+	DrawNumbers(20, temp0, temp1, displaymillis, 2, 9, 1)
+	temp0 += 10
+	temp1 -= 4
+	temp2 = select.char
+	temp2 += 32
+	DrawSpriteScreenXY(temp2, temp0, temp1)
+	
+
+	CallFunction(AllTimesList)
+	
+	CallFunction(VersionNumber)
+	
+	if FadeinComplete == 0
+		menufade += 16
+		temp0 = 320
+		temp0 -= menufade
+		DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, temp0)
+		if menufade >= 320
+			menufade = 0
+			FadeinComplete = 1
+			PlayMusic(0)
+		end if	
+	end if
+	
+	if achieve.active > 0
+		temp0 = 0
+		temp1 = screen.ysize
+		temp1 -= achieve.yoffset
+
+		while temp0 < screen.xsize
+			DrawSpriteScreenXY(19, temp0, temp1)
+			temp0 += 32				
+		loop
+		
+		
+		temp0 = screen.xsize
+		temp0 -= 9
+		DrawSpriteScreenXY(17, temp0, temp1)
+	end if
+	
+	tickeroffset++
+	tickeroffset %= 90
+	
+	temp0 = 0
+	temp0 -= tickeroffset
+	while temp0 < screen.xsize
+		DrawSpriteScreenXY(10, temp0, 5)
+		temp0 += 90
+	loop
+	
+	
+end event
+
+
+//Startup
+
+event ObjectStartup
+	recRings = 0
+	recShield = 0
+	recRingBonus = 0
+	recGoggles = 0
+	
+	LoadSpriteSheet("Menus/TimeAttackScreen.gif")
+	
+	//Numbers
+	SpriteFrame(0, 0, 8, 7, 1, 1016) //0
+	SpriteFrame(0, 0, 8, 7, 9, 1016) //1
+	SpriteFrame(0, 0, 8, 7, 17, 1016) //2
+	SpriteFrame(0, 0, 8, 7, 25, 1016) //3
+	SpriteFrame(0, 0, 8, 7, 33, 1016) //4
+	SpriteFrame(0, 0, 8, 7, 41, 1016) //5
+	SpriteFrame(0, 0, 8, 7, 49, 1016) //6
+	SpriteFrame(0, 0, 8, 7, 57, 1016) //7
+	SpriteFrame(0, 0, 8, 7, 65, 1016) //8
+	SpriteFrame(0, 0, 8, 7, 73, 1016) //9
+	
+	SpriteFrame(0, 0, 90, 5, 176, 115) //10 Time Attack Header
+	
+	SpriteFrame(-76, 0, 151, 44, 222, 1) //11 Sonic
+	SpriteFrame(-75, 0, 150, 43, 222, 46) //12 Tails
+	SpriteFrame(-70, 0, 139, 44, 177, 90) //13 Knuckles
+	
+	//Zone Short Names
+	SpriteFrame(-8, -9, 136, 206, 1, 411) //14 Short Nsmes
+		
+	SpriteFrame(0, 0, 50, 7, 317, 90) //15 Time '    "	
+		
+	SpriteFrame(0, 0, 2, 7, 368, 90) //16 Dot	
+	
+	SpriteFrame(-182, 13, 182, 11, 269, 152) //17 Beat the Clock
+	SpriteFrame(9, 13, 91, 12, 177, 152)	// 18 Achievement Unlocked
+	SpriteFrame(0, 0, 32, 30, 317, 99)		// 19 Yellow BG
+	
+	
+	// Large Numbers start 20
+	SpriteFrame(0, 0, 8, 15, 176, 83) //0
+	SpriteFrame(0, 0, 8, 15, 185, 83) //1
+	SpriteFrame(0, 0, 8, 15, 194, 83) //2
+	SpriteFrame(0, 0, 8, 15, 203, 83) //3
+	SpriteFrame(0, 0, 8, 15, 212, 83) //4
+	SpriteFrame(0, 0, 8, 15, 221, 83) //5
+	SpriteFrame(0, 0, 8, 15, 230, 83) //6
+	SpriteFrame(0, 0, 8, 15, 239, 83) //7
+	SpriteFrame(0, 0, 8, 15, 248, 83) //8
+	SpriteFrame(0, 0, 8, 15, 257, 83) //9
+	
+	SpriteFrame(0, 0, 56, 15, 176, 99)		// 30 Large Time '    "
+
+	SpriteFrame(0, 0, 35, 15, 1, 254) //31 best
+
+	SpriteFrame(0,0, 16, 23, 1, 270) //32 smoll sonic
+	SpriteFrame(0,0, 16, 23, 35, 270) //33
+	SpriteFrame(0,0, 16, 23, 1, 294) //34
+	SpriteFrame(0,0, 16, 23, 1, 270) //35 smoll sonic
+	
+	SetMusicTrack("Results.ogg", 0, 1)
+	
+	LoadPalette("SaveSlot.act", 1, 0, 0, 256)
+	LoadPalette("AchieveIcon.act", 2, 0, 0, 256)
+	arrayPos0 = 256
+	while arrayPos0 < 576
+		arrayPos1 = arrayPos0
+		arrayPos1 -= 256
+		Rand(stage[arrayPos1].deformationData2, 4)
+		temp0 = arrayPos0
+		temp0 &= 1
+		if temp0 == 1
+			FlipSign(stage[arrayPos1].deformationData2)
+		end if
+		stage[arrayPos0].deformationData2 = stage[arrayPos1].deformationData2
+		arrayPos0++
+	loop
+
+	foreach (TypeName[Time Attack Screen], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].value10 = saveRAM[615]
+		object[arrayPos0].value11 = saveRAM[616]
+	next
+	
+	
+	SuperTimeAttack = 0
+	
+	stage[0].activeLayer = 2
+end event
+
+
+

@@ -1,0 +1,218 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Swing Spikes Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 55 : TYPE_SWINGSPIKES
+
+// Function declarations
+reserve function SwingSpikes_DebugDraw
+reserve function SwingSpikes_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function SwingSpikes_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function SwingSpikes_DebugSpawn
+	CreateTempObject(TypeName[Swing Spikes], 8, object.xpos, object.ypos)
+	object[tempObjectPos].value5 = object.direction
+	if object[tempObjectPos].value5 == 0
+		object[tempObjectPos].value6 = 0x8000
+	else
+		object[tempObjectPos].value6 = 0
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -30, 0, 30, 128, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.state = 1
+				if object.priority != PRIORITY_XBOUNDS_DESTROY
+					object.priority = PRIORITY_ACTIVE
+				end if
+			end if
+		next
+		break
+	case 1
+		object.value0++
+		if object.value0 == 60
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		object.speed += 8
+		if object.value5 == 0
+			object.value6 -= object.speed
+			if object.value6 <= 0x4000
+				object.speed = 0
+				object.value6 = 0x4000
+				object.state++
+			end if
+		else
+			object.value6 += object.speed
+			if object.value6 >= 0x4000
+				object.speed = 0
+				object.value6 = 0x4000
+				object.state++
+			end if
+		end if
+		break
+	case 3
+		object.value0++
+		if object.value0 == 60
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 4
+		object.speed += 8
+		if object.value5 == 0
+			object.value6 += object.speed
+			if object.value6 >= 0x8000
+				object.speed = 0
+				object.value6 = 0x8000
+				object.state = 1
+			end if
+		else
+			object.value6 -= object.speed
+			if object.value6 <= 0
+				object.speed = 0
+				object.value6 = 0
+				object.state = 1
+			end if
+		end if
+		break
+	end switch
+	temp2 = object.xpos
+	temp3 = object.ypos
+	object.angle = object.value6
+	object.angle >>= 7
+	temp1 = object.propertyValue
+	temp1++
+	temp1 <<= 4
+	temp1 -= 8
+	object.xpos = object.value1
+	object.ypos = object.value2
+	Cos(object.value3, object.angle)
+	object.value3 *= temp1
+	object.value3 <<= 7
+	object.value3 += temp2
+	object.value3 &= -0x10000
+	object.value1 = object.value3
+	object.value3 -= object.xpos
+	Sin(object.value4, object.angle)
+	object.value4 *= temp1
+	object.value4 <<= 7
+	object.value4 += temp3
+	object.value4 &= -0x10000
+	object.value2 = object.value4
+	object.value4 -= object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX2, object.entityPos, -30, -8, 30, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		switch checkResult
+		case 1
+			object[currentPlayer].xpos += object.value3
+			object[currentPlayer].ypos += object.value4
+			break
+		case 2
+			CallFunction(PlayerObject_Hit)
+			break
+		case 3
+			CallFunction(PlayerObject_Hit)
+			break
+		end switch
+	next
+	object.xpos = temp2
+	object.ypos = temp3
+	if object.outOfBounds == 1
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			if object.value5 == 0
+				object.value6 = 0x8000
+			else
+				object.value6 = 0
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.propertyValue
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	Cos(object.value1, object.angle)
+	object.value1 *= temp1
+	object.value1 <<= 7
+	object.value1 += object.xpos
+	object.value1 &= -0x10000
+	Sin(object.value2, object.angle)
+	object.value2 *= temp1
+	object.value2 <<= 7
+	object.value2 += object.ypos
+	object.value2 &= -0x10000
+	DrawSprite(0)
+	DrawSpriteXY(2, object.value1, object.value2)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-12, -12, 23, 33, 152, 131)
+	SpriteFrame(-8, -8, 16, 16, 135, 148)
+	SpriteFrame(-31, -8, 62, 16, 30, 32)
+	foreach (TypeName[Swing Spikes], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue > 0
+			object[arrayPos0].propertyValue--
+		end if
+		object[arrayPos0].value5 = object[arrayPos0].propertyValue
+		object[arrayPos0].value5 >>= 3
+		object[arrayPos0].value5 &= 1
+		if object[arrayPos0].value5 == 0
+			object[arrayPos0].value6 = 0x8000
+		else
+			object[arrayPos0].value6 = 0
+		end if
+		object[arrayPos0].propertyValue &= 7
+		object[arrayPos0].propertyValue++
+	next
+	SetTableValue(TypeName[Swing Spikes], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SwingSpikes_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SwingSpikes_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

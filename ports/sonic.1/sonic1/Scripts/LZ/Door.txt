@@ -1,0 +1,185 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Door Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : DOOR_CLOSED
+private alias 1 : DOOR_OPENING
+private alias 2 : DOOR_OPENED
+private alias 3 : DOOR_AWAITCLOSE
+private alias 4 : DOOR_CLOSING
+
+// PushButton Aliases
+private alias object.value0 : pushButton.stood
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Door_DebugDraw
+reserve function Door_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Door_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Door_DebugSpawn
+	CreateTempObject(TypeName[Door], 0, object.xpos, object.ypos)
+	object[tempObjectPos].priority = PRIORITY_ACTIVE
+	object[tempObjectPos].timer = 32
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case DOOR_CLOSED
+		if object.propertyValue == 2
+			if player[0].xpos < object.xpos
+				CurrentTunnel_activateDelay = 4
+			end if
+		end if
+
+		if pushButton[+1].stood == true
+			object.state++
+		end if
+		break
+		
+	case DOOR_OPENING
+		object.ypos -= 0x20000
+
+		object.timer--
+		if object.timer < 0
+			object.state++
+			if object.propertyValue == 1
+				object.state++
+			end if
+		end if
+		break
+	
+	case DOOR_OPENED
+		break
+
+	case DOOR_AWAITCLOSE
+		if player[0].xpos > 0x11200000 // hardcoded xpos in the scene :(
+			object.state++
+		end if
+		break
+
+	case DOOR_CLOSING
+		object.ypos += 0x20000
+
+		object.timer++
+		if object.timer >= 32
+			object.state = DOOR_CLOSED
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -8, -32, 8, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+
+	// Door frame
+	SpriteFrame(-8, -32, 16, 64, 206, 142)
+
+	foreach (TypeName[Door], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].timer = 32
+	next
+	
+	// Add this object to the debug item list
+	SetTableValue(TypeName[Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Door_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Door_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw a line connecting the door to its trigger button
+		DrawLine(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-8, -32, 16, 64, 206, 142)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Stay Opened", 0)
+	AddEnumVariable("Open Then Close", 1) // hardcoded to only close after player passes ixpos 4384 in the scene btw
+	AddEnumVariable("Current", 2)
+end event

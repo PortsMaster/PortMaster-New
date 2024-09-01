@@ -1,0 +1,212 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Aquis Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 57 : TYPE_AQUIS
+
+// Function declarations
+reserve function Aquis_DebugDraw
+reserve function Aquis_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Aquis_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Aquis_DebugSpawn
+	CreateTempObject(TypeName[Aquis], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE
+		end if
+		if object[0].controlMode > -1
+			object.value0 = -16
+			object.state = 2
+		end if
+		break
+	case 1
+		temp1 = 0x7FFFFFFF
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object.xpos
+			temp0 -= object[currentPlayer].xpos
+			Abs(temp0)
+			if temp0 < temp1
+				temp1 = temp0
+				temp2 = currentPlayer
+			end if
+		next
+		currentPlayer = temp2
+		if object.xpos > object[currentPlayer].xpos
+			object.direction = FLIP_NONE
+			object.xvel -= 0x1000
+			if object.xvel < -0x10000
+				object.xvel = -0x10000
+			end if
+		else
+			object.direction = FLIP_X
+			object.xvel += 0x1000
+			if object.xvel > 0x10000
+				object.xvel = 0x10000
+			end if
+		end if
+		if object.ypos > object[currentPlayer].ypos
+			object.yvel -= 0x1000
+			if object.yvel < -0x10000
+				object.yvel = -0x10000
+			end if
+		else
+			object.yvel += 0x1000
+			if object.yvel > 0x10000
+				object.yvel = 0x10000
+			end if
+		end if
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		if object.value6 == 0
+			temp0 = object[currentPlayer].xpos
+			temp0 -= object.xpos
+			if object.direction == FLIP_NONE
+				if temp0 > -0x400000
+					if temp0 <= 0
+						CreateTempObject(TypeName[Aquis Shot], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xpos -= 0x100000
+						object[tempObjectPos].ypos -= 0xA0000
+						object[tempObjectPos].xvel = -0x30000
+						object[tempObjectPos].yvel = 0x20000
+						object.value6 = 1
+					end if
+				end if
+			else
+				if temp0 < 0x400000
+					if temp0 >= 0
+						CreateTempObject(TypeName[Aquis Shot], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xpos += 0x100000
+						object[tempObjectPos].ypos -= 0xA0000
+						object[tempObjectPos].xvel = 0x30000
+						object[tempObjectPos].yvel = 0x20000
+						object.value6 = 1
+					end if
+				end if
+			end if
+		end if
+		object.value0++
+		if object.value0 == 128
+			object.value0 = 0
+			object.xvel = 0
+			object.yvel = 0
+			object.state = 2
+		end if
+		break
+	case 2
+		object.value0++
+		if object.value0 == 32
+			object.value0 = 0
+			object.value6 = 0
+			object.value3++
+			if object.value3 == 4
+				object.xvel = -0x20000
+				object.yvel = 0
+				object.state = 3
+			else
+				object.state = 1
+			end if
+		end if
+		break
+	case 3
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		break
+	end switch
+	object.value4 = object.value5
+	object.value4 >>= 2
+	object.value4 += 3
+	object.value5++
+	object.value5 &= 7
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		if object.outOfBounds == 1
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.value3 = 0
+				object.value0 = 0
+				object.animationTimer = 0
+				object.xvel = 0
+				object.yvel = 0
+				object.state = 0
+			end if
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -10, 16, 10, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(object.value4, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-15, -24, 29, 47, 1, 1)
+		SpriteFrame(-16, -23, 30, 46, 31, 1)
+		SpriteFrame(-15, -23, 29, 46, 62, 1)
+		SpriteFrame(3, -13, 11, 13, 108, 18)
+		SpriteFrame(3, -9, 13, 12, 108, 32)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-15, -24, 29, 47, 929, 331)
+		SpriteFrame(-16, -23, 30, 46, 928, 379)
+		SpriteFrame(-15, -23, 29, 46, 929, 426)
+		SpriteFrame(3, -13, 11, 13, 917, 331)
+		SpriteFrame(3, -9, 13, 12, 915, 345)
+	end if
+	foreach (TypeName[Aquis], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+	next
+	SetTableValue(TypeName[Aquis], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Aquis_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Aquis_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,327 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Animal Prison Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value2 : object.buttonPos
+private alias object.value3 : object.lockPos.x
+private alias object.value4 : object.lockPos.y
+private alias object.value5 : object.debrisEdgeFrame
+private alias object.value6 : object.debrisCenterFrame
+
+// States
+private alias 0 : ANIMALPRISON_AWAITOPEN
+private alias 1 : ANIMALPRISON_OPENING
+private alias 2 : ANIMALPRISON_SHOWDEBRIS
+private alias 3 : ANIMALPRISON_HANDLEACTCLEAR
+private alias 4 : ANIMALPRISON_OPENED
+
+// Animal Aliases
+private alias object.value1 : animal.randomizeDir
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.collisionRight : player.collisionRight
+private alias object.collisionBottom : player.collisionBottom
+
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+private alias 2 : SUPERSTATE_FADEOUT
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function AnimalPrison_DebugDraw
+reserve function AnimalPrison_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function AnimalPrison_DebugDraw
+	DrawSprite(3)
+	DrawSprite(0)
+	DrawSprite(4)
+end function
+
+
+private function AnimalPrison_DebugSpawn
+	CreateTempObject(TypeName[Animal Prison], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ANIMALPRISON_AWAITOPEN
+		temp0 = object.ixpos
+		temp0 -= screen.xcenter
+		stage.newXBoundary1 = temp0
+		temp0 = object.ixpos
+		temp0 += screen.xcenter
+		stage.newXBoundary2 = temp0
+		break
+
+	case ANIMALPRISON_OPENING
+		object.timer++
+
+		object.lockPos.x += object.xvel
+		object.lockPos.y += object.yvel
+		object.yvel += 0x4000
+
+		if object.timer == 30
+			temp1 = object.ypos
+			temp1 += 0x40000
+			temp2 = 0
+			temp3 = 30
+			while temp2 < 32
+				Rand(temp0, 48)
+				temp0 >>= 2
+				temp0 <<= 18
+				temp0 -= 0x180000
+				temp0 += object.xpos
+				temp4 = temp2
+				temp4 &= 1
+				if temp4 == false
+					CreateTempObject(animalType1, temp3, temp0, temp1)
+				else
+					CreateTempObject(animalType2, temp3, temp0, temp1)
+				end if
+				animal[tempObjectPos].randomizeDir = true
+				temp0 += 0x40000
+				temp2++
+				temp3 += 5
+			loop
+			object.drawOrder = 4
+			object.timer = 0
+			object.state++
+			object.debrisEdgeFrame = 5
+			object.debrisCenterFrame = 17
+		end if
+		break
+
+	case ANIMALPRISON_SHOWDEBRIS
+		object.debrisEdgeFrame = object.timer
+		object.debrisEdgeFrame += 5
+		object.debrisCenterFrame = object.timer
+		object.debrisCenterFrame >>= 1
+		object.debrisCenterFrame += 17
+
+		if object.timer < 12
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case ANIMALPRISON_HANDLEACTCLEAR
+		if object.timer < 300
+			object.timer++
+			if object.timer > 240
+				music.volume -= 2
+			end if
+		else
+			PlayMusic(TRACK_ACTFINISH)
+			object[30].type = TypeName[Act Finish]
+			object[30].drawOrder = 6
+			object[30].priority = PRIORITY_ACTIVE
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case ANIMALPRISON_OPENED
+		break
+		
+	end switch
+
+	object.buttonPos = object.ypos
+	object.buttonPos -= 0x300000
+
+	temp2 = object.buttonPos
+	temp2 += 0x80000
+
+	// Check collision with players
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -24, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -40, 16, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if object.state == ANIMALPRISON_AWAITOPEN
+			if checkResult == COL_TOP
+				object.state = ANIMALPRISON_OPENING
+				stage.timeEnabled = false
+
+				if Player_superState == SUPERSTATE_SUPER
+					Player_superState = SUPERSTATE_FADEOUT
+				end if
+
+				object.xvel = 0x80000
+				object.yvel = -0x40000
+				object.lockPos.x = object.xpos
+				object.lockPos.y = object.ypos
+				CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+				object[tempObjectPos].ypos -= 0x180000
+				PlaySfx(SfxName[Destroy], false)
+#platform: USE_ORIGINS
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+			end if
+		end if
+
+		BoxCollisionTest(C_TOUCH, object.entityPos, -15, -48, 15, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			temp0 = player[currentPlayer].collisionBottom
+			temp0 <<= 16
+			temp0 += player[currentPlayer].ypos
+			if temp0 > object.buttonPos
+				if temp0 <= temp2
+					object.buttonPos = temp0
+				end if
+			end if
+		end if
+
+		// Boundary R
+		temp0 = player[currentPlayer].collisionRight
+		temp0 <<= 16
+		temp0 += player[currentPlayer].xpos
+		temp1 = stage.curXBoundary2
+		temp1 <<= 16
+		if temp0 > temp1
+			player[currentPlayer].xvel = 0
+			player[currentPlayer].speed = 0
+			player[currentPlayer].xpos = temp1
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			player[currentPlayer].xpos -= temp0
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case ANIMALPRISON_AWAITOPEN
+		DrawSpriteXY(2, object.xpos, object.buttonPos)
+		DrawSprite(0)
+		DrawSprite(4)
+		break
+
+	case ANIMALPRISON_OPENING
+		DrawSpriteXY(2, object.xpos, object.buttonPos)
+		DrawSprite(0)
+		DrawSpriteXY(4, object.lockPos.x, object.lockPos.y)
+		break
+
+	case ANIMALPRISON_SHOWDEBRIS
+		DrawSpriteXY(2, object.xpos, object.buttonPos)
+		DrawSprite(1)
+
+		DrawSprite(object.debrisEdgeFrame)
+
+		object.direction = FLIP_X
+		DrawSpriteFX(object.debrisEdgeFrame, FX_FLIP, object.xpos, object.ypos)
+
+		DrawSprite(object.debrisCenterFrame)
+		break
+
+	case ANIMALPRISON_HANDLEACTCLEAR
+	case ANIMALPRISON_OPENED
+		DrawSpriteXY(2, object.xpos, object.buttonPos)
+		DrawSprite(1)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-32, -32, 64, 64, 83, 1)	// capsule (closed) 	- #0
+	SpriteFrame(-32, -32, 64, 64, 148, 1)	// capsule (open) 		- #1
+	SpriteFrame(-16, 0, 32, 16, 213, 1)		// button (closed) 		- #2
+	SpriteFrame(-16, -48, 32, 16, 213, 1)	// button (open) 		- #3
+	SpriteFrame(-8, -31, 16, 16, 213, 18)	// lock 				- #4
+	SpriteFrame(-32, -16, 24, 24, 83, 17)	// debris 				- #5
+	SpriteFrame(-32, -14, 24, 22, 83, 17)	// debris 				- #6
+	SpriteFrame(-32, -12, 24, 20, 83, 17)	// debris 				- #7
+	SpriteFrame(-32, -10, 24, 18, 83, 17)	// debris 				- #8
+	SpriteFrame(-32, -8, 24, 16, 83, 17)	// debris 				- #9
+	SpriteFrame(-32, -6, 24, 14, 83, 17)	// debris 				- #10
+	SpriteFrame(-32, -4, 24, 12, 83, 17)	// debris 				- #11
+	SpriteFrame(-32, -2, 24, 10, 83, 17)	// debris 				- #12
+	SpriteFrame(-32, 0, 24, 8, 83, 17)		// debris 				- #13
+	SpriteFrame(-32, 2, 24, 6, 83, 17)		// debris 				- #14
+	SpriteFrame(-32, 4, 24, 4, 83, 17)		// debris 				- #15
+	SpriteFrame(-32, 6, 24, 2, 83, 17)		// debris 				- #16
+	SpriteFrame(-8, -16, 16, 24, 107, 17)	// debris 				- #17
+	SpriteFrame(-8, -16, 16, 20, 107, 17)	// debris 				- #18
+	SpriteFrame(-8, -16, 16, 16, 107, 17)	// debris 				- #19
+	SpriteFrame(-8, -16, 16, 12, 107, 17)	// debris 				- #20
+	SpriteFrame(-8, -16, 16, 8, 107, 17)	// debris 				- #21
+	SpriteFrame(-8, -16, 16, 4, 107, 17)	// debris 				- #22
+	
+	// Add this object to the debug item list
+	SetTableValue(TypeName[Animal Prison], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(AnimalPrison_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(AnimalPrison_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+
+	// Let all Animal Prisons load based on X only regardless of the player's Y, so that the player can't pass the Prison no matter how high they are
+	foreach (TypeName[Animal Prison], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+	next
+
+	// Erase all animal prisons if in VS mode, since SignPosts are used there instead
+	if options.vsMode == true
+		foreach (TypeName[Animal Prison], arrayPos0, ALL_ENTITIES)
+			object[arrayPos0].type = TypeName[Blank Object]
+		next
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.buttonPos = object.ypos
+	object.buttonPos -= 0x300000
+
+	DrawSpriteXY(1, object.xpos, object.buttonPos)
+	DrawSprite(0)
+	DrawSprite(2)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-32, -32, 64, 64, 83, 1)
+	SpriteFrame(-16, 0, 32, 16, 213, 1)
+	SpriteFrame(-8, -31, 16, 16, 213, 18)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

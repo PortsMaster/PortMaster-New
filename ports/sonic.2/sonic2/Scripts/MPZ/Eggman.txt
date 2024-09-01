@@ -1,0 +1,921 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// Using MPZEggman as a prefix here because there's like 12 "Eggman" objects in the game so its less confusing this way
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.oscillationAngle
+private alias object.value4  : object.timer
+private alias object.value5  : object.boundsL
+private alias object.value6  : object.boundsR
+private alias object.value7  : object.targetPos.x
+private alias object.value8  : object.moveBoundsB
+private alias object.value9  : object.boundsT
+private alias object.value10 : object.boundsB
+private alias object.value11 : object.moveVel
+private alias object.value12 : object.health
+private alias object.value13 : object.invincibilityTimer
+private alias object.value14 : object.exploding
+private alias object.value15 : object.flameAnim
+private alias object.value16 : object.flameAnimTimer
+private alias object.value17 : object.balloonRadius.x
+private alias object.value18 : object.balloonRadius.y
+private alias object.value19 : object.balloonOffset.y
+private alias object.value20 : object.activeBalloons
+private alias object.value21 : object.laserID
+private alias object.value22 : object.laserDelay
+private alias object.value23 : object.boundsExtend.x
+
+// Eggman States
+private alias 0  : MPZEGGMAN_AWAITPLAYER
+private alias 1  : MPZEGGMAN_HOVER
+private alias 2  : MPZEGGMAN_MOVEX
+private alias 3  : MPZEGGMAN_MOVEXY
+private alias 4  : MPZEGGMAN_EXTENDBALLOONS
+private alias 5  : MPZEGGMAN_RETRACTBALLOONS_Y
+private alias 6  : MPZEGGMAN_RETRACTBALLOONS_X
+private alias 7  : MPZEGGMAN_EXTENDBALLOONS2_Y
+private alias 8  : MPZEGGMAN_WAITFORPOPPED
+private alias 9  : MPZEGGMAN_RETURNTOMOVING
+private alias 10 : MPZEGGMAN_MOVETOLASERPOS
+private alias 11 : MPZEGGMAN_FIRINGLASERS
+private alias 12 : MPZEGGMAN_SWAPLASERDIR
+private alias 13 : MPZEGGMAN_EXPLODE
+private alias 14 : MPZEGGMAN_DEFEATFALL
+private alias 15 : MPZEGGMAN_DEFEATRISE
+private alias 16 : MPZEGGMAN_FLEE
+private alias 17 : MPZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : MPZEGGANI_INVISIBLE
+private alias 1 : MPZEGGANI_IDLE
+private alias 2 : MPZEGGANI_LAUGH
+private alias 3 : MPZEGGANI_HIT
+private alias 4 : MPZEGGANI_DEFEATED
+private alias 5 : MPZEGGANI_TOASTED
+private alias 6 : MPZEGGANI_PANIC
+
+// Flame Animations
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
+private alias 2 : FLAME_EXPLODE
+
+// EggmanBalloon Aliases
+private alias object.value0 : mbzEggmanBalloon.parent
+
+// EggmanLaser Aliases
+private alias object.value0 : mbzEggmanLaser.offset.x
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.collisionRight : player.collisionRight
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias  0 : MUSICEVENT_FADETOBOSS
+private alias  1 : MUSICEVENT_FADETOSTAGE
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MPZEggman_Oscillate
+reserve function MPZEggman_HandleFireLaser
+
+
+// ========================
+// Static Values
+// ========================
+
+private value MPZEggman_laserType = 0
+
+
+// ========================
+// Tables
+// ========================
+
+private table MPZEggman_flameAnim1Table
+	8, 9, 9, 8, 8, 17
+end table
+
+private table MPZEggman_balloonReleaseTable
+	0, 2, 4, 6, 1, 3, 5
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function MPZEggman_Oscillate
+	object.ypos = object.originPos.y
+	Sin256(temp0, object.oscillationAngle)
+	temp0 <<= 9
+	object.ypos += temp0
+	object.oscillationAngle += 4
+	object.oscillationAngle &= 0xFF
+end function
+
+
+private function MPZEggman_HandleFireLaser
+	object.laserDelay--
+	if object.laserDelay == 0
+		if object.laserID > 0
+			PlaySfx(SfxName[Small Laser], false)
+			object.laserDelay 	= 30
+			object.timer 		= 16
+
+			arrayPos0 = object.entityPos
+			arrayPos0 += 8
+			arrayPos0 += object.laserID
+			ResetObjectEntity(arrayPos0, MPZEggman_laserType, 0, object.xpos, object.ypos)
+			object[arrayPos0].direction = object.direction
+			object[arrayPos0].xvel = object.moveVel
+			object[arrayPos0].xvel <<= 2
+			if object.direction == FLIP_NONE
+				FlipSign(object[arrayPos0].xvel)
+				object[arrayPos0].xpos += 0x40000
+			else
+				object[arrayPos0].xpos -= 0x40000
+			end if
+			mbzEggmanLaser[arrayPos0].offset.x = object[arrayPos0].xpos
+			mbzEggmanLaser[arrayPos0].offset.x &= 0xFFFF0000
+			object[arrayPos0].ypos += 0x70000
+			object.laserID--
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case MPZEGGMAN_AWAITPLAYER
+		temp0 = object.ixpos
+		temp0 -= screen.xcenter
+		stage.newXBoundary1 = temp0
+
+		temp0 = object.ixpos
+		temp0 += screen.xcenter
+		stage.newXBoundary2 = temp0
+
+		temp0 = object.iypos
+		temp0 += 72
+		stage.newYBoundary2 = temp0
+
+		if player[0].xpos >= object.xpos
+			object.animation = MPZEGGANI_IDLE
+
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
+			object.moveVel			= 0x10000
+			object.moveVel			*= screen.xcenter
+			object.moveVel			/= 160
+
+			object.boundsExtend.x	= 0x200000
+			object.boundsExtend.x	*= screen.xcenter
+			object.boundsExtend.x	/= 160
+
+			object.oscillationAngle	= 128
+			object.flameAnim		= FLAME_ACTIVE
+
+			object.boundsL			= stage.newXBoundary1
+			object.boundsL			+= 32
+			object.boundsL			<<= 16
+
+			object.boundsR			= stage.newXBoundary2
+			object.boundsR			-= 32
+			object.boundsR			<<= 16
+
+			arrayPos0 = object.entityPos
+			arrayPos1 = arrayPos0
+			arrayPos1 += 7
+			temp0 = 36
+			while arrayPos0 < arrayPos1
+				arrayPos0++
+				object[arrayPos0].type = TypeName[Eggman Balloon]
+				mbzEggmanBalloon[arrayPos0].parent = object.entityPos
+				object[arrayPos0].angle = temp0
+				if temp0 >= 0x80
+					object[arrayPos0].drawOrder = 2
+				end if
+				object[arrayPos0].priority = PRIORITY_ACTIVE
+				temp0 += 36
+			loop
+
+			object.balloonRadius.x = 39
+			object.balloonRadius.y = 39
+			object.targetPos.x = object.xpos
+			object.moveBoundsB = object.ypos
+			object.moveBoundsB -= 0x300000
+			object.boundsT = object.ypos
+			object.boundsT -= 0x800000
+			object.boundsB = object.ypos
+
+			object.ypos 		-= 0x1200000
+			object.originPos.y 	= object.ypos
+			object.timer 		= 0
+			
+#platform: USE_STANDALONE
+			object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+			if game.bossOneLife == false
+				object.health = 8
+			else
+				object.health = 1
+			end if
+#endplatform
+
+			object.priority 	= PRIORITY_ACTIVE
+			object.state 		= MPZEGGMAN_HOVER
+		end if
+		break
+
+	case MPZEGGMAN_HOVER
+		object.originPos.y += 0x10000
+		if object.originPos.y >= object.boundsB
+			object.xvel = object.moveVel
+			if player[0].xpos < object.xpos
+				object.direction = FLIP_NONE
+				FlipSign(object.xvel)
+			else
+				object.direction = FLIP_X
+			end if
+			object.timer 	= 2
+			object.state 	= MPZEGGMAN_MOVEX
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_MOVEX
+		object.xpos += object.xvel
+
+		temp0 = false
+		if object.direction == FLIP_NONE
+			if object.xpos <= object.boundsL
+				temp0 = true
+			end if
+		else
+			if object.xpos >= object.boundsR
+				temp0 = true
+			end if
+		end if
+
+		if temp0 == true
+			FlipSign(object.xvel)
+			object.direction ^= FLIP_X
+
+			object.timer--
+			if object.timer == 0
+				object.xvel = object.moveVel
+				if object.direction == FLIP_NONE
+					FlipSign(object.xvel)
+				end if
+				object.yvel 	= -0x10000
+				object.state 	= MPZEGGMAN_MOVEXY
+			end if
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_MOVEXY
+		object.xpos += object.xvel
+		object.originPos.y += object.yvel
+
+		if object.originPos.y <= object.moveBoundsB
+			object.yvel = 0
+		end if
+
+		if object.direction == FLIP_NONE
+			if object.xpos <= object.targetPos.x
+				temp0 = true
+			end if
+		else
+			if object.xpos >= object.targetPos.x
+				temp0 = true
+			end if
+		end if
+
+		if temp0 == true
+			object.xvel 	= 0
+			object.xpos 	= object.targetPos.x
+			object.state 	= MPZEGGMAN_EXTENDBALLOONS
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_EXTENDBALLOONS
+		object.balloonRadius.x++
+		object.balloonRadius.y++
+
+		if object.balloonRadius.x >= 104
+			object.state = MPZEGGMAN_RETRACTBALLOONS_Y
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_RETRACTBALLOONS_Y
+		object.balloonRadius.y--
+		if object.balloonRadius.y <= 0
+			object.state = MPZEGGMAN_RETRACTBALLOONS_X
+		end if
+
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_RETRACTBALLOONS_X
+		object.balloonRadius.x--
+		if object.balloonRadius.x <= 39
+			object.state = MPZEGGMAN_EXTENDBALLOONS2_Y
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_EXTENDBALLOONS2_Y
+		object.balloonRadius.y++
+		if object.balloonRadius.y >= 39
+			object.state = MPZEGGMAN_HOVER
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_WAITFORPOPPED
+		object.originPos.y += object.yvel
+
+		if object.originPos.y <= object.boundsT
+			object.yvel = 0
+		end if
+
+		if object.balloonRadius.x > 39
+			object.balloonRadius.x--
+		end if
+
+		if object.balloonRadius.y > 0
+			object.balloonRadius.y--
+		else
+			if object.balloonOffset.y < 0x100000
+				object.balloonOffset.y += 0x8000
+			end if
+		end if
+
+		if object.activeBalloons == 0
+			if object.health > 1
+				object.state = MPZEGGMAN_RETURNTOMOVING
+			else
+				object.yvel = -0x18000
+				object.xvel = object.moveVel
+				if object.direction == FLIP_NONE
+					FlipSign(object.xvel)
+				end if
+				object.state = MPZEGGMAN_MOVETOLASERPOS
+			end if
+		end if
+
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_RETURNTOMOVING
+		object.balloonOffset.y -= 0x8000
+		if object.balloonOffset.y <= 0
+			object.balloonOffset.y 	= 0
+			object.state 	= MPZEGGMAN_EXTENDBALLOONS2_Y
+		end if
+		CallFunction(MPZEggman_Oscillate)
+		break
+
+	case MPZEGGMAN_MOVETOLASERPOS
+		if object.timer == 0
+			object.xpos += object.xvel
+
+			object.originPos.y += object.yvel
+			if object.originPos.y <= object.boundsT
+				object.yvel = 0
+			end if
+
+			if object.direction == FLIP_NONE
+				temp0 = object.boundsL
+				temp0 += object.boundsExtend.x
+				if object.xpos <= temp0
+					object.yvel 		= 0x18000
+					object.laserID 		= 3
+					object.laserDelay	= 30
+					object.direction 	= FLIP_X
+					object.state 		= MPZEGGMAN_FIRINGLASERS
+				end if
+			else
+				temp0 = object.boundsR
+				temp0 -= object.boundsExtend.x
+				if object.xpos >= temp0
+					object.yvel 		= 0x18000
+					object.laserID 		= 3
+					object.laserDelay 		= 30
+					object.direction 	= FLIP_NONE
+					object.state 		= MPZEGGMAN_FIRINGLASERS
+				end if
+			end if
+
+			CallFunction(MPZEggman_Oscillate)
+			CallFunction(MPZEggman_HandleFireLaser)
+		else
+			object.timer--
+		end if
+		break
+
+	case MPZEGGMAN_FIRINGLASERS
+		if object.timer == 0
+			object.xpos += object.xvel
+			object.originPos.y += object.yvel
+
+			if object.originPos.y >= object.boundsB
+				object.yvel 	= -0x18000
+				object.state 	= MPZEGGMAN_SWAPLASERDIR
+			end if
+
+			if object.direction == FLIP_NONE
+				if object.xpos >= object.boundsR
+					object.xvel = 0
+				end if
+			else
+				if object.xpos <= object.boundsL
+					object.xvel = 0
+				end if
+			end if
+
+			CallFunction(MPZEggman_Oscillate)
+			CallFunction(MPZEggman_HandleFireLaser)
+		else
+			object.timer--
+		end if
+		break
+
+	case MPZEGGMAN_SWAPLASERDIR
+		if object.timer == 0
+			object.xpos += object.xvel
+			object.originPos.y += object.yvel
+
+			temp0 = object.boundsB
+			temp0 -= 0x300000
+			if object.originPos.y <= temp0
+				object.xvel = object.moveVel
+				if object.direction == FLIP_NONE
+					FlipSign(object.xvel)
+				end if
+			end if
+
+			if object.originPos.y <= object.boundsT
+				object.yvel 	= 0
+				object.state 	= MPZEGGMAN_MOVETOLASERPOS
+			end if
+			CallFunction(MPZEggman_Oscillate)
+			CallFunction(MPZEggman_HandleFireLaser)
+		else
+			object.timer--
+		end if
+		break
+
+	case MPZEGGMAN_EXPLODE
+		object.timer++
+		if object.timer == 180
+			object.timer 		= 0
+			object.animation 	= MPZEGGANI_TOASTED
+			object.exploding	= false
+			object.state++
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+		end if
+		break
+
+	case MPZEGGMAN_DEFEATFALL
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+
+		object.timer++
+		if object.timer == 15
+			object.yvel 		  = 0
+			object.timer 		  = 0
+			object.animationTimer = 0
+			object.state++
+		end if
+		break
+
+	case MPZEGGMAN_DEFEATRISE
+		if object.timer < 48
+			object.ypos += object.yvel
+			object.yvel -= 0x800
+			object.timer++
+		else
+			object.timer 		= 0
+			object.yvel 	   	= 0
+			object.originPos.y 	= object.ypos
+			object.state++
+		end if
+		break
+
+	case MPZEGGMAN_FLEE
+		object.ypos = object.originPos.y
+		CallFunction(MPZEggman_Oscillate)
+		if object.timer < 8
+			object.timer++
+		else
+			object.timer 			= 0
+			object.animation 		= MPZEGGANI_PANIC
+			object.animationTimer 	= 0
+			object.flameAnim 		= FLAME_EXPLODE
+			object.flameAnimTimer 	= 0
+			object.direction 		= FLIP_X
+			object.priority 		= PRIORITY_ACTIVE
+			
+#platform: USE_STANDALONE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+#endplatform
+			
+			object.state++
+		end if
+		break
+
+	case MPZEGGMAN_ESCAPE
+		object.xpos += 0x40000
+		object.originPos.y -= 0x4000
+		CallFunction(MPZEggman_Oscillate)
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true
+				SetPaletteEntry(0, 192, 0xE0E0E0)
+			else
+				SetPaletteEntry(0, 192, 0x000000)
+			end if
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.invincibilityTimer == 0
+				CheckEqual(player[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+				if temp0 != 0
+					if object.animation != MPZEGGANI_LAUGH
+						object.animation 		= MPZEGGANI_LAUGH
+						object.animationTimer 	= 0
+					end if
+				end if
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 22, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CallFunction(Player_CheckHit)
+					if checkResult == true
+						object.health--
+						if object.health == 0
+#platform: USE_ORIGINS
+							CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+							CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+							
+							player.score += 1000
+							object.flameAnim 			= FLAME_INACTIVE
+							object.flameAnimTimer 		= 0
+							object.animation 			= MPZEGGANI_DEFEATED
+							object.animationTimer 		= 0
+							object.exploding			= true
+							object.originPos.y 			= object.ypos
+							object.state 				= MPZEGGMAN_EXPLODE
+							object.timer 				= 0
+#platform: USE_ORIGINS
+							object.invincibilityTimer	= 64
+#endplatform
+						else
+							temp0 = 7
+							temp0 -= object.health
+
+							GetTableValue(arrayPos0, temp0, MPZEggman_balloonReleaseTable)
+							arrayPos0 += object.entityPos
+							arrayPos0++
+							object[arrayPos0].state++
+							if player[0].xpos < object[arrayPos0].xpos
+								object[arrayPos0].xvel = -0x8000
+								object[arrayPos0].direction = FLIP_NONE
+							else
+								object[arrayPos0].xvel = 0x8000
+								object[arrayPos0].direction = FLIP_X
+							end if
+							object[arrayPos0].yvel = -0x40000
+							object[arrayPos0].priority = PRIORITY_ACTIVE
+
+							object.activeBalloons++
+							object.xvel 				= 0
+							object.yvel 				= -0x18000
+							object.state 				= MPZEGGMAN_WAITFORPOPPED
+							object.animation 			= MPZEGGANI_HIT
+							object.animationTimer 		= 0
+							object.invincibilityTimer	= 64
+							PlaySfx(SfxName[Boss Hit], false)
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	// Right Bounds
+	if object.state != MPZEGGMAN_ESCAPE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel 	= 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos 	= temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+
+	if object.exploding != false
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	default
+	case MPZEGGANI_INVISIBLE
+		break
+
+	case MPZEGGANI_IDLE
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MPZEGGANI_LAUGH
+		temp0 = object.animationTimer
+		temp0 &= 15
+		temp0 >>= 3
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			if player[0].animation != ANI_DYING
+				object.animation = MPZEGGANI_IDLE
+			end if
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MPZEGGANI_HIT
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			object.animation = MPZEGGANI_IDLE
+		end if
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MPZEGGANI_DEFEATED
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		temp0 %= 5
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MPZEGGANI_TOASTED
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case MPZEGGANI_PANIC
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 &= 1
+		if temp0 == 1
+			DrawSpriteFX(16, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+		
+	end switch
+
+	if object.animation > MPZEGGANI_INVISIBLE
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(7, FX_FLIP, object.xpos, object.ypos)
+	end if
+
+	switch object.flameAnim
+	default
+	case FLAME_INACTIVE
+		break
+
+	case FLAME_ACTIVE
+		GetTableValue(temp0, object.flameAnimTimer, MPZEggman_flameAnim1Table)
+		object.flameAnimTimer++
+		if object.flameAnimTimer == 6
+			object.flameAnimTimer = 0
+		end if
+
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case FLAME_EXPLODE
+		temp0 = object.flameAnimTimer
+		temp0 /= 3
+		temp0 += 10
+		object.flameAnimTimer++
+		if object.flameAnimTimer >= 18
+			object.flameAnimTimer = 0
+			temp0 = 8
+			object.flameAnim = FLAME_ACTIVE
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-28, -24, 44, 16, 195, 151)	// Eggman Idle - Frame 1 	- #0
+		SpriteFrame(-28, -24, 44, 16, 195, 168)	// Eggman Idle - Frame 2 	- #1
+		SpriteFrame(-28, -24, 44, 16, 240, 155)	// Eggman Laugh - Frame 1 	- #2
+		SpriteFrame(-28, -24, 44, 16, 240, 172)	// Eggman Laugh - Frame 2 	- #3
+		SpriteFrame(-28, -24, 44, 16, 285, 157)	// Eggman Hit 				- #4
+		SpriteFrame(-28, -24, 44, 16, 285, 174)	// Eggman Destroyed 		- #5
+		SpriteFrame(-24, -28, 56, 49, 220, 206)	// EggMobile 				- #6
+		SpriteFrame(-32, -8, 8, 23, 190, 69)	// Laser Cannon				- #7
+		SpriteFrame(31, 4, 12, 8, 289, 125)		// Flame Active - Frame 1	- #8
+		SpriteFrame(30, 2, 14, 12, 302, 125)	// Flame Active - Frame 2	- #9
+		SpriteFrame(31, -2, 22, 14, 285, 192)	// Flame Active - Frame 3	- #10
+		SpriteFrame(31, -9, 32, 26, 67, 75)		// Flame Active - Frame 4	- #11
+		SpriteFrame(31, -2, 22, 14, 285, 192)	// Flame Explode - Frame 1	- #12
+		SpriteFrame(31, -9, 32, 26, 67, 75)		// Flame Explode - Frame 2	- #13
+		SpriteFrame(31, 4, 12, 8, 289, 125)		// Flame Explode - Frame 3	- #14
+		SpriteFrame(30, 2, 14, 12, 302, 125)	// Flame Explode - Frame 4	- #15
+		SpriteFrame(-3, -28, 11, 8, 332, 144)	// Panic Sweat - Frame 1	- #16
+		SpriteFrame(0, 0, 1, 1, 332, 144)		// Panic Sweat - Frame 2	- #17
+		
+		MPZEggman_laserType = TypeName[Eggman Laser]
+		
+		// But, MPZ isn't even in 2PVS...
+		if options.vsMode == true
+			foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].type = TypeName[Blank Object]
+			next
+		end if
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-28, -28, 60, 20, 1, 1)		// Eggman Idle - Frame 1 	- #0
+		SpriteFrame(-28, -28, 60, 20, 62, 1)	// Eggman Idle - Frame 2 	- #1
+		SpriteFrame(-28, -28, 60, 20, 1, 22)	// Eggman Laugh - Frame 1 	- #2
+		SpriteFrame(-28, -28, 60, 20, 62, 22)	// Eggman Laugh - Frame 2 	- #3
+		SpriteFrame(-28, -28, 60, 20, 1, 43)	// Eggman Hit 				- #4
+		SpriteFrame(-28, -28, 60, 20, 62, 43)	// Eggman Destroyed 		- #5
+		SpriteFrame(-24, -28, 56, 49, 255, 206)	// EggMobile 				- #6
+		SpriteFrame(-32, -8, 8, 23, 316, 232)	// Laser Cannon				- #7
+		SpriteFrame(31, 4, 12, 8, 57, 90)		// Flame Active - Frame 1	- #8
+		SpriteFrame(30, 2, 14, 12, 57, 99)		// Flame Active - Frame 2	- #9
+		SpriteFrame(31, -2, 22, 14, 34, 97)		// Flame Active - Frame 3	- #10
+		SpriteFrame(31, -9, 32, 26, 72, 86)		// Flame Active - Frame 4	- #11
+		SpriteFrame(31, -2, 22, 14, 34, 97)		// Flame Explode - Frame 1	- #12
+		SpriteFrame(31, -9, 32, 26, 72, 86)		// Flame Explode - Frame 2	- #13
+		SpriteFrame(31, 4, 12, 8, 57, 90)		// Flame Explode - Frame 3	- #14
+		SpriteFrame(30, 2, 14, 12, 57, 99)		// Flame Explode - Frame 4	- #15
+		SpriteFrame(-3, -28, 11, 8, 45, 88)		// Panic Sweat - Frame 1	- #16
+		SpriteFrame(0, 0, 0, 0, 7, 2)			// Panic Sweat - Frame 2	- #17
+
+		MPZEggman_laserType = TypeName[Eggman Laser 2]
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(6)
+	DrawSprite(7)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-28, -24, 44, 16, 195, 151)	// Eggman Idle - Frame 1 	- #0
+		SpriteFrame(-28, -24, 44, 16, 195, 168)	// Eggman Idle - Frame 2 	- #1
+		SpriteFrame(-28, -24, 44, 16, 240, 155)	// Eggman Laugh - Frame 1 	- #2
+		SpriteFrame(-28, -24, 44, 16, 240, 172)	// Eggman Laugh - Frame 2 	- #3
+		SpriteFrame(-28, -24, 44, 16, 285, 157)	// Eggman Hit 				- #4
+		SpriteFrame(-28, -24, 44, 16, 285, 174)	// Eggman Destroyed 		- #5
+		SpriteFrame(-24, -28, 56, 49, 220, 206)	// EggMobile 				- #6
+		SpriteFrame(-32, -8, 8, 23, 190, 69)	// Laser Cannon				- #7
+		SpriteFrame(31, 4, 12, 8, 289, 125)		// Flame Active - Frame 1	- #8
+		SpriteFrame(30, 2, 14, 12, 302, 125)	// Flame Active - Frame 2	- #9
+		SpriteFrame(31, -2, 22, 14, 285, 192)	// Flame Active - Frame 3	- #10
+		SpriteFrame(31, -9, 32, 26, 67, 75)		// Flame Active - Frame 4	- #11
+		SpriteFrame(31, -2, 22, 14, 285, 192)	// Flame Explode - Frame 1	- #12
+		SpriteFrame(31, -9, 32, 26, 67, 75)		// Flame Explode - Frame 2	- #13
+		SpriteFrame(31, 4, 12, 8, 289, 125)		// Flame Explode - Frame 3	- #14
+		SpriteFrame(30, 2, 14, 12, 302, 125)	// Flame Explode - Frame 4	- #15
+		SpriteFrame(-3, -28, 11, 8, 332, 144)	// Panic Sweat - Frame 1	- #16
+		SpriteFrame(0, 0, 1, 1, 332, 144)		// Panic Sweat - Frame 2	- #17
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-28, -28, 60, 20, 1, 1)		// Eggman Idle - Frame 1 	- #0
+		SpriteFrame(-28, -28, 60, 20, 62, 1)	// Eggman Idle - Frame 2 	- #1
+		SpriteFrame(-28, -28, 60, 20, 1, 22)	// Eggman Laugh - Frame 1 	- #2
+		SpriteFrame(-28, -28, 60, 20, 62, 22)	// Eggman Laugh - Frame 2 	- #3
+		SpriteFrame(-28, -28, 60, 20, 1, 43)	// Eggman Hit 				- #4
+		SpriteFrame(-28, -28, 60, 20, 62, 43)	// Eggman Destroyed 		- #5
+		SpriteFrame(-24, -28, 56, 49, 255, 206)	// EggMobile 				- #6
+		SpriteFrame(-32, -8, 8, 23, 316, 232)	// Laser Cannon				- #7
+		SpriteFrame(31, 4, 12, 8, 57, 90)		// Flame Active - Frame 1	- #8
+		SpriteFrame(30, 2, 14, 12, 57, 99)		// Flame Active - Frame 2	- #9
+		SpriteFrame(31, -2, 22, 14, 34, 97)		// Flame Active - Frame 3	- #10
+		SpriteFrame(31, -9, 32, 26, 72, 86)		// Flame Active - Frame 4	- #11
+		SpriteFrame(31, -2, 22, 14, 34, 97)		// Flame Explode - Frame 1	- #12
+		SpriteFrame(31, -9, 32, 26, 72, 86)		// Flame Explode - Frame 2	- #13
+		SpriteFrame(31, 4, 12, 8, 57, 90)		// Flame Explode - Frame 3	- #14
+		SpriteFrame(30, 2, 14, 12, 57, 99)		// Flame Explode - Frame 4	- #15
+		SpriteFrame(-3, -28, 11, 8, 45, 88)		// Panic Sweat - Frame 1	- #16
+		SpriteFrame(0, 0, 0, 0, 7, 2)			// Panic Sweat - Frame 2	- #17
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

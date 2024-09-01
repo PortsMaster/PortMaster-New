@@ -1,0 +1,334 @@
+//-------Aliases-------//
+
+private alias object[9].value15 : hud.yoffset
+private alias object.value0 : bar.textline
+private alias object.value1 : bar.trigger
+private alias object.value2 : prev.playerstate
+private alias object.value3 : bar.spincount
+private alias object.value4 : bar.bossroom
+private alias object.value5 : prev.playerrings
+private alias object.value6 : bar.timeup
+private alias object.value7 : prev.power
+private alias object.value8 : prev.agent
+private alias object.value9 : bar.nice
+private alias object.value15 : bar.xoffset
+private alias object.value16 : bar.xscroll
+
+// Function declarations
+reserve function Bar_Check
+
+// Static Values
+private value bar.fill = 0;
+
+// Tables
+
+function Bar_Check
+temp0 = 0
+	while temp0 < 6
+		switch temp0
+		case 0 //spin triggered
+			if bar.spincount >= bar.fill
+				temp0 = 6
+				bar.spincount -= bar.fill
+				rand(bar.fill, 10)
+				bar.fill += 5
+				Rand(bar.trigger, 18)
+				bar.trigger++
+			else
+				if bar.nice == 0
+					if object[9].value33 == 69
+						Rand(bar.trigger, 2)
+						bar.trigger += 69
+						bar.nice = 1
+						temp0 = 6
+					end if
+				end if
+			end if
+			break
+		case 1 
+			if object[0].value0 < 0 //going negative
+				if prev.playerrings >= 0
+					temp0 = 6
+					Rand(bar.trigger, 12)
+					bar.trigger += 75
+				end if
+			else
+				if prev.playerrings < 0	//going positive				
+					temp0 = 6
+					Rand(bar.trigger, 9)
+					bar.trigger += 100
+				end if
+			end if
+			prev.playerrings = object[0].value0
+			break
+		case 2
+			if bar.timeup == 0
+				if stage.minutes == 9
+					temp0 = 6
+					Rand(bar.trigger, 4)
+					bar.trigger += 125
+					bar.timeup = 1
+				end if
+			end if
+			break
+		case 3 //powercut
+			if prev.power == 0
+				if Slots.Power == 1
+					temp0 = 6
+					Rand(bar.trigger, 6)
+					bar.trigger += 150				
+				end if
+			end if
+			prev.power = Slots.Power
+			break
+		case 4 //boss room triggered
+			if bar.bossroom == 0
+				if object[0].xpos >= 0x28780000
+					temp0 = 6
+					bar.bossroom = 1							
+					Rand(bar.trigger, 7)
+					bar.trigger += 175
+				end if
+			else
+				if object[0].xpos <= 0x25080000
+					bar.bossroom = 0
+				end if
+			end if
+			break
+		case 5 //agent spawn
+			if prev.agent != 2
+				if object[15].state == 2
+					temp0 = 6
+					Rand(bar.trigger, 9)
+					bar.trigger += 200
+				end if
+			end if
+			prev.agent = object[15].state
+			break
+		end switch
+		temp0++
+	loop
+end function
+
+event ObjectMain	
+	switch object.state
+		case 0 //listening for trigger
+			CallFunction(Bar_Check)
+			if bar.trigger > 0
+				bar.textline = bar.trigger
+				bar.trigger = 0
+				bar.xoffset = screen.xsize
+				bar.xoffset += 40
+				object.state = 1
+			end if
+			break
+		case 1 //summon bar
+			hud.yoffset++
+			if hud.yoffset  >= 32
+				hud.yoffset = 32
+				object.state++
+			end if
+			break
+		case 2 //begin scrolling text
+			if bar.xscroll <= -40
+				object.state++
+				bar.xscroll = 0
+			else
+				bar.xoffset -= 2				
+			end if
+			break
+		case 3
+			CallFunction(Bar_Check)
+			if bar.trigger > 0
+				bar.textline = bar.trigger
+				bar.trigger = 0
+				bar.xoffset = screen.xsize
+				bar.xoffset += 40
+				object.state = 2
+			else
+				object.state++
+			end if
+			break
+		case 4 //put bar away
+			hud.yoffset--
+			if hud.yoffset <= 0
+				hud.yoffset = 0
+				object.state = 0
+			end if
+			break
+	end switch	
+	if object[0].state == SlotMachine_PlayerBlank
+		if prev.playerstate != SlotMachine_PlayerBlank
+			bar.spincount++
+		end if
+	end if
+	prev.playerstate = object[0].state
+end event
+
+event ObjectDraw
+	if object.state > 0
+		temp3 = hud.yoffset
+		temp3 -= 32
+		DrawRect(0, temp3, screen.xsize, 32, 0, 0, 0, 225)
+		temp3 += 10
+		DrawRect(0, temp3, screen.xsize, 21, 224, 224, 224, 225)
+		temp3++
+		DrawRect(0, temp3, screen.xsize, 19, 0, 0, 0, 225)
+		temp3 += 2
+		DrawRect(0, temp3, screen.xsize, 15, 0, 0, 128, 225)
+		//Draw Letters
+		
+		if object.state == 2
+			GetTextInfo(temp0, 2, TEXTINFO_TEXTSIZE, bar.textline, 0)
+			temp1 = 0
+			bar.xscroll = bar.xoffset
+			while temp1 < temp0
+				GetTextInfo(temp2, 2, TEXTINFO_TEXTDATA, bar.textline, temp1)
+				switch temp2
+				case 46
+					object.frame = 36
+					break
+				case 44
+					object.frame = 37
+					break
+				case 33
+					object.frame = 38
+					break
+				case 63
+					object.frame = 39
+					break
+				case 39
+					object.frame = 40
+					break
+				case 64
+					object.frame = 41
+					break
+				case 45
+					object.frame = 42
+					break
+				case 32
+					object.frame = 43
+					break
+				default
+					if temp2 >= 48 //Numbers
+						if temp2 <= 57
+							object.frame = temp2
+							object.frame -= 48
+						end if
+					end if
+					if temp2 >= 65 //Upper Case
+						if temp2 <= 90
+							object.frame = temp2
+							object.frame -= 55
+						end if
+					end if
+					if temp2 >= 97 //Lower Case
+						if temp2 <= 122
+							object.frame = temp2
+							object.frame -= 87
+						end if
+					end if
+					break
+				end switch
+				
+				DrawSpriteScreenXY(object.frame, bar.xscroll, temp3)
+				switch object.frame
+					case 18
+					case 36
+					case 37
+					case 38
+					case 40
+					case 43
+						bar.xscroll += 8
+						break
+					case 41
+						bar.xscroll += 32
+						break
+					default
+						bar.xscroll += 16
+						break
+				end switch			
+				temp1++
+			loop
+		end if
+		
+		temp3++
+		temp0 = 0
+		while temp0 < 7
+			DrawRect(0, temp3, screen.xsize, 1, 0, 0, 0, 225)
+			temp3 += 2
+			temp0++
+		loop
+	end if
+end event
+
+
+event ObjectStartup
+	if options.gameMode == 5
+		ResetObjectEntity(16, TypeName[Bar], 0, 0, 0)
+		object[16].priority = PRIORITY_ACTIVE
+		object[16].drawOrder = 6
+		LoadTextFile(2, "Data/Game/Bar.txt")
+		rand(bar.fill, 10)
+		bar.fill += 5
+		
+		LoadSpriteSheet("CNZ/Objects2.gif")
+		SpriteFrame(0, 0, 13, 15, 140, 66) //0
+		SpriteFrame(0, 0, 10, 15, 154, 66) //1
+		SpriteFrame(0, 0, 12, 15, 165, 66) //2
+		SpriteFrame(0, 0, 12, 15, 178, 66) //3
+		SpriteFrame(0, 0, 13, 15, 191, 66) //4
+		SpriteFrame(0, 0, 13, 15, 205, 66) //5
+		SpriteFrame(0, 0, 13, 15, 219, 66) //6
+		SpriteFrame(0, 0, 12, 15, 233, 66) //7
+		SpriteFrame(0, 0, 13, 15, 1, 82) //8
+		SpriteFrame(0, 0, 13, 15, 15, 82) //9
+		
+		
+		SpriteFrame(0, 0, 13, 15, 1, 50) //10 A	
+		SpriteFrame(0, 0, 13, 15, 15, 50) //11
+		SpriteFrame(0, 0, 13, 15, 29, 50) //12
+		SpriteFrame(0, 0, 13, 15, 43, 50) //13
+		SpriteFrame(0, 0, 12, 15, 57, 50) //14
+		SpriteFrame(0, 0, 12, 15, 70, 50) //15
+		SpriteFrame(0, 0, 13, 15, 83, 50) //16
+		SpriteFrame(0, 0, 13, 15, 97, 50) //17
+		SpriteFrame(0, 0, 5, 15, 111, 50) //18
+		SpriteFrame(0, 0, 13, 15, 117, 50) //19
+		SpriteFrame(0, 0, 13, 15, 131, 50) //20
+		SpriteFrame(0, 0, 12, 15, 145, 50) //21
+		SpriteFrame(0, 0, 13, 15, 158, 50) //22
+		SpriteFrame(0, 0, 13, 15, 172, 50) //23
+		SpriteFrame(0, 0, 13, 15, 186, 50) //24
+		SpriteFrame(0, 0, 12, 15, 200, 50) //25	P
+		
+		SpriteFrame(0, 0, 14, 15, 1, 66) //26 Q	
+		SpriteFrame(0, 0, 13, 15, 16, 66) //27
+		SpriteFrame(0, 0, 13, 15, 30, 66) //28
+		SpriteFrame(0, 0, 12, 15, 44, 66) //29
+		SpriteFrame(0, 0, 13, 15, 57, 66) //30
+		SpriteFrame(0, 0, 13, 15, 71, 66) //31
+		SpriteFrame(0, 0, 13, 15, 85, 66) //32
+		SpriteFrame(0, 0, 13, 15, 99, 66) //33
+		SpriteFrame(0, 0, 14, 15, 113, 66) //34
+		SpriteFrame(0, 0, 11, 15, 128, 66) //35 Z
+		
+		SpriteFrame(0, 0, 4, 15, 29, 82) //36 .
+		SpriteFrame(0, 0, 4, 15, 34, 82) //37 ,
+		SpriteFrame(0, 0, 5, 15, 39, 82) //38 !
+		SpriteFrame(0, 0, 12, 15, 45, 82) //39 ?
+		SpriteFrame(0, 0, 4, 15, 58, 82) //40 '
+		SpriteFrame(0, 0, 32, 15, 63, 82) //41 roboface
+		SpriteFrame(0, 0, 14, 15, 96, 82) //42 Ball	
+		SpriteFrame(0, 0, 1, 1, 111, 82) //43 Space	
+	end if	
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

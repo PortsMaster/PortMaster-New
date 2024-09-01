@@ -1,0 +1,238 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Spiked Ledge Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.originX
+private alias object.value2 : object.collisionOffset.x
+
+private alias 0 : SPIKEDLEDGE_WAITING
+private alias 1 : SPIKEDLEDGE_MOVING
+private alias 2 : SPIKEDLEDGE_MOVED
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+private alias object.value42 : player.prevGravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SpikedLedge_DebugDraw
+reserve function SpikedLedge_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SpikedLedge_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function SpikedLedge_DebugSpawn
+	CreateTempObject(TypeName[Spiked Ledge], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	if object.direction == FACING_RIGHT
+		object[tempObjectPos].xvel = -0x10000
+	else
+		object[tempObjectPos].xvel = 0x10000
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SPIKEDLEDGE_WAITING
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].prevGravity == 0
+				// Check if the ledge should advance if the player is in range
+				if object.direction == FLIP_NONE
+					BoxCollisionTest(C_TOUCH, object.entityPos, -192, -16, -64, -14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, 64, -16, 192, -14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				end if
+			else
+				checkResult = false
+			end if
+
+			if checkResult == true
+				if object.priority != PRIORITY_XBOUNDS_DESTROY
+					object.priority = PRIORITY_ACTIVE
+				end if
+
+				object.state = SPIKEDLEDGE_MOVING
+				object.collisionOffset.x = object.xvel
+			end if
+		next
+		break
+
+	case SPIKEDLEDGE_MOVING
+		object.xpos += object.xvel
+		object.timer++
+		if object.timer == 128
+			object.timer = 0
+			object.collisionOffset.x = 0
+			object.state++
+		end if
+		break
+
+	case SPIKEDLEDGE_MOVED
+		break
+		
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID2, object.entityPos, -64, -16, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		switch checkResult
+		case COL_TOP
+			// Move the player along with the Ledge
+			player[currentPlayer].xpos += object.collisionOffset.x
+			break
+
+		case COL_LEFT
+			if object.direction == FLIP_NONE
+				// Spikes on the left
+				CallFunction(Player_Hit)
+			end if
+			break
+
+		case COL_RIGHT
+			if object.direction == FLIP_X
+				// Spikes on the right
+				CallFunction(Player_Hit)
+			end if
+			break
+			
+		end switch
+	next
+
+	if object.outOfBounds == true
+		// If the object's out of bounds, then only unload it if its origin position is OOB as well
+		temp0 = object.xpos
+		object.xpos = object.originX
+		if object.outOfBounds == true
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_BOUNDS
+			end if
+
+			// Reset the object
+			object.collisionOffset.x = 0
+			object.state = SPIKEDLEDGE_WAITING
+		else
+			object.xpos = temp0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-64, -16, 128, 32, 1, 99)
+
+	foreach (TypeName[Spiked Ledge], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].originX = object[arrayPos0].xpos
+
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+		
+		if object[arrayPos0].direction == FLIP_NONE
+			object[arrayPos0].xvel = -0x10000
+		else
+			object[arrayPos0].xvel = 0x10000
+		end if
+	next
+
+	SetTableValue(TypeName[Spiked Ledge], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SpikedLedge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SpikedLedge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.direction, object.propertyValue, 0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+
+	if editor.showGizmos == true
+		if object.direction == FLIP_NONE
+			temp0 = -128
+		else
+			temp0 = 128
+		end if
+		temp0 += object.ixpos
+
+		// Two alternate takes here, which one to do?
+		// One doesn't even play kindly with flipping...
+
+		object.inkEffect = INK_BLEND
+		DrawSpriteFX(0, FX_INK, temp0, object.ypos)
+
+		temp0 -= 64
+		temp1 = object.iypos; temp1 -= 16
+		DrawRectOutline(temp0, temp1, 128, 32, 255, 0, 0, 255)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-64, -16, 128, 32, 1, 99)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

@@ -1,0 +1,245 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Ride Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.startPos.x
+private alias object.value3 : object.startPos.y
+
+private alias 0 : RIDEBLOCK_AWAITPLAYER
+private alias 1 : RIDEBLOCK_MOVING
+private alias 2 : RIDEBLOCK_SINKING
+private alias 3 : RIDEBLOCK_STOPPED
+
+// Player Aliases
+private alias object.xpos: player.xpos
+private alias object.ypos: player.ypos
+
+// Tile Flag Aliases
+private alias 1 : TILE_LAVA
+
+// Tile Info ID Aliases
+private alias 8 : TILEINFO_ANGLEB
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RideBlock_DebugDraw
+reserve function RideBlock_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private function RideBlock_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function RideBlock_DebugSpawn
+	CreateTempObject(TypeName[Ride Block], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	object[tempObjectPos].startPos.x = object[arrayPos0].xpos
+	object[tempObjectPos].startPos.y = object[arrayPos0].ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case RIDEBLOCK_AWAITPLAYER
+		object.priority = PRIORITY_ACTIVE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.state++
+				if object.direction == FLIP_NONE
+					object.xvel = 0x10000
+				else
+					object.xvel = -0x10000
+				end if
+			end if
+		next
+		break
+
+	case RIDEBLOCK_MOVING
+		temp0 = object.xpos
+		temp0 -= object.drawPos.x
+		temp0 += object.xvel
+		temp0 &= 0xFFFF0000
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].xpos += temp0
+			end if
+		next
+
+		object.xpos += object.xvel
+		if object.xvel > 0
+			ObjectTileCollision(CSIDE_LWALL, 16, 12, PATH_A)
+			if checkResult == true
+				object.xvel = 0
+				object.timer = 0
+				temp1 = object.iypos
+				temp1 += 12
+				Get16x16TileInfo(temp0, object.ixpos, temp1, TILEINFO_ANGLEB)
+				if temp0 == TILE_LAVA
+					object.state = RIDEBLOCK_SINKING
+				else
+					object.state = RIDEBLOCK_STOPPED
+				end if
+			end if
+		else
+			ObjectTileCollision(CSIDE_RWALL, -16, 12, PATH_A)
+			if checkResult == true
+				object.xvel = 0
+				object.timer = 0
+				temp1 = object.iypos
+				temp1 += 12
+				Get16x16TileInfo(temp0, object.ixpos, temp1, TILEINFO_ANGLEB)
+				if temp0 == TILE_LAVA
+					object.state = RIDEBLOCK_SINKING
+				else
+					object.state = RIDEBLOCK_STOPPED
+				end if
+			end if
+		end if
+		break
+
+	case RIDEBLOCK_SINKING
+		if object.timer < 320
+			object.timer++
+			temp0 = object.timer
+			temp0 &= 7
+			if temp0 == 0
+				temp0 = 0x10000
+			else
+				temp0 = 0
+			end if
+
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					player[currentPlayer].ypos += temp0
+				end if
+			next
+			object.ypos += temp0
+		end if
+		break
+
+	case RIDEBLOCK_STOPPED
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		next
+		break
+		
+	end switch
+
+	object.drawPos.x = object.xpos
+	object.drawPos.x &= 0xFFFF0000
+	if object.outOfBounds == true
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
+			object.yvel = 0
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(0, object.drawPos.x, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 159, 322)
+
+	foreach (TypeName[Ride Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+		object[arrayPos0].direction &= FLIP_X
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Ride Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RideBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RideBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 159, 322)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
+end event

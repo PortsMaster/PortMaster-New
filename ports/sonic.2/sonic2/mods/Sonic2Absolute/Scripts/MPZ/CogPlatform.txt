@@ -1,0 +1,132 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Cog Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 58 : TYPE_COGPLATFORM
+
+// Function declarations
+reserve function CogPlatform_DebugDraw
+reserve function CogPlatform_DebugSpawn
+
+// Static Values
+public value CogPlatform_value39 = 0;
+
+// Tables
+
+function CogPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function CogPlatform_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= CogPlatform_value39
+	CreateTempObject(TypeName[Cog Platform], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	temp0 = object.xpos
+	temp0 &= -0x10000
+	object.xpos += object.xvel
+	if object.direction == FLIP_NONE
+		ObjectTileCollision(CSIDE_LWALL, 64, 0, 0)
+	else
+		ObjectTileCollision(CSIDE_RWALL, -64, 0, 0)
+	end if
+	if checkResult == 1
+		if object.propertyValue == 0
+			object.xvel = 0
+			MPZSetup_value35 = 0
+			MPZSetup_value34 = 0
+		else
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+			FlipSign(MPZSetup_value35)
+		end if
+	end if
+	temp4 = object.xpos
+	temp2 = object.xpos
+	temp2 &= -0x10000
+	temp2 -= temp0
+	object.xpos = temp0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		switch checkResult
+		case 1
+			if object.xvel == 0
+				object.priority = PRIORITY_ACTIVE
+				if object.direction == FLIP_NONE
+					object.xvel = 0x20000
+					MPZSetup_value35 = -1
+				else
+					object.xvel = -0x20000
+					MPZSetup_value35 = 1
+				end if
+			end if
+			object[currentPlayer].xpos += temp2
+			break
+		case 2
+		case 3
+			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
+				object[currentPlayer].value1 = 0
+				object[currentPlayer].animation = ANI_GLIDING_DROP
+				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+			end if
+			break
+		end switch
+	next
+	object.xpos = temp4
+	if object.outOfBounds == 1
+		if object.value0 == 0
+			object.type = TypeName[Blank Object]
+		else
+			object.xpos = object.value0
+			if object.outOfBounds == 0
+				object.xpos = temp4
+			else
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+				object.xvel = 0
+				MPZSetup_value35 = 0
+				MPZSetup_value34 = 0
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 350, 182)
+	temp0 = 0
+	CogPlatform_value39 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Cog Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(CogPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(CogPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+	foreach (TypeName[Cog Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

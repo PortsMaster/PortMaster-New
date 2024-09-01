@@ -1,0 +1,229 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Break Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias 0 : BREAKBLOCK_BLOCK
+private alias 1 : BREAKBLOCK_DEBRIS
+
+// Player Aliases
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value19 : player.badnikBonus
+private alias object.value16 : player.isSidekick
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Achievement Aliases
+private alias 3 : ACHIEVEMENT_BLOCKBUSTER
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BreakBlock_DebugDraw
+reserve function BreakBlock_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BreakBlock_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function BreakBlock_DebugSpawn
+	CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BREAKBLOCK_BLOCK
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
+			if player[currentPlayer].animation == ANI_JUMPING
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+			checkResult = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				checkResult = true
+			end if
+			
+			if stage.playerListPos == PLAYER_AMY
+				if player[currentPlayer].isSidekick == false
+					if player[currentPlayer].animation == ANI_HAMMER_JUMP
+						checkResult = 2
+					end if
+				end if
+			end if
+			
+			if checkResult != false
+				// For some reason, they changed the collision type from C_SOLID to C_TOUCH
+				// Guess they wanted the Hammer Jump to be able to hit multiple blocks at once, but why did they apply this to the regular rolling animation too?
+				switch checkResult
+				case 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					break
+					
+				case 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					break
+				end switch
+#endplatform
+				if checkResult == COL_TOP // well it's "COL_TOP" in Standalone but "true" in Origins, they both have the same numeric value though so we can leave it like this
+					player[currentPlayer].yvel = -0x30000
+					player[currentPlayer].gravity = GRAVITY_AIR
+
+					CreateTempObject(TypeName[Object Score], player[currentPlayer].badnikBonus, object.xpos, object.ypos)
+					object[tempObjectPos].drawOrder = 4
+
+					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
+					object[tempObjectPos].ixpos -= 8
+					object[tempObjectPos].iypos -= 8
+					object[tempObjectPos].xvel = -0x20000
+					object[tempObjectPos].yvel = -0x20000
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS
+					object[tempObjectPos].drawOrder = 5
+
+					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
+					object[tempObjectPos].ixpos += 8
+					object[tempObjectPos].iypos -= 8
+					object[tempObjectPos].xvel = 0x20000
+					object[tempObjectPos].yvel = -0x20000
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS
+					object[tempObjectPos].drawOrder = 5
+
+					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
+					object[tempObjectPos].ixpos -= 8
+					object[tempObjectPos].iypos += 8
+					object[tempObjectPos].xvel = -0x10000
+					object[tempObjectPos].yvel = -0x10000
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS
+					object[tempObjectPos].drawOrder = 5
+
+					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
+					object[tempObjectPos].ixpos += 8
+					object[tempObjectPos].iypos += 8
+					object[tempObjectPos].xvel = 0x10000
+					object[tempObjectPos].yvel = -0x10000
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS
+					object[tempObjectPos].drawOrder = 5
+
+					object.type = TypeName[Blank Object]
+
+					switch player[currentPlayer].badnikBonus
+					case 0
+						player.score += 100
+						break
+
+					case 1
+						player.score += 200
+						break
+
+					case 2
+						player.score += 500
+						break
+
+					case 3
+					case 4
+					case 5
+					case 6
+					case 7
+					case 8
+					case 9
+					case 10
+					case 11
+					case 12
+					case 13
+					case 14
+						player.score += 1000
+						break
+
+					case 15
+						player.score += 10000
+						if stage.debugMode == false
+							// Grant the "Block Buster" Achievement
+							CallNativeFunction2(SetAchievement, ACHIEVEMENT_BLOCKBUSTER, 100)
+						end if
+						break
+
+					end switch
+
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						if player[currentPlayer].badnikBonus < 15
+							player[currentPlayer].badnikBonus++
+						end if
+					end if
+
+					PlaySfx(SfxName[Block Break], false)
+				end if
+			else
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			end if
+		next
+		break
+
+	case BREAKBLOCK_DEBRIS
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.state)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 317, 363)
+	SpriteFrame(-8, -8, 16, 16, 317, 363)
+
+	SetTableValue(TypeName[Break Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(BreakBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(BreakBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 317, 363)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

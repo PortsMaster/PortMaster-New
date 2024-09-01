@@ -1,0 +1,175 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Steam Piston Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 66 : TYPE_STEAMPISTON
+
+// Function declarations
+reserve function SteamPiston_DebugDraw
+reserve function SteamPiston_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function SteamPiston_DebugDraw
+	DrawSprite(8)
+end function
+
+
+function SteamPiston_DebugSpawn
+	CreateTempObject(TypeName[Steam Piston], object.direction, object.xpos, object.ypos)
+	object[tempObjectPos].ypos += 0x100000
+	object[tempObjectPos].value1 = object.ypos
+end function
+
+
+event ObjectMain
+	temp7 = 0
+	switch object.state
+	case 0
+		temp0 = oscillation
+		temp0 &= 127
+		if temp0 == 0
+			object.priority = PRIORITY_ACTIVE
+			object.value0 = 2
+			object.state = 1
+		end if
+		break
+	case 1
+		object.ypos -= 0x80000
+		temp7 = -0x80000
+		object.value0--
+		if object.value0 == 0
+			object.state = 2
+			object.frame = 0
+			object.animation = 1
+		end if
+		break
+	case 2
+		temp0 = oscillation
+		temp0 &= 63
+		if temp0 == 0
+			object.priority = PRIORITY_ACTIVE
+			object.value0 = 2
+			object.state = 3
+		end if
+		break
+	case 3
+		object.ypos += 0x80000
+		temp7 = 0x80000
+		object.value0--
+		if object.value0 == 0
+			object.state = 0
+		end if
+		break
+	end switch
+	if object.animation == 1
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		if object.frame == 7
+			object.animationTimer = 0
+			object.animation = 0
+		end if
+	end if
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.value2, temp2)
+		if temp0 == 1
+			object[currentPlayer].ypos += temp7
+		end if
+		SetBit(object.value2, temp2, 0)
+		BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			SetBit(object.value2, temp2, 1)
+			if object.state == 1
+				object[currentPlayer].yvel = -0x9D000
+				object[currentPlayer].yvel -= object[currentPlayer].value25
+				object[currentPlayer].state = PlayerObject_HandleAir
+				object[currentPlayer].tileCollisions = 1
+				object[currentPlayer].gravity = GRAVITY_AIR
+				object[currentPlayer].value1 = 0
+				object[currentPlayer].collisionMode = CMODE_FLOOR
+				object[currentPlayer].pushing = 0
+				object[currentPlayer].animation = ANI_TWIRL
+				object[currentPlayer].prevAnimation = ANI_TWIRL
+				object[currentPlayer].frame = 0
+				object[currentPlayer].animationSpeed = 40
+				PlaySfx(SfxName[Spring], 0)
+			end if
+		else
+			if object.frame == 3
+				BoxCollisionTest(C_TOUCH, object.entityPos, -50, -4, -30, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_Hit)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, 30, -4, 50, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						CallFunction(PlayerObject_Hit)
+					end if
+				end if
+			end if
+		end if
+		temp2++
+	next
+	if object.outOfBounds == 1
+		object.ypos = object.value1
+		object.ypos += object.value31
+		object.value0 = 0
+		object.value2 = 0
+		object.animation = 0
+		object.animationTimer = 0
+		object.priority = PRIORITY_ACTIVE_BOUNDS
+		object.state = 0
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(8)
+	if object.animation == 1
+		object.direction = FLIP_X
+		object.xpos -= 0x280000
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		object.direction = FLIP_NONE
+		object.xpos += 0x500000
+		DrawSprite(object.frame)
+		object.xpos -= 0x280000
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-24, 1, 8, 4, 102, 98)
+	SpriteFrame(-24, -1, 14, 8, 102, 103)
+	SpriteFrame(-20, -3, 15, 13, 102, 112)
+	SpriteFrame(-16, -4, 23, 16, 118, 92)
+	SpriteFrame(-8, -4, 23, 16, 119, 109)
+	SpriteFrame(-3, -4, 22, 14, 143, 96)
+	SpriteFrame(9, -2, 14, 12, 143, 111)
+	SpriteFrame(9, -2, 1, 1, 143, 111)
+	SpriteFrame(-16, -16, 32, 32, 166, 93)
+	foreach (TypeName[Steam Piston], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].ypos += 0x100000
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+	next
+	SetTableValue(TypeName[Steam Piston], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SteamPiston_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SteamPiston_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,388 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Tri Bumper Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Types
+private alias 0 : TRIBUMPER_SMALL_L
+private alias 1 : TRIBUMPER_SMALL_R
+private alias 2 : TRIBUMPER_LARGE_U
+private alias 3 : TRIBUMPER_LARGE_D
+private alias 4 : TRIBUMPER_LARGE_L
+private alias 5 : TRIBUMPER_LARGE_R
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.tileCollisions : player.tileCollisions
+
+private alias object.value1  : player.timer
+private alias object.value36 : player.flyCarryTimer		// Tails assist lockout timer
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TriBumper_SetPlayerVelocity
+reserve function TriBumper_HandleBump
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TriBumper_SetPlayerVelocity
+	ATan2(temp0, player[currentPlayer].xvel, player[currentPlayer].yvel)
+	temp0 -= temp3
+	temp1 = temp0
+	Abs(temp1)
+	FlipSign(temp0)
+	temp0 += 256
+	temp0 += temp3
+	temp0 &= 255
+	if temp1 >= 56
+		temp0 = temp3
+	end if
+	Cos256(player[currentPlayer].xvel, temp0)
+	player[currentPlayer].xvel *= -0xA00
+	Sin256(player[currentPlayer].yvel, temp0)
+	player[currentPlayer].yvel *= -0xA00
+end function
+
+
+private function TriBumper_HandleBump
+	if player[currentPlayer].state == Player_State_Carried
+		player[1].flyCarryTimer = 30
+	end if
+
+	CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
+	temp2 = checkResult
+	CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
+	temp2 |= checkResult
+	CheckEqual(player[currentPlayer].animation, ANI_FLYING)
+	temp2 |= checkResult
+	CheckEqual(player[currentPlayer].state, Player_State_TubeRoll)
+	temp2 |= checkResult
+	CheckEqual(player[currentPlayer].state, Player_State_TubeAirRoll)
+	temp2 |= checkResult
+	if player[currentPlayer].animation != ANI_GLIDING
+		player[currentPlayer].speed = player[currentPlayer].xvel
+		player[currentPlayer].timer = 0
+	end if
+
+	if temp2 == false
+#platform: USE_STANDALONE
+		player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+		player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+		// Bug Details:
+		// This code wasn't updated in Origins Plus to include ANI_HAMMER_JUMP, so
+		//  Amy will always start walking if she hits a Bumper with her hammer out
+		if player[currentPlayer].animation != ANI_JUMPING
+			if player[currentPlayer].animation != ANI_RUNNING
+				player[currentPlayer].animation = ANI_WALKING
+			end if
+		end if
+	end if
+	player[currentPlayer].gravity = GRAVITY_AIR
+	player[currentPlayer].tileCollisions = true
+	PlaySfx(SfxName[CNZ Bumper], false)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.propertyValue
+	case TRIBUMPER_SMALL_L
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.ypos
+				temp0 -= player[currentPlayer].ypos
+				FlipSign(temp0)
+				if temp0 >= 0x200000
+					player[currentPlayer].yvel = 0xA0000
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.xpos
+					temp0 -= player[currentPlayer].xpos
+					FlipSign(temp0)
+					if temp0 >= 0x200000
+						player[currentPlayer].xvel = 0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						temp0 = object.xpos
+						temp0 -= player[currentPlayer].xpos
+						if temp0 >= 0x200000
+							temp0 = 0x200000
+						end if
+						temp0 += object.ypos
+						temp0 -= 0x80000
+						temp1 = player[currentPlayer].ypos
+						temp1 += 0xE0000
+						temp0 -= temp1
+						if temp0 < 0
+							temp3 = 32
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRIBUMPER_SMALL_R
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.ypos
+				temp0 -= player[currentPlayer].ypos
+				FlipSign(temp0)
+				if temp0 >= 0x200000
+					player[currentPlayer].yvel = 0xA0000
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.xpos
+					temp0 -= player[currentPlayer].xpos
+					if temp0 >= 0x200000
+						player[currentPlayer].xvel = -0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						temp0 = object.xpos
+						temp0 -= player[currentPlayer].xpos
+						FlipSign(temp0)
+						if temp0 >= 0x200000
+							temp0 = 0x200000
+						end if
+						temp0 += object.ypos
+						temp0 -= 0x80000
+						temp1 = player[currentPlayer].ypos
+						temp1 += 0xE0000
+						temp0 -= temp1
+						if temp0 < 0
+							temp3 = 96
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRIBUMPER_LARGE_U
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -64, -8, 64, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.ypos
+				temp0 -= player[currentPlayer].ypos
+				FlipSign(temp0)
+				if temp0 >= 0x80000
+					player[currentPlayer].yvel = 0xA00
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.xpos
+					temp0 -= player[currentPlayer].xpos
+					if temp0 >= 0x400000
+						player[currentPlayer].xvel = -0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						FlipSign(temp0)
+						if temp0 >= 0x400000
+							player[currentPlayer].xvel = 0xA0000
+							CallFunction(TriBumper_HandleBump)
+						else
+							if temp0 < 0
+								temp3 = 56
+							else
+								temp3 = 72
+							end if
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRIBUMPER_LARGE_D
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -64, -8, 64, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.ypos
+				temp0 -= player[currentPlayer].ypos
+				if temp0 >= 0x80000
+					player[currentPlayer].yvel = -0xA0000
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.xpos
+					temp0 -= player[currentPlayer].xpos
+					if temp0 >= 0x400000
+						player[currentPlayer].xvel = -0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						FlipSign(temp0)
+						if temp0 >= 0x400000
+							player[currentPlayer].xvel = 0xA0000
+							CallFunction(TriBumper_HandleBump)
+						else
+							if temp0 < 0
+								temp3 = 200
+							else
+								temp3 = 184
+							end if
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRIBUMPER_LARGE_L
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -64, 8, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.xpos
+				temp0 -= player[currentPlayer].xpos
+				FlipSign(temp0)
+				if temp0 >= 0x80000
+					player[currentPlayer].xvel = 0xA0000
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.ypos
+					temp0 -= player[currentPlayer].ypos
+					if temp0 >= 0x400000
+						player[currentPlayer].yvel = -0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						FlipSign(temp0)
+						if temp0 >= 0x400000
+							player[currentPlayer].yvel = 0xA0000
+							CallFunction(TriBumper_HandleBump)
+						else
+							if temp0 < 0
+								temp3 = 8
+							else
+								temp3 = 248
+							end if
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case TRIBUMPER_LARGE_R
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -64, 8, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				temp0 = object.xpos
+				temp0 -= player[currentPlayer].xpos
+				if temp0 >= 0x80000
+					player[currentPlayer].xvel = 0xA0000
+					CallFunction(TriBumper_HandleBump)
+				else
+					temp0 = object.ypos
+					temp0 -= player[currentPlayer].ypos
+					if temp0 >= 0x400000
+						player[currentPlayer].yvel = -0xA0000
+						CallFunction(TriBumper_HandleBump)
+					else
+						FlipSign(temp0)
+						if temp0 >= 0x400000
+							player[currentPlayer].yvel = 0xA0000
+							CallFunction(TriBumper_HandleBump)
+						else
+							if temp0 < 0
+								temp3 = 120
+							else
+								temp3 = 136
+							end if
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+		
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult %= 6
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			editor.variableValue %= 6
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small (Facing Left)", TRIBUMPER_SMALL_L)
+	AddEnumVariable("Small (Facing Right)", TRIBUMPER_SMALL_R)
+	AddEnumVariable("Large (Facing Up)", TRIBUMPER_LARGE_U)
+	AddEnumVariable("Large (Facing Down)", TRIBUMPER_LARGE_D)
+	AddEnumVariable("Large (Facing Left)", TRIBUMPER_LARGE_L)
+	AddEnumVariable("Large (Facing Right)", TRIBUMPER_LARGE_R)
+end event

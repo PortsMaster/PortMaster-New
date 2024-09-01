@@ -1,0 +1,336 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Nut Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.dropPos.y
+private alias object.value1  : object.startPos.y
+private alias object.value2  : object.stoodPlayers
+private alias object.value3  : object.playerDirections
+private alias object.value4  : object.activePlayers
+private alias object.value5  : object.reachedFloor
+private alias object.value6  : object.spinTimer
+private alias object.value7  : object.spinSpeed
+private alias object.value31 : object.wrapOffset.y
+
+// States
+private alias 0 : NUT_ATTATCHED
+private alias 1 : NUT_FALLING
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.gravity : player.gravity
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Nut_DebugDraw
+reserve function Nut_DebugSpawn
+
+private function Nut_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Nut_DebugSpawn
+	CreateTempObject(TypeName[Nut], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.y 	= object.ypos
+	object[tempObjectPos].dropPos.y 		= 0x7FFF0000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.ypos
+	temp0 &= 0xFFFF0000
+
+	object.ypos += object.yvel
+	if object.yvel >= 0
+		ObjectTileCollision(CSIDE_FLOOR, 0, 12, PATH_A)
+		if checkResult == true
+			object.reachedFloor	= true
+			object.spinSpeed 	= 0
+			object.yvel 		= 0
+		end if
+	else
+		object.reachedFloor = false
+	end if
+
+	temp1 = object.ypos
+	temp1 &= 0xFFFF0000
+	temp1 -= temp0
+
+	if object.state == NUT_ATTATCHED
+		GetBit(temp6, object.propertyValue, 7)
+		if temp6 == true
+			if object.ypos > object.dropPos.y
+				object.state  		= NUT_FALLING
+				object.spinSpeed	= object.yvel
+			end if
+		end if
+
+		object.spinTimer += object.yvel
+		temp0 = object.spinTimer
+		temp0 >>= 17
+		temp0 &= 3
+		object.frame = 3
+		object.frame -= temp0
+		object.yvel = 0
+
+		temp7 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp5 = object.reachedFloor
+
+			GetBit(temp6, object.stoodPlayers, temp7)
+			if temp6 == true
+				player[currentPlayer].ypos += temp1
+			else
+				SetBit(object.activePlayers, temp7, false)
+			end if
+
+			if object.reachedFloor == true
+				if player[currentPlayer].xvel < 0
+					SetBit(object.activePlayers, temp7, false)
+				else
+					temp5 = false
+				end if
+			end if
+
+			SetBit(object.stoodPlayers, temp7, false)
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -12, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			switch checkResult
+			case COL_TOP
+				SetBit(object.stoodPlayers, temp7, true)
+				if temp6 == false
+					GetBit(temp6, object.activePlayers, temp7)
+					temp6 |= temp5
+					if temp6 == false
+						temp2 = player[currentPlayer].xpos
+						temp2 &= 0xFFFF0000
+						temp3 = object.xpos
+						temp3 &= 0xFFFF0000
+
+						if temp2 == temp3
+							SetBit(object.activePlayers, temp7, true)
+							object.priority = PRIORITY_ACTIVE
+						else
+							if player[currentPlayer].xpos > object.xpos
+								SetBit(object.playerDirections, temp7, 0)
+							else
+								SetBit(object.playerDirections, temp7, 1)
+							end if
+						end if
+					end if
+				else
+					GetBit(temp6, object.activePlayers, temp7)
+					if temp6 == false
+						if temp5 == true
+							if player[currentPlayer].xvel > 0
+								SetBit(object.playerDirections, temp7, 0)
+							else
+								SetBit(object.playerDirections, temp7, 1)
+							end if
+						else
+							GetBit(temp6, object.playerDirections, temp7)
+							if temp6 == 0
+								if player[currentPlayer].xpos < object.xpos
+									SetBit(object.activePlayers, temp7, true)
+									player[currentPlayer].xpos = object.xpos
+									object.priority = PRIORITY_ACTIVE
+								end if
+							else
+								if player[currentPlayer].xpos > object.xpos
+									SetBit(object.activePlayers, temp7, true)
+									player[currentPlayer].xpos = object.xpos
+									object.priority = PRIORITY_ACTIVE
+								end if
+							end if
+						end if
+					else
+						player[currentPlayer].xpos = object.xpos
+						object.yvel += player[currentPlayer].xvel
+					end if
+				end if
+				break
+
+			case COL_BOTTOM
+				if player[currentPlayer].gravity == 0
+					CallFunction(Player_Kill)
+				end if
+				break
+			end switch
+
+			temp7++
+		next
+
+		FlipSign(object.yvel)
+		object.yvel >>= 3
+	else
+		object.yvel += 0x3800
+
+		object.spinTimer += object.spinSpeed
+		temp0 = object.spinTimer
+		temp0 >>= 17
+		temp0 &= 3
+		object.frame = 3
+		object.frame -= temp0
+
+		temp7 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			GetBit(temp6, object.stoodPlayers, temp7)
+			if temp6 == true
+				player[currentPlayer].ypos += temp1
+			end if
+
+			SetBit(object.stoodPlayers, temp7, false)
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -12, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				SetBit(object.stoodPlayers, temp7, true)
+			end if
+
+			temp7++
+		next
+	end if
+
+	if object.outOfBounds == true
+		temp1 = object.ypos
+		object.ypos = object.startPos.y
+		object.ypos += object.wrapOffset.y
+
+		if object.outOfBounds == true
+			object.stoodPlayers 	= 0
+			object.playerDirections = 0
+			object.activePlayers	= 0
+			object.reachedFloor		= false
+			object.spinTimer 		= 0
+			object.spinSpeed 		= 0
+			object.state 			= NUT_ATTATCHED
+			object.priority 		= PRIORITY_BOUNDS
+		else
+			object.ypos = temp1
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 130, 156)
+	SpriteFrame(-32, -12, 64, 24, 130, 181)
+	SpriteFrame(-32, -12, 64, 24, 130, 206)
+	SpriteFrame(-32, -12, 64, 24, 130, 231)
+
+	foreach (TypeName[Nut], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		
+		object[arrayPos0].dropPos.y = object[arrayPos0].propertyValue
+		object[arrayPos0].dropPos.y &= 0x7F
+		object[arrayPos0].dropPos.y <<= 19
+		object[arrayPos0].dropPos.y += object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Nut], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Nut_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Nut_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // useDistance
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+			
+		case 1 // distance
+			checkResult = object.propertyValue
+			checkResult &= 0x7F
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // useDistance
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+			
+		case 1 // distance
+			editor.variableValue &= 0x7F
+			object.propertyValue &= 0x80
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		GetBit(checkResult, object.propertyValue, 7)
+		if checkResult == true
+			object.dropPos.y = object.propertyValue
+			object.dropPos.y &= 0x7F
+			object.dropPos.y <<= 19
+			object.dropPos.y += object.ypos
+
+			object.inkEffect = INK_BLEND
+			DrawSpriteFX(0, FX_INK, object.xpos, object.dropPos.y)
+			object.inkEffect = INK_NONE
+
+			DrawArrow(object.xpos, object.ypos, object.xpos, object.dropPos.y, 0x00, 0xFF, 0x00)
+		end if
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 130, 156)
+
+	AddEditorVariable("allowDrop")
+	SetActiveVariable("allowDrop")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("dropDistance")
+	SetActiveVariable("dropDistance")
+end event

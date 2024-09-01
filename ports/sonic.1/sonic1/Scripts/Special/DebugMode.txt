@@ -1,0 +1,524 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Debug Mode Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value10 : object.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function DebugMode_PlaceBlock
+reserve function DebugMode_DummySpawn
+reserve function DebugMode_DummyDraw
+reserve function DebugMode_RemoveObject
+reserve function DebugMode_RemoveIconDraw
+reserve function DebugMode_LoadLayout
+reserve function DebugMode_LoadIconDraw
+reserve function DebugMode_SaveLayout
+reserve function DebugMode_SaveIconDraw
+reserve function DebugMode_ClrAllObjects
+reserve function DebugMode_ClrIconDraw
+reserve function DebugMode_FindBlockPos
+
+
+// ========================
+// Static Values
+// ========================
+
+public value DebugMode_ObjCount = 0
+
+
+// ========================
+// Tables
+// ========================
+
+// Three tables, to hold info about an object
+// If an object is added to one table, it should be added to all the other three too
+
+// Holds all the object types
+public table DebugMode_TypeTable[64]
+
+// Holds all the object Debug Draw functions
+public table DebugMode_DrawTable[64]
+
+// Holds all the object Debug Spawn functions
+public table DebugMode_SpawnTable[64]
+
+
+// ========================
+// Function Definitions
+// ========================
+
+// Shared by several functions to place (or remove) an object
+public function DebugMode_PlaceBlock
+	temp0 = 0
+
+	// Loop through all objects
+	arrayPos0 = 0x20
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[Blank Object]
+			temp0 = arrayPos0
+		end if
+
+		if temp6 == object[arrayPos0].xpos
+			if temp7 == object[arrayPos0].ypos
+				temp0 = arrayPos0
+				arrayPos0 = 0x420
+			end if
+		end if
+		arrayPos0++
+	loop
+
+	if temp0 != 0
+		arrayPos0 = temp0
+		ResetObjectEntity(temp0, temp5, temp4, temp6, temp7)
+	else
+		CreateTempObject(temp5, temp4, temp6, temp7)
+		arrayPos0 = object[tempObjectPos].entityPos
+	end if
+end function
+
+
+public function DebugMode_DummySpawn
+	temp0 = 0
+end function
+
+
+public function DebugMode_DummyDraw
+	DrawSprite(0)
+end function
+
+
+public function DebugMode_RemoveObject
+	// Somewhat confusing, what it does here is places a blank object, which deletes the obj "under" it
+	temp5 = TypeName[Blank Object]
+	temp4 = 0
+	CallFunction(DebugMode_PlaceBlock)
+end function
+
+
+public function DebugMode_RemoveIconDraw
+	DrawSprite(2)
+end function
+
+
+public function DebugMode_LoadLayout
+	ReadSaveRAM()
+	
+	arrayPos0 = 32
+	arrayPos1 = 0x800
+	while arrayPos0 < 0x420
+		temp0 = saveRAM[arrayPos1]
+		temp0 &= 255
+		temp1 = saveRAM[arrayPos1]
+		temp1 >>= 8
+		arrayPos1++
+		temp2 = saveRAM[arrayPos1]
+		temp2 &= 0x7FF
+		temp2 *= 0x180000
+		temp2 += 0xC0000
+		temp3 = saveRAM[arrayPos1]
+		temp3 >>= 11
+		temp3 *= 0x180000
+		temp3 += 0xC0000
+		ResetObjectEntity(arrayPos0, temp0, temp1, temp2, temp3)
+		arrayPos1++
+		arrayPos0++
+	loop
+end function
+
+
+public function DebugMode_LoadIconDraw
+	DrawSprite(3)
+end function
+
+
+public function DebugMode_SaveLayout
+	arrayPos0 = 32
+	arrayPos1 = 0x800
+	while arrayPos0 < 0x420
+		temp2 = object[arrayPos0].propertyValue
+		temp2 <<= 8
+		temp2 += object[arrayPos0].type
+		saveRAM[arrayPos1] = temp2
+		arrayPos1++
+		temp0 = object[arrayPos0].xpos
+		temp0 /= 0x180000
+		temp1 = object[arrayPos0].ypos
+		temp1 /= 0x180000
+		if temp0 < 0
+			temp0 -= 0x180000
+		end if
+		if temp1 < 0
+			temp1 -= 0x180000
+		end if
+		temp1 <<= 11
+		temp0 += temp1
+		saveRAM[arrayPos1] = temp0
+		arrayPos1++
+		arrayPos0++
+	loop
+	
+	WriteSaveRAM()
+end function
+
+
+public function DebugMode_SaveIconDraw
+	DrawSprite(4)
+end function
+
+
+public function DebugMode_ClrAllObjects
+	temp0 = 0
+
+	// Loop through all objects and delete them
+	arrayPos0 = 0x20
+	while arrayPos0 < 0x420
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		arrayPos0++
+	loop
+end function
+
+
+public function DebugMode_ClrIconDraw
+	DrawSprite(5)
+end function
+
+
+public function DebugMode_FindBlockPos
+	// Called by most Special Stage objects, in order to find their position based on the stage's current rotation
+	// Along with finding position, it also finds the block's angle
+	
+	temp2 = temp6
+	temp2 -= object[0].xpos
+	temp2 >>= 8
+	
+	temp3 = temp7
+	temp3 -= object[0].ypos
+	temp3 >>= 8
+	
+	Sin(temp4, Player_stageRotation)
+	
+	temp4 *= temp3
+	Cos(temp5, Player_stageRotation)
+	
+	temp5 *= temp2
+	temp0 = temp4
+	temp0 += temp5
+	temp0 >>= 1
+	temp0 += object[0].xpos
+	Cos(temp4, Player_stageRotation)
+	
+	temp4 *= temp3
+	Sin(temp5, Player_stageRotation)
+	
+	temp5 *= temp2
+	temp1 = temp4
+	temp1 -= temp5
+	temp1 >>= 1
+	temp1 += object[0].ypos
+	
+	object.rotation = 512
+	object.rotation -= Player_stageRotation
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+#platform: USE_STANDALONE
+	if options.touchControls == true
+		if object.controlMode == CONTROLMODE_P1
+			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
+
+			if checkResult > -1
+				arrayPos0 = checkResult
+				temp0 = touchscreen[arrayPos0].xpos
+				temp0 -= saveRAM[39]
+				temp1 = touchscreen[arrayPos0].ypos
+				temp1 -= saveRAM[40]
+
+				ATan2(temp2, temp0, temp1)
+				temp2 += 32
+				temp2 &= 255
+				temp2 >>= 6
+
+				switch temp2
+				case 0
+					keyDown[0].right = true
+					break
+
+				case 1
+					keyDown[0].down = true
+					break
+
+				case 2
+					keyDown[0].left = true
+					break
+
+				case 3
+					keyDown[0].up = true
+					break
+				end switch
+			end if
+
+			temp0 = screen.xcenter
+			temp0 -= 48
+
+			temp1 = temp0
+			temp1 += 96
+
+			CheckTouchRect(temp0, 0, temp1, 56)
+
+			if checkResult > -1
+				arrayPos0 = checkResult
+
+				if touchscreen[arrayPos0].xpos > screen.xcenter
+					if touchJump == false
+						object.currentSelection++
+						if object.currentSelection >= DebugMode_ObjCount
+							object.currentSelection = 0
+						end if
+					end if
+
+					touchJump = true
+				else
+					if touchJump == false
+						object.currentSelection--
+						if object.currentSelection < 0
+							object.currentSelection += DebugMode_ObjCount
+						end if
+					end if
+
+					touchJump = true
+				end if
+			else
+				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
+
+				switch checkResult
+				case -1
+					touchJump = false
+					break
+
+				case 0
+					keyDown[0].buttonC = true
+					if touchJump == 0
+						keyPress[0].buttonC |= keyDown[0].buttonC
+					end if
+
+					touchJump = keyDown[0].buttonC
+					break
+				end switch
+			end if
+
+			CheckTouchRect(0, 0, 112, 56)
+
+			if checkResult > -1
+				keyDown[0].buttonB = true
+			end if
+
+			if touchDebug == false
+				keyPress[0].buttonB |= keyDown[0].buttonB
+			end if
+
+			touchDebug = keyDown[0].buttonB
+			temp0 = screen.xsize
+			temp0 -= 88
+
+			CheckTouchRect(temp0, 0, screen.xsize, 40)
+
+			if checkResult > -1
+				PlaySfx(SfxName[Menu Back], false)
+				engine.state = 5
+			end if
+
+			if keyPress[0].start == true
+				PlaySfx(SfxName[Menu Back], false)
+				engine.state = 5
+			end if
+		end if
+	end if
+#endplatform
+
+	temp0 = false
+	if keyDown[0].left == true
+		object.xpos -= object.yvel
+		temp0 = true
+	end if
+
+	if keyDown[0].right == true
+		object.xpos += object.yvel
+		temp0 = true
+	end if
+
+	if keyDown[0].up == true
+		object.ypos -= object.yvel
+		temp0 = true
+	end if
+
+	if keyDown[0].down == true
+		object.ypos += object.yvel
+		temp0 = true
+	end if
+
+	if temp0 == true
+		object.yvel += 0xC00
+		if object.yvel > 0x100000
+			object.yvel = 0x100000
+		end if
+	else
+		object.yvel = 0
+	end if
+
+	if keyPress[0].buttonB == true
+		object.type = TypeName[Player Object]
+		if stage.playerListPos == PLAYER_TAILS_A
+			object[+1].type = TypeName[Tails Object]
+		end if
+		object.speed = 0
+		object.xvel = 0
+		object.yvel = 0
+		object.frame = 0
+		object.controlMode = CONTROLMODE_P1
+		object.interaction = true
+		Player_rotateSpeed = 0
+		Player_rotateDir = 0
+	else
+		// Sonic Team forgot you can spawn 1UPs in special stages, so there's no checks for them in Origins, farm coins to your heart's content!
+		
+		if keyPress[0].buttonA == true
+			object.currentSelection++
+			if object.currentSelection >= DebugMode_ObjCount
+				object.currentSelection = 0
+			end if
+		end if
+		
+		if keyDown[0].buttonA == true
+			if keyPress[0].buttonC == true
+				object.currentSelection--
+				if object.currentSelection < 0
+					object.currentSelection += DebugMode_ObjCount
+				end if
+			end if
+		else
+			if keyPress[0].buttonC == true
+				GetTableValue(temp0, object.currentSelection, DebugMode_SpawnTable)
+				CallFunction(temp0)
+				object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	temp6 = object.xpos
+	temp7 = object.ypos
+	if temp6 < 0
+		temp6 -= 0x180000
+	end if
+	if temp7 < 0
+		temp7 -= 0x180000
+	end if
+	temp6 /= 0x180000
+	temp7 /= 0x180000
+	temp6 *= 0x180000
+	temp7 *= 0x180000
+	temp6 += 0xC0000
+	temp7 += 0xC0000
+	CallFunction(DebugMode_FindBlockPos)
+	DrawSpriteXY(1, temp0, temp1)
+
+	// Temporarily switch to the selected object in order to draw the preview
+	GetTableValue(object.type, object.currentSelection, DebugMode_TypeTable)
+	GetTableValue(temp0, object.currentSelection, DebugMode_DrawTable)
+	CallFunction(temp0)
+
+	// Switch back
+	object.type = TypeName[Debug Mode]
+
+	// +/-
+	DrawSpriteScreenXY(6, screen.xcenter, 16)
+	DrawSpriteScreenXY(7, screen.xcenter, 16)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Editor sprite frames
+	SpriteFrame(-12, -12, 24, 24, 251, 176) // life icon - #0
+	SpriteFrame(-12, -12, 24, 24, 131, 454) // selection box - #1
+	SpriteFrame(-12, -12, 24, 24, 131, 479) // delete icon - #2
+	SpriteFrame(-12, -12, 24, 24, 455, 486) // load icon - #3
+	SpriteFrame(-12, -12, 24, 24, 480, 486) // save icon - #4
+	SpriteFrame(-12, -12, 24, 24, 308, 376) // clear icon - #5
+	SpriteFrame(-16, 0, 8, 8, 339, 390) 	// - icon - #6
+	SpriteFrame(8, 0, 8, 8, 348, 390) 		// + icon - #7
+
+	DebugMode_ObjCount = 0
+
+	// Fill the list up with dummy entries
+	temp0 = 0
+	while temp0 < 64
+		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
+		SetTableValue(DebugMode_DummyDraw, temp0, DebugMode_DrawTable)
+		SetTableValue(DebugMode_DummySpawn, temp0, DebugMode_SpawnTable)
+		temp0++
+	loop
+
+	// Add the object deleter as an entry
+	SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
+	SetTableValue(DebugMode_RemoveIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DebugMode_RemoveObject, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+
+	// Is the player in the custom special stage bulder scene?
+	if stage.actNum == 8
+		// Load saved stage
+		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
+		SetTableValue(DebugMode_LoadIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_LoadLayout, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+
+		// Save current stage
+		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
+		SetTableValue(DebugMode_SaveIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_SaveLayout, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+
+		// Clear current stage
+		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
+		SetTableValue(DebugMode_ClrIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_ClrAllObjects, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

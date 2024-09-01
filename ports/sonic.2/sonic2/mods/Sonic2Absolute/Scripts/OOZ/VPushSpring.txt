@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: V Push Spring Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 50 : TYPE_VPUSHSPRING
+
+// Function declarations
+reserve function VPushSpring_DebugDraw
+reserve function VPushSpring_DebugSpawn
+
+// Static Values
+private value VPushSpring_value35 = 0;
+
+// Tables
+
+function VPushSpring_DebugDraw
+	temp0 = object[0].value17
+	temp0 -= VPushSpring_value35
+	DrawSprite(0)
+	if temp0 == 1
+		temp0 = object.ypos
+		temp0 -= 0x240000
+		DrawSpriteXY(5, object.xpos, temp0)
+	end if
+end function
+
+
+function VPushSpring_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= VPushSpring_value35
+	CreateTempObject(TypeName[V Push Spring], 0, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+	if temp0 == 1
+		object[tempObjectPos].state = 3
+		object[tempObjectPos].value1 = 0x120000
+	end if
+end function
+
+
+event ObjectMain
+	temp0 = object.value1
+	temp0 >>= 16
+	temp0 -= 20
+	switch object.state
+	case 0
+		object.value2 = 0
+		if object.value3 == 1
+			object.state = 1
+		end if
+		break
+	case 1
+		if object.value1 < 0x120000
+			object.value1 += 0x20000
+			object.value2 = 0x20000
+		else
+			object.state = 2
+			object.value2 = 0
+		end if
+		break
+	case 2
+		if object.value1 > 0
+			object.value1 -= 0x20000
+			object.value2 = -0x20000
+		else
+			object.state = 0
+			object.value2 = 0
+		end if
+		break
+	case 3
+		if object[+1].value0 == 1
+			if object.propertyValue == 0
+				object.state = 2
+			end if
+			PlaySfx(SfxName[Spring], 0)
+			temp1 = object.value1
+			temp1 += object.ypos
+			temp1 -= 0x240000
+			CreateTempObject(TypeName[Checkered Ball], 0, object.xpos, temp1)
+			object[tempObjectPos].yvel = -0x60000
+			object[tempObjectPos].gravity = GRAVITY_AIR
+		end if
+		break
+	end switch
+	object.value3 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -16, temp0, 16, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object.value3 |= 1
+			object[currentPlayer].ypos += object.value2
+			if object.state == 2
+				if object.value1 == 0x120000
+					object[currentPlayer].state = PlayerObject_HandleAir
+					object[currentPlayer].animation = ANI_BOUNCING
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object[currentPlayer].yvel = -0xA0000
+					object[currentPlayer].yvel -= object[currentPlayer].value25
+					object[currentPlayer].value1 = 0
+					PlaySfx(SfxName[Spring], 0)
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.value1 == 0
+		DrawSprite(0)
+		temp0 = object.ypos
+		temp0 -= 0x240000
+		if object.state == 3
+			temp0 -= 16
+			DrawSpriteXY(5, object.xpos, temp0)
+		end if
+	else
+		temp0 = object.value1
+		temp0 += object.ypos
+		DrawSpriteXY(1, object.xpos, temp0)
+		if object.state == 3
+			temp0 -= 0x240000
+			DrawSpriteXY(5, object.xpos, temp0)
+			object.inkEffect = INK_ADD
+			object.alpha = 160
+			DrawSpriteFX(6, FX_INK, object.xpos, temp0)
+		end if
+		temp0 = object.value1
+		temp0 *= 2
+		temp0 /= 3
+		temp0 += object.ypos
+		DrawSpriteXY(2, object.xpos, temp0)
+		temp0 = object.value1
+		temp0 /= 3
+		temp0 += object.ypos
+		DrawSpriteXY(3, object.xpos, temp0)
+		DrawSprite(4)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-16, -20, 32, 40, 239, 140)
+	SpriteFrame(-16, -20, 32, 16, 239, 140)
+	SpriteFrame(-16, -4, 32, 8, 239, 156)
+	SpriteFrame(-16, 4, 32, 8, 239, 164)
+	SpriteFrame(-16, 12, 32, 8, 239, 172)
+	SpriteFrame(-16, -16, 32, 32, 429, 190)
+	SpriteFrame(-16, -16, 32, 32, 396, 190)
+	temp0 = 0
+	VPushSpring_value35 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[V Push Spring], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(VPushSpring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(VPushSpring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+	foreach (TypeName[V Push Spring], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = 3
+			object[arrayPos0].value1 = 0x120000
+		end if
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

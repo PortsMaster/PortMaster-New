@@ -1,0 +1,304 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Credits Control Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+private alias 0 : CREDITSCONTROL_INIT			// Initialization state
+private alias 1 : CREDITSCONTROL_FADEIN			// Fade in for when showing text
+private alias 2 : CREDITSCONTROL_DISPLAY		// Pausing to let the player read the credit text
+private alias 3 : CREDITSCONTROL_FADEOUT		// Fade out for when fading out of credits text
+private alias 4 : CREDITSCONTROL_FADEIN2		// Speical fade in for when going to the angry Eggman screen
+private alias 5 : CREDITSCONTROL_END_PAUSE		// Pause for when on the angry Eggman screen
+private alias 6 : CREDITSCONTROL_FADEOUT_FINAL	// Fading out of the angry Eggman screen
+
+// Priority Aliases
+private alias 1 : PRIORITY_ACTIVE
+
+// Presentation Stage Aliases
+private alias  0 : STAGE_P_TITLE
+
+// Regular Stage Aliases
+private alias  0 : STAGE_R_GHZ1
+private alias  4 : STAGE_R_MZ2
+private alias  8 : STAGE_R_SYZ3
+private alias 11 : STAGE_R_LZ3
+private alias 14 : STAGE_R_SLZ3
+private alias 15 : STAGE_R_SBZ1
+private alias 16 : STAGE_R_SBZ2
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CREDITSCONTROL_INIT
+		// Start the fade effect
+		object.timer = 320
+		SetScreenFade(0, 0, 0, object.timer)
+
+		// Go to the fade-in state
+		object.state++
+
+		// Only start the music on the first screen
+		// (This object is refreshed between gameplay demos so this has to be in an if statement)
+		if credits.screen == 0
+			PlayMusic(0)
+		end if
+		break
+
+	case CREDITSCONTROL_FADEIN
+		if object.timer > 0
+			object.timer -= 8
+		else
+			object.alpha = 128
+			object.state++
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	case CREDITSCONTROL_DISPLAY
+		object.timer++
+
+		// Pause for 136 frames
+		if object.timer == 136
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CREDITSCONTROL_FADEOUT
+		if object.timer < 256
+			object.timer += 8
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			// Start the demo
+
+			// Object gets cleared in a few frames anyway, but might as well
+			object.state = CREDITSCONTROL_INIT
+
+			// Increment the scredits.screen value
+			// Note that this makes 1 the first value, with 0 coming last
+			credits.screen++
+			credits.screen %= 9
+
+			// Move the camera to the curresponding position
+			// Another note: The text isn't actual text being drawn,
+			//   instead each screen is built into the level tiles/chunks
+			//   Because of this, moving to the next credits screen means moving the camera down
+			temp0 = credits.screen
+			temp0 <<= 8
+			screen.yoffset = temp0
+
+			// Turn on attract mode
+			options.attractMode = true
+
+			// Load the appropriate demo stage
+			switch credits.screen
+			case 0
+				// Final demo (check out note above, demos go 1-8 and then end at 0)
+
+				// Pay a visit to angry Eggman
+				object.state = CREDITSCONTROL_FADEIN2
+
+				// Determine whether the ending is good or not based on emerald count
+				// Of course, change between 6 and 7 emeralds depending on emerald count setting
+				if options.superStates == false
+					if specialStage.emeralds >= 0x3F // Six 1's in binary
+						screen.yoffset = 0xA00
+					else
+						screen.yoffset = 0x900
+					end if
+				else
+					if specialStage.emeralds >= 0x7F // Seven 1's in binary
+						screen.yoffset = 0xA00
+					else
+						screen.yoffset = 0x900
+					end if
+				end if
+				break
+
+			case 1
+			case 8
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_GHZ1
+				LoadStage()
+				break
+
+			case 2
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_MZ2
+				LoadStage()
+				break
+
+			case 3
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_SYZ3
+				LoadStage()
+				break
+
+			case 4
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_LZ3
+				LoadStage()
+				break
+
+			case 5
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_SLZ3
+				LoadStage()
+				break
+
+			case 6
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_SBZ1
+				LoadStage()
+				break
+
+			case 7
+				stage.activeList = REGULAR_STAGE
+				stage.listPos = STAGE_R_SBZ2
+				LoadStage()
+				break
+
+			end switch
+
+			// Set the screen to black
+			SetScreenFade(0, 0, 0, 255)
+		end if
+		break
+
+	case CREDITSCONTROL_FADEIN2
+		// Fade-in for when going to ending screen
+		if object.timer > 0
+			object.timer -= 8
+		else
+			object.alpha = 128
+			object.state++
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	case CREDITSCONTROL_END_PAUSE
+		object.timer++
+
+		// Advance time is up
+		if object.timer == 1200
+			object.timer = 0
+			object.state++
+		end if
+
+		// Advance if the player wants to skip the cutscene, too
+		if keyPress[0].start == true
+			object.timer = 0
+			object.state = CREDITSCONTROL_FADEOUT_FINAL
+		end if
+
+		if keyPress[0].buttonA == true
+			object.timer = 0
+			object.state = CREDITSCONTROL_FADEOUT_FINAL
+		end if
+
+		if keyPress[0].buttonB == true
+			object.timer = 0
+			object.state = CREDITSCONTROL_FADEOUT_FINAL
+		end if
+
+		if keyPress[0].buttonC == true
+			object.timer = 0
+			object.state = CREDITSCONTROL_FADEOUT_FINAL
+		end if
+
+#platform: MOBILE
+		if object.timer > 60
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			
+			if checkResult > -1
+				object.timer = 0
+				object.state = CREDITSCONTROL_FADEOUT_FINAL
+			end if
+		end if
+#endplatform
+		break
+		
+	case CREDITSCONTROL_FADEOUT_FINAL
+		// Final fade-out before going back
+		if object.timer < 256
+			object.timer += 8
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			// Go back to the menu now
+			
+			stage.activeList = PRESENTATION_STAGE
+			stage.listPos = STAGE_P_TITLE
+			StopMusic()
+			
+			options.attractMode = false
+			
+#platform: USE_STANDALONE
+			engine.state = 7
+#endplatform
+#platform: USE_ORIGINS
+			engine.state = 8
+#endplatform
+			SetScreenFade(0, 0, 0, 255)
+#platform: USE_ORIGINS
+			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_MOVIE, true)
+#endplatform
+		end if
+		break
+
+	end switch
+	
+	// Center the text around the screen
+	temp0 = screen.xcenter
+	FlipSign(temp0)
+	temp0 += 256
+	screen.xoffset = temp0
+end event
+
+
+event ObjectStartup
+	SetMusicTrack("Credits.ogg", 0, false)
+	
+	// Hide touch controls
+	options.touchControls = false
+	
+	// Position the screen based on the current credits screen
+	// -> This scene is entirely refreshed between demo playbacks, so we can't look at where the camera was previously
+	temp0 = credits.screen
+	temp0 <<= 8
+	screen.yoffset = temp0
+	
+	foreach (TypeName[Credits Control], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,671 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// Using LZEggman as a prefix here because there's like 12 "Eggman" objects in the game so its less confusing this way
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.originPos.x
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.defeated
+private alias object.value3  : object.oscillateAngle.y
+private alias object.value4  : object.oscillateAngle.x
+private alias object.value5  : object.timer
+private alias object.value6  : object.flameAnim
+private alias object.value7  : object.flameAnimTimer
+private alias object.value8  : object.health
+private alias object.value9  : object.invincibilityTimer
+private alias object.value10 : object.gotHit
+
+// Eggman States
+private alias 0 : LZEGGMAN_AWAITPLAYER
+private alias 1 : LZEGGMAN_NODE1
+private alias 2 : LZEGGMAN_NODE2
+private alias 3 : LZEGGMAN_NODE3
+private alias 4 : LZEGGMAN_NODE4
+private alias 5 : LZEGGMAN_LASTNODE
+private alias 6 : LZEGGMAN_REACHEDEND
+private alias 7 : LZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : LZEGGANI_INVISIBLE
+private alias 1 : LZEGGANI_IDLE
+private alias 2 : LZEGGANI_LAUGH
+private alias 3 : LZEGGANI_HIT
+private alias 4 : LZEGGANI_DEFEATED
+private alias 5 : LZEGGANI_TOASTED
+private alias 6 : LZEGGANI_PANIC
+
+// Flame Animations
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
+private alias 2 : FLAME_EXPLODE
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Achievement Aliases
+private alias 6 : ACHIEVEMENT_FLAWLESSPURSUIT
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LZEggman_Oscillate
+reserve function LZEggman_HandleMovement
+
+
+// ========================
+// Tables
+// ========================
+
+private table LZEggman_nodePositionTable[10]
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function LZEggman_Oscillate
+	Sin256(temp0, object.oscillateAngle.y)
+	temp0 <<= 10
+	object.ypos += temp0
+
+	object.oscillateAngle.y += 2
+	object.oscillateAngle.y &= 0xFF
+end function
+
+
+private function LZEggman_HandleMovement
+	object.originPos.x += object.xvel
+	object.originPos.y += object.yvel
+
+	object.xpos = object.originPos.x
+	object.ypos = object.originPos.y
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+#platform: USE_ORIGINS
+	// cool stuff
+	CallNativeFunction2(NotifyCallback, NOTIFY_DEBUGPRINT, object.state)
+#endplatform
+	
+	switch object.state
+	case LZEGGMAN_AWAITPLAYER
+		GetTableValue(temp0, 0, LZEggman_nodePositionTable)
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].xpos >= temp0
+				object.xvel = 0x6000
+				object.yvel = -0x18000
+				object.originPos.y = object.ypos
+				object.oscillateAngle.y = 0
+				object.state++
+				object.priority = PRIORITY_ACTIVE
+				ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+				object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			end if
+		next
+		CallFunction(LZEggman_HandleMovement)
+
+		if object.state == LZEGGMAN_AWAITPLAYER
+			CallFunction(LZEggman_Oscillate)
+		end if
+		break
+
+	case LZEGGMAN_NODE1
+		temp1 = -2
+
+		GetTableValue(temp0, 1, LZEggman_nodePositionTable)
+		if object.originPos.x >= temp0
+			object.originPos.x = temp0
+			object.xvel = 0
+			temp1++
+		end if
+
+		GetTableValue(temp0, 2, LZEggman_nodePositionTable)
+		if object.originPos.y <= temp0
+			object.originPos.y = temp0
+			object.yvel = 0
+			temp1++
+		end if
+
+		if temp1 == 0
+			object.xvel = 0x14000
+			object.yvel = -0x20000
+			object.state++
+		end if
+		CallFunction(LZEggman_HandleMovement)
+		break
+
+	case LZEGGMAN_NODE2
+		temp1 = -2
+
+		GetTableValue(temp0, 3, LZEggman_nodePositionTable)
+		if object.originPos.x >= temp0
+			object.originPos.x = temp0
+			object.xvel = 0
+			temp1++
+		end if
+
+		GetTableValue(temp0, 4, LZEggman_nodePositionTable)
+		if object.originPos.y <= temp0
+			object.originPos.y = temp0
+			object.yvel = 0
+			temp1++
+		end if
+
+		if temp1 == 0
+			object.yvel = -0x18000
+			object.state++
+		end if
+
+		CallFunction(LZEggman_HandleMovement)
+		break
+
+	case LZEGGMAN_NODE3
+		GetTableValue(temp0, 5, LZEggman_nodePositionTable)
+		if object.originPos.y <= temp0
+			object.originPos.y = temp0
+			if object.defeated == false
+				object.xvel = 0x14000
+				object.yvel--
+			else
+				object.xvel = 0x28000
+				object.yvel--
+			end if
+			object.direction = FLIP_X
+			object.originPos.x = object.xpos
+			object.state++
+			CallFunction(LZEggman_HandleMovement)
+		else
+			object.oscillateAngle.x += 2
+			object.oscillateAngle.x &= 0xFF
+			Cos256(temp0, object.oscillateAngle.x)
+			if temp0 > 0
+				object.direction = FLIP_X
+			else
+				object.direction = FLIP_NONE
+			end if
+			Sin256(object.xpos, object.oscillateAngle.x)
+			object.xpos <<= 12
+			object.xpos += object.originPos.x
+
+			temp0 = object.yvel
+			temp1 = 0x7FFFFFFF
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if player[currentPlayer].ypos < temp1
+					temp1 = player[currentPlayer].ypos
+				end if
+			next
+
+			temp1 -= object.originPos.y
+			if temp1 >= 0
+				temp1 -= 0x480000
+				if temp1 >= 0
+					temp0 >>= 1
+					temp1 -= 0x280000
+					if temp1 >= 0
+						temp0 >>= 1
+						temp1 -= 0x280000
+						if temp1 >= 0
+							temp0 = 0
+						end if
+					end if
+				end if
+			end if
+
+			if object.defeated == true
+				temp0 <<= 1
+			end if
+
+			if temp0 == 0
+				object.ypos = object.originPos.y
+				CallFunction(LZEggman_Oscillate)
+			else
+				object.originPos.y = object.ypos
+				object.oscillateAngle.y = 0
+				object.originPos.y += temp0
+				object.ypos = object.originPos.y
+			end if
+		end if
+		break
+
+	case LZEGGMAN_NODE4
+		temp1 = -2
+
+		GetTableValue(temp0, 6, LZEggman_nodePositionTable)
+		if object.originPos.x >= temp0
+			object.originPos.x = temp0
+			object.xvel = 0
+			temp1++
+		end if
+
+		GetTableValue(temp0, 7, LZEggman_nodePositionTable)
+		if object.originPos.y <= temp0
+			object.originPos.y = temp0
+			object.yvel = 0
+			temp1++
+		end if
+
+		if temp1 == 0
+			if object.defeated == false
+				object.direction = FLIP_NONE
+			end if
+			object.oscillateAngle.y = 0
+			object.state++
+		end if
+
+		CallFunction(LZEggman_HandleMovement)
+		break
+
+	case LZEGGMAN_LASTNODE
+		temp2 = 0
+		if object.defeated == false
+			// Check if player excaped to the top
+			GetTableValue(temp0, 8, LZEggman_nodePositionTable)
+			GetTableValue(temp1, 9, LZEggman_nodePositionTable)
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if player[currentPlayer].xpos >= temp0
+					if player[currentPlayer].ypos <= temp1
+						temp2 = true
+						object.timer = 50
+						object.animation = LZEGGANI_DEFEATED
+						object.animationTimer = 32
+					end if
+				end if
+			next
+		else
+			temp2 = true
+			object.timer = 1
+		end if
+
+		if temp2 == true
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			object.state++
+		end if
+
+		CallFunction(LZEggman_HandleMovement)
+		CallFunction(LZEggman_Oscillate)
+		break
+
+	case LZEGGMAN_REACHEDEND
+		object.timer--
+		if object.timer == 0
+			object.timer = 0
+			object.xvel = 0x40000
+			object.yvel = -0x4000
+			object.priority = PRIORITY_ACTIVE
+			object.animation = LZEGGANI_PANIC
+			object.animationTimer = 0
+			object.flameAnim = FLAME_EXPLODE
+			object.originPos.y = object.ypos
+			object.state++
+			if stage.debugMode == false
+				if object.gotHit == false
+					// Grant the "Flawless Pursuit" Achievement
+					CallNativeFunction2(SetAchievement, ACHIEVEMENT_FLAWLESSPURSUIT, 100)
+				end if
+			end if
+#platform: USE_ORIGINS
+			CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+			CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, true)
+#endplatform
+		else
+			if object.timer == 24
+				object.animation = LZEGGANI_IDLE
+				object.animationTimer = 0
+				object.direction = FLIP_X
+			end if
+		end if
+
+		CallFunction(LZEggman_HandleMovement)
+
+		if object.state == LZEGGMAN_REACHEDEND
+			CallFunction(LZEggman_Oscillate)
+		end if
+		break
+
+	case LZEGGMAN_ESCAPE
+		if object.outOfBounds == true
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+			object.defeated = false
+		else
+			CallFunction(LZEggman_HandleMovement)
+		end if
+		break
+		
+	end switch
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+		end if
+
+		// Check interaction with players
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.invincibilityTimer == 0
+
+				// CHeck if the player is in one of the following animations
+				CheckEqual(player[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+
+				if temp0 != 0
+					// Player is in one of those animations, start laughing at them
+					if object.animation != LZEGGANI_LAUGH
+						object.animation = LZEGGANI_LAUGH
+						object.animationTimer = 0
+					end if
+
+					if currentPlayer == 0
+						object.gotHit = true
+					end if
+				end if
+
+				// Check player collision
+#platform: USE_STANDALONE
+				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
+				if checkResult == true
+					
+					// See if the player should be hit or is attacking
+					CallFunction(Player_CheckHit)
+
+					if checkResult == true
+						object.health--
+						if object.health == 0
+#platform: USE_ORIGINS
+							CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+							CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+							// Final hit, increase score and start exploding
+							player.score += 1000
+							object.animation = LZEGGANI_DEFEATED
+							object.animationTimer = 0
+							object.defeated = true
+						else
+							// Simply got hit, do the hit stuff
+							object.animation = LZEGGANI_HIT
+							object.animationTimer = 0
+							object.invincibilityTimer = 32
+							PlaySfx(SfxName[Boss Hit], false)
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	if object.defeated == true
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 96)
+			temp0 -= 48
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	default
+	case LZEGGANI_INVISIBLE
+		break
+
+	case LZEGGANI_IDLE
+		temp0 = object.animationTimer
+		temp0 /= 6
+		object.animationTimer++
+		object.animationTimer %= 12
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case LZEGGANI_LAUGH
+		temp0 = object.animationTimer
+		temp0 %= 10
+		temp0 /= 5
+		temp0 += 9
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			if player[0].animation != ANI_DYING
+				object.animation = LZEGGANI_IDLE
+			end if
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case LZEGGANI_HIT
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 30
+			object.animationTimer = 0
+			object.animation = LZEGGANI_IDLE
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case LZEGGANI_DEFEATED
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case LZEGGANI_TOASTED
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case LZEGGANI_PANIC
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 += 7
+		object.animationTimer++
+		object.animationTimer %= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+
+	switch object.flameAnim
+	default
+	case FLAME_INACTIVE
+		break
+
+	case FLAME_ACTIVE
+		temp0 = object.flameAnimTimer
+		temp0 >>= 2
+		temp0 += 11
+		object.flameAnimTimer++
+		object.flameAnimTimer &= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case FLAME_EXPLODE
+		temp0 = object.flameAnimTimer
+		temp0 /= 3
+		temp0 += 11
+		object.flameAnimTimer++
+		if object.flameAnimTimer > 21
+			object.flameAnimTimer = 18
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Eggman.gif")
+
+	// Eggman frames
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 131, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 58)
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 58)
+	SpriteFrame(-28, -32, 64, 56, 131, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 115)
+	SpriteFrame(-28, -32, 64, 56, 66, 115)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+
+	// Setup values
+	foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+
+		// Set position points for changing behaviours
+		// (Think of how he turns after reaching a certain point, etc.)
+
+		// First Node (X only)
+		temp0 = -0x700000
+		temp0 += object[arrayPos0].xpos
+		SetTableValue(temp0, 0, LZEggman_nodePositionTable)
+
+		// Node 1 (X & Y)
+		temp0 = 0x380000
+		temp0 += object[arrayPos0].xpos
+		SetTableValue(temp0, 1, LZEggman_nodePositionTable)
+
+		temp0 = -0xC00000
+		temp0 += object[arrayPos0].ypos
+		SetTableValue(temp0, 2, LZEggman_nodePositionTable)
+
+		// Node 2 (X & Y)
+		temp0 = 0x600000
+		temp0 += object[arrayPos0].xpos
+		SetTableValue(temp0, 3, LZEggman_nodePositionTable)
+
+		temp0 = -0x1000000
+		temp0 += object[arrayPos0].ypos
+		SetTableValue(temp0, 4, LZEggman_nodePositionTable)
+
+		// Node 3 (Y only)
+		temp0 = -0x4C00000
+		temp0 += object[arrayPos0].ypos
+		SetTableValue(temp0, 5, LZEggman_nodePositionTable)
+
+		// Node 4 (X & Y)
+		temp0 = 0x13C0000
+		temp0 += object[arrayPos0].xpos
+		SetTableValue(temp0, 6, LZEggman_nodePositionTable)
+
+		temp0 = -0x5000000
+		temp0 += object[arrayPos0].ypos
+		SetTableValue(temp0, 7, LZEggman_nodePositionTable)
+
+		// Last Node (X & Y)
+		temp0 = 0xB80000
+		temp0 += object[arrayPos0].xpos
+		SetTableValue(temp0, 8, LZEggman_nodePositionTable)
+
+		temp0 = -0x4D00000
+		temp0 += object[arrayPos0].ypos
+		SetTableValue(temp0, 9, LZEggman_nodePositionTable)
+
+		// Store the starting position
+		object[arrayPos0].originPos.x = object[arrayPos0].xpos
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+		// Make it in the first animation state
+		object[arrayPos0].animation = LZEGGANI_IDLE
+	
+#platform: USE_ORIGINS
+		if game.bossOneLife == false
+			// It takes 8 hits to drown this egg
+			object[arrayPos0].health = 8
+		else
+			// It takes 2 hits now?
+			// Normally this cheat only makes it 1, wonder what's up with that...
+			object[arrayPos0].health = 2
+		end if
+#endplatform
+
+#platform: USE_STANDALONE
+		// It takes 8 hits to drown this egg
+		object[arrayPos0].health = 8
+#endplatform
+	next
+
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// TODO: draw node path, that'd be cool
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

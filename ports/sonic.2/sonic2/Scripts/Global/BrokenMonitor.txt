@@ -1,0 +1,478 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Broken Monitor Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.contentsPos.y
+private alias object.value1 : object.timer
+private alias object.value3 : object.rewardPlayer
+private alias object.value4 : object.drawIndex
+
+// Monitor type aliases
+private alias 0  : MONITOR_BLANK
+private alias 1  : MONITOR_RINGS
+private alias 2  : MONITOR_SHIELD_BLUE
+private alias 3  : MONITOR_INVINCIBILITY
+private alias 4  : MONITOR_SPEEDSHOES
+private alias 5  : MONITOR_1UP_SONIC // In Origins with game.coinMode set to true, these give coins instead
+private alias 6  : MONITOR_1UP_TAILS
+private alias 7  : MONITOR_1UP_KNUX
+private alias 8  : MONITOR_SUPER
+private alias 9  : MONITOR_SHIELD_BUBBLE
+private alias 10 : MONITOR_SHIELD_FIRE
+private alias 11 : MONITOR_SHIELD_LIGHTNING
+private alias 12 : MONITOR_EGGMAN
+private alias 13 : MONITOR_TELEPORT
+private alias 14 : MONITOR_RANDOM
+private alias 14 : MONITOR_DEBUG_SPIKES // This is strange... spikes shouldn't be here... yet is is.
+private alias 15 : MONITOR_DEBUG_SHIELD
+private alias 16 : MONITOR_DEBUG_EMERALDS
+private alias 17 : MONITOR_1UP_AMY // Origins exclusive
+
+// Monitor states
+private alias 0 : MONITOR_STATE_RISE
+private alias 1 : MONITOR_STATE_FADE
+private alias 2 : MONITOR_STATE_IDLE
+
+// VSGame States
+private alias 1 : VSGAME_TELEPORT
+
+// Player aliases
+private alias object.type    : player.type
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.speed   : player.speed
+private alias object.value0  : player.rings
+private alias object.value3  : player.drownTimer
+private alias object.value4  : player.drownLevel
+private alias object.value6  : player.speedShoesTimer
+private alias object.value7  : player.invincibleTimer
+private alias object.value16 : player.isSidekick
+private alias object.value37 : player.shield
+
+// Shields
+private alias 0 : SHIELD_NONE
+private alias 1 : SHIELD_NORMAL
+private alias 2 : SHIELD_BUBBLE
+private alias 3 : SHIELD_FIRE
+private alias 4 : SHIELD_LIGHTNING
+
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+
+// Shield Type Aliases
+private alias 3 : SHIELDTYPE_RAND_S3
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias 2 : MUSICEVENT_TRANSITION
+
+// Tracks
+private alias 2 : TRACK_INVINCIBLE
+
+// Global Variable ID Aliases
+private alias 25 : GLOBAL_PLAYERLIVES
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BrokenMonitor_Blank
+
+
+// ========================
+// Static Values
+// ========================
+
+public value BrokenMonitor_ResetDrownMusic = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BrokenMonitor_Blank
+	// Do nothing!
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case MONITOR_STATE_RISE
+		if object.timer < 0
+			object.contentsPos.y += object.timer
+			object.timer += 0x1800
+		else
+			object.timer = 0
+		end if
+
+		if object.timer == 0
+			object.state = MONITOR_STATE_FADE
+			object.inkEffect = INK_ALPHA
+			currentPlayer = object.rewardPlayer
+			switch object.propertyValue
+			case MONITOR_BLANK
+				break
+
+			case MONITOR_RINGS
+				player[currentPlayer].rings += 10
+				if ringPan == 0
+					PlaySfx(SfxName[Ring L], false)
+					SetSfxAttributes(SfxName[Ring L], -1, -100)
+					ringPan = 1
+				else
+					PlaySfx(SfxName[Ring R], false)
+					SetSfxAttributes(SfxName[Ring R], -1, 100)
+					ringPan = 0
+				end if
+
+				if player[currentPlayer].rings > 999
+					player[currentPlayer].rings = 999
+				end if
+				
+				if player[0].rings >= ringExtraLife
+					if options.gameMode != MODE_TIMEATTACK
+						// this one doesn't have 2P global array code, it's just like this
+#platform: USE_ORIGINS
+						if game.coinMode == false
+							player.lives++
+						else
+							CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+						end if
+#endplatform
+#platform: USE_STANDALONE
+						player.lives++
+#endplatform
+						PlaySfx(SfxName[Life], false)
+						PauseMusic()
+						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+						object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+					end if
+
+					ringExtraLife += 100
+					if ringExtraLife > 300
+						ringExtraLife = 1000
+					end if
+				end if
+				break
+
+			case MONITOR_SHIELD_BLUE
+				PlaySfx(SfxName[Blue Shield], false)
+				arrayPos0 = playerCount
+				arrayPos0 += currentPlayer
+				player[currentPlayer].shield = SHIELD_NORMAL
+
+				if Player_superState != SUPERSTATE_SUPER
+					if object[arrayPos0].type != invincibilityType
+						CallFunction(Player_ApplyShield)
+					end if
+				end if
+				break
+
+			case MONITOR_INVINCIBILITY
+				if Player_superState != SUPERSTATE_SUPER
+					arrayPos0 = playerCount
+					arrayPos0 += currentPlayer
+					ResetObjectEntity(arrayPos0, invincibilityType, 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+					object[arrayPos0].priority = PRIORITY_ACTIVE
+					player[currentPlayer].invincibleTimer = 1260
+					PlayMusic(TRACK_INVINCIBLE)
+				end if
+				break
+
+			case MONITOR_SPEEDSHOES
+				if SpeedUpMusic != 0
+					if player[currentPlayer].speedShoesTimer == 0
+						CallFunction(SpeedUpMusic)
+					end if
+				end if
+
+				player[currentPlayer].speedShoesTimer = 1320
+				CallFunction(Player_UpdatePhysicsState)
+				break
+
+			case MONITOR_1UP_SONIC
+			case MONITOR_1UP_TAILS
+			case MONITOR_1UP_KNUX
+#platform: USE_ORIGINS
+			case MONITOR_1UP_AMY
+				if game.coinMode == false
+#endplatform
+					// global variable "array" (yes, this is actually how its done)
+					arrayPos0 = GLOBAL_PLAYERLIVES
+#platform: USE_DECOMP
+					arrayPos0 = VarName[player.lives]
+#endplatform
+					if player[currentPlayer].isSidekick == false
+						arrayPos0 += currentPlayer
+					end if
+
+					global[arrayPos0]++
+#platform: USE_ORIGINS
+				else
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+				
+				PlaySfx(SfxName[Life], false)
+				PauseMusic()
+				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+				break
+
+			case MONITOR_SUPER
+				currentPlayer = 0
+				player[0].rings += 50
+				if Player_superState != SUPERSTATE_SUPER
+					object.type = player[0].type
+					CallFunction(Player_TryTransform)
+					object.type = TypeName[Broken Monitor]
+				else
+					if ringPan == 0
+						PlaySfx(SfxName[Ring L], false)
+						SetSfxAttributes(SfxName[Ring L], -1, -100)
+						ringPan = 1
+					else
+						PlaySfx(SfxName[Ring R], false)
+						SetSfxAttributes(SfxName[Ring R], -1, 100)
+						ringPan = 0
+					end if
+				end if
+
+				if player[0].rings > 999
+					player[0].rings = 999
+				end if
+
+				if player[0].rings >= ringExtraLife
+					if options.gameMode != MODE_TIMEATTACK
+						// this one doesn't have 2P code, it's just like this since the code only gives rings to P1 anyway
+#platform: USE_ORIGINS
+						if game.coinMode == false
+							player.lives++
+						else
+							CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+						end if
+#endplatform
+#platform: USE_STANDALONE
+						player.lives++
+#endplatform
+
+						PlaySfx(SfxName[Life], false)
+						PauseMusic()
+						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+						object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+					end if
+
+					ringExtraLife += 100
+					if ringExtraLife > 300
+						ringExtraLife = 1000
+					end if
+				end if
+				break
+
+			case MONITOR_SHIELD_BUBBLE
+				PlaySfx(SfxName[Bubble Shield], false)
+				arrayPos0 = playerCount
+				arrayPos0 += currentPlayer
+				player[currentPlayer].shield = SHIELD_BUBBLE
+
+				if Player_superState != SUPERSTATE_SUPER
+					if object[arrayPos0].type != invincibilityType
+						CallFunction(Player_ApplyShield)
+					end if
+				end if
+
+				if player[currentPlayer].drownLevel >= 3
+					player[currentPlayer].drownTimer = 0
+					player[currentPlayer].drownLevel = 0
+					CallFunction(BrokenMonitor_ResetDrownMusic)
+				end if
+				break
+
+			case MONITOR_SHIELD_FIRE
+				PlaySfx(SfxName[Fire Shield], false)
+				arrayPos0 = playerCount
+				arrayPos0 += currentPlayer
+				player[currentPlayer].shield = SHIELD_FIRE
+
+				if Player_superState != SUPERSTATE_SUPER
+					if object[arrayPos0].type != invincibilityType
+						CallFunction(Player_ApplyShield)
+					end if
+				end if
+				break
+
+			case MONITOR_SHIELD_LIGHTNING
+				PlaySfx(SfxName[Lightning Shield], false)
+				arrayPos0 = playerCount
+				arrayPos0 += currentPlayer
+				player[currentPlayer].shield = SHIELD_LIGHTNING
+
+				if Player_superState != SUPERSTATE_SUPER
+					if object[arrayPos0].type != invincibilityType
+						CallFunction(Player_ApplyShield)
+					end if
+				end if
+				break
+
+			case MONITOR_EGGMAN
+				CallFunction(Player_Hit)
+				break
+
+			case MONITOR_TELEPORT
+				CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
+				object[tempObjectPos].state = VSGAME_TELEPORT
+				PlaySfx(SfxName[Teleport], false)
+				break
+
+			case MONITOR_DEBUG_SPIKES
+				// Leftover from S1, this code should never hit at all since MONITOR_DEBUG_SPIKES is the same ID as MONITOR_RANDOM and
+				// random monitors get replaced on startup
+				
+				PlaySfx(SfxName[Spike], false)
+				options.spikeBehavior ^= true
+				break
+
+			case MONITOR_DEBUG_SHIELD
+				PlaySfx(SfxName[Blue Shield], false)
+				options.shieldType++
+				options.shieldType &= SHIELDTYPE_RAND_S3
+				arrayPos0 = playerCount
+				currentPlayer = 0
+				CallFunction(Player_ApplyShield)
+				break
+
+			case MONITOR_DEBUG_EMERALDS
+				// Toggle emerald state - give the player all emeralds if they don't have them already but give them none if they have all
+				if specialStage.emeralds == 0x7F
+					specialStage.emeralds = 0
+				else
+					specialStage.emeralds = 0x7F
+				end if
+				PlaySfx(SfxName[Transform], false)
+				break
+			end switch
+		end if
+		break
+
+	case MONITOR_STATE_FADE
+		object.timer++
+		if object.timer == 30
+			object.timer = 0
+			object.state = MONITOR_STATE_IDLE
+			object.propertyValue = MONITOR_BLANK
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_BOUNDS
+			end if
+		else
+			if object.timer > 14
+				object.alpha -= 16
+			end if
+		end if
+		break
+
+	case MONITOR_STATE_IDLE
+		break
+	end switch
+#platform: USE_ORIGINS
+	object.drawIndex = 0 // Added in Origins, prevents flickering issues in 2PVS Splitscreen.
+#endplatform
+end event
+
+
+event ObjectDraw
+	if object.drawIndex == 0
+		// Draw the monitor box on the normal layer
+		DrawSprite(0)
+		AddDrawListEntityRef(5, object.entityPos)
+	else
+		// Draw the effect icon on the higher draw layer
+		if object.propertyValue > 0
+			DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.contentsPos.y)
+		end if
+	end if
+	
+	object.drawIndex ^= 1
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, 0, 32, 16, 18, 34) // 0 - Broken Monitor Frame
+	
+	SpriteFrame(-8, -9, 16, 14, 18, 66) // 1 - MONITOR_RINGS
+	SpriteFrame(-8, -9, 16, 14, 35, 66) // 2 - MONITOR_SHIELD_BLUE
+	SpriteFrame(-8, -9, 16, 14, 18, 81) // 3 - MONITOR_INVINCIBILITY
+	SpriteFrame(-8, -9, 16, 14, 35, 81) // 4 - MONITOR_SPEEDSHOES
+	
+	// Amy's monitor icon is at the end of the list
+#platform: USE_ORIGINS
+	if game.coinMode == false
+#endplatform
+		// Player lives icons
+		SpriteFrame(-8, -9, 16, 14, 18, 96)  // 5 - MONITOR_1UP_SONIC
+		SpriteFrame(-8, -9, 16, 14, 35, 96)  // 6 - MONITOR_1UP_TAILS
+		SpriteFrame(-8, -9, 16, 14, 18, 111) // 7 - MONITOR_1UP_KNUX
+#platform: USE_ORIGINS
+	else
+		SpriteFrame(-8, -9, 16, 14, 35, 186) // 5 - MONITOR_1UP_SONIC (Coin)
+		SpriteFrame(-8, -9, 16, 14, 35, 186) // 6 - MONITOR_1UP_TAILS (Coin but again)
+		SpriteFrame(-8, -9, 16, 14, 35, 186) // 7 - MONITOR_1UP_KNUX  (Coin but yet again)
+	end if
+#endplatform
+	
+	SpriteFrame(-8, -9, 16, 14, 35, 111) // 8 - MONITOR_SUPER
+	SpriteFrame(-8, -9, 16, 14, 18, 141) // 9 - MONITOR_SHIELD_BUBBLE
+	SpriteFrame(-8, -9, 16, 14, 35, 126) // 10 - MONITOR_SHIELD_FIRE
+	SpriteFrame(-8, -9, 16, 14, 18, 126) // 11 - MONITOR_SHIELD_LIGHTNING
+	SpriteFrame(-8, -9, 16, 14, 35, 141) // 12 - MONITOR_EGGMAN
+	SpriteFrame(-8, -9, 16, 14, 18, 156) // 13 - MONITOR_TELEPORT
+	SpriteFrame(-8, -9, 16, 14, 35, 156) // 14 - MONITOR_RANDOM
+	SpriteFrame(-8, -9, 16, 14, 18, 171) // 15 - MONITOR_DEBUG_SHIELD
+	SpriteFrame(-8, -9, 16, 14, 35, 171) // 16 - MONITOR_DEBUG_EMERALDS
+#platform: USE_ORIGINS
+	if game.coinMode == false
+		SpriteFrame(-8, -9, 16, 14, 18, 201) // 17 - MONITOR_1UP_AMY
+	else
+		SpriteFrame(-8, -9, 16, 14, 35, 186) // 17 - MONITOR_1UP_AMY (The long awaited return of Coin)
+	end if
+#endplatform
+	
+	// (The Spring Icon is unused, and so is the Mania monitor added in Origins)
+	
+	// By default, assume there isn't any water in the stage and assign a dummy function for resetting drown music
+	// (In stages with water, that stage's [Water] object will set the function itself instead)
+	BrokenMonitor_ResetDrownMusic = BrokenMonitor_Blank
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, 0, 32, 16, 18, 34)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

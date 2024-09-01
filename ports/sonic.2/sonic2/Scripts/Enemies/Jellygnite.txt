@@ -1,0 +1,512 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Jellygnite Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.startPos.x
+private alias object.value2  : object.startPos.y
+private alias object.value3  : object.frontTentacleAngle
+private alias object.value4  : object.tentacleOffset.x
+private alias object.value5  : object.tentacleOffset.y
+private alias object.value6  : object.tentaclePos.x
+private alias object.value7  : object.tentaclePos.y
+private alias object.value8  : object.oscillateAngle
+private alias object.value9  : object.frontTentacleFrame
+private alias object.value10 : object.backTentacleFrame
+private alias object.value11 : object.drawIndex
+private alias object.value12 : object.grabbedPlayer
+private alias object.value13 : object.shakeTimer
+private alias object.value14 : object.shakeCount
+private alias object.value15 : object.lastShakeFlags
+
+// States
+private alias 0 : JELLYGNITE_SWIMMING
+private alias 1 : JELLYGNITE_GRABBEDPLAYER
+private alias 2 : JELLYGNITE_EXPLODE
+
+// Animations
+private alias 0 : JELLYGNITE_ANI_IDLE
+private alias 1 : JELLYGNITE_ANI_GRABBED
+private alias 2 : JELLYGNITE_ANI_EXPLODING
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.frame : player.frame
+private alias object.animationTimer : player.animationTimer
+private alias object.animation : player.animation
+private alias object.left : player.left
+private alias object.right : player.right
+
+private alias object.value1  : player.timer
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Jellygnite_DebugDraw
+reserve function Jellygnite_DebugSpawn
+reserve function Jellygnite_HandleGrabbedPlayer
+
+private function Jellygnite_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Jellygnite_DebugSpawn
+	CreateTempObject(TypeName[Jellygnite], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.x = object[tempObjectPos].xpos
+	object[tempObjectPos].startPos.y = object[tempObjectPos].ypos
+	object[tempObjectPos].grabbedPlayer = 0x7FFFFFFF
+end function
+
+
+private function Jellygnite_HandleGrabbedPlayer
+	if object.grabbedPlayer != 0x7FFFFFFF
+		currentPlayer = object.grabbedPlayer
+		if object.lastShakeFlags != 0
+			object.shakeTimer--
+			if object.shakeTimer == 0
+				object.shakeCount = 0
+				object.lastShakeFlags = 0
+			end if
+
+			temp0 = 0
+			if player[currentPlayer].left != false
+				temp0 |= 1
+			end if
+
+			if player[currentPlayer].right != false
+				temp0 |= 2
+			end if
+
+			if temp0 != 0
+				if temp0 != 3
+					if temp0 != object.lastShakeFlags
+						object.lastShakeFlags = temp0
+						object.shakeCount++
+						if object.shakeCount >= 4
+#platform: USE_STANDALONE
+							player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+							player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+							object.grabbedPlayer = 0x7FFFFFFF
+						else
+							object.shakeTimer = 32
+						end if
+					end if
+				end if
+			end if
+		else
+			if player[currentPlayer].left != false
+				object.lastShakeFlags |= 1
+				object.shakeTimer = 32
+			end if
+
+			if player[currentPlayer].right != false
+				object.lastShakeFlags |= 2
+				object.shakeTimer = 32
+			end if
+		end if
+
+		player[currentPlayer].xpos = object.xpos
+		player[currentPlayer].ypos = object.ypos
+		player[currentPlayer].ypos += 0xC0000
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case JELLYGNITE_SWIMMING
+		if object.priority != PRIORITY_XBOUNDS_DESTROY
+			object.priority = PRIORITY_ACTIVE
+		end if
+
+		object.angle += 4
+		object.angle &= 0x1FF
+		Sin(object.frontTentacleAngle, object.angle)
+		object.frontTentacleAngle <<= 1
+
+		object.oscillateAngle++
+		object.oscillateAngle &= 0x1FF
+		Sin(object.xpos, object.oscillateAngle)
+		object.xpos <<= 11
+		object.xpos += object.startPos.x
+
+		temp1 = 0x7FFFFFFF
+		temp2 = 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object.xpos
+			temp0 -= player[currentPlayer].xpos
+			Abs(temp0)
+			if temp0 < temp1
+				temp1 = temp0
+				temp2 = currentPlayer
+			end if
+		next
+
+		currentPlayer = temp2
+		if player[currentPlayer].ypos > stage.newWaterLevel
+			temp2 = player[currentPlayer].ypos
+			temp2 -= 0x200000
+			if object.ypos > temp2
+				object.yvel -= 0x800
+				if object.yvel < -0xC000
+					object.yvel = -0xC000
+				end if
+			else
+				object.yvel += 0x800
+				if object.yvel > 0xC000
+					object.yvel = 0xC000
+				end if
+			end if
+		else
+			object.yvel >>= 1
+		end if
+		object.ypos += object.yvel
+		break
+
+	case JELLYGNITE_GRABBEDPLAYER
+		if object.frontTentacleAngle < 0x600
+			object.frontTentacleAngle += 0x80
+		else
+			object.state = JELLYGNITE_EXPLODE
+			object.animation = JELLYGNITE_ANI_EXPLODING
+			PlaySfx(SfxName[Electricity], false)
+		end if
+
+		currentPlayer = object.grabbedPlayer
+		player[currentPlayer].xpos = object.xpos
+		player[currentPlayer].ypos = object.ypos
+		player[currentPlayer].ypos += 0xC0000
+		player[currentPlayer].frame = 0
+		player[currentPlayer].animationTimer = 0
+		break
+
+	case JELLYGNITE_EXPLODE
+		CallFunction(Jellygnite_HandleGrabbedPlayer)
+		object.timer++
+		if object.timer == 60
+			if object.grabbedPlayer != 0x7FFFFFFF
+				currentPlayer = object.grabbedPlayer
+				if player[currentPlayer].state != Player_State_Drown
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+					CallFunction(Player_Hit)
+				end if
+				object.grabbedPlayer = 0x7FFFFFFF
+			end if
+
+			ResetObjectEntity(object.entityPos, TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+			object.drawOrder = 4
+			PlaySfx(SfxName[Destroy], false)
+		end if
+		break
+		
+	end switch
+
+	if object.type == TypeName[Jellygnite]
+		if object.outOfBounds == true
+			temp0 = object.xpos
+			temp1 = object.ypos
+			object.xpos = object.startPos.x
+			object.ypos = object.startPos.y
+			if object.outOfBounds == true
+				object.animation = JELLYGNITE_ANI_IDLE
+				if object.priority != PRIORITY_XBOUNDS_DESTROY
+					object.priority = PRIORITY_BOUNDS
+				end if
+				object.state = JELLYGNITE_SWIMMING
+			else
+				object.xpos = temp0
+				object.ypos = temp1
+			end if
+		end if
+
+		temp7 = object.grabbedPlayer
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if currentPlayer != temp7
+				BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					if object.state == JELLYGNITE_SWIMMING
+						if player[currentPlayer].ypos < object.ypos
+							CallFunction(Player_BadnikBreak)
+						else
+							object.state = JELLYGNITE_GRABBEDPLAYER
+							object.animation = JELLYGNITE_ANI_GRABBED
+							object.grabbedPlayer = currentPlayer
+							player[currentPlayer].xvel = 0
+							player[currentPlayer].yvel = 0
+							player[currentPlayer].speed = 0
+							player[currentPlayer].timer = 0
+							player[currentPlayer].state = Player_State_Static
+							player[currentPlayer].gravity = GRAVITY_AIR
+							player[currentPlayer].animation = ANI_GRABBED
+						end if
+					else
+						if player[currentPlayer].ypos < object.ypos
+							CallFunction(Player_BadnikBreak)
+						end if
+					end if
+				end if
+			end if
+		next
+
+		if object.type == TypeName[Jellygnite]
+			switch object.animation
+			case JELLYGNITE_ANI_IDLE
+				object.frame = 0
+				object.frontTentacleFrame = 3
+				object.backTentacleFrame = 5
+				break
+
+			case JELLYGNITE_ANI_GRABBED
+				object.frame = 1
+				object.frontTentacleFrame = 3
+				object.backTentacleFrame = 5
+				break
+
+			case JELLYGNITE_ANI_EXPLODING
+				object.frame = object.animationTimer
+				object.frame >>= 5
+
+				object.frontTentacleFrame = object.frame
+				object.frontTentacleFrame += 3
+				object.backTentacleFrame = object.frame
+				object.backTentacleFrame += 5
+
+				object.frame++
+
+				object.animationTimer += object.timer
+				object.animationTimer &= 0x3F
+				break
+			end switch
+		else
+			if temp7 != 0x7FFFFFFF
+				currentPlayer = temp7
+				if player[currentPlayer].state == Player_State_Static
+#platform: USE_STANDALONE
+					player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+					player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				end if
+			end if
+		end if
+	else
+		if object.grabbedPlayer != 0x7FFFFFFF
+			currentPlayer = object.grabbedPlayer
+			if player[currentPlayer].state == Player_State_Static
+				player[currentPlayer].state = Player_State_Air
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.drawIndex == 0
+		// Back Tentacle
+		temp1 = object.angle
+		temp1 &= 0x1FF
+		temp0 = 0
+		temp2 = object.ypos
+		temp2 += 0x70000
+		while temp0 < 4
+			Cos(object.tentaclePos.x, temp1)
+			object.tentaclePos.x <<= 9
+			object.tentaclePos.x += object.xpos
+
+			Sin(object.tentaclePos.y, temp1)
+			object.tentaclePos.y <<= 8
+			object.tentaclePos.y += temp2
+
+			DrawSpriteXY(object.backTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+			temp0++
+			temp1 += 0x20
+			temp1 &= 0x1FF
+			temp2 += 0x60000
+		loop
+		AddDrawListEntityRef(4, object.entityPos)
+	else
+		// Front Tentacle
+		temp0 = 0
+		temp4 = object.frontTentacleAngle
+		object.tentacleOffset.x = 0
+		object.tentacleOffset.y = 0
+		while temp0 < 4
+			temp5 = temp4
+			temp5 >>= 7
+			temp5 &= 0x1FF
+			Sin(temp2, temp5)
+			temp2 *= 0x312
+			object.tentacleOffset.x += temp2
+
+			Cos(temp3, temp5)
+			temp3 *= 0x312
+			object.tentacleOffset.y += temp3
+
+			object.tentaclePos.x = object.tentacleOffset.x
+			object.tentaclePos.x += object.xpos
+			object.tentaclePos.x -= 0xD0000
+
+			object.tentaclePos.y = object.tentacleOffset.y
+			object.tentaclePos.y += object.ypos
+			object.tentaclePos.y += 0x10000
+
+			DrawSpriteXY(object.frontTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+
+			object.tentaclePos.x = object.tentacleOffset.x
+			FlipSign(object.tentaclePos.x)
+			object.tentaclePos.x += object.xpos
+			object.tentaclePos.x += 0xD0000
+			DrawSpriteXY(object.frontTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+
+			temp0++
+			temp4 += object.frontTentacleAngle
+		loop
+
+		// Body
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+
+	object.drawIndex ^= 1
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 20, 33, 123)
+	SpriteFrame(-16, -16, 32, 20, 66, 123)
+	SpriteFrame(-16, -16, 32, 20, 40, 144)
+	SpriteFrame(-3, -3, 6, 6, 198, 50)
+	SpriteFrame(-3, -3, 6, 6, 131, 97)
+	SpriteFrame(-3, -3, 6, 6, 33, 144)
+	SpriteFrame(-3, -3, 6, 6, 131, 90)
+
+	foreach (TypeName[Jellygnite], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].grabbedPlayer = 0x7FFFFFFF
+	next
+
+	SetTableValue(TypeName[Jellygnite], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Jellygnite_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Jellygnite_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.frame = 0
+	object.frontTentacleFrame = 3
+	object.backTentacleFrame = 5
+
+	// Back Tentacle
+	temp1 = object.angle
+	temp1 &= 0x1FF
+	temp0 = 0
+	temp2 = object.ypos
+	temp2 += 0x70000
+	while temp0 < 4
+		Cos(object.tentaclePos.x, temp1)
+		object.tentaclePos.x <<= 9
+		object.tentaclePos.x += object.xpos
+
+		Sin(object.tentaclePos.y, temp1)
+		object.tentaclePos.y <<= 8
+		object.tentaclePos.y += temp2
+
+		DrawSpriteXY(object.backTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+		temp0++
+		temp1 += 0x20
+		temp1 &= 0x1FF
+		temp2 += 0x60000
+	loop
+		
+	// Front Tentacle
+	temp0 = 0
+	temp4 = object.frontTentacleAngle
+	object.tentacleOffset.x = 0
+	object.tentacleOffset.y = 0
+	while temp0 < 4
+		temp5 = temp4
+		temp5 >>= 7
+		temp5 &= 0x1FF
+		Sin(temp2, temp5)
+		temp2 *= 0x312
+		object.tentacleOffset.x += temp2
+
+		Cos(temp3, temp5)
+		temp3 *= 0x312
+		object.tentacleOffset.y += temp3
+
+		object.tentaclePos.x = object.tentacleOffset.x
+		object.tentaclePos.x += object.xpos
+		object.tentaclePos.x -= 0xD0000
+
+		object.tentaclePos.y = object.tentacleOffset.y
+		object.tentaclePos.y += object.ypos
+		object.tentaclePos.y += 0x10000
+
+		DrawSpriteXY(object.frontTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+
+		object.tentaclePos.x = object.tentacleOffset.x
+		FlipSign(object.tentaclePos.x)
+		object.tentaclePos.x += object.xpos
+		object.tentaclePos.x += 0xD0000
+		DrawSpriteXY(object.frontTentacleFrame, object.tentaclePos.x, object.tentaclePos.y)
+
+		temp0++
+		temp4 += object.frontTentacleAngle
+	loop
+
+	// Body
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 20, 33, 123)
+	SpriteFrame(-16, -16, 32, 20, 66, 123)
+	SpriteFrame(-16, -16, 32, 20, 40, 144)
+	SpriteFrame(-3, -3, 6, 6, 198, 50)
+	SpriteFrame(-3, -3, 6, 6, 131, 97)
+	SpriteFrame(-3, -3, 6, 6, 33, 144)
+	SpriteFrame(-3, -3, 6, 6, 131, 90)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

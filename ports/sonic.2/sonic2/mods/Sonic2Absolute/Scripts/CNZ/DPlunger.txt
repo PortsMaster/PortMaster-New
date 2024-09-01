@@ -1,0 +1,163 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: D Plunger Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 47 : TYPE_DPLUNGER
+
+// Function declarations
+reserve function DPlunger_DebugDraw
+reserve function DPlunger_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function DPlunger_DebugDraw
+	DrawSprite(5)
+end function
+
+
+function DPlunger_DebugSpawn
+	CreateTempObject(TypeName[D Plunger], 1, object.xpos, object.ypos)
+	object[tempObjectPos].ypos &= -0x10000
+	object[tempObjectPos].inkEffect = INK_ALPHA
+end function
+
+
+event ObjectMain
+	if object.value2 == 1
+		if object.value1 < 0x100000
+			object.value1 += 0x4000
+		end if
+	else
+		if object.value1 > 0
+			object.value1 -= 0x20000
+			if object.value1 < 0
+				object.value1 = 0
+			end if
+		else
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+	end if
+	temp2 = object.value2
+	object.value2 = 0
+	temp0 = object.xpos
+	temp1 = object.ypos
+	object.xpos -= object.value1
+	object.ypos += object.value1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckEqual(object[currentPlayer].state, PlayerObject_Death)
+		temp7 = checkResult
+		CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
+		temp7 |= checkResult
+		if temp7 == 0
+			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -19, 19, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object[currentPlayer].state = PlayerObject_Blank
+				object[currentPlayer].value15 = 0
+				object[currentPlayer].gravity = GRAVITY_GROUND
+				object[currentPlayer].scrollTracking = 0
+				object[currentPlayer].animation = ANI_JUMPING
+				object[currentPlayer].xpos = object.xpos
+				object[currentPlayer].xpos += 0x1B0000
+				object[currentPlayer].ypos = object.ypos
+				object[currentPlayer].ypos -= 0x1B0000
+				object[currentPlayer].xvel = -1
+				object[currentPlayer].yvel = 1
+				if currentPlayer == 0
+					object.value2 |= object[currentPlayer].jumpHold
+				end if
+			end if
+		end if
+	next
+	if object.value1 > 0x60000
+		if temp2 == 1
+			if object.value2 == 0
+				object.priority = PRIORITY_ACTIVE
+				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+					CheckEqual(object[currentPlayer].state, PlayerObject_Death)
+					temp7 = checkResult
+					CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
+					temp7 |= checkResult
+					if temp7 == 0
+						if object[currentPlayer].state == PlayerObject_Blank
+							BoxCollisionTest(C_TOUCH, object.entityPos, 0, -19, 19, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+							if checkResult == 1
+								if object.propertyValue == 0
+									object[currentPlayer].state = CNZSetup_Function97
+									object[currentPlayer].gravity = GRAVITY_GROUND
+								else
+									object[currentPlayer].state = PlayerObject_HandleAir
+									object[currentPlayer].gravity = GRAVITY_AIR
+								end if
+								object[currentPlayer].value1 = 0
+								object[currentPlayer].direction = FLIP_NONE
+								object[currentPlayer].xvel = object.value1
+								object[currentPlayer].speed = object.value1
+								object[currentPlayer].yvel = object.value1
+								FlipSign(object[currentPlayer].yvel)
+								PlaySfx(SfxName[Plunger], 0)
+							end if
+						end if
+					end if
+				next
+			end if
+		end if
+	end if
+	object.xpos = temp0
+	object.ypos = temp1
+	temp0 = object.value1
+	temp0 >>= 14
+	object.angle += temp0
+	Sin(temp1, object.angle)
+	temp1 >>= 4
+	temp0 = object.value1
+	temp0 >>= 12
+	temp0 -= 64
+	temp0 += temp1
+	object.alpha = temp0
+end event
+
+
+event ObjectDraw
+	temp0 = object.value1
+	temp0 >>= 20
+	DrawSprite(temp0)
+	temp0 = object.xpos
+	temp0 -= object.value1
+	temp1 = object.ypos
+	temp1 += object.value1
+	DrawSpriteXY(3, temp0, temp1)
+	DrawSpriteFX(4, FX_INK, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-24, -8, 32, 32, 219, 51)
+	SpriteFrame(-24, -1, 25, 25, 219, 58)
+	SpriteFrame(-24, -1, 25, 25, 219, 58)
+	SpriteFrame(-3, -24, 27, 27, 199, 6)
+	SpriteFrame(-3, -24, 27, 27, 227, 6)
+	SpriteFrame(-24, -24, 48, 48, 170, 51)
+	foreach (TypeName[D Plunger], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].inkEffect = INK_ALPHA
+	next
+	SetTableValue(TypeName[D Plunger], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(DPlunger_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DPlunger_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,132 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Masher Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.startPos.y
+
+// Player Aliases
+private alias object.value38 : player.hitboxLeft
+private alias object.value39 : player.hitboxRight
+private alias object.value40 : player.hitboxTop
+private alias object.value41 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Masher_DebugDraw
+reserve function Masher_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Masher_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+private function Masher_DebugSpawn
+	CreateTempObject(TypeName[Masher], 0, object.xpos, object.ypos)
+	
+	// Mashers don't normally have the capability to be turned around in the scene (aside from the actual dir attr), but they made it so that they can be turned around in Debug Mode
+	// Neat
+	GetBit(temp0, object.direction, 0)
+	object[tempObjectPos].direction = temp0
+	
+	object[tempObjectPos].startPos.y = object.ypos
+	object[tempObjectPos].yvel = -0x50000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.ypos += object.yvel
+	object.yvel += 0x1800
+
+	if object.ypos > object.startPos.y
+		object.ypos = object.startPos.y
+		object.yvel = -0x50000
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+
+	if object.yvel < 0
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+	else
+		object.frame = 0
+		object.animationTimer = 0
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 105, 67)
+		SpriteFrame(-11, -16, 26, 30, 100, 100)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 66, 313)
+		SpriteFrame(-11, -16, 26, 30, 66, 346)
+	end if
+
+	foreach (TypeName[Masher], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].yvel = -0x50000
+	next
+
+	SetTableValue(TypeName[Masher], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Masher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Masher_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 105, 67)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 66, 313)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

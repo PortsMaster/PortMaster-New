@@ -1,0 +1,175 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Snail Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 58 : TYPE_SNAIL
+
+// Function declarations
+reserve function Snail_DebugDraw
+reserve function Snail_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Snail_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Snail_DebugSpawn
+	CreateTempObject(TypeName[Snail], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x8000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x8000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		if checkResult == 0
+			object.xpos -= object.xvel
+			if object.direction == FLIP_X
+				object.xvel = -0x8000
+			else
+				object.xvel = 0x8000
+			end if
+			object.state = 1
+		end if
+		temp0 = object.xvel
+		Abs(temp0)
+		if temp0 == 0x8000
+			temp0 = 6
+		else
+			temp0 = 3
+		end if
+		object.animationTimer++
+		if object.animationTimer >= temp0
+			object.animationTimer = 0
+			object.frame ^= 1
+		end if
+		break
+	case 1
+		if object.value0 < 59
+			object.value0++
+		else
+			object.value0 = 0
+			object.state = 0
+			object.direction ^= FLIP_X
+		end if
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		if object.outOfBounds == 1
+			if object.propertyValue == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x8000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x8000
+			end if
+			object.animationTimer = 0
+			object.frame = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	CallFunction(PlayerObject_EnemyPop)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -96, 0, 96, currentPlayer, 0, 0, 0, 0)
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -96, 96, 96, currentPlayer, 0, 0, 0, 0)
+		end if
+		if checkResult == 1
+			if object.direction == FLIP_NONE
+				object.xvel = -0x20000
+			else
+				object.xvel = 0x20000
+			end if
+		end if
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -16, 12, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+	temp0 = object.xvel
+	Abs(temp0)
+	if temp0 != 0x8000
+		temp0 = object.frame
+		temp0 += 3
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == 1
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 33, 44, 27)
+		SpriteFrame(-16, -16, 32, 33, 77, 27)
+		SpriteFrame(-23, -6, 16, 16, 110, 44)
+		SpriteFrame(16, 0, 6, 5, 19, 50)
+		SpriteFrame(16, 0, 7, 5, 19, 56)
+	end if
+	foreach (TypeName[Snail], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		GetBit(temp0, object[arrayPos0].propertyValue, 0)
+		if temp0 == 0
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x8000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x8000
+		end if
+	next
+	SetTableValue(TypeName[Snail], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Snail_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Snail_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

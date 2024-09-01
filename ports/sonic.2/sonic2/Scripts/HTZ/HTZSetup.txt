@@ -1,0 +1,520 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: HTZ Setup Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// value0 is unused
+private alias object.value1  : object.palRotateTimer
+// value2-4 are unused, too
+
+private alias object.value5  : object.bgLightDuration
+private alias object.value6  : object.bgLightFrame
+
+private alias object.value7  : object.pinkFlowerDuration
+private alias object.value8  : object.pinkFlowerFrame
+
+private alias object.value9  : object.redFlowerDuration
+private alias object.value10 : object.redFlowerFrame
+
+private alias object.value11 : object.rectFlowerDuration
+private alias object.value12 : object.rectFlowerFrame
+
+private alias object.value13 : object.pointyFlowerDuration
+private alias object.value14 : object.pointyFlowerFrame
+
+private alias object.value15 : object.lavaPalIndex1
+private alias object.value16 : object.lavaPalIndex2
+private alias object.value17 : object.lavaPalIndex3
+private alias object.value18 : object.lavaPalIndex4
+
+private alias object.value19 : object.shakeTimer
+private alias object.value20 : object.unused // unused (besides being reset after earthquakes)
+private alias object.value21 : object.earthquakeTimer
+private alias object.value22 : object.movementState
+private alias object.value23 : object.earthquakePos
+// value24 is unused
+private alias object.value25 : object.prevEarthquakeActive
+private alias object.value26 : object.prevEarthquakeType
+
+// Earthquake states
+private alias 0 : EARTHQUAKE_NONE
+private alias 1 : EARTHQUAKE_HOLD
+private alias 2 : EARTHQUAKE_ACTIVE
+
+// Tile Flag Aliases
+private alias 1 : TILE_LAVA
+
+// Tile Info ID Aliases
+private alias 8 : TILEINFO_ANGLEB
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+private alias 7 : TRACK_SUPER
+
+// Reserved object slots
+private alias 0  : SLOT_PLAYER1
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+// Music Events
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Music Loops
+private alias 1     : MUSIC_LOOP_HTZ
+private alias 1     : MUSIC_LOOP_HTZ_F
+
+private alias 38679 : MUSIC_LOOP_INV
+private alias 30897 : MUSIC_LOOP_INV_F
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HTZSetup_SpeedUpMusic
+reserve function HTZSetup_SlowDownMusic
+
+
+// ========================
+// Static Values
+// ========================
+
+public value HTZSetup_earthquakeState 		= 0
+public value HTZSetup_activeEarthquakeType 	= 0
+public value HTZSetup_earthquakePosMin 		= 0
+public value HTZSetup_earthquakePos 		= 0 // Y Position, truncated down to 1:1 value
+public value HTZSetup_earthquakePosMax		= 0 // Lowest point the earthquake should go
+
+
+// ========================
+// Tables
+// ========================
+
+// Format: Tile ID followed by duration
+private table HTZSetup_bgLightFrameTable
+	508, 24
+	509, 10
+	510, 12
+	511, 24
+	510, 12
+	509, 10
+end table
+
+private table HTZSetup_pinkFlowerFrameTable
+	512, 128
+	513, 20
+	512, 8
+	513, 8
+	512, 8
+	513, 8
+end table
+
+private table HTZSetup_redFlowerFrameTable
+	514, 128
+	515, 12
+	514, 12
+	515, 12
+	514, 6
+	515, 6
+	514, 6
+	515, 6
+end table
+
+private table HTZSetup_rectFlowerFrameTable
+	516, 8
+	517, 8
+end table
+
+private table HTZSetup_pointyFlowerFrameTable
+	518, 128
+	519, 8
+	518, 8
+	519, 8
+	518, 8
+	519, 12
+	518, 12
+	519, 12
+end table
+
+private table HTZSetup_palTable
+	0xE00000, 0xE06000, 0xE0A000, 0xE0E000
+	0xE0E000, 0xE00000, 0xE06000, 0xE0A000
+	0xE0C020, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0E040, 0xE0E080, 0xE02000
+	0xE04000, 0xE08000, 0xE0E060, 0xE0E0A0
+	0xE0E080, 0xE02000, 0xE06000, 0xE0E040
+	0xE0C020, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0C020, 0xE0E000, 0xE00000
+	0xE00000, 0xE06000, 0xE0A000, 0xE0E000
+	0xE0C000, 0xC00000, 0xE04000, 0xE08000
+	0xE06000, 0xC0A000, 0xA00000, 0xE02000
+	0xC00000, 0xC04000, 0xE08000, 0x800000
+	0xA00000, 0xE02000, 0xE06000, 0xC0A000
+	0xE0C000, 0xC00000, 0xE04000, 0xE08000
+	0xE0A000, 0xE0E000, 0xE00000, 0xE06000
+	0xE06000, 0xE0A000, 0xE0E000, 0xE00000
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function HTZSetup_SpeedUpMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("HillTop_F.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ_F, 8000)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
+			break
+
+		case TRACK_BOSS
+		case TRACK_GAMEOVER
+		case TRACK_SUPER
+			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			break
+			
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
+	end if
+end function
+
+
+private function HTZSetup_SlowDownMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
+	temp0 = checkResult
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
+	temp0 &= checkResult
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
+	temp0 &= checkResult
+	if temp0 == false
+		switch music.currentTrack
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("HillTop.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ, 12500)
+			break
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("HillTop.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
+			break
+
+		case TRACK_BOSS
+		case TRACK_GAMEOVER
+		case TRACK_SUPER
+			SetMusicTrack("HillTop.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			break
+			
+		end switch
+	else
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.palRotateTimer++
+	if object.palRotateTimer == 12
+		object.palRotateTimer = 0
+
+		object.lavaPalIndex1 += 4
+		object.lavaPalIndex1 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex1, HTZSetup_palTable)
+		SetPaletteEntry(0, 147, temp0)
+
+		object.lavaPalIndex2 += 4
+		object.lavaPalIndex2 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex2, HTZSetup_palTable)
+		SetPaletteEntry(0, 148, temp0)
+
+		object.lavaPalIndex3 += 4
+		object.lavaPalIndex3 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex3, HTZSetup_palTable)
+		SetPaletteEntry(0, 158, temp0)
+
+		object.lavaPalIndex4 += 4
+		object.lavaPalIndex4 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex4, HTZSetup_palTable)
+		SetPaletteEntry(0, 159, temp0)
+	end if
+
+	if object.bgLightDuration < 2
+		GetTableValue(temp0, object.bgLightFrame, HTZSetup_bgLightFrameTable)
+
+		Copy16x16Tile(761, temp0)
+		temp0 += 12
+
+		Copy16x16Tile(762, temp0)
+		temp0 += 4
+
+		Copy16x16Tile(763, temp0)
+		object.bgLightFrame++
+		
+		GetTableValue(object.bgLightDuration, object.bgLightFrame, HTZSetup_bgLightFrameTable)
+		object.bgLightFrame++
+
+		object.bgLightFrame %= 12
+	else
+		object.bgLightDuration--
+	end if
+
+	if object.pinkFlowerDuration < 2
+		GetTableValue(temp0, object.pinkFlowerFrame, HTZSetup_pinkFlowerFrameTable)
+
+		Copy16x16Tile(764, temp0)
+		object.pinkFlowerFrame++
+
+		GetTableValue(object.pinkFlowerDuration, object.pinkFlowerFrame, HTZSetup_pinkFlowerFrameTable)
+		object.pinkFlowerFrame++
+
+		object.pinkFlowerFrame %= 12
+	else
+		object.pinkFlowerDuration--
+	end if
+
+	if object.redFlowerDuration < 2
+		GetTableValue(temp0, object.redFlowerFrame, HTZSetup_redFlowerFrameTable)
+
+		Copy16x16Tile(765, temp0)
+		object.redFlowerFrame++
+
+		GetTableValue(object.redFlowerDuration, object.redFlowerFrame, HTZSetup_redFlowerFrameTable)
+		object.redFlowerFrame++
+
+		object.redFlowerFrame &= 15
+	else
+		object.redFlowerDuration--
+	end if
+
+	if object.rectFlowerDuration < 2
+		GetTableValue(temp0, object.rectFlowerFrame, HTZSetup_rectFlowerFrameTable)
+
+		Copy16x16Tile(766, temp0)
+		object.rectFlowerFrame++
+
+		GetTableValue(object.rectFlowerDuration, object.rectFlowerFrame, HTZSetup_rectFlowerFrameTable)
+		object.rectFlowerFrame++
+
+		object.rectFlowerFrame &= 3
+	else
+		object.rectFlowerDuration--
+	end if
+
+	if object.pointyFlowerDuration < 2
+		GetTableValue(temp0, object.pointyFlowerFrame, HTZSetup_pointyFlowerFrameTable)
+
+		Copy16x16Tile(767, temp0)
+		object.pointyFlowerFrame++
+
+		GetTableValue(object.pointyFlowerDuration, object.pointyFlowerFrame, HTZSetup_pointyFlowerFrameTable)
+		object.pointyFlowerFrame++
+
+		object.pointyFlowerFrame &= 15
+	else
+		object.pointyFlowerDuration--
+	end if
+
+	// Check if any players are standing on lava tiles, hurt them if so
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp1 = player[currentPlayer].xpos
+		temp1 >>= 16
+		
+		temp2 = player[currentPlayer].ypos
+		temp2 >>= 16
+		temp2 += 4
+		
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
+		temp0 &= TILE_LAVA
+		
+		if temp0 == TILE_LAVA
+			CallFunction(Player_FireHit)
+		end if
+	next
+
+	if HTZSetup_earthquakeState >= EARTHQUAKE_HOLD
+		if object.prevEarthquakeActive == false
+			if HTZSetup_activeEarthquakeType < 2
+				stage.midPoint 		 = 2
+				stage.activeLayer[0] = 9 // None
+				stage.activeLayer[1] = 0 // FG   (Low)
+				stage.activeLayer[2] = 3 // BG 3 (High)
+				stage.activeLayer[3] = 0 // FG   (High)
+			else
+				stage.midPoint 		 = 2
+				stage.activeLayer[0] = 9 // None
+				stage.activeLayer[1] = 0 // FG   (Low)
+				stage.activeLayer[2] = 4 // BG 4 (Low)
+				stage.activeLayer[3] = 0 // FG   (High)
+			end if
+
+			object.prevEarthquakeActive = true
+			if HTZSetup_activeEarthquakeType != object.prevEarthquakeType
+				// Earthquake has been newly-initiated, reset its variables
+				object.earthquakePos = HTZSetup_earthquakePosMin
+				HTZSetup_earthquakePos = 0
+				tileLayer[3].scrollPos = object.earthquakePos
+				tileLayer[4].scrollPos = object.earthquakePos
+				object.prevEarthquakeType = HTZSetup_activeEarthquakeType
+			end if
+		end if
+
+		if HTZSetup_earthquakeState > EARTHQUAKE_HOLD
+			if object.earthquakeTimer > 0
+				object.earthquakeTimer--
+			else
+				object.shakeTimer++
+				object.shakeTimer %= 40
+				if object.shakeTimer == 8
+					PlaySfx(SfxName[Rumble], false)
+				end if
+
+				temp0 = object.shakeTimer
+				temp0 &= 7
+				if temp0 == 0
+					screen.shakeX = 1
+				end if
+
+				temp0 = object.shakeTimer
+				temp0 &= 3
+				if temp0 == 0
+					screen.shakeY = 2
+				end if
+
+				if object.movementState == 0
+					// Going down...
+					object.earthquakePos += 0x4000
+					if object.earthquakePos == HTZSetup_earthquakePosMax
+						object.movementState = 1
+						object.earthquakeTimer = 120
+					end if
+				else
+					// Goin up!
+					object.earthquakePos -= 0x4000
+					if object.earthquakePos == HTZSetup_earthquakePosMin
+						object.movementState = 0
+						object.earthquakeTimer = 120
+					end if
+				end if
+
+				// Move the earthquake layers in accordance with their planned position
+				tileLayer[3].scrollPos = object.earthquakePos
+				tileLayer[4].scrollPos = object.earthquakePos
+
+				// Set the static variable as well, the Earthquake object needs it for collision checks
+				HTZSetup_earthquakePos = object.earthquakePos
+				HTZSetup_earthquakePos -= HTZSetup_earthquakePosMin
+				HTZSetup_earthquakePos >>= 16
+			end if
+		end if
+
+		if player[0].type != TypeName[Debug Mode] // Not quite sure exactly what this is for... if anything you'd want to disable earthquakes *in* debug mode, not the other way around
+			HTZSetup_earthquakeState = EARTHQUAKE_NONE
+		else
+			object.prevEarthquakeActive = false
+		end if
+	else
+		if object.prevEarthquakeActive != false
+			// Restore the stage to its non-earthquaking state
+
+			object.earthquakePos = HTZSetup_earthquakePosMin
+			HTZSetup_earthquakePos = 0
+			tileLayer[3].scrollPos = object.earthquakePos
+			tileLayer[4].scrollPos = object.earthquakePos
+
+			stage.midPoint 		 = 3
+			stage.activeLayer[0] = 1 // First BG layer  (far blue cliffs) (Low)
+			stage.activeLayer[1] = 2 // Second BG Layer (closer orange cliffs) (Low)
+			stage.activeLayer[2] = 0 // FG (Low)
+			stage.activeLayer[3] = 0 // FG (High)
+
+			object.shakeTimer 			= 0
+			object.unused 				= 0
+			object.earthquakeTimer 		= 0
+			object.movementState 		= 0
+			object.prevEarthquakeActive = false
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	SetMusicTrack("HillTop.ogg", TRACK_STAGE, MUSIC_LOOP_HTZ)
+
+	// Set the music speed-changing functions
+	SpeedUpMusic = HTZSetup_SpeedUpMusic
+	SlowDownMusic = HTZSetup_SlowDownMusic
+
+	// Reset the boss flash color
+	SetPaletteEntry(0, 192, 0x000000)
+
+	animalType1 = TypeName[Locky]
+	animalType2 = TypeName[Wocky]
+
+	// Set the BG layers to start from the correct places
+	tileLayer[1].scrollPos = -0x40000
+	tileLayer[2].scrollPos = -0x40000
+
+	object[SLOT_ZONESETUP].type = TypeName[HTZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+
+	object[SLOT_ZONESETUP].lavaPalIndex1 = 0
+	object[SLOT_ZONESETUP].lavaPalIndex2 = 1
+	object[SLOT_ZONESETUP].lavaPalIndex3 = 2
+	object[SLOT_ZONESETUP].lavaPalIndex4 = 3
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,134 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Shuttle Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.scrollPos
+
+// States
+private alias 0 : WFZEGGMANSHUTTLE_AWAITPLAYER
+private alias 1 : WFZEGGMANSHUTTLE_SCROLLING
+
+// Modes
+private alias 2 : MODE_TIMEATTACK
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case WFZEGGMANSHUTTLE_AWAITPLAYER
+		BoxCollisionTest(C_TOUCH, object.entityPos, 0, -128, 384, 128, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			stage.activeLayer[1] 	= 2
+			object.priority 		= PRIORITY_ACTIVE
+			object.drawOrder 		= 2
+			object.scrollPos 		= -0x2FF0000
+			object.xpos += 0x1000000
+			hParallax[4].scrollPos = object.scrollPos
+			object.state++
+		end if
+		break
+
+	case WFZEGGMANSHUTTLE_SCROLLING
+		object.xvel += 0x600
+		if object.xvel > 0x80000
+			object.xvel = 0x80000
+		end if
+		object.scrollPos -= object.xvel
+		object.xpos += object.xvel
+		hParallax[4].scrollPos = object.scrollPos
+
+		object.timer++
+		if object.timer == 480
+			stage.activeLayer[1] 	= 9
+			hParallax[4].scrollPos 	= 0
+			tileLayer[2].scrollPos 	= 0
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	temp0 = oscillation
+	temp0 += object.propertyValue
+	temp0 &= 1
+	if temp0 == 1
+		DrawSprite(0)
+		DrawSprite(1)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-416, -78, 32, 28, 203, 90) // Same sprite twice, just with different offsets
+	SpriteFrame(-416,  50, 32, 28, 203, 90)
+
+	foreach (TypeName[Eggman Shuttle], arrayPos0, ALL_ENTITIES)
+		if options.gameMode == MODE_TIMEATTACK
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // interval
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // interval
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-416, -78, 32, 28, 203, 90)
+	SpriteFrame(-416, 50, 32, 28, 203, 90)
+	
+	AddEditorVariable("interval")
+	SetActiveVariable("interval")
+	AddEnumVariable("Interval 1", 0)
+	AddEnumVariable("Interval 2", 1)
+end event

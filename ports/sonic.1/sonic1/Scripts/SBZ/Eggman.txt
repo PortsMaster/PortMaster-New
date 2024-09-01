@@ -1,0 +1,204 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: SBZ Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// This Eggman object is used for the SBZ2 end cutscene
+// For the game's final boss, see FZEggman instead
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.invincibilityTimer
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// States
+private alias 0 : SBZEGGMAN_WAITING
+private alias 1 : SBZEGGMAN_LAUGH
+private alias 2 : SBZEGGMAN_JUMP
+private alias 3 : SBZEGGMAN_INAIR
+private alias 4 : SBZEGGMAN_LAND
+private alias 5 : SBZEGGMAN_FINISHED
+
+// Animations
+private alias 0 : SBZEGGMAN_ANI_IDLE
+private alias 1 : SBZEGGMAN_ANI_LAUGH
+private alias 2 : SBZEGGMAN_ANI_JUMP
+private alias 3 : SBZEGGMAN_ANI_HIT
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Handle States
+	switch object.state
+	case SBZEGGMAN_WAITING
+		temp0 = object.xpos
+		temp0 -= 0x880000
+		if player[0].xpos >= temp0
+			object.state++
+			object.timer = 180
+			object.animation = SBZEGGMAN_ANI_LAUGH
+		end if
+		break
+
+	case SBZEGGMAN_LAUGH
+		object.timer--
+		if object.timer < 0
+			object.state++
+			object.timer = 15
+			object.animation = SBZEGGMAN_ANI_JUMP
+		end if
+		break
+
+	case SBZEGGMAN_JUMP
+		object.timer--
+		if object.timer < 0
+			object.state++
+			object.xvel = -0xFC00
+			object.yvel = -0x3C000
+		end if
+		break
+
+	case SBZEGGMAN_INAIR
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x2400
+		if object.yvel == 0
+			object.animation = SBZEGGMAN_ANI_LAUGH
+			object.state++
+		end if
+		break
+
+	case SBZEGGMAN_LAND
+		object.animation = SBZEGGMAN_ANI_LAUGH
+		object.state++
+		break
+	
+	case SBZEGGMAN_FINISHED
+		break
+		
+	end switch
+
+	// Handle Animations
+	switch object.animation
+	case SBZEGGMAN_ANI_IDLE
+		object.frame = 0
+		break
+
+	case SBZEGGMAN_ANI_LAUGH
+		object.animationTimer++
+		if object.animationTimer == 14
+			object.animationTimer = 0
+		end if
+		object.frame = object.animationTimer
+		object.frame /= 7
+		object.frame++
+		break
+
+	case SBZEGGMAN_ANI_JUMP
+		if object.yvel == 0
+			object.frame = 3
+		else
+			object.frame = 4
+		end if
+		break
+
+	case SBZEGGMAN_ANI_HIT
+		if object.yvel == 0
+			object.frame = 5
+		else
+			object.frame = 6
+		end if
+		break
+
+	end switch
+
+	// Player Interactions
+	if object.invincibilityTimer != 0
+		object.invincibilityTimer--
+	end if
+	
+	// Don't know how the player is even supposed to reach Eggman in the cutscene, but make Eggman have a reaction to being hit
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -20, 14, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+
+#platform: USE_ORIGINS
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -20, 14, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
+		
+		if checkResult == true
+			if object.invincibilityTimer == 0
+				CallFunction(Player_CheckHit)
+				if checkResult == true
+					object.animation = SBZEGGMAN_ANI_HIT
+					object.invincibilityTimer = 32
+				else
+					if object.yvel == 0
+						object.animation = SBZEGGMAN_ANI_LAUGH
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-22, -23, 38, 51, 1, 209)
+	SpriteFrame(-22, -24, 38, 52, 42, 208)
+	SpriteFrame(-22, -23, 38, 51, 84, 209)
+	SpriteFrame(-16, -16, 46, 44, 350, 165)
+	SpriteFrame(-16, -23, 46, 55, 350, 210)
+	SpriteFrame(-22, -24, 42, 52, 225, 266)
+	SpriteFrame(-30, -24, 60, 44, 289, 165)
+	SpriteFrame(-24, -23, 54, 43, 236, 221)
+	SpriteFrame(-21, -25, 51, 52, 269, 213)
+	SpriteFrame(-22, -20, 42, 64, 225, 319)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-22, -23, 38, 51, 1, 209)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

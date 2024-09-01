@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: V Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.centerPos.y
+private alias object.value1 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VPlatform_DebugDraw
+reserve function VPlatform_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function VPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function VPlatform_DebugSpawn
+	CreateTempObject(TypeName[V Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.y = object.ypos
+	object[tempObjectPos].propertyValue = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp7 = object.ypos
+	
+	GetTableValue(temp0, 12, StageSetup_oscillationTable)
+	if object.propertyValue == 1
+		FlipSign(temp0)
+		temp0 += 0x4000
+	else
+		temp0 -= 0x4000
+	end if
+	temp0 <<= 8
+
+	object.ypos = object.centerPos.y
+	object.ypos -= temp0
+	
+	temp1 = object.ypos
+	temp7 &= 0xFFFF0000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp7
+	
+	object.ypos = temp7
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	foreach (TypeName[V Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[V Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		// Draw some lines and ghosts to indicate where this platform is gonna go and that it's a vertical type
+		// (Otherwise it's just the generic platform sprite, which is shared between two other objects in EHZ)
+		
+		editor.drawingOverlay = true
+		
+		object.inkEffect = INK_BLEND
+		
+		temp0 = 0x408000
+		temp0 += object.ypos
+		DrawSpriteFX(0, FX_INK, object.xpos, temp0)
+		
+		temp1 = -0x3F8000
+		temp1 += object.ypos
+		DrawSpriteFX(0, FX_INK, object.xpos, temp1)
+		
+		object.inkEffect = INK_NONE
+		DrawArrow(object.xpos, temp0, object.xpos, temp1, 255, 255, 255)
+		DrawArrow(object.xpos, temp1, object.xpos, temp0, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end event

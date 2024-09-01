@@ -1,0 +1,577 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// Using CPZEggman as a prefix here because there's like 12 "Eggman" objects in the game so its less confusing this way
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.originPos.x
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.oscillationAngle
+private alias object.value4  : object.timer
+private alias object.value5  : object.flameAnim
+private alias object.value6  : object.flameAnimTimer
+private alias object.value7  : object.health
+private alias object.value8  : object.invincibilityTimer
+private alias object.value9  : object.exploding
+private alias object.value10 : object.nonStopBopCount
+
+// Eggman States
+private alias 0 : CPZEGGMAN_AWAITPLAYER
+private alias 1 : CPZEGGMAN_BOSSFIGHT
+private alias 2 : CPZEGGMAN_EXPLODE
+private alias 3 : CPZEGGMAN_DEFEATFALL
+private alias 4 : CPZEGGMAN_DEFEATRISE
+private alias 5 : CPZEGGMAN_FLEE
+private alias 6 : CPZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : CPZEGGANI_INVISIBLE
+private alias 1 : CPZEGGANI_IDLE
+private alias 2 : CPZEGGANI_LAUGH
+private alias 3 : CPZEGGANI_HIT
+private alias 4 : CPZEGGANI_DEFEATED
+private alias 5 : CPZEGGANI_TOASTED
+private alias 6 : CPZEGGANI_PANIC
+
+// Flame Animations
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
+private alias 2 : FLAME_EXPLODE
+
+// Dropper Aliases
+private alias object.value4  : chemicalDropper.boundsL
+private alias object.value5  : chemicalDropper.boundsR
+
+// Dropper States
+private alias 4 : CHEMICALDROPPER_DESTROYED
+
+// Music Events
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+private alias  0 : MUSICEVENT_FADETOBOSS
+private alias  1 : MUSICEVENT_FADETOSTAGE
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.gravity : player.gravity
+private alias object.collisionRight : player.collisionRight
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Achievement Aliases
+private alias 5 : ACHIEVEMENT_BOBNONSTOP
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CPZEggman_Oscillate
+
+
+// ========================
+// Tables
+// ========================
+
+private table CPZEggman_flameAnimFrameTable
+	7, 8, 8, 7, 7, 16
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function CPZEggman_Oscillate
+	object.ypos = object.originPos.y
+	Sin256(temp0, object.oscillationAngle)
+	temp0 <<= 10
+	object.ypos += temp0
+	object.oscillationAngle += 2
+	object.oscillationAngle &= 255
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CPZEGGMAN_AWAITPLAYER
+		temp0 = object.ixpos
+		temp0 -= screen.xcenter
+		stage.newXBoundary1 = temp0
+		temp0 = object.ixpos
+		temp0 += screen.xcenter
+		stage.newXBoundary2 = temp0
+		if player[0].xpos > object.xpos
+			object.animation = CPZEGGANI_IDLE
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			object.originPos.y = object.ypos
+			object[+1].type = TypeName[Chemical Dropper]
+			chemicalDropper[+1].boundsL = object.xpos
+			chemicalDropper[+1].boundsL -= 0x700000
+			chemicalDropper[+1].boundsR = object.xpos
+			chemicalDropper[+1].boundsR += 0x700000
+			temp0 = screen.xcenter
+			temp0 += 256
+			temp0 <<= 16
+			object.xpos += temp0
+			object[+1].xpos = object.xpos
+			object[+1].ypos = object.ypos
+			object[+1].originPos.x = object.xpos
+			object[+1].originPos.y = object.ypos
+			object[+1].priority = PRIORITY_ACTIVE
+			object.flameAnim = FLAME_ACTIVE
+			
+#platform: USE_STANDALONE
+			object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+			if game.bossOneLife == false
+				object.health = 8
+			else
+				object.health = 1
+			end if
+#endplatform
+
+			object.priority = PRIORITY_ACTIVE
+			object.state++
+		end if
+		break
+
+	case CPZEGGMAN_BOSSFIGHT
+		break
+
+	case CPZEGGMAN_EXPLODE
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
+			object.animation = CPZEGGANI_TOASTED
+			object.exploding = false
+			object.state++
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+		end if
+		break
+
+	case CPZEGGMAN_DEFEATFALL
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		object.timer++
+		if object.timer == 38
+			object.yvel = 0
+			object.timer = 0
+			object.animationTimer = 0
+			object.state++
+		end if
+		break
+
+	case CPZEGGMAN_DEFEATRISE
+		if object.timer < 48
+			object.ypos += object.yvel
+			object.yvel -= 0x800
+			object.timer++
+		else
+			object.timer = 0
+			object.yvel = 0
+			object.originPos.y = object.ypos
+			object.state++
+		end if
+		break
+		
+	case CPZEGGMAN_FLEE
+		object.ypos = object.originPos.y
+		CallFunction(CPZEggman_Oscillate)
+
+		if object.timer < 8
+			object.timer++
+		else
+			object.timer = 0
+			object.animation = CPZEGGANI_PANIC
+			object.animationTimer = 0
+			object.flameAnim = FLAME_EXPLODE
+			object.flameAnimTimer = 0
+			object.direction = FLIP_X
+			object.priority = PRIORITY_ACTIVE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+			object.state++
+		end if
+		break
+
+	case CPZEGGMAN_ESCAPE
+		object.xpos += 0x40000
+		object.originPos.y -= 0x4000
+		CallFunction(CPZEggman_Oscillate)
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+		
+	end switch
+
+	// If P1's touched the floor, then reset the Bop Non-Stop count for the Achievement
+	if player[0].gravity == GRAVITY_GROUND
+		object.nonStopBopCount = 0
+	end if
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true
+				SetPaletteEntry(0, 192, 0xE0E0E0)
+			else
+				SetPaletteEntry(0, 192, 0x000000)
+			end if
+		end if
+
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.invincibilityTimer == 0
+				CheckEqual(player[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+				if temp0 != false
+					if object.animation != CPZEGGANI_LAUGH
+						object.animation = CPZEGGANI_LAUGH
+						object.animationTimer = 0
+					end if
+				end if
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 22, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					CallFunction(Player_CheckHit)
+					if checkResult == true
+						object.health--
+						if object.health == 0
+#platform: USE_ORIGINS
+							CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+							CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+#endplatform
+
+							player.score += 1000
+							object.animation = CPZEGGANI_DEFEATED
+							object.animationTimer = 0
+							object.flameAnim = FLAME_INACTIVE
+							object.exploding = true
+							object.originPos.y = object.ypos
+							object.oscillationAngle = object[+1].oscillationAngle
+							object.state++
+							object[+1].state = CHEMICALDROPPER_DESTROYED
+							
+							if object.nonStopBopCount >= 7
+								if stage.debugMode == false
+									// Grant the "Bob Non-stop" Achievement
+									CallNativeFunction2(SetAchievement, ACHIEVEMENT_BOBNONSTOP, 100)
+								end if
+							end if
+						else
+							object.animation = CPZEGGANI_HIT
+							object.animationTimer = 0
+							object.invincibilityTimer = 32
+							PlaySfx(SfxName[Boss Hit], false)
+							if currentPlayer == 0
+								if player[0].gravity == GRAVITY_AIR
+									object.nonStopBopCount++
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+	end if
+
+	// Enforce the R Boundary
+	if object.state != CPZEGGMAN_ESCAPE
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+
+	if object.exploding == true
+		temp0 = oscillation
+		temp0 &= 7
+		if temp0 == 0
+			Rand(temp0, 48)
+			temp0 -= 24
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			object[tempObjectPos].drawOrder = 5
+			PlaySfx(SfxName[Explosion], false)
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.animation != CPZEGGANI_INVISIBLE
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+	end if
+
+	switch object.animation
+	case CPZEGGANI_IDLE
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CPZEGGANI_LAUGH
+		temp0 = object.animationTimer
+		temp0 &= 15
+		temp0 >>= 3
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			if player[0].animation != ANI_DYING
+				object.animation = CPZEGGANI_IDLE
+			end if
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CPZEGGANI_HIT
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			object.animation = CPZEGGANI_IDLE
+		end if
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CPZEGGANI_DEFEATED
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		temp0 %= 5
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CPZEGGANI_TOASTED
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case CPZEGGANI_PANIC
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 &= 1
+		if temp0 == 1
+			DrawSpriteFX(15, FX_FLIP, object.xpos, object.ypos)
+		end if
+		break
+		
+	end switch
+
+	switch object.flameAnim
+	default
+	case FLAME_INACTIVE
+		break
+
+	case FLAME_ACTIVE
+		GetTableValue(temp0, object.flameAnimTimer, CPZEggman_flameAnimFrameTable)
+		object.flameAnimTimer++
+		if object.flameAnimTimer == 6
+			object.flameAnimTimer = 0
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case FLAME_EXPLODE
+		temp0 = object.flameAnimTimer
+		temp0 /= 3
+		temp0 += 9
+		object.flameAnimTimer++
+		if object.flameAnimTimer >= 18
+			object.flameAnimTimer = 0
+			temp0 = 7
+			object.flameAnim = FLAME_ACTIVE
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("Global/EggMobile.gif")
+
+		// 0->5 - Eggman Frames
+		SpriteFrame(-28, -28, 60, 20, 5, 1)
+		SpriteFrame(-28, -28, 60, 20, 66, 1)
+		SpriteFrame(-28, -28, 60, 20, 5, 22)
+		SpriteFrame(-28, -28, 60, 20, 66, 22)
+		SpriteFrame(-28, -28, 60, 20, 5, 43)
+		SpriteFrame(-28, -28, 60, 20, 66, 43)
+		
+		// 6 - Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 1, 64)
+
+		// 7->9 - Thruster Frames
+		SpriteFrame(31, 4, 12, 8, 66, 65)
+		SpriteFrame(30, 2, 14, 12, 66, 74)
+		SpriteFrame(31, -2, 22, 14, 66, 87)
+
+		// 10->14 - Explosion Flame Frames
+		SpriteFrame(31, -9, 32, 26, 94, 64)
+		SpriteFrame(31, -2, 22, 14, 66, 87)
+		SpriteFrame(31, -9, 32, 26, 94, 64)
+		SpriteFrame(31, 4, 12, 8, 66, 65)
+		SpriteFrame(30, 2, 14, 12, 66, 74)
+		
+		// 15 - Sweat Frame
+		SpriteFrame(-3, -28, 11, 8, 79, 65)
+		
+		// 16 - Blank Frame
+		SpriteFrame(0, 0, 0, 0, 7, 2)
+
+		if options.vsMode == true
+			foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+				object[arrayPos0].type = TypeName[Blank Object]
+			next
+		end if
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// 0->5 - Eggman Frames
+		SpriteFrame(-28, -28, 60, 20, 1, 1)
+		SpriteFrame(-28, -28, 60, 20, 62, 1)
+		SpriteFrame(-28, -28, 60, 20, 1, 22)
+		SpriteFrame(-28, -28, 60, 20, 62, 22)
+		SpriteFrame(-28, -28, 60, 20, 1, 43)
+		SpriteFrame(-28, -28, 60, 20, 62, 43)
+		
+		// 6 - Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 415, 170)
+		
+		// 7->9 - Thruster Frames
+		SpriteFrame(31, 4, 12, 8, 57, 90)
+		SpriteFrame(30, 2, 14, 12, 57, 99)
+		SpriteFrame(31, -2, 22, 14, 34, 97)
+		
+		// 10->14 - Explosion Flame Frames
+		SpriteFrame(31, -9, 32, 26, 72, 86)
+		SpriteFrame(31, -2, 22, 14, 34, 97)
+		SpriteFrame(31, -9, 32, 26, 72, 86)
+		SpriteFrame(31, 4, 12, 8, 57, 90)
+		SpriteFrame(30, 2, 14, 12, 57, 99)
+		
+		// 15 - Sweat Frame
+		SpriteFrame(-3, -28, 11, 8, 45, 88)
+		
+		// 16 - Blank Frame
+		SpriteFrame(0, 0, 0, 0, 7, 2)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw lines connecting the whole network of boss objects
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0, 255, 0) // Chemical Dropper
+		
+		// Draw arena bounds
+		temp0 = 212; temp1 = 113; temp2 = 212; temp3 = 128;
+		CallFunction(EditorHelpers_DrawHitbox)
+		
+		// Draw Robotnik's movement bounds
+		temp0 = object.xpos
+		temp0 -= 0x700000
+		
+		temp1 = object.xpos
+		temp1 += 0x700000
+		
+		DrawLine(temp0, object.ypos, temp1, object.ypos, 0, 255, 0)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("Global/EggMobile.gif")
+		
+		// 0 - Eggman Frame
+		SpriteFrame(-28, -28, 60, 20, 5, 1)
+		
+		// 1 - Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 1, 64)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		
+		// 0 - Eggman Frame
+		SpriteFrame(-28, -28, 60, 20, 1, 1)
+		
+		// 1 - Eggmobile Body Frame
+		SpriteFrame(-32, -8, 64, 29, 415, 170)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

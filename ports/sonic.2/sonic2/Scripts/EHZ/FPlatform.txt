@@ -1,0 +1,261 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Fall Platform Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.stood
+private alias object.value1 : object.collisionOffset.y
+private alias object.value2 : object.timer
+private alias object.value3 : object.centerPos.y
+private alias object.value4 : object.stoodAngle
+
+private alias 0 : FPLATFORM_FALL
+private alias 1 : FPLATFORM_STATIC
+
+private alias 0 : FPLATFORM_IDLE
+private alias 1 : FPLATFORM_FALLING_SOLID
+private alias 2 : FPLATFORM_FALLING
+private alias 3 : FPLATFORM_OFFSCREEN
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function FallPlatform_DebugDraw
+reserve function FallPlatform_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function FallPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function FallPlatform_DebugSpawn
+	CreateTempObject(TypeName[Fall Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.y = object[tempObjectPos].ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.stood == true
+		if object.timer == 0
+			object.priority = PRIORITY_ACTIVE
+			object.timer = 30
+		end if
+
+		if object.stoodAngle < 64
+			object.stoodAngle += 4
+		end if
+	else
+		if object.stoodAngle > 0
+			object.stoodAngle -= 4
+		end if
+	end if
+
+	temp0 = object.ypos
+	temp0 &= 0xFFFF0000
+	switch object.state
+	case FPLATFORM_IDLE
+		temp1 = object.stoodAngle
+		temp1 <<= 1
+		Sin(temp2, temp1)
+		temp2 <<= 9
+		object.ypos = object.centerPos.y
+		object.ypos += temp2
+		if object.propertyValue == FPLATFORM_FALL
+			if object.timer != 0
+				object.timer--
+				if object.timer == 0
+					object.state++
+					object.timer = 32
+				end if
+			end if
+		end if
+		break
+
+	case FPLATFORM_FALLING_SOLID
+		object.timer--
+		if object.timer == 0
+			object.state++
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					player[currentPlayer].ypos += object.yvel
+					player[currentPlayer].yvel = object.yvel
+					player[currentPlayer].yvel -= 0x3800
+					player[currentPlayer].gravity = GRAVITY_AIR
+				end if
+			next
+		end if
+		// [FallThrough]
+	case FPLATFORM_FALLING
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+
+		if object.outOfBounds == true
+			object.ypos = object.centerPos.y
+			object.yvel = 0
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case FPLATFORM_OFFSCREEN
+		if object.outOfBounds == true
+			object.state = FPLATFORM_IDLE
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+		
+	end switch
+
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp0
+	object.stood = false
+
+	if object.state < FPLATFORM_FALLING
+		temp1 = object.ypos
+
+		object.ypos = temp0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+		next
+
+		object.ypos = temp1
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < FPLATFORM_OFFSCREEN
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	foreach (TypeName[Fall Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Fall Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(FallPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(FallPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	CheckEqual(editor.showGizmos, true)
+	temp0 = checkResult
+	CheckEqual(object.propertyValue, FPLATFORM_FALL)
+	temp0 &= checkResult
+	if temp0 == true
+		// Draw a dashed line to indicate that this platform is of the falling variety
+		// (Otherwise it's just the generic platform sprite, which is shared between two other objects)
+		
+		editor.drawingOverlay = true
+		
+		
+		temp0 = object.ypos
+		
+		temp1 = object.ypos
+		temp1 += 0x60000
+		
+		temp2 = object.ypos
+		temp2 += 0x3E0000
+		
+		while temp0 < temp2
+			DrawLine(object.xpos, temp0, object.xpos, temp1, 255, 255, 255)
+			
+			temp0 += 0xC0000
+			temp1 += 0xC0000
+		loop
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-32, -12, 64, 32, 127, 98)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 32, 1, 402)
+	end if
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Falling Platform", FPLATFORM_FALL)
+	AddEnumVariable("Static Platform",  FPLATFORM_STATIC)
+end event

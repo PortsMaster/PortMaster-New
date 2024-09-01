@@ -1,0 +1,217 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Grab Panel Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// This Object is used in Mission "Quick Step" - M050 - Mission_Zone11
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.delay
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+private alias object.jumpPress : player.jumpPress
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function GrabPanel_DebugDraw
+reserve function GrabPanel_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function GrabPanel_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function GrabPanel_DebugSpawn
+	CreateTempObject(TypeName[Grab Panel], 0, object.xpos, object.ypos)
+	object[tempObjectPos].delay = 60
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp7 = false
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp2 = false
+		temp3 = -0x280000
+
+		temp0 = object.xpos
+		temp0 += temp3
+		temp0 -= player[currentPlayer].xpos
+		Abs(temp0)
+		if temp0 <= 0x40000
+			temp0 = object.ypos
+			temp0 -= player[currentPlayer].ypos
+			temp1 = temp0
+			Abs(temp0)
+			if temp0 <= 0x160000
+				player[currentPlayer].animation 		= ANI_CLINGING
+				player[currentPlayer].animationSpeed 	= 128
+				player[currentPlayer].xpos 				= object.xpos
+				player[currentPlayer].xpos += temp3
+				if object.propertyValue == 0x7F
+					player[currentPlayer].state = Player_State_Static
+					player[currentPlayer].xvel 	= 0
+					player[currentPlayer].yvel 	= 0
+					player[currentPlayer].speed = 0
+				end if
+				
+				temp2 = true
+			else
+				if player[currentPlayer].animation == ANI_CLINGING
+					player[currentPlayer].ypos = object.ypos
+					if temp1 < 0
+						player[currentPlayer].ypos += 0x160000
+					else
+						player[currentPlayer].ypos -= 0x160000
+					end if
+
+					temp2 = true
+				end if
+			end if
+
+			if temp2 != false
+				if currentPlayer == 0
+					if player[currentPlayer].jumpPress != false
+						if player[currentPlayer].ypos < object.ypos
+							temp7 = 1
+						else
+							temp7 = 2
+						end if
+					end if
+
+					object.delay--
+					if object.delay == 0
+						if player[currentPlayer].ypos < object.ypos
+							temp7 = 1
+						else
+							temp7 = 2
+						end if
+					end if
+				end if
+			end if
+		end if
+	next
+
+	if temp7 != 0
+		player[currentPlayer].animation = ANI_FANROTATE
+		PlaySfx(SfxName[Ledge Break], false)
+		temp0 = object.xpos
+		temp0 -= 0x100000
+		temp1 = object.ypos
+		temp1 -= 0x100000
+		if temp7 == 1
+			CreateTempObject(TypeName[Grab Panel Part], 16, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			temp1 += 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 24, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			temp0 -= 0x200000
+			temp1 -= 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 0, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			object[tempObjectPos].state = 1
+			temp1 += 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 4, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+		else
+			CreateTempObject(TypeName[Grab Panel Part], 24, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			temp1 += 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 16, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			temp0 -= 0x200000
+			temp1 -= 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 4, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			temp1 += 0x200000
+			
+			CreateTempObject(TypeName[Grab Panel Part], 0, temp0, temp1)
+			object[tempObjectPos].xvel = 0x40000
+			object[tempObjectPos].state = 1
+		end if
+		
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	if object.propertyValue != 0x7F
+		DrawSprite(0)
+		
+	// ??? no end if?
+	// I mean code-wise, yeah the end event will reset it but, this is prolly a "bug"
+	// (btw it was like this in the original script already, this isn't something new introduced in the Mission ver)
+	
+#platform: USE_DECOMP
+	// just for peace of mind :)
+	end if
+#endplatform
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-64, -32, 64, 64, 1, 69)
+
+	foreach (TypeName[Grab Panel], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].delay = object[arrayPos0].propertyValue
+		object[arrayPos0].delay *= 60
+	next
+
+	SetTableValue(TypeName[Grab Panel], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(GrabPanel_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(GrabPanel_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	CheckEqual(object.propertyValue, 0x7F)
+	object.inkEffect = checkResult
+	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+	object.inkEffect = INK_NONE
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-64, -32, 64, 64, 1, 69)
+	
+	// 0x7F == Eggman Shuttle Grab Panel
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "delay")
+end event

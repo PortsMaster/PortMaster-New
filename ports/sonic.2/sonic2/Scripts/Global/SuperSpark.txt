@@ -1,0 +1,159 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Super Spark Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.propertyValue : object.isChild
+private alias object.value0 : object.timer
+
+private alias 0 : SUPERSPARK_SETUP
+private alias 1 : SUPERSPARK_ANIMATE1
+private alias 2 : SUPERSPARK_ANIMATE2
+private alias 3 : SUPERSPARK_DELAY
+private alias 4 : SUPERSPARK_FINISHED
+
+// Player aliases
+private alias object.xpos 		: player.xpos
+private alias object.ypos 		: player.ypos
+private alias object.speed 		: player.speed
+private alias object.value18 	: player.sortedDrawOrder
+private alias object.value42	: player.prevGravity
+
+private alias -1 : DRAWORDER_PLAYER
+
+
+// ========================
+// Events
+// ========================
+
+
+event ObjectUpdate
+	if object.isChild == false
+		object.xpos = player[-playerCount].xpos
+		object.ypos = player[-playerCount].ypos
+	end if
+
+	switch object.state
+	case SUPERSPARK_SETUP
+		if player[-playerCount].prevGravity == 0
+			temp0 = player[-playerCount].speed
+			Abs(temp0)
+
+			if temp0 >= 0x80000
+				object.drawOrder = DRAWORDER_PLAYER
+				object.timer 	 = 0
+				object.frame 	 = 0
+				object.state++
+			end if
+		end if
+		break
+
+	case SUPERSPARK_ANIMATE1
+		object.timer++
+		if object.timer >= 3
+			object.timer = 1
+			object.frame++
+			if object.frame >= 2
+				object.state++
+			end if
+		end if
+		break
+
+	case SUPERSPARK_ANIMATE2
+		object.timer++
+		if object.timer >= 3
+			object.timer = 1
+			object.frame--
+			if object.frame <= 0
+				object.state++
+			end if
+		end if
+		break
+
+	case SUPERSPARK_DELAY
+		object.timer++
+		if object.timer >= 3
+			object.timer = 9
+			object.state++
+		end if
+		break
+
+	case SUPERSPARK_FINISHED
+		if object.isChild == true
+			object.type = TypeName[Blank Object]
+		end if
+
+		object.timer++
+		if object.timer >= 13
+			temp0 = player[-playerCount].speed
+			Abs(temp0)
+			CheckLower(temp0, 0x80000)
+			temp0 = checkResult
+			CheckEqual(player[-playerCount].prevGravity, 0)
+			temp0 &= checkResult
+			CheckEqual(object[-playerCount].state, Player_State_Climb)
+			temp0 |= checkResult
+
+			if temp0 == true
+				object.state = SUPERSPARK_SETUP
+			else
+				object.timer = 0
+				CreateTempObject(TypeName[Super Spark], true, object[-playerCount].xpos, object[-playerCount].ypos)
+				object[tempObjectPos].frame = 0
+				object[tempObjectPos].state = SUPERSPARK_ANIMATE1
+				object[tempObjectPos].drawOrder = player[-playerCount].sortedDrawOrder
+			end if
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	default
+	case SUPERSPARK_SETUP
+	case SUPERSPARK_FINISHED
+		break
+
+	case SUPERSPARK_ANIMATE1
+	case SUPERSPARK_ANIMATE2
+	case SUPERSPARK_DELAY
+		DrawSprite(object.frame)
+		break
+		
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	
+	SpriteFrame(-8, -8, 16, 16, 200, 33)
+	SpriteFrame(-16, -16, 32, 32, 223, 116)
+	SpriteFrame(-24, -24, 48, 48, 207, 149)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 200, 33)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

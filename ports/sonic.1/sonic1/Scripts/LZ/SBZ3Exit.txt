@@ -1,0 +1,197 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: SBZ3 Exit Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.timer
+
+// Player values
+private alias object.type		 : player.type
+private alias object.groupID	 : player.groupID
+private alias object.controlMode : player.controlMode
+private alias object.animation	 : player.animation
+private alias object.direction	 : player.direction
+private alias object.value0		 : player.rings
+
+private alias 0 : SBZ3EXIT_WAIT
+private alias 1 : SBZ3EXIT_FINISH_NORMAL
+private alias 2 : SBZ3EXIT_FINISH_TATTACK
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_SAVEGAME
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+// Reserved Object Slot Aliases
+private alias 30 : SLOT_ACTFINISH
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SBZ3EXIT_WAIT
+		// Check for player collision
+		BoxCollisionTest(C_TOUCH, object.entityPos, -128, -16, 128, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			// First, erase the player object (by turning them into a ring!)
+			player[0].type = TypeName[Ring]
+			player[0].groupID = TypeName[Blank Object]
+			player[0].controlMode = CONTROLMODE_NONE
+
+#platform: USE_STANDALONE
+			//Check for time attack
+			if options.gameMode == MODE_TIMEATTACK
+#endplatform
+#platform: USE_ORIGINS
+			CheckEqual(options.gameMode, MODE_TIMEATTACK)
+			temp0 = checkResult
+			CheckNotEqual(game.oneStageFlag, false)
+			temp0 |= checkResult
+			if temp0 != false
+#endplatform
+				// Go into special time attack variant (Origins uses it too for single-stage mode)
+				object.state = SBZ3EXIT_FINISH_TATTACK
+				stage.timeEnabled = false
+			else
+				// Normal variant
+				object.state++ // SBZ3EXIT_FINISH_NORMAL
+			end if
+
+			recAnimation = 0
+			temp0 = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				temp1 = player[currentPlayer].animation
+				temp1 <<= 8
+				temp1 |= player[currentPlayer].direction
+				temp1 <<= temp0
+
+				recAnimation |= temp1
+				temp0 += 16
+			next
+		end if
+		break
+
+	case SBZ3EXIT_FINISH_NORMAL
+		// Normal variant - start fading out
+		if object.timer < 512
+			object.timer += 8
+			music.volume -= 2
+		else
+#platform: USE_ORIGINS
+			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, player[0].rings)
+			CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+			StageStatsUsabilityParam1 = 0
+			StageStatsUsabilityParam2 = 0
+			StageStatsUsabilityParam3 = 0
+			StageStatsUsabilityParam4 = 0
+			StageStatsUsabilityParam5 = 0
+			StatsUsabilityParam1 = 0
+			StatsUsabilityParam2 = 0
+			StatsUsabilityParam3 = 0
+			StatsUsabilityParam4 = 0
+			StatsUsabilityParam5 = 0
+#endplatform
+			
+			// Fade done, go to SBZ3
+			object.direction = FACING_RIGHT // ???
+			lampPostID = 0
+			stage.listPos++
+
+			if options.gameMode == MODE_SAVEGAME
+				// There aren't any act results in this stage so save the game here (even if already on a completed save...)
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				if stage.player2Enabled == true
+#platform: USE_STANDALONE
+					saveRAM[arrayPos1] = PLAYER_SONIC_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+					switch stage.playerListPos
+					case PLAYER_SONIC_A
+						saveRAM[arrayPos1] = PLAYER_SONIC_TAILS
+						break
+					case PLAYER_AMY_A
+						saveRAM[arrayPos1] = PLAYER_AMY_TAILS
+						break
+					end switch
+#endplatform
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				
+				// Bug Details:
+				// This is missing the check for if your save file is already past the next act
+				// This means the save file's act will be overwritten to Final Zone, even if you're on a Complete save file...
+				saveRAM[arrayPos1] = stage.listPos
+				saveRAM[arrayPos1]++
+				
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+
+				WriteSaveRAM()
+			end if
+
+			LoadStage()
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	case SBZ3EXIT_FINISH_TATTACK
+		// Time attack variant - no fade out and instead show Act Results after a second
+		// Origins also uses this to display results when not in normal gameplay
+		
+		if object.timer < 60
+			object.timer++
+			music.volume -= 2
+		else
+			object.type = TypeName[Blank Object]
+
+			object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+			object[SLOT_ACTFINISH].drawOrder = 6
+			object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+			PlayMusic(TRACK_ACTFINISH)
+		end if
+		break
+
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

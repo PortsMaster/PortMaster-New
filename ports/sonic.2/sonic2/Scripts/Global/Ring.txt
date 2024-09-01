@@ -1,0 +1,308 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Ring Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.targetPlayer
+
+private alias 0 : RING_IDLE
+private alias 1 : RING_ATTRACTED
+
+// Player Aliases
+private alias object.state   : player.state
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value0  : player.rings
+private alias object.value16 : player.isSidekick
+private alias object.value18 : player.currentPlane
+private alias object.value37 : player.shield
+
+private alias 4 : SHIELD_LIGHTNING
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias  2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Ring_DebugDraw
+reserve function Ring_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Ring_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function Ring_DebugSpawn
+	CreateTempObject(TypeName[Ring], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Bug Details:
+	// - The loop doesn't check to see if the ring's been obtained already, so
+	//    if two players touch the ring at the same time, then the ring will count twice
+	// - (The CNZ ring properly checks for that.. so why doesn't the normal version have the fix?..)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		
+		// Bug Details:
+		// -> While this top check works fine in singleplayer, as well as 2013's online VS, this doesn't work quite as fairly in Origins's local 2PVS
+		//    It puts P2 at a direct disadvantage, since it blocks them from picking up any rings while P1 is recoiling
+		//    On the other hand, however, P1 can still pick up rings even when P2 is recoiling
+		CheckEqual(player[0].state, Player_State_Hurt)
+		temp0 = checkResult
+		
+		CheckEqual(player[currentPlayer].state, Player_State_Hurt)
+		temp0 = checkResult
+		CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+		temp0 |= checkResult
+
+		if temp0 == false
+			// All checks passed, see if the player is touching the ring
+
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Player is touching ring - collect it
+
+				// Turn this object into a sparkle
+				object.type = TypeName[Ring Sparkle]
+
+				// Set this object to the same drawOrder as the player
+				object.drawOrder = player[currentPlayer].currentPlane
+
+				// Add it to the player's ring count
+				if player[currentPlayer].isSidekick == true
+					// P2 Tails in normal gameplay (not VS)
+					// So add it to P1's ring count
+					player[0].rings++
+					if player[0].rings > 999
+						player[0].rings = 999
+					end if
+				else
+					// Either P2 in VS or P1 in any mode
+					// In any case, give the ring to the player that collected it
+					player[currentPlayer].rings++
+					if player[currentPlayer].rings > 999
+						player[currentPlayer].rings = 999
+					end if
+				end if
+
+				// Check if the player should get an extra life
+				// (Always checking against P1? Doesn't look like P2 can get an extra life with rings in VS..)
+				if player[0].rings >= ringExtraLife
+					// Not in time attack?
+					if options.gameMode != MODE_TIMEATTACK
+						// Give the player an extra life/coin and play the music
+#platform: USE_ORIGINS
+						if game.coinMode == false
+							player.lives++
+						else
+							CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+						end if
+#endplatform
+#platform: USE_STANDALONE
+						player.lives++
+#endplatform
+						PlaySfx(SfxName[Life], false)
+						PauseMusic()
+						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+						object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+					end if
+
+					ringExtraLife += 100
+					if ringExtraLife > 300
+						ringExtraLife = 1000
+					end if
+				end if
+
+				if options.vsMode == true
+					if vs.playerID == 0 // Player 1 on the server side
+						if currentPlayer == 0 // Player 1 on the client's side
+							vs.totalRings1P++
+						else
+							vs.totalRings2P++
+						end if
+					else
+						if currentPlayer == 1 // Player 2 on the client's side
+							vs.totalRings1P++
+						else
+							vs.totalRings2P++
+						end if
+					end if
+				end if
+
+				// Play the ring sound
+				if ringPan == 0
+					PlaySfx(SfxName[Ring L], false)
+					SetSfxAttributes(SfxName[Ring L], -1, -100)
+					ringPan = 1
+				else
+					PlaySfx(SfxName[Ring R], false)
+					SetSfxAttributes(SfxName[Ring R], -1, 100)
+					ringPan = 0
+				end if
+			else
+				// Check if the ring should get attracted
+				if object.state == RING_IDLE
+					if player[currentPlayer].shield == SHIELD_LIGHTNING
+						BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+						if checkResult == true
+							// Make the ring attracted to the player
+							object.state = RING_ATTRACTED
+							object.targetPlayer = currentPlayer
+						end if
+					end if
+				end if
+			end if
+		end if
+	next
+
+	if object.state == RING_ATTRACTED
+		arrayPos0 = object.targetPlayer
+
+		if player[arrayPos0].shield != SHIELD_LIGHTNING
+			// If the player lost their shield, then make this ring dropped
+			object.type = TypeName[Lose Ring]
+			object.animationSpeed = 128
+			object.alpha = 256
+		else
+			arrayPos0 = object.targetPlayer
+
+			// Move closer to the player
+			if object.xpos > player[arrayPos0].xpos
+				if object.xvel > 0
+					object.xvel -= 0xC000
+				else
+					object.xvel -= 0x3000
+				end if
+			else
+				if object.xvel < 0
+					object.xvel += 0xC000
+				else
+					object.xvel += 0x3000
+				end if
+			end if
+
+			if object.ypos > player[arrayPos0].ypos
+				if object.yvel > 0
+					object.yvel -= 0xC000
+				else
+					object.yvel -= 0x3000
+				end if
+			else
+				if object.yvel < 0
+					object.yvel += 0xC000
+				else
+					object.yvel += 0x3000
+				end if
+			end if
+
+			object.xpos += object.xvel
+			object.ypos += object.yvel
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// All rings use the same frame
+	// (Animation is handled by Stage Setup object)
+	DrawSprite(ringFrame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	// (Doesn't mean much, but this is one of the few times in v4 scripts that a code is between LoadSpriteSheet and SpriteFrames)
+	foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+
+	// Ring frames
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	SpriteFrame(-8, -8, 16, 16, 1, 18)
+	SpriteFrame(-8, -8, 16, 16, 1, 35)
+	SpriteFrame(-8, -8, 16, 16, 1, 52)
+	SpriteFrame(-8, -8, 16, 16, 1, 69)
+	SpriteFrame(-8, -8, 16, 16, 1, 86)
+	SpriteFrame(-8, -8, 16, 16, 1, 103)
+	SpriteFrame(-8, -8, 16, 16, 1, 120)
+
+	// Add the Ring to the debug mode object list
+	SetTableValue(TypeName[Ring], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Ring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Ring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Normal", 0)
+	//AddEnumVariable("Not required by Sonic for perfect bonus", 1) // The score tally system seems to be a bit broken, so while it looks like this is how it was *supposed* to be, this is effectively useless
+	AddEnumVariable("Not required by all characters for perfect bonus", 2)
+end event

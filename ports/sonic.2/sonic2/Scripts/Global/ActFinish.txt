@@ -1,0 +1,670 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Act Finish Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.textPos
+private alias object.value2  : object.gotThroughTextPos
+private alias object.value3  : object.timePos
+private alias object.value4  : object.ringPos
+private alias object.value5  : object.perfectPos
+private alias object.value6  : object.totalPos
+private alias object.value7  : object.timeBonus
+private alias object.value8  : object.ringBonus
+private alias object.value9  : object.perfectBonus
+private alias object.value10 : object.hasPerfectBonus
+private alias object.value11 : object.totalScore
+private alias object.value12 : object.hasContinue // (can be Coins in Origins too)
+
+// States
+private alias -1 : ACTFINISH_NORESULTS
+private alias  0 : ACTFINISH_INIT
+private alias  1 : ACTFINISH_ENTERTEXT
+private alias  2 : ACTFINISH_ACTFINISHJINGLE
+private alias  3 : ACTFINISH_TALLYSCORE
+private alias  4 : ACTFINISH_SHOWRESULTS
+private alias  5 : ACTFINISH_LOADNEXTSTAGE
+private alias  6 : ACTFINISH_GOTCONTINUE
+private alias  7 : ACTFINISH_WAITFORCALLBACK
+private alias  8 : ACTFINISH_SETSCREENFADE
+
+// Player Aliases
+private alias object.value0 : player.rings
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_SAVEGAME
+private alias 2 : MODE_TIMEATTACK
+
+// Achievement Aliases
+private alias 6 : ACHIEVEMENT_PERFECTIONIST
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	options.touchControls = false
+	
+	switch object.state
+	case ACTFINISH_INIT
+		object.drawOrder = 6
+		object.priority = PRIORITY_ACTIVE
+		object.textPos = -384
+		object.gotThroughTextPos = 384
+		object.timePos = 640
+		object.ringPos = 656
+		object.perfectPos = 672
+		object.totalPos = 688
+
+		switch stage.minutes
+		case 0
+			if stage.seconds < 30
+				object.timeBonus = 50000
+			else
+				if stage.seconds < 45
+					object.timeBonus = 10000
+				else
+					object.timeBonus = 5000
+				end if
+			end if
+			break
+
+		case 1
+			if stage.seconds < 30
+				object.timeBonus = 4000
+			else
+				object.timeBonus = 3000
+			end if
+			break
+
+		case 2
+			object.timeBonus = 2000
+			break
+
+		case 3
+			object.timeBonus = 1000
+			break
+
+		case 4
+			object.timeBonus = 500
+			break
+
+		case 5
+			object.timeBonus = 100
+			break
+
+		case 9
+			if stage.debugMode == false
+				if options.gameMode < MODE_TIMEATTACK
+					if stage.seconds == 59
+						// Cutting it really close there - give the player a ton of points
+						object.timeBonus = 100000
+					end if
+				end if
+			end if
+			break
+
+		end switch
+
+		object.ringBonus = player[0].rings
+		object.ringBonus *= 100
+
+		// Calculate Perfect Bonus
+
+		// Ring Property Values
+		// 0 = All
+		// 1 = Not needed by Sonic for perfect
+		// 2 = Not needed at all for perfect
+		
+		// The tallying system seems to be a bit off, though...
+
+		switch stage.playerListPos
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+#endplatform
+			temp0 = 0
+			foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
+				if object[arrayPos0].propertyValue <= 1 // Is this supposed to be just a `<`?
+					temp0++
+				end if
+			next
+			break
+			
+		case PLAYER_TAILS_A
+		case PLAYER_KNUCKLES_A
+			temp0 = 0
+			foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
+				if object[arrayPos0].propertyValue != 2
+					temp0++
+				end if
+			next
+			break
+			
+		end switch
+		
+		// Perfect Bonus
+		if temp0 == 0
+			object.hasPerfectBonus = true
+			object.perfectBonus = 50000
+			if stage.debugMode == false
+				// Grant the "Perfectionist" Achievement, for collecting all rings in a level
+				CallNativeFunction2(SetAchievement, ACHIEVEMENT_PERFECTIONIST, 100)
+			end if
+		end if
+		
+#platform: USE_STANDALONE
+		object.state++
+#endplatform
+		
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_MISSION
+			object.state = ACTFINISH_NORESULTS
+		else
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				object.state = ACTFINISH_NORESULTS
+			else
+				object.state++
+			end if
+		end if
+		
+		CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+		CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, player[0].rings)
+		CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+		
+		StageStatsUsabilityParam1 = 0
+		StageStatsUsabilityParam2 = 0
+		StageStatsUsabilityParam3 = 0
+		StageStatsUsabilityParam4 = 0
+		StageStatsUsabilityParam5 = 0
+		
+		StatsUsabilityParam1 = 0
+		StatsUsabilityParam2 = 0
+		StatsUsabilityParam3 = 0
+		StatsUsabilityParam4 = 0
+		StatsUsabilityParam5 = 0
+#endplatform
+		break
+
+	case ACTFINISH_ENTERTEXT
+		if object.textPos < 0
+			object.textPos += 16
+		end if
+		
+		if object.gotThroughTextPos > 0
+			object.gotThroughTextPos -= 16
+		end if
+		
+		if object.timePos > 0
+			object.timePos -= 16
+		end if
+		
+		if object.ringPos > 0
+			object.ringPos -= 16
+		end if
+		
+		if object.perfectPos > 0
+			object.perfectPos -= 16
+		end if
+		
+		if object.totalPos > 0
+			object.totalPos -= 16
+		else
+			object.state++
+		end if
+		break
+		
+	case ACTFINISH_ACTFINISHJINGLE
+		object.timer++
+		if object.timer > 299
+			object.timer = 0
+			object.state++
+		end if
+		break
+		
+	case ACTFINISH_TALLYSCORE
+		if object.ringBonus > 0
+			object.ringBonus -= 100
+			object.totalScore += 100
+			player.score += 100
+		end if
+		
+		if object.timeBonus > 0
+			object.timeBonus -= 100
+			object.totalScore += 100
+			player.score += 100
+		end if
+		
+		if object.perfectBonus > 0
+			object.perfectBonus -= 100
+			object.totalScore += 100
+			player.score += 100
+		end if
+		
+		CheckGreater(object.ringBonus, 0)
+		temp0 = checkResult
+		CheckGreater(object.timeBonus, 0)
+		temp0 |= checkResult
+		CheckGreater(object.perfectBonus, 0)
+		temp0 |= checkResult
+		if temp0 == true
+			object.timer++
+			if object.timer == 2
+				PlaySfx(SfxName[Score Add], false)
+				object.timer = 0
+			end if
+		else
+			if options.vsMode == false
+				if object.totalScore >= 10000
+					object.state = ACTFINISH_GOTCONTINUE
+				else
+					object.state++
+				end if
+			else
+				object.state++
+			end if
+			
+			object.timer = 0
+			PlaySfx(SfxName[Score Total], false)
+		end if
+		break
+		
+	case ACTFINISH_GOTCONTINUE
+		object.timer++
+		if object.timer == 60
+			object.timer = 0
+			object.hasContinue = true
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				player.continues++
+			else
+				CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 3)
+			end if
+#endplatform
+#platform: USE_STANDALONE
+			player.continues++
+#endplatform
+			PlaySfx(SfxName[Continue], false)
+			object.state = ACTFINISH_SHOWRESULTS
+		end if
+		break
+
+	case ACTFINISH_SHOWRESULTS
+		object.timer++
+		if object.timer == 160
+#platform: USE_ORIGINS
+			if game.oneStageFlag != false
+				game.callbackResult = -1
+				CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+				object.state = ACTFINISH_WAITFORCALLBACK
+			else
+				object.timer = 0
+				object.state++
+			end if
+#endplatform
+#platform: USE_STANDALONE
+			object.timer = 0
+			object.state++
+#endplatform
+		end if
+		break
+
+	case ACTFINISH_LOADNEXTSTAGE
+		object.timer += 4
+		SetScreenFade(0, 0, 0, object.timer)
+		if object.timer == 384
+			fadeColor = 0x000000
+			object.timer = 0
+			starPostID = 0
+			
+			// Huh? This object's direction doesn't really mean much, what's this supposed to mean..?
+			object.direction = FACING_RIGHT
+			
+#platform: USE_ORIGINS
+			// These following two lines were added in Origins 1.0.4
+			// RSDKv5U doesn't stop all currently playing sound effects before (re)loading a scene unlike standalone RSDKv4, so we need to stop them manually
+			StopSfx(SfxName[Flying])
+			StopSfx(SfxName[Tired])
+#endplatform
+			
+			stage.listPos++
+			
+			// Hidden Palace Checks
+			if stage.listPos > 20
+				stage.listPos = 12 // Make the next stage Oil Ocean Zone Act 1
+				if options.stageSelectFlag == false
+					if stage.debugMode == false
+						if options.gameMode == MODE_NOSAVE
+							ReadSaveRAM()
+							saveRAM[46] = true // "unlockedHPZ"
+							WriteSaveRAM()
+						else
+							saveRAM[46] = true // "unlockedHPZ"
+						end if
+					end if
+				end if
+			end if
+
+			if options.gameMode == MODE_SAVEGAME
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				if stage.player2Enabled == true
+#platform: USE_STANDALONE
+					saveRAM[arrayPos1] = PLAYER_SONIC_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+					switch stage.playerListPos
+					case PLAYER_SONIC_A
+						saveRAM[arrayPos1] = PLAYER_SONIC_TAILS
+						break
+						
+					case PLAYER_KNUCKLES_A
+						saveRAM[arrayPos1] = PLAYER_KNUCKLES_TAILS
+						break
+						
+					case PLAYER_AMY_A
+						saveRAM[arrayPos1] = PLAYER_AMY_TAILS
+						break
+					end switch
+#endplatform
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				temp0 = stage.listPos
+				temp0++
+				if temp0 > saveRAM[arrayPos1]
+					saveRAM[arrayPos1] = temp0
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+				WriteSaveRAM()
+			end if
+
+#platform: USE_ORIGINS
+			recScore = player.score
+			
+			if game.oneStageFlag != false
+				stage.listPos--
+				object.state = ACTFINISH_SETSCREENFADE
+			else
+#endplatform
+				if options.gameMode == MODE_TIMEATTACK
+					timeAttack.result = stage.seconds
+					timeAttack.result *= 100
+					temp0 = stage.minutes
+					temp0 *= 6000
+					timeAttack.result += temp0
+					timeAttack.result += stage.milliSeconds
+					stage.listPos--
+					if stage.activeList == REGULAR_STAGE
+						CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
+					else
+						// If we're on a non-regular stage, then we're in the Boss Rush so use its special ID
+						// (This was written in a pre-Origins world, before anything and everything was shoved into the BONUS_STAGE list)
+						CallNativeFunction2(SetLeaderboard, 21, timeAttack.result)
+					end if
+					
+					engine.state = 8
+				else
+					temp0 = engine.trialMode
+					if stage.listPos >= stage.listSize
+						temp0 = true
+					end if
+
+					if temp0 == false
+						LoadStage()
+					else
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 0
+						LoadStage()
+					end if
+				end if
+#platform: USE_ORIGINS
+			end if
+#endplatform
+		end if
+		break
+	
+#platform: USE_ORIGINS
+	case ACTFINISH_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.timer = 0
+			object.state = ACTFINISH_LOADNEXTSTAGE
+		end if
+		break
+		
+	case ACTFINISH_SETSCREENFADE
+		SetScreenFade(0, 0, 0, 0xFF)
+		break
+#endplatform
+	end switch
+end event
+
+
+event ObjectDraw
+	SetActivePalette(0, 0, screen.ysize)
+	
+	temp7 = object.textPos
+	temp7 += screen.xcenter
+	
+	DrawSpriteScreenXY(0, temp7, 64)
+	DrawSpriteScreenXY(1, temp7, 64)
+	
+	temp7 = object.gotThroughTextPos
+	temp7 += screen.xcenter
+	DrawSpriteScreenXY(2, temp7, 82)
+	
+	// Determine whether to show `got through zone` or `got through act`
+	if TitleCard_showZoneText == false
+		DrawSpriteScreenXY(3, temp7, 82)
+		temp1 = stage.actNum
+		temp1 += 4
+		DrawSpriteScreenXY(temp1, temp7, 70)
+	else
+		DrawSpriteScreenXY(4, temp7, 82)
+	end if
+	
+	temp7 = object.timePos
+	temp7 += screen.xcenter
+	DrawSpriteScreenXY(8, temp7, 120)
+	DrawSpriteScreenXY(13, temp7, 120)
+	temp7 += 88
+	DrawNumbers(14, temp7, 121, object.timeBonus, 6, 8, false)
+	
+	temp7 = object.ringPos
+	temp7 += screen.xcenter
+	DrawSpriteScreenXY(9, temp7, 136)
+	DrawSpriteScreenXY(13, temp7, 136)
+	temp7 += 88
+	DrawNumbers(14, temp7, 137, object.ringBonus, 5, 8, false)
+	if object.hasPerfectBonus == true
+		temp7 = object.perfectPos
+		temp7 += screen.xcenter
+		DrawSpriteScreenXY(10, temp7, 152)
+		DrawSpriteScreenXY(11, temp7, 152)
+		temp7 += 88
+		DrawNumbers(14, temp7, 153, object.perfectBonus, 5, 8, false)
+	end if
+	
+	temp7 = object.totalPos
+	temp7 += screen.xcenter
+	DrawSpriteScreenXY(12, temp7, 168)
+	temp7 += 88
+	DrawNumbers(14, temp7, 169, object.totalScore, 6, 8, false)
+	
+	if object.hasContinue == true
+#platform: USE_ORIGINS
+		if game.coinMode == false
+#endplatform
+			// Draw the Continue icon
+			GetBit(temp0, oscillation, 4)
+			if temp0 == true
+				GetBit(temp0, oscillation, 5)
+				temp0 += 24
+				temp1 = screen.xcenter
+				temp1 += 112
+				temp2 = screen.ycenter
+				temp2 += 52
+				DrawSpriteScreenXY(temp0, temp1, temp2)
+			end if
+#platform: USE_ORIGINS
+		else
+			// Draw the Coin icon
+			
+			// First, the "Coin x 3" text
+			// They could've used a constant value of 26 in the function rather than doing it this roundabout way, but if they really wanna ig
+			temp0 = 26
+			temp1 = screen.xcenter
+			temp1 += 112
+			temp2 = screen.ycenter
+			temp2 += 52
+			DrawSpriteScreenXY(temp0, temp1, temp2)
+			
+			// Then, the Coins icon
+			temp0 = oscillation
+			temp0 &= 15
+			temp0 >>= 2
+			temp0 += 27
+			DrawSpriteScreenXY(temp0, temp1, temp2)
+		end if
+#endplatform
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+
+	// Assign sprite frames based on current characters in play
+	switch stage.playerListPos
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
+		SpriteFrame(-64, 0, 72, 16, 1, 222)			// 0  - "SONIC" large text
+		SpriteFrame(16, 0, 48, 16, 1, 205)			// 1  - "GOT" large text
+		break
+
+	case PLAYER_TAILS_A
+		// Determine Miles Vs Tails
+		if options.region == false
+			SpriteFrame(-61, 0, 69, 16, 74, 222)	// 0  - "TAILS" large text
+		else
+			SpriteFrame(-71, 0, 79, 16, 144, 222)	// 0  - "MILES" large text
+		end if
+		SpriteFrame(16, 0, 48, 16, 1, 205)			// 1  - "GOT" large text
+		break
+		
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A
+#endplatform
+		SpriteFrame(-94, 0, 128, 16, 34, 188)		// 0  - "KNUCKLES" large text
+		SpriteFrame(40, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the others
+		break
+		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-55, 0, 54, 16, 188, 239)		// 0  - "AMY" large text
+		SpriteFrame(7, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the others
+		break
+#endplatform
+	end switch
+
+	// Frames that are the same for everyone
+	SpriteFrame(-88, 0, 112, 16, 50, 205) 			// 2  - "THROUGH" large text
+	SpriteFrame(33, 0, 46, 16, 163, 205) 			// 3  - "ACT" large text
+	SpriteFrame(33, 0, 62, 16, 83, 1) 				// 4  - "ZONE" large text
+	SpriteFrame(88, 0, 16, 29, 42, 1) 				// 5  - Act number 1
+	SpriteFrame(88, 0, 23, 29, 59, 1) 				// 6  - Act number 2
+	SpriteFrame(88, 0, 23, 32, 42, 31) 				// 7  - Act number 3
+	SpriteFrame(-91, 1, 31, 11, 2, 17) 				// 8  - "Time" text, cropped from normal HUD sprites
+	SpriteFrame(-92, 1, 32, 11, 1, 33) 				// 9  - "Rings" text, also cropped from normal HUD sprites
+	SpriteFrame(-104, 1, 56, 11, 66, 35)			// 10 - "Perfect" text
+	SpriteFrame(-40, 0, 44, 16, 190, 1) 			// 11 - "Bonus" text
+	SpriteFrame(-71, 0, 43, 16, 146, 1) 			// 12 - "Total" text
+	SpriteFrame(-52, 0, 44, 16, 190, 1) 			// 13 - "Bonus" text, note its different offset
+	SpriteFrame(0, 0, 8, 11, 1, 50) 				// 14 - Number 0
+	SpriteFrame(0, 0, 8, 11, 10, 50)				// 15 - Number 1
+	SpriteFrame(0, 0, 8, 11, 19, 50)				// 16 - Number 2
+	SpriteFrame(0, 0, 8, 11, 28, 50)				// 17 - Number 3
+	SpriteFrame(0, 0, 8, 11, 1, 62) 				// 18 - Number 4
+	SpriteFrame(0, 0, 8, 11, 10, 62)				// 19 - Number 5
+	SpriteFrame(0, 0, 8, 11, 19, 62)				// 20 - Number 6
+	SpriteFrame(0, 0, 8, 11, 28, 62)				// 21 - Number 7
+	SpriteFrame(0, 0, 8, 11, 1, 74) 				// 22 - Number 8
+	SpriteFrame(0, 0, 8, 11, 10, 74)				// 23 - Number 9
+
+	switch stage.playerListPos
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
+		SpriteFrame(-8, -11, 16, 23, 178, 113)		// 24 - Sonic continue frame 1
+		SpriteFrame(-8, -11, 16, 23, 195, 113)		// 25 - Sonic continue frame 2
+		break
+		
+	case PLAYER_TAILS_A
+		SpriteFrame(-8, -11, 16, 23, 212, 113)		// 24 - Tails continue frame 1
+		SpriteFrame(-8, -11, 16, 23, 229, 113)		// 25 - Tails continue frame 2
+		break
+		
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A
+#endplatform
+		SpriteFrame(-8, -11, 16, 23, 178, 137)		// 24 - Knuckles continue frame 1
+		SpriteFrame(-8, -11, 16, 23, 195, 137)		// 25 - Knuckles continue frame 2
+		break
+		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-8, -11, 17, 22, 212, 138)		// 24 - Amy continue frame 1
+		SpriteFrame(-8, -11, 17, 22, 230, 138)		// 25 - Amy continue frame 2
+		break
+#endplatform
+	end switch
+
+#platform: USE_ORIGINS
+	SpriteFrame(-8, -5, 50, 16, 196, 180)			// 26 - Coin x 3
+	SpriteFrame(-12, -9, 24, 24, 145, 48)			// 27 - Coin Sparkle 1
+	SpriteFrame(-12, -9, 24, 24, 170, 48)			// 28 - Coin Sparkle 2
+	SpriteFrame(-12, -9, 24, 24, 195, 48)			// 29 - Coin Sparkle 3
+	SpriteFrame(-12, -9, 24, 24, 220, 48)			// 30 - Coin Sparkle 4
+#endplatform
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

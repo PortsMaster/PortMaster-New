@@ -1,0 +1,171 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Touch Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.stood
+private alias object.value1 : object.collisionOffset.y
+private alias object.value2 : object.timer // never used here, but since this is based off [Falling Block] its safe to assume thats what this is since it's skipped over
+private alias object.value3 : object.startPos.y
+
+private alias 0 : TOUCHBLOCK_IDLE
+private alias 1 : TOUCHBLOCK_MOVING
+private alias 2 : TOUCHBLOCK_RETURNTOSTART
+private alias 3 : TOUCHBLOCK_OOB
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.gravity : player.gravity
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TouchBlock_DebugDraw
+reserve function TouchBlock_DebugSpawn
+
+
+// ========================
+// Tables
+// ========================
+
+private function TouchBlock_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function TouchBlock_DebugSpawn
+	CreateTempObject(TypeName[Touch Block], 0, object.xpos, object.ypos)
+	object[tempObjectPos].startPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.ypos
+	temp0 &= 0xFFFF0000
+
+	switch object.state
+	case TOUCHBLOCK_IDLE
+		break
+
+	case TOUCHBLOCK_MOVING
+		object.ypos += object.yvel
+		object.yvel += 0x800
+
+		ObjectTileCollision(CSIDE_FLOOR, 0, 16, PATH_A)
+		if checkResult == true
+			object.state++
+		end if
+
+		if object.outOfBounds == true
+			object.ypos = object.startPos.y
+			object.yvel = 0
+			object.timer = 0
+			object.state = TOUCHBLOCK_OOB
+		end if
+		break
+
+	case TOUCHBLOCK_RETURNTOSTART
+		if object.outOfBounds == true
+			object.ypos = object.startPos.y
+			object.yvel = 0
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case TOUCHBLOCK_OOB
+		if object.outOfBounds == true
+			object.state = TOUCHBLOCK_IDLE
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+		
+	end switch
+
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp0
+	object.stood = false
+
+	if object.state < TOUCHBLOCK_OOB
+		temp1 = object.ypos
+		object.ypos = temp0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			switch checkResult
+			case COL_TOP
+				player[currentPlayer].ypos += object.collisionOffset.y
+				break
+
+			case COL_LEFT
+			case COL_RIGHT
+				if object.state == TOUCHBLOCK_IDLE
+					object.state = TOUCHBLOCK_MOVING
+				end if
+				break
+
+			case COL_BOTTOM
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(Player_Kill)
+				end if
+				break
+			end switch
+		next
+
+		object.ypos = temp1
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < TOUCHBLOCK_OOB
+		DrawSprite(0)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 84, 223)
+
+	foreach (TypeName[Touch Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[Touch Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(TouchBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(TouchBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 84, 223)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

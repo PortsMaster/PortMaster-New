@@ -1,0 +1,151 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: 1UP Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias 2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function 1UP_DebugDraw
+reserve function 1UP_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function 1UP_DebugDraw
+	// Bug Details: really minor bug, but
+	// -> This doesn't account for Amy, so Amy's object placement mode shows 1UPs as Warp Blocks
+	//    (The object appears properly once it's placed, though, so)
+	DrawSprite(stage.playerListPos)
+end function
+
+
+private function 1UP_DebugSpawn
+	temp5 = TypeName[1UP]
+	temp4 = 0
+	CallFunction(DebugMode_PlaceBlock)
+	object[arrayPos0].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Interact with player(s)
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			// Make the object disappear
+			object.type = TypeName[Ring Sparkle]
+
+			// Give an extra life
+			if options.gameMode != MODE_TIMEATTACK
+#platform: USE_STANDALONE
+				player.lives++
+#endplatform
+#platform: USE_ORIGINS
+				if game.coinMode == false
+					player.lives++
+				else
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+				PlaySfx(SfxName[Life], false)
+				PauseMusic()
+				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	CallFunction(SpecialSetup_GetBlockPos)
+#platform: USE_STANDALONE
+	DrawSpriteXY(stage.playerListPos, temp0, temp1)
+#endplatform
+#platform: USE_ORIGINS
+	switch stage.playerListPos
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
+		DrawSpriteXY(0, temp0, temp1)
+		break
+	case PLAYER_TAILS_A
+		DrawSpriteXY(1, temp0, temp1)
+		break
+	case PLAYER_KNUCKLES_A
+	case PLAYER_KNUCKLES_TAILS_A // but K+T isn't even in Origins..?
+		DrawSpriteXY(2, temp0, temp1)
+		break
+	case PLAYER_AMY_A
+		DrawSpriteXY(3, temp0, temp1)
+		break
+	end switch
+#endplatform
+
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Loop through all objects, view this as a foreach
+	arrayPos0 = 0x20
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[1UP]
+			object[arrayPos0].drawOrder = 4
+		end if
+		
+		arrayPos0++
+	loop
+
+	// Sprite frames: In order of Sonic icon, Tails icon, Knuckles icon, and Amy icon (Origins Plus)
+	SpriteFrame(-12, -12, 24, 24, 251, 176)
+	SpriteFrame(-12, -12, 24, 24, 351, 276)
+	SpriteFrame(-12, -12, 24, 24, 376, 276)
+#platform: USE_ORIGINS
+	SpriteFrame(-12, -12, 24, 24, 105, 492)
+#endplatform
+	
+	// Add this object to the stage's debug mode list
+	SetTableValue(TypeName[1UP], DebugMode_ObjCount, DebugMode_TypeTable)
+	SetTableValue(1UP_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(1UP_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-12, -12, 24, 24, 251, 176)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,351 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Invisible Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.width
+private alias object.value1 : object.height
+private alias object.value2 : object.killTimerP1
+private alias object.value3 : object.killTimerP2
+
+private alias 0 : INVISIBLEBLOCK_SOLID		// regular invis block
+private alias 1 : INVISIBLEBLOCK_EJECT_L	// ejects the player out (to the left)
+private alias 2 : INVISIBLEBLOCK_EJECT_R	// ejects the player out (to the right)
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function InvisibleBlock_DebugDraw
+reserve function InvisibleBlock_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+// MPZ shortens this, to kill the player fast
+private value InvisibleBlock_killDelay = 8
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function InvisibleBlock_DebugDraw
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp0 -= 0x80000
+	temp1 -= 0x80000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 -= 0x100000
+	temp1 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+end function
+
+
+private function InvisibleBlock_DebugSpawn
+	CreateTempObject(TypeName[Invisible Block], 17, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+	object[tempObjectPos].width = 16
+	object[tempObjectPos].height = 16
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = object.width
+	FlipSign(temp0)
+	temp1 = object.height
+	FlipSign(temp1)
+
+	// Note: state is editable and is set via the editor
+	
+	switch object.state
+	case INVISIBLEBLOCK_SOLID
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_SOLID, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				switch checkResult
+				case COL_NONE
+					temp0 += 2
+					temp1 += 2
+					temp2 = object.width
+					temp3 = object.height
+					temp2 -= 2
+					temp3 -= 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, temp2, temp3, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						player[currentPlayer].gravity = GRAVITY_GROUND
+					end if
+					
+					if currentPlayer == 0
+						object.killTimerP1 = 0
+					else
+						object.killTimerP2 = 0
+					end if
+					break
+					
+				case COL_BOTTOM
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						if currentPlayer == 0
+							object.killTimerP1++
+							if object.killTimerP1 > InvisibleBlock_killDelay
+								CallFunction(Player_Kill)
+							end if
+						else
+							object.killTimerP2++
+							if object.killTimerP2 > InvisibleBlock_killDelay
+								CallFunction(Player_Kill)
+							end if
+						end if
+					end if
+					break
+				end switch
+			end if
+		next
+		break
+
+	case INVISIBLEBLOCK_EJECT_L
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionRight
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos -= object.width
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed > 0
+							player[currentPlayer].speed = 0
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+
+	case INVISIBLEBLOCK_EJECT_R
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_LedgePullUp
+				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos += object.width
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed < 0
+							player[currentPlayer].speed = 0
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if player[0].type == TypeName[Debug Mode]
+		temp0 = object.xpos
+		temp1 = object.ypos
+		temp2 = object.propertyValue
+		temp4 = temp2
+		temp4 &= 240
+		temp4 <<= 15
+		temp2 >>= 4
+		temp2++
+		temp6 = temp2
+		temp3 = object.propertyValue
+		temp3 &= 15
+		temp5 = temp3
+		temp5 <<= 19
+		temp3++
+		temp0 -= temp4
+		temp4 = temp0
+		temp1 -= temp5
+		while temp3 > 0
+			while temp2 > 0
+				DrawSpriteXY(object.state, temp0, temp1)
+				temp0 += 0x100000
+				temp2--
+			loop
+			temp2 = temp6
+			temp0 = temp4
+			temp1 += 0x100000
+			temp3--
+		loop
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -7, 16, 14, 1, 176)
+	SpriteFrame(-8, -7, 16, 14, 17, 176)
+	SpriteFrame(-8, -7, 16, 14, 1, 190)
+	
+	foreach (TypeName[Invisible Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].width = object[arrayPos0].propertyValue
+		object[arrayPos0].width &= 0xF0
+		object[arrayPos0].width += 16
+		object[arrayPos0].width >>= 1
+		object[arrayPos0].height = object[arrayPos0].propertyValue
+		object[arrayPos0].height &= 15
+		object[arrayPos0].height++
+		object[arrayPos0].height <<= 3
+	next
+	
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		InvisibleBlock_killDelay = 1
+	end if
+
+	SetTableValue(TypeName[Invisible Block], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(InvisibleBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(InvisibleBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // width
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0xF
+			break
+			
+		case 1 // height
+			checkResult = object.propertyValue
+			checkResult &= 0xF
+			break
+			
+		case 2 // type
+			checkResult = object.state
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // width
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+			temp0 <<= 4
+			
+			object.propertyValue &= 0x0F
+			object.propertyValue |= temp0
+			break
+			
+		case 1 // height
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+
+			object.propertyValue &= 0xF0
+			object.propertyValue |= temp0
+			break
+			
+		case 2 // type
+			object.state = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp2 = object.propertyValue
+
+	temp4 = temp2
+	temp4 &= 0xF0
+	temp4 <<= 15
+	temp2 >>= 4
+	temp2++
+	temp6 = temp2
+		
+	temp3 = object.propertyValue
+	temp3 &= 0x0F
+	temp5 = temp3
+	temp5 <<= 19
+	temp3++
+
+	temp0 -= temp4
+	temp4 = temp0
+	temp1 -= temp5
+	while temp3 > 0
+		while temp2 > 0
+			DrawSpriteXY(object.state, temp0, temp1)
+			temp0 += 0x100000
+			temp2--
+		loop
+		temp2 = temp6
+		temp0 = temp4
+		temp1 += 0x100000
+		temp3--
+	loop
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -7, 16, 14, 1, 176)
+	SpriteFrame(-8, -7, 16, 14, 17, 176)
+	SpriteFrame(-8, -7, 16, 14, 1, 190)
+
+	AddEditorVariable("width")
+	AddEditorVariable("height")
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Solid",       INVISIBLEBLOCK_SOLID)
+	AddEnumVariable("Eject left",  INVISIBLEBLOCK_EJECT_L)
+	AddEnumVariable("Eject right", INVISIBLEBLOCK_EJECT_R)
+end event

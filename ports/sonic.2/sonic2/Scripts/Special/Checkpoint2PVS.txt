@@ -1,0 +1,415 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Checkpoint 2PVS Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.localPos.x // unused, required for halfpipe stuff though
+private alias object.value2  : object.localPos.y // unused, required for halfpipe stuff though
+private alias object.value3  : object.localPos.z
+private alias object.value4  : object.worldPos.x // unused, required for halfpipe stuff though
+private alias object.value5  : object.worldPos.y // unused, required for halfpipe stuff though
+private alias object.value6  : object.worldPos.z // unused, required for halfpipe stuff though
+private alias object.value7  : object.thumbPos.y
+private alias object.value8  : object.failed
+private alias object.value9  : object.emblemFrame
+private alias object.value10 : object.thumbsFrame
+
+// States
+private alias 0 : CHECKPOINT2PVS_SETUP
+private alias 1 : CHECKPOINT2PVS_AWAITPLAYERS
+private alias 2 : CHECKPOINT2PVS_SHOWRESULTS
+private alias 3 : CHECKPOINT2PVS_EXITMSG
+private alias 4 : CHECKPOINT2PVS_SHOWNEXTMSG
+private alias 5 : CHECKPOINT2PVS_FADEOUT
+private alias 6 : CHECKPOINT2PVS_TORESULTSSCREEN
+
+// Text Message Property Values
+private alias 5 : TEXTMESSAGE_MOSTRINGSWIN
+private alias 6 : TEXTMESSAGE_P1WINS
+private alias 7 : TEXTMESSAGE_P2WINS
+private alias 8 : TEXTMESSAGE_TIE
+
+// Player Aliases
+private alias object.value0  : player.rings
+private alias object.value14 : player.localPos.z
+private alias object.value19 : player.vsCheckpointID
+private alias object.value20 : player.vsCheckpoint1Rings
+private alias object.value21 : player.vsCheckpoint2Rings
+private alias object.value22 : player.vsCheckpoint3Rings
+
+// Face Buffer Flag Aliases
+private alias 5 : FACE_TEXTURED_C
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Checkpoint2PVS_ProcessDrawing
+
+
+// ========================
+// Tables
+// ========================
+
+private table Checkpoint2PVS_vertexUTable
+	165, 198, 231, 264, 297, 330, 263
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Checkpoint2PVS_ProcessDrawing
+	arrayPos0 = scene3D.vertexCount
+	arrayPos1 = scene3D.faceCount
+	temp0 = object.localPos.z
+	temp0 >>= 22
+	temp0 &= 3
+	GetTableValue(arrayPos2, temp0, Halfpipe_checkpointFaceTable)
+
+	temp0 = 0
+	while temp0 < 7
+		faceBuffer[arrayPos1].flag = FACE_TEXTURED_C
+		faceBuffer[arrayPos1].a = arrayPos0
+		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
+		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
+		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
+		GetTableValue(vertexBuffer[arrayPos0].u, object.frame, Checkpoint2PVS_vertexUTable)
+		vertexBuffer[arrayPos0].v = 256
+		arrayPos0++
+
+		faceBuffer[arrayPos1].b = arrayPos0
+		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
+		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
+		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
+		vertexBuffer[arrayPos0].u = 0x800
+		vertexBuffer[arrayPos0].v = 0x800
+		arrayPos0++
+
+		faceBuffer[arrayPos1].c = arrayPos0
+		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
+		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
+		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
+		vertexBuffer[arrayPos0].u = 16
+		vertexBuffer[arrayPos0].v = 16
+		arrayPos0++
+
+		faceBuffer[arrayPos1].d = arrayPos0
+		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
+		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
+		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
+		arrayPos0++
+
+		scene3D.vertexCount += 4
+		scene3D.faceCount++
+		arrayPos1++
+		arrayPos2 += 4
+		temp0++
+	loop
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CHECKPOINT2PVS_SETUP
+		if object.timer < 16
+			object.timer++
+		else
+			object.localPos.z >>= 22
+			object.localPos.z <<= 22
+			object.localPos.z += 0x300000
+			ResetObjectEntity(11, TypeName[Blank Object], 0, 0, 0)
+
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CHECKPOINT2PVS_AWAITPLAYERS
+		object.animationTimer++
+		if object.animationTimer == 4
+			object.animationTimer = 0
+			object.frame++
+			object.frame %= 7
+		end if
+		CallFunction(Checkpoint2PVS_ProcessDrawing)
+
+		temp3 = false
+		foreach (TypeName[Player Object], currentPlayer, ACTIVE_ENTITIES)
+			if temp3 == false
+				temp1 = object.localPos.z
+				temp1 -= 0x20000
+				temp2 = object.localPos.z
+				temp2 += 0x20000
+				if player[currentPlayer].localPos.z > temp1
+					if player[currentPlayer].localPos.z < temp2
+						object.thumbPos.y = 80
+#platform: USE_STANDALONE
+						object.drawOrder = 5
+#endplatform
+#platform: USE_ORIGINS
+						object.drawOrder = 6
+#endplatform
+						if player[2].rings == player[3].rings
+							object.emblemFrame = -1
+							CreateTempObject(TypeName[Text Message], TEXTMESSAGE_TIE, 0, 0)
+						else
+							if player[2].rings > player[3].rings
+								player[2].vsCheckpointID++
+								
+								// Bug Details:
+								// This works fine for the other characters, but for Amy in Origins Plus her actual character ID is 5,
+								// which means the sprite ID this would have would be one SpriteFrame over the actual Amy Emblem sprite
+								object.emblemFrame = 4
+								object.emblemFrame += stage.playerListPos
+
+								if vs.playerID == 0
+									CreateTempObject(TypeName[Text Message], TEXTMESSAGE_P1WINS, 0, 0)
+								else
+									CreateTempObject(TypeName[Text Message], TEXTMESSAGE_P2WINS, 0, 0)
+								end if
+							else
+								if ReceiveValue == -1
+									player[3].vsCheckpointID++
+								end if
+								
+								// Also bugged in Origins Plus, see above
+								object.emblemFrame = 4
+								object.emblemFrame += vs.player2Type
+								
+								if vs.playerID == 0
+									CreateTempObject(TypeName[Text Message], TEXTMESSAGE_P2WINS, 0, 0)
+								else
+									CreateTempObject(TypeName[Text Message], TEXTMESSAGE_P1WINS, 0, 0)
+								end if
+							end if
+						end if
+
+						switch SpecialSetup_checkpointID
+						case 0
+							player[2].vsCheckpoint1Rings = player[2].rings
+							player[3].vsCheckpoint1Rings = player[3].rings
+							break
+
+						case 1
+							player[2].vsCheckpoint2Rings = player[2].rings
+							player[3].vsCheckpoint2Rings = player[3].rings
+							break
+
+						case 2
+							player[2].vsCheckpoint3Rings = player[2].rings
+							player[3].vsCheckpoint3Rings = player[3].rings
+							break
+						end switch
+
+#platform: USE_STANDALONE
+						object[tempObjectPos].drawOrder = 5
+#endplatform
+#platform: USE_ORIGINS
+						object[tempObjectPos].drawOrder = 6
+#endplatform
+						PlaySfx(SfxName[Star Post], false)
+						object.thumbsFrame = 0
+						if object.emblemFrame == 6
+							object.thumbsFrame += 2
+						end if
+						temp3 = true
+
+						object.state++
+					end if
+				end if
+			end if
+		next
+		break
+
+	case CHECKPOINT2PVS_SHOWRESULTS
+		Sin(object.thumbPos.y, object.angle)
+		object.thumbPos.y >>= 7
+		object.thumbPos.y += 0x50
+		object.angle += 24
+		object.angle &= 0x1FF
+
+		if object.timer < 120
+			if object.timer < 20
+				CallFunction(Checkpoint2PVS_ProcessDrawing)
+			end if
+
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case CHECKPOINT2PVS_EXITMSG
+		if object.scale > 0
+			object.scale -= 16
+		else
+			SpecialSetup_checkpointID++
+			if SpecialSetup_checkpointID == 3
+				object.state = CHECKPOINT2PVS_FADEOUT
+				object[2].controlMode = CONTROLMODE_NONE
+				object[3].controlMode = CONTROLMODE_NONE
+			else
+				object.state++
+			end if
+		end if
+		break
+
+	case CHECKPOINT2PVS_SHOWNEXTMSG
+		if object.timer < 10
+			object.timer++
+		else
+			CreateTempObject(TypeName[Text Message], TEXTMESSAGE_MOSTRINGSWIN, 0, 0)
+#platform: USE_STANDALONE
+			object[tempObjectPos].drawOrder = 5
+#endplatform
+#platform: USE_ORIGINS
+			object[tempObjectPos].drawOrder = 6
+#endplatform
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+
+	case CHECKPOINT2PVS_FADEOUT
+		options.touchControls = false
+
+		if object.timer < 320
+			object.timer += 8
+			SetScreenFade(0xF8, 0xF8, 0xF8, object.timer)
+		else
+			object.timer = 248
+			object.state++
+			SetScreenFade(0xF8, 0xF8, 0xF8, 0xFF)
+		end if
+		break
+
+	case CHECKPOINT2PVS_TORESULTSSCREEN
+		options.touchControls = false
+
+		if object.timer > 0
+			object.timer -= 8
+			music.volume -= 5
+		else
+			if vs.playerID == 0
+				vs.checkpoint1P = player[2].vsCheckpoint1Rings
+				temp0 = player[2].vsCheckpoint2Rings
+				temp0 <<= 8
+				vs.checkpoint1P += temp0
+				temp0 = player[2].vsCheckpoint3Rings
+				temp0 <<= 16
+				vs.checkpoint1P += temp0
+
+				vs.checkpoint2P = player[3].vsCheckpoint1Rings
+				temp0 = player[3].vsCheckpoint2Rings
+				temp0 <<= 8
+				vs.checkpoint2P += temp0
+				temp0 = player[3].vsCheckpoint3Rings
+				temp0 <<= 16
+				vs.checkpoint2P += temp0
+			else
+				vs.checkpoint1P = player[3].vsCheckpoint1Rings
+				temp0 = player[3].vsCheckpoint2Rings
+				temp0 <<= 8
+				vs.checkpoint1P += temp0
+				temp0 = player[3].vsCheckpoint3Rings
+				temp0 <<= 16
+				vs.checkpoint1P += temp0
+
+				vs.checkpoint2P = player[2].vsCheckpoint1Rings
+				temp0 = player[2].vsCheckpoint2Rings
+				temp0 <<= 8
+				vs.checkpoint2P += temp0
+				temp0 = player[2].vsCheckpoint3Rings
+				temp0 <<= 16
+				vs.checkpoint2P += temp0
+			end if
+
+			stage.activeList = PRESENTATION_STAGE
+			stage.listPos = 3
+			StopMusic()
+			LoadStage()
+		end if
+
+		SetScreenFade(object.timer, object.timer, object.timer, 255)
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.emblemFrame > -1
+		switch object.state
+		case CHECKPOINT2PVS_SHOWRESULTS
+			DrawSpriteScreenXY(object.emblemFrame, screen.xcenter, 80)
+			DrawSpriteScreenXY(object.thumbsFrame, screen.xcenter, object.thumbPos.y)
+			break
+
+		case CHECKPOINT2PVS_EXITMSG
+			DrawSpriteScreenFX(object.emblemFrame, FX_SCALE, screen.xcenter, 80)
+			DrawSpriteScreenFX(object.thumbsFrame, FX_SCALE, screen.xcenter, object.thumbPos.y)
+			break
+		end switch
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-24, -24, 48, 48, 463, 42) 	// Thumbs up - #0
+	SpriteFrame(-24, -24, 48, 48, 366, 155) // Thumbs down - #1
+	SpriteFrame(-24, -24, 48, 48, 463, 328) // Thumbs up (Knux) - #2
+	SpriteFrame(-24, -24, 48, 48, 463, 377) // Thumbs down (Knux) - #3
+	SpriteFrame(-48, -24, 96, 48, 415, 122) // Emblem (Sonic) - #4
+	SpriteFrame(-48, -24, 96, 48, 415, 171) // Emblem (Tails) - #5
+	SpriteFrame(-48, -24, 96, 48, 415, 220) // Emblem (Knux) - #6
+#platform: USE_ORIGINS
+	SpriteFrame(-48, -24, 96, 48, 154, 361) // Emblem (Amy) - #7
+#endplatform
+	
+	if options.vsMode == true
+		foreach (TypeName[Checkpoint], arrayPos0, ALL_ENTITIES)
+			object[arrayPos0].type = TypeName[Checkpoint 2PVS]
+		next
+		
+		foreach (TypeName[Chaos Emerald], arrayPos0, ALL_ENTITIES)
+			object[arrayPos0].type = TypeName[Checkpoint 2PVS]
+		next
+
+		foreach (TypeName[Rings Reminder], arrayPos0, ALL_ENTITIES)
+			object[arrayPos0].type = TypeName[Blank Object]
+		next
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 199, 165)
+	SpriteFrame(-8, -4, 16, 7, 348, 108)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

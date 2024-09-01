@@ -1,0 +1,174 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Wind Current Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.minPos.x
+private alias object.value1 : object.minPos.y
+private alias object.value2 : object.maxPos.x
+private alias object.value3 : object.maxPos.y
+
+// Player Aliases
+private alias object.state 			: player.state
+private alias object.animation 		: player.animation
+private alias object.xpos			: player.xpos
+private alias object.ypos			: player.ypos
+private alias object.xvel			: player.xvel
+private alias object.yvel			: player.yvel
+private alias object.speed			: player.speed
+private alias object.tileCollisions	: player.tileCollisions
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = PRIORITY_XBOUNDS
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckLower(player[currentPlayer].xpos, object.minPos.x)
+		temp0 = checkResult
+		CheckGreater(player[currentPlayer].xpos, object.minPos.y)
+		temp0 |= checkResult
+		CheckLower(player[currentPlayer].ypos, object.maxPos.x)
+		temp0 |= checkResult
+		CheckGreater(player[currentPlayer].ypos, object.maxPos.y)
+		temp0 |= checkResult
+		if temp0 == false
+			temp6 = PRIORITY_ACTIVE
+
+			CheckEqual(player[currentPlayer].state, Player_State_GotHit)
+			temp0 = checkResult
+			CheckEqual(player[currentPlayer].state, Player_State_Hurt)
+			temp0 |= checkResult
+			CheckEqual(player[currentPlayer].state, Player_State_Death)
+			temp0 |= checkResult
+			CheckEqual(player[currentPlayer].state, Player_State_Drown)
+			temp0 |= checkResult
+			CheckEqual(player[currentPlayer].state, WFZSetup_State_Clinging)
+			temp0 |= checkResult
+			if temp0 == false
+				player[currentPlayer].state 		 = WFZSetup_State_Clinging
+				player[currentPlayer].animation 	 = ANI_FANROTATE
+				player[currentPlayer].tileCollisions = true
+			end if
+
+			if player[currentPlayer].animation == ANI_FANROTATE
+				if player[currentPlayer].xvel == 0
+					temp1 = object.maxPos.y
+					temp1 -= object.maxPos.x
+					temp1 >>= 1
+					temp1 += object.maxPos.x
+					if player[currentPlayer].ypos < temp1
+						player[currentPlayer].ypos += 0x40000
+					else
+						player[currentPlayer].ypos -= 0x40000
+					end if
+				end if
+			end if
+		else
+			if player[currentPlayer].state == WFZSetup_State_Clinging
+#platform: USE_STANDALONE
+				player[currentPlayer].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state = Player_State_Air_NoDropDash
+#endplatform
+				player[currentPlayer].xvel 	= -0x40000
+				player[currentPlayer].speed = -0x40000
+			end if
+		end if
+	next
+
+	object.priority = temp6
+	if object.propertyValue == 0
+		object[+1].priority = temp6
+	else
+		object[-1].priority = temp6
+	end if
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Wind Current], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == 0
+			arrayPos1 = arrayPos0
+			arrayPos1++
+			object[arrayPos0].minPos.x = object[arrayPos0].xpos
+			object[arrayPos0].minPos.y = object[arrayPos1].xpos
+			temp1 = object[arrayPos0].ypos
+			temp2 = object[arrayPos1].ypos
+		else
+			arrayPos1 = arrayPos0
+			arrayPos1--
+			object[arrayPos0].minPos.x = object[arrayPos1].xpos
+			object[arrayPos0].minPos.y = object[arrayPos0].xpos
+			temp1 = object[arrayPos1].ypos
+			temp2 = object[arrayPos0].ypos
+		end if
+
+		if temp1 < temp2
+			object[arrayPos0].maxPos.x = temp1
+			object[arrayPos0].maxPos.y = temp2
+		else
+			object[arrayPos0].maxPos.x = temp2
+			object[arrayPos0].maxPos.y = temp1
+		end if
+
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // childType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // childType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("childType")
+	SetActiveVariable("childType")
+	AddEnumVariable("Next Slot", 0)
+	AddEnumVariable("Previous Slot", 1)
+end event

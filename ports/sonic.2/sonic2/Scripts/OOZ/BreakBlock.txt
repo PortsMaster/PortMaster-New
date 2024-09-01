@@ -1,0 +1,367 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Gas Break Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// States
+private alias 0 : GASBREAKBLOCK_BLOCKS
+private alias 1 : GASBREAKBLOCK_LAUNCHER
+private alias 2 : GASBREAKBLOCK_DEBRIS
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animationSpeed : player.animationSpeed
+private alias object.animation : player.animation
+
+private alias object.value5  : player.rollAnimationSpeed
+private alias object.value17 : debugMode.currentSelection
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function GasBreakBlock_DebugDraw
+reserve function GasBreakBlock_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value GasBreakBlock_startDebugID = 0
+
+
+// ========================
+// Tables
+// ========================
+
+// btw these tables are public cuz Checkered Ball uses 'em too
+
+// Holds position offsets for blocks
+public table GasBreakBlock_blockOffsets
+	-0xC0000, -0xC0000
+	-0x40000, -0xC0000
+	 0x40000, -0xC0000
+	 0xC0000, -0xC0000
+	-0xC0000, -0x40000
+	-0x40000, -0x40000
+	 0x40000, -0x40000
+	 0xC0000, -0x40000
+	-0xC0000,  0x40000
+	-0x40000,  0x40000
+	 0x40000,  0x40000
+	 0xC0000,  0x40000
+	-0xC0000,  0xC0000
+	-0x40000,  0xC0000
+	 0x40000,  0xC0000
+	 0xC0000,  0xC0000
+end table
+
+// Holds starting velocity for blocks
+public table GasBreakBlock_blockVelocities
+	-0x40000, -0x40000
+	-0x20000, -0x40000
+	 0x20000, -0x40000
+	 0x40000, -0x40000
+	-0x3C000, -0x20000
+	-0x1C000, -0x20000
+	 0x1C000, -0x20000
+	 0x3C000, -0x20000
+	-0x38000,  0x20000
+	-0x18000,  0x20000
+	 0x18000,  0x20000
+	 0x38000,  0x20000
+	-0x34000,  0x40000
+	-0x14000,  0x40000
+	 0x14000,  0x40000
+	 0x34000,  0x40000
+end table
+
+// Holds frame IDs for block fragments to display
+public table GasBreakBlock_blockFrames
+	2, 3, 4, 5
+	2, 3, 4, 5
+	2, 3, 4, 5
+	2, 3, 4, 5
+end table
+
+// It's unknown exactly was this table is...
+// There doesn't appear to be any match for this data in the original game, so we can't pull any guesses from there
+private table GasBreakBlock_unusedTable
+	6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9
+end table
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function GasBreakBlock_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= GasBreakBlock_startDebugID
+	DrawSprite(temp0)
+end function
+
+
+private function GasBreakBlock_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= GasBreakBlock_startDebugID
+	CreateTempObject(TypeName[Gas Break Block], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = temp0
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case GASBREAKBLOCK_BLOCKS
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
+			if player[currentPlayer].animation == ANI_JUMPING
+#endplatform
+#platform: USE_ORIGINS
+			checkResult = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				checkResult = true
+			end if
+			
+			if player[currentPlayer].animation == ANI_HAMMER_JUMP
+				checkResult = 2
+			end if
+			
+			if checkResult != false
+#endplatform
+				if object.state == GASBREAKBLOCK_BLOCKS
+					temp0 = player[currentPlayer].yvel
+#platform: USE_STANDALONE
+					BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+					switch checkResult
+					case 1
+						BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+						break
+						
+					case 2
+						BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+						break
+					end switch
+#endplatform
+					player[currentPlayer].yvel = temp0
+					if checkResult == COL_TOP
+						player[currentPlayer].gravity = GRAVITY_AIR
+						temp0 = 0
+						temp1 = 0
+						while temp0 < 16
+							CreateTempObject(TypeName[Gas Break Block], 0, object.xpos, object.ypos)
+							GetTableValue(object[tempObjectPos].frame, temp0, GasBreakBlock_blockFrames) // these blocks compose a Vertical block, there's no extra version of the table for Horizontal blocks
+							GetTableValue(temp2, temp1, GasBreakBlock_blockOffsets)
+							GetTableValue(object[tempObjectPos].xvel, temp1, GasBreakBlock_blockVelocities)
+							temp1++
+
+							GetTableValue(temp3, temp1, GasBreakBlock_blockOffsets)
+							GetTableValue(object[tempObjectPos].yvel, temp1, GasBreakBlock_blockVelocities)
+							temp1++
+
+							object[tempObjectPos].xpos 		+= temp2
+							object[tempObjectPos].ypos 		+= temp3
+							object[tempObjectPos].state 	= GASBREAKBLOCK_DEBRIS
+							object[tempObjectPos].drawOrder = 5
+							temp0++
+						loop
+						object.state++
+
+						if object.priority != PRIORITY_XBOUNDS_DESTROY
+							object.priority = PRIORITY_ACTIVE
+						end if
+						PlaySfx(SfxName[Block Break], false)
+					end if
+				end if
+			else
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			end if
+		next
+		break
+
+	case GASBREAKBLOCK_LAUNCHER
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].state != Player_State_Static
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -4, 8, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					player[currentPlayer].state 				= Player_State_Static
+					player[currentPlayer].animation 			= ANI_JUMPING
+					player[currentPlayer].animationSpeed 		= 0xF0
+					player[currentPlayer].rollAnimationSpeed	= 0xF0
+					player[currentPlayer].xpos 					= object.xpos
+					player[currentPlayer].ypos 					= object.ypos
+#platform: USE_ORIGINS
+					player[currentPlayer].gravity = GRAVITY_AIR
+#endplatform
+					if object.propertyValue == 0
+						// Vertical Block
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].yvel = -0x80000
+					else
+						// Horizontal Block
+						player[currentPlayer].xvel = 0x80000
+						player[currentPlayer].yvel = 0
+					end if
+					PlaySfx(SfxName[Rolling], false)
+				end if
+			end if
+		next
+
+		if object.outOfBounds == true
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_BOUNDS
+				object.state 	= GASBREAKBLOCK_BLOCKS
+			end if
+		end if
+		break
+
+	case GASBREAKBLOCK_DEBRIS
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state != GASBREAKBLOCK_LAUNCHER
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 69, 141) 	// Vertical Frame				 - #0
+		SpriteFrame(-16, -16, 32, 32, 69, 174) 	// Horizontal Frame				 - #1
+		SpriteFrame(-4, -4, 8, 8, 69, 141)		// Block Debris Frame 0 		 - #2
+		SpriteFrame(-4, -4, 8, 8, 77, 141)		// Block Debris Frame 1 		 - #3
+		SpriteFrame(-4, -4, 8, 8, 85, 141)		// Block Debris Frame 2 		 - #4
+		SpriteFrame(-4, -4, 8, 8, 93, 141)		// Block Debris Frame 3 		 - #5
+		SpriteFrame(-4, -4, 8, 8, 69, 141) 		// Block Debris Frame 4 (Unused) - #6
+		SpriteFrame(-4, -4, 8, 8, 69, 141) 		// Block Debris Frame 5 (Unused) - #7
+		SpriteFrame(-4, -4, 8, 8, 69, 141) 		// Block Debris Frame 6 (Unused) - #8
+		SpriteFrame(-4, -4, 8, 8, 69, 141) 		// Block Debris Frame 7 (Unused) - #9
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 991, 843)	// Vertical Frame				 - #0
+		SpriteFrame(-16, -16, 32, 32, 991, 876)	// Horizontal Frame				 - #1
+		SpriteFrame(-4, -4, 8, 8, 991, 843)		// Block Debris Frame 0 		 - #2
+		SpriteFrame(-4, -4, 8, 8, 999, 843)		// Block Debris Frame 1 		 - #3
+		SpriteFrame(-4, -4, 8, 8, 1007, 843)	// Block Debris Frame 2 		 - #4
+		SpriteFrame(-4, -4, 8, 8, 1015, 843)	// Block Debris Frame 3 		 - #5
+		SpriteFrame(-4, -4, 8, 8, 991, 843)		// Block Debris Frame 4 (Unused) - #6
+		SpriteFrame(-4, -4, 8, 8, 991, 843)		// Block Debris Frame 5 (Unused) - #7
+		SpriteFrame(-4, -4, 8, 8, 991, 843)		// Block Debris Frame 6 (Unused) - #8
+		SpriteFrame(-4, -4, 8, 8, 991, 843)		// Block Debris Frame 7 (Unused) - #9
+	end if
+
+	foreach (TypeName[Gas Break Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].propertyValue &= 1
+		object[arrayPos0].frame = object[arrayPos0].propertyValue
+		object[arrayPos0].drawOrder = 4
+	next
+
+	temp0 = 0
+	GasBreakBlock_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Gas Break Block], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(GasBreakBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(GasBreakBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // frameID
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // frameID
+			editor.variableValue &= 1
+			
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.frame = object.propertyValue
+	object.frame &= 1
+	DrawSprite(object.frame)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 69, 141) 	// Vertical Frame
+		SpriteFrame(-16, -16, 32, 32, 69, 174) 	// Horizontal Frame
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 991, 843)	// Vertical Frame
+		SpriteFrame(-16, -16, 32, 32, 991, 876)	// Horizontal Frame
+	end if
+	
+	AddEditorVariable("orientation")
+	SetActiveVariable("orientation")
+	AddEnumVariable("Vertical", 0)
+	AddEnumVariable("Horizontal", 1)
+end event

@@ -1,0 +1,167 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Continue Screen Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.countdown	// The time you see in big numbers (seconds)
+private alias object.value1 : object.timer		// The hidden in-between timer (frames)
+
+// States
+private alias 0 : CONTINUE_IDLE
+private alias 1 : CONTINUE_COUNTDOWN
+
+// Continue Setup states
+private alias 3 : CONTINUESETUP_WAITING
+private alias 5 : CONTINUESETUP_RUNOFFSCREEN
+private alias 7 : CONTINUESETUP_FADETOMENU
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == CONTINUE_COUNTDOWN
+		object.timer--
+		if object.timer <= 0
+			if object.countdown == 0
+				object.state++
+				object[-2].state = CONTINUESETUP_FADETOMENU
+			else
+				object.countdown--
+				object.timer = 60
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// First draw the constant sprites ("Continue" & stars)
+	DrawSprite(0)
+	DrawSprite(1)
+
+	// Then draw the remaining time countdown
+	temp0 = object.xpos
+	temp0 >>= 16
+	DrawNumbers(2, temp0, 126, object.countdown, 2, 8, true)
+
+	// And now draw a visual representation of all the continues the player has
+
+	temp0 = player.continues
+	temp1 = temp0
+	temp0 -= 2
+	temp0 *= 21
+	temp0 >>= 1
+	FlipSign(temp0)
+	temp0 += screen.xcenter
+	GetBit(object.frame, oscillation, 4)
+	object.frame += 12
+	temp3 = true
+	while temp1 > 1
+		temp2 = true
+
+		if temp3 == true
+			temp3 = false
+			if object[-2].state >= CONTINUESETUP_RUNOFFSCREEN
+				if object[-2].state != CONTINUESETUP_FADETOMENU
+					// Don't draw
+					temp2 = false
+				end if
+			else
+				if object[-2].state > CONTINUESETUP_WAITING
+					// Flashing, draw sometimes
+					GetBit(temp2, oscillation, 0)
+				end if
+			end if
+		end if
+
+		if temp2 == true
+			DrawSpriteScreenXY(object.frame, temp0, 100)
+		end if
+
+		temp0 += 21
+		temp1--
+	loop
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Sprite frames
+	SpriteFrame(-59, 64, 118, 16, 382, 400) 	// #0  - "CONTINUE" text
+	SpriteFrame(-21, 128, 41, 9, 357, 390) 		// #1  - Pair of stars
+	SpriteFrame(0, 0, 8, 11, 120, 418)			// #2  - Number 0
+	SpriteFrame(0, 0, 8, 11, 129, 418)			// #3  - Number 1
+	SpriteFrame(0, 0, 8, 11, 138, 418)			// #4  - Number 2
+	SpriteFrame(0, 0, 8, 11, 147, 418)			// #5  - Number 3
+	SpriteFrame(0, 0, 8, 11, 120, 430)			// #6  - Number 4
+	SpriteFrame(0, 0, 8, 11, 129, 430)			// #7  - Number 5
+	SpriteFrame(0, 0, 8, 11, 138, 430)			// #8  - Number 6
+	SpriteFrame(0, 0, 8, 11, 147, 430)			// #9  - Number 7
+	SpriteFrame(0, 0, 8, 11, 120, 442)			// #10 - Number 8
+	SpriteFrame(0, 0, 8, 11, 129, 442)			// #11 - Number 9
+
+	// Mini foot tapping sprites are character-specific
+	switch stage.playerListPos
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
+		SpriteFrame(-8, -11, 16, 23, 399, 376)
+		SpriteFrame(-8, -11, 16, 23, 416, 376)
+		break
+		
+	case PLAYER_TAILS_A
+		SpriteFrame(-8, -11, 16, 23, 433, 376)
+		SpriteFrame(-8, -11, 16, 23, 450, 376)
+		break
+		
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A // Huh...? It's cool this is here, but K+T isn't a combo in Origins Plus?
+#endplatform
+		SpriteFrame(-8, -11, 16, 23, 467, 376)
+		SpriteFrame(-8, -11, 16, 23, 484, 376)
+		break
+		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-9, -10, 17, 22, 465, 417)
+		SpriteFrame(-9, -10, 17, 22, 483, 417)
+		break
+#endplatform
+		
+	end switch
+
+	foreach (TypeName[Continue Screen], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].xpos = screen.xcenter
+		object[arrayPos0].xpos <<= 16
+		object[arrayPos0].ypos = 0
+		object[arrayPos0].countdown = 10
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-59, -8, 118, 16, 382, 400)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

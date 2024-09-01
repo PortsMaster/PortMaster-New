@@ -1,0 +1,335 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Rotating Spike Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.swingAngle
+private alias object.value1 : object.spinSpeed
+private alias object.value2 : object.length
+private alias object.value3 : object.amplitude
+private alias object.value4 : object.spikePos.x
+private alias object.value5 : object.spikePos.y
+
+private alias object.value17 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatingSpike_DebugDraw
+reserve function RotatingSpike_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+private value RotatingSpike_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function RotatingSpike_DebugDraw
+	temp7 = debugMode[0].currentSelection
+	temp7 -= RotatingSpike_startDebugID
+
+	temp6 = object.direction
+	temp6 <<= 8
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, temp6)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, temp6)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	Cos(temp2, temp6)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+
+	Sin(temp3, temp6)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+private function RotatingSpike_DebugSpawn
+	CreateTempObject(TypeName[Rotating Spike], 0, object.xpos, object.ypos)
+
+	object[tempObjectPos].swingAngle = object.direction
+	object[tempObjectPos].swingAngle <<= 16 // ObjectStartup shifts it by 15...
+
+	if object.direction == FACING_RIGHT
+		object[tempObjectPos].spinSpeed = 0x100
+	else
+		object[tempObjectPos].spinSpeed = -0x100
+	end if
+
+	object[tempObjectPos].length = debugMode[0].currentSelection
+	object[tempObjectPos].length -= RotatingSpike_startDebugID
+	object[tempObjectPos].length++
+
+	object[tempObjectPos].amplitude = object[tempObjectPos].length
+	object[tempObjectPos].amplitude <<= 4
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.swingAngle += object.spinSpeed
+	object.swingAngle &= 0x1FFFF
+	temp0 = object.swingAngle
+	temp0 >>= 8
+
+	// Calculate the spike ball's position
+	Cos(object.spikePos.x, temp0)
+	object.spikePos.x *= object.amplitude
+	object.spikePos.x <<= 7
+	object.spikePos.x += object.xpos
+
+	Sin(object.spikePos.y, temp0)
+	object.spikePos.y *= object.amplitude
+	object.spikePos.y <<= 7
+	object.spikePos.y += object.ypos
+
+	// Backup the object position and replace it with the spike ball's position for collision checks
+	temp0 = object.xpos
+	temp1 = object.ypos
+	object.xpos = object.spikePos.x
+	object.ypos = object.spikePos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+
+	// Restore that backed-up position from earlier
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	// Draw the post first
+	DrawSprite(0)
+
+	// Then draw the chains
+	temp0 = 0
+	temp1 = 16
+	temp4 = object.swingAngle
+	temp4 >>= 8
+	while temp0 < object.length
+		Cos(temp2, temp4)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, temp4)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	
+	// And finally draw the spike ball itself
+	DrawSpriteXY(2, object.spikePos.x, object.spikePos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Post (same frame as Chain)
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 1 - Chain
+	SpriteFrame(-16, -16, 32, 32, 103, 0) // 2 - Spike ball
+
+	foreach (TypeName[Rotating Spike], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].swingAngle = object[arrayPos0].direction
+		object[arrayPos0].swingAngle <<= 15 // To make it around 256 or -256
+
+		object[arrayPos0].direction = FLIP_NONE
+
+		object[arrayPos0].spinSpeed = object[arrayPos0].propertyValue
+		object[arrayPos0].spinSpeed &= 0xF0
+		if object[arrayPos0].spinSpeed >= 0x80
+			object[arrayPos0].spinSpeed -= 0x100
+		end if
+		object[arrayPos0].spinSpeed <<= 4
+
+		object[arrayPos0].length = object[arrayPos0].propertyValue
+		object[arrayPos0].length &= 0x0F
+
+		object[arrayPos0].amplitude = object[arrayPos0].length
+		object[arrayPos0].amplitude <<= 4
+	next
+
+	// Add the object to the debug item list a few times for different lengths
+	temp0 = 0
+	RotatingSpike_startDebugID = DebugMode_ObjCount
+	RotatingSpike_startDebugID--
+	while temp0 < 4
+		SetTableValue(TypeName[Rotating Spike], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatingSpike_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatingSpike_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // length
+			checkResult = object.propertyValue
+			checkResult &= 0x0F
+			break
+			
+		case 1 // spinSpeed
+			checkResult = object.propertyValue
+			checkResult &= 0xF0
+			checkResult >>= 4
+			break
+			
+		case 2 // initialDir
+			checkResult = object.direction
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // length
+			object.propertyValue &= 0xF0
+			editor.variableValue &= 0x0F
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 1 // spinSpeed
+			object.propertyValue &= 0x0F
+			editor.variableValue &= 0x0F
+			editor.variableValue <<= 4
+
+			object.propertyValue |= editor.variableValue
+			break
+			
+		case 2 // initialDir
+			object.direction = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.length = object.propertyValue
+	object.length &= 15
+	object.amplitude = object.length
+	object.amplitude <<= 4
+
+	object.swingAngle = object.direction
+	object.swingAngle <<= 15
+	object.swingAngle &= 0x1FFFF
+	temp4 = object.swingAngle
+	temp4 >>= 8
+
+	Cos(object.spikePos.x, temp4)
+	object.spikePos.x *= object.amplitude
+	object.spikePos.x <<= 7
+	object.spikePos.x += object.xpos
+
+	Sin(object.spikePos.y, temp4)
+	object.spikePos.y *= object.amplitude
+	object.spikePos.y <<= 7
+	object.spikePos.y += object.ypos
+
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.length
+		Cos(temp2, temp4)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		
+		Sin(temp3, temp4)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+
+	DrawSpriteXY(2, object.spikePos.x, object.spikePos.y)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Post (same frame as Chain)
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 1 - Chain
+	SpriteFrame(-16, -16, 32, 32, 103, 0) // 2 - Spike ball
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+
+	AddEditorVariable("spinSpeed")
+	SetActiveVariable("spinSpeed")
+	
+	AddEditorVariable("initialDir")
+	SetActiveVariable("initialDir")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Down", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Up", 3)
+end event

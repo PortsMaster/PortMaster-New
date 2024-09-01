@@ -1,0 +1,147 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: V Platform 2 Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.centerPos.y
+private alias object.value1 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.gravity : player.gravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VPlatform2_DebugDraw
+reserve function VPlatform2_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function VPlatform2_DebugDraw
+	DrawSprite(0)
+end function
+
+
+private function VPlatform2_DebugSpawn
+	CreateTempObject(TypeName[V Platform 2], 0, object.xpos, object.ypos)
+	object[tempObjectPos].centerPos.y = object.ypos
+	object[tempObjectPos].propertyValue = object.direction
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp7 = object.ypos
+	GetTableValue(temp0, 12, StageSetup_oscillationTable)
+	if object.propertyValue == 1
+		FlipSign(temp0)
+		temp0 += 0x4000
+	else
+		temp0 -= 0x4000
+	end if
+	temp0 <<= 7
+
+	object.ypos = object.centerPos.y
+	object.ypos -= temp0
+
+	temp1 = object.ypos
+	temp7 &= 0xFFFF0000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= temp7
+
+	object.ypos = temp7
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -41, 32, 39, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_TOP
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+
+		if checkResult == COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				CallFunction(Player_Kill)
+			end if
+		end if
+	next
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-32, -45, 64, 85, 191, 170)
+
+	foreach (TypeName[V Platform 2], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
+	next
+
+	SetTableValue(TypeName[V Platform 2], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VPlatform2_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VPlatform2_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-32, -45, 64, 85, 191, 170)
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end event

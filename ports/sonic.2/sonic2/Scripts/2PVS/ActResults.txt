@@ -1,0 +1,569 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Act Results Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0  : object.timer
+private alias object.value1  : object.iconSheet
+private alias object.value2  : object.textSheet
+private alias object.value3  : object.scoreWinner
+private alias object.value4  : object.timeWinner
+private alias object.value5  : object.ringsWinner
+private alias object.value6  : object.totalRingsWinner
+private alias object.value7  : object.itemsWinner
+private alias object.value8  : object.millisecs1P
+private alias object.value9  : object.millisecs2P
+private alias object.value10 : object.secs1P
+private alias object.value11 : object.secs2P
+private alias object.value12 : object.mins1P
+private alias object.value13 : object.mins2P
+private alias object.value14 : object.rings1P
+private alias object.value15 : object.rings2P
+private alias object.value16 : object.totalRings1P
+private alias object.value17 : object.totalRings2P
+private alias object.value18 : object.items1P
+private alias object.value19 : object.items2P
+private alias object.value20 : object.wins1P
+private alias object.value21 : object.wins2P
+private alias object.value22 : object.overallWinner
+private alias object.value23 : object.actID
+private alias object.value24 : object.zoneID
+private alias object.value25 : object.score1P
+private alias object.value26 : object.score2P
+
+// States
+private alias 0 : ACTRESULTS_SETUP
+private alias 1 : ACTRESULTS_WAITING
+private alias 2 : ACTRESULTS_CALCRESULTS
+private alias 3 : ACTRESULTS_SHOWRESULTS
+private alias 4 : ACTRESULTS_LOADSTAGE
+private alias 5 : ACTRESULTS_FADEOUT
+
+// 2PVSSetup Aliases
+private alias object.value0 : 2PVSSetup.timer
+
+// 2PVSSetup States
+private alias 1 : 2PVSSETUP_FADEIN
+private alias 2 : 2PVSSETUP_MENUACTIVE
+private alias 3 : 2PVSSETUP_TOREGULARSTAGE
+private alias 4 : 2PVSSETUP_TOSPECIALSTAGE
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function ActResults_CheckTieBreaker
+
+
+// ========================
+// Function Defintions
+// ========================
+
+// (This function is used by SS Single Result too)
+public function ActResults_CheckTieBreaker
+	arrayPos0 = vs.match
+	arrayPos0 <<= 2
+	arrayPos0 += 0x400
+	// Wins 1P
+	temp0 = saveRAM[arrayPos0]
+	temp0 &= 15
+	// Wins 2P
+	temp1 = saveRAM[arrayPos0]
+	temp1 >>= 4
+
+	if temp0 == temp1
+		temp0 = 0
+		temp1 = 0
+	else
+		if temp0 > temp1
+			temp0 = 1	// 1P Win Count
+			temp1 = 0	// 2P Win Count
+		else
+			temp0 = 0
+			temp1 = 1
+		end if
+	end if
+	arrayPos0++
+
+	// Wins 1P
+	temp2 = saveRAM[arrayPos0]
+	temp2 &= 15
+	// Wins 2P
+	temp3 = saveRAM[arrayPos0]
+	temp3 >>= 4
+
+	if temp2 == temp3
+		temp2 = 0
+		temp3 = 0
+	else
+		if temp2 > temp3
+			temp2 = 1	// 1P Win Count
+			temp3 = 0	// 2P Win Count
+		else
+			temp2 = 0
+			temp3 = 1
+		end if
+	end if
+
+	temp0 += temp2	// Total 1P Win Count
+	temp1 += temp3	// Total 2P Win Count
+	if temp0 == temp1
+		checkResult = true
+	else
+		checkResult = false
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ACTRESULTS_SETUP
+		if ReceiveValue > -1
+			CallNativeFunction2(ReceiveEntity, 0x400, true)
+			ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
+			CallNativeFunction2(TransmitGlobal, "player.score2", player.score)
+			CallNativeFunction2(TransmitGlobal, "player.lives2", player.lives)
+			if vs.playerID == 0
+				CallNativeFunction2(TransmitGlobal, "vs.time1P", vs.time1P)
+				CallNativeFunction2(TransmitGlobal, "vs.rings1P", vs.rings1P)
+				CallNativeFunction2(TransmitGlobal, "vs.totalRings1P", vs.totalRings1P)
+				CallNativeFunction2(TransmitGlobal, "vs.items1P", vs.items1P)
+			else
+				CallNativeFunction2(TransmitGlobal, "vs.time2P", vs.time2P)
+				CallNativeFunction2(TransmitGlobal, "vs.rings2P", vs.rings2P)
+				CallNativeFunction2(TransmitGlobal, "vs.totalRings2P", vs.totalRings2P)
+				CallNativeFunction2(TransmitGlobal, "vs.items2P", vs.items2P)
+			end if
+			CallNativeFunction2(TransmitGlobal, "vs.dataSent", true)
+
+			object[0].state = 2PVSSETUP_MENUACTIVE
+			object.state = ACTRESULTS_WAITING
+		else
+			object.state = ACTRESULTS_CALCRESULTS
+		end if
+		break
+
+	case ACTRESULTS_WAITING
+		if vs.dataSent == true
+			object[0].state = 2PVSSETUP_FADEIN
+			2PVSSetup[0].timer = 384
+			SetScreenFade(0x00, 0x00, 0x00, 0xFF)
+			object.state = ACTRESULTS_CALCRESULTS
+		end if
+		break
+
+	case ACTRESULTS_CALCRESULTS
+		SetupMenu(MENU_1, 0, 3, 0)
+
+		LoadSpriteSheet("LevelSelect/Icons.gif")
+		object.iconSheet = object.spriteSheet
+
+		LoadSpriteSheet("LevelSelect/Text.gif")
+		object.textSheet = object.spriteSheet
+
+#platform: USE_ORIGINS
+		options.physicalControls = true  
+#endplatform
+		
+
+		menu1.selection = -1
+		object.zoneID = vs.listPos
+		object.zoneID >>= 1
+		object.actID = vs.listPos
+		object.actID &= 1
+
+		if object.actID == 0
+			AddMenuEntry(MENU_1, "@@@@@@@@@@@@@@@@@@@@@@@@@* 1 *", true)
+		else
+			AddMenuEntry(MENU_1, "@@@@@@@@@@@@@@@@@@@@@@@@@* 2 *", true)
+		end if
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@@@@@@@@@@@@@@@1P@@@@@@@@2P@@@@WINS", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@SCORE", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@TIME@@@@@@@@:@@:@@@@@@:@@:", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@RING", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@TOTAL RING", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@@ITEM BOX", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "@", true)
+		AddMenuEntry(MENU_1, "* TOTAL *@@@@@@@@@@@@:", true)
+
+		object.wins1P = 0
+		object.wins2P = 0
+		if vs.playerID == 0
+			object.score1P = player.score
+			object.score2P = player.score2
+		else
+			object.score1P = player.score2
+			object.score2P = player.score
+		end if
+
+		if object.score1P == object.score2P
+			object.scoreWinner = 11
+		else
+			if object.score1P > object.score2P
+				object.scoreWinner = 9
+				object.wins1P++
+			else
+				object.scoreWinner = 10
+				object.wins2P++
+			end if
+		end if
+
+#platform: USE_STANDALONE
+		object.millisecs1P = vs.time1P
+		object.millisecs1P %= 100
+		object.secs1P = vs.time1P
+		object.secs1P /= 100
+		object.secs1P %= 60
+		object.mins1P = vs.time1P
+		object.mins1P /= 6000
+#endplatform
+
+#platform: USE_ORIGINS
+		temp0 = vs.time1P
+		if temp0 >= 0x927BF
+			temp0 = 0x927BF
+		end if
+		object.millisecs1P = temp0
+		object.millisecs1P %= 100
+		object.secs1P = temp0
+		object.secs1P /= 100
+		object.secs1P %= 60
+		object.mins1P = temp0
+		object.mins1P /= 6000
+#endplatform
+
+#platform: USE_STANDALONE
+		object.millisecs2P = vs.time2P
+		object.millisecs2P %= 100
+		object.secs2P = vs.time2P
+		object.secs2P /= 100
+		object.secs2P %= 60
+		object.mins2P = vs.time2P
+		object.mins2P /= 6000
+#endplatform
+
+#platform: USE_ORIGINS
+		temp0 = vs.time2P
+		if temp0 >= 0x927BF
+			temp0 = 0x927BF
+		end if
+		object.millisecs2P = temp0
+		object.millisecs2P %= 100
+		object.secs2P = temp0
+		object.secs2P /= 100
+		object.secs2P %= 60
+		object.mins2P = temp0
+		object.mins2P /= 6000
+#endplatform
+
+		if vs.time1P == vs.time2P
+			object.timeWinner = 11
+		else
+			if vs.time1P < vs.time2P
+				object.timeWinner = 9
+				object.wins1P++
+			else
+				object.timeWinner = 10
+				object.wins2P++
+			end if
+		end if
+
+		object.rings1P = vs.rings1P
+		object.rings2P = vs.rings2P
+		if object.rings1P == object.rings2P
+			object.ringsWinner = 11
+		else
+			if object.rings1P > object.rings2P
+				object.ringsWinner = 9
+				object.wins1P++
+			else
+				object.ringsWinner = 10
+				object.wins2P++
+			end if
+		end if
+
+		object.totalRings1P = vs.totalRings1P
+		object.totalRings2P = vs.totalRings2P
+		if object.totalRings1P == object.totalRings2P
+			object.totalRingsWinner = 11
+		else
+			if object.totalRings1P > object.totalRings2P
+				object.totalRingsWinner = 9
+				object.wins1P++
+			else
+				object.totalRingsWinner = 10
+				object.wins2P++
+			end if
+		end if
+
+		object.items1P = vs.items1P
+		object.items2P = vs.items2P
+		if object.items1P == object.items2P
+			object.itemsWinner = 11
+		else
+			if object.items1P > object.items2P
+				object.itemsWinner = 9
+				object.wins1P++
+			else
+				object.itemsWinner = 10
+				object.wins2P++
+			end if
+		end if
+
+		if object.wins1P == object.wins2P
+			object.overallWinner = 26
+		else
+			if object.wins1P > object.wins2P
+				object.overallWinner = 22
+			else
+				object.overallWinner = 24
+			end if
+		end if
+
+		arrayPos0 = vs.match
+		arrayPos0 <<= 2
+		arrayPos0 += object.actID
+		arrayPos0 += 0x400
+		saveRAM[arrayPos0] = object.wins2P
+		saveRAM[arrayPos0] <<= 4
+		saveRAM[arrayPos0] += object.wins1P
+		if object.actID == 1
+			arrayPos0++
+			saveRAM[arrayPos0] = 0
+			arrayPos0++
+			saveRAM[arrayPos0] = object.zoneID
+		end if
+
+		object.state = ACTRESULTS_SHOWRESULTS
+		break
+
+	case ACTRESULTS_SHOWRESULTS
+		if object.timer < 60
+			object.timer++
+		else
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			if keyPress[0].start == true
+				checkResult = 0
+			end if
+
+			if keyPress[0].buttonA == true
+				checkResult = 0
+			end if
+
+			if keyPress[0].buttonB == true
+				checkResult = 0
+			end if
+
+			if keyPress[0].buttonC == true
+				checkResult = 0
+			end if
+			
+			if checkResult > -1
+				object.timer = 0
+				if object.actID == 0
+					vs.listPos++
+					stage.activeList = vs.activeList
+					stage.listPos = vs.listPos
+					object.state = ACTRESULTS_LOADSTAGE
+					object[0].state = 2PVSSETUP_TOREGULARSTAGE
+				else
+					CallFunction(ActResults_CheckTieBreaker)
+					if checkResult == true
+						stage.activeList = SPECIAL_STAGE
+						stage.listPos = object.zoneID
+						object.state = ACTRESULTS_LOADSTAGE
+						object[0].state = 2PVSSETUP_TOSPECIALSTAGE
+						PlaySfx(SfxName[Warp], false)
+						vs.tieBreaker = true
+					else
+						object.state = ACTRESULTS_FADEOUT
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case ACTRESULTS_LOADSTAGE
+		break
+
+	case ACTRESULTS_FADEOUT
+		if object.timer < 256
+			object.timer += 16
+			SetScreenFade(0x00, 0x00, 0x00, object.timer)
+		else
+			ResetObjectEntity(1, TypeName[Zone Results], 0, 0, 0)
+			object[1].priority = PRIORITY_ACTIVE
+			object[0].state = 2PVSSETUP_FADEIN
+			2PVSSetup[0].timer = 384
+			SetScreenFade(0x00, 0x00, 0x00, 0xFF)
+		end if
+		break
+	end switch
+
+	object.animationTimer++
+	object.animationTimer &= 15
+end event
+
+
+event ObjectDraw
+	if object.state < ACTRESULTS_CALCRESULTS
+		// Waiting...
+		object.spriteSheet = object.iconSheet
+		DrawRect(0, 0, screen.xsize, screen.ysize, 0x00, 0x00, 0x00, 0xFF)
+		DrawSpriteScreenXY(28, screen.xsize, screen.ysize)
+	else
+		object.spriteSheet = object.iconSheet
+
+		// ZONE RESULT
+		DrawSpriteScreenXY(8, screen.xcenter, 17)
+		DrawSpriteScreenXY(object.zoneID, screen.xcenter, 57)
+
+		// 1P Results
+		temp0 = screen.xcenter
+		temp0 += 8
+		DrawNumbers(12, temp0, 89,  object.score1P, 6, 8, false)
+		DrawNumbers(12, temp0, 121, object.rings1P, 3, 8, false)
+		DrawNumbers(12, temp0, 137, object.totalRings1P, 3, 8, false)
+		DrawNumbers(12, temp0, 153, object.items1P, 3, 8, false)
+		DrawNumbers(12, temp0, 105, object.millisecs1P, 2, 8, true)
+		temp0 -= 24
+		DrawNumbers(12, temp0, 105, object.secs1P, 2, 8, true)
+		temp0 -= 24
+#platform: USE_ORIGINS
+		if object.mins1P >= 10
+			DrawNumbers(12, temp0, 105, object.mins1P, 2, 8, true)
+		else
+#endplatform
+			DrawNumbers(12, temp0, 105, object.mins1P, 1, 8, true)
+#platform: USE_ORIGINS
+		end if
+#endplatform
+
+		// 2P Results
+		temp0 = screen.xcenter
+		temp0 += 88
+		DrawNumbers(12, temp0, 89,  object.score2P, 6, 8, false)
+		DrawNumbers(12, temp0, 121, object.rings2P, 3, 8, false)
+		DrawNumbers(12, temp0, 137, object.totalRings2P, 3, 8, false)
+		DrawNumbers(12, temp0, 153, object.items2P, 3, 8, false)
+		DrawNumbers(12, temp0, 105, object.millisecs2P, 2, 8, true)
+		temp0 -= 24
+		DrawNumbers(12, temp0, 105, object.secs2P, 2, 8, true)
+		temp0 -= 24
+#platform: USE_ORIGINS
+		if object.mins2P >= 10
+			DrawNumbers(12, temp0, 105, object.mins2P, 2, 8, true)
+		else
+#endplatform
+			DrawNumbers(12, temp0, 105, object.mins2P, 1, 8, true)
+#platform: USE_ORIGINS
+		end if
+#endplatform
+		temp0 = screen.xcenter
+		temp0 += 8
+
+		// Wins
+		DrawNumbers(12, temp0, 185, object.wins1P, 1, 8, true)
+		temp0 += 32
+		DrawNumbers(12, temp0, 185, object.wins2P, 1, 8, true)
+
+		// Winners
+		temp0 = screen.xcenter
+		temp0 += 128
+		DrawSpriteScreenXY(object.scoreWinner, temp0, 89)
+		DrawSpriteScreenXY(object.timeWinner, temp0, 105)
+		DrawSpriteScreenXY(object.ringsWinner, temp0, 121)
+		DrawSpriteScreenXY(object.totalRingsWinner, temp0, 137)
+		DrawSpriteScreenXY(object.itemsWinner, temp0, 153)
+		temp0 = object.animationTimer
+		temp0 >>= 3
+		temp0 += object.overallWinner
+		DrawSpriteScreenXY(temp0, screen.xcenter, 210)
+
+		// Menu
+		object.spriteSheet = object.textSheet
+		temp0 = screen.xcenter
+		temp0 -= 144
+		DrawMenu(MENU_1, temp0, 56)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	LoadSpriteSheet("LevelSelect/Text.gif")
+
+	SpriteFrame(-88, 0, 136, 7, 103, 350)	// EMERALD HILL ZONE 	- #0
+	SpriteFrame(-104, 0, 152, 7, 103, 358)	// CHEMICAL PLANT ZONE 	- #1
+	SpriteFrame(-88, 0, 136, 7, 103, 366)	// AQUATIC RUIN ZONE 	- #2
+	SpriteFrame(-88, 0, 136, 7, 103, 374)	// CASINO NIGHT ZONE 	- #3
+	SpriteFrame(-56, 0, 104, 7, 103, 382)	// HILL TOP ZONE 		- #4
+	SpriteFrame(-80, 0, 128, 7, 103, 390)	// MYSTIC CAVE ZONE 	- #5
+	SpriteFrame(-64, 0, 112, 7, 103, 398)	// OIL OCEAN ZONE 		- #6
+	SpriteFrame(-56, 0, 104, 7, 103, 406)	// SPECIAL STAGE 		- #7
+	SpriteFrame(-48, 0, 96, 14, 1, 136)		// RESULT				- #8
+	SpriteFrame(-8, 0, 16, 7, 98, 136)		// 1P text 				- #9
+	SpriteFrame(-8, 0, 16, 7, 115, 136)		// 2P text 				- #10
+	SpriteFrame(-16, 0, 32, 7, 132, 136) 	// TIED text 			- #11
+	SpriteFrame(0, 0, 8, 7, 175, 140)		// 0 					- #12
+	SpriteFrame(0, 0, 8, 7, 183, 140)		// 1 					- #13
+	SpriteFrame(0, 0, 8, 7, 191, 140)		// 2 					- #14
+	SpriteFrame(0, 0, 8, 7, 199, 140)		// 3 					- #15
+	SpriteFrame(0, 0, 8, 7, 207, 140)		// 4 					- #16
+	SpriteFrame(0, 0, 8, 7, 215, 140)		// 5 					- #17
+	SpriteFrame(0, 0, 8, 7, 223, 140)		// 6 					- #18
+	SpriteFrame(0, 0, 8, 7, 231, 140)		// 7 					- #19
+	SpriteFrame(0, 0, 8, 7, 239, 140)		// 8 					- #20
+	SpriteFrame(0, 0, 8, 7, 247, 140)		// 9 					- #21
+	SpriteFrame(-47, 0, 91, 12, 1, 110)		// 1P WINS 				- #22
+	SpriteFrame(-47, 0, 91, 12, 1, 123)		// 1P WINS (Flashing) 	- #23
+	SpriteFrame(-47, 0, 91, 12, 93, 110)	// 2P WINS 				- #24
+	SpriteFrame(-47, 0, 91, 12, 93, 123)	// 2P WINS (Flashing) 	- #25
+	SpriteFrame(-22, 0, 44, 12, 1, 385)		// TIED 				- #26
+	SpriteFrame(-22, 0, 44, 12, 1, 398)		// TIED (Flashing) 		- #27
+	if vs.playerID == 0
+		SpriteFrame(-160, -16, 136, 7, 103, 422)	// WAITING FOR 2P... 	- #28
+	else
+		SpriteFrame(-160, -16, 136, 7, 103, 414)	// WAITING FOR 1P... 	- #28
+	end if
+
+	foreach (TypeName[Act Results], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-48, 0, 96, 14, 1, 136)		// RESULT				- #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,440 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: Death Event Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value1 : object.leftTextPos
+private alias object.value2 : object.rightTextPos
+private alias object.value3 : object.timer
+private alias object.value4 : object.timeOver
+
+// States
+private alias 0 : DEATHEVENT_GAMEOVER
+private alias 1 : DEATHEVENT_TIMEOVER
+private alias 2 : DEATHEVENT_DEATH
+private alias 3 : DEATHEVENT_DEATH_TA
+private alias 4 : DEATHEVENT_WAITFORCALLBACK
+private alias 5 : DEATHEVENT_RETRY
+private alias 6 : DEATHEVENT_SETSCREENFADE
+
+// Player aliases
+private alias object.value0 : player.rings
+
+// Game Modes
+private alias 1 : MODE_SAVEGAME
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case DEATHEVENT_GAMEOVER
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_CLASSIC
+			CheckEqual(object.timeOver, false)
+			temp0 = checkResult
+			CheckEqual(stage.minutes, 9)
+			temp0 &= checkResult
+			CheckEqual(stage.seconds, 59)
+			temp0 &= checkResult
+			CheckEqual(stage.milliSeconds, 99)
+			temp0 &= checkResult
+			temp0 |= game.timeOver
+			
+			if temp0 != false
+				if player.continues == 0
+					object.timeOver = true
+				else
+					recMilliSeconds = 0
+					recSeconds = 0
+					recMinutes = 0
+					game.timeOver = false
+				end if
+			end if
+		end if
+		// Fall-through
+#endplatform
+	case DEATHEVENT_TIMEOVER
+#platform: USE_ORIGINS
+		object.timeOver |= object.state
+		
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			// In Boss Rush we don't need to be the ones to tell the Player they've Game Over'd, there's already all the fancy stuff over on the Hedgehog Engine 2 wrapper side of things
+			object.type = TypeName[Blank Object]
+		end if
+#endplatform
+
+		temp0 = screen.xcenter
+#platform: USE_STANDALONE
+		temp0 -= 72
+#endplatform
+#platform: USE_ORIGINS
+		temp0 -= 40
+#endplatform
+		if object.leftTextPos < temp0
+			object.leftTextPos += 16
+			if object.leftTextPos > temp0
+				object.leftTextPos = temp0
+			end if
+		end if
+
+		temp0 += 80
+		if object.rightTextPos > temp0
+			object.rightTextPos -= 16
+			if object.rightTextPos < temp0
+				object.rightTextPos = temp0
+			end if
+		end if
+
+		if object.timer < 288
+			object.timer += 4
+		else
+#platform: USE_ORIGINS
+			if object.timeOver == true
+				if starPostID > 0
+					recMilliSeconds = 99
+					recSeconds = 59
+					recMinutes = 9
+					game.timeOver = true
+				else
+					recMilliSeconds = 0
+					recSeconds = 0
+					recMinutes = 0
+				end if
+			end if
+#endplatform
+			
+			if object.state == 0
+				recStageList = stage.activeList
+				recStage = stage.listPos
+				stage.activeList = PRESENTATION_STAGE
+				if options.vsMode == false
+					if player.continues == 0
+						stage.listPos = 0
+#platform: USE_STANDALONE
+						engine.state = 8
+#endplatform
+						CallNativeFunction2(ShowPromoPopup, 0, "GameOverPromo")
+					else
+						stage.listPos = 4
+					end if
+				else
+					stage.listPos = 3
+					if vs.playerID == 0
+						if object.entityPos == 0
+							player.score = 0
+							player.lives = 3
+							vs.time1P = 60000
+							vs.rings1P = 0
+							vs.totalRings1P = 0
+							vs.items1P = 0
+						else
+							player.score2 = 0
+							player.lives2 = 3
+							vs.time2P = 60000
+							vs.rings2P = 0
+							vs.totalRings2P = 0
+							vs.items2P = 0
+						end if
+					else
+						if object.entityPos == 1
+							player.score2 = 0
+							player.lives2 = 3
+							vs.time1P = 60000
+							vs.rings1P = 0
+							vs.totalRings1P = 0
+							vs.items1P = 0
+						else
+							player.score = 0
+							player.lives = 3
+							vs.time2P = 60000
+							vs.rings2P = 0
+							vs.totalRings2P = 0
+							vs.items2P = 0
+						end if
+					end if
+				end if
+
+				starPostID = 0
+				if options.gameMode == MODE_SAVEGAME
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					arrayPos1++
+					if saveRAM[arrayPos1] < 3
+						saveRAM[arrayPos1] = 3
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = 0
+					arrayPos1++
+					saveRAM[arrayPos1] = 50000
+					player.score = 0
+					WriteSaveRAM()
+				end if
+			else
+				if options.vsMode == true
+					if vs.playerID == 0
+						vs.rings1P = player[0].rings
+						vs.rings2P = player[1].rings
+					else
+						vs.rings1P = player[1].rings
+						vs.rings2P = player[0].rings
+					end if
+
+					starPostID = 0
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos = 3
+				end if
+
+				if options.gameMode == MODE_SAVEGAME
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					WriteSaveRAM()
+				end if
+			end if
+
+#platform: USE_STANDALONE
+			if object.state == DEATHEVENT_TIMEOVER
+				recMilliSeconds = 0
+				recSeconds = 0
+				recMinutes = 0
+			end if
+#endplatform
+
+#platform: USE_ORIGINS
+			if object.state == DEATHEVENT_GAMEOVER
+				CallNativeFunction2(NotifyCallback, NOTIFY_TIME_OVER, game.timeOver)
+			end if
+			
+			if object.state == DEATHEVENT_TIMEOVER
+				player.deadResetRings = true
+			end if
+#endplatform
+
+			LoadStage()
+		end if
+
+		if object.timer > 0
+			music.volume -= 2
+			SetScreenFade(0, 0, 0, object.timer)
+		else
+			if keyPress[0].buttonA == true
+				object.timer = 0
+			end if
+
+			if keyPress[0].buttonB == true
+				object.timer = 0
+			end if
+
+			if keyPress[0].buttonC == true
+				object.timer = 0
+			end if
+
+#platform: MOBILE
+			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+			if checkResult > -1
+				object.timer = 0
+			end if
+#endplatform
+		end if
+		break
+
+	case DEATHEVENT_DEATH
+#platform: USE_ORIGINS
+		CheckNotEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+		temp0 = checkResult
+		CheckNotEqual(game.oneStageFlag, false)
+		checkResult &= temp0
+		
+		if checkResult != false
+			game.callbackResult = -1
+			CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 0, stage.listPos, 0)
+			object.state = DEATHEVENT_WAITFORCALLBACK
+			if options.gameMode == MODE_SAVEGAME
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				WriteSaveRAM()
+			end if
+		else
+#endplatform
+			if object.timer < 288
+				music.volume -= 2
+				object.timer += 4
+			else
+				if options.gameMode == MODE_SAVEGAME
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					WriteSaveRAM()
+				end if
+				
+#platform: USE_STANDALONE
+				LoadStage()
+#endplatform
+
+#platform: USE_ORIGINS
+				if game.playMode != BOOT_PLAYMODE_MISSION
+					LoadStage()
+				else
+					player.score = 0
+				end if
+#endplatform
+			end if
+			
+			SetScreenFade(0, 0, 0, object.timer)
+#platform: USE_ORIGINS
+		end if
+		
+		player.deadResetRings = true
+#endplatform
+		break
+
+	case DEATHEVENT_DEATH_TA
+		if object.timer < 288
+			music.volume -= 2
+			object.timer += 4
+		else
+			timeAttack.result = 0
+			vs.bossAttack = false
+			player.score = 0
+			starPostID = 0
+			recMilliSeconds = 0
+			recSeconds = 0
+			recMinutes = 0
+			stage.milliSeconds = 0
+			stage.seconds = 0
+			stage.minutes = 0
+			engine.state = 8
+
+#platform: USE_ORIGINS
+			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+			
+			StageStatsUsabilityParam1 = 0
+			StageStatsUsabilityParam2 = 0
+			StageStatsUsabilityParam3 = 0
+			StageStatsUsabilityParam4 = 0
+			StageStatsUsabilityParam5 = 0
+			
+			StatsUsabilityParam1 = 0
+			StatsUsabilityParam2 = 0
+			StatsUsabilityParam3 = 0
+			StatsUsabilityParam4 = 0
+			StatsUsabilityParam5 = 0
+#endplatform
+		end if
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+#platform: USE_ORIGINS
+	case DEATHEVENT_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.timer = 0
+			object.state = DEATHEVENT_RETRY
+		end if
+		break
+		
+	case DEATHEVENT_RETRY
+		if object.timer < 288
+			music.volume -= 2
+			object.timer += 4
+		else
+			if game.callbackResult == 0
+				engine.state = 8
+			else
+				LoadStage()
+			end if
+		end if
+		
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case DEATHEVENT_SETSCREENFADE
+		SetScreenFade(0, 0, 0, 255)
+		break
+#endplatform
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case DEATHEVENT_GAMEOVER
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			object.direction = FLIP_X
+			DrawSpriteScreenFX(2, FX_FLIP, object.leftTextPos, 96)
+			DrawSpriteScreenFX(0, FX_FLIP, object.rightTextPos, 96)
+		else
+			DrawSpriteScreenXY(0, object.leftTextPos, 96)
+			DrawSpriteScreenXY(2, object.rightTextPos, 96)
+		end if
+#endplatform
+#platform: USE_STANDALONE
+		DrawSpriteScreenXY(0, object.leftTextPos, 96)
+		DrawSpriteScreenXY(2, object.rightTextPos, 96)
+#endplatform
+		break
+		
+	case DEATHEVENT_TIMEOVER
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			object.direction = FLIP_X
+			DrawSpriteScreenFX(2, FX_FLIP, object.leftTextPos, 96)
+			DrawSpriteScreenFX(1, FX_FLIP, object.rightTextPos, 96)
+		else
+			DrawSpriteScreenXY(1, object.leftTextPos, 96)
+			DrawSpriteScreenXY(2, object.rightTextPos, 96)
+		end if
+#endplatform
+#platform: USE_STANDALONE
+		DrawSpriteScreenXY(1, object.leftTextPos, 96)
+		DrawSpriteScreenXY(2, object.rightTextPos, 96)
+#endplatform
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+#platform: USE_STANDALONE
+	SpriteFrame(0, 0, 64, 16, 1, 239)   // 0 - "GAME"
+	SpriteFrame(0, 0, 56, 16, 66, 239)  // 1 - "TIME"
+	SpriteFrame(0, 0, 64, 16, 123, 239) // 2 - "OVER"
+#endplatform
+#platform: USE_ORIGINS
+	// I really don't know why they did this.
+	SpriteFrame(-32, 0, 64, 16, 1, 239)   // 0 - "GAME"
+	SpriteFrame(-28, 0, 56, 16, 66, 239)  // 1 - "TIME"
+	SpriteFrame(-32, 0, 64, 16, 123, 239) // 2 - "OVER"
+#endplatform
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event
