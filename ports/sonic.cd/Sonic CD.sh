@@ -23,26 +23,11 @@ source $controlfolder/device_info.txt
 GAMEDIR="/$directory/ports/soniccd"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Set current virtual screen
-if [ "$CFW_NAME" == "muOS" ]; then
-  /opt/muos/extra/muxlog & CUR_TTY="/tmp/muxlog_info"
-elif [ "$CFW_NAME" == "TrimUI" ]; then
-  CUR_TTY="/dev/fd/1"
-else
-  CUR_TTY="/dev/tty0"
-fi
-
 cd $GAMEDIR
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
-
-# Setup gl4es environment
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Permissions
 $ESUDO chmod 666 /dev/tty0
@@ -80,7 +65,6 @@ fi
 # Run the game
 echo "Loading, please wait!" > $CUR_TTY
 $GPTOKEYB "soniccd" -c "sonic.gptk" &
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 ./soniccd
 
 $ESUDO kill -9 $(pidof gptokeyb)
