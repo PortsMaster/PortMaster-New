@@ -30,6 +30,8 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
+$ESUDO chmod 777 "$GAMEDIR/libs/splash"
+$ESUDO chmod 777 "$GAMEDIR/tools/gm-Ktool.py"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
