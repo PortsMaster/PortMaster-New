@@ -13,32 +13,31 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/gmu-music-player"
+#GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/gmu-music-player"
+GAMEDIR=/$directory/ports/gmu-music-player
 
 $ESUDO chmod 777 -R $GAMEDIR/*
-
-cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-# system
-export LD_LIBRARY_PATH=$GAMEDIR/libs:$LD_LIBRARY_PATH
+cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO rm $GAMEDIR/log.txt
-sleep 0.3
-
 $GPTOKEYB "gmu.bin" -c "$GAMEDIR/gmu.gptk" &
-./gmu.bin -c gmu.settings.conf 2>&1 | tee -a $GAMEDIR/log.txt
+./gmu.bin -c gmu.settings.conf
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
-unset SDL_GAMECONTROLLERCONFIG
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
