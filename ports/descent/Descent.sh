@@ -28,7 +28,8 @@ cd $GAMEDIR
 $ESUDO rm -rf ~/.$GAME
 ln -sfv $GAMEDIR/config ~/.$GAME
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export SDL_FORCE_SOUNDFONTS=1
 export SDL_SOUNDFONTS="$GAMEDIR/soundfont.sf2"
 
@@ -51,13 +52,35 @@ sed -i "s/^AspectY=.*/AspectY=$ASPECT_X/g" $GAMEDIR/config/descent.cfg
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-if [ $CFW_NAME == "ArkOS" ]; then
+# List of compatibility firmwares
+CFW_NAMES="ArkOS:ArkOS wuMMLe:ArkOS AeUX:knulli:TrimUI"
+
+# Check if the current CFW name is in the list
+contains() {
+    local value="$CFW_NAME"
+    local item
+    local tmp=$IFS
+    IFS=":" # Use : as the delimiter
+    echo "Checking if CFW_NAME '$value' is in the list..."
+    for item in $CFW_NAMES; do
+        echo "Comparing '$item' with '$value'..."
+        if [ "$item" = "$value" ]; then
+            echo "Match found: '$item'"
+            IFS=$tmp
+            return 0
+        fi
+    done
+    echo "No match found for '$value'."
+    IFS=$tmp
+    return 1
+}
+
+# If it's in the list use the compatibility binary
+if contains; then
 	$GPTOKEYB "$GAME.compat" -c "config/joy.gptk" & 
-	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 	./$GAME.compat -hogdir data
 else
 	$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
-	SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 	./$GAME.$DEVICE_ARCH -hogdir data
 fi
 
