@@ -1,0 +1,270 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Vertical Pole to swing around                         //
+//-------------------------------------------------------//
+
+//# address-hook(0x03f05a) end(0x03f086)
+function void VerticalPole.Init()
+{
+	objA0.mapping_offset = 0x03f360
+	objA0.sprite_attributes = 0x03f3
+	objA0.render_flags |= render_flag.WORLD
+	objA0.sprite_priority = 0x80
+	objA0.box_size.x = 0x04
+	objA0.box_size.y = 0x20
+	objA0.flags2a |= 0x80
+
+	objA0.update_address = addressof(VerticalPole.Update)
+	VerticalPole.Update()
+}
+
+
+//# address-hook(0x03f08c) end(0x03f0d2)
+function void VerticalPole.Update()
+{
+	D1 = objA0.box_size.x
+	D3.u16 = 0x21
+	D4.u16 = objA0.position.x.u16
+	PlatformCheckClimbOn()
+
+	A2 = A0 + 0x30
+	A1 = 0xffffb000
+	D1.u16 = control.player1
+	fn03f0d8()
+
+	++A2
+	A1 = 0xffffb04a
+	D1.u16 = control.tails
+	fn03f0d8()
+
+	if (u8[A0 + 0x30] != 0)
+	{
+		camera.use_forced_target = true
+		camera.forced_target.x = objA0.position.x.u16
+		camera.forced_target.y = u16[0xffffb000 + 0x14]
+	}
+
+#if STANDALONE
+	bool player2attached = u8[A0 + 0x31]
+	DrawOrUnloadObject()
+
+	// Handle second character if he's still attached to the pole
+	if (objA0.update_address == 0 && player2attached)
+	{
+		u8[0xffffb04a + 0x2e] &= ~(control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+	}
+#else
+	DrawOrUnloadObject()
+#endif
+}
+
+
+//# address-hook(0x03f0d8) end(0x03f108)
+function void fn03f0d8()
+{
+	if (u8[A2] == 0)
+	{
+		fn03f246()
+		return
+	}
+
+	if (debug_mode.state || u8[A1 + 0x05] >= base_state.HURT)
+	{
+		fn03f17a()
+		return
+	}
+
+	// Check if jump button pressed
+	D1.u16 &= CONTROL_ABC
+	if (D1.u16 != 0)
+	{
+		fn03f166()
+		return
+	}
+
+	if (u8[A2 + 0x04] == 0xf8)
+	{
+		fn03f1c8()
+		return
+	}
+
+	u8[A2 + 0x04] += 8
+	fn03f11c()
+	fn03f10a()
+}
+
+
+//# address-hook(0x03f10a) end(0x03f11a)
+function void fn03f10a()
+{
+	D0 = objA1.animation.sprite
+	u32 backupA2 = A2
+	SetCharacterSpritePatterns()
+	A2 = backupA2
+}
+
+
+//# address-hook(0x03f11c) end(0x03f144)
+function void fn03f11c()
+{
+	D0 = u8[A2 + 0x04] >> 4
+	objA1.animation.sprite = u8[0x03f146 + D0.u16]		// Player characters' pole spinning sprites
+
+	D1.s16 = s8[0x03f156 + D0.u16]
+	if (objA1.render_flags & render_flag.FLIP_X)
+		D1.s16 = -D1.s16
+
+	D1.u16 += objA0.position.x.u16
+	objA1.position.x.u16 = D1.u16
+}
+
+
+//# address-hook(0x03f166) end(0x03f174)
+function void fn03f166()
+{
+	objA1.velocity.y = (u8[A1 + 0x2a] & char.flag.UNDERWATER) ? -0x200 : -0x500
+
+	fn03f17a()
+}
+
+
+//# address-hook(0x03f17a) end(0x03f1c6)
+function void fn03f17a()
+{
+	u8[A2] = 0
+	u8[A2 + 0x02] = (u8[A1 + 0x2a] & char.flag.UNDERWATER) ? 0x3c : 0x1e
+
+	objA1.hitbox_extends.x = char.hitbox.x.ROLLING
+	objA1.hitbox_extends.y = char.hitbox.y.ROLLING
+	objA1.state = char.state.ROLLING
+	objA1.flags2a |= (char.flag.IN_AIR | char.flag.ROLLING)
+	objA1.flags2a &= ~char.flag.CONTROL_LOCK
+	u8[A1 + 0x2e] &= ~(control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+	u8[A1 + 0x27] = 0
+	u8[A1 + 0x40] = 0x01
+}
+
+
+//# address-hook(0x03f1c8) end(0x03f242)
+function void fn03f1c8()
+{
+	u8[A2] = 0
+	u8[A2 + 0x02] = 0x08
+
+	u16[A1 + 0x20] = 0
+	u8[A1 + 0x2e] &= ~(control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+	objA1.position.x.u16 = objA0.position.x.u16
+	objA1.velocity.x = 0x1000
+	u8[A1 + 0x2a] &= ~0x01
+	if (objA1.render_flags & render_flag.FLIP_X)
+	{
+		u8[A1 + 0x2a] |= 0x01
+		objA1.velocity.x = -objA1.velocity.x
+	}
+	u16[A1 + 0x32] = 0x0f
+	objA1.groundspeed = objA1.velocity.x
+	u8[A1 + 0x40] = 0
+	u8[A1 + 0x3d] = 0
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.flags2a &= ~char.flag.CONTROL_LOCK
+	u8[A1 + 0x2f] = 0
+	u8[A1 + 0x27] = 0
+	u8[A1 + 0x22] = (u8[A1 + 0x38] == CHARACTER_TAILS) ? 0x0e : 0x24
+
+	fn03f10a()
+}
+
+
+//# address-hook(0x03f246) end(0x03f35e)
+function void fn03f246()
+{
+	if (u8[A2 + 0x02] != 0)
+	{
+		--u8[A2 + 0x02]
+		return
+	}
+
+	D0.u16 = objA1.velocity.x
+	if (D0.s16 < 0)
+	{
+		if (D0.s16 > -0x400)
+			return
+
+		D0.u16 = objA1.position.x.u16 - objA0.position.x.u16 + 0x28
+		if (D0.u16 >= 0x18)
+			return
+
+		D0.u16 = objA1.position.y.u16 - objA0.position.y.u16 + 0x20
+		if (D0.u16 >= 0x40)
+			return
+
+		D2 = -0x12
+	}
+	else
+	{
+		if (D0.s16 < 0x400)
+			return
+
+		D0.u16 = objA1.position.x.u16 - objA0.position.x.u16 - 0x10
+		if (D0.u16 >= 0x18)
+			return
+
+		D0.u16 = objA1.position.y.u16 - objA0.position.y.u16 + 0x20
+		if (D0.u16 >= 0x40)
+			return
+
+		D2 = 0x12
+	}
+
+	if (debug_mode.state == 0 && u8[A1 + 0x05] < base_state.HURT)
+	{
+		if (u8[A1 + 0x2e] == 0)
+		{
+			if ((u8[A1 + 0x2a] & char.flag.IN_AIR) == 0)
+			{
+				objA1.velocity.x = 0
+				objA1.velocity.y = 0
+				objA1.groundspeed = 0
+				objA1.render_flags &= ~(render_flag.FLIP_X | render_flag.FLIP_Y)
+				D0.u8 = u8[A1 + 0x1e]
+				u8[A1 + 0x1e] = u8[A1 + 0x44]
+				u8[A1 + 0x1f] = u8[A1 + 0x45]
+
+				if (u8[A1 + 0x2a] & char.flag.ROLLING)
+				{
+					u8[A1 + 0x2a] &= ~char.flag.ROLLING
+					D0.u8 -= u8[A1 + 0x44]
+					objA1.position.y.u16 += D0.s8
+				}
+
+				objA1.position.x.u16 = objA0.position.x.u16 + D2.u16
+				u8[A1 + 0x20] = 0
+				u8[A1 + 0x2e] = (control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+				objA1.animation.sprite = 0x62		// Set Player characters' pole posing sprite; unfortunately, due to an error, it only shows up for one frame
+
+				u8[A2 + 0x04] = 0x08
+				u8[A2] = 0x01
+				if (D2.s16 < 0)
+				{
+					objA1.render_flags |= render_flag.FLIP_X
+				}
+
+				D0 = objA1.animation.sprite
+				u32 backupA2 = A2
+				SetCharacterSpritePatterns()
+				A2 = backupA2
+
+				playSound(SFX_GRAB)
+			}
+		}
+	}
+}

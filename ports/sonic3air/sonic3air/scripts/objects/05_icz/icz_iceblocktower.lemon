@@ -1,0 +1,199 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// ICZ Tower of four Ice Blocks                          //
+//-------------------------------------------------------//
+
+// Subtypes:
+//  - 0x00 for the bottom-most block
+//  - 0x02, 0x04, 0x06 for the ones stacked on top
+
+//# address-hook(0x08ab4e) end(0x08ab6a)
+function void IceBlockTower.Init()
+{
+	setupObjectAttributesFull(0x08ace2)
+	objA0.update_address = 0x0850a2
+
+	if (objA0.subtype2c == 0)
+	{
+		// "spawnChildObjectHierarchy(0x08acf4)" replaced by:
+		spawnChildObjectsHierarchy(0x08ab86, 3)
+	}
+	else
+	{
+		// "spawnChildObjectHierarchy(0x08acfc)" replaced by:
+		spawnChildObjectsHierarchy(0x08ab86, 4)
+	}
+}
+
+
+//# address-hook(0x08ab86) end(0x08abac)
+function void fn08ab86()
+{
+	setupObjectAttributesBasic(0x08acee)
+	objA0.update_address = 0x08abb0
+	if (objA0.subtype2c == 0x06)
+		objA0.animation.sprite = 0x03	// Different sprite for the top-most block
+
+	objA0.position.y.u16 -= objA0.subtype2c * 16
+	fn08acce()
+}
+
+
+//# address-hook(0x08abb0) end(0x08ac1c)
+function void fn08abb0()
+{
+	if (objA0.subtype2c != 0)
+	{
+		A1 = 0xffff0000 + u16[A0 + 0x46]
+		if (objA1.flags38 & 0x01)
+		{
+			// Start countdown before falling
+			objA0.update_address = 0x08ac1e
+			objA0.flags38 |= 0x01
+			objA0.countdown_value = 0x0f + objA0.subtype2c * 4
+			objA0.countdown_callback = 0x08ac2a
+
+		#if STANDALONE
+			// Render this object (otherwise it would be invisible for a single frame)
+			fn08acce()
+		#endif
+			return
+		}
+	}
+
+	u16[A7-=2] = u16[0xffffb000 + 0x18]
+	u16[A7-=2] = u16[0xffffb04a + 0x18]
+	fn08ac70()
+
+	D0 = u32[(A7+=4)-4]
+	D1 = 5
+	if (objA0.animation.sprite != 0x03 && objA0.subtype2c == 0)	// Only bottom-most block can be broken
+	{
+		A1 = 0xffffb000
+		if (fn08ac80())
+			return
+
+		A1 = 0xffffb04a
+		D0 = (D0 << 16) + (D0 >> 16)
+		++D1.u8
+		if (fn08ac80())
+			return
+	}
+	fn08acce()
+}
+
+
+//# address-hook(0x08ac1e) end(0x08ac26)
+function void fn08ac1e()
+{
+	fn08ac70()
+	Object.CountdownAndTrigger()
+	fn08acce()
+}
+
+
+//# address-hook(0x08ac2a) end(0x08ac42)
+function void fn08ac2a()
+{
+	objA0.update_address = 0x08ac44
+	objA0.countdown_value = 0x07
+	objA0.countdown_callback = 0x08ac54
+	objA0.subtype2c -= 2
+}
+
+
+//# address-hook(0x08ac44) end(0x08ac50)
+function void fn08ac44()
+{
+	fn08ac70()
+	objA0.position.y.u16 += 4
+	Object.CountdownAndTrigger()
+	fn08acce()
+}
+
+
+//# address-hook(0x08ac54) end(0x08ac6e)
+function void fn08ac54()
+{
+	objA0.update_address = 0x08abb0
+	objA0.flags38 &= ~0x01
+	camera.screenshake.state = 0x10
+	playSound(0x96)
+}
+
+
+//# address-hook(0x08ac70) end(0x08ac7a)
+function void fn08ac70()
+{
+	D1 = 0x2b
+	D2 = 0x10
+	D3 = 0x10
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+}
+
+
+//# translated(0x08ac80) end(0x08accc)
+function bool fn08ac80()
+{
+	u8 bit = (1 << D1.u8)
+
+	if (objA0.flags2a & bit)
+	{
+		// To break through, the character needs to be rolling fast enough
+		D3.u16 = abs(D0.s16)
+		if ((u8[A1 + 0x20] == char.state.ROLLING) && (D3.u16 >= 0x0600))
+		{
+			objA1.velocity.x = D0.s16
+			objA1.groundspeed = D0.s16
+			u8[A1 + 0x2a] &= ~bit
+
+			objA0.flags2a &= ~bit
+			objA0.flags38 |= 0x01
+
+			// "spawnChildObjects(0x08aaea)" replaced by:
+			spawnChildObject(0x08a8dc, 0x00, -12, -8)
+			spawnChildObject(0x08a8dc, 0x02, -4, -8)
+			spawnChildObject(0x08a8dc, 0x04, 4, -8)
+			spawnChildObject(0x08a8dc, 0x06, 12, -8)
+			spawnChildObject(0x08a8dc, 0x08, -12, 0)
+			spawnChildObject(0x08a8dc, 0x0a, -4, 0)
+			spawnChildObject(0x08a8dc, 0x0c, 4, 0)
+			spawnChildObject(0x08a8dc, 0x0e, 12, 0)
+			spawnChildObject(0x08a8dc, 0x10, -12, 8)
+			spawnChildObject(0x08a8dc, 0x12, -4, 8)
+			spawnChildObject(0x08a8dc, 0x14, 4, 8)
+			spawnChildObject(0x08a8dc, 0x16, 12, 8)
+
+			fn08594e()
+			Object.TriggerUnloading()
+			playSound(SFX_COLLAPSE)
+			return true
+		}
+	}
+	return false
+}
+
+
+//# address-hook(0x08acce) end(0x08acdc)
+function void fn08acce()
+{
+	A1 = 0xffff0000 + u16[A0 + 0x44]
+	if (objA1.flags38 & 0x10)
+	{
+		fn0852ae()
+	}
+	else
+	{
+		DrawObject()
+	}
+}

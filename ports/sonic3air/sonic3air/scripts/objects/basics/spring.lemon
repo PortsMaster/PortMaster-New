@@ -1,0 +1,836 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Spring                                                //
+//-------------------------------------------------------//
+
+// Subtype flags:
+//  - 0x01        = Character animation flag; rotating animation if set, or spring jump animation otherwise
+//  - 0x02        = Yellow spring if set, red spring otherwise
+//  - 0x04, 0x08  = Layer switch flags
+//  - 0x10...0x40 = Spring orientation (see comments in "Spring.BaseUpdate()")
+
+
+//# address-hook(0x022d06) end(0x022d46)
+//# alias(SpringVertical.BaseUpdate) deprecated
+function void Spring.BaseUpdate()
+{
+	objA0.mapping_offset = 0x02375c
+	objA0.sprite_attributes = 0x04a4
+	objA0.render_flags |= render_flag.WORLD
+	objA0.box_size.x = 0x10
+	objA0.box_size.y = 0x10
+	objA0.sprite_priority = 0x200
+	objA0.value32 = objA0.position.x.u16
+	u16[A0 + 0x34] = objA0.position.y.u16
+
+	// Targets:
+	//  - 0x022e8e	-> objA0.subtype2c == 0x00 .. 0x0f	-> Vertical spring
+	//  - 0x022db0	-> objA0.subtype2c == 0x10 .. 0x1f	-> Horizontal spring
+	//  - 0x022dee	-> objA0.subtype2c == 0x20 .. 0x2f	-> Vertical spring, pointing down
+	//  - 0x022e28	-> objA0.subtype2c == 0x30 .. 0x3f	-> Diagonal spring, pointing up
+	//  - 0x022e58	-> objA0.subtype2c == 0x40 .. 0x4f	-> Diagonal spring, pointing down
+	D0.u16 = (objA0.subtype2c >> 3) & 0x0e
+	call tableLookupAddress(0x022d4a, D0.u16)
+}
+
+
+//# address-hook(0x022db0) end(0x022dea)
+function void SpringHorizontal.Init()
+{
+	objA0.state = 2
+	objA0.animation.sprite = 3
+	objA0.sprite_attributes = 0x04b4
+	objA0.box_size.x = 8
+	objA0.update_address = addressof(SpringHorizontal.Update)
+
+	if (competition_mode.active)
+	{
+		objA0.mapping_offset = 0x023904
+		objA0.sprite_attributes = 0x03ad
+		objA0.update_address = addressof(SpringHorizontal.Update.CompetitionMode)
+	}
+	Spring.SharedInit()
+}
+
+
+//# address-hook(0x022e8e) end(0x022ebe)
+function void SpringVertical.Init()
+{
+	SpringVertical.initInternal(global.inv_gravity)
+
+}
+
+//# address-hook(0x022dee) end(0x022e24)
+//# alias(SpringVertical.InitFlipped) deprecated
+function void SpringVerticalFlipped.Init()
+{
+	if (!global.inv_gravity)
+	{
+		objA0.flags2a |= 0x02
+	}
+
+	SpringVertical.initInternal(!global.inv_gravity)
+}
+
+//# translated(0x022dfc) end(0x022e24)
+function void SpringVertical.initInternal(bool flipY)
+{
+	if (flipY)
+	{
+		objA0.animation.sprite = 6
+		if (competition_mode.active)
+		{
+			objA0.update_address = addressof(SpringVerticalFlipped.Update.CompetitionMode)
+			objA0.mapping_offset = 0x023904
+			objA0.sprite_attributes = 0x0391
+		}
+		else
+		{
+			objA0.update_address = addressof(SpringVerticalFlipped.Update)
+		}
+	}
+	else
+	{
+		if (competition_mode.active)
+		{
+			objA0.update_address = addressof(SpringVertical.Update.CompetitionMode)
+			objA0.mapping_offset = 0x023904
+			objA0.sprite_attributes = 0x0391
+			if (global.zone == 0x12)
+				objA0.sprite_attributes |= sprite_attribute.PRIORITY
+		}
+		else
+		{
+			objA0.update_address = addressof(SpringVertical.Update)
+		}
+	}
+
+	Spring.SharedInit()
+}
+
+
+//# address-hook(0x022e28) end(0x022e56)
+//# alias(SpringVertical.InitDiagonal) deprecated
+function void SpringDiagonal.Init()
+{
+	SpringDiagonal.initInternal(false)
+}
+
+//# address-hook(0x022e58) end(0x022e8c)
+//# alias(SpringVertical.InitDiagonalFlipped) deprecated
+function void SpringDiagonalFlipped.Init()
+{
+	SpringDiagonal.initInternal(true)
+}
+
+function void SpringDiagonal.initInternal(bool flipY)
+{
+	objA0.state = 0x04
+	objA0.animation.sprite = flipY ? 0x0a : 0x07
+	objA0.sprite_attributes = 0x043a
+	if (global.zone == 0x02 || global.zone == 0x07)
+	{
+		objA0.sprite_attributes = 0x0478
+	}
+	if (flipY)
+	{
+		objA0.flags2a |= 0x02
+		objA0.update_address = addressof(SpringDiagonalFlipped.Update)
+	}
+	else
+	{
+		objA0.update_address = addressof(SpringDiagonal.Update)
+	}
+	Spring.SharedInit()
+}
+
+
+//# address-hook(0x022ec4) end(0x022eee)
+function void Spring.SharedInit()
+{
+	if (objA0.subtype2c & 0x02)
+	{
+		// Yellow spring
+		u16[A0 + 0x30] = -0x0a00
+		objA0.mapping_offset = (competition_mode.active) ? 0x023912 : 0x023772
+
+	#if STANDALONE
+		// Make springs in HPZ just a little bit stronger
+		if (global.zone_act == 0x1601)
+		{
+			u16[A0 + 0x30] = -0x0ac0
+		}
+	#endif
+	}
+	else
+	{
+		// Red spring
+		u16[A0 + 0x30] = -0x1000
+	}
+}
+
+
+// Vertical spring
+
+//# address-hook(0x022ef4) end(0x022f40)
+function void SpringVertical.Update()
+{
+	SpringVertical.updateInternal(false)
+}
+
+//# address-hook(0x023326) end(0x02336e)
+//# alias(SpringVertical.UpdateFlipped) deprecated
+function void SpringVerticalFlipped.Update()
+{
+	SpringVertical.updateInternal(true)
+}
+
+function void SpringVertical.updateInternal(bool flipY)
+{
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		D1.u16 = 27
+		D2.u16 = 8
+		D3.u16 = flipY ? 9 : 16
+		D4.u16 = objA0.position.x.u16
+		D6 = 0
+
+		u32 characterAddress = 0xffffb000 + characterIndex * 0x4a
+		u8 bitnum = 3 + characterIndex
+		if (fn01dcb6_internal(characterAddress, bitnum))
+		{
+			fn01df90()
+		}
+
+		if (flipY)
+		{
+			if (D4.u16 == -2)
+			{
+				SpringVerticalFlipped.ApplyToCharacter()
+			}
+		}
+		else
+		{
+			if ((objA0.flags2a >> bitnum) & 0x01)
+			{
+				SpringVertical.ApplyToCharacter()
+			}
+		}
+	}
+
+	Object.animationUpdate(0x023722)
+	DrawOrUnloadObject()
+}
+
+
+// Horizontal spring
+
+//# address-hook(0x023050) end(0x0230d8)
+//# alias(SpringHorizontal.Check) deprecated
+function void SpringHorizontal.Update()
+{
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		D1.u16 = 19
+		D2.u16 = 14
+		D3.u16 = 15
+		D4.u16 = objA0.position.x.u16
+		D6 = 0
+
+		u32 characterAddress = 0xffffb000 + characterIndex * 0x4a
+		u8 bitnum = 3 + characterIndex
+		if (fn01dcb6_internal(characterAddress, bitnum))
+		{
+			fn01df90()
+		}
+
+		D6 = (D6 << 16) + (D6 >> 16)
+		D6.u16 &= (1 << characterIndex)
+		if (D6.u16 != 0)
+		{
+			D1.u8 = objA0.flags2a
+			D0.s16 = objA0.position.x.u16 - objA1.position.x.u16
+			if (D0.s16 >= 0)
+				D1.u8 ^= 0x01
+
+			D1.u8 &= 0x01
+			if (D1.u8 == 0)
+			{
+				SpringHorizontal.ApplyToCharacter()
+			}
+		}
+	}
+
+	fn02326c()
+	Object.animationUpdate(0x023722)
+	D0.u16 = objA0.value32
+	DrawOrUnloadObjectByD0()
+}
+
+
+// Vertical spring in competition mode
+
+//# address-hook(0x022f46) end(0x022f92)
+//# alias(fn022f46) deprecated
+function void SpringVertical.Update.CompetitionMode()
+{
+	// Only used in competition mode
+	SpringVertical.updateInternal.CompetitionMode(false)
+}
+
+function void SpringVertical.updateInternal.CompetitionMode(bool flipY)
+{
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		D1.u16 = 19
+		D2.u16 = 8
+		D3.u16 = flipY ? 9 : 16
+		D4.u16 = objA0.position.x.u16
+
+		u32 characterAddress = 0xffffb000 + characterIndex * 0x4a
+		u8 bitnum = 3 + characterIndex
+		if (fn01dcb6_internal(characterAddress, bitnum))
+		{
+			fn01df90()
+		}
+
+		if (flipY)
+		{
+			if (D4.u16 == -2)
+			{
+				u16[A1 + 0x14] -= 4
+				SpringVerticalFlipped.ApplyToCharacter.CompetitionMode()
+			}
+		}
+		else
+		{
+			if ((objA0.flags2a >> bitnum) & 0x01)
+			{
+				SpringVertical.ApplyToCharacter()
+			}
+		}
+	}
+
+	Object.animationUpdate(0x023722)
+	DrawObject()
+}
+
+
+//# address-hook(0x022f98) end(0x02304a)
+function void SpringVertical.ApplyToCharacter()
+{
+	objA0.state.both = 0x100
+	if (global.inv_gravity)
+		objA1.position.y.u16 -= 8
+	else
+		objA1.position.y.u16 += 8
+
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.velocity.y = u16[A0 + 0x30]
+	objA1.flags2a |= char.flag.IN_AIR
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+	u8[A1 + 0x3d] = 0
+	u8[A1 + 0x40] = 0
+
+	if (objA0.subtype2c & 0x80)
+	{
+		objA1.velocity.x = 0
+	}
+	if (objA0.subtype2c & 0x01)
+	{
+		objA1.state = char.state.RUNNING
+		u8[A1 + 0x30] = (objA0.subtype2c & 0x02) ? 0 : 1		// "char.rotation.x.count"
+		u8[A1 + 0x31] = 4										// "char.rotation.x.speed"
+
+		if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			objA1.groundspeed = -1
+			s8[A1 + 0x27] = -1		// Set x-rotation of character
+		}
+		else
+		{
+			objA1.groundspeed = 1
+			s8[A1 + 0x27] = 1		// Set x-rotation of character
+		}
+	}
+	else
+	{
+		objA1.state = char.state.STRAIGHTJUMP
+	}
+
+	D0.u8 = objA0.subtype2c & 0x0c
+	if (D0.u8 == 0x04)
+	{
+		u8[A1 + 0x46] = 0x0c
+		u8[A1 + 0x47] = 0x0d
+	}
+	if (D0.u8 == 0x08)
+	{
+		u8[A1 + 0x46] = 0x0e
+		u8[A1 + 0x47] = 0x0f
+	}
+
+	playSound(SFX_SPRING)
+}
+
+
+//# address-hook(0x023374) end(0x0233c4)
+//# alias(fn023374) deprecated
+function void SpringVerticalFlipped.Update.CompetitionMode()
+{
+	// Only for competition mode (CGZ)
+	SpringVertical.updateInternal.CompetitionMode(true)
+}
+
+
+//# address-hook(0x0233ca) end(0x0233d4)
+function void SpringVerticalFlipped.ApplyToCharacter()
+{
+	if (global.inv_gravity)
+		objA1.position.y.u16 += 8
+	else
+		objA1.position.y.u16 -= 8
+
+	SpringVerticalFlipped.ApplyToCharacter.CompetitionMode()
+}
+
+
+//# address-hook(0x0233da) end(0x02348a)
+//# alias(fn0233da) deprecated
+function void SpringVerticalFlipped.ApplyToCharacter.CompetitionMode()
+{
+	objA0.state.both = 0x100
+
+	objA1.velocity.y = -s16[A0 + 0x30]
+	if (objA1.velocity.y == 0x1000)
+		objA1.velocity.y = 0x0d00
+
+	if (objA0.subtype2c & 0x80)
+	{
+		objA1.velocity.x = 0
+	}
+	if (objA0.subtype2c & 0x01)
+	{
+		objA1.state = char.state.RUNNING
+		u8[A1 + 0x30] = (objA0.subtype2c & 0x02) ? 0 : 1		// "char.rotation.x.count"
+		u8[A1 + 0x31] = 4										// "char.rotation.x.speed"
+
+		if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			objA1.groundspeed = -1
+			s8[A1 + 0x27] = -1		// Set x-rotation of character
+		}
+		else
+		{
+			objA1.groundspeed = 1
+			s8[A1 + 0x27] = 1		// Set x-rotation of character
+		}
+	}
+
+	D0.u8 = objA0.subtype2c & 0x0c
+	if (D0.u8 == 0x04)
+	{
+		u8[A1 + 0x46] = 0x0c
+		u8[A1 + 0x47] = 0x0d
+	}
+	if (D0.u8 == 0x08)
+	{
+		u8[A1 + 0x46] = 0x0e
+		u8[A1 + 0x47] = 0x0f
+	}
+
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.flags2a |= char.flag.IN_AIR
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+	u8[A1 + 0x2f] = 0
+	u8[A1 + 0x40] = 0
+
+	playSound(SFX_SPRING)
+}
+
+
+// Horizontal spring in competition mode
+
+//# address-hook(0x0230de) end(0x02315a)
+//# alias(fn0230de) deprecated
+function void SpringHorizontal.Update.CompetitionMode()
+{
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		D1.u16 = 15
+		D2.u16 = 12
+		D3.u16 = 13
+		D4.u16 = objA0.position.x.u16
+
+		u32 characterAddress = 0xffffb000 + characterIndex * 0x4a
+		D6 = 3 + characterIndex		// Seems like this value needs to be in D6, otherwise it causes a strange camera/player 2 bug in ALZ
+		if (fn01dcb6_internal(characterAddress, D6.u8))
+		{
+			fn01df90()
+		}
+
+		D6 = (D6 << 16) + (D6 >> 16)
+		D6.u16 &= (1 << characterIndex)
+		if (D6.u16 != 0)
+		{
+			D1.u8 = objA0.flags2a & 0x01
+			D0.u16 = objA0.position.x.u16 - objA1.position.x.u16
+			if (D0.s16 >= 0)
+			{
+				D1.u8 ^= 0x01
+			}
+			if (D1.u8 == 0)
+			{
+				SpringHorizontal.ApplyToCharacter.CompetitionMode()
+			}
+		}
+	}
+
+	Object.animationUpdate(0x023722)
+	DrawObject()
+}
+
+
+//# address-hook(0x023160) end(0x02318e)
+//# alias(fn023160) deprecated
+function void SpringHorizontal.ApplyToCharacter.CompetitionMode()
+{
+	objA0.state.both = 0x0300
+	if ((objA0.flags2a & 0x01) == 0)
+	{
+		u8[A1 + 0x2a] &= ~0x01
+		u16[A1 + 0x10] -= 4
+		s16[A1 + 0x18] = -s16[A0 + 0x30]
+	}
+	else
+	{
+		u8[A1 + 0x2a] |= 0x01
+		u16[A1 + 0x10] += 4
+		s16[A1 + 0x18] = s16[A0 + 0x30]
+	}
+
+	fn0231be()
+}
+
+
+//# address-hook(0x023190) end(0x0231ba)
+//# alias(fn023190) deprecated
+function void SpringHorizontal.ApplyToCharacter()
+{
+	objA0.state.both = 0x300
+	if (objA0.flags2a & 0x01)
+	{
+		objA1.position.x.u16 += 8
+		objA1.velocity.x = s16[A0 + 0x30]
+		objA1.flags2a |= char.flag.FACING_LEFT
+	}
+	else
+	{
+		objA1.position.x.u16 -= 8
+		objA1.velocity.x = -s16[A0 + 0x30]
+		objA1.flags2a &= ~char.flag.FACING_LEFT
+	}
+
+	fn0231be()
+}
+
+
+//# address-hook(0x0231be) end(0x023266)
+function void fn0231be()
+{
+	u16[A1 + 0x32] = 15		// "char.hlock_countdown"
+	if ((u8[A1 + 0x2a] & char.flag.ROLLING) == 0)
+	{
+		u8[A1 + 0x20] = 0
+	}
+
+	if (objA0.subtype2c & 0x80)
+	{
+		objA1.velocity.y = 0
+	}
+	if (objA0.subtype2c & 0x01)
+	{
+		objA1.state = char.state.RUNNING
+		u8[A1 + 0x30] = (objA0.subtype2c & 0x02) ? 1 : 3		// "char.rotation.x.count"
+		u8[A1 + 0x31] = 8										// "char.rotation.x.speed"
+
+		if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			objA1.groundspeed = -1
+			s8[A1 + 0x27] = -1		// Set x-rotation of character
+		}
+		else
+		{
+			objA1.groundspeed = 1
+			s8[A1 + 0x27] = 1		// Set x-rotation of character
+		}
+	}
+	else
+	{
+		objA1.groundspeed = objA1.velocity.x
+	}
+
+	D0.u8 = objA0.subtype2c & 0x0c
+	if (D0.u8 == 0x04)
+	{
+		u8[A1 + 0x46] = 0x0c
+		u8[A1 + 0x47] = 0x0d
+	}
+	if (D0.u8 == 0x08)
+	{
+		u8[A1 + 0x46] = 0x0e
+		u8[A1 + 0x47] = 0x0f
+	}
+
+	objA0.flags2a &= ~(object.flag.P1_PUSHING | object.flag.P2_PUSHING)
+	objA1.flags2a &= ~char.flag.PUSHING
+	u8[A1 + 0x2f] = 0
+
+	playSound(SFX_SPRING)
+}
+
+
+//# address-hook(0x02326c) end(0x023324)
+function void fn02326c()
+{
+#if STANDALONE
+	if (debug_mode.state)
+		return
+#endif
+
+	if (objA0.state == 0x03)
+		return
+
+	if (objA0.flags2a & 0x01)
+	{
+		D0.u16 = objA0.position.x.u16 - 0x28
+		D1.u16 = objA0.position.x.u16
+	}
+	else
+	{
+		D0.u16 = objA0.position.x.u16
+		D1.u16 = objA0.position.x.u16 + 0x28
+	}
+	D2.u16 = objA0.position.y.u16 - 0x18
+	D3.u16 = objA0.position.y.u16 + 0x18
+
+	u16 backupD0 = D0.u16
+
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		A1 = 0xffffb000 + characterIndex * 0x4a
+		if ((u8[A1 + 0x2a] & char.flag.IN_AIR) == 0)
+		{
+			D4.u16 = u16[A1 + 0x1c]
+			if (objA0.flags2a & 0x01)
+				D4.s16 = -D4.s16
+
+			if (D4.s16 >= 0)
+			{
+				D4.u16 = objA1.position.x.u16
+				if (D4.u16 >= D0.u16 && D4.u16 < D1.u16)
+				{
+					D4.u16 = objA1.position.y.u16
+					if (D4.u16 >= D2.u16 && D4.u16 < D3.u16)
+					{
+						D0.u16 = backupD0
+						SpringHorizontal.ApplyToCharacter()
+					}
+				}
+			}
+		}
+	}
+}
+
+
+// Diagonal spring
+
+//# address-hook(0x023490) end(0x0234e0)
+function void SpringDiagonal.Update()
+{
+	SpringDiagonal.updateInternal(false)
+}
+
+
+//# address-hook(0x0234e6) end(0x0235cc)
+//# alias(fn0234e6) deprecated
+function void SpringDiagonal.ApplyToCharacter()
+{
+	if ((objA0.flags2a & 0x01) == 0)
+	{
+		D0.u16 = objA0.position.x.u16 - 4
+		if (D0.u16 >= objA1.position.x.u16)
+			return
+	}
+	else
+	{
+		D0.u16 = objA0.position.x.u16 + 4
+		if (D0.u16 < objA1.position.x.u16)
+			return
+	}
+
+	objA0.state.both = 0x0500
+	objA1.velocity.y = u16[A0 + 0x30]
+	objA1.position.y.u16 += 6
+	if ((objA0.flags2a & 0x01) == 0)
+	{
+		objA1.flags2a &= ~char.flag.FACING_LEFT
+		objA1.position.x.u16 -= 6
+		objA1.velocity.x = -s16[A0 + 0x30]
+	}
+	else
+	{
+		objA1.flags2a |= char.flag.FACING_LEFT
+		objA1.position.x.u16 += 6
+		objA1.velocity.x = s16[A0 + 0x30]
+	}
+
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.state = char.state.STRAIGHTJUMP
+	objA1.flags2a |= char.flag.IN_AIR
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+	u8[A1 + 0x40] = 0
+
+	if (objA0.subtype2c & 0x01)
+	{
+		u8[A1 + 0x20] = 0
+		u8[A1 + 0x30] = (objA0.subtype2c & 0x02) ? 1 : 3		// "char.rotation.x.count"
+		u8[A1 + 0x31] = 8										// "char.rotation.x.speed"
+
+		if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			s8[A1 + 0x27] = -1		// Set x-rotation of character
+			objA1.groundspeed = -1
+		}
+		else
+		{
+			s8[A1 + 0x27] = 1		// Set x-rotation of character
+			objA1.groundspeed = 1
+		}
+	}
+
+	D0.u8 = objA0.subtype2c & 0x0c
+	if (D0.u8 == 0x04)
+	{
+		u8[A1 + 0x46] = 0x0c
+		u8[A1 + 0x47] = 0x0d
+	}
+	if (D0.u8 == 0x08)
+	{
+		u8[A1 + 0x46] = 0x0e
+		u8[A1 + 0x47] = 0x0f
+	}
+
+	playSound(SFX_SPRING)
+}
+
+
+
+//# address-hook(0x0235d2) end(0x02361e)
+//# alias(SpringDiagonal.UpdateFlipped) deprecated
+function void SpringDiagonalFlipped.Update()
+{
+	SpringDiagonal.updateInternal(true)
+}
+
+function void SpringDiagonal.updateInternal(bool flipY)
+{
+	for (u8 characterIndex = 0; characterIndex < 2; ++characterIndex)
+	{
+		D1.u16 = 27
+		D2.u16 = 16
+		D4.u16 = objA0.position.x.u16
+		A2 = flipY ? 0x023706 : 0x0236ea
+
+		A1 = 0xffffb000 + characterIndex * 0x4a
+		D6 = 3 + characterIndex
+		fn01dd24()
+		if (flipY)
+		{
+			if (D4.u16 == -2)
+			{
+				SpringDiagonalFlipped.ApplyToCharacter()
+			}
+		}
+		else
+		{
+			if ((objA0.flags2a >> D6) & 0x01)
+			{
+				SpringDiagonal.ApplyToCharacter()
+			}
+		}
+	}
+
+	Object.animationUpdate(0x023722)
+	D0.u16 = objA0.value32
+	DrawOrUnloadObjectByD0()
+}
+
+
+//# address-hook(0x023624) end(0x0236e4)
+//# alias(fn023624) deprecated
+function void SpringDiagonalFlipped.ApplyToCharacter()
+{
+	objA0.state.both = 0x0500
+	objA1.velocity.y = -s16[A0 + 0x30]
+	objA1.position.y.u16 -= 6
+
+	if ((objA0.flags2a & char.flag.FACING_LEFT) == 0)
+	{
+		objA1.flags2a &= ~char.flag.FACING_LEFT
+		objA1.position.x.u16 -= 6
+		objA1.velocity.x = -s16[A0 + 0x30]		// Regression fix for diagonal springs: fix #contributed by GFX32
+	}
+	else
+	{
+		objA1.flags2a |= char.flag.FACING_LEFT
+		objA1.position.x.u16 += 6
+		objA1.velocity.x = s16[A0 + 0x30]
+	}
+
+	objA1.flags2a |= char.flag.IN_AIR
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+	u8[A1 + 0x40] = 0
+	u8[A1 + 0x05] = base_state.NORMAL
+
+	if (objA0.subtype2c & 0x01)
+	{
+		u8[A1 + 0x20] = 0
+		u8[A1 + 0x30] = (objA0.subtype2c & 0x02) ? 1 : 3		// "char.rotation.x.count"
+		u8[A1 + 0x31] = 8										// "char.rotation.x.speed"
+
+		if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			s8[A1 + 0x27] = -1		// Set x-rotation of character
+			objA1.groundspeed = -1
+		}
+		else
+		{
+			s8[A1 + 0x27] = 1		// Set x-rotation of character
+			objA1.groundspeed = 1
+		}
+	}
+
+	D0.u8 = objA0.subtype2c & 0x0c
+	if (D0.u8 == 0x04)
+	{
+		u8[A1 + 0x46] = 0x0c
+		u8[A1 + 0x47] = 0x0d
+	}
+	if (D0.u8 == 0x08)
+	{
+		u8[A1 + 0x46] = 0x0e
+		u8[A1 + 0x47] = 0x0f
+	}
+
+	playSound(SFX_SPRING)
+}

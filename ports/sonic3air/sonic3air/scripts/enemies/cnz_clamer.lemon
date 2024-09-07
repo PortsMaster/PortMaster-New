@@ -1,0 +1,175 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Clamer enemy from Carnival Night Zone                 //
+//-------------------------------------------------------//
+
+//# address-hook(0x088fb4) end(0x088fb4)
+//# alias(fn088fb4) deprecated
+function void Clamer.Init()
+{
+	Object.InitWithUpdateAddress(addressof(Clamer.BaseUpdate))
+}
+
+
+//# address-hook(0x088fba) end(0x088fd0)
+//# alias(fn088fba) deprecated
+function void Clamer.BaseUpdate()
+{
+	// Targets:
+	//  - 0x088fdc	-> objA0.base_state = 0x00
+	//  - 0x088fec	-> objA0.base_state = 0x02
+	//  - 0x08904e	-> objA0.base_state = 0x04
+	//  - 0x089064	-> objA0.base_state = 0x06
+	call tableLookupAddress(0x088fd4, objA0.base_state)
+
+	Object.loadSpritePatterns(0x089168)
+	fn085208()
+}
+
+
+//# address-hook(0x088fdc) end(0x088fe8)
+function void fn088fdc()
+{
+	if (SetupObjectAttributesSlotted(0x089124))
+		return
+
+	// "spawnChildObjects(0x089148)" replaced by:
+	spawnChildObject(0x08908c, 0x00, 0, -8)		// Bouncy shell hitbox
+}
+
+
+//# address-hook(0x088fec) end(0x08904c)
+function void fn088fec()
+{
+	if ((objA0.flags38 & 0x01) == 0)
+	{
+		CheckDistanceToPlayers()
+		if (D2.u16 < 0x60)
+		{
+			if (objA0.render_flags & render_flag.FLIP_X)
+			{
+				D0.u16 -= 2
+			}
+			if (D0.u16 == 0)
+			{
+				objA0.base_state = 0x06
+				objA0.countdown_callback = 0x089056
+				objA0.animation.frame = 0
+				objA0.animation.timer = 0
+				return
+			}
+		}
+
+		Object.AnimationProgress.DistinctTimer(0x089170)		// Shell clacking animation
+	}
+	else
+	{
+		objA0.base_state = 0x04
+		u8[A0 + 0x28] = 0
+		objA0.flags38 &= ~0x01
+		objA0.countdown_callback = 0x089056
+		objA0.animation.frame = 0
+		objA0.animation.timer = 0
+	}
+}
+
+
+//# address-hook(0x08904e) end(0x089052)
+function void fn08904e()
+{
+	Object.animationProgress(0x089179)
+}
+
+
+//# address-hook(0x089056) end(0x089062)
+function void fn089056()
+{
+	objA0.base_state = 0x02
+	objA0.collision_attributes = collision.size.16x8
+}
+
+
+//# address-hook(0x089064) end(0x089088)
+function void fn089064()
+{
+	Object.AnimationProgress.DistinctTimer(0x089185)		// Shooting animation
+
+	if (D2.u16 != 0 && objA0.animation.sprite == 8 && objA0.render_flags & render_flag.VISIBLE)
+	{
+		// "spawnProjectileChildObjectsInDir(0x089150)" replaced by:
+		spawnProjectileChildObjectInDir(0x086d4a, 0x00, -16, 2, -512, 0, 0x08913c, 0x000000, addressof(UpdateMovementStraightSimple))		// Spike ball
+	}
+}
+
+
+//# address-hook(0x08908c) end(0x0890a8)
+function void fn08908c()
+{
+	setupObjectAttributesBasic(0x089136)
+	A1 = 0xffff0000 + u16[A0 + 0x46]
+	objA0.render_flags = objA1.render_flags
+	objA0.sprite_attributes = 0
+	objA0.update_address = 0x0890aa
+}
+
+
+//# address-hook(0x0890aa) end(0x0890c4)
+function void fn0890aa()
+{
+	fn085870()
+	if (!_equal())
+	{
+		objA0.update_address = 0x0890c8
+		fn0890d8()
+
+		A1 = 0xffff0000 + u16[A0 + 0x46]
+		u8[A1 + 0x38] |= 0x01
+	}
+	Child.DrawSprite_DynObj()
+}
+
+
+//# address-hook(0x0890c8) end(0x0890d6)
+function void fn0890c8()
+{
+	--objA0.countdown_value
+	if (objA0.countdown_value < 0)
+	{
+		objA0.update_address = 0x0890aa
+	}
+}
+
+
+//# address-hook(0x0890d8) end(0x089122)
+function void fn0890d8()
+{
+	if (objA0.render_flags & render_flag.FLIP_X)
+	{
+		D0.s16 = -0x800
+		u8[A1 + 0x2a] |= render_flag.FLIP_X
+	}
+	else
+	{
+		D0.s16 = 0x800
+		u8[A1 + 0x2a] &= ~render_flag.FLIP_X
+	}
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.position.y.u16 += 6
+	objA1.velocity.x = D0.u16
+	objA1.velocity.y = -0x800
+	objA1.groundspeed = D0.u16
+	objA1.state = char.state.STRAIGHTJUMP
+	objA1.flags2a |= char.flag.IN_AIR
+	u8[A1 + 0x40] = 0
+
+	playSound(SFX_SPRING)
+}
