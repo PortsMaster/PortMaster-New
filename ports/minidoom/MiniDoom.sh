@@ -33,12 +33,6 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
 expected_checksum="66a2399ec3b73b51be1462b416419437"
 
 if [ -f "$GAMEDIR/gamedata/Mini Doom V1.3.exe" ]; then
