@@ -1,0 +1,130 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Miles Prower's fluffy rear parts                      //
+//-------------------------------------------------------//
+
+//# address-hook(0x0160a6) end(0x01615e)
+function void TailsTails.Init()
+{
+	objA0.mapping_offset = 0x344bb8
+	objA0.sprite_attributes = (Char.Tails_Tails.targetInVRAM >> 5)
+	objA0.sprite_priority = 0x100
+	objA0.box_size.x = 0x18
+	objA0.box_size.y = 0x18
+	objA0.render_flags = render_flag.WORLD
+
+	objA0.update_address = addressof(TailsTails.Update)
+	TailsTails.Update()
+}
+
+
+//# address-hook(0x0160d2)
+function void TailsTails.Update()
+{
+	// Update various properties from Tails main object
+	A2 = 0xffff0000 + u16[A0 + 0x30]
+	objA0.position.x.u16 = u16[A2 + 0x10]
+	objA0.position.y.u16 = u16[A2 + 0x14]
+	u8[A0 + 0x26] = u8[A2 + 0x26]			// Rotation
+	objA0.flags2a = u8[A2 + 0x2a]			// Flags
+	objA0.sprite_priority = u16[A2 + 0x08]
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+
+	D0 = u8[A2 + 0x20]
+	if ((u8[A2 + 0x2a] & char.flag.PUSHING) && level.HCZ_water_current_flags.tails == 0)
+	{
+		if (u8[A2 + 0x22] >= 0xa9 && u8[A2 + 0x22] <= 0xac)		// Range of Tails' pushing animation frames
+		{
+			D0 = 4	// Set appropriate tail animation manually, because char.state isn't actually set for character pushing animation
+		}
+	}
+	if (u8[A0 + 0x34] != D0.u8)
+	{
+		u8[A0 + 0x34] = D0.u8
+		objA0.state = u8[0x016164 + D0.s16]
+	}
+
+	A1 = 0x016196
+	UpdateTailsAnimation_inner()
+	if (global.inv_gravity && objA0.state != 0x03)
+	{
+		objA0.render_flags ^= render_flag.FLIP_Y
+	}
+
+	TailsTails.UpdateSpritePatterns()
+	DrawObject()
+}
+
+
+//# address-hook(0x015c3e) end(0x015c6c)
+function void TailsTails.UpdateSpritePatterns()
+{
+	updateCharacterSpritePatternsInternal(objA0.animation.sprite, 0x336620, 0x344d74, Char.Tails_Tails.targetInVRAM, 0xfffff7df)
+}
+
+
+
+// Competition mode
+
+//# address-hook(0x016022) end(0x01604e)
+//# alias(fn016022) deprecated
+function void CompetitionMode.TailsTails.UpdateSpritePatterns()
+{
+	u16 targetInVRAM = (A0 == 0xffffcc0a) ? Char.Tails_Tails.targetInVRAM : Char.Player1_Tails.targetInVRAM
+	updateMultipleSpritePatterns(0x33d5e0, 0x2a024c, targetInVRAM, objA0.animation.sprite)
+}
+
+
+//# address-hook(0x0161fa) end(0x01622c)
+//# alias(fn0161fa) deprecated
+function void CompetitionMode.TailsTails.Init()
+{
+	objA0.mapping_offset = 0x2a00a4
+	objA0.sprite_attributes = (A0 == 0xffffcc0a) ? (Char.Tails_Tails.targetInVRAM >> 5) : (Char.Player1_Tails.targetInVRAM >> 5)
+	objA0.sprite_priority = 0x0100
+	objA0.box_size.x = 0x18
+	objA0.box_size.y = 0x18
+	objA0.render_flags = render_flag.WORLD
+
+	objA0.update_address = 0x016232
+	CompetitionMode.TailsTails.Update()
+}
+
+
+//# address-hook(0x016232) end(0x01629a)
+//# alias(fn016232) deprecated
+function void CompetitionMode.TailsTails.Update()
+{
+	A2 = 0xffff0000 + u16[A0 + 0x30]
+	objA0.value26 = u8[A2 + 0x26]
+	objA0.flags2a = u8[A2 + 0x2a]
+	objA0.position.x.u16 = u16[A2 + 0x10]
+	objA0.position.y.u16 = u16[A2 + 0x14]
+	objA0.sprite_priority = u16[A2 + 0x08]
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+
+	D0 = u8[A2 + 0x20]
+	if ((u8[A2 + 0x2a] & 0x20) && D0.u8 != 0x05)
+	{
+		D0 = 0x04
+	}
+	if (D0.u8 != u8[A0 + 0x34])
+	{
+		u8[A0 + 0x34] = D0.u8
+		objA0.state = u8[0x0162a0 + D0.u16]
+	}
+
+	A1 = 0x0162c2
+	CompetitionMode.UpdateTailsAnimation_inner()
+	CompetitionMode.TailsTails.UpdateSpritePatterns()
+	DrawObject()
+}

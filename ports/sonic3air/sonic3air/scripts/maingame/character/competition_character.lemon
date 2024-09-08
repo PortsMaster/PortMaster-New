@@ -1,0 +1,756 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+// Shared
+
+function void CompetitionMode.Character.BaseUpdate(u32 mainRoutineTableAddress)
+{
+	if (A0 == 0xffffb000)
+	{
+		A4 = addressof(global.move.speedcap)	// Address: 0xfffff760 = Base address of speed caps & acceleration/deceleration for player 1
+		A5 = addressof(camera.yoffset.player)	// Address: 0xffffee2c
+		A6 = 0xffffcc54							// Base address of dust cloud object for player 1
+		if (u8[0xffffb04a + 0x38] == char.character)
+		{
+			char.render_flags ^= render_flag.COMPETITION_P1_SCREEN
+		}
+
+		if (debug_mode.state != 0)
+		{
+			DebugMode.BaseUpdate()
+			return
+		}
+	}
+	else
+	{
+		A4 = addressof(global.move.speedcap.tails)	// Address: 0xfffffec0 - Base address of speed caps & acceleration/deceleration for player 2
+		A5 = addressof(camera.yoffset.tails)		// Address: 0xffffee2e
+		A6 = 0xffffcc9e								// Base address of dust cloud object for player 2
+		if (u8[0xffffb000 + 0x38] == char.character)
+		{
+			char.render_flags ^= render_flag.COMPETITION_P2_SCREEN
+		}
+	}
+
+	// Targets:
+	//  - 0x010628, 0x013166	-> char.base_state = 0x00	-> CompetitionMode.Character.Initialization.*()		-> Initialization
+	//  - 0x010740, 0x013274	-> char.base_state = 0x02	-> CompetitionMode.Character.UpdateNormalState.*()	-> In normal state
+	//  - 0x0122be, 0x01569c	-> char.base_state = 0x04	-> Character.UpdateGotHurtState.*()					-> Character just got hurt
+	//  - 0x012390, 0x01578e	-> char.base_state = 0x06	-> Character.UpdateDiedState.*()					-> Character died
+	//  - 0x01257c, 0x0157e0	-> char.base_state = 0x08	-> Character.UpdateRestartDelay()					-> Completely inactive after death
+	call tableLookupAddress(mainRoutineTableAddress, char.base_state)
+}
+
+
+
+// Sonic, Knuckles
+
+//# address-hook(0x0105c4) end(0x010618)
+//# alias(fn0105c4) deprecated
+function void CompetitionMode.Character.BaseUpdate.Sonic_Knuckles()
+{
+	CompetitionMode.Character.BaseUpdate(0x01061c)
+}
+
+
+//# address-hook(0x010628) end(0x01073c)
+//# alias(fn010628) deprecated
+function void CompetitionMode.Character.Initialization.Sonic_Knuckles()
+{
+	char.base_state += 2
+	char.hitbox_extends.x = 5
+	char.hitbox_extends.y = 11
+	char.hitbox.default.x = 5
+	char.hitbox.default.y = 11
+
+	char.sprite_priority = 0x0100
+	char.box_size.x = 0x0c
+	char.box_size.y = 0x0c
+	char.render_flags = render_flag.WORLD
+
+	A1 = 0x1e3c00 + char.character * 8
+	u16[A4] = u16[(A1+=2)-2]
+	u16[A4 + 0x02] = u16[(A1+=2)-2]
+	u16[A4 + 0x04] = u16[(A1+=2)-2]
+
+	if (checkpoint.number == 0)
+	{
+		char.layer_flags1 = 0x0c
+		char.layer_flags2 = 0x0d
+		if (A0 == 0xffffb000)
+		{
+			if (char.character == CHARACTER_SONIC)
+			{
+				char.mapping_offset = 0x29fc3a
+				char.sprite_attributes = (Char.Player1.targetInVRAM >> 5)
+			}
+			else
+			{
+				char.mapping_offset = 0x2a02aa
+				char.sprite_attributes = (sprite_attribute.PALETTE.LINE1 | (Char.Player1.targetInVRAM >> 5))
+			}
+			if (global.zone == 0x12)
+			{
+				char.sprite_attributes |= sprite_attribute.PRIORITY
+			}
+			checkpoint.x = char.position.x.u16
+			checkpoint.y = char.position.y.u16
+			checkpoint.sprite_attr = char.sprite_attributes
+			checkpoint.layer_flags = char.layer_flags
+		}
+		else
+		{
+			if (char.character == CHARACTER_SONIC)
+			{
+				char.mapping_offset = 0x29fc3a
+				char.sprite_attributes = (Char.Tails.targetInVRAM >> 5)
+			}
+			else
+			{
+				char.mapping_offset = 0x2a02aa
+				char.sprite_attributes = (sprite_attribute.PALETTE.LINE1 | (Char.Tails.targetInVRAM >> 5))
+			}
+			if (global.zone == 0x12)
+			{
+				char.sprite_attributes |= sprite_attribute.PRIORITY
+			}
+			level.backup.x = char.position.x.u16
+			level.backup.y = char.position.y.u16
+			level.backup.sprite_attr = char.sprite_attributes
+			level.backup.layer_flags = char.layer_flags
+		}
+	}
+
+	u8[A0 + 0x30] = 0
+	u8[A0 + 0x31] = 0x04
+	super.active = 0
+	char.drown_countdown = 30
+	ClearPositionBackup()
+
+	CompetitionMode.Character.UpdateNormalState.Sonic_Knuckles()
+}
+
+
+//# address-hook(0x010740) end(0x0107ec)
+//# alias(fn010740) deprecated
+function void CompetitionMode.Character.UpdateNormalState.Sonic_Knuckles()
+{
+	if (debug_mode.enabled && A0 == 0xffffb000 && (control.pad1.pressed & CONTROL_B))
+	{
+		debug_mode.state = 0x01
+		player1.control_override = 0
+		return
+	}
+
+	if (A0 == 0xffffb000)
+	{
+		if (player1.control_override == 0)
+		{
+			control.player1 = control.pad1
+		}
+	}
+	else
+	{
+		if (player2.control_override == 0)
+		{
+			control.player1 = control.pad2
+		}
+	}
+
+	UpdateSonicBonusEffects()
+	if ((char.control_flags & control_flag.DISABLE_UPDATE) == 0)
+	{
+		// Targets:
+		//  - 0x0107f6	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = 0x00												-> CompetitionMode.Character.UpdateUprightOnGround.Sonic_Knuckles()
+		//  - 0x010868	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.IN_AIR									-> CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()
+		//  - 0x010896	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.ROLLING								-> CompetitionMode.Character.UpdateRollingOnGround.Sonic_Knuckles()
+		//  - 0x0108b8	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = (char.flag.IN_AIR | char.flag.ROLLING)			-> CompetitionMode.Character.UpdateRollingInAir.Sonic_Knuckles()
+		call tableLookupAddress(0x0107ee, char.flags & (char.flag.IN_AIR | char.flag.ROLLING))
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		char.position.y.u16 &= level.height.bitmask
+	}
+	char.position.x.u16 = 0x0400 + (char.position.x.u16 & u16[0xffffeea8])
+	Character.WriteToPositionBackup()
+
+	char.angle_sensor_1 = u8[0xfffff768]
+	char.angle_sensor_2 = u8[0xfffff76a]
+	if ((char.control_flags & control_flag.DISABLE_ANIMATION) == 0)	// Hanging flag
+	{
+		CompetitionMode.Character.UpdateAnimation.Sonic_Knuckles()
+		CompetitionMode.Character.UpdateSpritePatterns.Sonic_Knuckles()
+	}
+
+	D0.u8 = char.control_flags & (control_flag.DISABLE_INTERACTION | 0x20)
+	if (D0.u8 == 0)
+	{
+		CompetitionMode.Character.CheckCollisionsWithDynamicObjects()
+	}
+}
+
+
+//# address-hook(0x0107f6) end(0x010866)
+//# alias(fn0107f6) deprecated
+function void CompetitionMode.Character.UpdateUprightOnGround.Sonic_Knuckles()
+{
+	if ((control.player1.pressed & CONTROL_ABC) == 0)
+	{
+		if (char.state == 0x0a || char.state == 0x0b)
+			return
+
+		if (char.state == 0x05 && char.animation.frame >= 0x1e)
+		{
+			Character.UpdateUprightSlopeEffect()
+			if (control.player1.state & ~CONTROL_START)
+			{
+				char.state = (char.animation.frame < 0xac) ? 0x0a : 0x0b
+			}
+
+			Character.UpdateRotationOnGround_partial()
+			Character.UpdateGroundContact()
+			return
+		}
+	}
+
+	CompetitionMode.Character.UpdateSpindash.Sonic_Knuckles()
+	if (checkForMultiReturn())
+		return
+
+	if (Character.CheckStartJump())
+		return
+
+	Character.UpdateUprightSlopeEffect()
+	UpdateSonicUprightOnGroundInner()
+	CompetitionMode.Character.CheckForStartRolling.Sonic_Knuckles()
+	UpdateMovementStraightSimple()
+
+	Character.UpdateRotationOnGround_partial()
+	Character.UpdateGroundContact()
+}
+
+
+//# address-hook(0x010868) end(0x010894)
+//# alias(fn010868) deprecated
+function void CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()
+{
+	UpdateSonicJumpMoves()
+	Character.UpdateControlInAir()
+	UpdateMovementSimple()
+
+	if (char.flags & char.flag.UNDERWATER)
+	{
+		// Gravity
+		char.velocity.y -= 0x28
+	}
+
+	Character.UpdateRotationInAir()
+	pushA456()
+	Character.CheckCollision()
+	popA456()
+}
+
+
+//# address-hook(0x010896) end(0x0108b6)
+//# alias(fn010896) deprecated
+function void CompetitionMode.Character.UpdateRollingOnGround.Sonic_Knuckles()
+{
+	if (char.spindash == 0)
+	{
+		if (Character.CheckStartJump())
+			return
+	}
+
+	Character.UpdateRollingSlopeEffect()
+	UpdateSonicControlRollingOnGround()
+	UpdateMovementStraightSimple()
+	Character.UpdateRotationOnGround_partial()
+	Character.UpdateGroundContact()
+}
+
+
+//# address-hook(0x0108b8) end(0x0108e4)
+//# alias(fn0108b8) deprecated
+function void CompetitionMode.Character.UpdateRollingInAir.Sonic_Knuckles()
+{
+	// This is exactly the same as "CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()", so just call this one
+	CompetitionMode.Character.UpdateUprightInAir.Sonic_Knuckles()
+}
+
+
+//# address-hook(0x0108e6) end(0x01094a)
+//# alias(fn0108e6) deprecated
+function void CompetitionMode.Character.CheckForStartRolling.Sonic_Knuckles()
+{
+	if (s8[A0 + 0x2b] >= 0 && abs(char.groundspeed) >= 0x80)
+	{
+		// Start rolling
+		if ((control.player1.state & (CONTROL_LEFT | CONTROL_RIGHT)) == 0 && (control.player1.state & CONTROL_DOWN) && (char.flags & char.flag.ROLLING) == 0)
+		{
+			char.flags |= char.flag.ROLLING
+			char.hitbox_extends.x = 3
+			char.hitbox_extends.y = 7
+			char.state = char.state.ROLLING
+			char.position.y.u16 += 4
+			playSound(SFX_ROLL)
+			if (char.groundspeed == 0)
+			{
+				char.groundspeed = 0x0200
+			}
+		}
+	}
+}
+
+
+//# address-hook(0x01094c) end(0x010a12)
+//# alias(fn01094c) deprecated
+function void CompetitionMode.Character.UpdateSpindash.Sonic_Knuckles()
+{
+	if (char.spindash == 0)
+	{
+		if ((char.state == char.state.COWERING) && (control.player1.pressed & CONTROL_ABC))
+		{
+			// Start spindash
+			char.state = char.state.SPINDASH
+			playSound(SFX_SPINDASH_CHARGE)
+			signalMultiReturn()
+
+			char.spindash = 0x01
+			char.spindash_charge = 0
+			if (char.drown_countdown >= 12)
+			{
+				u8[A6 + 0x20] = 0x02
+			}
+			Character.UpdateRotationOnGround_partial()
+		}
+		return
+	}
+
+	if (control.player1.state & CONTROL_DOWN)
+	{
+		fn010a38()
+		return
+	}
+
+	// Release spindash!
+	char.hitbox_extends.x = 3
+	char.hitbox_extends.y = 7
+	char.state = char.state.ROLLING
+	char.position.y.u16 += 4
+	char.spindash = 0
+
+	D0 = u8[A0 + 0x3e] * 2
+	char.groundspeed = u16[0x010a14 + D0.u16]
+	A1 = (A0 == 0xffffb000) ? addressof(camera.locktime.player1) : addressof(camera.locktime.player2)	// Addresses: 0xffffee24 / 0xffffee28
+	u16[A1] = 0x2000 - (((u16(char.groundspeed) - 0x0800) * 2) & 0x1f00)
+	if (char.flags & char.flag.FACING_LEFT)
+	{
+		char.groundspeed = -char.groundspeed
+	}
+	char.flags |= char.flag.ROLLING
+
+	// Tell dust cloud object to disappear again
+	u8[A6 + 0x20] = 0
+	playSound(SFX_SPINDASH_RELEASE)
+
+	CompetitionMode.centerCameraYOffset.Sonic_Knuckles()
+}
+
+
+//# address-hook(0x010a38) end(0x010a7a)
+function void fn010a38()
+{
+	// Update spindash
+	if (char.spindash_charge != 0)
+	{
+		char.spindash_charge -= char.spindash_charge >> 5
+		if (s16(char.spindash_charge) < 0)
+			char.spindash_charge = 0
+	}
+
+	if (control.player1.pressed & CONTROL_ABC)
+	{
+		// Charge up
+		char.state.both = 0x0900		// char.state.SPINDASH, char.state.RUNNING
+		playSound(SFX_SPINDASH_CHARGE)
+		char.spindash_charge = min(char.spindash_charge + 0x200, 0x800)
+	}
+
+	CompetitionMode.centerCameraYOffset.Sonic_Knuckles()
+}
+
+
+//# address-hook(0x010a80) end(0x010a92)
+//# alias(fn010a80) deprecated
+function void CompetitionMode.centerCameraYOffset.Sonic_Knuckles()
+{
+	signalMultiReturn()
+
+	centerCameraYOffset()
+	Character.UpdateRotationOnGround_partial()
+}
+
+
+
+// Tails
+
+//# address-hook(0x013102) end(0x013156)
+//# alias(fn013102) deprecated
+function void CompetitionMode.Character.BaseUpdate.Tails()
+{
+	CompetitionMode.Character.BaseUpdate(0x01315a)
+}
+
+
+//# address-hook(0x013166) end(0x01326e)
+//# alias(fn013166) deprecated
+function void CompetitionMode.Character.Initialization.Tails()
+{
+	char.base_state += 2
+	char.hitbox_extends.x = 5
+	char.hitbox_extends.y = 11
+	char.hitbox.default.x = 5
+	char.hitbox.default.y = 11
+	char.mapping_offset = 0x29fee6
+	char.sprite_priority = 0x0100
+	char.box_size.x = 0x0c
+	char.box_size.y = 0x0c
+	char.render_flags = (render_flag.WORLD | render_flag.VISIBLE)
+	char.character = CHARACTER_TAILS
+
+	A1 = 0x1e3c00 + char.character * 8
+	u16[A4] = u16[(A1+=2)-2]
+	u16[A4 + 0x02] = u16[(A1+=2)-2]
+	u16[A4 + 0x04] = u16[(A1+=2)-2]
+
+	if (checkpoint.number == 0)
+	{
+		char.layer_flags1 = 0x0c
+		char.layer_flags2 = 0x0d
+		if (A0 == 0xffffb000)
+		{
+			char.sprite_attributes = (Char.Player1.targetInVRAM >> 5)
+			if (global.zone == 0x12)
+			{
+				char.sprite_attributes |= sprite_attribute.PRIORITY
+			}
+			checkpoint.x = char.position.x.u16
+			checkpoint.y = char.position.y.u16
+			checkpoint.sprite_attr = char.sprite_attributes
+			checkpoint.layer_flags = char.layer_flags
+			u32[0xffffcbc0] = addressof(CompetitionMode.TailsTails.Init)
+			u16[0xffffcbc0 + 0x30] = A0.u16
+		}
+		else
+		{
+			char.sprite_attributes = (Char.Tails.targetInVRAM >> 5)
+			if (global.zone == 0x12)
+			{
+				char.sprite_attributes |= sprite_attribute.PRIORITY
+			}
+			level.backup.x = char.position.x.u16
+			level.backup.y = char.position.y.u16
+			level.backup.sprite_attr = char.sprite_attributes
+			level.backup.layer_flags = char.layer_flags
+			u32[0xffffcc0a] = addressof(CompetitionMode.TailsTails.Init)
+			u16[0xffffcc0a + 0x30] = A0.u16
+		}
+	}
+
+	u8[A0 + 0x30] = 0
+	u8[A0 + 0x31] = 0x04
+	char.drown_countdown = 30
+	tails.ai_routine = 0
+	tails.control_counter = 600
+	tails.respawn_counter = 0
+
+	CompetitionMode.Character.UpdateNormalState.Tails()
+}
+
+
+//# address-hook(0x013274) end(0x01332c)
+//# alias(fn013274) deprecated
+function void CompetitionMode.Character.UpdateNormalState.Tails()
+{
+	if (debug_mode.enabled != 0 && A0 == 0xffffb000 && (control.pad1.pressed & CONTROL_B))
+	{
+		debug_mode.state = 0x01
+		player1.control_override = 0
+		return
+	}
+
+	if (A0 == 0xffffb000)
+	{
+		control.tails = control.player1
+		if (player1.control_override == 0)
+		{
+			control.tails = control.pad1
+			control.player1 = control.pad1
+		}
+	}
+	else
+	{
+		if (player2.control_override == 0)
+		{
+			control.tails = control.pad2
+		}
+	}
+
+	UpdateTailsBonusEffects()
+	if ((char.control_flags & control_flag.DISABLE_UPDATE) == 0)
+	{
+		// Targets:
+		//  - 0x013336	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = 0x00												-> CompetitionMode.Character.UpdateUprightOnGround.Tails()
+		//  - 0x01335a	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.IN_AIR									-> CompetitionMode.Character.UpdateUprightInAir.Tails()
+		//  - 0x01346a	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.ROLLING								-> CompetitionMode.Character.UpdateRollingOnGround.Tails()
+		//  - 0x01348c	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = (char.flag.IN_AIR | char.flag.ROLLING)			-> CompetitionMode.Character.UpdateRollingInAir.Tails()
+		call tableLookupAddress(0x01332e, char.flags & (char.flag.IN_AIR | char.flag.ROLLING))
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		char.position.y.u16 &= level.height.bitmask
+	}
+	char.position.x.u16 = 0x0400 + (char.position.x.u16 & u16[0xffffeea8])
+	Character.WriteToPositionBackup()
+
+	char.angle_sensor_1 = u8[0xfffff768]
+	char.angle_sensor_2 = u8[0xfffff76a]
+	if ((char.control_flags & control_flag.DISABLE_ANIMATION) == 0)	// Hanging flag
+	{
+		CompetitionMode.Character.UpdateAnimation.Tails()
+		CompetitionMode.Character.UpdateSpritePatterns.Tails()
+	}
+
+	D0.u8 = char.control_flags & (control_flag.DISABLE_INTERACTION | 0x20)
+	if (D0.u8 == 0)
+	{
+		CompetitionMode.Character.CheckCollisionsWithDynamicObjects()
+	}
+}
+
+
+//# address-hook(0x013336) end(0x013358)
+//# alias(fn013336) deprecated
+function void CompetitionMode.Character.UpdateUprightOnGround.Tails()
+{
+	CompetitionMode.Character.UpdateSpindash.Tails()
+	if (checkForMultiReturn())
+		return
+
+	if (Character.CheckStartJump())
+		return
+
+	Character.UpdateUprightSlopeEffect()
+	UpdateTailsUprightOnGroundInner()
+	CompetitionMode.Character.CheckForStartRolling.Tails()
+	UpdateMovementStraightSimple()
+
+	Character.UpdateRotationOnGround_partial()
+	Character.UpdateGroundContact()
+}
+
+
+//# address-hook(0x01335a) end(0x0133ac)
+//# alias(fn01335a) deprecated
+function void CompetitionMode.Character.UpdateUprightInAir.Tails()
+{
+	if (char.double_jump_state == 0)
+	{
+		UpdateTailsJumpMoves()
+		Character.UpdateControlInAir()
+		UpdateMovementSimple()
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			// Gravity
+			char.velocity.y -= 0x28
+		}
+	}
+	else
+	{
+		fn0133ae()
+		Character.UpdateControlInAir()
+		UpdateMovementStraightSimple()
+	}
+
+	Character.UpdateRotationInAir()
+	pushA456()
+	Character.CheckCollision()
+	popA456()
+}
+
+
+//# address-hook(0x0133ae) end(0x013468)
+function void fn0133ae()
+{
+	UpdateTailsFlight_innerA()
+
+	if (((level.framecounter.low + 0x08) & 0x0f) == 0)
+	{
+		playSound((tails.flight_countdown == 0) ? 0xbb : 0xba)
+	}
+}
+
+
+//# address-hook(0x01346a) end(0x01348a)
+//# alias(fn01346a) deprecated
+function void CompetitionMode.Character.UpdateRollingOnGround.Tails()
+{
+	if (char.spindash == 0)
+	{
+		if (Character.CheckStartJump())
+			return
+	}
+
+	Character.UpdateRollingSlopeEffect()
+	UpdateTailsControlRollingOnGround()
+	UpdateMovementStraightSimple()
+	Character.UpdateRotationOnGround_partial()
+	Character.UpdateGroundContact()
+}
+
+
+//# address-hook(0x01348c) end(0x0134b8)
+//# alias(fn01348c) deprecated
+function void CompetitionMode.Character.UpdateRollingInAir.Tails()
+{
+	UpdateTailsJumpMoves()
+	Character.UpdateControlInAir()
+	UpdateMovementSimple()
+	if (char.flags & char.flag.UNDERWATER)
+	{
+		// Gravity
+		char.velocity.y -= 0x28
+	}
+
+	Character.UpdateRotationInAir()
+	pushA456()
+	Character.CheckCollision()
+	popA456()
+}
+
+
+//# address-hook(0x0134ba) end(0x01351e)
+//# alias(fn0134ba) deprecated
+function void CompetitionMode.Character.CheckForStartRolling.Tails()
+{
+	if (s8[A0 + 0x2b] >= 0 && abs(char.groundspeed) >= 0x80)
+	{
+		// Start rolling
+		if ((control.tails.state & (CONTROL_LEFT | CONTROL_RIGHT)) == 0 && (control.tails.state & CONTROL_DOWN) && (char.flags & char.flag.ROLLING) == 0)
+		{
+			char.flags |= char.flag.ROLLING
+			char.hitbox_extends.x = 3
+			char.hitbox_extends.y = 7
+			char.state = char.state.ROLLING
+			char.position.y.u16 += 4
+			playSound(SFX_ROLL)
+			if (char.groundspeed == 0)
+			{
+				char.groundspeed = 0x0200
+			}
+		}
+	}
+}
+
+
+//# address-hook(0x013520) end(0x0135ec)
+//# alias(fn013520) deprecated
+function void CompetitionMode.Character.UpdateSpindash.Tails()
+{
+	if (char.spindash == 0)
+	{
+		if ((char.state == char.state.COWERING) && (control.tails.pressed & CONTROL_ABC))
+		{
+			// Start spindash
+			char.state = char.state.SPINDASH
+			playSound(SFX_SPINDASH_CHARGE)
+			signalMultiReturn()
+
+			char.spindash = 0x01
+			char.spindash_charge = 0
+			if (char.drown_countdown >= 12)
+			{
+				u8[A6 + 0x20] = 0x02
+			}
+			Character.CheckAgainstMoveBorders()
+			Character.UpdateRotationOnGround_partial()
+		}
+		return
+	}
+
+	if (control.tails.state & CONTROL_DOWN)
+	{
+		fn013600()
+		return
+	}
+
+	// Release spindash!
+	char.hitbox_extends.x = 3
+	char.hitbox_extends.y = 7
+	char.state = char.state.ROLLING
+	char.position.y.u16 += 4
+	char.spindash = 0
+
+	D0 = u8[A0 + 0x3e] * 2
+	char.groundspeed = u16[0x0135ee + D0.u16]
+	A1 = (A0 == 0xffffb000) ? addressof(camera.locktime.player1) : addressof(camera.locktime.player2)	// Addresses: 0xffffee24 / 0xffffee28
+	u16[A1] = 0x2000 - (((u16(char.groundspeed) - 0x0800) * 2) & 0x1f00)
+	if (char.flags & char.flag.FACING_LEFT)
+	{
+		char.groundspeed = -char.groundspeed
+	}
+	char.flags |= char.flag.ROLLING
+
+	// Tell dust cloud object to disappear again
+	u8[A6 + 0x20] = 0
+#if STANDALONE
+	playSound(SFX_SPINDASH_RELEASE)
+#else
+	playSound(0xfb)
+#endif
+
+	CompetitionMode.centerCameraYOffset.Tails()
+}
+
+
+//# address-hook(0x013600) end(0x01365a)
+function void fn013600()
+{
+	// Update spindash
+	if (char.spindash_charge != 0)
+	{
+		char.spindash_charge -= char.spindash_charge >> 5
+		if (s16(char.spindash_charge) < 0)
+			char.spindash_charge = 0
+	}
+
+	if (control.tails.pressed & CONTROL_ABC)
+	{
+		// Charge up
+		char.state.both = 0x0900		// char.state.SPINDASH, char.state.RUNNING
+		playSound(SFX_SPINDASH_CHARGE)
+		char.spindash_charge = min(char.spindash_charge + 0x200, 0x800)
+	}
+
+	CompetitionMode.centerCameraYOffset.Tails()
+}
+
+
+//# address-hook(0x013648) end(0x01365a)
+//# alias(fn013648) deprecated
+function void CompetitionMode.centerCameraYOffset.Tails()
+{
+	signalMultiReturn()
+
+	centerCameraYOffset()
+	Character.UpdateRotationOnGround_partial()
+}
