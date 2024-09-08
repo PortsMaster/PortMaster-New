@@ -23,8 +23,9 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR=/$directory/ports/nxengine-evo
-
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+cd $GAMEDIR
 
 # Check if settings.dat file doesn't exist
 if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
@@ -35,6 +36,8 @@ if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.960" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 1280 ] || [ "$DISPLAY_WIDTH" -eq 854 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.854" "$GAMEDIR/conf/nxengine/settings.dat"
+    elif [ "$DISPLAY_WIDTH" -eq 720 ]; then
+        mv -f "$GAMEDIR/conf/nxengine/settings.dat.720" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 480 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.480" "$GAMEDIR/conf/nxengine/settings.dat"
     else
@@ -48,7 +51,6 @@ fi
 
 $ESUDO rm -rf ~/.local/share/nxengine
 $ESUDO ln -s $GAMEDIR/conf/nxengine ~/.local/share/
-cd $GAMEDIR
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

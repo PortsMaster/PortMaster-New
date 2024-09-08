@@ -19,7 +19,8 @@ source $controlfolder/device_info.txt
 
 get_controls
 
-GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/cropsmare"
+#GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/cropsmare"
+GAMEDIR="/$directory/ports/cropsmare"
 CONFDIR="$GAMEDIR/conf/"
 
 # Ensure the conf directory exists

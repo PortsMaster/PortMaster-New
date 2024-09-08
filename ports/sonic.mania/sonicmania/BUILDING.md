@@ -3,21 +3,19 @@ This guide assumes you will be using WSL2 or similar with debian bullseye chroot
 
 To build Mania:
 ```
-apt install build-essential cmake libglew-dev libglfw3-dev libtheora-dev
-git clone https://github.com/RSDKModding/Sonic-Mania-Decompilation
+apt install build-essential cmake libglew-dev libglfw3-dev libtheora-dev libdrm-dev libgbm-dev
+git clone --recursive https://github.com/RSDKModding/Sonic-Mania-Decompilation
 cd Sonic-Mania-Decompilation
-git submodule update --init --recursive
-cmake -B build -DRETRO_REVISION=2 -DRETRO_DISABLE_PLUS=on -DRETRO_SUBSYSTEM=SDL2
+cmake -B build -DRETRO_REVISION=2 -DRETRO_DISABLE_PLUS=on -DRETRO_SUBSYSTEM=SDL2 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG" -DCMAKE_C_FLAGS_RELEASE="-O3 -DNDEBUG"
 cmake --build build --config release
 ```
 
 To build Plus:
 ```
-apt install build-essential cmake libglew-dev libglfw3-dev libtheora-dev
-git clone https://github.com/RSDKModding/Sonic-Mania-Decompilation
+apt install build-essential cmake libglew-dev libglfw3-dev libtheora-dev libdrm-dev libgbm-dev
+git clone --recursive https://github.com/RSDKModding/Sonic-Mania-Decompilation
 cd Sonic-Mania-Decompilation
-git submodule update --init --recursive
-cmake -B build -DRETRO_REVISION=2 -DRETRO_DISABLE_PLUS=off -DRETRO_SUBSYSTEM=SDL2
+cmake -B build -DRETRO_REVISION=2 -DRETRO_DISABLE_PLUS=off -DRETRO_SUBSYSTEM=SDL2 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG" -DCMAKE_C_FLAGS_RELEASE="-O3 -DNDEBUG"
 cmake --build build --config release
 ```
 
