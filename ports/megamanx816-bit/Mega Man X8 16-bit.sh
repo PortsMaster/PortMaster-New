@@ -28,7 +28,7 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
