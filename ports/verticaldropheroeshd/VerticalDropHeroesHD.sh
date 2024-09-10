@@ -29,45 +29,30 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+exec > > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# pack audio into apk if not done yet
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mkdir ./assets
-    mv ./gamedata/*.ogg ./assets/
-    echo "Moved .ogg files from ./gamedata to ./assets/"
+# Check if there are any .ogg or .mp3 files in the ./gamedata directory
+if [ -n "$(ls ./gamedata/*.{ogg,mp3} 2>/dev/null)" ]; then
+    # Create the ./assets directory if it doesn't exist
+    mkdir -p ./assets
 
-    # Zip the contents of ./verticaldropheroeshd.apk including the new .ogg files
+    # Move all .ogg and .mp3 files from ./gamedata to ./assets
+    mv ./gamedata/*.ogg ./gamedata/*.mp3 ./assets/ 2>/dev/null
+    echo "Moved .ogg and .mp3 files from ./gamedata to ./assets/"
+
+    # Zip the contents of ./verticaldropheroeshd.apk including the new audio files
     zip -r -0 ./verticaldropheroeshd.apk ./assets/
     echo "Zipped contents to ./verticaldropheroeshd.apk"
-    rm -Rf "$GAMEDIR/assets/"
-fi
 
-# pack audio into apk if not done yet
-if [ -n "$(ls ./gamedata/*.mp3 2>/dev/null)" ]; then
-    # Move all .mp3 files from ./gamedata to ./assets
-    mkdir ./assets
-    mv ./gamedata/*.mp3 ./assets/
-    echo "Moved .mp3 files from ./gamedata to ./assets/"
-
-    # Zip the contents of ./verticaldropheroeshd.apk including the new .mp3 files
-    zip -r -0 ./verticaldropheroeshd.apk ./assets/
-    echo "Zipped contents to ./verticaldropheroeshd.apk"
-    rm -Rf "$GAMEDIR/assets/"
+    # Remove the assets directory
+    rm -Rf ./assets/
 fi
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
