@@ -31,9 +31,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_SOUNDFONTS="$GAMEDIR/gs.sf2"
 
-# $ESUDO rm -rf ~/.boswars
-# ln -sfv $GAMEDIR/conf/.boswars ~/
-
 cd $GAMEDIR
 
 $GPTOKEYB "freedink" -c ./freedink.gptk textinput &
