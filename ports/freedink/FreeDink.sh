@@ -29,7 +29,6 @@ mkdir -p "$GAMEDIR/conf"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
-export SDL_SOUNDFONTS="$GAMEDIR/gs.sf2"
 
 cd $GAMEDIR
 
