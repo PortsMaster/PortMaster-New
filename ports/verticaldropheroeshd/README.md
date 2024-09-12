@@ -1,7 +1,7 @@
 ## Notes
 
 I'd like to thank the following:
-- [Nerdok Productions](https://nerdook-productions.com/), for making a fun game;
+- [Nerdok Productions](https://store.steampowered.com/app/311480/Vertical_Drop_Heroes_HD/), for making a fun game;
 - Fraxinus88, for making a killer tutorial on porting Game Maker game;
 - The PortMaster team for the great project;
 - And you for downloading it. Have fun! :)
