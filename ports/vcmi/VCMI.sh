@@ -33,6 +33,11 @@ printf "\033c" > $CUR_TTY
 printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
+if [ -f "$GAMEDIR/libs/libicudata.so.63.bz2" ]; then
+    bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
+    rm "$GAMEDIR/libs/libicudata.so.63.bz2"
+fi
+
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
   FILES_TO_REMOVE=()
   BUILDER_OPTIONS=()
@@ -64,8 +69,8 @@ echo "Starting game." > $CUR_TTY
 export PORTMASTER_HOME="${GAMEDIR}"
 export LD_LIBRARY_PATH="${GAMEDIR}/libs:${LD_LIBRARY_PATH}"
 
-$GPTOKEYB "MainGUI" -c vcmi.gptk &
-bin/vcmiclient
+$GPTOKEYB "vcmiclient" &
+./bin/vcmiclient 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO killall -9 tee
