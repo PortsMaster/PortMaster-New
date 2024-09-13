@@ -7,4 +7,4 @@ Thanks to [Nacho Sama](https://nachogames.itch.io/unlikely) for that wonderful g
 | Button | Action |
 |--|--| 
 |Lstick/Dpad|Mouse|
-|Everything else|Left Mouse |
+|A/B/X/Y/R1/R2|Left Mouse |
