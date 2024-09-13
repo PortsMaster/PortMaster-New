@@ -16,14 +16,14 @@ VCMI supports gamepad controls.
 Controller mapping can be redone in ./config/shortcutsConfig.json  
 
 Some additional settings can be made in ./save/settings.json:  
-"input" : {
-    "enableController" : true // turn controller detection on/off
-    "controllerTriggerTreshold" : 0.3  // triggers, e.g. L2/R2 on PS controller would activate if they are pressed to 30%
-    "controllerAxisDeadZone" : 0.2 // analog sticks would activate if they are at 20% from resting position
-    "controllerAxisFullZone" : 1.0 // analog sticks would be maxed-out when they are at 100% from resting position
-    "controllerAxisSpeed" : 1000 // analog sticks would move at 1000 px/second
-    "controllerAxisScale" : 2 // adds acceleration to analog sticks. So, half-pressed stick would actually move not at 500 px/second, but 250 px/s IIRC. Changing to 1 would make analog sticks linear
-}
+"input" : {  
+    "enableController" : true // turn controller detection on/off  
+    "controllerTriggerTreshold" : 0.3  // triggers, e.g. L2/R2 on PS controller would activate if they are pressed to 30%  
+    "controllerAxisDeadZone" : 0.2 // analog sticks would activate if they are at 20% from resting position  
+    "controllerAxisFullZone" : 1.0 // analog sticks would be maxed-out when they are at 100% from resting position  
+    "controllerAxisSpeed" : 1000 // analog sticks would move at 1000 px/second  
+    "controllerAxisScale" : 2 // adds acceleration to analog sticks. So, half-pressed stick would actually move not at 500 px/second, but 250 px/s IIRC. Changing to 1 would make analog sticks linear  
+}  
 
 ## Building
 
