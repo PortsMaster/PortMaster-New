@@ -14,8 +14,8 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
 $ESUDO chmod 666 /dev/tty0
 
@@ -34,7 +34,7 @@ cd $GAMEDIR
 # We log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Functions
+# Functions BEGIN
 swapabxy() {
     # Update SDL_GAMECONTROLLERCONFIG to swap a/b and x/y button
 
@@ -47,21 +47,25 @@ swapabxy() {
         export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | swapabxy.py`"
     fi
 }
+# Functions END
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
+
+# Make sure execution flags are set
+$ESUDO chmod 777 "$TOOLDIR/swapabxy.py"
+$ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
 # Swap a/b and x/y button if needed
 if [ -f "$GAMEDIR/swapabxy.txt" ]; then
     swapabxy
 fi
 
-# Splash
+# Splash loading screen
+[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
 splash "splash.png" 10000 &
 
 $GPTOKEYB "gmloadernext" &
-
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 ./gmloadernext game.apk
 
