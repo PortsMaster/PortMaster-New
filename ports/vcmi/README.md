@@ -47,8 +47,9 @@ Some additional settings can be made in ./save/settings.json:
 
 
     make
+    
 ```
-
+```
 ## Thanks
 
 A special thanks to the excellent folks on the [AmberELEC discord](https://discord.com/invite/R9Er7hkRMe), especially [Cebion](https://github.com/Cebion) for all the testing.
