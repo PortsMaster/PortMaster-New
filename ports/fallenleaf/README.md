@@ -1,5 +1,6 @@
 ## Notes
 
+* The game is available on [Steam](https://store.steampowered.com/app/1459010/Fallen_Leaf/)
 * The first run will need 5 to 10 min to compress the audio data so that the game can run on 1GB memory devices
 * The splashscreen on game loading is currently not displayed on rocknix devices, it shows a black screen
 * You can skip a cutscene with a long press on start
@@ -28,4 +29,4 @@ A special thank you to the wonderful devs over at [Delta Shore Games](https://ww
 
 We cannot forget to thanks warmly our fellow testers from the PortMaster Discord <3
 
-And finaly a big thanks to our Lucky Luke cover maker, aka Jeod, for making this beautiful cover for the port in the blink of an eye ~pew~ ~pew~
+And finaly a big thanks to our Lucky Luke cover maker, aka Jeod, for making this beautiful cover for the port in the blink of an eye *~pew~ ~pew~*
