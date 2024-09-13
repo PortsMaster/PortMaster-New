@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [VCMI Team](https://github.com/vcmi/vcmi) for the open source Heroes of Might and Magic III engine that makes this possible.  Also thanks to the @kloptops for the porting work for portmaster.
+Thanks to [VCMI Team](https://github.com/vcmi/vcmi) for the open source Heroes of Might and Magic III engine that makes this possible.  Also thanks to the @kloptops for the porting work for portmaster.  
 Update to 1.6.0-dev was made by @ddrsoul with great help of @kloptops , @kotzebuedog and all VCMI and PortMaster community.
 
 ## Detailed Instructions
