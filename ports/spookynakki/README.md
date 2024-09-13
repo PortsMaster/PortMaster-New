@@ -23,4 +23,7 @@ A special thank you to [Team Bugulon](https://team-bugulon.itch.io/) for making 
 
 We cannot forget to thank warmly our fellow testers from the PortMaster Discord <3
 
-And finaly a big thanks to Slobters for making this beautiful cover for the port with [GIMP](https://www.gimp.org/).
+And finaly a big thanks to:
+* JohnnyOnFlame for making GMLoaderNext
+* nate for the custom loading splash engine
+* Slobters for making this beautiful cover for the port with [GIMP](https://www.gimp.org/).
