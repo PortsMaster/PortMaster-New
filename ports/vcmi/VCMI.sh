@@ -68,6 +68,8 @@ echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="${GAMEDIR}"
 export LD_LIBRARY_PATH="${GAMEDIR}/libs:${LD_LIBRARY_PATH}"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "vcmiclient" &
 ./bin/vcmiclient 2>&1 | $ESUDO tee -a ./log.txt
