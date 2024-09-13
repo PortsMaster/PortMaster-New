@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: daikatana.zip, Daikatana.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -19,8 +20,8 @@ source $controlfolder/tasksetter
 
 get_controls
 
-gamedir="/$directory/ports/daikatana"
-cd "$gamedir/"
+GAMEDIR="/$directory/ports/daikatana"
+cd "$GAMEDIR/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -31,16 +32,16 @@ echo "Loading... Please Wait." > /dev/tty0
 
 # Create the symlinks
 mkdir -p "$HOME/.local/share"
-mkdir -p "$gamedir/savedata/gamedata"
+mkdir -p "$GAMEDIR/savedata/gamedata"
 $ESUDO rm -rf "$HOME/.local/share/Daikatana"
-$ESUDO ln -s "$gamedir/savedata" "$HOME/.local/share/Daikatana"
+$ESUDO ln -s "$GAMEDIR/savedata" "$HOME/.local/share/Daikatana"
 
 # We want to avoid stale .cfg files from Desktop daikatana installs...
-rm -f "$gamedir/gamedata/"*.cfg
-cp "$gamedir/cfgs/"* "$gamedir/savedata/gamedata"
+rm -f "$GAMEDIR/gamedata/"*.cfg
+cp "$GAMEDIR/cfgs/"* "$GAMEDIR/savedata/gamedata"
 
 # Ensure bin is executable
-chmod +x "$gamedir/daikatana"
+chmod +x "$GAMEDIR/daikatana"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
