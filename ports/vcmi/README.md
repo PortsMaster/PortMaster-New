@@ -23,7 +23,7 @@ Some additional settings can be made in ./save/settings.json:
     "controllerAxisFullZone" : 1.0 // analog sticks would be maxed-out when they are at 100% from resting position  
     "controllerAxisSpeed" : 1000 // analog sticks would move at 1000 px/second  
     "controllerAxisScale" : 2 // adds acceleration to analog sticks. So, half-pressed stick would actually move not at 500 px/second, but 250 px/s IIRC. Changing to 1 would make analog sticks linear  
-}  
+	}  
 
 ## Building
 
