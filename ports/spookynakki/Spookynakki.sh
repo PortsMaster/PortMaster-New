@@ -32,7 +32,7 @@ export GMLOADER_PLATFORM="os_linux"
 cd $GAMEDIR
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Functions BEGIN
 swapabxy() {
