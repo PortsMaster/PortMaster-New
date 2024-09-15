@@ -35,7 +35,6 @@ printf "\033c" > $CUR_TTY
 
 if [ -f "$GAMEDIR/libs/libicudata.so.63.bz2" ]; then
     bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
-    rm "$GAMEDIR/libs/libicudata.so.63.bz2"
 fi
 
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
