@@ -25,7 +25,6 @@ cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "zbiolab" & 
