@@ -29,9 +29,6 @@ cd $GAMEDIR
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# # Rename data.win
-mv $GAMEDIR/data.win $GAMEDIR/game.droid
-	
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloadernext" -c "towerbag.gptk" &
