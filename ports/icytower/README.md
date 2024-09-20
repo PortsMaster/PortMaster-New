@@ -1,5 +1,5 @@
 ## Notes
-Thanks to the [Roy E & RaMMicHaeL](https://github.com/royeldar/icytower) for remaking this game in allegro 5 and making it available for free!
+Thanks to the [Roy E & RaMMicHaeL](https://github.com/royeldar/icytower) for remaking this game in Allegro 5 and making it available for free!
 
 ## Controls
 
