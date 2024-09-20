@@ -13,7 +13,7 @@ Thanks to the [Roy E & RaMMicHaeL](https://github.com/royeldar/icytower) for rem
 
 ```shell
 
-// Requirements compile allegro5 with SDL2 build
+// Requirements compile Allegro 5 with SDL2 build
 
 OpenGL: ES 2.0
 Primitives addon: yes
