@@ -5,7 +5,7 @@ All files included and ready to run. Thanks to [Fenrir-Lunaris](https://fenrir-l
 
 | Button | Action                                   |
 | ------ | ---------------------------------------- |
-| DPAD   | Directional movement                     |
+| D-PAD  | Directional movement                     |
 | A      | Investigate /advance / confirm           |
 | B      | Raise menu / cancel choice / flee battle |
 | X      | Sprint on the *field* when held down     |
