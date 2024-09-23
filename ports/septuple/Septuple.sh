@@ -28,6 +28,7 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -55,7 +56,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./septuple.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/septuple.x86_64" -sw 2>&1 | $ESUDO tee -a ./log.txt
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/septuple.x86_64"
 
 
 $ESUDO umount "$godot_file"
