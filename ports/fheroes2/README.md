@@ -44,3 +44,12 @@ DPAD DOWN - 3
 DPAD LEFT - 4  
 START - ENTER  
 SELECT -  ESC  
+
+## CHANGELOG
+
+Update 1.1.1 -> 1.1.2
+- Improve AI behavior on the Adventure Map and remove most of bonuses for AI heroes
+- Fix multiple Editor related issues and add support for alliances on the created maps
+- Improve translation support by supporting more languages for the Virtual Keyboard
+- Fix multiple rendering issues in several dialogs
+- Over 40 issues have been closed since the 1.1.1 release
