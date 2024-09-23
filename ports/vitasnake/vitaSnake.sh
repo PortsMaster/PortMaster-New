@@ -41,7 +41,7 @@ cd $GAMEDIR
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./controls.gptk &
+$GPTOKEYB "gmloader" -c ./vitasnake/controls.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/vitasnake/gmloader"
 
