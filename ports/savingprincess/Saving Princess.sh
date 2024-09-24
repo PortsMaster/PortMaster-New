@@ -27,8 +27,6 @@ export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_windows"
-export TOOLDIR="$GAMEDIR/tools"
-export PATH=$PATH:$GAMEDIR/tools
 
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -57,7 +55,7 @@ if [ -f "$GAMEDIR/gamedata/Saving Princess.exe" ]; then
         # Wait for the extraction process to complete
         wait $pid
 
-        # Check if the Saving Princess - DEMO.exe file exists
+        # Check if Saving Princess v0_8.exe file exists
         if [ -f "$GAMEDIR/gamedata/Saving Princess v0_8.exe" ]; then
             # Delete the redundant .exe files
             rm -f "$GAMEDIR/gamedata/Saving Princess v0_8.exe"
@@ -86,7 +84,7 @@ if [ -f "$GAMEDIR/gamedata/Saving Princess - DEMO - Windows.exe" ]; then
         # Wait for the extraction process to complete
         wait $pid
 
-        # Check if the Saving Princess - DEMO.exe file exists
+        # Check if Saving Princess - DEMO.exe file exists
         if [ -f "$GAMEDIR/gamedata/Saving Princess - DEMO.exe" ]; then
             # Delete the redundant .exe files
             rm -f "$GAMEDIR/gamedata/Saving Princess - DEMO.exe"
@@ -130,19 +128,6 @@ if [ -f "$GAMEDIR/gamedata/splash.png" ]; then
     if [ "$splash_checksum" != "53aa45e0edcdabcb8a8c50fd3a58970e" ]; then
         # Copy the new splash.png from the main directory to gamedata
         cp "$GAMEDIR/splash.png" "$GAMEDIR/gamedata/splash.png"
-    fi
-fi
-
-if [ -f "$GAMEDIR/swapabxy.txt" ]; then
-    # Update SDL_GAMECONTROLLERCONFIG to swap a/b and x/y button
-
-    if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
-	      # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
-        cat "$SDL_GAMECONTROLLERCONFIG_FILE" | swapabxy.py > "$GAMEDIR/gamecontrollerdb_swapped.txt"
-	      export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
-    else
-        # Other CFW use SDL_GAMECONTROLLERCONFIG
-        export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | swapabxy.py`"
     fi
 fi
 
