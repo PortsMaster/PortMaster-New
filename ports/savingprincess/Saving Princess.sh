@@ -111,7 +111,7 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
     echo "Moved .ogg files from ./gamedata to ./assets/"
 
-    # Zip the contents of ./headsrun.apk including the new audio files
+    # Zip the contents of ./savingprincess.apk including the new audio files
     zip -r -0 ./savingprincess.apk ./assets/
     echo "Zipped contents to ./savingprincess.apk"
 
