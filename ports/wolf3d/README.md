@@ -13,7 +13,7 @@ This port comes with the shareware and demo for Wolfenstein 3D and Spear of Dest
 To use them, place your game data (`.WL6`, `.SOD`, `.SD2`, `.SD3`, `.N3D`, etc) in `ports/wolf3d/data`.
 
 ## Play
-To use addon mods, place `.pk3` files in `ports/wolf3d` and list the `.pk3` files to load in `.load.txt` for the relevant game. use the Left Shoulder and Right Shoulder buttons in the launcher to select which engine to use.
+To use addon mods, place `.pk3` files in `ports/wolf3d` and list the `.pk3` files to load in `.load.txt` for the relevant game. Use the Left Shoulder and Right Shoulder buttons in the launcher to select which engine to use.
 
 ## Config
 The launchscript is set up to use one of two `.cfg` files based on the presence of joysticks. You can freely modify button assignments ingame by going to `Options -> Control Setup -> Customize controls` and selecting the `JOY` column.
