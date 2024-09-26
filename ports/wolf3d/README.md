@@ -47,7 +47,12 @@ PK3_2=Wasserstein2.pk3
 Since we gave the mod its own subfolder and `.load.txt` file, it appears in the launcher as its own option despite using shared data files.
 
 ## Building
-See [PM-LZWolf](https://github.com/JeodC/pm-lzwolf) GitHub fork for compile instructions and change information.
+git clone https://github.com/JeodC/pm-lzwolf
+cd pm-lzwolf
+mkdir build && cd build
+cmake ..
+make
+strip lzwolf
 
 ## Thanks
 id Software -- Original game  
