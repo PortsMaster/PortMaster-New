@@ -40,7 +40,6 @@ $ESUDO chmod 777 -R $GAMEDIR/*
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export SDL_GAMECONTROLLERCONFIG_FILE="$sdl_controllerconfig"
 
 # Select a config file
 if [ "${ANALOG_STICKS}" -lt 2 ]; then
