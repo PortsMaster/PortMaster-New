@@ -41,6 +41,7 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 $ESUDO chmod +x "$GAMEDIR/lib/splash"
 $ESUDO chmod 777 "$TOOLDIR/gmKtool.py"
 $ESUDO chmod 777 "$TOOLDIR/oggenc"
+$ESUDO chmod 777 "$TOOLDIR/oggdec"
 
 cd $GAMEDIR
 
@@ -149,7 +150,7 @@ process_game() {
 
     echo "All .ogg files have been processed."
 
-    # Check for .dat files and move to APK
+    # Check for .ogg files and move to APK
     if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
         mkdir -p ./assets
         mv ./gamedata/*.ogg ./assets/
