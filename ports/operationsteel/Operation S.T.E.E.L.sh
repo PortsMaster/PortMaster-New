@@ -27,10 +27,6 @@ CONFDIR="$GAMEDIR/conf/"
 mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
-#  If XDG Path does not work
-#$ESUDO rm -rf ~/.operationsteel
-#ln -sfv $GAMEDIR/conf/.operationsteel ~/
-
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
