@@ -20,6 +20,7 @@ source $controlfolder/device_info.txt
 get_controls
 
 GAMEDIR=/$directory/ports/sdlpal
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
