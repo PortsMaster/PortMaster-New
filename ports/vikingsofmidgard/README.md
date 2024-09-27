@@ -6,7 +6,7 @@ All files included and ready to run. Thanks to [Fenrir-Lunaris](https://fenrir-l
 | Button | Action                                   |
 | ------ | ---------------------------------------- |
 | D-PAD  | Directional movement                     |
-| A      | Investigate /advance / confirm           |
+| A      | Investigate / advance / confirm          |
 | B      | Raise menu / cancel choice / flee battle |
 | X      | Sprint on the *field* when held down     |
 | Y      | Pause during battle                      |
@@ -19,4 +19,3 @@ git clone https://github.com/ohrrpgce/ohrrpgce.git
 cd ohrrpgce
 scons gfx=sdl2
 ```
-
