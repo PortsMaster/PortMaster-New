@@ -88,7 +88,7 @@ sed -i "s/^FullScreenWidth = [0-9]\+/FullScreenWidth = $WIDTH/" "$CONFIG"
 if [[ $FOLDER == "Exit" ]]; then
     exit
 else
-    sed -i "s|^BaseDataPaths = .*|BaseDataPaths = \"./data;$FOLDER\";|" "$CONFIG"
+    sed -i "s|^BaseDataPaths = .*|BaseDataPaths = \"$FOLDER;./data\";|" "$CONFIG"
 fi
 
 # List of games that should use EC Wolf
