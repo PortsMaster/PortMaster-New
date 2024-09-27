@@ -34,7 +34,6 @@ export GMLOADER_PLATFORM="os_windows"
 # Permissions
 $ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-$ESUDO chmod 777 "$TOOLDIR/gmKtool.py"
 
 cd $GAMEDIR
 
