@@ -44,6 +44,14 @@ PK3_2=Wasserstein2.pk3
 -- end --
 ```
 
+To load WL6 mods:
+Create a folder with the name of the mod in the wolf3d directory (/ports/wolf3d/NameOfMod)
+Create a `.load.txt` file in the newly created /ports/wolf3d/NameOfMod folder, open a text editor and add:
+PATH=./data
+DATA=WL6
+PK3_1=breathing_fix.pk3 (optional and depending on mod)
+Copy your WL6 files with the mod's WL6 files applied (originals overwritten with the mod) into the /ports/wolf3d/NameOfMod folder.
+
 Since we gave the mod its own subfolder and `.load.txt` file, it appears in the launcher as its own option despite using shared data files.
 
 ## Building
