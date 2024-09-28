@@ -39,4 +39,3 @@ $GPTOKEYB "ohrrpgce-game" -c ./vikingsofmidgard.gptk &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
-
