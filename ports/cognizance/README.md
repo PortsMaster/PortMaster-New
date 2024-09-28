@@ -1,21 +1,13 @@
 ## Notes
-All files included and ready to run. Thanks to [Fenrir-Lunaris](https://fenrir-lunaris.itch.io/vikings-of-midgard) for releasing this fantastic game to the Public Domain.
+
+Thanks to [Daniel Linssen](https://managore.itch.io/cognizance) for creating this game, which you download free at [itch.io](https://managore.itch.io/cognizance)
+
+Note that, as per the creator's documentation, "progress isn't saved (yet)".
 
 ## Controls
 
-| Button | Action                                   |
-| ------ | ---------------------------------------- |
-| D-PAD  | Directional movement                     |
-| A      | Investigate / advance / confirm          |
-| B      | Raise menu / cancel choice / flee battle |
-| X      | Sprint on the *field* when held down     |
-| Y      | Pause during battle                      |
-
-## Compile OHRRPGCE 
-
-```shell
-Install FreeBASIC
-git clone https://github.com/ohrrpgce/ohrrpgce.git
-cd ohrrpgce
-scons gfx=sdl2
-```
+| Button | Action              |
+| ------ | ------------------- |
+| D-PAD  | Left/right movement |
+| A      | Jump                |
+| Y      | Retry               |
