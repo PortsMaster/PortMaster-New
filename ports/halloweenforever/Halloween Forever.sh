@@ -21,13 +21,13 @@ $ESUDO chmod 666 /dev/tty0
 
 GAMEDIR="/$directory/ports/halloweenforever"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
