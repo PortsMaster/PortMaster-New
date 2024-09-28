@@ -19,7 +19,7 @@ get_controls
 
 $ESUDO chmod 666 /dev/tty0
 
-GAMEDIR="/$directory/ports/towardsthepantheon"
+GAMEDIR="/$directory/ports/towardsthepantheones"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
@@ -45,7 +45,7 @@ fi
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./towardsthepantheon.gptk &
+$GPTOKEYB "gmloader" -c ./towardsthepantheones.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
