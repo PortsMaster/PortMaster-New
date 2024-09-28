@@ -1,15 +1,15 @@
 ## Notes
-All files included and ready to run. Thanks to [Fenrir-Lunaris](https://fenrir-lunaris.itch.io/vikings-of-midgard) for releasing this fantastic game to the Public Domain.
+
+Thanks to [Super Walrus Games](https://super-walrus-games.itch.io/) for creating this game, which you can purchase on [itch.io](https://super-walrus-games.itch.io/walthros-renewal)
 
 ## Controls
 
-| Button | Action                                   |
-| ------ | ---------------------------------------- |
-| D-PAD  | Directional movement                     |
-| A      | Investigate / advance / confirm          |
-| B      | Raise menu / cancel choice / flee battle |
-| X      | Sprint on the *field* when held down     |
-| Y      | Pause during battle                      |
+| Button | Action                 |
+| ------ | ---------------------- |
+| D-PAD  | Direction / navigation |
+| A      | Interact / proceed     |
+| B      | Cancel                 |
+| Y      | Menu                   |
 
 ## Compile OHRRPGCE 
 
