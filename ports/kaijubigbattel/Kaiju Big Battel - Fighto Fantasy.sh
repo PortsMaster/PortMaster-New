@@ -21,7 +21,6 @@ get_controls
 
 GAMEDIR=/$directory/ports/kaijubigbattel
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=kaiju.rpg
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -33,6 +32,16 @@ export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
+
+# Check if kaiju.rpg or kaijudemo.rpg exists
+if [ -f "kaiju.rpg" ]; then
+  DATAFILE="kaiju.rpg"
+elif [ -f "kaijudemo.rpg" ]; then
+  DATAFILE="kaijudemo.rpg"
+else
+  echo "Neither kaiju.rpg nor kaijudemo.rpg found."
+  exit 1
+fi
 
 $GPTOKEYB "ohrrpgce-game" -c ./kaijubigbattel.gptk &
 "./ohrrpgce-game" $DATAFILE -f
