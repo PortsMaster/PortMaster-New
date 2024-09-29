@@ -36,7 +36,7 @@ cd $GAMEDIR
 
 [ ! -f "$GAMEDIR/franken.rpg" ] && mv "$GAMEDIR/"*.rpg "$GAMEDIR/franken.rpg"
 
-$GPTOKEYB "gmloader" -c ./franken.gptk &
+$GPTOKEYB "ohrrpgce-game" -c ./franken.gptk &
 
 "./ohrrpgce-game" $DATAFILE -f
 
