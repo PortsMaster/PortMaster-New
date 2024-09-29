@@ -1,0 +1,72 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+process_game() {
+    # Unzip assets to gamedata
+    if [ -f ZALiA_Q00.zip ]; then
+        echo "Unzipping 'ZALiA_Q00.zip' into gamedata"
+        mkdir -p "$GAMEDIR/gamedata"
+        unzip "ZALiA_Q00.zip" -d "$GAMEDIR/gamedata/"
+        rm -rf "ZALiA_Q00.zip"
+    else
+        echo "Missing zip file!"
+    fi
+    
+    # Delete unnecessary files
+    rm -rf gamedata/*.exe gamedata/*.dll gamedata/.gitkeep
+    echo "Removed unecessary files"
+
+    # Compress audio
+        echo "Compressing audio. The process will take 5-10 minutes."     
+        mkdir -p "$TMPDIR"
+        # Run the compression tool
+        echo "Running gmKtool.py with parameters..."
+        PYTHON=$(which python3)
+        $PYTHON ./tools/gmKtool.py -vvv -m 1000 -b 64 -d "$TMPDIR" "$GAMEDIR/gamedata/data.win"
+
+        if [ $? -eq 0 ]; then
+            echo "Compression completed successfully."
+            mv "$TMPDIR/"* "$GAMEDIR/gamedata"
+            echo "Moved compressed files to $GAMEDIR/gamedata."
+            rm "$GAMEDIR/compress.txt"
+            echo "Removed compress.txt from $GAMEDIR."
+            rmdir "$TMPDIR"
+            echo "Temporary directory $TMPDIR removed."
+            echo "Audio compression applied successfully."
+        else
+            echo "Audio compression failed."
+            echo "Cleaning up temporary directory $TMPDIR."
+            rm -rf "$TMPDIR"
+        fi
+        
+    sleep 3
+    
+    # Rename data.win
+    mv "./gamedata/data.win" "./gamedata/game.droid"
+	
+    # Final completion message
+    echo "Patching process complete!"
+}
+
+# Call the function
+process_game

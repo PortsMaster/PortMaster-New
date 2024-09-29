@@ -13,4 +13,5 @@ Download the .zip from https://hoverbat.itch.io/ziiaol and put in the port folde
 
 ## Thanks
 This enhanced edition of Zelda II created by HoverBat  
+GMTools audo patcher by Cyril aka kotzebuedog  
 Testers and devs from the PortMaster Discord  
