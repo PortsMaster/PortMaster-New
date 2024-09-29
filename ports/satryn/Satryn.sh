@@ -22,6 +22,10 @@ get_controls
 GAMEDIR=/$directory/ports/satryn/
 cd $GAMEDIR
 
+CONFDIR="$GAMEDIR/conf/"
+mkdir -p "$GAMEDIR/conf"
+export XDG_DATA_HOME="$CONFDIR"
+
 runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
@@ -46,7 +50,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./satryn.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "satryn.pck" -sw 2>&1 | $ESUDO tee -a ./log.txt
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "satryn.x86_64" -sw 2>&1 | $ESUDO tee -a ./log.txt
 
 
 $ESUDO umount "$godot_file"

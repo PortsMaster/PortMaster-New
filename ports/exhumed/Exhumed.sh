@@ -13,12 +13,14 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
 GAMEDIR="/$directory/ports/Exhumed"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if   [[ $ANALOGSTICKS == '1' ]]; then
+if   [[ $ANALOG_STICKS == '1' ]]; then
   if [ ! -f "$GAMEDIR/conf/pcexhumed/pcexhumed.cfg" ]; then
      mv -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.1analog $GAMEDIR/conf/pcexhumed/pcexhumed.cfg
      rm -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.2analog
@@ -27,7 +29,7 @@ if   [[ $ANALOGSTICKS == '1' ]]; then
      mv -f $GAMEDIR/pcexhumed.gptk.1analog $GAMEDIR/pcexhumed.gptk
      rm -f $GAMEDIR/pcexhumed.gptk.2analog
   fi
-elif [[ $ANALOGSTICKS == '2' ]]; then
+elif [[ $ANALOG_STICKS == '2' ]]; then
   if [ ! -f "$GAMEDIR/conf/pcexhumed/pcexhumed.cfg" ]; then
      mv -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.2analog $GAMEDIR/conf/pcexhumed/pcexhumed.cfg
      rm -f $GAMEDIR/conf/pcexhumed/pcexhumed.cfg.1analog
@@ -38,6 +40,9 @@ elif [[ $ANALOGSTICKS == '2' ]]; then
   fi
 fi
 
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO rm -rf ~/.config/pcexhumed
 $ESUDO ln -s $GAMEDIR/conf/pcexhumed ~/.config/
 cd $GAMEDIR
@@ -47,7 +52,8 @@ export TEXTINPUTINTERACTIVE="Y"
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "pcexhumed" -c "./pcexhumed.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./pcexhumed 2>&1 | tee $GAMEDIR/log.txt
+ ./pcexhumed
+ 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 pgrep -f pcexhumed | $ESUDO xargs kill -9

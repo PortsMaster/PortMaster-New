@@ -26,6 +26,8 @@ CUR_TTY=/dev/tty0
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/zelda3t"
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -40,12 +42,11 @@ cp /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 /$GAMEDIR/libs && mv /$GAMED
 
 fi
 
-cd $GAMEDIR
-
 $ESUDO chmod 666 $CUR_TTY
 
 export TERM=linux
 printf "\033c" > $CUR_TTY
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 ## RUN SCRIPT HERE
 $ESUDO chmod -x ./zelda3t
@@ -53,7 +54,7 @@ $ESUDO chmod -x ./zelda3t
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "zelda3t" -c "zelda3t.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" ./zelda3t
+./zelda3t
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH

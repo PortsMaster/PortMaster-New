@@ -1,0 +1,467 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Cork Floor (e.g. in AIZ and ICZ)                      //
+//-------------------------------------------------------//
+
+// The term "Cork Floor" is borrowed from skdisasm.
+// It is the vertical blocker object you can crush into pieces from either above or below.
+
+
+//-------------------------------------------------------//
+// Cork Floor destroyable from below                     //
+//-------------------------------------------------------//
+
+//# address-hook(0x02a618) end(0x02a6d0)
+function void CorkFloor.Init()
+{
+	u16[A0 + 0x30] = u16[0xffffb000 + 0x1a]
+	u16[A0 + 0x32] = u16[0xffffb04a + 0x1a]
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	D6 = (D6 >> 16) & 0x0c
+	if (D6.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	D0.u8 = D6.u8 & 0x04
+	if (D0.u8 != 0)
+	{
+		A1 = 0xffffb000
+		objA1.velocity.y = u16[A0 + 0x30]
+		D6.u8 &= 0x08
+		if (D6.u8 != 0)
+		{
+			A1 = 0xffffb04a
+			objA1.velocity.y = u16[A0 + 0x32]
+		}
+	}
+	else
+	{
+		D6.u8 &= 0x08
+		if (D6.u8 != 0)
+		{
+			A1 = 0xffffb04a
+			objA1.velocity.y = u16[A0 + 0x32]
+		}
+		else
+		{
+			DrawOrUnloadObject()
+			return
+		}
+	}
+
+	if (objA0.flags2a & object.flag.P1_ON_OBJECT)
+	{
+		A1 = 0xffffb000
+		objA1.flags2a |= char.flag.IN_AIR
+		objA1.flags2a &= ~char.flag.ON_OBJECT
+	}
+	if (objA0.flags2a & object.flag.P2_ON_OBJECT)
+	{
+		A1 = 0xffffb04a
+		objA1.flags2a |= char.flag.IN_AIR
+		objA1.flags2a &= ~char.flag.ON_OBJECT
+	}
+
+	A4 = u32[A0 + 0x3c]
+	++objA0.animation.sprite
+	objA0.update_address = addressof(CorkFloor.Update)
+	Wall.Destroy()
+	CorkFloor.Update()
+}
+
+
+//# address-hook(0x02a5c0) end(0x02a5d6)
+function void fn02a5c0()
+{
+	D0.u8 &= 0x10
+	if (D0.u8 == 0 || u8[A0 + 0x36] != 2)
+	{
+		DrawOrUnloadObject()
+	}
+	else
+	{
+		A1 = 0xffffb04a
+		fn02a58e()
+		fn02a5d8()
+	}
+}
+
+
+//# address-hook(0x02a5d8) end(0x02a5f2)
+function void fn02a5d8()
+{
+	score.bonus_counter = u16[A0 + 0x38]
+	objA0.flags2a &= ~(object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT)
+
+	A4 = u32[A0 + 0x3c]
+	++objA0.animation.sprite
+	objA0.update_address = addressof(CorkFloor.Update)
+	Wall.Destroy()
+	CorkFloor.Update()
+}
+
+
+//# address-hook(0x02a5f8) end(0x02a612)
+function void CorkFloor.Update()
+{
+	UpdateMovementStraightSimple()
+	objA0.velocity.y += 0x18
+	if (objA0.render_flags & render_flag.VISIBLE)
+	{
+		DrawObject()
+	}
+	else
+	{
+		UnloadObject()
+	}
+}
+
+
+
+//-------------------------------------------------------//
+// Cork Floor destroyable from above                     //
+//-------------------------------------------------------//
+
+//# address-hook(0x02a3d0) end(0x02a4fc)
+function void fn02a3d0()
+{
+	objA0.render_flags = render_flag.WORLD
+	objA0.sprite_priority = 0x280
+	objA0.mapping_offset = 0x229b60
+	objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0001)
+	objA0.box_size.x = 0x10
+	objA0.box_size.y = 0x28
+	u32[A0 + 0x3c] = 0x02a8b0
+
+	if (global.zone_act == 0x0001)
+	{
+		// Angel Island Act 2
+		objA0.mapping_offset = 0x229bd4
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0001)
+		objA0.box_size.y = 0x2c
+	}
+	else if (global.zone == 0x03)
+	{
+		// Carnival Night Zone
+		objA0.mapping_offset = 0x229c48
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0430)
+		objA0.box_size.x = 0x20
+		objA0.box_size.y = 0x20
+		u32[A0 + 0x3c] = 0x02a8e0
+	}
+	else if (global.zone == 0x04)
+	{
+		// Flying Battery Zone
+		objA0.mapping_offset = 0x02a920
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE1 | 0x043a)
+		objA0.box_size.x = 0x10
+		objA0.box_size.y = 0x10
+		u32[A0 + 0x3c] = 0x02a884
+	}
+	else if (global.zone == 0x05)
+	{
+		// IceCap Zone
+		objA0.mapping_offset = 0x229ce0
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0001)
+		objA0.box_size.x = 0x10
+		objA0.box_size.y = 0x24
+		objA0.animation.sprite = objA0.subtype2c & 0x0f
+		D1.u8 = objA0.subtype2c & 0x10
+		if (D1.u8 == 0)
+		{
+			objA0.update_address = 0x02a6d4
+			fn02a6d4()
+			return
+		}
+		u32[A0 + 0x3c] = 0x02a884
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x03b6)
+		objA0.box_size.y = 0x10
+	}
+	else if (global.zone == 0x06)
+	{
+		// Launch Base Zone
+		objA0.mapping_offset = 0x229ee8
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0001)
+		objA0.box_size.x = 0x20
+		objA0.box_size.y = 0x20
+		u32[A0 + 0x3c] = 0x02a8e0
+	}
+
+	if (objA0.subtype2c == 0)
+	{
+		objA0.update_address = addressof(CorkFloor.Init)
+		CorkFloor.Init()
+	}
+	else
+	{
+		objA0.update_address = 0x02a502
+		fn02a502()
+	}
+}
+
+
+//# address-hook(0x02a502) end(0x02a586)
+function void fn02a502()
+{
+	u16[A0 + 0x38] = score.bonus_counter
+	u8[A0 + 0x34] = u8[0xffffb000 + 0x20]
+	u8[A0 + 0x36] = u8[0xffffb04a + 0x20]
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	D0.u16 = objA0.flags2a & (object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT)
+	if (D0.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	if (D0.u8 == (object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT))
+	{
+		if (u8[A0 + 0x34] != 2 && u8[A0 + 0x36] != 2)
+		{
+			DrawOrUnloadObject()
+			return
+		}
+
+		A1 = 0xffffb000
+		D0.u8 = u8[A0 + 0x34]
+		fn02a588()
+
+		A1 = 0xffffb04a
+		D0.u8 = u8[A0 + 0x36]
+		fn02a588()
+
+		fn02a5d8()
+	}
+	else
+	{
+		D1.u8 = D0.u8 & object.flag.P1_ON_OBJECT
+		if (D1.u8 == 0)
+		{
+			fn02a5c0()
+			return
+		}
+
+		if (u8[A0 + 0x34] != 2)
+		{
+			DrawOrUnloadObject()
+			return
+		}
+
+		A1 = 0xffffb000
+		fn02a58e()
+		fn02a5d8()
+	}
+}
+
+
+//# address-hook(0x02a53c)
+function void fn02a53c()
+{
+	DrawOrUnloadObject()
+}
+
+
+//# address-hook(0x02a588) end(0x02a5be)
+function void fn02a588()
+{
+	if (D0.u8 == 2)
+	{
+		fn02a58e()
+	}
+	else
+	{
+		u8[A1 + 0x2a] |= char.flag.IN_AIR
+		u8[A1 + 0x2a] &= ~char.flag.ON_OBJECT
+		u8[A1 + 0x05] = base_state.NORMAL
+	}
+}
+
+
+//# address-hook(0x02a58e)
+function void fn02a58e()
+{
+	objA1.flags2a |= (char.flag.IN_AIR | char.flag.ROLLING)
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+	objA1.hitbox_extends.x = char.hitbox.x.ROLLING
+	objA1.hitbox_extends.y = char.hitbox.y.ROLLING
+	objA1.state = char.state.ROLLING
+	objA1.velocity.y = -0x300
+	u8[A1 + 0x05] = base_state.NORMAL
+}
+
+
+
+//-------------------------------------------------------//
+// ICZ2 variant destroyable from above                   //
+//-------------------------------------------------------//
+
+//# address-hook(0x02a6d4) end(0x02a7ae)
+//# translated(0x02a7e2) end(0x02a848)
+function void fn02a6d4()
+{
+	u16[A0 + 0x38] = score.bonus_counter
+	u8[A0 + 0x34] = u8[0xffffb000 + 0x20]
+	u8[A0 + 0x36] = u8[0xffffb04a + 0x20]
+
+	A2 = 0x02a894
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D4.u16 = objA0.position.x.u16
+	fn01ddc6()
+
+	D0.u8 = objA0.flags2a & (object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT)
+	if (D0.u8 == 0)
+	{
+		DrawOrUnloadObject()
+	}
+	else if (D0.u8 == (object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT))
+	{
+		bool goto02a762 = false
+		if (u8[A0 + 0x34] == 0x02)
+		{
+			if (s8[A0 + 0x2c] < 0 || u8[0xffffb000 + 0x46] == 0x0e)
+			{
+				goto02a762 = true
+			}
+		}
+
+		if (!goto02a762)
+		{
+			u8[0xffffb000 + 0x46] = 0x0c
+			u8[0xffffb000 + 0x47] = 0x0d
+			if (u8[A0 + 0x36] == 0x02)
+			{
+				if (s8[A0 + 0x2c] < 0 || u8[0xffffb04a + 0x46] == 0x0e)
+				{
+					goto02a762 = true
+				}
+			}
+		}
+
+		if (goto02a762)
+		{
+			A1 = 0xffffb000
+			D0.u8 = u8[A0 + 0x34]
+			fn02a7b0()
+
+			A1 = 0xffffb04a
+			D0.u8 = u8[A0 + 0x36]
+			fn02a7b0()
+
+			fn02a816()
+		}
+		else
+		{
+			u8[0xffffb04a + 0x46] = 0x0c
+			u8[0xffffb04a + 0x47] = 0x0d
+			DrawOrUnloadObject()
+		}
+	}
+	else
+	{
+		D1.u8 = D0.u8 & object.flag.P1_ON_OBJECT
+		if (D1.u8 == 0)
+		{
+			D0.u8 &= object.flag.P2_ON_OBJECT
+			if (D0.u8 == 0)
+			{
+				DrawOrUnloadObject()
+				return
+			}
+
+			if (u8[A0 + 0x36] == 0x02)
+			{
+				if (s8[A0 + 0x2c] < 0 || u8[0xffffb04a + 0x46] == 0x0e)
+				{
+					A1 = 0xffffb04a
+					fn02a7b6()
+					return
+				}
+			}
+
+			u8[0xffffb04a + 0x46] = 0x0c
+			u8[0xffffb04a + 0x47] = 0x0d
+		}
+		else
+		{
+			if (u8[A0 + 0x34] == 0x02)
+			{
+				if (s8[A0 + 0x2c] < 0 || u8[0xffffb000 + 0x46] == 0x0e)
+				{
+					A1 = 0xffffb000
+					fn02a7b6()
+					fn02a816()
+					return
+				}
+			}
+
+			u8[0xffffb000 + 0x46] = 0x0c
+			u8[0xffffb000 + 0x47] = 0x0d
+		}
+		DrawOrUnloadObject()
+	}
+}
+
+
+//# address-hook(0x02a816)
+function void fn02a816()
+{
+	score.bonus_counter = u16[A0 + 0x38]
+	objA0.flags2a &= ~(object.flag.P1_ON_OBJECT | object.flag.P2_ON_OBJECT)
+	D0 = objA0.animation.sprite
+	++objA0.animation.sprite
+	D1 = D0
+	A4 = 0x02a84c + D0.u16 * 4
+	objA0.update_address = addressof(CorkFloor.Update)
+	Wall.Destroy()
+	CorkFloor.Update()
+}
+
+
+//# address-hook(0x02a7b0) end(0x02a7e0)
+function void fn02a7b0()
+{
+	if (D0.u8 == 0x02)
+	{
+		fn02a7b6()
+	}
+	else
+	{
+		u8[A1 + 0x2a] |= char.flag.IN_AIR
+		u8[A1 + 0x2a] &= ~char.flag.ON_OBJECT
+		u8[A1 + 0x05] = base_state.NORMAL
+	}
+}
+
+
+//# address-hook(0x02a7b6)
+function void fn02a7b6()
+{
+	u8[A1 + 0x05] = base_state.NORMAL
+	objA1.hitbox_extends.x = char.hitbox.x.ROLLING
+	objA1.hitbox_extends.y = char.hitbox.y.ROLLING
+	objA1.state = char.state.ROLLING
+	objA1.flags2a |= (char.flag.IN_AIR | char.flag.ROLLING)
+	objA1.flags2a &= ~char.flag.ON_OBJECT
+}

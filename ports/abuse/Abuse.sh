@@ -19,9 +19,12 @@ get_controls
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
+GAMEDIR="/$directory/ports/Abuse"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 666 /dev/tty1
+
+cd $GAMEDIR
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
@@ -31,7 +34,6 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-GAMEDIR="/$directory/ports/Abuse"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/libs"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
@@ -53,8 +55,6 @@ if [ -f "/boot/rk3326-rg351v-linux.dtb" ] || [ $(cat "/storage/.config/.OS_ARCH"
   GPTOKEYB_CONFIG="abuse.gptk.rg351p.leftanalog"
   sed -i '/ctr_left_stick_aim\=0/s//ctr_left_stick_aim\=1/' $GAMEDIR/user/config.txt
 fi
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.abuse
 ln -sfv $GAMEDIR/conf/.abuse ~/

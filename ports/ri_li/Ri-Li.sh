@@ -17,11 +17,17 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/ri_li
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "Ri_li" -c "./ri_li.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./Ri_li -n 2>&1 | tee -a ./log.txt
+./Ri_li
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

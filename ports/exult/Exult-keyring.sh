@@ -13,17 +13,23 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
 GAMEDIR="/$directory/ports/exult"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "exult" $HOTKEY -c "$GAMEDIR/exult.$ANALOGSTICKS.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" ./exult -c "$GAMEDIR/exult.keyring.cfg" 2>&1 | tee $GAMEDIR/log.txt
+
+$GPTOKEYB "exult" $HOTKEY -c "$GAMEDIR/exult.$ANALOG_STICKS.gptk" &
+./exult -c "$GAMEDIR/exult.keyring.cfg"
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

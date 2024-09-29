@@ -1,10 +1,20 @@
-## Notes
-<br/>
+## Installation
+Download the Windows or Linux version from Steam or GOG and put all gamedata in `ports/undertale/gamedata`. You want to copy over the contents of the folder that has all the `.ogg` files. For Windows this is just `/Undertale`, for Linux this is `/Undertale/assets`.
 
--  It's been reported that version 1.0.8 seems to work best with this setup. Version 2.0 or newer does not work at this time.
--  On devices with resolutions higher than 640x480, pressing L1 or L2 will adjust the screen aspect ratio.
+Disclaimer: There are Undertale fan translations out there, but those require v1.001 of the game--a much earlier version. There may be a separate port in the future to support this multi-language option.
 
-Thanks to ptitSeb for box86 (https://github.com/ptitSeb/box86)
-Thanks to JohnnyonFlame for the necessary modification to allow this game to run on supported linux distros.
-You can donate towards JohnnyonFlame's work [here](https://ko-fi.com/johnnyonflame)
-<br/>
+## Default Gameplay Controls
+| Button | Action |
+|--|--|
+|START|Confirm|
+|D-PAD|Move|
+|LEFT ANALOG|Move|
+|A|Confirm|
+|B|Cancel|
+|X|In-Game Menu|
+|Y|In-Game Menu|
+
+## Thanks
+TobyFox -- For the game  
+krishenriksen -- For the original box86 port  
+JohnnyOnFlame -- For GMLoader

@@ -1,0 +1,565 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+define objA0.shield.animation.sprite.backup	=  u8[A0 + 0x34]
+define objA0.shield.art_offset				= u32[A0 + 0x38]
+define objA0.shield.pattern_offset			= u32[A0 + 0x3c]
+define objA0.shield.targetInVRAM			= u16[A0 + 0x40]
+define objA0.shield.character_address		= u16[A0 + 0x42]
+define objA1.shield.character_address		= u16[A1 + 0x42]
+
+constant u16 Shield.targetInVRAM			= 0xf380
+
+
+//-------------------------------------------------------//
+// No shield / Insta-Shield (also Classic Shield)        //
+//-------------------------------------------------------//
+
+//# address-hook(0x0194ce) end(0x019524)
+function void InstaShield.Init()
+{
+	objA0.mapping_offset = 0x01a0d0
+	objA0.shield.pattern_offset = 0x01a154
+	objA0.shield.art_offset = 0x18c084
+	Shield.sharedInit()
+
+	objA0.update_address = addressof(InstaShield.Update)
+	InstaShield.Update()
+}
+
+
+function void Shield.sharedInit()
+{
+	objA0.render_flags = render_flag.WORLD
+	objA0.sprite_priority = 0x80
+	objA0.box_size.x = 0x18
+	objA0.box_size.y = 0x18
+	objA0.sprite_attributes = (Shield.targetInVRAM >> 5)
+	objA0.shield.targetInVRAM = Shield.targetInVRAM
+	u8[A0 + 0x0a] |= (u8[0xffffb000 + 0x0a] & 0x80)
+	objA0.state.both = 0x01
+	objA0.shield.animation.sprite.backup = 0xff
+}
+
+
+//# address-hook(0x01952a) end(0x0195a4)
+function void InstaShield.Update()
+{
+	A2 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A2 + 0x2b] & char.bonus.INVINCIBLE) == 0)
+	{
+		objA0.position.x.u16 = u16[A2 + 0x10]
+		objA0.position.y.u16 = u16[A2 + 0x14]
+		objA0.flags2a = u8[A2 + 0x2a] & char.flag.FACING_LEFT
+		if (global.inv_gravity)
+			objA0.flags2a |= 0x02
+		objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+
+		Object.animationUpdate(0x0199ea)
+
+		if (objA0.animation.sprite == 7)
+		{
+			if (u8[A2 + 0x2f] != 0)		// char.double_jump_state
+				u8[A2 + 0x2f] = 2
+		}
+
+		if (objA0.animation.sprite == 0 || objA0.animation.sprite == 3)
+		{
+			Shield.SharedSpriteUpdate()
+		}
+
+	#if STANDALONE
+		if (u8[A2 + 0x20] == char.state.DISAPPEARED)
+			return
+	#endif
+
+		DrawObject()
+	}
+}
+
+
+//# address-hook(0x01999a) end(0x0199e8)
+function void Shield.SharedSpriteUpdate()
+{
+	if (objA0.shield.animation.sprite.backup != objA0.animation.sprite)
+	{
+		objA0.shield.animation.sprite.backup = objA0.animation.sprite
+
+		u32 sourceBase   = objA0.shield.art_offset
+		u32 tableAddress = objA0.shield.pattern_offset
+		u16 targetInVRAM = objA0.shield.targetInVRAM
+		updateMultipleSpritePatterns(sourceBase, tableAddress, targetInVRAM, objA0.animation.sprite)
+	}
+}
+
+
+
+//-------------------------------------------------------//
+// Fire shield                                           //
+//-------------------------------------------------------//
+
+//# address-hook(0x0195a6) end(0x0195fc)
+function void FireShield.Init()
+{
+	objA0.mapping_offset = 0x019ac6
+	objA0.shield.art_offset = 0x18c704
+	objA0.shield.pattern_offset = 0x019ce6
+	Shield.sharedInit()
+
+	objA0.update_address = addressof(FireShield.Update)
+	FireShield.Update()
+}
+
+
+//# address-hook(0x019602) end(0x0196c0)
+function void FireShield.Update()
+{
+	A2 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A2 + 0x2b] & char.bonus.INVINCIBLE) || (u8[A2 + 0x20] == char.state.DISAPPEARED))
+		return
+
+	// Lost shield?
+	if ((u8[A2 + 0x2b] & char.bonus.ANY_SHIELD) == 0)
+	{
+		u8[A2 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+		objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+		return
+	}
+
+	if (u8[A2 + 0x2a] & char.flag.UNDERWATER)
+	{
+		u8[A2 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+		if (allocDynamicObjectStd())
+		{
+			// Spawn small explosion
+			objA1.update_address = 0x01e68e
+			objA1.position.x.u16 = objA0.position.x.u16
+			objA1.position.y.u16 = objA0.position.y.u16
+		}
+		objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+
+	#if STANDALONE
+		if (Game.getSetting(SETTING_SHIELD_TYPES) == 3)
+		{
+			// Replace with classic shield when using upgradable shields
+			u8[A2 + 0x2b] |= char.bonus.ANY_SHIELD
+		}
+	#endif
+		return
+	}
+
+	objA0.position.x.u16 = u16[A2 + 0x10]
+	objA0.position.y.u16 = u16[A2 + 0x14]
+	if (objA0.state == 0)
+	{
+		objA0.flags2a = u8[A2 + 0x2a] & char.flag.FACING_LEFT
+		if (global.inv_gravity)
+			objA0.flags2a |= 0x02
+
+		objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+	}
+
+	Object.animationUpdate(0x019a02)
+	objA0.sprite_priority = (objA0.animation.sprite >= 0x0f) ? 0x200 : 0x80
+
+	Shield.SharedSpriteUpdate()
+	DrawObject()
+}
+
+
+
+//-------------------------------------------------------//
+// Lightning shield                                      //
+//-------------------------------------------------------//
+
+//# address-hook(0x0196c2) end(0x01972c)
+function void LightningShield.Init()
+{
+#if STANDALONE
+	//if (!DIRECT_OBJECT_RENDERING)
+#endif
+	{
+		// Load sprite patterns for the sparks
+		updateSpritePattern(0x18f8e4, 0xf760, 0x50)
+	}
+
+	objA0.mapping_offset = 0x019dc8
+	objA0.shield.art_offset = 0x18e8a4
+	objA0.shield.pattern_offset = 0x019efa
+	Shield.sharedInit()
+
+	objA0.update_address = addressof(LightningShield.Update)
+	LightningShield.Update()
+}
+
+
+//# address-hook(0x019732) end(0x01980a)
+function void LightningShield.Update()
+{
+	A2 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A2 + 0x2b] & char.bonus.INVINCIBLE) || (u8[A2 + 0x20] == char.state.DISAPPEARED))
+		return
+
+	// Lost shield?
+	if ((u8[A2 + 0x2b] & char.bonus.ANY_SHIELD) == 0)
+	{
+		u8[A2 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+		objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+		return
+	}
+
+	if (u8[A2 + 0x2a] & char.flag.UNDERWATER)
+	{
+		u8[A2 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+		if (global.fade_timer != 0)
+		{
+			objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+		}
+		else
+		{
+			objA0.update_address = addressof(LightningShield.ResetWaterPalette)
+
+			copyMemory(0xfffff000, 0xfffff080, 0x80)
+			fillMemory_u32(0xfffff080, 0x80, 0x0eee0eee)	// Fill palette with white color
+
+			u16[0xfffff0c0] = 0
+			objA0.animation.timer = 3
+		}
+
+	#if STANDALONE
+		// Kill all enemies in water
+		Game.setAchievementValue(ACHIEVEMENT_ELECTROCUTE, level.framecounter)
+		Character.clearEnemiesOnScreen(water.height.current)
+
+		if (Game.getSetting(SETTING_SHIELD_TYPES) == 3)
+		{
+			// Replace with classic shield when using upgradable shields
+			u8[A2 + 0x2b] |= char.bonus.ANY_SHIELD
+		}
+	#endif
+		return
+	}
+
+	objA0.position.x.u16 = u16[A2 + 0x10]
+	objA0.position.y.u16 = u16[A2 + 0x14]
+	objA0.flags2a = u8[A2 + 0x2a] & char.flag.FACING_LEFT
+	if (global.inv_gravity)
+		objA0.flags2a |= 0x02
+
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+
+	if (objA0.state != 0)
+	{
+		LightningShield.CreateSparks()
+		objA0.state = 0
+	}
+
+	Object.animationUpdate(0x019a2a)
+	objA0.sprite_priority = (objA0.animation.sprite >= 0x0e) ? 0x200 : 0x80
+
+	Shield.SharedSpriteUpdate()
+	DrawObject()
+}
+
+
+//# address-hook(0x01980c) end(0x01980c)
+function void LightningShield.CreateSparks()
+{
+	D2 = 1
+	Effects.CreateSparks()
+}
+
+
+//# address-hook(0x01980e) end(0x019862)
+function void Effects.CreateSparks()
+{
+	A2 = 0x019864
+	u8 counter = 4
+	while (counter > 0)
+	{
+		// Spawn sparks
+		if (!allocDynamicObjectStd())
+			break
+
+		objA1.update_address = addressof(LightningShieldSpark.Update)
+		objA1.render_flags = render_flag.WORLD
+		objA1.sprite_attributes = objA0.sprite_attributes
+		objA1.mapping_offset = objA0.mapping_offset
+		objA1.box_size.y = 0x08
+		objA1.box_size.x = 0x08
+		objA1.sprite_priority = 0x80
+		objA1.position.x.u16 = objA0.position.x.u16
+		objA1.position.y.u16 = objA0.position.y.u16
+		objA1.velocity.x = u16[A2]
+		objA1.velocity.y = u16[A2+2]
+		objA1.state = D2.u8
+
+		A2 += 4
+		--counter
+	}
+}
+
+
+//# address-hook(0x019874) end(0x019898)
+function void LightningShieldSpark.Update()
+{
+	UpdateMovementStraightSimple()
+	objA0.velocity.y += 0x18
+
+	Object.animationUpdate(0x019a2a)
+
+	if (objA0.base_state == 0)
+	{
+		DrawObject()
+	}
+	else
+	{
+		UnloadObject()
+	}
+}
+
+
+//# address-hook(0x01989e) end(0x0198bc)
+function void LightningShield.ResetWaterPalette()
+{
+	--objA0.animation.timer
+	if (s8(objA0.animation.timer) < 0)
+	{
+		objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+		copyMemory(0xfffff080, 0xfffff000, 0x80)
+	}
+}
+
+
+//-------------------------------------------------------//
+// Bubble shield                                         //
+//-------------------------------------------------------//
+
+//# address-hook(0x0198be) end(0x01991c)
+function void BubbleShield.Init()
+{
+	objA0.mapping_offset = 0x019f82
+	objA0.shield.art_offset = 0x18f984
+	objA0.shield.pattern_offset = 0x01a076
+	Shield.sharedInit()
+
+	A1 = 0xffff0000 + objA0.shield.character_address
+	UpdateMusicOnWaterTransition()
+	objA0.update_address = addressof(BubbleShield.Update)
+	BubbleShield.Update()
+}
+
+
+//# address-hook(0x019922) end(0x019998)
+function void BubbleShield.Update()
+{
+	A2 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A2 + 0x2b] & char.bonus.INVINCIBLE) || (u8[A2 + 0x20] == char.state.DISAPPEARED))
+		return
+
+	// Lost shield?
+	if ((u8[A2 + 0x2b] & char.bonus.ANY_SHIELD) == 0)
+	{
+		u8[A2 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+		objA0.update_address = addressof(InstaShield.Init)		// Insta-Shield
+		return
+	}
+
+	objA0.position.x.u16 = u16[A2 + 0x10]
+	objA0.position.y.u16 = u16[A2 + 0x14]
+	objA0.flags2a = u8[A2 + 0x2a] & char.flag.FACING_LEFT
+	if (global.inv_gravity)
+		objA0.flags2a |= 0x02
+
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (u16[A2 + 0x0a] & sprite_attribute.PRIORITY)
+
+	Object.animationUpdate(0x019a7a)
+
+	Shield.SharedSpriteUpdate()
+	DrawObject()
+}
+
+
+
+//-------------------------------------------------------//
+// Invincibility effect                                  //
+//-------------------------------------------------------//
+
+//# address-hook(0x0187f0) end(0x018862)
+//# alias(fn0187f0) deprecated
+function void Invincibility.Init()
+{
+	updateSpritePattern(0x18a204, Shield.targetInVRAM, 0x200)
+
+	D2 = 0
+	A2 = 0x0187d8
+	A1 = A0
+	for (u8 i = 0; i < 4; ++i)
+	{
+		objA1.update_address = addressof(Invincibility.Trail.Update)
+		objA1.render_flags = (render_flag.COMPOUND | render_flag.WORLD)
+		objA1.box_size.x = 0x10
+		objA1.sprite_priority = 0x80
+		objA1.sprite_attributes = (Shield.targetInVRAM >> 5)
+		objA1.mapping_offset = 0x018aea
+		objA1.compound.count = 2
+		objA1.shield.character_address = objA0.shield.character_address
+		u8[A1 + 0x36] = D2.u8
+		u32[A1 + 0x30] = u32[(A2+=4)-4]
+		u16[A1 + 0x34] = u16[(A2+=2)-2]
+		A1 += 0x4a
+		++D2.u16
+	}
+
+	objA0.update_address = addressof(Invincibility.Update)
+	u8[A0 + 0x34] = 4
+	Invincibility.Update()
+}
+
+
+//# address-hook(0x018868) end(0x0188e4)
+//# alias(fn018868) deprecated
+function void Invincibility.Update()
+{
+	if (super.active || super.active.tails)
+	{
+		UnloadObject()
+		return
+	}
+
+	A1 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A1 + 0x2b] & char.bonus.INVINCIBLE) == 0)
+	{
+		UnloadObject()
+		return
+	}
+
+#if STANDALONE
+	if (objA1.state == char.state.DISAPPEARED)
+		return
+
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (objA1.sprite_attributes & sprite_attribute.PRIORITY)
+#endif
+
+	objA0.position.x.u16 = objA1.position.x.u16
+	objA0.position.y.u16 = objA1.position.y.u16
+	D0.u16 = objA1.position.x.u16
+	D1.u16 = objA1.position.y.u16
+
+	A2 = A0 + 0x18
+	A3 = 0x0189e0
+	D5 = 0
+	while (true)
+	{
+		D2.u16 = u16[A0 + 0x38]
+		D5.s8 = s8[A3 + D2.s16]
+		if (D5.s8 >= 0)
+			break
+
+		u16[A0 + 0x38] = 0
+	}
+
+	++u16[A0 + 0x38]
+	A6 = 0x0189a0
+	D6.u8 = u8[A0 + 0x34]
+	fn01898a()
+
+	u16[(A2+=2)-2] = D2.u16		// Compound sprite 1 X-position
+	u16[(A2+=2)-2] = D3.u16		// Compound sprite 1 Y-position
+	u16[(A2+=2)-2] = D5.u16		// Compound sprite 1 animation frame
+	D6.u16 += 0x20
+	fn01898a()
+
+	u16[(A2+=2)-2] = D2.u16		// Compound sprite 2 X-position
+	u16[(A2+=2)-2] = D3.u16		// Compound sprite 2 Y-position
+	u16[(A2+=2)-2] = D5.u16		// Compound sprite 2 animation frame
+	u8[A0 + 0x34] += (u8[A1 + 0x2a] & char.flag.FACING_LEFT) ? -0x12 : 0x12
+
+	DrawObject()
+}
+
+
+//# address-hook(0x0188e8) end(0x018986)
+//# alias(fn0188e8) deprecated
+function void Invincibility.Trail.Update()
+{
+	if (super.active || super.active.tails)
+	{
+		UnloadObject()
+		return
+	}
+
+	A1 = 0xffff0000 + objA0.shield.character_address
+	if ((u8[A1 + 0x2b] & char.bonus.INVINCIBLE) == 0)
+	{
+		UnloadObject()
+		return
+	}
+
+#if STANDALONE
+	if (objA1.state == char.state.DISAPPEARED)
+		return
+
+	objA0.sprite_attributes = (objA0.sprite_attributes & ~sprite_attribute.PRIORITY) | (objA1.sprite_attributes & sprite_attribute.PRIORITY)
+#endif
+
+	D1.u16 = u16(u8[A0 + 0x36]) * 12
+	D0.u8 = posbackup.offset.player1 - D1.u8
+	A2 = 0xffffe500 + D0.u8
+	D0.u16 = u16[A2]
+	D1.u16 = u16[A2+2]
+	objA0.position.x.u16 = D0.u16
+	objA0.position.y.u16 = D1.u16
+
+	A2 = A0 + 0x18
+	A3 = u32[A0 + 0x30]
+
+	while (true)
+	{
+		D2.u16 = u16[A0 + 0x38]
+		D5.u8 = u8[A3 + D2.s16]
+		if (D5.s8 >= 0)
+			break
+
+		u16[A0 + 0x38] = 0
+	}
+
+	D5 = (D5 << 16) + (D5 >> 16)
+	D2.u8 += u8[A0 + 0x35]
+	D5.u8 = u8[A3 + D2.s16]
+	++u16[A0 + 0x38]
+
+	A6 = 0x0189a0
+	D6.u8 = u8[A0 + 0x34]
+	fn01898a()
+
+	u16[(A2+=2)-2] = D2.u16		// Compound sprite 1 X-position
+	u16[(A2+=2)-2] = D3.u16		// Compound sprite 1 Y-position
+	u16[(A2+=2)-2] = D5.u16		// Compound sprite 1 animation frame
+	D6.u16 += 0x20
+	D5 = (D5 << 16) + (D5 >> 16)
+	fn01898a()
+
+	u16[(A2+=2)-2] = D2.u16		// Compound sprite 2 X-position
+	u16[(A2+=2)-2] = D3.u16		// Compound sprite 2 Y-position
+	u16[(A2+=2)-2] = D5.u16		// Compound sprite 2 animation frame
+	u8[A0 + 0x34] += (u8[A1 + 0x2a] & char.flag.FACING_LEFT) ? -2 : 2
+
+	DrawObject()
+}
+
+
+//# address-hook(0x01898a) end(0x01899e)
+function void fn01898a()
+{
+	D6.u16 &= 0x3e
+	D2.u16 = D0.u16 + s8[A6 + D6.s16]
+	D3.u16 = D1.u16 + s8[A6 + D6.s16 + 1]
+}

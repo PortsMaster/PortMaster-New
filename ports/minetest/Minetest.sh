@@ -34,6 +34,7 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
 CUR_TTY=/dev/tty0
 
 # Define the archive file name
@@ -44,7 +45,7 @@ if [[ -f "$ARCHIVE_FILE" ]]; then
    echo "Extracting game data, this can take a few minutes..." > "$CUR_TTY"
    
    # Extract the archive and check if the extraction was successful
-   if tar -xzf "$ARCHIVE_FILE"; then
+   if zcat "$ARCHIVE_FILE" | tar -xv; then
        echo "Extraction successful." > "$CUR_TTY"
        $ESUDO rm -f "$ARCHIVE_FILE"
    else
@@ -54,9 +55,17 @@ if [[ -f "$ARCHIVE_FILE" ]]; then
    fi
 fi
 
+[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && [ -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
+ifconfig lo up
+if [ "$CFW_NAME" = "ROCKNIX" ]; then
+	swaymsg seat seat0 hide_cursor 0
+fi
 chmod +x ./bin/minetest
 $GPTOKEYB "minetest" -c "$GAMEDIR/minetest.gptk.$ANALOG_STICKS" &
 ./bin/minetest
+if [ "$CFW_NAME" = "ROCKNIX" ]; then
+	swaymsg seat seat0 hide_cursor 1000
+fi
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

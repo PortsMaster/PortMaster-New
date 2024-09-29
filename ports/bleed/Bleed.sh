@@ -53,23 +53,23 @@ regen_checksum=no
 
 sha1sum -c "${gamedir}/gamedata/.ver_checksum"
 if [ $? -ne 0 ]; then
-	echo "Checksum fail or unpatched binary found, patching game..." |& tee /dev/tty0
+	echo "Checksum fail or unpatched binary found, patching game..." 2>&1 | tee /dev/tty0
 	rm -f "${gamedir}/gamedata/.patch_done"
 fi
 
 # MONOMODDED files not found, let's perform patching
 if [[ ! -f "${gamedir}/gamedata/.patch_done" ]]; then
-	echo "Performing game patching..." |& tee /dev/tty0 "${gamedir}/install_log.txt"
+	echo "Performing game patching..." 2>&1 | tee /dev/tty0 "${gamedir}/install_log.txt"
 
 	# Configure MonoMod settings
 	export MONOMOD_MODS="$gamedir/patches"
 	export MONOMOD_DEPDIRS="${MONO_PATH}":"${gamedir}/monomod"
 
 	# Patch the ParisEngine/gameassembly files
-	mono "${gamedir}/monomod/MonoMod.RuntimeDetour.HookGen.exe" "${gamedir}/gamedata/Bleed.exe" |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
-	mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/Bleed.exe" |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
+	mono "${gamedir}/monomod/MonoMod.RuntimeDetour.HookGen.exe" "${gamedir}/gamedata/Bleed.exe" 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
+	mono "${gamedir}/monomod/MonoMod.exe" "${gamedir}/gamedata/Bleed.exe" 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
 	if [ $? -ne 0 ]; then
-		echo "Failure performing first time setup, report this." |& tee -a /dev/tty0 "${gamedir}/install_log.txt"
+		echo "Failure performing first time setup, report this." 2>&1 | tee -a /dev/tty0 "${gamedir}/install_log.txt"
 		exit -1
 	fi
 
@@ -85,7 +85,7 @@ if [[ x${regen_checksum} -eq xyes ]]; then
 fi
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all MONOMODDED_${gameassembly} |& tee /dev/tty0 "${gamedir}/log.txt"
+$TASKSET mono --ffast-math -O=all MONOMODDED_${gameassembly} 2>&1 | tee /dev/tty0 "${gamedir}/log.txt"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"

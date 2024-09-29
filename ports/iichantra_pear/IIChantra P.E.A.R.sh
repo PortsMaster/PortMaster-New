@@ -32,28 +32,11 @@ else
 fi
 
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
-export LD_LIBRARY_PATH="$PWD/libs"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [[ "$(cat /sys/firmware/devicetree/base/model | tr -d '\0')" == "Anbernic RG552" ]]; then
-  xres="1920"
-  yres="1152"
-elif [[ -e "/sys/class/drm/card0-HDMI-A-1/status" ]] && [[ "$(cat /sys/class/drm/card0-HDMI-A-1/status)" == "connected" ]]; then
-  xres="$(cat /sys/class/drm/card0-HDMI-A-1/modes | sed -n 's/^\([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\1/p')"
-  yres="$(cat /sys/class/drm/card0-HDMI-A-1/modes | sed -n 's/^\([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\2/p')"
-elif [[ -e "/sys/class/drm/card0-HDMI-A-1/status" ]] && [[ "$(cat /sys/class/drm/card0-DSI-1/status)" == "connected" ]]; then
-  xres="$(cat /sys/class/drm/card0-DSI-1/modes | sed -n 's/^\([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\1/p')"
-  yres="$(cat /sys/class/drm/card0-DSI-1/modes | sed -n 's/^\([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\2/p')"
-else
-  xres=640
-  yres=480
-fi
-
-echo $xres
-echo $yres
-
-$ESUDO sed -i "s|window_width = [0-9]\+;|window_width = $xres;|g" $GAMEDIR/config/default.lua
-$ESUDO sed -i "s|window_height = [0-9]\+;|window_height = $yres;|g" $GAMEDIR/config/default.lua
+$ESUDO sed -i "s|window_width = [0-9]\+;|window_width = $DISPLAY_WIDTH;|g" $GAMEDIR/config/default.lua
+$ESUDO sed -i "s|window_height = [0-9]\+;|window_height = $DISPLAY_HEIGHT;|g" $GAMEDIR/config/default.lua
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "iiChantra.Release" -c "./iiChantra.gptk" &

@@ -22,6 +22,8 @@ get_controls
 GAMEDIR=/$directory/ports/cromagrally
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
+
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -36,8 +38,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
 fi 
-
-cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "CroMagRally" &

@@ -21,15 +21,8 @@ get_controls
 GAMEDIR="/$directory/ports/JediOutcast"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ ! -f $GAMEDIR/conf/openjo/base/openjo_sp.cfg ]; then
-  if [[ -e "/dev/input/by-path/platform-odroidgo3-joypad-event-joystick" ]] || [[ "$(cat /sys/firmware/devicetree/base/model)" == "Rockchip RK3566 EVB2 LP4X V10 Board" ]] || [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG503" ]]; then
-    mv -f $GAMEDIR/conf/openjo/base/openjo_sp.cfg.ogs $GAMEDIR/conf/openjo/base/openjo_sp.cfg
-    rm -f $GAMEDIR/conf/openjo/base/openjo_sp.cfg.*
-  else
-    mv -f $GAMEDIR/conf/openjo/base/openjo_sp.cfg.rg552 $GAMEDIR/conf/openjo/base/openjo_sp.cfg
-    rm -f $GAMEDIR/conf/openjo/base/openjo_sp.cfg.* 
-  fi
-fi
+sed -i "s/seta r_customheight \".*\"/seta r_customheight \"$DISPLAY_HEIGHT\"/" "$GAMEDIR/conf/openjo/base/openjo_sp.cfg"
+sed -i "s/seta r_customwidth \".*\"/seta r_customwidth \"$DISPLAY_WIDTH\"/" "$GAMEDIR/conf/openjo/base/openjo_sp.cfg"
 
 cd $GAMEDIR
 
@@ -50,8 +43,6 @@ fi
 
 export LD_LIBRARY_PATH=$GAMEDIR/libs:$LD_LIBRARY_PATH
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-source /etc/profile
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then

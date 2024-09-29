@@ -22,8 +22,7 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/yatka"
-
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -35,16 +34,17 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 ## RUN SCRIPT HERE
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "yatka" -c yatka.gptk &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./yatka --scale2x
+./yatka --scale2x
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 
 # Disable console
 printf "\033c" > $CUR_TTY
-

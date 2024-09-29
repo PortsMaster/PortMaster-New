@@ -47,7 +47,12 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]]; then
+if [[ -f "$GAMEDIR/gamedata/aliens_of_gold/VSWAP.BS1" ]] && [[ -f "$GAMEDIR/gamedata/aliens_of_gold/VSWAP.BS6" ]]; then
+    rm -f "$GAMEDIR/gamedata/aliens_of_gold/"*.BS1
+    sleep 0.5
+fi
+
+if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]] || [[ "$DEVICE_NAME" == 'RG40XX' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/bstonetriggers.gptk"
 else
     GPTOKEYB_CONFIG="$GAMEDIR/bstone$ANALOG_STICKS.gptk"

@@ -17,13 +17,19 @@ source $controlfolder/control.txt
 get_controls
 
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 GAMEDIR=/$directory/ports/worship
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "worship.bin" -c "./worship.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./worship.bin -n 2>&1 | tee -a ./log.txt
+./worship.bin
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

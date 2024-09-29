@@ -24,6 +24,8 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/znax"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 $CUR_TTY
@@ -37,13 +39,12 @@ printf "\033c" > $CUR_TTY
 echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="$GAMEDIR"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "znax" -c znax.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./znax 2>&1 | $ESUDO tee -a ./log.txt
+./znax
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

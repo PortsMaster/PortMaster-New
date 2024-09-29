@@ -21,6 +21,8 @@ get_controls
 GAMEDIR=/$directory/ports/ottomatic
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
+
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
@@ -33,8 +35,6 @@ fi
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
-cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "OttoMatic" &

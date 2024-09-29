@@ -23,15 +23,12 @@ if [[ $CFW_NAME == "TheRA" ]]; then
 elif [[ $CFW_NAME == "RetroOZ" ]]; then
   raloc="/opt/retroarch/bin"
   raconf="--config /home/odroid/.config/retroarch/retroarch.cfg"
-elif [[ $CFW_NAME == "ArkOS" ]]; then
+elif [[ $CFW_NAME == "ArkOS" ]] || [[ $CFW_NAME == "ArkOS wuMMLe" ]]; then
   raloc="/usr/local/bin"
   raconf=""
-elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH == "aarch64" ]]; then
+elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
-  raconf="--config /mnt/mmc/MUOS/retroarch/retroarch32.cfg"
-elif [[ $CFW_NAME == "muOS" && $DEVICE_ARCH != "aarch64" ]]; then
-  raloc="/mnt/mmc/MUOS"
-  raconf="--config /mnt/mmc/MUOS/.retroarch/retroarch.cfg"
+  raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
 else
   raloc="/usr/bin"
   raconf=""
@@ -39,10 +36,5 @@ fi
 
 GAMEDIR="/$directory/ports/2048"
 
-if [[ $CFW_NAME == "muOS" && $DEVICE_ARCH == "aarch64" ]]; then
-  $GPTOKEYB "retroarch32" &
-  $raloc/retroarch32 $raconf -L $GAMEDIR/2048_libretro.so.armhf
-else
-  $GPTOKEYB "retroarch" &
-  $raloc/retroarch $raconf -L $GAMEDIR/2048_libretro.so.${DEVICE_ARCH}
-fi
+$GPTOKEYB "retroarch" &
+$raloc/retroarch $raconf -L $GAMEDIR/2048_libretro.so.${DEVICE_ARCH}

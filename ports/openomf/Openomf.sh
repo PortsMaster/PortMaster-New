@@ -17,6 +17,8 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR="/$directory/ports/openomf"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1
@@ -24,11 +26,13 @@ $ESUDO chmod 666 /dev/uinput
 
 $ESUDO rm -rf ~/.local/share/openomfproject
 ln -sfv $GAMEDIR/conf/openomfproject ~/.local/share
+
 export OPENOMF_RESOURCE_DIR="$GAMEDIR/gamedata"
 export OPENOMF_PLUGIN_DIR="$GAMEDIR/plugins"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "openomf" -c "$GAMEDIR/openomf.gptk" &
-LD_LIBRARY_PATH="$GAMEDIR/lib" ./openomf 2>&1 | tee $GAMEDIR/log.txt
+./openomf
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

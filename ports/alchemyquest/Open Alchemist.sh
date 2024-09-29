@@ -13,10 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
-
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
@@ -26,6 +22,7 @@ PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/alchemyquest"
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 666 $CUR_TTY
 $ESUDO touch log.txt
@@ -37,17 +34,15 @@ printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
 export PORTMASTER_HOME="$GAMEDIR"
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "alchemyquest" -c alchemyquest.gptk &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./alchemyquest --openalchemist 2>&1 | $ESUDO tee -a ./log.txt
+./alchemyquest --openalchemist
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console
 printf "\033c" > $CUR_TTY
-

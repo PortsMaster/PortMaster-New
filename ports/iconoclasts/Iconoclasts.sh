@@ -21,11 +21,10 @@ export PORT_32BIT="Y"
 get_controls
 
 GAMEDIR="/$directory/ports/iconoclasts"
-cd $GAMEDIR/gamedata
+
+cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
 
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -35,9 +34,11 @@ else
 fi
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.armhf/libEGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
 fi 
+
+cd $GAMEDIR/gamedata
 
 export CHOWDREN_FPS=30
 export LIBGL_FB_TEX_SCALE=0.5
@@ -49,7 +50,7 @@ export BOX86_DLSYM_ERROR=1
 export SDL_DYNAMIC_API="libSDL2-2.0.so.0"
 export BOX86_LD_PRELOAD="$GAMEDIR/libIconoclasts.so"
 
-export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"/usr/config/emuelec/lib32"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"/usr/config/emuelec/lib32"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/native":"$GAMEDIR/gamedata/bin32"
 
 export BOX86_DYNAREC=1
@@ -107,7 +108,7 @@ fi
 chmod +x "$GAMEDIR/box86/box86"
 chmod +x "$GAMEDIR/gamedata/bin32/Chowdren"
 
-$GPTOKEYB "box86" -c "$GAMEDIR/iconoclasts.gptk" &
+$GPTOKEYB "Chowdren" -c "$GAMEDIR/iconoclasts.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $GAMEDIR/box86/box86 bin32/Chowdren 2>&1 | tee $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)

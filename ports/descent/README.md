@@ -34,40 +34,38 @@ Descent I & II: Definitive Edition came with some extra content not available on
 This extra content can be placed in the data/missions folder for both Descent and Descent 2. If done correctly you'll see a new submenu when selecting New Game.
 
 ## Configuration
-Ini files `d1x.ini` and `d2x.ini` are configurable. The port features keyboard emulation and native SDL joystick controls.
+Ini files `d1x.ini` and `d2x.ini` are configurable. The port features native SDL joystick controls. Function keys and others can be customized in `config/joy.gptk`.
 
-You may rename `Player.plr` and `Player.plx` in the conf folder for a different multiplayer display name. If you do so, please modify the `d1x.ini` or `d2x.ini` file to reflect this change.
+You may rename `Player.plr` and `Player.plx` in the config folder for a different multiplayer display name. If you do so, you can modify the `d1x.ini` or `d2x.ini` file to reflect this change and autoselect your pilot.
 
 Cheats can be found and modified in `cheats.txt`. To turn a cheat on, change the 0 to 1. To turn it off, change 1 to 0.
 
 Add-Ons (.dxa files) such as different soundtracks from various soundcards and game versions, can be found at the project's [GitHub Repo](https://github.com/JeodC/Portmaster-Descent)
 
 ## Default Gameplay Controls
-
 | Button | Action |
 |--|--| 
-|A|Primary Fire|
+|A||
 |B|Deploy Bomb|
-|X|Secondary Fire|
+|X|Rear View|
 |Y|Fire Flare|
-|L1|Reverse|
-|L2|Cycle Secondary Weapon|
+|L1|Fire Secondary Weapon|
+|L2|Cycle Primary Weapon|
 |L3|Not Set|
-|R1|Accelerate|
+|R1|Fire Primary Weapon|
 |R2|Scroll Primary Weapon|
 |R3|Not Set|
 |D-PAD UP|Look Up|
 |D-PAD DOWN|Look Down|
 |D-PAD LEFT|Turn Left|
 |D-PAD RIGHT|Turn Right|
-|LEFT ANALOG|Look Around|
-|RIGHT ANALOG|Slide Up/Down & Bank Left/Right|
+|LEFT ANALOG|Throttle|
+|RIGHT ANALOG|Pitch & Turn|
 |SELECT|Back / Escape|
 |START|Start / Accept / Enter|
 |START + LEFT|Activate Cheats|
 
 ## Level Select Controls
-
 | Button | Action |
 |--|--| 
 |B|0|
@@ -83,9 +81,13 @@ Add-Ons (.dxa files) such as different soundtracks from various soundcards and g
 |D-PAD Left|Backspace|
 
 ## Secret Levels
-Level 10 -> -> Secret Level 1  
-Level 21 -> -> Secret Level 2  
-Level 23 -> -> Secret Level 3  
+Some levels have secondary exit points which, when used, will lead to a secret level. These levels are fairly challenging.
+
+|Origin Level|Leads To|
+|--|--|
+|Level 10|Secret Level 1|
+|Level 21|Secret Level 2|
+|Level 23|Secret Level 3| 
 
 ## Thanks
 Cebion  

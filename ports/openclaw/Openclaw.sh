@@ -17,6 +17,8 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR="/$directory/ports/openclaw"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 yres="$(cat /sys/class/graphics/fb0/modes | grep -o -P '(?<=:).*(?=p-)' | cut -dx -f2)"
@@ -95,10 +97,15 @@ else
   sed -i '/<Scale>3/s//<Scale>1/g' $GAMEDIR/config.xml
 fi
 
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "openclaw" -c "$GAMEDIR/openclaw.gptk.1" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./openclaw 2>&1 | tee $GAMEDIR/log.txt
+./openclaw
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

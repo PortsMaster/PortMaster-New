@@ -13,16 +13,24 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
 
 GAMEDIR="/$directory/ports/skijump3"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "SJ3" -c "$GAMEDIR/skijump3.gptk.$ANALOGSTICKS" &
-LD_LIBRARY_PATH="$GAMEDIR/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./SJ3 2>&1 | tee $GAMEDIR/log.txt
+
+$GPTOKEYB "SJ3" -c "$GAMEDIR/skijump3.gptk.$ANALOG_STICKS" &
+./SJ3
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

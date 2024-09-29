@@ -22,6 +22,9 @@ get_controls
 GAMEDIR=/$directory/ports/helpnobrake/
 CONFDIR="$GAMEDIR/conf/"
 
+# New logging code.
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 

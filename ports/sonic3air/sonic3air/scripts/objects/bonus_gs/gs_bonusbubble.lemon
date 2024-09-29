@@ -1,0 +1,371 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Bonus Bubble                                          //
+//-------------------------------------------------------//
+
+//# address-hook(0x04a1e6) end(0x04a212)
+function void fn04a1e6()
+{
+	objA0.mapping_offset = 0x04a294
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | sprite_attribute.PALETTE.LINE3 | 0x0364)
+	objA0.render_flags |= render_flag.WORLD
+	objA0.box_size.x = 0x10
+	objA0.box_size.y = 0x10
+	objA0.sprite_priority = 0x0200
+	objA0.collision_attributes = (collision.flag.SPECIAL | collision.size.8x8_2)
+
+	objA0.update_address = 0x04a218
+	fn04a218()
+}
+
+
+//# address-hook(0x04a218) end(0x04a234)
+function void fn04a218()
+{
+	if (u8[A0 + 0x29] != 0)
+	{
+		u8[A0 + 0x29] = 0
+		objA0.update_address = 0x04a238
+	}
+
+	Object.animationUpdate(0x04a288)
+	fn04a31a()
+}
+
+
+// Rising bonus bubble
+
+//# address-hook(0x04a238) end(0x04a284)
+function void fn04a238()
+{
+	if (u8[A0 + 0x29] == 0)
+	{
+		objA0.animation.sprite = 0
+		playSound(0x65)
+
+		D1.u16 = (u8[A0 + 0x14] & 0x0f) * 4
+		D0.u16 = D1.u16 + (level.framecounter & 0x03)
+		objA0.subtype2c = u8[0x1e4484 + D0.u16]
+	#if STANDALONE
+		// Don't spawn 1-ups with the infinite lives setting on, instead replace with a ring bubble
+		if (objA0.subtype2c == 1 && Game.getSetting(SETTING_INFINITE_LIVES))
+			objA0.subtype2c = 3
+	#endif
+
+		objA0.update_address = 0x04a34c
+		fn04a2cc()
+	}
+	else
+	{
+		u8[A0 + 0x29] = 0
+		Object.animationUpdate(0x04a288)
+		fn04a31a()
+	}
+}
+
+
+//# address-hook(0x04a2cc) end(0x04a318)
+function void fn04a2cc()
+{
+	if (objA0.subtype2c == 0)
+	{
+		// Unused "F" bonus bubble sprite
+		objA0.mapping_offset = 0x04a3d2
+		objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE3 | 0x0378)
+	}
+	else
+	{
+		// Bonus bubble sprites
+		objA0.mapping_offset = 0x06148a
+		objA0.sprite_attributes = 0x0388
+		objA0.animation.sprite = objA0.subtype2c + 7
+	}
+
+	objA0.render_flags |= render_flag.WORLD
+	objA0.box_size.x = 0x10
+	objA0.box_size.y = 0x10
+	objA0.sprite_priority = 0x0200
+	objA0.collision_attributes = (collision.flag.SPECIAL | collision.size.8x8_2)
+	if (u8[A0 + 0x29] != 0)
+	{
+		fn04a362()
+	}
+	fn04a31a()
+}
+
+
+//# address-hook(0x04a31a) end(0x04a346)
+function void fn04a31a()
+{
+	D0.u16 = (objA0.position.y.u16 & 0xff80) - level.despawn_position.y
+	if (D0.u16 <= 0x0200)
+	{
+		AddAsDynamicObject()
+		DrawObject()
+	}
+	else
+	{
+		if (objA0.respawn_entry)
+		{
+			A2 = 0xffff0000 + objA0.respawn_entry
+			u8[A2] &= ~0x80
+		}
+		UnloadObject()
+	}
+}
+
+
+//# address-hook(0x04a34c) end(0x04a360)
+function void fn04a34c()
+{
+	if (u8[A0 + 0x29] != 0)
+	{
+		fn04a362()
+	}
+
+	UpdateMovementStraightSimple()
+	objA0.velocity.y -= 4
+	fn04a31a()
+}
+
+
+//# address-hook(0x04a362) end(0x04a382)
+function void fn04a362()
+{
+	A1 = 0xffffb000
+	if (u8[A0 + 0x29] & 0x01)
+	{
+		fn04a384()
+	}
+
+	A1 = 0xffffb04a
+	if (u8[A0 + 0x29] & 0x02)
+	{
+		fn04a384()
+	}
+
+	u8[A0 + 0x29] = 0
+}
+
+
+//# address-hook(0x04a384) end(0x04a3cc)
+function void fn04a384()
+{
+	objA0.update_address = addressof(UnloadObject)
+	D1 = objA0.subtype2c
+	D2 = 1
+	if (D1.u8 == 3)
+	{
+		// Rings bonus bubble
+		// In the Glowing Spheres bonus stage, the rings bonus bubble gives different amounts of rings based on elevation
+		D0.u16 = u8[A0 + 0x14] & 0x0f
+		D0.u8 = u8[0x1e44c4 + D0.u16]
+		checkpoint.rings += D0.u16
+		AddRings()
+		return
+	}
+
+	if (D1.u8 == 2)
+	{
+		// "REP" bonus bubble, useless in glowing spheres bonus
+		playSound(0x7b)
+		return
+	}
+
+	// Moving the "F" bonus bubble out of range
+	--D1.u16
+	if (D1.s16 >= 0)
+	{
+		// Call one of the rest of the bonus bubble powerups
+		D0 = A1.u16
+		fn061100()
+	}
+}
+
+
+//# address-hook(0x0610f8) end(0x0610fc)
+function void fn0610f8()
+{
+	D1 = 0
+	D2 = 1
+	D1.u8 = objA0.subtype2c
+	fn061100()
+}
+
+
+//# address-hook(0x061100) end(0x06110c)
+function void fn061100()
+{
+	// Targets:
+	//  - 0x061120	-> D1.u16 = 0x00	-> 1-up bubble
+	//  - 0x061130	-> D1.u16 = 0x01	-> Rep bubble
+	//  - 0x06114e	-> D1.u16 = 0x02	-> Ring bubble
+	//  - 0x06114c	-> D1.u16 = 0x03	-> Empty bubble
+	//  - 0x06115c	-> D1.u16 = 0x04	-> Bouncy black bubble
+	//  - 0x0611d6	-> D1.u16 = 0x05	-> Fire shield
+	//  - 0x061200	-> D1.u16 = 0x06	-> Bubble shield
+	//  - 0x06122a	-> D1.u16 = 0x07	-> Lightning shield
+	//  - 0x061264	-> D1.u16 = 0x08	-> Unused golden "Super bubble"
+	call tableLookupAddress(0x06110e, D1.u16 * 2)
+	_setZeroFlagByValue(D2.u16)
+}
+
+
+//# address-hook(0x061120) end(0x06112a)
+function void fn061120()
+{
+	gainExtraLife()
+}
+
+
+//# address-hook(0x061130) end(0x06114c)
+function void fn061130()
+{
+	if (u8[0xffff2022] != 0)
+		return
+
+	// Spawn floor platform for springs
+	if (!allocDynamicObjectAfterA0())
+		return
+
+	objA1.update_address = 0x060d58
+	u8[0xffff2022] = 0xff
+}
+
+
+//# address-hook(0x06114c) end(0x06114c)
+function void fn06114c()
+{
+	// Reaction to empty bubble: Nothing happens
+}
+
+
+//# address-hook(0x06114e) end(0x061156)
+function void fn06114e()
+{
+	checkpoint.rings += 20
+	addRings(10)
+}
+
+
+//# address-hook(0x06115c) end(0x061174)
+function void fn06115c()
+{
+	u32 backupD0 = D0
+	if (D0.u16 != 0)
+	{
+		fn061176()
+	}
+	D0 = backupD0
+	D0 = (D0 << 16) + (D0 >> 16)
+	if (D0.u16 != 0)
+	{
+		fn061176()
+	}
+
+	u8[A0 + 0x29] = 0
+	D2 = 0
+}
+
+
+//# address-hook(0x061176) end(0x0611d0)
+function void fn061176()
+{
+	A1 = 0xffff0000 + D0.u16
+	D1.u16 = objA0.position.x.u16 - objA1.position.x.u16
+	D2.u16 = objA0.position.y.u16 - objA1.position.y.u16
+	LookupAngleByVector()
+
+	D1.u16 = u8[0xfffffe04] & 0x03
+	D0.u16 += D1.u16
+	LookupSinCos()
+
+	D1.s32 = s32(D1.s16) * -0x700
+	D1.s32 >>= 8
+	objA1.velocity.x = D1.u16
+
+	D0.s32 = s32(D0.s16) * -0x700
+	D0.s32 >>= 8
+	objA1.velocity.y = D0.u16
+
+	objA1.flags2a |= char.flag.IN_AIR
+	objA1.flags2a &= ~(char.flag.CONTROL_LOCK | char.flag.PUSHING)
+	u8[A1 + 0x40] = 0
+
+	objA0.state = 1
+	playSound(0x7b)
+}
+
+
+//# address-hook(0x0611d6) end(0x0611fa)
+function void fn0611d6()
+{
+	A1 = 0xffffb000
+	u32[0xffffcce8] = addressof(FireShield.Init)
+	u16[0xffffcce8 + 0x42] = A1.u16
+	u8[A1 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+	u8[A1 + 0x2b] |= char.bonus.ANY_SHIELD
+
+	D0 = 4		// char.bonus.SHIELD_FIRE
+	fn061254()
+	playMusic(SFX_FIRESHIELD)
+}
+
+
+//# address-hook(0x061200) end(0x061224)
+function void fn061200()
+{
+	A1 = 0xffffb000
+	u32[0xffffcce8] = addressof(BubbleShield.Init)
+	u16[0xffffcce8 + 0x42] = A1.u16
+	u8[A1 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+	u8[A1 + 0x2b] |= char.bonus.ANY_SHIELD
+
+	D0 = 6		// char.bonus.SHIELD_BUBBLE
+	fn061254()
+	playMusic(SFX_BUBBLESHIELD)
+}
+
+
+//# address-hook(0x06122a) end(0x06124e)
+function void fn06122a()
+{
+	A1 = 0xffffb000
+	u32[0xffffcce8] = addressof(LightningShield.Init)
+	u16[0xffffcce8 + 0x42] = A1.u16
+	u8[A1 + 0x2b] &= ~char.bonus.ALL_SHIELDS
+	u8[A1 + 0x2b] |= char.bonus.ANY_SHIELD
+
+	D0 = 5		// char.bonus.SHIELD_LIGHTNING
+	fn061254()
+	playMusic(SFX_LIGHTNINGSHIELD)
+}
+
+
+//# address-hook(0x061254) end(0x061262)
+function void fn061254()
+{
+	u8 shield = (1 << D0.u8)
+
+	u8[A1 + 0x2b] |= shield
+	A2 = addressof(global.shields_backup_1)		// Address: 0xfffffe47
+	u8[A2] &= ~char.bonus.ELEMENTAL_SHIELDS
+	u8[A2] |= shield
+}
+
+
+//# address-hook(0x061264) end(0x06126a)
+function void fn061264()
+{
+	// Unused "Super bubble"
+	global.shields_backup_1 |= 0x80
+}

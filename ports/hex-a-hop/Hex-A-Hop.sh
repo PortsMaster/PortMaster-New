@@ -17,14 +17,20 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/hex-a-hop
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
 $ESUDO rm -rf ~/.hex-a-hop
 ln -sfv /$directory/ports/hex-a-hop/conf/.hex-a-hop ~/
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "hex-a-hop"  -c "./hex-a-hop.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./hex-a-hop -n 2>&1 | tee -a ./log.txt
+./hex-a-hop
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0

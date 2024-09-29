@@ -17,6 +17,10 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/srb2kart
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 
@@ -29,9 +33,10 @@ else
 fi
 
 $ESUDO chmod 666 /dev/uinput
-# $GPTOKEYB "srb2kart" -c "srb2kart.gptk" &
+
 $GPTOKEYB "srb2kart" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./srb2kart 2>&1 | tee ./log.txt 
+./srb2kart
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

@@ -17,6 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/bzflag
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 ## Game does not adhere to XDG Standard, so manually link
 ## Make sure to create the /conf/.bzf folders 
@@ -25,13 +26,15 @@ ln -sfv $GAMEDIR/conf/.bzf ~/
 
 
 export TEXTINPUTINTERACTIVE="Y"
+export LD_LIBRARY_PATH="$PWD/libs::$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "bzflag" -c "./bzflag.gptk" &
 
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./bzflag 2>&1 | tee ./log.txt
+./bzflag
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

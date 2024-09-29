@@ -15,61 +15,54 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/undertale"
-LIBDIR="$GAMEDIR/lib32"
-BINDIR="$GAMEDIR/box86"
 
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs":$LD_LIBRARY_PATH
+export GMLOADER_DEPTH_DISABLE=1
+export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+export GMLOADER_PLATFORM="os_linux"
+
+cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# gl4es
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
+printf "\033c" > /dev/tty0
+install() {
+    $ESUDO mkdir -p gamedata/assets/
+    $ESUDO rm -rf gamedata/*.exe gamedata/*.dll gamedata/*.ini
+    mv gamedata/*.ogg gamedata/assets/
+    mv gamedata/*.png gamedata/assets/
+    cd gamedata
+    $ESUDO ../utils/zip -r -0 ../game.apk ./assets || return 1
+    rm -rf assets/
+    cd $GAMEDIR
+    touch installed
+}
+
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+
+if [ ! -f installed ]; then
+    echo "Performing first-time setup, please wait..." > /dev/tty0
+    install
+    if [ $? -ne 0 ]; then
+        echo "An error occurred during the installation process. Exiting." > /dev/tty0
+        exit 1
+    fi
 fi
 
-# system
-export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
+$GPTOKEYB "gmloader" -c "undertale.gptk" &
+echo "Loading, please wait... " > /dev/tty0
 
-# box86
-export BOX86_ALLOWMISSINGLIBS=1
-export BOX86_LD_LIBRARY_PATH="$LIBDIR"
-export BOX86_PATH="$BINDIR"
+$ESUDO chmod +x "$GAMEDIR/gmloader"
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+./gmloader game.apk
 
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
-if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
-fi 
-
-cd $GAMEDIR
-
-$ESUDO rm -rf ~/.config/UNDERTALE
-$ESUDO ln -s /$GAMEDIR/conf/UNDERTALE ~/.config/
-
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "box86" -c "$GAMEDIR/undertale.gptk" &
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$BINDIR/box86 $GAMEDIR/runner
-$ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
+$ESUDO kill -9 "$(pidof gptokeyb)"
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
 printf "\033c" > /dev/tty0
-

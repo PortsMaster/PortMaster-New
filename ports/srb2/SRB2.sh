@@ -13,8 +13,13 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 
 get_controls
+
+GAMEDIR=/$directory/ports/SRB2/
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd /$directory/ports/SRB2/
 
@@ -26,9 +31,14 @@ else
   sheight="480"
 fi
 
+export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "lsdlsrb2" -c "./srb2.$ANALOGSTICKS.gptk" &
-LD_LIBRARY_PATH="$PWD/libs" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./lsdlsrb2 -nojoy -home ./conf -width $swidth -height $sheight 2>&1 | tee ./log.txt
+
+$GPTOKEYB "lsdlsrb2" -c "./srb2.$ANALOG_STICKS.gptk" &
+./lsdlsrb2 -nojoy -home ./conf -width $swidth -height $sheight
+
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1

@@ -23,7 +23,7 @@ get_controls
 $ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/freedomplanet"
-cd $GAMEDIR/gamedata
+cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -33,6 +33,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+cd $GAMEDIR/gamedata
 
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_DLSYM_ERROR=1
@@ -44,7 +45,7 @@ if [[ $whichos == *"RetroOZ"* ]]; then
     export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32:$GAMEDIR/box86/native"
     export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib32/:./:lib/:lib32/:x86/"
 else
-    export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:/usr/lib32"
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:/usr/lib32"
     export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:./:lib/:libbin32/:x86/"
 fi
 

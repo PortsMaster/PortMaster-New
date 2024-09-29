@@ -13,10 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
-
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
@@ -24,8 +20,9 @@ CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/supertuxkart"
-cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+cd $GAMEDIR
 
 $ESUDO chmod 666 $CUR_TTY
 $ESUDO touch log.txt
@@ -40,15 +37,14 @@ export PORTMASTER_HOME="$GAMEDIR"
 
 export SUPERTUXKART_DATADIR="$GAMEDIR"
 export SUPERTUXKART_ASSETS_DIR="$GAMEDIR/data/"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "supertuxkart" -c supertuxkart.gptk textinput &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./supertuxkart 2>&1 | $ESUDO tee -a ./log.txt
+./supertuxkart
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

@@ -19,8 +19,11 @@ source $controlfolder/device_info.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/ROTA/
+GAMEDIR=/$directory/ports/rota/
 CONFDIR="$GAMEDIR/conf/"
+
+# New logging code.
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"

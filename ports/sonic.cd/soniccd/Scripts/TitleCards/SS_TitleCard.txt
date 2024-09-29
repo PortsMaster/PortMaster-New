@@ -1,0 +1,400 @@
+//-----------------Sonic CD Title Card Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.BarPos
+#alias Object.Value1			:	Object.TextPos
+#alias Object.Value2			:	Object.TextSize
+#alias Object.Value3			:	Object.Timer
+#alias Object.Value4			:	Object.FadeR
+#alias Object.Value5			:	Object.FadeG
+#alias Object.Value6			:	Object.FadeB
+#alias Object.Value7			:	Object.CharPos
+
+// SS Sonic aliases
+#alias Player.ControlMode		:	SSSonic.ControlMode
+
+// HUD Alias
+#alias Object.Value1			:	HUD.TimeSeconds
+#alias Object.Value2			:	HUD.TimeFrames
+
+// States
+#alias 0	:	TITLECARD_FADEIN
+#alias 1	:	TITLECARD_SLIDEIN
+#alias 2	:	TITLECARD_DISPLAY
+#alias 3	:	TITLECARD_SLIDEOUT
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+// ControlMode Aliases
+#alias -1	:	CONTROLMODE_NONE
+#alias  0	:	CONTROLMODE_NORMAL
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectDraw
+	// Set the starting time values
+	// (Rather than disabling the HUD timer while the title card is active,
+	//  its values are simply reset here every frame until no longer needed)
+	HUD[4].TimeSeconds = 100
+	HUD[4].TimeFrames  = 0
+	
+	switch Object.State
+	case TITLECARD_FADEIN
+		if Object.Timer > 0
+			if Object.Timer == 256
+				// Start the stage music!
+				PlayMusic(0)
+				
+				// Free Sonic's control
+				// (But, it gets locked again right after anyway...)
+				SSSonic.ControlMode = CONTROLMODE_NORMAL
+			end if
+			
+			SetScreenFade(Object.FadeR, Object.FadeG, Object.FadeB, Object.Timer)
+			Object.Timer -= 8
+		else
+			// Make the Title Card start appearing
+			
+			Object.State = TITLECARD_SLIDEIN
+			Object.Timer = 0
+		end if
+		
+		// Lock Sonic's control
+		SSSonic.ControlMode = CONTROLMODE_NONE
+		break
+		
+	case TITLECARD_SLIDEIN
+		TempValue0  = 144
+		TempValue0 += Object.CharPos
+
+		if Object.TextPos > TempValue0
+			// Slide the text to the left
+			Object.TextPos -= 8
+			
+			// Now, this part got changed in an update
+			
+		else
+			// -> Updated version - both the text AND the bar have to be on screen for the title card to progress
+
+			if Object.BarPos == 0
+				Object.State = TITLECARD_DISPLAY
+			end if
+		end if
+		
+		if Object.BarPos < 0
+			// Move the Bar down
+			Object.BarPos += 8
+			
+			// There used to be code here in older versions, but not anymore...
+			// -> Initial version - only the bar needed to be in the proper position for the title card to continue
+			//    This had text get incorrectly often
+			
+		end if
+		break
+		
+	case TITLECARD_DISPLAY
+		// Hold for a moment to let the Player see what a nice Title Card this is
+		
+		if Object.Timer == 160
+			// Time's up, start sliding out!
+			Object.State = TITLECARD_SLIDEOUT
+		else
+			Object.Timer++
+		end if
+		break
+		
+	case TITLECARD_SLIDEOUT
+		if Object.TextPos < 408
+		
+			// Move the text to the right, and...
+			Object.TextPos += 16
+			
+			// ...move the bar upwards as well
+			Object.BarPos -= 16
+			
+		else
+			// The Title Card's job is done, despawn it
+			ResetObjectEntity(20, TypeName[Blank Object], 0, 0, 0)
+			
+			// Free Sonic's control, for real this time
+			SSSonic.ControlMode = CONTROLMODE_NORMAL
+			
+			if Options.GameMode == MODE_TIMEATTACK
+				// If in time attack, start proper time progression
+				Stage.TimeEnabled = true
+			end if
+		end if
+		break
+		
+	end switch
+	
+	// Before drawing, make sure this object hasn't been blanked already
+	// (Under certain circumstances, this can otherwise cause major graphical issues!!)
+	if Object.Type > TypeName[Blank Object]
+		TempValue0  = 136
+		TempValue0 += Object.CharPos
+		
+		// Draw the Title Card Bar
+		DrawSpriteScreenXY(0, TempValue0, Object.BarPos)
+		
+		// And then draw the Sonic CD bar and the weird three lines
+		DrawSpriteScreenXY(5, Object.TextPos, 64)
+		DrawSpriteScreenXY(6, Object.TextPos, 64)
+		DrawSpriteScreenXY(7, Object.TextPos, 64)
+		
+#platform: Use_Decomp // Creates a black rectangle that fills the empty space on wider resolutions
+		TempValue0  = Object.TextPos
+		TempValue0 += 150
+		DrawRect(TempValue0, 147, Screen.XSize, 9, 0, 0, 0, 255)
+#endplatform
+		
+		// And then Draw the Round Name
+		// (Letters start at Sprite Frame 8)
+		TempValue0 = 8
+		while TempValue0 < Object.TextSize
+			DrawSpriteScreenXY(TempValue0, Object.TextPos, 64)
+			TempValue0++
+		loop
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Load different sheets based on the Engine's current language
+	switch Engine.Language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+		// LANG_ENGLISH and LANG_JAPANESE share the same sheet
+		LoadSpriteSheet("Special/ScoreScreen.gif")
+		break
+		
+	case LANG_FRENCH
+		LoadSpriteSheet("Special/ScoreScreen_FR.gif")
+		break
+		
+	case LANG_ITALIAN
+		LoadSpriteSheet("Special/ScoreScreen_IT.gif")
+		break
+		
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Special/ScoreScreen_DE.gif")
+		break
+		
+	case LANG_SPANISH
+		LoadSpriteSheet("Special/ScoreScreen_ES.gif")
+		break
+		
+	end switch
+	
+	// Place the Title Card object into the level and setup its values
+	Object[20].Type  = TypeName[TitleCard]
+	Object[20].Timer = 384
+	
+	// Make the Title Card always active, and have it draw above everything
+	Object[20].Priority  = PRIORITY_ACTIVE
+	Object[20].DrawOrder = 6
+	
+	// Set initial Bar & Text Positions
+	Object[20].BarPos  = -216
+	Object[20].TextPos = 336
+	
+
+	Object[20].CharPos  = Screen.CenterX
+	Object[20].CharPos -= 160
+	
+	if Object[20].CharPos > 3
+		Object[20].CharPos -= 4
+	end if
+	
+	Object[20].CharPos &= 248
+	
+	Object[20].TextPos += Object[20].CharPos
+	Object[20].TextPos += Object[20].CharPos
+	
+	// "SPECIAL STAGE" is 12 letters
+	Object[20].TextSize = 12
+	
+	// Bump the value by 8 to correspond with the order of the Sprite Frames
+	Object[20].TextSize += 8
+	
+	// Preserve the color used from the last fade. Fade_Colour is stored as RRGGBB, in hex
+	
+	Object[20].FadeR   = Fade_Colour
+	Object[20].FadeR >>= 16
+	
+	Object[20].FadeG   = Fade_Colour
+	Object[20].FadeG  &= 0x00FF00
+	Object[20].FadeG >>= 8
+	
+	Object[20].FadeB = Fade_Colour
+	Object[20].FadeB &= 0x0000FF
+	
+	// 0 - Red Bar Frame
+	SpriteFrame(0, 0, 32, 184, 224, 37)
+	
+	// These next few frames are unused leftovers from the maingame Title Card script
+	// They appear as garbage sprites here since they use values from the normal Global Display sheet,
+	// and not the Special Stage version of the sheet
+	
+	// 1-3 - Act Bubbles, appear as random texts with this sheet
+	SpriteFrame(96, 96, 48, 48, 41, 1)
+	SpriteFrame(96, 96, 48, 48, 90, 1)
+	SpriteFrame(96, 96, 48, 48, 139, 1)
+	
+	// 4 - "Zone" text, appears as part of BG with this sheet though
+	SpriteFrame(64, 97, 48, 16, 41, 67)
+	
+	// All the letters used by the Title Card
+	// They got updated a bit post-release, we're using the updated version here
+	
+	// 5 - Main part of the "SONIC THE HEGDEHOG CD" bar
+	
+	// Workaround for steam datafile to show this sprite correctly
+#platform: Use_Origins
+	SpriteFrame(72, 81, 160, 16, 60, 227)	 // #5  - Sonic The Hedgehog CD
+#endplatform
+
+#platform: Use_Standalone
+	#platform: Standard
+		SpriteFrame(64, 81, 160, 16, 52, 227)// #5  - Sonic The Hedgehog CD
+	#endplatform
+#endplatform
+
+#platform: Use_Standalone
+	#platform: Mobile
+		SpriteFrame(72, 81, 160, 16, 60, 227)// #5  - Sonic The Hedgehog CD
+	#endplatform
+#endplatform
+
+	// 6 - Continuation of the Sonic CD bar
+	SpriteFrame(16, 81, 160, 16, 52, 227)
+	
+	// 7 - Set of three lines
+	SpriteFrame(100, 32, 24, 48, 182, 124)
+	
+	// 8-19 - Individual letters spelling out "Special Stage"
+	SpriteFrame(0, 0, 16, 55, 207, 124)		// #8  - S
+	SpriteFrame(17, 32, 10, 23, 176, 180)	// #9  - P
+	SpriteFrame(28, 32, 9, 23, 187, 180)	// #10 - E
+	SpriteFrame(38, 32, 8, 23, 197, 180)	// #11 - C
+	SpriteFrame(47, 32, 6, 23, 206, 180)	// #12 - I
+	SpriteFrame(54, 32, 11, 23, 212, 180)	// #13 - A
+	SpriteFrame(66, 32, 9, 23, 176, 203)	// #14 - L
+	
+	SpriteFrame(0, 56, 16, 55, 207, 124)	// #15 - S
+	SpriteFrame(17, 56, 10, 23, 186, 203)	// #16 - T
+	SpriteFrame(28, 56, 11, 23, 212, 180)	// #17 - A
+	SpriteFrame(40, 56, 10, 23, 197, 203)	// #18 - G
+	SpriteFrame(51, 56, 9, 23, 187, 180)	// #19 - E
+	
+#platform: Use_Origins
+	// There aren't any Special Stage missions nor are any of them part of the Boss Rush, so god knows why this code is here
+	
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		TempValue0 = true
+	else
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			TempValue0 = true
+		else
+			TempValue0 = false
+		end if
+	end if
+	
+	if TempValue0 != false
+		PlayMusic(0)
+		
+		game.missionCondition = 0
+		game.missionEnd		  = false
+
+		Player.ControlMode	  = CONTROLMODE_NORMAL
+		Stage.TimeEnabled	  = true
+
+		ResetObjectEntity(20, TypeName[Blank Object], 0, 0, 0)
+		Warp.XPos = 0
+	end if
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.TextSize = 12
+	Object.TextSize += 8
+
+	TempValue0 = 136
+	TempValue0 += Object.CharPos
+	TempValue0 <<= 16
+
+	TempValue1 = 0x500000
+	TempValue1 += Object.YPos
+	
+	DrawSpriteXY(0, Object.XPos, Object.YPos)
+	DrawSpriteXY(5, Object.XPos, TempValue1)
+	DrawSpriteXY(6, Object.XPos, TempValue1)
+	DrawSpriteXY(7, Object.XPos, TempValue1)
+	
+	TempValue0 = 8
+	while TempValue0 < Object.TextSize
+		DrawSpriteXY(TempValue0, Object.XPos, TempValue1)
+		TempValue0++
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/ScoreScreen.gif")
+	// 0 - Red Bar Frame
+	SpriteFrame(0, 0, 32, 184, 224, 37)
+	
+	// 1-3 - Act Bubbles, not used here.
+	SpriteFrame(96, 96, 48, 48, 41, 1)
+	SpriteFrame(96, 96, 48, 48, 90, 1)
+	SpriteFrame(96, 96, 48, 48, 139, 1)
+	
+	// 4 - "Zone" text, not used here.
+	SpriteFrame(64, 97, 48, 16, 41, 67)
+	
+	// 5 - Main part of the "SONIC THE HEGDEHOG CD" bar
+	SpriteFrame(72, 81, 160, 16, 60, 227)
+	
+	// 6 - Continuation of the Sonic CD bar
+	SpriteFrame(16, 81, 160, 16, 52, 227)
+	
+	// 7 - Set of three lines
+	SpriteFrame(100, 32, 24, 48, 182, 124)
+	
+	// 8-19 - Individual letters spelling out "Special Stage"
+	SpriteFrame(0, 0, 16, 55, 207, 124)		// #8  - S
+	SpriteFrame(17, 32, 10, 23, 176, 180)	// #9  - P
+	SpriteFrame(28, 32, 9, 23, 187, 180)	// #10 - E
+	SpriteFrame(38, 32, 8, 23, 197, 180)	// #11 - C
+	SpriteFrame(47, 32, 6, 23, 206, 180)	// #12 - I
+	SpriteFrame(54, 32, 11, 23, 212, 180)	// #13 - A
+	SpriteFrame(66, 32, 9, 23, 176, 203)	// #14 - L
+	
+	SpriteFrame(0, 56, 16, 55, 207, 124)	// #15 - S
+	SpriteFrame(17, 56, 10, 23, 186, 203)	// #16 - T
+	SpriteFrame(28, 56, 11, 23, 212, 180)	// #17 - A
+	SpriteFrame(40, 56, 10, 23, 197, 203)	// #18 - G
+	SpriteFrame(51, 56, 9, 23, 187, 180)	// #19 - E
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

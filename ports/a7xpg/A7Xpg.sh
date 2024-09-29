@@ -26,6 +26,8 @@ CONFDIR="$GAMEDIR/conf/"
 
 mkdir -p "$GAMEDIR/conf"
 
+cd $GAMEDIR
+
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -38,8 +40,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
-
-cd $GAMEDIR
 
 $GPTOKEYB "a7xpg" -c "./a7xpg.gptk" &
 ./a7xpg

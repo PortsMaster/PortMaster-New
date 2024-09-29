@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# Define key mapping using simple space-separated strings
+key_mapping_keys="ProceduralTextures Fog LightCoronas WeaponCoronas ObjectComplexity PowerupHalos ScorchMarks DynamicLighting ForceFeedback SimpleHeadlight Gamma TerrainDetail MipMapping ShaderType RenderDistance TextureQuality VSync BilinearFiltering GuidedMissileView MusicVolume MirrorSurfaces MineAutoleveling SoundQuality SoundQuantity SoundVolume SpecularMapping TerrainAutoleveling PXOLogin PXOPassword DirectIP"
+key_mapping_values="DetailProcedurals DetailFog DetailCoronas DetailWeaponCoronas DetailObjectComp DetailPowerupHalos DetailScorchMarks Dynamic_Lighting EnableJoystickFF FastHeadlight RS_gamma RS_pixelerror RS_mipping RS_light RS_terraindist RS_texture_quality RS_vsync RS_bilear MissileView MUS_mastervol MirrorSurfaces RoomLeveling SoundQuality SoundQuantity SND_mastervol Specmapping TerrLeveling TrackerLogin TrackerPassword DirectIP"
+
+# Define key types using simple space-separated strings
+key_types_keys="RS_gamma RS_terraindist Dynamic_Lighting RS_vsync RS_bilear RS_mipping RS_light RS_texture_quality SND_mastervol MUS_mastervol EnableJoystickFF SoundQuality SoundQuantity DetailObjectComp RS_pixelerror TerrLeveling RoomLeveling DetailScorchMarks DetailFog DetailCoronas DetailWeaponCoronas DetailProcedurals DetailPowerupHalos Specmapping MirrorSurfaces FastHeadlight MissileView TrackerLogin TrackerPassword DirectIP"
+key_types_values="string string dword dword dword dword dword dword string string dword dword dword string dword dword dword dword dword dword dword dword dword dword dword dword string string string"
+
+# Function to get value from key mapping
+get_value_from_key() {
+  local key="$1"
+  local keys="$2"
+  local values="$3"
+  local i=1
+
+  for k in $keys; do
+    if [ "$k" = "$key" ]; then
+      echo $values | cut -d' ' -f$i
+      return
+    fi
+    i=$((i + 1))
+  done
+}
+
+# Function to update the .Descent3Registry file based on user-friendly ini values
+parse_ini() {
+  local key="$1"
+  local value="$2"
+  local type="$3"
+  local file="$4"
+  local entry
+
+  if [ "$type" = "dword" ]; then
+    if echo "$value" | grep -qE '^[0-9]+$'; then
+      value=$(printf "%X" "$value")
+    elif echo "$value" | grep -qE '^[0-9]+\.[0-9]+$'; then
+      value=$(printf "%X" "${value%.*}")
+    fi
+    entry="\"$key\"=dword:$value"
+  elif [ "$type" = "string" ]; then
+    value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    entry="\"$key\"=\"$value\""  # Treat value as a string, wrap in double quotes
+  else
+    echo "Unsupported registry type for key: $key"
+    return 1
+  fi
+
+  if grep -q "^\"$key\"=\".*\"" "$file"; then
+    sed -i "s|^\"$key\"=\".*\"|$entry|" "$file" || echo "Failed to update $file"
+  else
+    echo "$entry" >> "$file" || echo "Failed to append to $file"
+  fi
+}
+
+# Read the ini file and update settings
+while IFS='=' read -r key value_comment; do
+  key=$(echo "$key" | sed 's/^[ \t]*//;s/[ \t]*$//')  # Trim spaces
+  value=$(echo "$value_comment" | sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/;.*$//' | tr -d '\r')
+  [ -z "$key" ] || echo "$key" | grep -qE '^\[' && continue
+  
+  registry_key=$(get_value_from_key "$key" "$key_mapping_keys" "$key_mapping_values")
+  if [ -n "$registry_key" ]; then
+    registry_type=$(get_value_from_key "$registry_key" "$key_types_keys" "$key_types_values")
+    parse_ini "$registry_key" "$value" "$registry_type" "$REGFILE"
+  else
+    echo "No mapping found for key: $key"
+  fi
+done < "$INIFILE"

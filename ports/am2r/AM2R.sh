@@ -25,7 +25,7 @@ $ESUDO chmod 666 /dev/uinput
 
 GAMEDIR="/$directory/ports/am2r"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:/usr/lib32"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib:/usr/lib32:$LD_LIBRARY_PATH"
 $ESUDO rm -rf ~/.config/am2r
 ln -sfv $GAMEDIR/conf/am2r/ ~/.config/
 cd $GAMEDIR

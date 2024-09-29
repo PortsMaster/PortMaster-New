@@ -13,38 +13,32 @@ else
 fi
 
 source $controlfolder/control.txt
-if [ -z ${TASKSET+x} ]; then
-  source $controlfolder/tasksetter
-fi
-
 get_controls
 
 CUR_TTY=/dev/tty0
 
 PORTDIR="/$directory/ports"
 GAMEDIR="$PORTDIR/opensupaplex"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 $ESUDO chmod 666 $CUR_TTY
-$ESUDO touch log.txt
-$ESUDO chmod 666 log.txt
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
 ## RUN SCRIPT HERE
 
 export PORTMASTER_HOME="$GAMEDIR"
-
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 echo "Starting game." > $CUR_TTY
 
 $GPTOKEYB "opensupaplex" opensupaplex.gptk textinput &
-LD_LIBRARY_PATH="$PWD/libs" $TASKSET ./opensupaplex 2>&1 | $ESUDO tee -a ./log.txt
+./opensupaplex
 
 $ESUDO kill -9 $(pidof gptokeyb)
-unset LD_LIBRARY_PATH
-unset SDL_GAMECONTROLLERCONFIG
 $ESUDO systemctl restart oga_events &
 
 # Disable console

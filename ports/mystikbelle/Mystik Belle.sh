@@ -32,6 +32,8 @@ GAMEDIR="/$directory/ports/mystikbelle"
 LIBDIR="$GAMEDIR/lib32"
 BINDIR="$GAMEDIR/box86"
 
+cd $GAMEDIR
+
 # gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -40,23 +42,21 @@ else
 fi
 
 # system
-export LD_LIBRARY_PATH="$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 
 # box86
 export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
-
-cd $GAMEDIR
 
 $ESUDO rm -rf ~/.config/Mystik_Belle
 $ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle
 
 $GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
-#echo "Loading, please wait... (might take a while!)" > /dev/tty0
+echo "Loading, please wait... (might take a while!)" > /dev/tty0
 $GAMEDIR/box86/box86 $GAMEDIR/runner
 
 $ESUDO kill -9 $(pidof gptokeyb)
