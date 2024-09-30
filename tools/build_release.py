@@ -28,7 +28,7 @@ README_FILE, SCREENSHOT_FILE, COVER_FILE, GAMEINFO_XML, PORT_JSON, PORT_SCRIPT, 
 REQUIRED_FILES = (
     (1<<README_FILE)     |
     (1<<SCREENSHOT_FILE) |
-    # (1<<GAMEINFO_XML)    |   ## Not yet required for every port.
+    (1<<GAMEINFO_XML)    |
     (1<<PORT_JSON)       |
     (1<<PORT_SCRIPT)     |
     (1<<PORT_DIR)        )
@@ -237,7 +237,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
             port_data['dirs'].append(port_file.name + '/')
 
         elif port_file_type == PORT_JSON:
-            port_data['port_json'] = port_info_load(port_file)
+            port_data['port_json'] = port_info_load(port_file, port_dir.name)
             if port_data['port_json'] is None:
                 return None
 
