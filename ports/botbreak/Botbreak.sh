@@ -13,28 +13,13 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-# We source the control.txt file contents here
-# The $ESUDO, $directory, $param_device and necessary 
-# Sdl configuration controller configurations will be sourced from the control.txt
-
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-
-# We pull the controller configs from the get_controls function from the control.txt file here
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
-# We check on emuelec based CFWs the OS_NAME 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
-
-GAMEDIR=/$directory/ports/botbreak
+GAMEDIR="$directory/ports/botbreak"
 
 # We log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
