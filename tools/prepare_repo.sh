@@ -14,6 +14,7 @@ wget "https://github.com/${RELEASE_ORG}/${RELEASE_REPO}/releases/latest/download
 wget "https://github.com/${RELEASE_ORG}/${RELEASE_REPO}/releases/latest/download/ports_status.json"
 wget "https://github.com/${RELEASE_ORG}/${RELEASE_REPO}/releases/latest/download/manifest.json"
 wget "https://github.com/${RELEASE_ORG}/${RELEASE_REPO}/releases/latest/download/images.zip"
+wget "https://raw.githubusercontent.com/PortsMaster/PortMaster-Info/refs/heads/main/port_stats_raw.json"
 cd ..
 
 python3 tools/build_data.py
