@@ -23,29 +23,27 @@ $ESUDO chmod 666 /dev/tty0
 
 GAMEDIR="/$directory/ports/vitasnake"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/vitasnake/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/vitasnake/gamedata/"
+export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
 # Check for file existence before trying to manipulate them:
-[ -f "./vitasnake/gamedata/data.win" ] && mv vitasnake/gamedata/data.win vitasnake/gamedata/game.droid
-[ -f "./vitasnake/gamedata/game.win" ] && mv vitasnake/gamedata/game.win vitasnake/gamedata/game.droid
-[ -f "./vitasnake/gamedata/game.unx" ] && mv vitasnake/gamedata/game.unx vitasnake/gamedata/game.droid
+[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloader" -c ./vitasnake/controls.gptk &
+$GPTOKEYB "gmloader" -c ./vitasnake.gptk &
 
-$ESUDO chmod +x "$GAMEDIR/vitasnake/gmloader"
+$ESUDO chmod +x "$GAMEDIR/gmloader"
 
-./vitasnake/gmloader vitasnake/game.apk
+./gmloader vitasnake.apk
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
