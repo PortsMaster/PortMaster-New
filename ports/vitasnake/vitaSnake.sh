@@ -29,7 +29,7 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -43,7 +43,7 @@ $GPTOKEYB "gmloader" -c ./vitasnake.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
-./gmloader vitasnake.apk
+./gmloader game.apk
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
