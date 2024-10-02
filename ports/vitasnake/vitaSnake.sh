@@ -38,12 +38,13 @@ cd $GAMEDIR
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
+$ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
-$GPTOKEYB "gmloader" -c ./vitasnake.gptk &
+$GPTOKEYB "gmloadernext" -c ./vitasnake.gptk &
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
-./gmloader game.apk
+./gmloadernext game.apk
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
