@@ -1,3 +1,5 @@
+#!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -19,7 +21,7 @@ get_controls
 
 $ESUDO chmod 666 /dev/tty0
 
-GAMEDIR="/$directory/ports/flaskoman"
+GAMEDIR=/$directory/ports/flaskoman
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
 export GMLOADER_DEPTH_DISABLE=1
@@ -35,6 +37,23 @@ if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
+fi
+
+# Check if there are any .ogg or .mp3 files in the ./gamedata directory
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    # Create the ./assets directory if it doesn't exist
+    mkdir -p ./assets
+
+    # Move all .ogg files from ./gamedata to ./assets
+    mv ./gamedata/*.ogg ./assets/ 2>/dev/null
+    echo "Moved .ogg files from ./gamedata to ./assets/"
+
+    # Zip the contents of ./game.apk including the new audio files
+    zip -r -0 ./game.apk ./assets/
+    echo "Zipped contents to ./game.apk"
+
+    # Remove the assets directory
+    rm -Rf ./assets/
 fi
 
 # Check for file existence before trying to manipulate them:
