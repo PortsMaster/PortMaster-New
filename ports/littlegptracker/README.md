@@ -1,5 +1,5 @@
 ## Notes
-Thanks to the [Mdashdotdashn](https://github.com/Mdashdotdashn), [djdiskmachine](https://github.com/djdiskmachine)  and other contributors for creating this music tracker and making available for free.
+Thanks to the [Mdashdotdashn](https://github.com/Mdashdotdashn), [djdiskmachine](https://github.com/djdiskmachine), and other contributors for creating this music tracker and making it available for free.
 
 ## Controls
 ```
