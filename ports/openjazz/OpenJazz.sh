@@ -28,6 +28,8 @@ if [ -n "$(pgrep sway)" ]; then
   timeout 7 watch swaymsg '[app_id=OpenJazz] fullscreen enable' &
 fi
 
+unset SDL_BLITTER_DISABLED
+
 if [[ -e "/usr/share/plymouth/themes/text.plymouth" ]]; then
   SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ./OpenJazz -f "$GAMEDIR/gamedata" 2>&1 | tee $GAMEDIR/log.txt
 else

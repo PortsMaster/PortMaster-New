@@ -1,0 +1,109 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Blastoid  enemy from HCZ                              //
+//-------------------------------------------------------//
+
+//# address-hook(0x087928) end(0x087928)
+//# alias(fn087928) deprecated
+function void Blastoid.Init()
+{
+	Object.InitWithUpdateAddress(addressof(Blastoid.BaseUpdate))
+}
+
+
+//# address-hook(0x08792e) end(0x087940)
+//# alias(fn08792e) deprecated
+function void Blastoid.BaseUpdate()
+{
+	// Targets:
+	//  - 0x08794a	-> objA0.base_state = 0x00
+	//  - 0x087952	-> objA0.base_state = 0x02
+	//  - 0x087976	-> objA0.base_state = 0x04
+	call tableLookupAddress(0x087944, objA0.base_state)
+
+	if (fn0879a8())
+		return
+
+	Enemy.DrawOrUnload()
+}
+
+
+//# address-hook(0x08794a) end(0x08794e)
+function void fn08794a()
+{
+	setupObjectAttributesFull(0x0879e0)
+}
+
+
+//# address-hook(0x087952) end(0x087974)
+function void fn087952()
+{
+	CheckDistanceToPlayers()
+	if (D2.u16 >= 0x80)
+		return
+
+	objA0.base_state = 0x04
+	u32[A0 + 0x30] = 0x087a10
+	objA0.countdown_callback = 0x0879a0
+}
+
+
+//# address-hook(0x087976) end(0x08799c)
+function void fn087976()
+{
+	Object.AnimationProgressByLocalA1.DistinctTimer()
+	if (D2.s16 > 0 && objA0.animation.sprite == 1 && objA0.render_flags & render_flag.VISIBLE)
+	{
+		playSound(0x4d)
+		// "spawnProjectileChildObjectsInDir(0x0879f8)" replaced by:
+		spawnProjectileChildObjectInDir(0x086d4a, 0x00, -20, -7, -512, -256, 0x0879ec, 0x087a1f, 0x085636)
+	}
+}
+
+
+//# address-hook(0x0879a0) end(0x0879a6)
+function void fn0879a0()
+{
+	objA0.base_state = 0x02
+}
+
+
+//# translated(0x0879a8) end(0x0879da)
+function bool fn0879a8()
+{
+	// Check for collision with either character
+	fn085870()
+	if (_equal())
+	{
+		return false
+	}
+
+	// Check which player to damage
+	fn0857c2()
+	if (_equal())
+	{
+		if (u8[A1 + 0x34] == 0)
+		{
+			// Character is not invulnerable, deal damage to character
+			Enemy.DamageCharacter()
+		}
+		return false
+	}
+
+	// Trigger bridge collapse after badnik is defeated
+	D0.u16 = objA0.subtype2c & 0x0f
+	A3 = 0xfffff7e0
+	u8[A3 + D0.u16] = 0xff
+	fn085732()
+	DrawObject()
+	return true
+}
