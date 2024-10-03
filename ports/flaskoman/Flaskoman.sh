@@ -43,15 +43,12 @@ fi
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     # Create the ./assets directory if it doesn't exist
     mkdir -p ./assets
-
     # Move all .ogg files from ./gamedata to ./assets
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
     echo "Moved .ogg files from ./gamedata to ./assets/"
-
     # Zip the contents of ./game.apk including the new audio files
     zip -r -0 ./game.apk ./assets/
     echo "Zipped contents to ./game.apk"
-
     # Remove the assets directory
     rm -Rf ./assets/
 fi
