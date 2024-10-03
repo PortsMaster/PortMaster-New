@@ -29,15 +29,9 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 # Check if there are any .ogg or .mp3 files in the ./gamedata directory
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
