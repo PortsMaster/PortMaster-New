@@ -2,7 +2,7 @@
 This is a port of Super Dungeon Muncher by nexy via PortMaster. It uses [gmloader-next](https://github.com/JohnnyonFlame/gmloader-next) by JohnnyOnFlame.
 
 # Installation
-Purchase the game from [Itch.io](https://n-nexy.itch.io/super-dungeon-muncher) or [Steam](https://store.steampowered.com/app/3095800/SUPER_Dungeon_Muncher) and put `data.win` into your `ports/superdungeonmuncher` folder.
+Purchase the game from [Itch.io](https://n-nexy.itch.io/super-dungeon-muncher) or [Steam](https://store.steampowered.com/app/3095800/SUPER_Dungeon_Muncher) and put `data.win` and `options.ini` into your `ports/superdungeonmuncher/gamedata` folder.
 
 ## Default Gameplay Controls
 | Button | Action |
