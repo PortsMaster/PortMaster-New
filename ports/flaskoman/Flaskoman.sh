@@ -61,6 +61,9 @@ fi
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
+# Delete files not required
+rm -f ./gamedata/*.exe ./gamedata/*.ini ./gamedata/*.txt
+
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
@@ -73,4 +76,3 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
-
