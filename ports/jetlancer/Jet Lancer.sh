@@ -91,6 +91,7 @@ process_game() {
  	    echo "Steam data.win has been patched"
         else
             echo "Error: MD5 checksum of data.win does not match any expected version."
+            exit 1
         fi
     else    
         echo "Error: Missing data.win in gamedata folder or game has been patched."
