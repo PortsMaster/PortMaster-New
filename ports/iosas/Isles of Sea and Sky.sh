@@ -53,16 +53,14 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./libs/splash "splash.png" 1 
+    [ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
     $ESUDO ./libs/splash "splash.png" 8000
 fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "control.gptk" &
-pm_platform_helper "$GAMEDIR/game.apk"
+pm_platform_helper "$GAMEDIR/gmloadernext.apk"
 ./gmloadernext game.apk
 
 # Kill processes
 pm_finish
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
