@@ -56,7 +56,7 @@ if [ -f "./gamedata/data.win" ]; then
     # Checksum for the Steam version
     elif [ "$checksum" = "3cfef6de9806eb3e07eda4626d3fba0a" ]; then
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/steam.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
+        rm -f gamedata/data.win
         rm -f "gamedata/Place data.win here"
     else
         echo "Error: MD5 checksum of game.unx does not match any expected version."
