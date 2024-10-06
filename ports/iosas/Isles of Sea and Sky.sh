@@ -59,7 +59,7 @@ fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "control.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.apk"
+pm_platform_helper "$GAMEDIR/gmloadernext"
 ./gmloadernext game.apk
 
 # Kill processes
