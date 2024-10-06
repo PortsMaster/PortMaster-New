@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -36,7 +35,6 @@ to_lower_case() {
     done
 }
 
-#GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/quake2"
 GAMEDIR="/$directory/ports/quake2"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
@@ -46,10 +44,6 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 to_lower_case "$GAMEDIR/rogue"
-
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
@@ -84,9 +78,7 @@ else
       fi
 fi
 
-#ADDLPARAMS="+set in_initjoy 0 +set cl_showfps 1 +set r_shadows 1 -datadir $GAMEDIR +set vid_fullscreen 2 -portable"
-$ESUDO rm -rf ~/.yq2
-$ESUDO ln -sfv /$GAMEDIR/conf/.yq2 ~/
+bind_directories $GAMEDIR/conf/.yq2 ~/
 
 if [[ ! -f "$GAMEDIR/rogue/pak0.pak" ]]; then
     ./text_viewer -f 25 -w -t "Missing gamedata" -m "Please place your pak0.pak into the ports/quake2/rogue directory and, optionally, the music tracks in ports/quake2/rogue/music and the .cin cutscenes in ports/quake2/rogue/video!"
@@ -94,9 +86,9 @@ if [[ ! -f "$GAMEDIR/rogue/pak0.pak" ]]; then
 fi
 
 $GPTOKEYB "quake2" -c "$GAMEDIR/quake2.gptk" &
+pm_platform_helper $GAMEDIR/quake2
 ./quake2 +set vid_renderer $YQ2RENDERER +set r_mode -2 +set r_customwidth $DISPLAY_WIDTH +set r_customheight $DISPLAY_HEIGHT +set r_gunfov $GUNFOV +set r_hudscale $SSCALE +set r_menuscale $SSCALE +set game rogue
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
+pm_finish
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
