@@ -32,7 +32,7 @@ cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "gmloadernext" -c "psrl.gptk"&
+$GPTOKEYB "gmloadernext" -c "psrl.gptk" &
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
