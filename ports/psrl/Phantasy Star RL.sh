@@ -30,7 +30,6 @@ cd $GAMEDIR
 # Rename data.win
 [ -f "./data.win" ] && mv data.win game.droid
 
-pm_platform_helper "$GAMEDIR/gmloadernext"
 $GPTOKEYB "gmloadernext" -c "psrl.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
 
