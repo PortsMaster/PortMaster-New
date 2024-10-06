@@ -78,8 +78,7 @@ else
       fi
 fi
 
-$ESUDO rm -rf ~/.yq2
-$ESUDO ln -sfv /$GAMEDIR/conf/.yq2 ~/
+bind_directories $GAMEDIR/conf/.yq2  ~/.yq2
 
 if [[ ! -f "$GAMEDIR/rogue/pak0.pak" ]]; then
     ./text_viewer -f 25 -w -t "Missing gamedata" -m "Please place your pak0.pak into the ports/quake2/rogue directory and, optionally, the music tracks in ports/quake2/rogue/music and the .cin cutscenes in ports/quake2/rogue/video!"
