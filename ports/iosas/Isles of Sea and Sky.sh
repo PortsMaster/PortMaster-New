@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -34,8 +33,6 @@ export PATCHER_TIME="5 to 10 minutes"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x -R $GAMEDIR/*
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/gmKtool.py"
@@ -62,9 +59,10 @@ fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "control.gptk" &
+pm_platform_helper "$GAMEDIR/game.apk"
 ./gmloadernext game.apk
 
 # Kill processes
-$ESUDO kill -9 $(pidof gptokeyb)
+pm_finish
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
