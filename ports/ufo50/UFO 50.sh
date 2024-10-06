@@ -57,11 +57,9 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext" -c "./ufo50.gptk" & 
-
-pm_platform_helper "$GAMEDIR/game.apk"
+$GPTOKEYB "gmloadernext" -c "./ufo50.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext"
 ./gmloadernext game.apk
 
 # Kill processes
-pm_finish &
-printf "\033c" > /dev/tty0
+pm_finish
