@@ -78,7 +78,8 @@ else
       fi
 fi
 
-bind_directories $GAMEDIR/conf/.yq2 ~/
+$ESUDO rm -rf ~/.yq2
+$ESUDO ln -sfv /$GAMEDIR/conf/.yq2 ~/
 
 if [[ ! -f "$GAMEDIR/xatrix/pak0.pak" ]]; then
     ./text_viewer -f 25 -w -t "Missing gamedata" -m "Please place your pak0.pak into the ports/quake2/xatrix directory and, optionally, the music tracks in ports/quake2/xatrix/music and the .cin cutscenes in ports/quake2/xatrix/video!"

@@ -78,7 +78,8 @@ else
       fi
 fi
 
-bind_directories $GAMEDIR/conf/.yq2 ~/
+$ESUDO rm -rf ~/.yq2
+$ESUDO ln -sfv /$GAMEDIR/conf/.yq2 ~/
 
 $GPTOKEYB "quake2" -c "$GAMEDIR/quake2.gptk" &
 pm_platform_helper $GAMEDIR/quake2
