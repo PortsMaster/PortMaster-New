@@ -30,7 +30,6 @@ cd $GAMEDIR
 # Rename data.win
 [ -f "./data.win" ] && mv data.win game.droid
 
-$ESUDO chmod 666 /dev/uinput
 pm_platform_helper "$GAMEDIR/gmloadernext"
 $GPTOKEYB "gmloadernext" -c "psrl.gptk" &
 
