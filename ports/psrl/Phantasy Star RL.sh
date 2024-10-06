@@ -32,6 +32,7 @@ cd $GAMEDIR
 
 pm_platform_helper "$GAMEDIR/gmloadernext"
 $GPTOKEYB "gmloadernext" -c "psrl.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext"
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
