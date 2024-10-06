@@ -44,9 +44,8 @@ fi
 
 cd $GAMEDIR
 
-# Run LOVE
+# Run LOVE and Spotify
 $GPTOKEYB "love" &
-sleep 0.3 # For TSP only, do not move/modify this line.
 pm_platform_helper $GAMEDIR/love
 ./love librespotui
 
