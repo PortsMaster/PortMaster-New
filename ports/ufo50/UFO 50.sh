@@ -58,6 +58,8 @@ fi
 
 # Run the game
 $GPTOKEYB "gmloadernext" -c "./ufo50.gptk" & 
+
+pm_platform_helper "$GAMEDIR/game.apk"
 ./gmloadernext game.apk
 
 # Kill processes
