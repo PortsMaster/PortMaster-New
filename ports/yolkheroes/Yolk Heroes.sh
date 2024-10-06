@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -60,9 +59,10 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./yolkheroes.gptk" &
+pm_platform_helper "$runtime"
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/yolkheroes.pck"
 
-$ESUDO umount "$godot_dir"
+pm_finish
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
