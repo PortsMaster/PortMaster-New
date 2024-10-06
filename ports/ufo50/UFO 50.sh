@@ -63,6 +63,5 @@ pm_platform_helper "$GAMEDIR/game.apk"
 ./gmloadernext game.apk
 
 # Kill processes
-pm_finish
-$ESUDO systemctl restart oga_events &
+pm_finish &
 printf "\033c" > /dev/tty0
