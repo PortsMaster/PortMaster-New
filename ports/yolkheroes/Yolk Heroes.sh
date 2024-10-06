@@ -34,17 +34,6 @@ export TEXTINPUTINTERACTIVE="Y"        # enables interactive text input mode
 export TEXTINPUTNOAUTOCAPITALS="Y"     # disables automatic capitalisation of first letter of words in interactive text input mode
 export TEXTINPUTADDEXTRASYMBOLS="Y"    # enables additional symbols for interactive text input
 
-# # .check for patched .pck ...
-# if [ -f "/$GAMEDIR/gamedata/yolkheroes-patched.pck" ]; then
-#   echo "found yolkheroes-patched.pck"
-# # ... or patched .pck if not found
-# elif [ -f "/$GAMEDIR/gamedata/yolkheroes.pck" ]; then
-#   echo "patching yolkheroes.pck"
-#   export LD_LIBRARY_PATH=/$GAMEDIR/lib
-#   cd /$GAMEDIR/gamedata/
-#   $SUDO $controlfolder/xdelta3 -d -s "yolkheroes.pck" "yolkheroes.xdelta" "yolkheroes-patched.pck"
-# fi
-
 cd $GAMEDIR
 
 runtime="frt_3.5.2"
