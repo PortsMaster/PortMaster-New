@@ -70,5 +70,5 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader goblindungeoneer.apk
 
-$ESUDO systemctl restart oga_events &
+pm_finish
 printf "\033c" > /dev/tty0
