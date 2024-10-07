@@ -70,6 +70,5 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader goblindungeoneer.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
