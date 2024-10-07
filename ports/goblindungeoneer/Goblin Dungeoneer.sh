@@ -67,7 +67,7 @@ fi
 $GPTOKEYB "gmloader" &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader goblindungeoneer.apk
 
 $ESUDO kill -9 $(pidof gptokeyb)
