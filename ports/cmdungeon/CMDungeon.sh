@@ -35,7 +35,7 @@ cd $GAMEDIR
 #Install the game file
 if [ -f "$GAMEDIR/cmdungeonv0.2.0_linux_x11.zip" ]; then
 	
-	# Unzip the PCK file the gamedata directory
+	# Unzip the PCK file into the gamedata directory
 	unzip -j -o cmdungeonv0.2.0_linux_x11.zip "cmdungeonv0.2.0_linux_x11/*" -x *.x86_64 -d gamedata
 	
 	# Delete the zip file
