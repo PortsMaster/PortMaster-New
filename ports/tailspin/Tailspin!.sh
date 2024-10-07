@@ -40,7 +40,6 @@ $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 $ESUDO ./tools/splash "splash.png" 10000 &
 
 $GPTOKEYB "gmloadernext" -c ./controls.gptk &
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 ./gmloadernext game.apk
