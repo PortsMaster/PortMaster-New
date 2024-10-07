@@ -65,7 +65,8 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "cmdungeon.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/CMDungeon v0.2.0.pck"
+pm_platform_helper $runtime
+"$runtime" $GODOT_OPTS --main-pack "gamedata/CMDungeon v0.2.0.pck"
 
 
 $ESUDO umount "$godot_dir"
