@@ -80,11 +80,11 @@ contains() {
 # If it's in the list use the compatibility binary
 if contains; then
 	$GPTOKEYB "$GAME.compat" -c "config/joy.gptk" & 
-    pm_platform_helper "$GAMEDIR/$GAME"
+    pm_platform_helper "$GAMEDIR/$GAME.compat"
 	./$GAME.compat -hogdir data
 else
 	$GPTOKEYB "$GAME.$DEVICE_ARCH" -c "config/joy.gptk" & 
-    pm_platform_helper "$GAMEDIR/$GAME"
+    pm_platform_helper "$GAMEDIR/$GAME.$DEVICE_ARCH"
 	./$GAME.$DEVICE_ARCH -hogdir data
 fi
 
