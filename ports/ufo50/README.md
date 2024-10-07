@@ -7,6 +7,16 @@ and usually 1-2GB of memory, alongside Mali blob drivers. Low processing power, 
 
 - Games that use large rooms will have lower fps (Ninpek, Velgress, Planet Zoldath, etc).
 
+## xDelta Patch Notes
+For the more technically inclined, here are specific modifications made in order to make UFO 50 run smoothly on the targeted devices:
+
+- [GMTools](https://github.com/cdeletre/gmtools) by Cyril Deletre to convert WAV to OGG and lower their bitrate
+- [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) to make some specific changes to the game
+- - Remove/hide the scaling feature since the game always scales to the display on targeted devices, and enforce 1x scaling
+- - Change the video settings menu to use `Stretch to Fit`, `Maintain Aspect Ratio`, and `Integer Scale` for display options
+- - Remove/hide the scale options and the CRT shader options, since CRT shaders do not work on 1x scale
+- - Flush textures during cleanup operations
+
 ## Thanks
 Mossmouth -- The absolutely amazing game  
 JohnnyOnFlame -- GMLoader-Next and TextureRepacker via UTMT  
