@@ -4,21 +4,21 @@
 LOGFILE="$PATCHDIR/patchlog.txt"
 
 # Redirect output and error to the log file
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
 
 echo "PATCHDIR is set to: $PATCHDIR"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$PATCHDIR/libs:$PATCHDIR/tools/libs:$LD_LIBRARY_PATH"
 export TOOLDIR="$PATCHDIR/tools"
 export TMPDIR="$PATCHDIR/tmp"
-export PATH=$PATH:$PATCHDIR/tools
+export PATH=$PATH:TOOLDIR
+export LD_LIBRARY_PATH="/usr/lib:$PATCHDIR/libs:$TOOLDIR/libs:$LD_LIBRARY_PATH"
 
 # Permissions
-chmod 666 /dev/uinput
 chmod 777 "$TOOLDIR/gmKtool.py"
 chmod 777 "$TOOLDIR/oggdec"
 chmod 777 "$TOOLDIR/oggenc"
+chmod 777 "$TOOLDIR/xdelta3"
 
 cd "$PATCHDIR"
 
@@ -45,12 +45,12 @@ process_game() {
 
     # Delete unnecessary files
     for file in "${files_to_delete[@]}"; do
-      if [ -f "$file" ]; then
-        rm "$file"
-        echo "Deleted $file"
-      else
-        echo "$file not found"
-      fi
+        if [ -f "$file" ]; then
+            rm "$file"
+            echo "Deleted $file"
+        else
+            echo "$file not found"
+        fi
     done
 
     # If "gamedata/data.win" exists and matches the checksum of the GOG or Steam versions
@@ -59,14 +59,14 @@ process_game() {
     
         # Checksum for the GOG version
         if [ "$checksum" = "0258cadce342712c2ffbd5fc70e0dfd7" ]; then
-        $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/gogdata.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
-	echo "GOG data.win has been patched"
+            $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/gogdata.xdelta gamedata/game.droid && \
+            rm gamedata/data.win
+            echo "GOG data.win has been patched"
         # Checksum for the Steam version
         elif [ "$checksum" = "86045b6464bb909851634c3e34b2a82e" ]; then
             $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/steamdata.xdelta gamedata/game.droid && \
             rm gamedata/data.win
- 	    echo "Steam data.win has been patched"
+ 	        echo "Steam data.win has been patched"
         else
             echo "Error: MD5 checksum of data.win does not match any expected version."
         fi
@@ -75,16 +75,15 @@ process_game() {
     fi
 
     # If "gamedata/audiogroup1.dat" exists and matches the checksum of the Steam version
-    if [ -f "./gamedata/data.win" ]; then
+    if [ -f "./gamedata/audiogroup1.dat" ]; then
         checksum=$(md5sum "./gamedata/audiogroup1.dat" | awk '{print $1}')
     
         # Checksum for the Steam audiogroup1.dat version
         if [ "$checksum" = "bcadc44e45f8a6caf9b5c5db538ced13" ]; then
-        $ESUDO tools/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/steamaudiogroup1.xdelta gamedata/audiogroup1patched.dat && \
-        rm gamedata/audiogroup1.dat
-        mv gamedata/audiogroup1patched.dat gamedata/audiogroup1.dat
-        else
-            echo "Error: MD5 checksum of audiogroup1.dat does not match any expected version."
+            $ESUDO tools/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/steamaudiogroup1.xdelta gamedata/audiogroup1patched.dat && \
+            rm gamedata/audiogroup1.dat
+            mv gamedata/audiogroup1patched.dat gamedata/audiogroup1.dat
+            echo "Steam audiogroup1.dat has been patched."
         fi
     else    
         echo "Error: Missing audiogroup1.dat in gamedata folder or game has been patched."

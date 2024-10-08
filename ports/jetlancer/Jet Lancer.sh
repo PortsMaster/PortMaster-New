@@ -13,17 +13,12 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-$ESUDO chmod 666 /dev/tty0
-
 GAMEDIR="/$directory/ports/jetlancer"
-TOOLDIR="$GAMEDIR/tools"
-TMPDIR="$GAMEDIR/tmp"
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -31,7 +26,7 @@ export GMLOADER_DEPTH_DISABLE=0
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_windows"
 export TOOLDIR="$GAMEDIR/tools"
-export PATH=$PATH:$GAMEDIR/tools
+export PATH=$PATH:$TOOLDIR
 export PATCHER_FILE="$GAMEDIR/patch/patchscript"
 export PATCHER_GAME="Jet Lancer"
 export PATCHER_TIME="10 to 15 minutes"
@@ -41,12 +36,8 @@ export PATCHDIR=$GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Permissions
-$ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-$ESUDO chmod +x "$GAMEDIR/lib/splash"
-$ESUDO chmod +x "$GAMEDIR/tools/xdelta3"
-$ESUDO chmod 777 "$TOOLDIR/gmKtool.py"
-$ESUDO chmod 777 "$TOOLDIR/oggenc"
+$ESUDO chmod +x "$TOOLDIR/splash"
 
 cd "$GAMEDIR"
 
@@ -62,18 +53,13 @@ else
     echo "Patching process already completed. Skipping."
 fi
 
-config_file="$GAMEDIR/gamedata/config.ini"
-
 if [ ! -f "$GAMEDIR/gamedata/config.ini" ]; then
   mv "$GAMEDIR/config.ini.default" "$GAMEDIR/gamedata/config.ini"
 fi
 
 $GPTOKEYB "gmloader" &
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader jetlancer.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
