@@ -33,8 +33,8 @@ export GMLOADER_PLATFORM="os_windows"
 export TOOLDIR="$GAMEDIR/tools"
 export PATH=$PATH:$GAMEDIR/tools
 export PATCHER_FILE="$GAMEDIR/patch/patchscript"
-export PATCHER_GAME="MAGO"
-export PATCHER_TIME="2 to 4 minutes"
+export PATCHER_GAME="Jet Lancer"
+export PATCHER_TIME="10 to 15 minutes"
 export PATCHDIR=$GAMEDIR
 
 # We log the execution of the script into log.txt
