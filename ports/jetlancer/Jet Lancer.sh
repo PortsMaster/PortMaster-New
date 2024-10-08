@@ -52,7 +52,14 @@ cd "$GAMEDIR"
 
 # Run install if needed
 if [ ! -f "$GAMEDIR/gamedata/game.droid" ]; then
-source "$controlfolder/utils/patcher.txt"
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+    fi
+else
+    echo "Patching process already completed. Skipping."
 fi
 
 config_file="$GAMEDIR/gamedata/config.ini"
