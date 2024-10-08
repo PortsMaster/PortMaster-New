@@ -34,4 +34,3 @@ $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 ./gmloadernext game.apk
 
 pm_finish
-printf "\033c" > /dev/tty0
