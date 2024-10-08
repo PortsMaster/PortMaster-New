@@ -13,53 +13,60 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-# Setup permissions
-echo "Loading, please wait... (might take a while!)" > $CUR_TTY
+$ESUDO chmod 666 /dev/tty0
 
-# Variables
 GAMEDIR="/$directory/ports/jetlancer"
-
-# CD and set permissions
-cd $GAMEDIR
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+TOOLDIR="$GAMEDIR/tools"
+TMPDIR="$GAMEDIR/tmp"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="10 to 15 minutes"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export GMLOADER_DEPTH_DISABLE=0
+export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+export GMLOADER_PLATFORM="os_windows"
+export TOOLDIR="$GAMEDIR/tools"
+export PATH=$PATH:$GAMEDIR/tools
+export PATCHER_FILE="$GAMEDIR/patch/patchscript"
+export PATCHER_GAME="MAGO"
+export PATCHER_TIME="2 to 4 minutes"
+export PATCHDIR=$GAMEDIR
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
+# We log the execution of the script into log.txt
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Check if game.droid present to skip patching
+# Permissions
+$ESUDO chmod 666 /dev/uinput
+$ESUDO chmod +x "$GAMEDIR/gmloader"
+$ESUDO chmod +x "$GAMEDIR/lib/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/xdelta3"
+$ESUDO chmod 777 "$TOOLDIR/gmKtool.py"
+$ESUDO chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+# Run install if needed
 if [ ! -f "$GAMEDIR/gamedata/game.droid" ]; then
-    if [ -f "$controlfolder/utils/patcher.txt" ]; then
-        source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb)
-    else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
-    fi
-else
-    echo "Patching process already completed. Skipping."
+source "$controlfolder/utils/patcher.txt"
 fi
 
-#Move config file to /gamedata
 config_file="$GAMEDIR/gamedata/config.ini"
 
 if [ ! -f "$GAMEDIR/gamedata/config.ini" ]; then
   mv "$GAMEDIR/config.ini.default" "$GAMEDIR/gamedata/config.ini"
 fi
 
-# Run the game
 $GPTOKEYB "gmloader" &
-pm_platform_helper gmloader
+
+$ESUDO chmod +x "$GAMEDIR/gmloader"
+
 ./gmloader jetlancer.apk
 
-pm_finish
+$ESUDO kill -9 $(pidof gptokeyb)
+$ESUDO systemctl restart oga_events &
+printf "\033c" > /dev/tty0

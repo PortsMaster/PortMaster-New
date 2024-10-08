@@ -1,46 +1,75 @@
 #!/bin/bash
-# Set GAMEDIR to the current directory and set logfile
-GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Set the log file
+LOGFILE="$PATCHDIR/patchlog.txt"
 
 # Redirect output and error to the log file
 exec > >(tee -a "$LOGFILE") 2>&1
-echo "GAMEDIR is set to: $GAMEDIR"
+
+echo "PATCHDIR is set to: $PATCHDIR"
 
 # Exports
-export DATADIR="$GAMEDIR/gamedata"
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
-export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export TOOLDIR="$PATCHDIR/tools"
+export TMPDIR="$PATCHDIR/tmp"
+export PATH=$PATH:$PATCHDIR/tools
+
 
 # Permissions
 chmod 666 /dev/uinput
 chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
 chmod 777 "$TOOLDIR/oggdec"
+chmod 777 "$TOOLDIR/oggenc"
 
-cd "$GAMEDIR"
+cd "$PATCHDIR"
 
-apply_xdelta() {
-# If "gamedata/data.win" exists and matches the checksum of the GOG or Steam versions
+process_game() {
+    # Define files to delete
+    local files_to_delete=(
+      "./gamedata/Galaxy.dll"
+      "./gamedata/GOG.gml.dll"
+      "./gamedata/gog.ico"
+      "./gamedata/goggame-1489231569.hashdb"
+      "./gamedata/goggame-1489231569.ico"
+      "./gamedata/goggame-1489231569.info"
+      "./gamedata/goggame-galaxyFileList.ini"
+      "./gamedata/goglog.ini"
+      "./gamedata/Jet Lancer.exe"
+      "./gamedata/Launch Jet Lancer.lnk"
+      "./gamedata/support.ico"
+      "./gamedata/unins000.dat"
+      "./gamedata/unins000.exe"
+      "./gamedata/unins000.ini"
+      "./gamedata/unins000.msg"
+      "./gamedata/steam_api.dll"
+    )
+
+    # Delete unnecessary files
+    for file in "${files_to_delete[@]}"; do
+      if [ -f "$file" ]; then
+        rm "$file"
+        echo "Deleted $file"
+      else
+        echo "$file not found"
+      fi
+    done
+
+    # If "gamedata/data.win" exists and matches the checksum of the GOG or Steam versions
     if [ -f "./gamedata/data.win" ]; then
         checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     
         # Checksum for the GOG version
         if [ "$checksum" = "0258cadce342712c2ffbd5fc70e0dfd7" ]; then
-        $ESUDO $TOOLDIR/xdelta3 -d -s gamedata/data.win -f ./tools/patches/gogdata.xdelta gamedata/game.droid && \
+        $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/gogdata.xdelta gamedata/game.droid && \
         rm gamedata/data.win
 	echo "GOG data.win has been patched"
         # Checksum for the Steam version
         elif [ "$checksum" = "86045b6464bb909851634c3e34b2a82e" ]; then
-            $ESUDO $TOOLDIR/xdelta3 -d -s gamedata/data.win -f ./tools/patches/steamdata.xdelta gamedata/game.droid && \
+            $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/steamdata.xdelta gamedata/game.droid && \
             rm gamedata/data.win
  	    echo "Steam data.win has been patched"
         else
             echo "Error: MD5 checksum of data.win does not match any expected version."
-	    exit 1
         fi
     else    
         echo "Error: Missing data.win in gamedata folder or game has been patched."
@@ -52,7 +81,7 @@ apply_xdelta() {
     
         # Checksum for the Steam audiogroup1.dat version
         if [ "$checksum" = "bcadc44e45f8a6caf9b5c5db538ced13" ]; then
-        $ESUDO $TOOLDIR/xdelta3 -d -s gamedata/audiogroup1.dat -f ./tools/patches/steamaudiogroup1.xdelta gamedata/audiogroup1patched.dat && \
+        $ESUDO tools/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/steamaudiogroup1.xdelta gamedata/audiogroup1patched.dat && \
         rm gamedata/audiogroup1.dat
         mv gamedata/audiogroup1patched.dat gamedata/audiogroup1.dat
         else
@@ -61,10 +90,8 @@ apply_xdelta() {
     else    
         echo "Error: Missing audiogroup1.dat in gamedata folder or game has been patched."
     fi
-}
 
-compress_audio() {
-    # Compress audio
+      # Compress audio
     if [ -f "$GAMEDIR/compress.txt" ]; then
         echo "Compressing audio. The process will take 5-10 minutes"  > $CUR_TTY
         mkdir -p "$TMPDIR"
@@ -101,42 +128,7 @@ compress_audio() {
     done
 
     echo "All .ogg files have been processed."
-}
 
-process_game() {
-       local files_to_delete=(
-      "./gamedata/Galaxy.dll"
-      "./gamedata/GOG.gml.dll"
-      "./gamedata/gog.ico"
-      "./gamedata/goggame-1489231569.hashdb"
-      "./gamedata/goggame-1489231569.ico"
-      "./gamedata/goggame-1489231569.info"
-      "./gamedata/goggame-galaxyFileList.ini"
-      "./gamedata/goglog.ini"
-      "./gamedata/Jet Lancer.exe"
-      "./gamedata/Launch Jet Lancer.lnk"
-      "./gamedata/support.ico"
-      "./gamedata/unins000.dat"
-      "./gamedata/unins000.exe"
-      "./gamedata/unins000.ini"
-      "./gamedata/unins000.msg"
-      "./gamedata/steam_api.dll"
-    )
-
-    # Delete unnecessary files
-    for file in "${files_to_delete[@]}"; do
-      if [ -f "$file" ]; then
-        rm "$file"
-        echo "Deleted $file"
-      else
-        echo "$file not found"
-      fi
-    done
-
-    apply_xdelta
-    compress_audio
-    sleep 3
-    
     # Check for .ogg files and move to APK
     if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
         mkdir -p ./assets
@@ -151,9 +143,6 @@ process_game() {
     else
         echo "No .ogg files found"
     fi
-	
-    # Final completion message
-    echo "Patching process complete!"
 }
 
 # Call the function
