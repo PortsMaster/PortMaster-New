@@ -25,25 +25,22 @@ TOOLDIR="$GAMEDIR/tools"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_PLATFORM="os_linux"
 
 cd $GAMEDIR
 
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
 # Splash
+[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
 $ESUDO ./tools/splash "splash.png" 10000 &
 
 $GPTOKEYB "gmloadernext" -c ./controls.gptk &
 pm_platform_helper $GAMEDIR/gmloadernext
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
-./gmloadernext game.apk
+./gmloadernext
 
 pm_finish
-printf "\033c" > /dev/tty0
