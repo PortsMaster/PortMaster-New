@@ -37,5 +37,3 @@ pm_platform_helper $GAMEDIR/gmloader
 ./gmloader assaultshell.apk
 
 pm_finish
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
