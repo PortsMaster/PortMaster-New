@@ -21,7 +21,7 @@ get_controls
 export PORT_32BIT="Y"
 GAMEDIR="/$directory/ports/tempuslocus"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
@@ -36,13 +36,11 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" -c ./tempuslocus.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper $GAMEDIR/gmloader
 ./gmloader game.apk
 
 pm_finish
