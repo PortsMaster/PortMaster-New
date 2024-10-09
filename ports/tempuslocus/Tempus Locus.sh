@@ -36,7 +36,6 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
 
 $GPTOKEYB "gmloader" -c ./tempuslocus.gptk &
 
