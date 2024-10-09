@@ -16,34 +16,31 @@ source $controlfolder/control.txt
 # device_info.txt will be included by default
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
+export PORT_32BIT="Y"
 GAMEDIR="/$directory/ports/lividmeadow"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
+# Check for file existence before trying to manipulate them:
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" -c ./lividmeadow.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper $GAMEDIR/gmloader
 ./gmloader game.apk
 
 pm_finish
