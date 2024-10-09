@@ -22,13 +22,14 @@ get_controls
 GAMEDIR=/$directory/ports/techmaniac/
 CONFDIR="$GAMEDIR/conf/"
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
 # Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
@@ -55,7 +56,8 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "techmaniac.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Techmaniac.pck"
+pm_platform_helper $runtime
+"$runtime" $GODOT_OPTS --main-pack $GODOT_OPTS --main-pack "gamedata/Techmaniac.pck"
 
 
 $ESUDO umount "$godot_dir"
