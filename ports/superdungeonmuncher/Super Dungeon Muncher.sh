@@ -30,8 +30,8 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 cd $GAMEDIR
 
 # rename game files for gmloadernext
-if [ -f "data.win" ]; then
-    mv data.win game.droid
+if [ -f "gamedata/data.win" ]; then
+    mv ./gamedata/data.win ./gamedata/game.droid
 fi
 
 # Make sure uinput is accessible so we can make use of the gptokeyb controls

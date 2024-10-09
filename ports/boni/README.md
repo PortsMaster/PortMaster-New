@@ -1,9 +1,8 @@
 ## Notes
 
-Original version by:  
-https://pistachoduck.itch.io/boniboni (tested with Boni_Linux64.zip)
+Original version by Pistacho Duck: https://pistachoduck.itch.io/boniboni (tested with Boni_Linux64.zip)
 
-Boni the skeleton is traveling across the Mexican "Dia de Muertos", however, he needs to go across the spooky Iztepetl Cemetery. Help him get his skeletal body to the other side!
+Boni the skeleton is traveling across the Mexican "Dia de Muertos", however, he needs to cross the spooky Iztepetl Cemetery. Help him get his skeletal body to the other side!
 
 
 ## Controls
