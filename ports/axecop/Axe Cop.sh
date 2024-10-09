@@ -35,17 +35,18 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 # Rename any .rpg file found to the DATAFILE variable
-rpg_file=$(find "$GAMEDIR" -name "*.rpg" | head -n 1)
-if [ -n "$rpg_file" ]; then
-  mv "$rpg_file" "$GAMEDIR/axecop.rpg"
-  DATAFILE="axecop.rpg"
+file=$(find . -maxdepth 1 -type f -name "*.rpg")
+# Check if a file was found
+if [[ -n "$file" ]]; then
+  mv "$file" "tmp.rpg" # FAT32 case rename fix
+  mv "tmp.rpg" "$DATAFILE"
+  echo "File renamed to $DATAFILE"
 else
-  echo "No .rpg file found in $GAMEDIR"
-  exit 1
+  echo "No .rpg file found"
 fi
 
 $GPTOKEYB "ohrrpgce-game" -c ./axecop.gptk &
-
 "./ohrrpgce-game" $DATAFILE -f
 
 pm_finish
+
