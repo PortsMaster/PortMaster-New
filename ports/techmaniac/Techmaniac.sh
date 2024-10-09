@@ -55,7 +55,6 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-pm_platform_helper "$runtime"
 $GPTOKEYB "$runtime" -c "techmaniac.gptk" &
 pm_platform_helper $runtime
 "$runtime" $GODOT_OPTS --main-pack $GODOT_OPTS --main-pack "gamedata/Techmaniac.pck"
