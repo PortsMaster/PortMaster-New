@@ -29,10 +29,12 @@ mkdir -p "$GAMEDIR/conf"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
+export SDL_SOUNDFONTS="$GAMEDIR/gm.sf2"
 
 # Run bartozip and move DoomRPG.zip only if it doesn't exist
 if [ ! -f "$GAMEDIR/DoomRPG.zip" ]; then
     (cd "$GAMEDIR/gamedata" && PATH=$PATH:. ./bartozip && mv DoomRPG.zip "$GAMEDIR/") || exit 1
+    unzip -d "$GAMEDIR/extracted" "$GAMEDIR/DoomRPG.zip" || exit 1
 fi
 
 cd $GAMEDIR

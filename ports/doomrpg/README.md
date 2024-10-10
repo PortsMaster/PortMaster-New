@@ -8,13 +8,17 @@ Special thanks to kotzebuedog for helping me out and Szilard Biro for rewriting 
 |--|--| 
 |DPAD| Look Around|
 |A| Interact/Shoot/Talk|
+|B| Skip Turn|
+|Y| AutoMap|
 |L1/R1 | Strafe|
+|L2/R2| Switch Weapons|
 |Select| Menu|
+
 
 ## Compile
 
 ```shell
-git clone https://github.com/Cebion/DoomRPG-RE
+git clone https://github.com/Cebion/DoomRPG-RE_PM
 cd DoomRPG-RE
 mkdir build && cd build
 cmake ..
