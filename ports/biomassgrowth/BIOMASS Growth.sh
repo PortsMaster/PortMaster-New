@@ -15,12 +15,12 @@ fi
 source $controlfolder/control.txt
 # device_info.txt will be included by default
 
+export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/biomassgrowth"
 
-export PORT_32BIT="Y"
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
