@@ -1,3 +1,5 @@
+#!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -11,14 +13,12 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
+# device_info.txt will be included by default
 
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+export PORT_32BIT="Y"
 GAMEDIR="/$directory/ports/beemisthecurseofgod"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -31,26 +31,15 @@ export GMLOADER_PLATFORM="os_linux"
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
-
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
-
 $GPTOKEYB "gmloader" -c ./beemisthecurseofgod.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper $GAMEDIR/gmloader
 ./gmloader game.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
