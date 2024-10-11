@@ -40,12 +40,17 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
   zip -r -0 ./game.apk ./game.apk ./assets/
   rm -f ./assets/*.ogg
   echo "Zipped contents to ./game.apk"
+  # Delete uneeded files
+  rm -f ./gamedata/*.exe
+  rm -f ./gamedata/*.dll
+  rm -f ./gamedata/*.ini
 fi
 
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+
 
 
 $GPTOKEYB "gmloader" -c ./superskelemania.gptk &
