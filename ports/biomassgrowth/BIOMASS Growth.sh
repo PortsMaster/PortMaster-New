@@ -32,22 +32,14 @@ cd $GAMEDIR
 
 # Extract the game files
 if [ -f "$GAMEDIR/gamedata/Biomass Growth 20211213.exe" ]; then
-    
-	cd "$GAMEDIR" || exit
-		
+    		
 	# Use 7zip to extract the Biomass Growth 20211213.exe file to the destination directory
-    "$GAMEDIR/patch/7zzs" -aos x "$GAMEDIR/gamedata/Biomass Growth 20211213.exe" -o"$GAMEDIR/gamedata" & pid=$!
-
-    # Wait for the extraction process to complete
-    wait $pid
-
-    # Check if the Biomass Growth 20211213.exe file exists
-    if [ -f "$GAMEDIR/gamedata/Biomass Growth 20211213.exe" ]; then
-		# Delete the redundant files
-		rm "$GAMEDIR/gamedata/Biomass Growth 20211213.exe"  
-		rm "$GAMEDIR/gamedata/D3DX9_43.dll"
-		rm "$GAMEDIR/gamedata/options.ini"  
-	fi
+    	"$GAMEDIR/patch/7zzs" -aos x "$GAMEDIR/gamedata/Biomass Growth 20211213.exe" -o"$GAMEDIR/gamedata" 
+   
+   	# Delete all redundant files
+	rm "$GAMEDIR/gamedata/Biomass Growth 20211213.exe"  
+	rm "$GAMEDIR/gamedata/D3DX9_43.dll"
+	rm "$GAMEDIR/gamedata/options.ini"  
 else
 	echo "The exe file is missing, skipping the extraction step!"
 fi
