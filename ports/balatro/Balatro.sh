@@ -53,6 +53,12 @@ if [ -f "$GAMEFILE" ]; then
   sed -i 's/s/shadows = 'On'/shadows = 'Off'/g' globals.lua
   sed -i 's/self.F_HIDE_BG = false/self.F_HIDE_BG = true/g' globals.lua
 
+  # change controller mapping (swap A/B,X/Y to match the physical buttons) for TSP
+  if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ]; then
+    sed -i 's/self.F_SWAP_AB_BUTTONS = false/self.F_SWAP_AB_BUTTONS = true/g' globals.lua
+    sed -i 's/self.F_SWAP_XY_BUTTONS = false/self.F_SWAP_XY_BUTTONS = true/g' globals.lua
+  fi
+
   if [ $DISPLAY_WIDTH -le 1279 ]; then # increase the scale for smaller screens
     sed -i 's/self.TILE_W = self.F_MOBILE_UI and 11.5 or 20/self.TILE_W = 18.25/g' globals.lua
     sed -i 's/self.TILE_H = self.F_MOBILE_UI and 20 or 11.5/self.TILE_H = 18.25/g' globals.lua
