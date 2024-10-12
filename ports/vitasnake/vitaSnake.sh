@@ -13,39 +13,36 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
+TOOLDIR="$GAMEDIR/tools"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/vitasnake"
+TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATH="$TOOLDIR:$PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+cd $GAMEDIR
 
 # We log the execution of the script into log.txt
 "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd $GAMEDIR
-
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
-
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
-$GPTOKEYB "gmloadernext" -c ./vitasnake.gptk &
+# Splash
+[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
+$ESUDO ./tools/splash "splash.png" 10000 &
 
+$GPTOKEYB "gmloadernext" -c ./controls.gptk &
+pm_platform_helper $GAMEDIR/gmloadernext
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
-./gmloadernext game.apk
+./gmloadernext
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
