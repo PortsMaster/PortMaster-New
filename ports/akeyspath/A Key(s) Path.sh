@@ -52,12 +52,6 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-# Check if .pck needs patching
-if [ -f "./gamedata/a_keys_path_v0.7.pck" ]; then
-    $SUDO $controlfolder/xdelta3 -d -s "./gamedata/a_keys_path_v0.7.pck" "./gamedata/patch.xdelta3" "./gamedata/a_keys_path_v0.7_patched.pck"
-    rm "./gamedata/a_keys_path_v0.7.pck"
-fi
-
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./akeyspath.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/a_keys_path_v0.7_patched.pck"
