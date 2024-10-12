@@ -32,7 +32,6 @@ cd $GAMEDIR
 # We log the execution of the script into log.txt
 "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
 # Splash
