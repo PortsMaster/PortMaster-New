@@ -18,7 +18,7 @@ get_controls
 
 GAMEDIR=/$directory/ports/xooxenoxafari
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=xeno.rpg
+DATAFILE=xeno.rpg # demo file
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -29,6 +29,11 @@ export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
+
+# Check if xoo.rpg exists in; change DATAFILE to xoo.rpg if it exists
+if [ -f "./xoo.rpg" ]; then
+  DATAFILE=xoo.rpg # full game file
+fi
 
 $GPTOKEYB "ohrrpgce-game" -c ./xooxenoxafari.gptk &
 pm_platform_helper $GAMEDIR/ohrrpgce-game
