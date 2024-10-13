@@ -13,20 +13,15 @@ else
 fi
 
 source $controlfolder/control.txt
-# device_info.txt will be included by default
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 GAMEDIR=/$directory/ports/rambleplanet
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=rambleplanet11.rpg
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 mkdir -p "$GAMEDIR/conf"
-
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
@@ -36,6 +31,6 @@ cd $GAMEDIR
 
 $GPTOKEYB "ohrrpgce-game" -c ./rambleplanet.gptk &
 pm_platform_helper $GAMEDIR/ohrrpgce-game
-"./ohrrpgce-game" $DATAFILE -f
+"./ohrrpgce-game" rambleplanet11.rpg -f
 
 pm_finish
