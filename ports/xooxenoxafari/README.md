@@ -6,4 +6,4 @@
 ## Paid (new/sequel) version
 
 1. Purchase and download from: https://willyelektrix.itch.io/xoo-xeno-xafari
-2. Extract and copy `xeno.rpg` to port folder
+2. Extract and copy `xoo.rpg` to port folder
