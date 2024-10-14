@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to FartFish for developing this game and kindly allowing us to distribute it, check the game site at https://fartfish.itch.io/fist-bump
+Thanks to Adam "FartFish" Chean-Udell for developing this game and kindly allowing us to distribute it, check the game site at https://fartfish.itch.io/fist-bump
 
 ## Controls
 
