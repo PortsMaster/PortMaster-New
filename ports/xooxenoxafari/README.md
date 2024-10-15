@@ -1,9 +1,12 @@
-## Free (old) version
+## Notes
 
-1. Download from: https://willyelektrix.itch.io/1999megallennium
-2. Extract and copy `megadata/xeno.rpg` to port folder
+Thanks to [Willy Elektrix](https://willyelektrix.itch.io/) for creating this game, which you can purchase at [itch.io](https://willyelektrix.itch.io/xoo-xeno-xafari)
 
-## Paid (new/sequel) version
 
-1. Purchase and download from: https://willyelektrix.itch.io/xoo-xeno-xafari
-2. Extract and copy `xoo.rpg` to port folder
+## Controls
+
+| Button  | Action                |
+| ------- | --------------------- |
+| D-PAD   | Movement / navigation |
+| A       | Action / interact     |
+| B       | Menu / back           |
