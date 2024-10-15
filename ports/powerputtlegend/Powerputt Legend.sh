@@ -29,13 +29,14 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Display loading splash
-$ESUDO ./libs/splash "splash.png" 1 
+[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS  
+
 $ESUDO ./libs/splash "splash.png" 1000
 
 # Run game
 $GPTOKEYB "gmloadernext" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
+./gmloadernext
 
 # Kill processes
 pm_finish
