@@ -30,7 +30,7 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 $GPTOKEYB "ohrrpgce-game" -c ./rambleplanet.gptk &
-pm_platform_helper $GAMEDIR/ohrrpgce-game
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" rambleplanet11.rpg -f
 
 pm_finish
