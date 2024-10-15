@@ -40,7 +40,7 @@ else
 fi
 
 $GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
-pm_platform_helper $GAMEDIR/$BINARY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY -f --resolution=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}
 
 pm_finish

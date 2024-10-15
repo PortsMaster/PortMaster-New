@@ -40,7 +40,7 @@ fi
 cd $GAMEDIR
 
 $GPTOKEYB "$BINARY" &
-pm_platform_helper $GAMEDIR/$BINARY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
 pm_finish

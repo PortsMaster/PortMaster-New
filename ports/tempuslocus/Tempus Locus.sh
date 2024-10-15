@@ -40,7 +40,7 @@ cd $GAMEDIR
 $GPTOKEYB "gmloader" -c ./tempuslocus.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
 pm_finish

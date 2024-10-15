@@ -38,7 +38,7 @@ ln -sfv $GAMEDIR/conf/.rockdodger_high ~/
 cd $GAMEDIR
 
 $GPTOKEYB2 "$BINARY" -c ./$BINARY.gptk &
-pm_platform_helper $GAMEDIR/$BINARY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY -k -f
 
 pm_finish
