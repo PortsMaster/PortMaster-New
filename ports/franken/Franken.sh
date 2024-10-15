@@ -35,7 +35,7 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 $GPTOKEYB "ohrrpgce-game" -c ./franken.gptk &
-pm_platform_helper $GAMEDIR/ohrrpgce-game
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" $DATAFILE -f
 
 pm_finish

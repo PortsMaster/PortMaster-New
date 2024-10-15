@@ -46,7 +46,7 @@ cd $GAMEDIR
 
 # Run LOVE and Spotify
 $GPTOKEYB "love" &
-pm_platform_helper $GAMEDIR/love
+pm_platform_helper "$GAMEDIR/love"
 ./love librespotui
 
 # Cleanup LOVE

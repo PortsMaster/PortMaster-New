@@ -33,7 +33,7 @@ $GPTOKEYB "gmloader" &
 echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader assaultshell.apk
 
 pm_finish

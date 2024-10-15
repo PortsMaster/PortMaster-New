@@ -33,7 +33,7 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 $GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
-pm_platform_helper $GAMEDIR/$BINARY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
 pm_finish

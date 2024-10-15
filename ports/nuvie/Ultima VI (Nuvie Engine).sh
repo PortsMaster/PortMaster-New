@@ -36,7 +36,7 @@ bind_directories $GAMEDIR/conf/.nuvie ~/.nuvie
 cd $GAMEDIR
 
 $GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
-pm_platform_helper $GAMEDIR/$BINARY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
 pm_finish
