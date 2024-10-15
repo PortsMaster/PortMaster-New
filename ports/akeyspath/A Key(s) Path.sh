@@ -52,7 +52,6 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./akeyspath.gptk" &
 "$runtime" $GODOT_OPTS --main-pack "gamedata/a_keys_path_v0.7_patched.pck"
 
