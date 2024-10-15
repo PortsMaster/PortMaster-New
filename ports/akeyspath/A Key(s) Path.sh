@@ -54,7 +54,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./akeyspath.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/a_keys_path_v0.7_patched.pck"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/a_keys_path_v0.7_patched.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish
