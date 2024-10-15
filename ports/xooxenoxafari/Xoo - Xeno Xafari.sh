@@ -36,7 +36,7 @@ if [ -f "./xoo.rpg" ]; then
 fi
 
 $GPTOKEYB "ohrrpgce-game" -c ./xooxenoxafari.gptk &
-pm_platform_helper $GAMEDIR/ohrrpgce-game
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" $DATAFILE -f
 
 pm_finish
