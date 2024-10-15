@@ -49,7 +49,7 @@ $ESUDO ./tools/splash "splash.png" 5000 &
 
 # GPTK Setup and run gmloader
 $GPTOKEYB "gmloadernext" &
-pm_platform_helper $GAMEDIR/gmloadernext
+pm_platform_helper "$GAMEDIR/gmloadernext"
 ./gmloadernext game.apk
 
 # Cleanup

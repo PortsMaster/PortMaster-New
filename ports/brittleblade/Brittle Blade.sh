@@ -55,7 +55,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "brittleblade.gptk" &
-pm_platform_helper $runtime
+pm_platform_helper "$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/Brittle Blade.pck"
 
 

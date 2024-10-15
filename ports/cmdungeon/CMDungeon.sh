@@ -65,7 +65,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "cmdungeon.gptk" &
-pm_platform_helper $runtime
+pm_platform_helper "$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/CMDungeon v0.2.0.pck"
 
 

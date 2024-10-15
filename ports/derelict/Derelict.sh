@@ -60,7 +60,7 @@ fi
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 $GPTOKEYB "gmloader" -c "derelict.gptk" &
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
 pm_finish

@@ -86,7 +86,7 @@ if [[ ! -f "$GAMEDIR/rogue/pak0.pak" ]]; then
 fi
 
 $GPTOKEYB "quake2" -c "$GAMEDIR/quake2.gptk" &
-pm_platform_helper $GAMEDIR/quake2
+pm_platform_helper "$GAMEDIR/quake2"
 ./quake2 +set vid_renderer $YQ2RENDERER +set r_mode -2 +set r_customwidth $DISPLAY_WIDTH +set r_customheight $DISPLAY_HEIGHT +set r_gunfov $GUNFOV +set r_hudscale $SSCALE +set r_menuscale $SSCALE +set game rogue
 
 pm_finish

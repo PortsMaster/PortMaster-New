@@ -46,7 +46,7 @@ else
 fi
 
 $GPTOKEYB "ohrrpgce-game" -c ./axecop.gptk &
-pm_platform_helper $GAMEDIR/ohrrpgce-game
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" $DATAFILE -f
 
 pm_finish
