@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Display loading splash
-[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS  
+[ "$CFW_NAME" == "muOS" ] && ./libs/splash "splash.png" 1 # workaround for muOS
 
 $ESUDO ./libs/splash "splash.png" 1000
 
