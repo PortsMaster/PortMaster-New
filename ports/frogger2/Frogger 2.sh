@@ -58,7 +58,7 @@ $GPTOKEYB "gmloader" -c "./frogger2.gptk" &
 echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader frogger2.apk
 
 pm_finish
