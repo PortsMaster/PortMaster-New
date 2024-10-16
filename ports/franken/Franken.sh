@@ -19,9 +19,9 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/franken
+GAMEDIR="/$directory/ports/franken"
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=franken.rpg
+DATAFILE="franken.rpg"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -33,6 +33,8 @@ export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
+
+bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
 $GPTOKEYB "ohrrpgce-game" -c ./franken.gptk &
 pm_platform_helper "$GAMEDIR/ohrrpgce-game"
