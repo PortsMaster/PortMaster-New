@@ -56,7 +56,7 @@ fi
 # Run the game
 $GPTOKEYB "gmloadernext" -c "./sonic.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
+./gmloadernext
 
 # Kill processes
 pm_finish
