@@ -43,7 +43,7 @@ rm -f gamedata/*.{dll,ini,exe}
 $GPTOKEYB "gmloader" -c ./halloweenforever.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader halloweenforever.apk
 
 pm_finish
