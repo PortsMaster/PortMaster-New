@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 # device_info.txt will be included by default
 
+export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
