@@ -50,6 +50,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "./catsonmars.gptk" &
+pm_platform_helper "$runtime" 
 "$runtime" $GODOT_OPTS --main-pack "gamedata/CatsOnMarsWindows_patched.pck"
 
 $ESUDO umount "$godot_dir"
