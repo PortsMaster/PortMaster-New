@@ -51,8 +51,6 @@ fi
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-
-
 $GPTOKEYB "gmloader" -c ./superskelemania.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
