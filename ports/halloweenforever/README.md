@@ -1,21 +1,15 @@
 ## Notes
-All files included and ready to run. Thanks to [Fenrir-Lunaris](https://fenrir-lunaris.itch.io/vikings-of-midgard) for releasing this fantastic game to the Public Domain.
+
+Thanks to [Imaginary Monsters](https://imaginarymonsters.itch.io/) for creating this fantastic game, which you can purchase on [itch.io](https://imaginarymonsters.itch.io/halloween-forever)
+
+Note the **Steam version will not work**
+
 
 ## Controls
 
-| Button | Action                                   |
-| ------ | ---------------------------------------- |
-| D-PAD  | Directional movement                     |
-| A      | Investigate / advance / confirm          |
-| B      | Raise menu / cancel choice / flee battle |
-| X      | Sprint on the *field* when held down     |
-| Y      | Pause during battle                      |
-
-## Compile OHRRPGCE 
-
-```shell
-Install FreeBASIC
-git clone https://github.com/ohrrpgce/ohrrpgce.git
-cd ohrrpgce
-scons gfx=sdl2
-```
+| Button | Action       |
+| ------ | ------------ |
+| D-PAD  | Movement     |
+| A/B    | Jump         |
+| X/Y    | Attack       |
+| Start  | Proceed/menu |
