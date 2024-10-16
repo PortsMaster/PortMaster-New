@@ -25,7 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 # Patch game
 cd "$GAMEDIR"
@@ -79,8 +79,8 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-    $ESUDO ./libs/splash "splash.png" 1 
-    $ESUDO ./libs/splash "splash.png" 2000
+    $ESUDO ./lib/splash "splash.png" 1 
+    $ESUDO ./lib/splash "splash.png" 2000
 fi
 
 # Run the game
