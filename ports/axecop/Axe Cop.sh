@@ -19,9 +19,9 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/axecop
+GAMEDIR="/$directory/ports/axecop"
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=axecop.rpg
+DATAFILE="axecop.rpg"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -33,6 +33,8 @@ export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
+
+bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
 # Rename any .rpg file found to the DATAFILE variable
 file=$(find . -maxdepth 1 -type f -name "*.rpg")
