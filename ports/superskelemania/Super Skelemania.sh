@@ -52,7 +52,7 @@ fi
 $GPTOKEYB "gmloader" -c ./superskelemania.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
 pm_finish
