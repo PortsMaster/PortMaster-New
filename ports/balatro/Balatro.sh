@@ -14,7 +14,7 @@ fi
 
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
 get_controls
 
 GAMEDIR="/$directory/ports/balatro"
@@ -27,9 +27,11 @@ mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
 
 ## Uncomment the following file to log the output, for debugging purpose
-# exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
+
+$ESUDO chmod a+x ./bin/*
 
 if [ -f "Balatro.exe" ]; then
     GAMEFILE="Balatro.exe"
@@ -120,11 +122,10 @@ fi
 
 if [ -f "$LAUNCH_GAME" ]; then
   $GPTOKEYB "love.${DEVICE_ARCH}" &
+	pm_platform_helper "./bin/love.${DEVICE_ARCH}"
   ./bin/love.${DEVICE_ARCH} "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
 fi
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
