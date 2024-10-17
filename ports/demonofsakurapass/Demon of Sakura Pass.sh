@@ -14,7 +14,6 @@ fi
 
 source $controlfolder/control.txt
 export PORT_32BIT="Y"
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
