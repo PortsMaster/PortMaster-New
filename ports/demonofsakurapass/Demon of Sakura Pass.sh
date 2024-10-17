@@ -35,6 +35,7 @@ if [ -f "./gamedata/The Demon of Sakura Pass.exe" ]; then
     ./7zzs x "./gamedata/The Demon of Sakura Pass.exe" -o"./gamedata/"
     # Patch data.win
     $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
+    [ $? -eq 0 ] && rm "./gamedata/data.win" || echo "Patching of data.win has failed"
     # Delete unneeded files
     rm -f gamedata/*.{dll,ini,exe}
 fi
