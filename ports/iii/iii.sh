@@ -1,3 +1,5 @@
+#!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -10,18 +12,14 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-get_controls
+source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
-$ESUDO chmod 666 /dev/tty0
+get_controls
 
 GAMEDIR="/$directory/ports/iii"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
@@ -37,18 +35,12 @@ cd $GAMEDIR
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Delete unneeded files
-rm -f ./gamedata/*.dll ./gamedata/*.exe ./gamedata/*.ini
-
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+rm -f ./gamedata/*.exe
 
 $GPTOKEYB "gmloader" -c ./iii.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper $GAMEDIR/gmloader
 ./gmloader game.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+pm_finish
