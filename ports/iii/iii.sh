@@ -35,7 +35,7 @@ cd $GAMEDIR
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Delete unneeded files
-rm -f ./gamedata/*.exe
+[ -f ./gamedata/*.exe ] && rm -f ./gamedata/*.exe
 
 $GPTOKEYB "gmloader" -c ./iii.gptk &
 
