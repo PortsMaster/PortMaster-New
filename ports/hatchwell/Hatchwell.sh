@@ -30,20 +30,20 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 # Patch game
 cd "$GAMEDIR"
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-
-if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
-    # Move all audiogroup.dat from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.dat ./assets/ || exit 1
-    echo "Moved audiogroup.dat files from ./gamedata to ./assets/"	
-
-    # Zip the contents of ./game.apk including the new .ogg and .wav files
-    zip -r -0 ./game.apk ./assets/ || exit 1
-    echo "Zipped contents to ./game.apk"
-    rm -Rf "$GAMEDIR/assets/" || exit 1
-
+# If "gamedata/data.win" exists and matches the checksum of the steam versions
+if [ -f "./gamedata/data.win" ]; then
+    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
+    
+    # Checksum for the Steam version
+    if [ "$checksum" = "8584c4d3227e3219c9ac6db2ca3ff162" ]; then
+        $ESUDO ./patch/xdelta3 -d -s gamedata/data.win -f ./patch/hatchwell.xdelta gamedata/game.droid && \
+        rm gamedata/data.win
+    else
+        echo "Error: MD5 checksum of data.win does not match any expected version."
+	exit 1
+    fi
+else    
+    echo "Error: Missing files in gamedata folder or game has been patched."
 fi
 
 # Check if either "Hatchwell.exe"exists
