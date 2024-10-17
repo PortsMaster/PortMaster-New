@@ -12,7 +12,7 @@ Source: https://store.steampowered.com/app/1424690/Hatchwell/
 |A|Action|
 |B|Cancel|
 |X|Roll|
-|T|Equip 3|
+|Y|Equip 3|
 |L1|Map|
 |R1|Menu|
 
