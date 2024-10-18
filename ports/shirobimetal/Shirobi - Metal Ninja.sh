@@ -47,6 +47,6 @@ pm_platform_helper "$GAMEDIR/gmloadernext"
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
-./gmloadernext game.apk
+./gmloadernext
 
 pm_finish
