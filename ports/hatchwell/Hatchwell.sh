@@ -26,41 +26,26 @@ $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/patch/patchscript"
+export PATCHER_GAME="Hatchwell" 
+export PATCHER_TIME="3-5 mins minutes"
 
-# Patch game
-cd "$GAMEDIR"
-
-# If "gamedata/data.win" exists and matches the checksum of the steam versions
-if [ -f "./gamedata/data.win" ]; then
-    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
-    
-    # Checksum for the Steam version
-    if [ "$checksum" = "8584c4d3227e3219c9ac6db2ca3ff162" ]; then
-        $ESUDO ./patch/xdelta3 -d -s gamedata/data.win -f ./patch/hatchwell.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
+# Check if patchlog.txt to skip patching
+if [ ! -f patchlog.txt ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "Error: MD5 checksum of data.win does not match any expected version."
-	exit 1
+        echo "This port requires the latest version of PortMaster." > $CUR_TTY
     fi
-else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
-fi
-
-# Check if either "Hatchwell.exe"exists
-if [ -f "./gamedata/Hatchwell.exe" ]; then    
-    # Remove extra files from Steam or Itch.io builds
-    rm -Rf "./gamedata/Hatchwell.exe" \
-           "./gamedata/"*.dll \
-	   "./gamedata/Place game files here" 
-    echo "Extra game files removed"
-else    
-    echo "No extra game files to remove"
+else
+    echo "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-[ "$CFW_NAME" == "muOS" ] && $ESUDO ./lib/splash "splash.png" 1 # muOS only workaround
-    $ESUDO ./lib/splash "splash.png" 2000
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
+    $ESUDO ./tools/splash "splash.png" 2000
 fi
 
 # Run the game
