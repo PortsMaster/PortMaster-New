@@ -30,7 +30,8 @@ cd "$GAMEDIR"
 # Check if .exe exists
 if [ -f "./gamedata/Haunted Lands Burial Grounds 1.1.0.exe" ]; then
     # Extract its contents in place using 7zzs
-    ./libs/7zzs x "./gamedata/Haunted Lands Burial Grounds 1.1.0.exe" -o"./gamedata/"
+    ./libs/7zzs x "./gamedata/Haunted Lands Burial Grounds 1.1.0.exe" -o"./gamedata/" ||
+    exit1
 fi
 
 # Array of files to remove 
@@ -64,7 +65,7 @@ $GPTOKEYB "gmloader" -c "./hauntedlandsburial.gptk" &
 echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader hauntedlandsburial.apk
 
 pm_finish
