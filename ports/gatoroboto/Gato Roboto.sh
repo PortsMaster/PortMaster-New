@@ -45,7 +45,7 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./tools/splash "splash.png" 1 
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO splash "splash.png" 1 # workaround for muOS
     $ESUDO ./tools/splash "splash.png" 2000
 fi
 
