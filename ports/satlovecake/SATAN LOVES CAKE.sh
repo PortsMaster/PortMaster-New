@@ -39,7 +39,6 @@ else
 fi
 
 # Ensure necessary permissions
-$ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 # Start game with game.droid file in $GAMEDIR
