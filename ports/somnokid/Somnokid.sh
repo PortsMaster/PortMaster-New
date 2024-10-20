@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-TOOLDIR="$GAMEDIR/tools"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
