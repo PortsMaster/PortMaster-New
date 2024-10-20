@@ -1,0 +1,62 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/gamedata"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+# Check for file existence before trying to manipulate them:
+if [ -f "./gamedata/data.win" ]; then
+    mv gamedata/data.win gamedata/game.droid && echo "data.win renamed to game.droid" || echo "Failed to rename data.win"
+else
+    echo "data.win not found"
+fi
+
+# Compress audio
+echo "Compressing audio..."
+sleep 3
+mkdir -p "$TMPDIR"
+
+# Run the compression tool
+PYTHON=$(which python3)
+$PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+
+if [ $? -eq 0 ]; then
+    echo "Compression completed successfully."
+    mv "$TMPDIR/"* "$DATADIR"
+    echo "Moved compressed files to $DATADIR."
+    rmdir "$TMPDIR"
+    echo "Temporary directory $TMPDIR removed."
+    echo "Audio compression applied successfully."
+else
+    echo "Audio compression failed."
+    echo "Cleaning up temporary directory $TMPDIR."
+    rm -rf "$TMPDIR"
+fi
+
+# Check if either "Tamiku.exe"exists
+if [ -f "./gamedata/Tamiku.exe" ]; then    
+    # Remove extra files from Steam build
+    rm -Rf "./gamedata/Tamiku.exe" \
+           "./gamedata/"*.dll \
+	   "./gamedata/Place game files here" 
+    echo "Extra game files removed"
+else    
+    echo "No extra game files to remove, game has been patched!"
+fi
