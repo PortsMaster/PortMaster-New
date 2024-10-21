@@ -1,6 +1,6 @@
 ## Notes
 Thanks to [Drinkbox Studios](https://www.gog.com/en/game/guacamelee_gold_edition) for making this awesome game!
-Speical thanks to kotzebuedog for solving a game-breaking bug
+Special thanks to kotzebuedog for solving a game-breaking bug
 
 ## Controls
 
