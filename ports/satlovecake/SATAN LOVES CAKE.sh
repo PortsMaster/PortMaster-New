@@ -29,7 +29,7 @@ cd "$GAMEDIR"
 if [ -e "$GAMEDIR/data.win" ]; then
     mv "$GAMEDIR/data.win" "$GAMEDIR/game.droid" || exit 1
     echo "Renamed data.win to game.droid."
-elif [ ! -e "$GAMEDIR/data.win" ] || [ ! -e "$GAMEDIR/game.droid" ];
+elif [ ! -e "$GAMEDIR/data.win" ] || [ ! -e "$GAMEDIR/game.droid" ]; then
     echo "No data.win or game.droid file found in the main folder."
 fi
 
