@@ -21,12 +21,26 @@ chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
-# Check for file existence before trying to manipulate them:
+# If "gamedata/data.win" exists and matches the checksum of the Steam or Itch versions
 if [ -f "./gamedata/data.win" ]; then
-    mv gamedata/data.win gamedata/game.droid && echo "data.win renamed to game.droid" || echo "Failed to rename data.win"
-else
-    echo "data.win not found"
+    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
+    
+    # Checksum for the Steam version
+    if [ "$checksum" = "9f12bbf6e23626fdb69782f6ecaa4a6b" ]; then
+        mv "./patch/game.apk.steam" "./game.apk"
+        mv "./gamedata/data.win" "./gamedata/game.droid"
+    # Checksum for the Itch version
+    elif [ "$checksum" = "7442951ac2c5f1e8d29242f2d3a9e12c" ]; then
+        mv "./patch/game.apk.itch" "./game.apk"
+        mv "./gamedata/data.win" "./gamedata/game.droid"
+    else
+        echo "Error: MD5 checksum of data.win does not match any expected version."
+	exit 1
+    fi
+else    
+    echo "Missing files in gamedata folder or game has been patched."
 fi
+
 
 # Compress audio
 echo "Compressing audio..."

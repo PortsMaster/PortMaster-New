@@ -28,7 +28,7 @@ $ESUDO chmod +x -R $GAMEDIR/*
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/patch/patchscript"
 export PATCHER_GAME="Tamiku" 
-export PATCHER_TIME="3 to 5 minutes"
+export PATCHER_TIME="2 to 3 minutes"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
