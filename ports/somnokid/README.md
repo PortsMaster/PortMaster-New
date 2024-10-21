@@ -1,6 +1,6 @@
 ## Notes
 
-A special thank you to [Team Bugulon](https://team-bugulon.itch.io/) for making this great spooky arcade game and allowing us to distribute it Ready to run !
+A special thank you to [Team Bugulon](https://team-bugulon.itch.io/somnokid) for making this great spooky arcade game and allowing us to distribute it Ready to run !
 
 Also a big thanks to our fellow testers and great port makers from the PortMaster Discord.
 
