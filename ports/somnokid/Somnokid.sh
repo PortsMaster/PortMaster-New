@@ -39,7 +39,6 @@ $ESUDO ./tools/splash "splash.png" 10000 &
 
 $GPTOKEYB "gmloadernext" -c "controls.gptk" &
 pm_platform_helper $GAMEDIR/gmloadernext
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 ./gmloadernext
 
