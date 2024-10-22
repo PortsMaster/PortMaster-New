@@ -58,5 +58,7 @@ pm_platform_helper "$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/Cosmic Cleaning Crew Windows 64 Bit.pck"
 
 
-$ESUDO umount "$godot_dir"
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "$godot_dir"
+fi
 pm_finish
