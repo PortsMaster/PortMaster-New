@@ -18,3 +18,15 @@ When using the on-screen quick-controls the buttons are swapped.  A is B, B is A
 |R1|Fire Primary|
 |L2+R2|Quick Menus|
 |L3|OSK|
+
+
+## Compile
+
+Extract the contents of reflectionhle-sauce.7z
+
+```shell
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j3
+```
