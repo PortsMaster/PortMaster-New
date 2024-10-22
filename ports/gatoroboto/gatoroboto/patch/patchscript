@@ -1,0 +1,84 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/gamedata"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+if [ -f "gamedata/data.win" ]; then
+    checksum=$(md5sum "gamedata/data.win" | awk '{print $1}')
+    
+    if [ "$checksum" = "38970c275305ccd7c9abe9a10817872e" ]; then
+        echo "Detected Steam version. Using xdelta to patch the game with Steam patch..."
+        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.steam.xdelta" "gamedata/game.droid"; then
+            echo "Steam Xdelta patch successful."
+            rm "gamedata/data.win"
+        else
+            echo "Steam Xdelta patch unsuccessful."
+        fi
+    elif [ "$checksum" = "3d64f409e0e6d30650aea4ed03a1a4a1" ]; then
+        echo "Detected GOG version. Using xdelta to patch the game with GOG patch..."
+        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.gog.xdelta" "gamedata/game.droid"; then
+            echo "GOG Xdelta patch successful."
+            rm "gamedata/data.win"
+        else
+            echo "GOG Xdelta patch unsuccessful."
+        fi
+    else
+        echo "Unknown data.win checksum. No patch applied."
+    fi
+else
+    echo "data.win file not found."
+fi
+
+# Compress audio
+echo "Compressing audio..."
+sleep 3
+mkdir -p "$TMPDIR"
+
+# Run the compression tool
+PYTHON=$(which python3)
+$PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+
+if [ $? -eq 0 ]; then
+    echo "Compression completed successfully."
+    mv "$TMPDIR/"* "$DATADIR"
+    echo "Moved compressed files to $DATADIR."
+    rmdir "$TMPDIR"
+    echo "Temporary directory $TMPDIR removed."
+    echo "Audio compression applied successfully."
+else
+    echo "Audio compression failed."
+    echo "Cleaning up temporary directory $TMPDIR."
+    rm -rf "$TMPDIR"
+fi
+
+# Check if there are .dat files in ./gamedata
+if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
+    # Move all .dat files from ./gamedata to ./assets
+    mkdir -p ./assets
+    mv ./gamedata/*.dat ./assets/ || exit 1
+
+    # Zip the contents of ./game.apk including the .dat files
+    zip -r -0 ./game.apk ./assets/ || exit 1
+    rm -Rf "$GAMEDIR/assets/" || exit 1
+	
+	  # Final completion message
+    echo "Patching process complete!"
+fi

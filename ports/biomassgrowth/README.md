@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to BRAINOS for developing this game. Check it out on https://brainos.itch.io/biomassgrowth
+Thanks to BRAINOS for developing this game and kindly allowing us to distribute it. Check it out on https://brainos.itch.io/biomassgrowth
 
 ## Controls
 
