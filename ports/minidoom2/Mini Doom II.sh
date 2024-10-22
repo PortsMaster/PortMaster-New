@@ -34,6 +34,12 @@ exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/oggenc"
+$ESUDO chmod +x "$GAMEDIR/tools/oggdec"
+$ESUDO chmod +x "$GAMEDIR/tools/vgmstream-cli"
+$ESUDO chmod +x "$GAMEDIR/tools/vgmstream-cli"
+$ESUDO chmod +x "$GAMEDIR/tools/wwise2audiogroup.py"
 
 cd $GAMEDIR
 
