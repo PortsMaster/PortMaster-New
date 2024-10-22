@@ -35,7 +35,7 @@ $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
 # Splash
 [ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
-$ESUDO ./tools/splash "splash.png" 10000 &
+$ESUDO splash "splash.png" 10000 &
 
 $GPTOKEYB "gmloadernext" -c "controls.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
