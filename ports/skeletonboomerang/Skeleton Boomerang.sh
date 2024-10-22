@@ -68,13 +68,16 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     mv ./gamedata/*.ogg ./assets/
     echo "Moved .ogg files from ./gamedata to ./assets/"
 
-    # Zip the contents of ./skeletonboomerang.apk including the new .ogg files
-    zip -r -0 ./skeletonboomerang.apk ./assets/
-    echo "Zipped contents to ./skeletonboomerang.apk"
+    # Zip the contents of ./game.apk including the new .ogg files
+    zip -r -0 ./game.apk ./assets/
+    echo "Zipped contents to ./game.apk"
     rm -Rf "$GAMEDIR/assets/"
 
     # cleanup if extra files were copied in from steam
-    rm -Rf "$GAMEDIR/gamedata/skeletonboomerang.exe"
+    rm -Rf "./gamedata/skeletonboomerang.exe" \
+           "./gamedata/"*.dll \
+	   "./gamedata/Place game files here"
+    echo "Extra game files removed."
 fi
 
 $GPTOKEYB "gmloader" &
