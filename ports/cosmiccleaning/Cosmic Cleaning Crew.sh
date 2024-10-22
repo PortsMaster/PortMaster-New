@@ -54,7 +54,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "cosmiccleaning.gptk" &
-pm_platform_helper $runtime
+pm_platform_helper "$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/Cosmic Cleaning Crew Windows 64 Bit.pck"
 
 
