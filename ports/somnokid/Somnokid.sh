@@ -22,7 +22,7 @@ GAMEDIR="/$directory/ports/somnokid"
 TOOLDIR="$GAMEDIR/tools"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
