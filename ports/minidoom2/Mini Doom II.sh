@@ -33,7 +33,7 @@ export PATCHER_TIME="2 to 5 minutes"
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
-$ESUDO chmod +x "$GAMEDIR/tools/swapabxy.py"
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 cd $GAMEDIR
 
