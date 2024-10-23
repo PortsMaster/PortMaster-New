@@ -41,7 +41,13 @@ if [ -f "./gamedata/JUMP ON HEAD.exe" ]; then
     rm -rf gamedata/\$*
 fi
 
-$GPTOKEYB "gmloader" -c ./jumponhead.gptk &
+# Determine the correct .gptk configuration based on CFW_NAME
+if [ "$CFW_NAME" == "ROCKNIX" ]; then
+    GPTK_CONFIG="./jumponhead_rocknix.gptk"
+else
+    GPTK_CONFIG="./jumponhead.gptk"
+fi
+$GPTOKEYB "gmloader" -c "$GPTK_CONFIG" &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
