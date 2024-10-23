@@ -30,7 +30,7 @@ Dashing is 20% faster and damages enemy tanks!
 
 A special thank you to [rologfos](https://rologfos.itch.io/table-tanks) for making this nice tank action game!
 
-Special thanks to JanTrueno for helping me out with porting and making cover for the game;
+Special thanks to JanTrueno for helping me out with porting and making cover for the game with EmulationStation ImageMaker tool;
 
 Special thanks to Jeod for making an [EmulationStation ImageMaker](https://github.com/JeodC/EmulationStation-ImageMaker) tool;
 
