@@ -33,14 +33,13 @@ cd $GAMEDIR
 if [ -f "./gamedata/JUMP ON HEAD.exe" ]; then
     # Extract its contents in place using 7zzs
     ./7zzs x "./gamedata/JUMP ON HEAD.exe" -o"./gamedata/"
+    # Patch data.win
+    $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
+    [ $? -eq 0 ] && rm "./gamedata/data.win" || echo "Patching of data.win has failed"
+    # Delete unneeded files
     rm -f gamedata/*.{dll,ini,exe}
     rm -rf gamedata/\$*
 fi
-
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 $GPTOKEYB "gmloader" -c ./jumponhead.gptk &
 
