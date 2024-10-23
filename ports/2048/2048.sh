@@ -28,11 +28,12 @@ elif [[ $CFW_NAME == "ArkOS" ]] || [[ $CFW_NAME == "ArkOS wuMMLe" ]]; then
   raconf=""
 elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
-  raconf="--config /run/muos/storage/info/config/retroarch.cfg"
-else
-  raloc="/usr/bin"
-  raconf=""
-fi
+  if [ -f /run/muos/storage/info/config/retroarch.cfg ]; then
+    raconf="--config /run/muos/storage/info/config/retroarch.cfg"
+  else
+    raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+  fi
+
 
 GAMEDIR="/$directory/ports/2048"
 
