@@ -28,7 +28,7 @@ elif [[ $CFW_NAME == "ArkOS" ]]; then
   raconf=""
 elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
-  raconf="-v -f -c /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+  raconf="-v -f -c /run/muos/storage/info/config/retroarch.cfg"
 else
   raloc="/usr/bin"
   raconf=""
