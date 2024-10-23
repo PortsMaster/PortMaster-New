@@ -1,28 +1,29 @@
 ## Notes
 
 *List of upgrades:*
-**Double Tap:**
+
+**Double Tap:**  
 Fire an extra bullet at no cost!
 
-**Increased Tank Agility:**
+**Increased Tank Agility:**  
 +50% Top Speed & 17% Turn Speed.
 
-**+2 Max Ammo:** 
+**+2 Max Ammo:**   
 Grants +2 Maximum Ammo capacity.
 
-**Big Bullets:**
+**Big Bullets:**  
 Your bullets becomes huge and destroy enemy bullets!
 
-**Shield Generator:**
+**Shield Generator:**  
 Your tank ignores the first bullet that hits it each level.
 
-**Bouncy Bullets:**
+**Bouncy Bullets:**  
 Your bullets will bounce off of walls twice before being destroyed.
 
-**Laser Sight:**
+**Laser Sight:**  
 Shows where you are aiming and increases bullet speed by 60%!
 
-**Ram Dashing:**
+**Ram Dashing:**  
 Dashing is 20% faster and damages enemy tanks!
 
 ## Acknowledgments
