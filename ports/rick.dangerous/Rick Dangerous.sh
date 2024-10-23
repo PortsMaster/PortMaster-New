@@ -35,7 +35,7 @@ elif [[ $CFW_NAME == "muOS" ]]; then
   fi
 else
   raloc="/usr/bin"
-  raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+  raconf=""
 fi
 
 GAMEDIR="/$directory/ports/xrick"
