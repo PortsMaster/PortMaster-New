@@ -1,13 +1,20 @@
 ## Notes
 
-Thanks to [BRAINOS](https://brainos.itch.io) for creating this fantastic game, which you can purchase on [itch.io](https://brainos.itch.io/touge)
+Thanks to [Drew Shapiro + Jackson Neu](https://organzola.itch.io/) for creating this fantastic game, which you can purchase on [itch.io](https://organzola.itch.io/jumponhead)
+
+**This is game is local multiplayer only; there is no single player option**
 
 
 ## Controls
 
-| Button        | Action |
-| ------------- | ------ |
-| L-STICK/D-PAD | Steer  |
-| START         | Select |
-| R1            | Reset  |
-| SELECT        | Quit   |
+| Button       | Action           |
+| ------------ | ---------------- |
+| **Player 1** |                  |
+| D-PAD        | Movement         |
+| L-STICK-UP   | Jump alternative |
+|              |                  |
+| **Player 2** |                  |
+| A/B/X/Y      | Movement         |
+|              |                  |
+| START        | Proceed          |
+| BACK         | Pause/menu       |
