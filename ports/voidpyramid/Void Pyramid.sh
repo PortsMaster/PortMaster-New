@@ -13,15 +13,13 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-GAMEDIR=/$directory/ports/voidpyramid
+GAMEDIR="/$directory/ports/voidpyramid"
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=voidpyramid.rpg
+DATAFILE="voidpyramid.rpg"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -34,10 +32,10 @@ export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
-$GPTOKEYB "ohrrpgce-game" -c ./voidpyramid.gptk &
+bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
+$GPTOKEYB "ohrrpgce-game" -c ./voidpyramid.gptk &
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" $DATAFILE -f
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
