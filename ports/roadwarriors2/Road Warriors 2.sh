@@ -32,14 +32,13 @@ cd $GAMEDIR
 
 # Extract and prepare the game files.  
 if [ -f "$GAMEDIR/gamedata/rw2_release_v1_1.zip" ]; then
+    # Unzip necessary files into the gamedata directory
+    unzip -j -o gamedata/rw2_release_v1_1.zip -x *.exe *.ini *.dll -d gamedata
 	
-	# Unzip necessary files into the gamedata directory
-	unzip -j -o gamedata/rw2_release_v1_1.zip -x *.exe *.ini *.dll -d gamedata
+    # Rename data.win
+    mv gamedata/data.win gamedata/game.droid
 	
-	# Rename data.win
-	mv gamedata/data.win gamedata/game.droid
-	
-	# Move all .ogg files from gamedata folder to ./assets
+    # Move all .ogg files from gamedata folder to ./assets
     mkdir -p ./assets
     mv ./gamedata/*.ogg ./assets/
 
@@ -47,10 +46,10 @@ if [ -f "$GAMEDIR/gamedata/rw2_release_v1_1.zip" ]; then
     zip -r -0 ./game.apk ./assets/
     rm -Rf "$GAMEDIR/assets/"
 	
-	# Delete no longer needed zip file
-	rm gamedata/rw2_release_v1_1.zip
+    # Delete no longer needed zip file
+    rm gamedata/rw2_release_v1_1.zip
 else
-	echo "rw2_release_v1_1.zip is missing, skipping the extraction step"
+    echo "rw2_release_v1_1.zip is missing, skipping the extraction step"
 fi
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
