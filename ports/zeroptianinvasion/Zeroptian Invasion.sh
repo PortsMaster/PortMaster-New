@@ -34,7 +34,8 @@ if [ -f "./gamedata/data.win" ]; then
     $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
     [ $? -eq 0 ] && rm "./gamedata/data.win" || echo "Patching of data.win has failed"
     # Delete unneeded files
-    rm -f gamedata/*.{ini,exe}
+    rm -f gamedata/*.exe
+    rm -f gamedata/options.ini
 fi
 
 $GPTOKEYB "gmloader" -c ./zeroptianinvasion.gptk &
