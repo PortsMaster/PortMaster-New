@@ -1,7 +1,6 @@
 ## Notes
 
-Thanks to Yar for developing this game, check the game's website at https://github.com/PortsMaster/PortMaster-New/pull/845/files
-
+Thanks to Yar for developing this game, check the game's website at https://yaru.itch.io/road-warriors-2
 ## Controls
 
 | Button | Action |
