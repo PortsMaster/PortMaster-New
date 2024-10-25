@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-GAMEDIR="/$directory/ports/unofficial/zeroptianinvasion"
+GAMEDIR="/$directory/ports/zeroptianinvasion"
 
 # CD and set permissions
 cd $GAMEDIR
