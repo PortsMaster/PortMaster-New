@@ -1,3 +1,5 @@
+#!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -19,22 +21,27 @@ get_controls
 
 $ESUDO chmod 666 /dev/tty0
 
-GAMEDIR="/$directory/ports/lostethereal"
+GAMEDIR=/$directory/ports/lostethereal
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
+# Extract and add .ogg files to .apk
+if [ -f "./gamedata/Lost Ethereal.exe" ]; then
+    ./7zzs x "./gamedata/Lost Ethereal.exe" -o"./gamedata/"
+    mv ./gamedata/*.ogg ./assets/ 2>/dev/null
+    zip -r -0 ./game.apk ./assets/
+    echo "Zipped contents to ./game.apk"
+    # Delete unneeded files
+    rm -Rf ./assets/
+    rm -f gamedata/*.{dll,ini,exe}
 fi
 
 # Check for file existence before trying to manipulate them:
@@ -54,4 +61,3 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
-
