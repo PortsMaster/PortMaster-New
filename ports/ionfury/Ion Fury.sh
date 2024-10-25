@@ -55,6 +55,7 @@ else
 fi
 
 $GPTOKEYB "eduke32.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+pm_platform_helper "$GAMEDIR/eduke32.${DEVICE_ARCH}"
 ./eduke32.${DEVICE_ARCH} -gfury.grp
 
 pm_finish
