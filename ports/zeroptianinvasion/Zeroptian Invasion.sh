@@ -13,35 +13,51 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="/$directory/ports/zeroptianinvasion"
+# Variables
+GAMEDIR="/$directory/ports/unofficial/zeroptianinvasion"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-# We log the execution of the script into log.txt
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
 
-# Patch data.win
-if [ -f "./gamedata/data.win" ]; then
-    $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
-    [ $? -eq 0 ] && rm "./gamedata/data.win" || echo "Patching of data.win has failed"
-    # Delete unneeded files
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+
+data_win="./gamedata/data.win"
+
+# Check if the data.win file exists
+if [ -f "$data_win" ]; then
+    current_md5=$(md5sum "$data_win" | awk '{print $1}')
+    # itch.io patch
+    if [ "$current_md5" == "f0e0952c79e50d261993cfbf8731410f" ]; then
+        $controlfolder/xdelta3 -d -s "$data_win" "./gamedata/patch_itch.xdelta3" "./gamedata/game.droid"
+    # Steam patch
+    elif [ "$current_md5" == "5b34b1f0a90a3ffb044c1016245d3eb6" ]; then
+        $controlfolder/xdelta3 -d -s "$data_win" "./gamedata/steam.patch" "./gamedata/game.droid"
+    else
+        echo "MD5 checksum does not match any expected value. Aborting patch."
+    fi
+    # Delete unnecessary files
     rm -f gamedata/*.exe
     rm -f gamedata/options.ini
+else
+    echo "File $file_path does not exist."
 fi
 
-$GPTOKEYB "gmloader" -c ./zeroptianinvasion.gptk &
+# Display loading splash
+if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
+    $ESUDO ./tools/splash "splash.png" 2000
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
+# Run the game
+$GPTOKEYB "gmloadernext" -c "./zeroptianinvasion.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext"
+./gmloadernext
 
+# Kill processes
 pm_finish
