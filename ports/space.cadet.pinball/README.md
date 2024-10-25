@@ -10,8 +10,8 @@ The menu bar will be hidden after the first launch.
 |Dpad|Shake|
 |A|Launch / OK|
 |B|Cancel|
-|X|New game|
-|Y|Menu bar|
+|Y|New game|
+|X|Menu bar|
 |Select|Quit|
 |Start|Pause|
 
