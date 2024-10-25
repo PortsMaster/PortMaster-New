@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: space.cadet.pinball.zip, Space Cadet Pinball.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
