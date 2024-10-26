@@ -33,9 +33,6 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
-
 $GPTOKEYB "gmloader" -c ./fnafnes.gptk &
 
 pm_platform_helper "$GAMEDIR/gmloader"
