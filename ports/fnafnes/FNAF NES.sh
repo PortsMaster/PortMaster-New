@@ -1,4 +1,4 @@
-XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+#!/bin/bash
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -11,13 +11,10 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
-$ESUDO chmod 666 /dev/tty0
+get_controls
 
 GAMEDIR="/$directory/ports/fnafnes"
 
@@ -27,15 +24,9 @@ export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
 # We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
@@ -47,10 +38,8 @@ $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" -c ./fnafnes.gptk &
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
 
 ./gmloader fnafnes.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
