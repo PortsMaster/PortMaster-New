@@ -33,7 +33,8 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 # check if we have new enough version of PortMaster that contains xdelta3
 if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > $CUR_TTY
+    echo "PortMaster update required."
   sleep 5
   exit 1
 fi
