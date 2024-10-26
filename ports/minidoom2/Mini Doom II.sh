@@ -40,7 +40,6 @@ $ESUDO chmod +x "$GAMEDIR/tools/oggdec"
 $ESUDO chmod +x "$GAMEDIR/tools/vgmstream-cli"
 $ESUDO chmod +x "$GAMEDIR/tools/wwise2audiogroup.py"
 
-
 cd $GAMEDIR
 
 # Functions BEGIN
@@ -77,7 +76,6 @@ if [ -f "$GAMEDIR/SDL_swap_gpbuttons.txt" ]; then
     swapabxy
 fi
 
-#$GPTOKEYB "gmloader" -c ./minidoom2.gptk &
 $GPTOKEYB "gmloadernext" &
 pm_plateform_helper "$GAMEDIR/gmloadernext"
 
