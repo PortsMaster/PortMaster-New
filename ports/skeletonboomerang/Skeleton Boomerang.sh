@@ -88,4 +88,3 @@ pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
 pm_finish
-printf "\033c" > /dev/tty0
