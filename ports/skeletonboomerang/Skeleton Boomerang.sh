@@ -65,7 +65,7 @@ fi
 # pack audio into apk if not done yet
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     # Move all .ogg files from ./gamedata to ./assets
-    mkdir ./assets
+    mkdir -p ./assets
     mv ./gamedata/*.ogg ./assets/
     echo "Moved .ogg files from ./gamedata to ./assets/"
 
