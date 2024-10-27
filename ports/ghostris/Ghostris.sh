@@ -21,6 +21,7 @@ get_controls
 GAMEDIR="/$directory/ports/ghostris"
 
 export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
@@ -29,35 +30,35 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Extract and prepare the game files.  
-if [ -f "$GAMEDIR/Ghostris_2020HalloweenUpdate.zip" ]; then
-	
+if [ -f "$GAMEDIR/gamedata/Ghostris_2020HalloweenUpdate.zip" ]; then
+
 	# Unzip necessary files into the gamedata directory
-	unzip -j -o Ghostris_2020HalloweenUpdate.zip -x *.exe *.ini
-	
+	unzip -j -o "$GAMEDIR/gamedata/Ghostris_2020HalloweenUpdate.zip" -x *.exe *.ini -d gamedata
+
 	# Patch the data.win file
-	$controlfolder/xdelta3 -d -s "./data.win" "./patch/ghostrispatch.xdelta" "./game.droid"
-	
+	$controlfolder/xdelta3 -d -s "./gamedata/data.win" "./patch/ghostrispatch.xdelta" "./gamedata/game.droid"
+
 	# Move all .ogg files from gamedata folder to ./assets
     mkdir -p ./assets
-    mv ./*.ogg ./assets/
-    
-    # Zip the contents of ./game.apk including the .ogg files
-    zip -r -0 ./game.apk ./assets/
-    
+    mv ./gamedata/*.ogg ./assets/
+
+
+	# Zip the contents of ./game.apk including the .ogg files
+	zip -r -0 ./game.apk ./assets/
+
 	# Delete no longer needed files and folders
 	rm -Rf "$GAMEDIR/assets/"
-	rm Ghostris_2020HalloweenUpdate.zip
-	rm -r ./patch
-	rm data.win
+	rm ./gamedata/Ghostris_2020HalloweenUpdate.zip
+	rm ./gamedata/data.win
+	rm -Rf "$GAMEDIR/patch"
 else
 	echo "Ghostris_2020HalloweenUpdate.zip is missing, skipping the extraction step"
 fi
 
-$GPTOKEYB "gmloadernext" -c "ghostris.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
+$ESUDO chmod +x "$GAMEDIR/gmloader"
 
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-
-./gmloadernext
+$GPTOKEYB "gmloader" -c "ghostris.gptk" &
+pm_platform_helper "$GAMEDIR/gmloader"
+./gmloader game.apk
 
 pm_finish
