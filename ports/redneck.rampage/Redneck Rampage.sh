@@ -47,7 +47,7 @@ GAMEDIR="/$directory/ports/rednukem-redneck1"
 $ESUDO rm -rf ~/.config/rednukem
 $ESUDO ln -s $GAMEDIR/conf/rednukem ~/.config/
 
-export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR

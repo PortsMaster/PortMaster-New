@@ -66,7 +66,7 @@ fi
 echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="${GAMEDIR}"
-export LD_LIBRARY_PATH="${GAMEDIR}/libs:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$GAMEDIR/libs.${DEVICE_ARCH}:${GAMEDIR}/libs:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod 666 /dev/uinput
 

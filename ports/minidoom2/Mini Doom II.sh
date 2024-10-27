@@ -20,7 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/minidoom2"
 TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export PATH="$PATH:$GAMEDIR/tools"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 

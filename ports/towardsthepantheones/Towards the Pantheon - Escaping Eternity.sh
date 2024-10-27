@@ -21,7 +21,7 @@ get_controls
 export PORT_32BIT="Y"
 GAMEDIR="/$directory/ports/towardsthepantheones"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib32:$GAMEDIR/libs:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"

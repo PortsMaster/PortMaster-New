@@ -47,7 +47,7 @@ rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 export MONO_IOMAP=all
 export XDG_DATA_HOME=$HOME/.local/share
 export MONO_PATH="$gamedir/dlls":"$gamedir/gamedata":"$gamedir/monomod"
-export LD_LIBRARY_PATH="$gamedir/libs":"$monodir/lib":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH=""$LD_LIBRARY_PATH:$gamedir/libs":"$monodir/lib":$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin":"$PATH"
 
 # Configure the renderpath

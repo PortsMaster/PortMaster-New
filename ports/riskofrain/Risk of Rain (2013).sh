@@ -22,7 +22,7 @@ get_controls
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/$GAMEDIR/lib:/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/"
 export GMLOADER_PLATFORM="os_windows"

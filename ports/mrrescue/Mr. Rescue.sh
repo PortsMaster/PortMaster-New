@@ -22,7 +22,7 @@ export XDG_DATA_HOME="$GAMEDIR/saves"
 mkdir "$XDG_DATA_HOME"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

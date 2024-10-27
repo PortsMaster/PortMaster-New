@@ -33,7 +33,7 @@ if [ -f $GAMEDIR/savegame/savegame-widescreen.sor ]; then
   fi
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib32:$GAMEDIR/libs:/usr/local/lib/arm-linux-gnueabihf:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*

@@ -39,7 +39,7 @@ cd $GAMEDIR
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 # Run the installer file if it hasn't been run yet
 install-apk() {

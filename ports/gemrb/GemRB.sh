@@ -288,7 +288,7 @@ export TEXTINPUTNOAUTOCAPITALS="Y"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 export PYTHONHOME="$GAMEDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "gemrb" -c "${GPTOKEYB_CFG}" textinput &
 $TASKSET ./gemrb -c "${GAMEDIR}/games/${GAME}/GemRB.cfg" "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt

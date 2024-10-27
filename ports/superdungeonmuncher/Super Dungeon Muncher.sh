@@ -25,7 +25,7 @@ GAMEDIR="/$directory/ports/superdungeonmuncher"
 # We log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

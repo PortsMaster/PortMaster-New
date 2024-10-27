@@ -45,7 +45,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/Bin/libs:/usr/lib32:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/Bin/libs:/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [ "$LIBGL_FB" != "" ]; then

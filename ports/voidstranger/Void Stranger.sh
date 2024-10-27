@@ -15,7 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 GAMEDIR="/$directory/ports/voidstranger"
-export LD_LIBRARY_PATH="/usr/lib:/$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"

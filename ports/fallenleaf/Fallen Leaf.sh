@@ -43,7 +43,7 @@ $ESUDO chmod 777 "$TOOLDIR/gmKtool.py"
 $ESUDO chmod 777 "$TOOLDIR/swapabxy.py"
 $ESUDO chmod 777 "$GAMEDIR/gmloader"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$TOOLDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$TOOLDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR/libs:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export GMLOADER_DEPTH_DISABLE=1

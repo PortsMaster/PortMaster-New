@@ -32,7 +32,7 @@ $ESUDO chmod 666 /dev/uinput
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 [ -f "$GAMEDIR/gamedata/data.win" ] && mv $GAMEDIR/gamedata/data.win $GAMEDIR/gamedata/game.droid

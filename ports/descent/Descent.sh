@@ -34,7 +34,7 @@ $ESUDO rm -rf ~/.$GAME
 ln -sfv $GAMEDIR/config ~/.$GAME
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export SDL_FORCE_SOUNDFONTS=1
 export SDL_SOUNDFONTS="$GAMEDIR/soundfont.sf2"

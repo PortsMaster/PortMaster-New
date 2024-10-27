@@ -25,7 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/patch/patchscript"
 export PATCHER_GAME="Hatchwell" 
 export PATCHER_TIME="3-5 minutes"

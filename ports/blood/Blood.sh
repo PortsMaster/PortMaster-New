@@ -16,7 +16,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/storage/roms/ports/Blood/lib:/usr/lib"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 GAMEDIR="/$directory/ports/Blood"
 
 GPTOKEYB_CONFIG="$GAMEDIR/nblood.gptk"

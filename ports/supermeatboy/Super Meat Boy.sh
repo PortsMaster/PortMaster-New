@@ -98,7 +98,7 @@ export BOX86_SHOWSEGV=1
 export BOX86_SHOWBT=1
 export BOX86_DYNAREC=1
 
-export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH=""$LD_LIBRARY_PATH:$GAMEDIR/libs.${DEVICE_ARCH}:"/usr/lib32":$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"$GAMEDIR/libs/":$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAMEDIR/libs/x86:$GAMEDIR/gamedata/x86"
 
 if [ "$LIBGL_FB" != "" ]; then

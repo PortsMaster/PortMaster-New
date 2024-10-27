@@ -33,7 +33,7 @@ cd $GAMEDIR
 $ESUDO chmod 777 "$GAMEDIR/gmloadernext-armhf"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/$GAMEDIR/libs:/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export GMLOADER_PLATFORM="os_windows"
 export PORT_32BIT="Y"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

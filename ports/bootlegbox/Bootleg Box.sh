@@ -13,23 +13,15 @@ else
 fi
 
 source $controlfolder/control.txt
-
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
-
+get_controls
 
 GAMEDIR=/$directory/ports/bootlegbox
 
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-
-
-
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/utils/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR/libs:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 

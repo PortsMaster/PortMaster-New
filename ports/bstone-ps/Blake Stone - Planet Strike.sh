@@ -44,7 +44,7 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [[ "$DEVICE_NAME" == 'x55' ]] || [[ "$DEVICE_NAME" == 'RG353P' ]] || [[ "$DEVICE_NAME" == 'RG40XX' ]]; then

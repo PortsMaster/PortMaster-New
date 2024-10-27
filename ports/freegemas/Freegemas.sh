@@ -29,7 +29,7 @@ export TERM=linux
 printf "\033c" > $CUR_TTY
 
 printf "\033c" > $CUR_TTY
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$PWD/libs:$LD_LIBRARY_PATH"
 ## RUN SCRIPT HERE
 
 echo "Starting game." > $CUR_TTY

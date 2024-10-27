@@ -20,7 +20,7 @@ GAMEDIR="/$directory/ports/dfencervstheorb"
 
 export XDG_DATA_HOME="$GAMEDIR/conf" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/conf"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"

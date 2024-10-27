@@ -35,7 +35,7 @@ printf "\033c" > $CUR_TTY
 echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="$GAMEDIR"
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$PWD/libs:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "gnurobbo" -c gnurobbo.gptk &
 ./gnurobbo

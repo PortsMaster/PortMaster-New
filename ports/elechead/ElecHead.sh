@@ -22,7 +22,7 @@ $ESUDO chmod 666 /dev/tty0
 
 GAMEDIR="/$directory/ports/elechead"
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/libs:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1

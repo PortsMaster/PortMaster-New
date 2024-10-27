@@ -22,7 +22,7 @@ GAMEDIR="/$directory/ports/tabletanks"
 TOOLDIR="$GAMEDIR/tools"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:/usr/lib:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 

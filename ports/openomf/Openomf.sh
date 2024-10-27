@@ -29,7 +29,7 @@ ln -sfv $GAMEDIR/conf/openomfproject ~/.local/share
 
 export OPENOMF_RESOURCE_DIR="$GAMEDIR/gamedata"
 export OPENOMF_PLUGIN_DIR="$GAMEDIR/plugins"
-export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "openomf" -c "$GAMEDIR/openomf.gptk" &
 ./openomf

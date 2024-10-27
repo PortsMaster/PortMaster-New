@@ -46,7 +46,7 @@ cp $gamedir/libs/Celeste.exe.config $gamedir/gamedata
 # Setup path and other environment variables
 export FNA_PATCH="$gamedir/dlls/CelestePatches.dll"
 export MONO_PATH="$gamedir/dlls"
-export LD_LIBRARY_PATH="$gamedir/libs":"${monodir}/lib":$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$gamedir/libs":"${monodir}/lib:$controlfolder/libs/aarch64:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin":"$PATH"
 export FNA3D_OPENGL_FORCE_ES3=1
 export FNA3D_OPENGL_FORCE_VBO_DISCARD=1

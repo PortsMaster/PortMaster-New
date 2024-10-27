@@ -43,7 +43,7 @@ $ESUDO chmod 666 /dev/uinput
 #for old portmaster installs where DEVICE_ARCH may not be defined or empty take the (previous) default
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "game.${DEVICE_ARCH}" -c "./dynamate_playdate.gptk" &

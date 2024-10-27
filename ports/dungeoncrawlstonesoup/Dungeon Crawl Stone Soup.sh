@@ -23,7 +23,7 @@ CUR_TTY="/dev/tty0"
 BINARY="crawl"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib32/:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32/:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib/armhf-linux-gnu/:$GAMEDIR/libs:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 

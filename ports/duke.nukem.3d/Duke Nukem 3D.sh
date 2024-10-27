@@ -43,7 +43,7 @@ fi
 bind_directories "$HOME/.config/rednukem" "$CONFDIR/rednukem"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "rednukem" &
 

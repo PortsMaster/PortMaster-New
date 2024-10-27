@@ -30,7 +30,7 @@ $ESUDO chmod 666 $CUR_TTY
 
 cd $GAMEDIR
 
-export LD_LIBRARY_PATH="/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH=""$LD_LIBRARY_PATH:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO rm -rf ~/.nfs2se

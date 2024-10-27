@@ -27,7 +27,7 @@ if [[ -f "/storage/.config/.OS_ARCH" ]]; then
   WGET="$CONFIGFOLDER/wget"
 fi
 
-export LD_LIBRARY_PATH="$CONFIGFOLDER/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$CONFIGFOLDER/libs:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
