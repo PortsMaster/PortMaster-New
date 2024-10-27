@@ -48,11 +48,11 @@ swapabxy() {
 
     if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
       # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
-      SDL_swap_gpbuttons.py -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" $(<SDL_swap_gpbuttons.txt)
+      SDL_swap_gpbuttons.py -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
       export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
     else
       # Other CFW use SDL_GAMECONTROLLERCONFIG
-      export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | SDL_swap_gpbuttons.py $(<SDL_swap_gpbuttons.txt)`"
+      export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | SDL_swap_gpbuttons.py -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
     fi
 }
 # Functions END
