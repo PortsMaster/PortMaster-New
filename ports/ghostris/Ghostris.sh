@@ -20,7 +20,7 @@ get_controls
 
 GAMEDIR="/$directory/ports/ghostris"
 
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
