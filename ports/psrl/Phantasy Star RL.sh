@@ -20,6 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/psrl"
 
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 
 cd $GAMEDIR
@@ -27,15 +28,11 @@ cd $GAMEDIR
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Rename data.win
-[ -f "./data.win" ] && mv data.win game.droid
+$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
 $GPTOKEYB "gmloadernext" -c "psrl.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
 
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-
-./gmloadernext game.apk
+./gmloadernext
 
 pm_finish
-printf "\033c" > /dev/tty0
