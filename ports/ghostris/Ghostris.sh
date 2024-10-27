@@ -39,9 +39,8 @@ if [ -f "$GAMEDIR/gamedata/Ghostris_2020HalloweenUpdate.zip" ]; then
 	$controlfolder/xdelta3 -d -s "./gamedata/data.win" "./patch/ghostrispatch.xdelta" "./gamedata/game.droid"
 
 	# Move all .ogg files from gamedata folder to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.ogg ./assets/
-
+	mkdir -p ./assets
+	mv ./gamedata/*.ogg ./assets/
 
 	# Zip the contents of ./game.apk including the .ogg files
 	zip -r -0 ./game.apk ./assets/
