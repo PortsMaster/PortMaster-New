@@ -13,15 +13,14 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+# device_info.txt will be included by default
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
-GAMEDIR=/$directory/ports/redtrianglesc
+GAMEDIR="/$directory/ports/redtrianglesc"
 CONFDIR="$GAMEDIR/conf/"
-DATAFILE=RTSuperCollection.rpg
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -34,12 +33,15 @@ export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
-[ ! -f "$GAMEDIR/franken.rpg" ] && mv "$GAMEDIR/"*.rpg "$GAMEDIR/redtrianglesc.rpg"
+if [ -f "./RTSuperCollection.exe" ]; then
+  rm -f ./*.{dll,exe,lib}
+fi
+
+bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
 $GPTOKEYB "ohrrpgce-game" -c ./redtrianglesc.gptk &
+pm_platform_helper "$GAMEDIR/ohrrpgce-game"
+"./ohrrpgce-game" RTSuperCollection.rpg -f
 
-"./ohrrpgce-game" $DATAFILE -f
+pm_finish
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
