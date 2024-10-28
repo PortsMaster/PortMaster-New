@@ -22,6 +22,18 @@ chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
+unzip_audiogroups() {
+    # Unzip audiogroups from game.apk into $DATADIR
+    echo "Unzipping audiogroups..."
+    unzip -j -o "$GAMEDIR/game.apk" "assets/*" -d "$DATADIR"
+    if [ $? -eq 0 ]; then
+        echo "Audiogroups unzipped successfully to $DATADIR."
+    else
+        echo "Failed to unzip audiogroups."
+        exit 1
+    fi
+}
+
 apply_xdelta() {
     # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/data.win" ]; then
@@ -47,13 +59,20 @@ compress_audio() {
 
     # Run the compression tool
     PYTHON=$(which python3)
-    $PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    DATAONLY=1
+    if [ "$PREPATCH" != 1 ]; then
+        echo "Running GMTools on data and audiogroups."
+        $PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    else
+        echo "Running GMTools on data file only."
+        $PYTHON ./tools/gmKtool.py -v -O 0 -m 1000 -b 64 -r -d "$TMPDIR" "$DATADIR/game.droid"
+    fi
 
     if [ $? -eq 0 ]; then
         echo "Compression completed successfully."
         mv "$TMPDIR/"* "$DATADIR"
         echo "Moved compressed files to $DATADIR."
-        rmdir "$TMPDIR"
+        rm -rf "$TMPDIR"
         echo "Temporary directory $TMPDIR removed."
         echo "Audio compression applied successfully."
     else
@@ -66,8 +85,13 @@ compress_audio() {
 process_game() {
     # Delete unnecessary files
     rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
-    echo "Removed unecessary files"
-
+    echo "Removed unnecessary files"
+    # Check if we're using a prepatched game
+    if unzip -l "$GAMEDIR/game.apk" "assets/*" | grep -q "assets/.*\.dat"; then
+        echo "Prepatched game detected." && sleep 1
+        PREPATCH=1
+        unzip_audiogroups
+    fi
     apply_xdelta
     compress_audio
     sleep 3
