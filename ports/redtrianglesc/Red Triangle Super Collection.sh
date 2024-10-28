@@ -34,8 +34,15 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 if [ -f "./RTSuperCollection.exe" ]; then
-  $controlfolder/xdelta3 -d -s "./Paradox.rpg" "./Paradox_patch.xdelta3" "./Paradox.rpg"
-  rm -f ./*.{dll,exe,lib}
+  $controlfolder/xdelta3 -d -s "./Paradox.rpg" "./Paradox_patch.xdelta3" "./Paradox_patched.rpg"
+  # Check if Paradox file patched
+  if [ -f "./Paradox_patched.rpg" ]; then
+    rm -f "./Paradox.rpg"
+    mv "./Paradox_patched.rpg" "./Paradox.rpg"
+    rm -f ./*.{dll,exe,lib}
+  else
+    echo "Paradox.rpg patch failed"
+  fi
 fi
 
 bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
