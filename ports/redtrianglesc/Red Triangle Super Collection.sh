@@ -34,6 +34,7 @@ export XDG_DATA_HOME="$CONFDIR"
 cd $GAMEDIR
 
 if [ -f "./RTSuperCollection.exe" ]; then
+  $controlfolder/xdelta3 -d -s "./Paradox.rpg" "./Paradox_patch.xdelta3" "./Paradox.rpg"
   rm -f ./*.{dll,exe,lib}
 fi
 
