@@ -22,7 +22,7 @@ Game data files needed from Ion Fury version 1.10 or earlier:
 
 While an earlier release can be obtained via Steam via:
 1) Enter steam://nav/console in the URL of your web browser
-2) From the Steam Console, type   download_depot 562860 562861 8506993987461859820
+2) From the Steam Console, type   download_depot 562860 562861 189007903929408028
 
 Only the GOG release has been thoroughly tested working.  With the Steam release, YMMV.
 
