@@ -78,7 +78,7 @@ else
       fi
 fi
 
-bind_directories $GAMEDIR/conf/.yq2  ~/.yq2
+bind_directories ~/.yq2 $GAMEDIR/conf/.yq2
 
 if [[ ! -f "$GAMEDIR/rogue/pak0.pak" ]]; then
     ./text_viewer -f 25 -w -t "Missing gamedata" -m "Please place your pak0.pak into the ports/quake2/rogue directory and, optionally, the music tracks in ports/quake2/rogue/music and the .cin cutscenes in ports/quake2/rogue/video!"
@@ -90,5 +90,3 @@ pm_platform_helper "$GAMEDIR/quake2"
 ./quake2 +set vid_renderer $YQ2RENDERER +set r_mode -2 +set r_customwidth $DISPLAY_WIDTH +set r_customheight $DISPLAY_HEIGHT +set r_gunfov $GUNFOV +set r_hudscale $SSCALE +set r_menuscale $SSCALE +set game rogue
 
 pm_finish
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0

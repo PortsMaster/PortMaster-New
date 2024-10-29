@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Requinnzious for developing the game, check it on https://requinnzious.itch.io/phantasy-star-rl
+Thanks to Requinnzious for developing the game and allowing us to distribute it, check it on https://requinnzious.itch.io/phantasy-star-rl
 
 ## Controls
 

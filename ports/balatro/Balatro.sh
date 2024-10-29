@@ -12,10 +12,10 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-
 source $controlfolder/control.txt
 
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 GAMEDIR="/$directory/ports/balatro"
 
