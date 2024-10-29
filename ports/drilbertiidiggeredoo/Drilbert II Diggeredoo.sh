@@ -20,7 +20,7 @@ GAMEDIR=/$directory/ports/drilbertiidiggeredoo
 
 export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

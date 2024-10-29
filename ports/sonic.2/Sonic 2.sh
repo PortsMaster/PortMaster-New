@@ -27,7 +27,7 @@ WIDTH=$((DISPLAY_WIDTH / 2))
 cd $GAMEDIR
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$controlfolder/libs/aarch64:$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Setup gl4es environment

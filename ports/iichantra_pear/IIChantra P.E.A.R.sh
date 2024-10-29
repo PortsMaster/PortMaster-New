@@ -32,7 +32,7 @@ else
 fi
 
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO sed -i "s|window_width = [0-9]\+;|window_width = $DISPLAY_WIDTH;|g" $GAMEDIR/config/default.lua

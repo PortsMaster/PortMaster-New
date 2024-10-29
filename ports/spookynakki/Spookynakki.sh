@@ -22,7 +22,7 @@ $ESUDO chmod 666 /dev/tty0
 GAMEDIR="/$directory/ports/spookynakki"
 TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib32:$GAMEDIR/libs:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export GMLOADER_DEPTH_DISABLE=1

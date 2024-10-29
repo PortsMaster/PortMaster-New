@@ -34,7 +34,7 @@ printf "\033c" > $CUR_TTY
 echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="$GAMEDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "mirrormagic" -c mirrormagic.gptk &
 ./mirrormagic

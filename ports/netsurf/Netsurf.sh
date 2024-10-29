@@ -27,16 +27,16 @@ BINARY=nsfb
 mkdir -p "$GAMEDIR/conf"
 
 if [ "$CFW_NAME" = "TrimUI" ]; then
-    export LD_LIBRARY_PATH="$GAMEDIR/libs.compat:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.compat:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
     export BINARY=nsfb.compat
 elif [ "$CFW_NAME" = "ArkOS" ]; then
-    export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 	export BINARY=nsfb.compat
 elif [ "$CFW_NAME" = "ROCKNIX" ]; then
     rm -f "$GAMEDIR/libs.${DEVICE_ARCH}/libwayland-client.so.0"
-    export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 else
-    export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 fi
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

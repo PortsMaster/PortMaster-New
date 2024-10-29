@@ -21,7 +21,7 @@ GAMEDIR=/$directory/ports/wetspot2
 
 cd $GAMEDIR
 
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput

@@ -40,7 +40,7 @@ if [ -f "$GAMEFILE" ]; then
 fi
 
 export XDG_DATA_HOME="$GAMEDIR/conf" # allowing saving to the same path as the game
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 mkdir -p "$XDG_DATA_HOME"
 
 echo "Loading game.." > /dev/tty0

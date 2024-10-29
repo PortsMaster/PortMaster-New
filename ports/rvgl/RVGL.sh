@@ -42,7 +42,7 @@ fi
 
 export TEXTINPUTINTERACTIVE="Y"
 
-export LD_LIBRARY_PATH="$LIB_DIR:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$LIB_DIR:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
 

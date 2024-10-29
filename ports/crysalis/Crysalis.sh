@@ -38,7 +38,7 @@ cd $GAMEDIR
 export XDG_CONFIG_HOME="${CONFDIR}"
 export XDG_DATA_HOME="${GAMEDATA}"
 export SDL_GAMECONTROLLERCONFIG="${sdl_controllerconfig}"
-export LD_LIBRARY_PATH="${GAMEDIR}/libs.${DEVICE_ARCH}:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:${LD_LIBRARY_PATH}:$controlfolder/libs/aarch64:${GAMEDIR}/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 # Check if RPG Maker VX Ace Run Time Package is installed
 if [ ! -d "$GAMEDATADIR/Fonts" ]; then

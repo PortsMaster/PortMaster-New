@@ -87,7 +87,7 @@ DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH:/usr/lib32:$GAMEDIR/valve/dlls:$GAMEDIR/valve/cl_dlls"
+export LD_LIBRARY_PATH="$GAMEDIR/valve/cl_dlls:/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/armhf:$GAMEDIR/valve/dlls:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "xash3d.${DEVICE_ARCH}" &
 $TASKSET ./xash3d.${DEVICE_ARCH} -ref gles2 -fullscreen -console $RUNMOD 2>&1 | tee -a ./log.txt

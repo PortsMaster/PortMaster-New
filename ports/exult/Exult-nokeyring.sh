@@ -25,7 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "exult" $HOTKEY -c "$GAMEDIR/exult.$ANALOG_STICKS.gptk" &
 ./exult -c "$GAMEDIR/exult.nokeyring.cfg"

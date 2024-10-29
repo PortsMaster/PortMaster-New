@@ -37,7 +37,7 @@ export PORTMASTER_HOME="$GAMEDIR"
 
 export SUPERTUXKART_DATADIR="$GAMEDIR"
 export SUPERTUXKART_ASSETS_DIR="$GAMEDIR/data/"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 echo "Starting game." > $CUR_TTY
 

@@ -26,7 +26,7 @@ ln -sfv $GAMEDIR/conf/.bzf ~/
 
 
 export TEXTINPUTINTERACTIVE="Y"
-export LD_LIBRARY_PATH="$PWD/libs::$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH=":$GAMEDIR/libs.${DEVICE_ARCH}:$PWD/libs:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR

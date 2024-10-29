@@ -37,7 +37,7 @@ $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "gmloader" &
 
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 

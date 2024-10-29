@@ -26,7 +26,7 @@ cd $GAMEDIR
 $ESUDO chmod 666 $CUR_TTY
 export TERM=linux
 printf "\033c" > $CUR_TTY
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 ## RUN SCRIPT HERE
 

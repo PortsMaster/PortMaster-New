@@ -66,7 +66,7 @@ if grep -q '#REGNAME = "KEY\智代アフター_EN_ALL"' $INI; then
     sed -i 's/#WAKU.001.000.BACK="s_mw00e_convertible"/#WAKU.001.000.BACK="s_mw00e"/' $INI
 fi
 
-export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$controlfolder/libs/aarch64:$rlvm_dir/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
   export LD_LIBRARY_PATH="$rlvm_dir/gl4es:$LD_LIBRARY_PATH"

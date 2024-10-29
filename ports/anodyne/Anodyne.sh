@@ -51,7 +51,7 @@ export FNA_PATCH="$gamedir/dlls/AnodynePatches.dll"
 export MONO_IOMAP=all
 export XDG_DATA_HOME=$HOME/.local/share
 export MONO_PATH="$gamedir/dlls":"$gamedir/gamedata"
-export LD_LIBRARY_PATH="$gamedir/libs":"$monodir/lib":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$gamedir/libs":"$monodir/lib":$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin":"$PATH"
 
 # Configure the renderpath

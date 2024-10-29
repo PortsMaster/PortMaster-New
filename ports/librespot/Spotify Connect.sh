@@ -27,7 +27,7 @@ mkdir -p "$GAMEDIR/conf"
 
 # Set the XDG environment variables for config & savefiles for LOVE
 export XDG_DATA_HOME="$CONFDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export LOVEDIR=$GAMEDIR
 
 # Check if the cache directory size is greater than 50 MB

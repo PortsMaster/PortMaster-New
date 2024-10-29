@@ -43,7 +43,7 @@ else
 fi
 
 # Setup Box64
-export LD_LIBRARY_PATH="$GAMEDIR/box64/native":"/usr/lib":"/usr/lib/aarch64-linux-gnu/":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/box64/native":"$LD_LIBRARY_PATH:"/usr/lib":$GAMEDIR/libs.${DEVICE_ARCH}:"/usr/lib/aarch64-linux-gnu/":"$GAMEDIR/libs/":$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/x64":"$GAMEDIR/box64/native":"$GAMEDIR/libs/x64"
 
 # Move existing savedata to the port directory to avoid overwriting existing

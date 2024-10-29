@@ -38,7 +38,7 @@ else
 fi
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
+export LD_LIBRARY_PATH="$solarus_dir:$controlfolder/libs/aarch64:$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 # Check for runtime
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then

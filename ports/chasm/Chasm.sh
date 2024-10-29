@@ -44,7 +44,7 @@ rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 # Setup path and other environment variables
 export FNA_PATCH="$gamedir/dlls/ChasmPatches.dll"
 export MONO_PATH="$gamedir/dlls"
-export LD_LIBRARY_PATH="$gamedir/libs":"$monodir/lib":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH=""$gamedir/libs":"$monodir/lib":$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin":"$PATH"
 
 # Configure the renderpath

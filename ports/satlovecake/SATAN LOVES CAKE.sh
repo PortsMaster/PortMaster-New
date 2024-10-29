@@ -21,7 +21,7 @@ GAMEDIR=/$directory/ports/satlovecake
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="$GAMEDIR/lib:/usr/lib32:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib32:$GAMEDIR/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 
 cd "$GAMEDIR"
 

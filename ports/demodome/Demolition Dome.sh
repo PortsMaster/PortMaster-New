@@ -20,7 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/demodome"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/libs:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

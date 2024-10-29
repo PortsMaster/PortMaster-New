@@ -33,7 +33,7 @@ cd "$GAMEDIR"
 
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/sulka/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/$directory/ports/sulka/libs:/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid

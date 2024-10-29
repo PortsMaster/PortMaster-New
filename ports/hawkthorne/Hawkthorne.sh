@@ -22,7 +22,7 @@ GAMEDIR=/$directory/ports/hawkthorne
 cd $GAMEDIR
 
 export LOVE_GRAPHICS_USE_OPENGLES=1
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$PWD/libs:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
 

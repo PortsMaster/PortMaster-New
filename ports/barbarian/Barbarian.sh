@@ -53,7 +53,7 @@ export BOX86_DLSYM_ERROR=1
 export BOX86_SHOWSEGV=1
 export BOX86_SHOWBT=1
 
-export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/box86/native":"/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":$controlfolder/libs/armhf:$LD_LIBRARY_PATH"
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAMEDIR/libs/x86"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 

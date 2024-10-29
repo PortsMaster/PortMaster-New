@@ -87,7 +87,7 @@ rm -f System*.dll Mono.*.dll mscorlib.dll FNA.dll
 
 # Setup path and other environment variables
 export MONO_PATH="$gamedir/dlls"
-export LD_LIBRARY_PATH="$gamedir/libs":"$monodir/lib":$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$gamedir/libs":$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:"$monodir/lib:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin":"$PATH"
 
 export FNA3D_FORCE_DRIVER=OpenGL

@@ -62,7 +62,7 @@ if [ "$LIBGL_FB" != "" ]; then
   ARG="-g $LIBGL_DRIVERS_PATH"
 fi 
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:/usr/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 # Run the game
 $GPTOKEYB game -c "config/joy.gptk" & 

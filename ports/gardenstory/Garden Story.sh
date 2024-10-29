@@ -24,7 +24,7 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:/usr/lib:$GAMEDIR/lib:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 # Check if "data.win" exists and its MD5 checksum matches the specified value then apply patch
 if [ -f "gamedata/data.win" ]; then

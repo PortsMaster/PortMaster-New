@@ -43,7 +43,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 ## RUN SCRIPT HERE
 

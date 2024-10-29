@@ -22,7 +22,7 @@ solarus_dir="$HOME/portmaster-solarus"
 solarus_file="$controlfolder/libs/${runtime}.squashfs"
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
+export LD_LIBRARY_PATH="$solarus_dir:$controlfolder/libs/aarch64:$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 cd $GAMEDIR
 

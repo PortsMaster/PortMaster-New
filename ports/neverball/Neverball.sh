@@ -34,7 +34,7 @@ echo "Starting game." > $CUR_TTY
 
 export PORTMASTER_HOME="$GAMEDIR"
 export NEVERBALL_DATA="./data"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/libs/aarch64:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "neverball" -c neverball.gptk &
 ./neverball
