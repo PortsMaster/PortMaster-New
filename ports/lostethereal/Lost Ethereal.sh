@@ -13,15 +13,11 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
-GAMEDIR=/$directory/ports/lostethereal
+GAMEDIR="/$directory/ports/lostethereal"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
@@ -32,7 +28,6 @@ export GMLOADER_PLATFORM="os_linux"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
-
 # Extract and add .ogg files to .apk
 if [ -f "./gamedata/Lost Ethereal.exe" ]; then
     ./7zzs x "./gamedata/Lost Ethereal.exe" -o"./gamedata/"
@@ -49,15 +44,9 @@ fi
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c ./lostethereal.gptk &
-
+$GPTOKEYB "gmloader" -c "lostethereal.gptk" &
 $ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
