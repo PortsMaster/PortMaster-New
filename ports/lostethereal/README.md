@@ -1,21 +1,11 @@
 ## Notes
 
-Thanks to [BRAINOS](https://brainos.itch.io) for creating this fantastic game, which you can purchase on [itch.io](https://brainos.itch.io/touge)
+Thanks to [Lucre Games](https://lucregames.com) for creating this fantastic game, which you can purchase on [itch.io](https://lucregames.itch.io/lost-ethereal)
 
 
 ## Controls
 
-For entering text (for names, etc.) --
-
-1. Enter text-input mode using: `START + DPAD-DOWN`
-2. Once activated, use `DPAD-UP/DOWN` to select letters, and `DPAD-LEFT/RIGHT` to move a letter back/forward
-3. Use `A` for `ENTER` (when you're done)
-
-In some instances, you may need to press `START` to confirm and exit interactive text entry; `SELECT/HOTKEY` cancels interactive text entry.
-
 | Button        | Action |
 | ------------- | ------ |
-| L-STICK/D-PAD | Steer  |
-| START         | Select |
-| R1            | Reset  |
-| SELECT        | Quit   |
+| D-PAD/L-STICK | Move   |
+| SELECT+START  | Quit   |
