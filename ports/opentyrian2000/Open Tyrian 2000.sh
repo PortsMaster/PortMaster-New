@@ -33,7 +33,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-$ESUDO rm -rf ~/.$GAMEDIRNAME
 ln -sfv $GAMEDIR/conf/.$GAMEDIRNAME ~/
 
 cd $GAMEDIR
