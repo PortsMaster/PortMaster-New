@@ -19,7 +19,7 @@ source $controlfolder/control.txt
 get_controls
 
 export PORT_32BIT="Y"
-GAMEDIR="/$directory/ports/windthe"
+GAMEDIR="/$directory/ports/thewind"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
@@ -37,7 +37,7 @@ if [ -f "./gamedata/THEWIND_v1-0.exe" ]; then
     mv gamedata/data.win gamedata/game.droid
     rm -f gamedata/*.{dll,ini,exe}
 fi
-$GPTOKEYB "gmloader" -c ./windthe.gptk &
+$GPTOKEYB "gmloader" -c ./thewind.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper $GAMEDIR/gmloader
