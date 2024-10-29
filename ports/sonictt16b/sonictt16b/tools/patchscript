@@ -1,0 +1,112 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/gamedata"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+extract_apk() {
+    # Extract the user-provided apk file
+    mkdir -p "$DATADIR"
+    unzip "$GAMEDIR/sonic-triple-trouble-16-bit-v1-2-8.apk" -d "$DATADIR"
+    # Zip the lib folder into a new game.apk
+    (cd "$DATADIR" && zip -r -0 "$GAMEDIR/game.apk" lib)
+    # Delete everything else except the assets folder
+    for item in "$DATADIR"/*; do
+        if [ "$(basename "$item")" != "assets" ]; then
+            rm -rf "$item"
+        fi
+    done
+    # Delete the original apk file
+    rm -rf "$GAMEDIR/sonic-triple-trouble-16-bit-v1-2-8.apk"
+    # Move assets to gamedata and delete the assets folder
+    mv "$DATADIR/assets/"* "$DATADIR/" 2>/dev/null
+    rm -rf "$DATADIR/assets"
+    rm -rf $DATADIR/*.png $DATADIR/*.txt
+}
+
+apply_xdelta() {
+    # Check if the game.droid file exists and apply xdelta
+    if [ -f "$DATADIR/game.droid" ]; then
+        echo "Applying xdelta patch"
+        output=$(xdelta3 -d -s "$DATADIR/game.droid" -f "./tools/patches/sonictt16b.xdelta" "$DATADIR/game2.droid" 2>&1)
+        if [ $? -eq 0 ]; then
+            echo "Patch applied successfully"
+            echo "$output"
+            rm -rf "$DATADIR/game.droid" && mv "$DATADIR/game2.droid" "$DATADIR/game.droid"
+        else
+            echo "Failed to apply patch"
+            echo "$output"
+            exit 1
+        fi
+    fi
+}
+
+compress_audio() {
+    # Compress audio
+    echo "Compressing audio..."
+    sleep 3
+    mkdir -p "$TMPDIR"
+
+    # Run the compression tool
+    PYTHON=$(which python3)
+    $PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+
+    if [ $? -eq 0 ]; then
+        echo "Compression completed successfully."
+        mv "$TMPDIR/"* "$DATADIR"
+        echo "Moved compressed files to $DATADIR."
+        rmdir "$TMPDIR"
+        echo "Temporary directory $TMPDIR removed."
+        echo "Audio compression applied successfully."
+    else
+        echo "Audio compression failed."
+        echo "Cleaning up temporary directory $TMPDIR."
+        rm -rf "$TMPDIR"
+    fi
+}
+
+process_game() {
+    extract_apk
+    apply_xdelta
+    compress_audio
+    sleep 3
+
+    # Check for .dat files and move to APK
+    if [ -n "$(ls $DATADIR/*.dat 2>/dev/null)" ]; then
+        mkdir -p ./assets
+        mv $DATADIR/*.dat ./assets/
+        echo "Moved .dat files to ./assets/"
+
+        zip -r -0 ./game.apk ./assets/
+        echo "Zipped contents to ./game.apk"
+
+        rm -rf ./assets
+        echo "Deleted assets directory"
+    else
+        echo "No .dat files found"
+    fi
+	
+    # Final completion message
+    echo "Patching process complete!"
+}
+
+# Call the function
+process_game

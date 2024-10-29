@@ -78,12 +78,10 @@ else
       fi
 fi
 
-bind_directories $GAMEDIR/conf/.yq2  ~/.yq2
+bind_directories ~/.yq2 $GAMEDIR/conf/.yq2
 
 $GPTOKEYB "quake2" -c "$GAMEDIR/quake2.gptk" &
 pm_platform_helper "$GAMEDIR/quake2"
 ./quake2 +set vid_renderer $YQ2RENDERER +set r_mode -2 +set r_customwidth $DISPLAY_WIDTH +set r_customheight $DISPLAY_HEIGHT +set r_gunfov $GUNFOV +set r_hudscale $SSCALE +set r_menuscale $SSCALE
 
 pm_finish
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
