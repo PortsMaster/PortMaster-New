@@ -14,18 +14,35 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 GAMEDIR="/$directory/ports/spacecadetpinball"
+CONFDIR="$GAMEDIR/conf/SpaceCadetPinball"
+BINARY="SpaceCadetPinball.${DEVICE_ARCH}"
 
-$ESUDO rm -rf ~/.local/share/SpaceCadetPinball
-ln -sfv $GAMEDIR/conf/SpaceCadetPinball ~/.local/share/
+mkdir -p "$CONFDIR"
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+bind_directories "$HOME/.local/share/SpaceCadetPinball" "$CONFDIR"
+
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "SpaceCadetPinball" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./SpaceCadetPinball -fullscreen 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
+
+if [[ -f "$CONFDIR/imgui_pb.ini" ]]; then
+  # The config file is created on the first launch.
+  # We can update the file to hide the menu for
+  # the next runs
+  sed -i 's/ShowMenu=1/ShowMenu=0/g' "$CONFDIR/imgui_pb.ini"
+fi
+
+$GPTOKEYB "$BINARY" -c "spacecadetpinball.gptk" &
+
+pm_platform_helper "$GAMEDIR/$BINARY"
+
+./$BINARY > /dev/null # too much SDL Error we don't log
+
+pm_finish
