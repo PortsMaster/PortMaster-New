@@ -18,22 +18,21 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIRNAME=opentyrian2000
-GAMEDATADIRNAME=tyrian2000
+GAMEDIRNAME="opentyrian2000"
+GAMEDATADIRNAME="gamedata"
 GAMEDIR="/$directory/ports/$GAMEDIRNAME"
 CONFDIR="$GAMEDIR/conf/"
 BINARY=opentyrian2000
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-mkdir -p "$GAMEDIR/conf"
-
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-ln -sfv $GAMEDIR/conf/.$GAMEDIRNAME ~/
+mkdir -p "$GAMEDIR/conf/.$GAMEDIRNAME"
+bind_directories ~/.$GAMEDIRNAME $GAMEDIR/conf/.$GAMEDIRNAME
 
 cd $GAMEDIR
 

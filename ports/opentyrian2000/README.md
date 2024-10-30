@@ -1,6 +1,6 @@
 ## Notes
 
-Special thank you goes to [Kaito Sinclaire](https://github.com/KScl) for creating this amazing version of [Tyrian 2000](https://github.com/KScl/opentyrian2000) and making it available for everyone, free of charge.
+Special thank you goes to [**Kaito Sinclaire** (any pronoun)](https://github.com/KScl) for creating this amazing version of [**Tyrian 2000**](https://github.com/KScl/opentyrian2000) and making it available for everyone, free of charge. Thanks to the original developers of this fantastic game.
 
 
 ## Controls
