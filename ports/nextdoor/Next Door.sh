@@ -20,8 +20,11 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/nextdoor"
 
+# We log the execution of the script into log.txt
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
@@ -58,9 +61,6 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     zip -r -0 ./game.apk ./assets/
     rm -Rf "$GAMEDIR/assets/"
 fi
-
-# We log the execution of the script into log.txt
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod +x -R $GAMEDIR/*
 
