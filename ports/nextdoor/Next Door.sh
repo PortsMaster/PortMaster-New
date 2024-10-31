@@ -30,8 +30,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 cd $GAMEDIR
 
 if [ -f "$GAMEDIR/gamedata/NextDoor_v1.00.exe" ]; then
-    
-	cd "$GAMEDIR" || exit
 		
 	# Use 7zip to extract the NextDoor_v1.00.exe file to the destination directory
     "$GAMEDIR/patch/7zzs" -aos x "$GAMEDIR/gamedata/NextDoor_v1.00.exe" -o"$GAMEDIR/gamedata" & pid=$!
