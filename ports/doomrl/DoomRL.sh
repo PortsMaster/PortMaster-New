@@ -28,9 +28,6 @@ export XDG_DATA_HOME="$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
-printf "\033c" > $CUR_TTY
-printf "Starting game (first load can take a while)...\n" > $CUR_TTY
-
 # $GPTOKEYB $BINARY -c "$BINARY.gptk" &
 $GPTOKEYB2 $BINARY -c "$BINARY.gptk2" &
 # ./$BINARY -console >$CUR_TTY <$CUR_TTY
