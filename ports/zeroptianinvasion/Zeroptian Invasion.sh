@@ -37,7 +37,7 @@ if [ -f "$data_win" ]; then
         $controlfolder/xdelta3 -d -s "$data_win" "./gamedata/patch_itch.xdelta3" "./gamedata/game.droid"
     # Steam patch
     elif [ "$current_md5" == "5b34b1f0a90a3ffb044c1016245d3eb6" ]; then
-        $controlfolder/xdelta3 -d -s "$data_win" "./gamedata/steam.patch" "./gamedata/game.droid"
+        $controlfolder/xdelta3 -d -s "$data_win" "./gamedata/steam.patch.xdelta3" "./gamedata/game.droid"
     else
         echo "MD5 checksum does not match any expected value. Aborting patch."
     fi
