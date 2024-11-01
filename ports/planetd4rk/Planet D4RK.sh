@@ -31,10 +31,21 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # Source love2d runtime
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
+# Unzip and patch game files
+if [[ -f "PlanetD4RK_WindowsV2.zip" ]]; then
+  unzip PlanetD4RK_WindowsV2.zip
+  unzip ./PlanetD4RK_WindowsV2/PlanetD4RK_WindowsV2.exe
+  rm -rf ./PlanetD4RK_WindowsV2
+  rm -rf ./PlanetD4RK_WindowsV2.zip
+  ./patch.aarch64 ./conf.lua < ./conf.lua.patch
+  ./patch.aarch64 ./main.lua < ./main.lua.patch
+  echo "Patch applied successfully"
+fi
+
 # Run the love runtime
 $GPTOKEYB "$LOVE_GPTK" -c "./planetd4rk.gptk"  &
 pm_platform_helper "$LOVE_BINARY"
-$LOVE_RUN "$GAMEDIR/PlanetD4RK_WindowsV2.love"
+$LOVE_RUN "$GAMEDIR"
 
 # Cleanup any running gptokeyb instances, and any platform specific stuff.
 pm_finish
