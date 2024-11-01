@@ -31,9 +31,9 @@ cd $GAMEDIR
 printf "\033c" > $CUR_TTY
 printf "Starting game (first load can take a while)...\n" > $CUR_TTY
 
-$GPTOKEYB $BINARY -c "$BINARY.gptk" &
+# $GPTOKEYB $BINARY -c "$BINARY.gptk" &
+$GPTOKEYB2 $BINARY -c "$BINARY.gptk2" &
 # ./$BINARY -console >$CUR_TTY <$CUR_TTY
 ./$BINARY
 
 pm_finish
-printf "\033c" > $CUR_TTY
