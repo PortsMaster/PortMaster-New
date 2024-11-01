@@ -9,10 +9,5 @@ Thanks to [Abhi Sundu](https://abhimonk.itch.io/) for creating this great game, 
 | -------------- | --------------------------------- |
 | D-PAD/L-STICK  | Move                              |
 | A              | Jump                              |
-| X              | Dash                              |
-| R1             | Skip cutscene                     |
-| R2             | Hold to restart the current level |
-| L2             | Hold to return to title screen    |
-
-
-
+| X/R1           | Slash                             |
+| B/L1           | Dash                              |
