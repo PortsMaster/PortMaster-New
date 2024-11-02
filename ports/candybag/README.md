@@ -1,6 +1,6 @@
 ## Notes
 
-All files included and ready to run. Thanks to [Jon Topielski](https://jontopielski.itch.io/cats-on-mars) for permission to distribute the files.
+All files included and ready to run. Thanks to [Jon Topielski](https://jontopielski.itch.io/cats-on-mars) for permission to distribute the game files.
 
 **HOW TO PLAY**
 
