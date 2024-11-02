@@ -14,22 +14,30 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
-GAMEDIR="/$directory/ports/cgenius"
+GAMEDIRNAME=cgenius
+GAMEDIR="/$directory/ports/$GAMEDIRNAME"
+CONFDIRNAME=CommanderGenius
+CONFDIR="$GAMEDIR/conf/"
+BINARY=CGeniusExe
 
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf ~/.CommanderGenius
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export XDG_DATA_HOME="$CONFDIR"
+export TEXTINPUTINTERACTIVE="Y" 
 
-ln -sfv $GAMEDIR/.CommanderGenius/ ~/
+mkdir -p "$GAMEDIR/conf/.$CONFDIRNAME"
+bind_directories ~/.$CONFDIRNAME $CONFDIR.$CONFDIRNAME
+
 cd $GAMEDIR
-$GPTOKEYB "CGeniusExe" -c "./cgenius.gptk" &
 
-./CGeniusExe 2>&1 | tee $GAMEDIR/log.txt
+$GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
+pm_platform_helper "$GAMEDIR/$BINARY"
+./$BINARY -t $CONFDIR.$CONFDIRNAME -j
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-
+pm_finish
