@@ -7,6 +7,8 @@ LOGFILE="$GAMEDIR/patchlog.txt"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+shopt -s extglob
+
 # Exports
 export DATADIR="$GAMEDIR/gamedata"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
@@ -39,7 +41,7 @@ extract_apk() {
     # Move assets to gamedata and delete the assets folder
     mv "$DATADIR/assets/"* "$DATADIR/" 2>/dev/null
     rm -rf "$DATADIR/assets"
-    rm -rf $DATADIR/*.png $DATADIR/*.txt
+    rm -rf "$DATADIR"/*.@(png|txt)
 }
 
 apply_xdelta() {
@@ -89,11 +91,12 @@ process_game() {
     compress_audio
     sleep 3
 
-    # Check for .dat files and move to APK
-    if [ -n "$(ls $DATADIR/*.dat 2>/dev/null)" ]; then
+    # Check for data or *.dat files and move to APK
+    data=("$DATADIR"/@(data|*.dat))
+    if [ -e "$data" ]; then
         mkdir -p ./assets
-        mv $DATADIR/*.dat ./assets/
-        echo "Moved .dat files to ./assets/"
+        mv "${data[@]}" ./assets/
+        echo "Moved data files to ./assets/"
 
         zip -r -0 ./game.apk ./assets/
         echo "Zipped contents to ./game.apk"
