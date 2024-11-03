@@ -29,8 +29,13 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 # Delete unneeded files
 if [ -f "./gamedata/UNGRATEFUL BIRDS No Good Deed.exe" ]; then
-    rm -f gamedata/*.{exe,ini}
+    rm -f gamedata/*.{exe}
 fi
+
+# Rename data.win
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Display loading splash
 if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
