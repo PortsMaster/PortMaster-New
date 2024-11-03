@@ -22,6 +22,9 @@ source $controlfolder/tasksetter
 GAMEDIR="/$directory/ports/catwarrior"
 cd "$GAMEDIR/gamedata"
 
+# Log the execution of the script, the script overwrites itself on each launch
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Setup mono
 monodir="$HOME/mono"
 monofile="$controlfolder/libs/mono-6.12.0.122-aarch64.squashfs"
@@ -30,7 +33,6 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir linux
-mkdir -p "$GAMEDIR/savedata"
 bind_directories "$HOME/.local/share/tiny_slash" "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
@@ -47,7 +49,7 @@ export FNA3D_OPENGL_FORCE_VBO_DISCARD=1
 
 $GPTOKEYB "mono" &
 pm_platform_helper "mono"
-$TASKSET mono tiny_slash.exe 2>&1 | tee /dev/tty0 $GAMEDIR/log.txt
+$TASKSET mono tiny_slash.exe
 
 # Cleanup any running gptokeyb instances, and any platform specific stuff.
 pm_finish
