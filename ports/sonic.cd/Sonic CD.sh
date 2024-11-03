@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: sonic.cd.zip, Sonic CD.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
