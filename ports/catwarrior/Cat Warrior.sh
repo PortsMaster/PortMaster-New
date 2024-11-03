@@ -30,10 +30,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir linux
-$ESUDO rm -rf ~/.local/share/tiny_slash
-mkdir -p ~/.local/share
 mkdir -p "$GAMEDIR/savedata"
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/tiny_slash
 bind_directories "$HOME/.local/share/tiny_slash" "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
