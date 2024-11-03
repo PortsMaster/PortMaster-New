@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-GAMEDIR="/$directory/ports/ungratefulbirds"
+GAMEDIR="/$directory/ports/ungratefulbirdsngd"
 
 # CD and set permissions
 cd $GAMEDIR
@@ -39,7 +39,7 @@ if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext" -c "./ungratefulbirds.gptk" &
+$GPTOKEYB "gmloadernext" -c "./ungratefulbirdsngd.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
 ./gmloadernext
 
