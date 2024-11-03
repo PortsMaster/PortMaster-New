@@ -1,17 +1,13 @@
 #!/bin/bash
 
-XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
-
+# Source SDL controls
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
-elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
-  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
 source $controlfolder/control.txt
 get_controls
 
@@ -22,7 +18,7 @@ solarus_dir="$HOME/portmaster-solarus"
 solarus_file="$controlfolder/libs/${runtime}.squashfs"
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$solarus_dir"
 
 cd $GAMEDIR
 
@@ -53,7 +49,6 @@ $GPTOKEYB "$runtime" -c "yarntown.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 "$runtime" $GAMEDIR/*.solarus 2>&1 | tee -a ./"log.txt"
 $ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO umount "$solarus_file" || true
-$ESUDO systemctl restart oga_events & 
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+
+# Cleanup
+pm_finish
