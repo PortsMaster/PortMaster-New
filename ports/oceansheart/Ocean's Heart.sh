@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -38,7 +37,7 @@ else
 fi
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$solarus_dir"
 
 # Check for runtime
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
@@ -66,8 +65,6 @@ $GPTOKEYB "$runtime" -c "oceansheart.gptk" &
 # Run the game
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 "$runtime" $GAMEDIR/*.solarus
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO umount "$solarus_file" || true
-$ESUDO systemctl restart oga_events & 
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+
+# Cleanup
+pm_finish
