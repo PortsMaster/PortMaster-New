@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: megamanx816-bit.zip, Mega Man X8 16-bit.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,7 +14,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -21,6 +21,8 @@ get_controls
 
 GAMEDIR=/$directory/ports/megamanx816-bit/
 CONFDIR="$GAMEDIR/conf/"
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
@@ -53,12 +55,11 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+exe_file=$(find -maxdepth 10 -type f -name "*.exe") 
 
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./megamanx816-bit.gptk" &
-"$runtime" $GODOT_OPTS --main-pack "gamedata/Mega Man X8 16-bit 1.0.0.7.exe"
+pm_platform_helper "$runtime"
+"$runtime" $GODOT_OPTS --main-pack "$exe_file"
 
 $ESUDO umount "$godot_dir"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
