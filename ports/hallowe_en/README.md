@@ -20,9 +20,8 @@ Press Down to zap holes in the floors.  Only certain parts of the floors can be 
 
 Running this with sdl12-compat is recommended even with some systems that may not require it for best results.
 
-git clone https://github.com/Slayer366/linapple
-
 ```shell
+git clone https://github.com/Slayer366/linapple
 cd linapple
 make -j3
 ```
