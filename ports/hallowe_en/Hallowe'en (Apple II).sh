@@ -24,8 +24,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 
-$ESUDO chmod 777 -R $GAMEDIR/*
-
 cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
