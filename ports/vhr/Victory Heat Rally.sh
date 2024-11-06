@@ -57,7 +57,7 @@ fi
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext" -c "vhr.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
+./gmloadernext
 
 # Cleanup
 pm_finish
