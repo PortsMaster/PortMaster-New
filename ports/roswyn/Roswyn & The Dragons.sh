@@ -30,7 +30,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y" 
 
-#bind_directories ~/.freegish $GAMEDIR/conf/.freegish
 
 cd $GAMEDIR
 
