@@ -55,11 +55,10 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
-exe_file=$(find -maxdepth 10 -type f -name "*.exe") 
 
 $GPTOKEYB "$runtime" -c "./megamanx816-bit.gptk" &
 pm_platform_helper "$runtime"
-"$runtime" $GODOT_OPTS --main-pack "$exe_file"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/Mega1.0.0.9.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish
