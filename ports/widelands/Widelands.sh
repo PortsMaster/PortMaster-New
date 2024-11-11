@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 get_controls
 
@@ -38,14 +37,11 @@ else
 fi
 
 # Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
-
-CUR_TTY=/dev/tty0
 
 # Define the archive file name
 ARCHIVE_FILE="data.tar.gz"
@@ -54,30 +50,40 @@ ARCHIVE_FILE="data.tar.gz"
 if [[ -f "$ARCHIVE_FILE" ]]; then
    # Remove the old data directory if it exists
    if [[ -d 'data/' ]]; then
-     echo "Removing old game data" > "$CUR_TTY"
+     pm_message "Removing old game data"
      $ESUDO rm -fR 'data/'
    fi
-
-   echo "Extracting game data, this can take a few minutes..." > "$CUR_TTY"
+   pm_message "Extracting game data, this can take a few minutes..."
    
    # Extract the archive and check if the extraction was successful
-   if tar -xzf "$ARCHIVE_FILE"; then
-       echo "Extraction successful." > "$CUR_TTY"
-       $ESUDO rm -f "$ARCHIVE_FILE"
+   if [ "$CFW_NAME" = "muOS" ]; then
+       if gunzip -c "$ARCHIVE_FILE" | tar xf -; then
+           pm_message "Extraction successful."
+           $ESUDO rm -f "$ARCHIVE_FILE"
+       else
+           pm_message "Error: Extraction failed."
+           sleep 5
+           exit 1
+       fi
    else
-       echo "Error: Extraction failed." > "$CUR_TTY"
-	   sleep 5
-       exit 1
+       if tar -xzf "$ARCHIVE_FILE"; then
+           pm_message "Extraction successful."
+           $ESUDO rm -f "$ARCHIVE_FILE"
+       else
+           pm_message "Error: Extraction failed."
+           sleep 5
+           exit 1
+       fi
    fi
 elif [ ! -d 'data/' ]; then
-   echo "Error: No data directory present and Archive file $ARCHIVE_FILE not found." > "$CUR_TTY"
+   pm_message "Error: No data directory present and Archive file $ARCHIVE_FILE not found."
+   sleep 5
    exit 1  # Exit the script if no data directory and no archive file
 fi
 
 $GPTOKEYB "widelands" -c "./widelands.gptk" &
  
+pm_platform_helper "$GAMEDIR/widelands" 
 ./widelands --datadir=data --homedir=conf
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
