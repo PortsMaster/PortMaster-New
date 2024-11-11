@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -24,7 +23,8 @@ DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 runtime="rlvm"
 rlvm_dir="$HOME/rlvm"
 rlvm_file="$controlfolder/libs/${runtime}.squashfs"
-font="--font $rlvm_dir/fonts/msgothic.ttc"
+font="--font $rlvm_dir/fonts/sazanami-gothic.ttf"
+font2="--font $rlvm_dir/fonts/DejaVuSans.ttf"
 
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -52,18 +52,18 @@ $ESUDO umount "$rlvm_file" || true
 $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
+# Export libs
+export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
+  export LD_LIBRARY_PATH="$rlvm_dir/gl4es:$LD_LIBRARY_PATH"
+fi
+
 # Create the config folders
 for SAVEDIR in "${SAVEDIR[@]}"; do
     rm -rf "$HOME/.rlvm/$SAVEDIR"
     ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
 done
-
-export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
-if [ "$LIBGL_FB" != "" ]; then
-  export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
-  export LD_LIBRARY_PATH="$rlvm_dir/gl4es:$LD_LIBRARY_PATH"
-  export LD_LIBRARY_PATH="$rlvm_dir/gl4es:$LD_LIBRARY_PATH"
-fi
 
 # Setup controls
 $ESUDO chmod 666 /dev/tty0
