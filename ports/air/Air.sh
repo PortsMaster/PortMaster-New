@@ -71,11 +71,16 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
+# Disable touchscreen
+modprobe -r edt_ft5x06
+
 # Run the game
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
+pm_platform_helper "$runtime"
 $runtime $font "$GAMEDIR/gamedata"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO umount "$rlvm_file" || true
-$ESUDO systemctl restart oga_events & 
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+
+# Cleanup
+pm_finish
+
+# Re-enable touchscreen
+modprobe edt_ft5x06
