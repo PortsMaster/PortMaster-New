@@ -12,7 +12,8 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -20,9 +21,6 @@ get_controls
 BINARYNAME="Barbarian"
 GAMEDIR=/$directory/ports/barbarian
 CONFDIR="$GAMEDIR/conf/"
-
-CUR_TTY=/dev/tty0
-$ESUDO chmod 666 $CUR_TTY
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -42,12 +40,6 @@ fi
 
 cd $GAMEDIR/gamedata/
 
-# mkdir -p "$GAMEDIR/conf"
-# $ESUDO rm -rf ~/.folder
-# ln -sfv $GAMEDIR/conf/ ~/.folder
-
-# Setup Box86
-#export BOX86_ALLOWMISSINGLIBS=1
 export BOX86_LOG=1
 export BOX86_DLSYM_ERROR=1
 export BOX86_SHOWSEGV=1

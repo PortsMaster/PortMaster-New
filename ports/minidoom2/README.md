@@ -41,7 +41,10 @@ This configuration might be more confortable on the RG40XXH device.
 
 Edit `SDL_swap_gpbuttons.txt`:
 ```
-a b x y leftshoulder lefttrigger rightshoulder righttrigger
+a b
+x y
+leftshoulder lefttrigger
+rightshoulder righttrigger
 ```
 
 ## Acknowledgments
