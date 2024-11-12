@@ -13,14 +13,10 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-export PORT_32BIT="Y"
-
 get_controls
-
-$ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/freedomplanet"
 cd $GAMEDIR
@@ -42,24 +38,23 @@ export SDL_DYNAMIC_API=libSDL2-2.0.so.0
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
-    export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32:$GAMEDIR/box86/native"
-    export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib32/:./:lib/:lib32/:x86/"
+  export LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32:$GAMEDIR/box86/native"
+  export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:$GAMEDIR/box86/native:/usr/lib32/:./:lib/:lib32/:x86/"
 else
 	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:/usr/lib32"
-    export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:./:lib/:libbin32/:x86/"
+  export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib/arm-linux-gnueabihf/:./:lib/:libbin32/:x86/"
 fi
 
 export BOX86_DYNAREC=1
-export BOX86_FORCE_ES=31
 
 if [ ! -f "$GAMEDIR/gamedata/freedomplanet/bin32/oga_controls" ]; then
   cp -f $GAMEDIR/oga_controls* .
 fi
 
 $ESUDO $controlfolder/oga_controls box86 $param_device &
+
+pm_platform_helper "$GAMEDIR/gamedata/bin32/Chowdren"
+
 $GAMEDIR/box86/box86 bin32/Chowdren
 
-$ESUDO kill -9 $(pidof oga_controls)
-$ESUDO systemctl restart oga_events &
-unset LD_LIBRARY_PATH
-printf "\033c" >> /dev/tty1
+pm_finish

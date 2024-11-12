@@ -13,40 +13,35 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
+TOOLDIR="$GAMEDIR/tools"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/vitasnake"
+TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/vitasnake/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/vitasnake/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATH="$TOOLDIR:$PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+cd $GAMEDIR
 
 # We log the execution of the script into log.txt
 "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd $GAMEDIR
+$ESUDO chmod 777 "$GAMEDIR/gmloadernext"
 
-# Check for file existence before trying to manipulate them:
-[ -f "./vitasnake/gamedata/data.win" ] && mv vitasnake/gamedata/data.win vitasnake/gamedata/game.droid
-[ -f "./vitasnake/gamedata/game.win" ] && mv vitasnake/gamedata/game.win vitasnake/gamedata/game.droid
-[ -f "./vitasnake/gamedata/game.unx" ] && mv vitasnake/gamedata/game.unx vitasnake/gamedata/game.droid
+# Splash
+[ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
+$ESUDO ./tools/splash "splash.png" 10000 &
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+$GPTOKEYB "gmloadernext" -c ./controls.gptk &
+pm_platform_helper "$GAMEDIR/gmloadernext"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 
-$GPTOKEYB "gmloader" -c ./vitasnake/controls.gptk &
+./gmloadernext
 
-$ESUDO chmod +x "$GAMEDIR/vitasnake/gmloader"
-
-./vitasnake/gmloader vitasnake/game.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish

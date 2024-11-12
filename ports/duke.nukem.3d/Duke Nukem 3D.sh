@@ -13,39 +13,42 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 get_controls
 
-export PORT_32BIT="Y"
-GAMEDIR="/$directory/ports/rednukem-dn3d-atomic"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-cd "$GAMEDIR"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
+GAMEDIR="/$directory/ports/rednukem-dn3d-atomic"
+CONFDIR="$GAMEDIR/conf"
+
+cd "$GAMEDIR"
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # set resolution
-if [[ -f $GAMEDIR/conf/rednukem/rednukem.cfg ]]; then
+if [[ -f "$CONFDIR/rednukem/rednukem.cfg" ]]; then
   sed -i -E \
   -e "s/^(\s*ScreenHeight\s*=\s*).*/\1$DISPLAY_HEIGHT/" \
   -e "s/^(\s*ScreenWidth\s*=\s*).*/\1$DISPLAY_WIDTH/" \
-  "$GAMEDIR/conf/rednukem/rednukem.cfg"
+  "$CONFDIR/rednukem/rednukem.cfg"
 fi
 
 # set data dir 
-if [[ -f $GAMEDIR/conf/rednukem/rednukem.cfg ]]; then
+if [[ -f "$CONFDIR/rednukem/rednukem.cfg" ]]; then
   sed -i -E \
   -e "s/^(\s*ModDir\s*=\s*).*/\1\"$GAMEDIR\/gamedata\"/" \
-  "$GAMEDIR/conf/rednukem/rednukem.cfg"
+  "$CONFDIR/rednukem/rednukem.cfg"
 fi
 
 
-$ESUDO rm -rf ~/.config/rednukem
-$ESUDO ln -s $GAMEDIR/conf/rednukem ~/.config/
-cd $GAMEDIR
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
+bind_directories "$HOME/.config/rednukem" "$CONFDIR/rednukem"
+
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+
 $GPTOKEYB "rednukem" &
-LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH" SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./rednukem -game_dir $GAMEDIR/gamedata
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+
+pm_platform_helper "$GAMEDIR/rednukem"
+
+./rednukem -game_dir "$GAMEDIR/gamedata"
+
+pm_finish
