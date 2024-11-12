@@ -1,5 +1,5 @@
 ## Installation
-Download the [Windows](https://gamejolt.com/games/UndertaleYellow/136925) or [Android](https://gamejolt.com/games/utyandroidp-yftxzc/866335) game from gamejolt and add the contents to `ports/utyellow/assets` (if windows) or directly to `ports/utyellow` (if android). 
+Download [Undertale Yellow for Windows](https://gamejolt.com/games/UndertaleYellow/136925) game from gamejolt and add the assets (mus, snd folders, data.win etc) to `ports/utyellow/assets`. 
 Game is ready to play after a brief first-time setup.
 
 ## Default Gameplay Controls
@@ -15,4 +15,5 @@ Game is ready to play after a brief first-time setup.
 ## Thanks
 TeamUndertaleYellow -- The game  
 JohnnyOnFlame -- GMLoaderNext  
+Cyril aka kotzebuedog -- GMTools audio patcher  
 Testers and Devs from the PortMaster Discord  

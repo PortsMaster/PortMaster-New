@@ -1,0 +1,96 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/assets"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggenc"
+
+cd "$GAMEDIR"
+
+apply_xdelta() {
+    # Check if the data.win file exists and apply xdelta
+    if [ -f "$DATADIR/data.win" ]; then
+        echo "Applying xdelta patch"
+        output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/utyellow.xdelta" "$DATADIR/game.droid" 2>&1)
+        if [ $? -eq 0 ]; then
+            echo "Patch applied successfully"
+            echo "$output"
+            rm "$DATADIR/data.win"
+        else
+            echo "Failed to apply patch"
+            echo "$output"
+            exit 1
+        fi
+    else
+        echo "No data.win file found!"
+        exit 1
+    fi
+}
+
+compress_audio() {
+    # Compress audio
+    echo "Compressing audio..."
+    sleep 3
+    mkdir -p "$TMPDIR"
+
+    # Run the compression tool
+    PYTHON=$(which python3)
+    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+
+    if [ $? -eq 0 ]; then
+        echo "Compression completed successfully."
+        mv "$TMPDIR/"* "$DATADIR"
+        echo "Moved compressed files to $DATADIR."
+        rmdir "$TMPDIR"
+        echo "Temporary directory $TMPDIR removed."
+        echo "Audio compression applied successfully."
+    else
+        echo "Audio compression failed."
+        echo "Cleaning up temporary directory $TMPDIR."
+        rm -rf "$TMPDIR"
+    fi
+}
+
+zip_apk() {
+    # Zip data files into apk
+    zip -r -0 ./utyellow.port ./assets/
+    if [ $? -eq 0 ]; then
+        echo "Packed data files into utyellow.port."
+        rm -rf ./assets
+    else
+        echo "Failed to pack data files."
+        exit 1
+    fi
+}
+
+process_game() {
+    # Do some prep
+    rm -rf $DATADIR/*.exe $DATADIR/.gitkeep
+    mv $DATADIR/splash.png .
+    apply_xdelta
+    compress_audio
+    sleep 1
+    zip_apk
+    sleep 1
+	
+    # Final completion message
+    echo "Patching process complete!"
+}
+
+# Call the function
+process_game
