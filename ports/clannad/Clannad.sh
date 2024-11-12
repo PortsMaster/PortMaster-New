@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -23,7 +22,8 @@ DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 runtime="rlvm"
 rlvm_dir="$HOME/rlvm"
 rlvm_file="$controlfolder/libs/${runtime}.squashfs"
-font="--font $rlvm_dir/fonts/msgothic.ttc"
+font="--font $rlvm_dir/fonts/sazanami-gothic.ttf"
+font2="--font $rlvm_dir/fonts/DejaVuSans.ttf"
 
 cd $GAMEDIR
 
@@ -56,6 +56,7 @@ PATH="$rlvm_dir:$PATH"
 rm -rf "$HOME/.rlvm/KEY_CLANNAD_ENHD"
 ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_CLANNAD_ENHD"
 
+# Export libs
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$rlvm_dir/gl4es/libGL.so.1"
@@ -68,11 +69,16 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
+# Disable touchscreen
+modprobe -r edt_ft5x06
+
 # Run the game
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
+pm_platform_helper "$runtime"
 $runtime $font "$GAMEDIR/gamedata"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO umount "$rlvm_file" || true
-$ESUDO systemctl restart oga_events & 
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+
+# Cleanup
+pm_finish
+
+# Re-enable touchscreen
+modprobe edt_ft5x06
