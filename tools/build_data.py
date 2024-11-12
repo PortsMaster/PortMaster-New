@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'libs'))
 from util import *
 
 #############################################################################
-ROOT_DIR = Path('.')
+ROOT_DIR = Path("C:/Users/ashle/PortMaster-New")
 
 CACHE_FILE    = ROOT_DIR / '.hash_cache'
 MANIFEST_FILE = ROOT_DIR / 'manifest.json'
