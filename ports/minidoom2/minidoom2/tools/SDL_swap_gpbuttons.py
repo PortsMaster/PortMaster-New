@@ -4,10 +4,10 @@ import argparse
 
 """
     name: swapabxy tool
-    description: swap a/b and x/y button in SDL_GAMECONTROLLERCONFIG
+    description: swap buttons in SDL_GAMECONTROLLERCONFIG
     author: kotzebuedog
     usage:
-        export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | ./swapabxy.py`"
+        export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | ./SDL_swap_gpbuttons.py -i - -o - -l swaplist.txt`"
 
     For example:
 
@@ -27,14 +27,21 @@ def main():
     parser = argparse.ArgumentParser(description='K-dog Gamepad button swapper tool: swap one or more pair of button in the SDL GAMECONTROLLER CONFIG')
     parser.add_argument('-i', '--input', default="-",help='SDL GAMECONTROLLER CONFIG input file (by default stdin)')
     parser.add_argument('-o', '--output', default="-",help='SDL GAMECONTROLLER CONFIG output file (by default stdout)')
-    parser.add_argument('swaplist', action="extend", nargs="+", type=str, help='list of pair of button to swap (eg. a b x y)')
+    parser.add_argument('-l', '--list-file',default="SDL_swap_gpbuttons.txt",help='Swap list file. 2-tuples of buttons to swap (eg. "a b" to swap a with b), one per line.')
 
     args = parser.parse_args()
 
     swaplist = []
-    # Setup a list of swap pairs
-    for i in range( len(args.swaplist) // 2 ):
-        swaplist.append(args.swaplist[ 2 * i : 2 * i + 2 ])
+    # Setup a list of swap 2-tuples
+    with open(args.list_file,'r') as list_file:
+        lines = list_file.readlines()
+        for _,line in enumerate(lines):
+            values = line.strip().split(' ')
+            if len(values) != 2:
+                # we skip this line
+                continue
+            else:
+                swaplist.append(values)
     
     if args.input != '-':
         with open(args.input, 'r') as inputfile:
