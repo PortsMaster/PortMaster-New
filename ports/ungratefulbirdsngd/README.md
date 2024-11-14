@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Whatnot Studios](https://josyan.itch.io) for creating this fantastic game, which you can purchase on [itch.io](https://jdmgames.itch.io/ungrateful-birds-no-good-deed)
+Thanks to [Whatnot Studios](https://jdmgames.itch.io) for creating this fantastic game, which you can purchase on [itch.io](https://jdmgames.itch.io/ungrateful-birds-no-good-deed)
 
 As of writing, this game is available to claim for free.
 
