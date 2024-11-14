@@ -12,10 +12,10 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
 get_controls
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 GAMEDIR="/$directory/ports/balatro"
 
@@ -27,9 +27,11 @@ mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
 
 ## Uncomment the following file to log the output, for debugging purpose
-# exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
+
+$ESUDO chmod a+x ./bin/*
 
 if [ -f "Balatro.exe" ]; then
     GAMEFILE="Balatro.exe"
@@ -52,6 +54,12 @@ if [ -f "$GAMEFILE" ]; then
   sed -i 's/bloom = 1/bloom = 0/g' globals.lua
   sed -i 's/s/shadows = 'On'/shadows = 'Off'/g' globals.lua
   sed -i 's/self.F_HIDE_BG = false/self.F_HIDE_BG = true/g' globals.lua
+
+  # change controller mapping (swap A/B,X/Y to match the physical buttons) for TSP
+  if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ]; then
+    sed -i 's/self.F_SWAP_AB_BUTTONS = false/self.F_SWAP_AB_BUTTONS = true/g' globals.lua
+    sed -i 's/self.F_SWAP_XY_BUTTONS = false/self.F_SWAP_XY_BUTTONS = true/g' globals.lua
+  fi
 
   if [ $DISPLAY_WIDTH -le 1279 ]; then # increase the scale for smaller screens
     sed -i 's/self.TILE_W = self.F_MOBILE_UI and 11.5 or 20/self.TILE_W = 18.25/g' globals.lua
@@ -114,11 +122,10 @@ fi
 
 if [ -f "$LAUNCH_GAME" ]; then
   $GPTOKEYB "love.${DEVICE_ARCH}" &
+	pm_platform_helper "./bin/love.${DEVICE_ARCH}"
   ./bin/love.${DEVICE_ARCH} "$LAUNCH_GAME"
 else
   echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
 fi
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
