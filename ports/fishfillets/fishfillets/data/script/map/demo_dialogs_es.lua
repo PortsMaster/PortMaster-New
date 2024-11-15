@@ -1,4 +1,0 @@
-
-dialogId("dlg-x-poster1", "font_poster", "After much hardship we succeeded in finding captain Silver’s map. Initial enthusiasm afterwards changed into bitter disappointment, when we found out that the above mentioned map does not indicate the location of the treasure, but the place of residence of the last surviving Silver’s parrot that, unfortunately, suffers from sclerosis and cannot remember, where the treasure is.")
-dialogStr("Después de mucho navegar tuvimos éxito en encontrar el mapa de capitán Silver. Pero después de todo, el entusiasmo inicial cambió a una profunda decepción, cuando nos dimos cuenta que el mapa mencionado no indica la localización del tesoro, sinó el lugar de residencia del último perico sobreviviente del capitán Silver el cual, desafortunadamente, sufre de esclerosis y no puede recordar, donde está el tesoro.")
-
