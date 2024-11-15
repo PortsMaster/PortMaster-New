@@ -11,38 +11,28 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
+# Pm
 source $controlfolder/control.txt
 export PORT_32BIT="Y"
-
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
 GAMEDIR=/$directory/ports/thestarlitescape
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+cd $GAMEDIR
 
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
+# Permissions for manual installs
+$ESUDO chmod +x "$GAMEDIR/gmloader"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
+# Log the execution of the script, the script overwrites itself on each launch
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Exports
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
-cd $GAMEDIR
-
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-
-$ESUDO chmod 666 /dev/uinput
-
+# Run Gmloader
 $GPTOKEYB "gmloader" -c ./thestarlitescape.gptk &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader thestarlitescape.apk
-
 pm_finish
