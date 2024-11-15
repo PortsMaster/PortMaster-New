@@ -1,9 +1,9 @@
 ## Notes
 
-Thanks to xJackFox [https://xjackfox.itch.io/the-starlit-escape] for this game and allowing the distribution via PortMaster.
+Thanks to xJackFox [https://xjackfox.itch.io/the-starlit-escape] for this game and allowing the distribution via PortMaster!
+Thanks to JanTrueno for the script edits!
 
 Source: https://xjackfox.itch.io/the-starlit-escape
-
 
 
 ## Controls
