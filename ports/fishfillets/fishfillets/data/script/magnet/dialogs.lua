@@ -1,0 +1,2 @@
+
+dialogLoad("script/"..codename.."/")

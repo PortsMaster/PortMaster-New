@@ -1,0 +1,4 @@
+
+dialogId("dlg-x-poster1", "font_poster", "After much hardship we succeeded in finding captain Silver’s map. Initial enthusiasm afterwards changed into bitter disappointment, when we found out that the above mentioned map does not indicate the location of the treasure, but the place of residence of the last surviving Silver’s parrot that, unfortunately, suffers from sclerosis and cannot remember, where the treasure is.")
+dialogStr("Après de nombreuses épreuves, nous avons réussi à localiser la carte du capitaine Silver. Notre enthousiasme du départ a vite tourné à l'amère déception, quand nous avons réalisé que la susdite carte n'indiquait pas l'emplacement du trésor, mais le lieu de résidence du dernier perroquet survivant au capitaine Silver. Malheureusement, celui-ci souffre de sclérose et est incapable de se souvenir où est enterré le trésor.")
+

@@ -1,0 +1,4 @@
+
+dialogId("dlg-x-poster1", "font_poster", "We succeeded in discovering the right cause of sinking the city. It was a well known artifact called atlantic relief, up to now considered by mistake to be a depiction of extraterrestrial visit, that gave us a hint. At the same time, we recommend increasing the surveillance of the plugs on all continents and bigger islands in order not to repeat similar awkward catastrophe again.")
+dialogStr("Wir haben den wahren Grund für den Untergang der Stadt aufgedeckt. Es war ein gutbekannter Artefakt, genannt das Atlantische Relief, fälschlicherweise bis jetzt für eine Darstellung ausserirdischen Besuches gehalten, der uns den Hinweis gab. Gleichzeitig empfehlen wir die Überwachung der Stöpsel auf allen Kontinenten und grösseren Inseln zu erhöhen, damit sich solche unangenehmen Katastrophen nicht wiederholen.")
+
