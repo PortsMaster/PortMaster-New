@@ -54,6 +54,10 @@ if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
     $ESUDO ./tools/splash "splash.png" 2000
 fi
 
+# Swap buttons
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
+
 # Run the game
 $GPTOKEYB "gmloadernext" -c "./qyoblaster.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
