@@ -45,7 +45,4 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 ./gmloader thestarlitescape.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+pm_finish
