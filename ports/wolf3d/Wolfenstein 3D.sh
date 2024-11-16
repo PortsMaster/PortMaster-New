@@ -148,10 +148,10 @@ if [ -n "$FOLDER" ]; then
     while IFS== read -r key value; do
         case "$key" in
             DATA)
-                ARGS+=" --data $value"
+                ARGS="$ARGS --data $value"
                 ;;
             PK3|PK3_1|PK3_2|PK3_3|PK3_4)
-                ARGS+=" --file $value"
+                ARGS="$ARGS --file $value"
                 ;;
         esac
     done < "${FOLDER}/.load.txt"
