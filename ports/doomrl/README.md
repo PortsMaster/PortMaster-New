@@ -32,6 +32,11 @@ Thanks to the [Kornel Kisielewicz](https://github.com/epyon) for creating this a
 | Right Analog | Mouse control |
 | R3 | Mouse click |
 
+## Adding music files
+- Go to the (DoomRL downloads page)[https://drl.chaosforge.org/downloads]
+- Download Windows or Linux archive 
+- Copy files from archive `mp3` folder into `ports/doomrl/mp3/`
+
 ## Version
 0.9.9.8
 

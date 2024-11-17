@@ -28,9 +28,18 @@ export XDG_DATA_HOME="$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
+MP3FILES_COUNT=$(find ./mp3/*.mp3 -type f | wc -l)
+
+if [$MP3FILES_COUNT -gt 20]; then
+	sed -e "s/^GameMusic\s*=\s*false$/GameMusic = true/" ./config.lua
+else
+	sed -e "s/^GameMusic\s*=\s*false$/GameMusic = false/" ./config.lua
+fi
+
 # $GPTOKEYB $BINARY -c "$BINARY.gptk" &
 $GPTOKEYB2 $BINARY -c "$BINARY.gptk2" &
 # ./$BINARY -console >$CUR_TTY <$CUR_TTY
+pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
 pm_finish
