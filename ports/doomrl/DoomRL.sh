@@ -30,10 +30,10 @@ cd $GAMEDIR
 
 MP3FILES_COUNT=$(find ./mp3/*.mp3 -type f | wc -l)
 
-if [$MP3FILES_COUNT -gt 20]; then
-	sed -e "s/^GameMusic\s*=\s*false$/GameMusic = true/" ./config.lua
+if [ "$MP3FILES_COUNT" -gt "20" ]; then
+        sed -E -i "s/^GameMusic\s*=\s*(false|true)$/GameMusic = true/" "$GAMEDIR/config.lua"
 else
-	sed -e "s/^GameMusic\s*=\s*false$/GameMusic = false/" ./config.lua
+        sed -E -i "s/^GameMusic\s*=\s*(false|true)$/GameMusic = false/" "$GAMEDIR/config.lua"
 fi
 
 # $GPTOKEYB $BINARY -c "$BINARY.gptk" &

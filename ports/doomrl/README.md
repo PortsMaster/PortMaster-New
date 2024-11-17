@@ -27,10 +27,6 @@ Thanks to the [Kornel Kisielewicz](https://github.com/epyon) for creating this a
 | R2 + Y | Choose weapon (in mod pack prompt) |
 | R2 + A | Choose armor (in mod pack prompt) |
 | R2 + B | Choose boots (in mod pack prompt) |
-| Left Analog | Character movement, menu navigation |
-| L3 | Wait turn |
-| Right Analog | Mouse control |
-| R3 | Mouse click |
 
 ## Adding music files
 The game is not bundled with music files but you can add them manually.
