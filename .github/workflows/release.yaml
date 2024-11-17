@@ -9,63 +9,26 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: self-hosted
 
     steps:
       - uses: hmarr/debug-action@v2
         name: "debug: ${{github.event_name}}"
 
-      - name: Clean out files part 1
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
-      - uses: actions/checkout@v4
-
-      - name: Clean out files part 2
-        run: |
-          rm -rf .git
-          echo "Free Space"
-          df -h
-
       - name: env - better defaulting of env vars;
         id: env
         run: |
-            source SOURCE_SETUP.txt
+          ~/git-scripts/PortMaster-New-Prepare.sh
 
-            if [[ -z "$RELEASE_ORG" ]]; then
-              echo "::error file=SOURCE_SETUP.txt,line=2::Missing RELEASE_ORG, please configure"
-              exit 255
-            fi
-            echo "RELEASE_ORG=$RELEASE_ORG" >> $GITHUB_OUTPUT
+      - name: Get release name for artifacts
+        id: date
+        run: |
+          echo "date=$(date +'%Y-%m-%d_%H%M')" >> $GITHUB_OUTPUT
 
-            if [[ -z "$RELEASE_REPO" ]]; then
-              echo "::error file=SOURCE_SETUP.txt,line=5::Missing RELEASE_REPO, please configure"
-              exit 255
-            fi
-            echo "RELEASE_REPO=$RELEASE_REPO" >> $GITHUB_OUTPUT
-
-            echo "PMGUI_RELEASE=$PMGUI_RELEASE" >> $GITHUB_OUTPUT
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - uses: robinraju/release-downloader@v1.8
-        with:
-          repository: ${{ github.repository }}
-          latest: true
-          out-file-path: "releases"
-          fileName: "*.json"
-
-      - uses: robinraju/release-downloader@v1.8
-        with:
-          repository: ${{ github.repository }}
-          latest: true
-          out-file-path: "releases"
-          fileName: "images.zip"
+      - name: Generate Port Files.
+        id: ports-info
+        run: |
+          ~/git-scripts/PortMaster-New-Build-Release.sh "${{steps.date.outputs.date}}"
 
       ######################################################################
       ## Only run these if it is the PortMaster-New repo
@@ -78,22 +41,6 @@ jobs:
           fileName: "PortMaster.zip"
 
       ######################################################################
-
-      - name: Get release name for artifacts
-        id: date
-        run: |
-            echo "date=$(date +'%Y-%m-%d_%H%M')" >> $GITHUB_OUTPUT
-
-      - name: Generate Port Files.
-        id: ports-info
-        run: |
-          touch .github_check
-          wget -O releases/port_stats_raw.json "https://raw.githubusercontent.com/PortsMaster/PortMaster-Info/refs/heads/main/port_stats_raw.json"
-          tools/prepare_restore_port.sh
-          python3 tools/build_data.py
-          python3 tools/build_release.py "${{steps.date.outputs.date}}"
-          rm -fv releases/.gitignore
-          rm -fv releases/port_stats_raw.json
 
       - name: "Prepare Release"
         uses: ncipollo/release-action@v1
@@ -121,10 +68,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           repo: ${{ steps.env.outputs.RELEASE_REPO }}
           owner: ${{ steps.env.outputs.RELEASE_ORG }}
-
-      - name: Check Free Space
-        run: |
-          df -h
 
       - name: Release Info
         id: info
