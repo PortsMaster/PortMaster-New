@@ -20,9 +20,7 @@ get_controls
 GAMEDIR="/$directory/ports/doomrl"
 BINARY="drl"
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib32/:$LD_LIBRARY_PATH"
-export XDG_CONFIG_HOME="$GAMEDIR"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export XDG_DATA_HOME="$GAMEDIR"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1

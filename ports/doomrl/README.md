@@ -39,6 +39,11 @@ Here are the steps you need to take:
 0.9.9.8
 
 ## Compile
-Follow steps from this repo:
-https://github.com/ohol-vitaliy/PortMaster-DoomRL
-
+```sh
+git clone https://github.com/ohol-vitaliy/PortMaster-DoomRL.git
+cd PortMaster-DoomRL
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+docker build . --platform linux/arm64 --rm -t drl_build
+docker run --rm drl_build cat /root/drl.zip > drl.zip
+```
+Put contents of a `drl.zip` archive into the `ports/doomrl` folder
