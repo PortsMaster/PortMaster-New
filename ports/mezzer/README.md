@@ -8,7 +8,7 @@ Source: https://danieldavis.itch.io/mezzer
 
 | Button | Action |
 |--|--| 
-|L-stick/D-pad|Movement|
+|L-stick / D-pad|Movement|
 |A|Jump|
 |B|Parry|
 |X|Parry|
