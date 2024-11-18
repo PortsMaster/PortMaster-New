@@ -33,6 +33,44 @@ bind_directories ~/.fillets-ng $GAMEDIR/conf/.fillets-ng
 
 cd $GAMEDIR
 
+# Define the archive file name
+ARCHIVE_FILE="data.tar.gz"
+
+# Check if the archive file exists
+if [[ -f "$ARCHIVE_FILE" ]]; then
+   # Remove the old data directory if it exists
+   if [[ -d 'data/' ]]; then
+     pm_message "Removing old game data"
+     $ESUDO rm -fR 'data/'
+   fi
+   pm_message "Extracting game data, this can take a few minutes..."
+   
+   # Extract the archive and check if the extraction was successful
+   if [ "$CFW_NAME" = "muOS" ]; then
+       if gunzip -c "$ARCHIVE_FILE" | tar xf -; then
+           pm_message "Extraction successful."
+           $ESUDO rm -f "$ARCHIVE_FILE"
+       else
+           pm_message "Error: Extraction failed."
+           sleep 5
+           exit 1
+       fi
+   else
+       if tar -xzf "$ARCHIVE_FILE"; then
+           pm_message "Extraction successful."
+           $ESUDO rm -f "$ARCHIVE_FILE"
+       else
+           pm_message "Error: Extraction failed."
+           sleep 5
+           exit 1
+       fi
+   fi
+elif [ ! -d 'data/' ]; then
+   pm_message "Error: No data directory present and Archive file $ARCHIVE_FILE not found."
+   sleep 5
+   exit 1  # Exit the script if no data directory and no archive file
+fi
+
 $GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
 pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY systemdir=data fullscreen=on userdir=conf
