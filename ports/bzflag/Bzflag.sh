@@ -14,28 +14,25 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 GAMEDIR=/$directory/ports/bzflag
+CONFDIR="$GAMEDIR/conf"
+BINARY=bzflag
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-## Game does not adhere to XDG Standard, so manually link
-## Make sure to create the /conf/.bzf folders 
-$ESUDO rm -rf ~/.bzf
-ln -sfv $GAMEDIR/conf/.bzf ~/
-
-
 export TEXTINPUTINTERACTIVE="Y"
-export LD_LIBRARY_PATH="$PWD/libs::$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "bzflag" -c "./bzflag.gptk" &
+bind_directories ~/.bzf $GAMEDIR/conf/.bzf
 
-./bzflag
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+$GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
+pm_platform_helper "$GAMEDIR/$BINARY"
+./$BINARY
+pm_finish
