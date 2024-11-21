@@ -1,8 +1,10 @@
 ## Notes
 Thanks to the [Codebrew Software](codebrew.se) for creating this game
+
 Thanks to the [rgimad](https://github.com/rgimad), [AntonEvmenenko](https://github.com/AntonEvmenenko), [turbocat2001](https://github.com/turbocat2001) for creating a C++/SDL2 port
+
 Thanks to the [ohol-vitaliy](https://github.com/ohol-vitaliy) for fixing bugs with saving progress and incorrect scaling
- 
+
 ## Controls
 ### Menu
 | Button | Action |
