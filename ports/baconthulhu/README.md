@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to James "Bob the Hamster" Paige for developing this game and the OHRRPGCE itself and releasing both under GPL licence. Check the game on itch https://bob-the-hamster.itch.io/crypt-of-baconthulhu and also check mr. Paige's personal site https://james.hamsterrepublic.com/
+Thanks to James "Bob the Hamster" Paige for developing this game and the OHRRPGCE itself and releasing both under GPL licence. Check the game on itch https://bob-the-hamster.itch.io/crypt-of-baconthulhu and also check Mr. Paige's personal site https://james.hamsterrepublic.com/
 
 ## Controls
 
