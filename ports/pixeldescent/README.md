@@ -7,13 +7,14 @@ This has been tested using *PixelDescent.zip (V1.22)*
 
 ## Controls
 
-| Button  | Action      |
-| ------- | ----------- |
-| D-PAD   | Movement    |
-| R2      | Attack      |
-| L2      | Alt Attack  |
-| A       | Confirm     |
-| B       | Cancel      |
-| X       | Level up    |
-| Y       | Key markers |
-| START   | Pause       |
+| Button        | Action      |
+| ------------- | ----------- |
+| D-PAD/L-STICK | Movement    |
+| R-STICK       | Aim         |
+| R2            | Attack      |
+| L2            | Alt Attack  |
+| A             | Confirm     |
+| B             | Cancel      |
+| X             | Level up    |
+| Y             | Key markers |
+| START         | Pause       |
