@@ -9,13 +9,11 @@ This has been tested using *PixelDescent.zip (V1.22)*
 
 | Button  | Action      |
 | ------- | ----------- |
-| L-STICK | Mouse       |
-| X       | Mouse click |
-| D-PAD   | Move        |
-| A       | Attack      |
-| B       | Alt Attack  |
-| Y       | Level up    |
+| D-PAD   | Movement    |
+| R2      | Attack      |
+| L2      | Alt Attack  |
+| A       | Confirm     |
+| B       | Cancel      |
+| X       | Level up    |
+| Y       | Key markers |
 | START   | Pause       |
-| L1      | Cancel      |
-| R1      | Auto-attack |
-| R2      | Key markers |
