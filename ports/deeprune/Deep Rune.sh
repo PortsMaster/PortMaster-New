@@ -13,32 +13,34 @@ else
 fi
 
 source $controlfolder/control.txt
-# device_info.txt will be included by default
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-export PORT_32BIT="Y"
+# Variables
 GAMEDIR="/$directory/ports/deeprune"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-# We log the execution of the script into log.txt
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
+
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 # Prepare files
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/DeepRune.exe" ] && rm -f gamedata/DeepRune.exe
 
-$GPTOKEYB "gmloader" -c ./deeprune.gptk &
+# Display loading splash
+if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
+    $ESUDO ./tools/splash "splash.png" 2000
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
-./gmloader game.apk
+# Run the game
+$GPTOKEYB "gmloadernext" -c "./deeprune.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext"
+./gmloadernext
 
+# Kill processes
 pm_finish
