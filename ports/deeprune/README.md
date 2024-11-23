@@ -4,6 +4,8 @@ Thanks to [JC Bailey](https://jc-bailey.itch.io) for creating this great game, w
 
 The game runs too slowly on RK3326 handhelds -- although RK3326 performance is enjoyable on ROCKNIX with Panfrost drivers. RK3566 and H700 handhelds are fine.
 
+Port tested using version: `DeepRune.zip (V1.03)`
+
 
 ## Controls
 
