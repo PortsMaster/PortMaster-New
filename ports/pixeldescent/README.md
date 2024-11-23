@@ -2,8 +2,7 @@
 
 Thanks to [JC Bailey](https://jc-bailey.itch.io) for creating this great game, which you can purchase at [itch.io](https://jc-bailey.itch.io/pixel-descent)
 
-This has been tested using *PixelDescent.zip (V1.22)*
-
+Port tested using version: `PixelDescent.zip (V1.22)`, *Oct 10, 2024*
 
 ## Controls
 
