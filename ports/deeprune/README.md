@@ -2,6 +2,8 @@
 
 Thanks to [JC Bailey](https://jc-bailey.itch.io) for creating this great game, which you can download free at [itch.io](https://jc-bailey.itch.io/deep-rune)
 
+The game runs too slowly on RK3326 handhelds -- although RK3326 performance is enjoyable on ROCKNIX with Panfrost drivers. RK3566 and H700 handhelds are fine.
+
 
 ## Controls
 

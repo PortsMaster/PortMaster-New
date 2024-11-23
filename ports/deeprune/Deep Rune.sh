@@ -28,6 +28,10 @@ $ESUDO chmod +x -R $GAMEDIR/*
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+# Prepare files
+[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+[ -f "./gamedata/DeepRune.exe" ] && rm -f gamedata/DeepRune.exe
+
 # Display loading splash
 $ESUDO ./tools/splash "splash.png" 2000
 
