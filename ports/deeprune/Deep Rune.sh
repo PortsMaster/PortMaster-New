@@ -25,22 +25,16 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
-
-# Prepare files
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/DeepRune.exe" ] && rm -f gamedata/DeepRune.exe
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Display loading splash
-if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
-    $ESUDO ./tools/splash "splash.png" 2000
-fi
+$ESUDO ./tools/splash "splash.png" 2000
 
-# Run the game
-$GPTOKEYB "gmloadernext" -c "./deeprune.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+# Assign configs and load the game
+$GPTOKEYB "gmloader.aarch64" -c "deeprune.gptk" &
+pm_platform_helper "gmloader.aarch64"
+./gmloader.aarch64 -c gmloader.json
 
-# Kill processes
+# Cleanup
 pm_finish
