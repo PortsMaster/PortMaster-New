@@ -8,7 +8,7 @@ Thanks to Wired Games Studio for developing this game, check their other games o
 |--|--| 
 |DPAD/LSTICK|Movement|
 |A|Confirm|
-|B|Cance/Dash|
+|B|Cancel/Dash|
 |X|Throw sword|
 |Y|Jump|
 |L1|AP charge|
