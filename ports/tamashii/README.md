@@ -1,6 +1,6 @@
 ## Notes
 
-Big thanks to [Vikintor](https://vikintor.itch.io/) for creating this game! Another thanks to each person who tested this port! Thank You!🎩
+Big thanks to [Vikintor](https://https://store.steampowered.com/app/1026400/TAMASHII/) for creating this game! Another thanks to each person who tested this port! Thank You!🎩
 
 ## Controls
 
