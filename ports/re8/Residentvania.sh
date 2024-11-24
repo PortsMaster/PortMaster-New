@@ -33,7 +33,7 @@ cd $GAMEDIR
 [ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
-$GPTOKEYB "gmloader" -xbox36ß &
+$GPTOKEYB "gmloader" -xbox360 &
 
 pm_platform_helper "$GAMEDIR/gmloader"
 
