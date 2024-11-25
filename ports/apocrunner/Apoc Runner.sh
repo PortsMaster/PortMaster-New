@@ -13,45 +13,34 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
-
+# Variables
 GAMEDIR="/$directory/ports/apocrunner"
+SPLASHFILE="splash.png"
 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
 
-cd "$GAMEDIR"
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+# Display loading splash
+# Note: Due to bug in muOS, we must call twice to ensure it is displayed
+if [ "$CFW_NAME" == "muOS" ]; then
+  $ESUDO ./tools/splash $SPLASHFILE 1 
 fi
+$ESUDO ./tools/splash $SPLASHFILE 5000
 
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/apocrunner/libs:$LD_LIBRARY_PATH"
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Assign configs and load the game
+$GPTOKEYB "gmloader.aarch64" &
+pm_platform_helper "gmloader.aarch64"
+./gmloader.aarch64 -c gmloader.json
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" textinput &
-echo "Loading, please wait... " > /dev/tty0
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader apocrunner.apk
-
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
