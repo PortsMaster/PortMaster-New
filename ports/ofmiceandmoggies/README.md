@@ -9,11 +9,12 @@ Note that Community Level downloads are functional. But the (level) Editor requi
 
 ## Controls
 
-| Button        | Action      |
-| ------------- | ----------- |
-| D-PAD/L-STICK | Move        |
-| A             | Accept      |
-| B             | Undo/cancel |
-| Y             | Restart     |
-| R1/R2         | Map zoom    |
-| SELECT        | Menu        |
+| Button        | Action       |
+| ------------- | ------------ |
+| D-PAD/L-STICK | Move         |
+| A             | Accept       |
+| B             | Undo/cancel  |
+| Y             | Restart      |
+| R1/R2         | Map zoom     |
+| SELECT        | Menu         |
+| HOTKEY+X      | Hide/show UI |
