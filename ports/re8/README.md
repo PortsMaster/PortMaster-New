@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [OcO](https://oco.itch.io/) for making this wonderful demake 
+Thanks to [OcO](https://oco.itch.io/residentvania) for making this wonderful demake 
 
 ## Controls
 
