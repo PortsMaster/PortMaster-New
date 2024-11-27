@@ -21,7 +21,8 @@ GAMEDIR="/$directory/ports/apocrunner"
 SPLASHFILE="splash.png"
 
 # CD and set permissions
-cd $GAMEDIR > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+cd "$GAMEDIR"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
