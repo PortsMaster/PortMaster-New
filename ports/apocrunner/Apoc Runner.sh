@@ -39,7 +39,7 @@ $ESUDO ./tools/splash $SPLASHFILE 5000
 
 # Assign configs and load the game
 $GPTOKEYB "gmloader.aarch64" &
-pm_platform_helper "gmloader.aarch64"
+pm_platform_helper "$GAMEDIR/gmloader.aarch64"
 ./gmloader.aarch64 -c gmloader.json
 
 # Cleanup
