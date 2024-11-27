@@ -40,6 +40,16 @@ if [ -f "./gamedata/The Demon of Sakura Pass.exe" ]; then
     rm -f gamedata/*.{dll,ini,exe}
 fi
 
+# Check if there are any .ogg or .mp3 files in the ./gamedata directory
+if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
+    mkdir -p ./assets
+    mv ./gamedata/*.ogg ./assets/ 2>/dev/null
+    echo "Moved .ogg files from ./gamedata to ./assets/"
+    zip -r -0 ./game.apk ./assets/
+    echo "Zipped contents to ./game.apk"
+    rm -Rf ./assets/
+fi
+
 $GPTOKEYB "gmloader" -c ./demonofsakurapass.gptk &
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
