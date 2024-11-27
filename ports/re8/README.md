@@ -7,7 +7,7 @@ Thanks to [Fraxinus88](https://portmaster.games/profile.html?porter=Fraxinus88) 
 
 | Button | Action |
 |--|--| 
-|DPad|Movement|
+|DPAD|Movement|
 |A|Jump|
 |X|Knife|
 |Y|Shoot (only if a weapon is equipped)|
