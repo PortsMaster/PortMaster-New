@@ -16,13 +16,13 @@ source $controlfolder/control.txt
 
 export PORT_32BIT="Y"
 
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
+get_controls
 
 GAMEDIR="/$directory/ports/residentvania"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
@@ -38,16 +38,8 @@ if [ -f "$GAMEDIR/gamedata/data.win" ]; then
   rm -f "$GAMEDIR/gamedata/data.win"
 fi
 
-
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
-
-
 $GPTOKEYB "gmloader" -xbox360 &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
 
 ./gmloader re8.apk
 
