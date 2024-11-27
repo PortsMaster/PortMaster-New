@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Abhi Sundu](https://abhimonk.itch.io/) for creating this great game and kindly granting PortMaster permission to distribute the game files.
+Thanks to [Abhi Sundu](https://abhimonk.itch.io) for creating this great game and kindly granting PortMaster permission to distribute the game files.
 
 
 ## Controls
