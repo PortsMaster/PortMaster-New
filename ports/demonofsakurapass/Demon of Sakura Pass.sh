@@ -35,7 +35,7 @@ if [ -f "./gamedata/The Demon of Sakura Pass.exe" ]; then
     ./7zzs x "./gamedata/The Demon of Sakura Pass.exe" -o"./gamedata/"
     # Patch data.win
     $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
-    [ $? -eq 0 ] && rm "./gamedata/data.win" || echo "Patching of data.win has failed"
+    [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
     # Delete unneeded files
     rm -f gamedata/*.{dll,ini,exe}
 fi
@@ -44,9 +44,9 @@ fi
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     mkdir -p ./assets
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
-    echo "Moved .ogg files from ./gamedata to ./assets/"
+    pm_message "Moved .ogg files from ./gamedata to ./assets/"
     zip -r -0 ./game.apk ./assets/
-    echo "Zipped contents to ./game.apk"
+    pm_message "Zipped contents to ./game.apk"
     rm -Rf ./assets/
 fi
 
