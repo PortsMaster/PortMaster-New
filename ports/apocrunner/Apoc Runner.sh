@@ -23,7 +23,8 @@ SPLASHFILE="splash.png"
 # CD and set permissions
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x "$GAMEDIR/gmloader.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
