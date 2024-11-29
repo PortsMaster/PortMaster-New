@@ -48,6 +48,7 @@ fi
 # Prepare files
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
+[ -f "./gamedata/*.dll" ] && rm -f ./gamedata/*.dll
 
 $GPTOKEYB "gmloader" -c ./galaxychampionstv.gptk &
 
