@@ -27,6 +27,7 @@ $ESUDO chmod +x $GAMEDIR/tools/gmKtool.py
 $ESUDO chmod +x $GAMEDIR/tools/oggdec
 $ESUDO chmod +x $GAMEDIR/tools/oggenc
 $ESUDO chmod +x $GAMEDIR/tools/patchscript
+$ESUDO chmod +x $GAMEDIR/tools/splash
 $ESUDO chmod +x $GAMEDIR/tools/xdelta3
 
 # Exports
