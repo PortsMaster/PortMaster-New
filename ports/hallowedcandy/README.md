@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Project Level studios](https://projectlevel.itch.io) for creating this great game and kindly granting permission for PortMaster to distribute the game files.
+Thanks to [Project Level studios](https://projectlevel.itch.io) for creating this great game, and kindly granting permission for PortMaster to distribute the game files.
 
 
 ## Controls
