@@ -30,10 +30,11 @@ cd $GAMEDIR
 
 # Patch file
 if [ -f "./gamedata/Of Mice and Moggies.pck" ]; then
-    $controlfolder/xdelta3 -d -s "./gamedata/Of Mice and Moggies.pck" "./gamedata/patch.xdelta3" "./gamedata/Of Mice and Moggies-patched.pck"
-    [ $? -eq 0 ] && rm "./gamedata/Of Mice and Moggies.pck" || echo "Patching of Of Mice and Moggies.pck has failed"
-    # Delete unneeded files
-    rm -f gamedata/*.exe
+  pm_message "Patching Of Mice and Moggies.pck"
+  $controlfolder/xdelta3 -d -s "./gamedata/Of Mice and Moggies.pck" "./gamedata/patch.xdelta3" "./gamedata/Of Mice and Moggies-patched.pck"
+  [ $? -eq 0 ] && rm "./gamedata/Of Mice and Moggies.pck" || pm_message "Patching of Of Mice and Moggies.pck has failed"
+  # Delete unneeded files
+  rm -f gamedata/*.exe
 fi
 
 # Load runtime
@@ -41,7 +42,7 @@ runtime="frt_3.3.4"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
-    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
     sleep 5
     exit 1
   fi
