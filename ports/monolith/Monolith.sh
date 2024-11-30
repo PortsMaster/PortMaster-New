@@ -61,7 +61,9 @@ if [ -f "$GAMEDIR/Monolith.exe" ]; then
   actual_checksum=$(md5sum "$GAMEDIR/Monolith.exe" | awk '{print $1}')
 
   # Check if the file exists and the checksum matches
-  if [ "$actual_checksum" = "1f9c7039ca9f5d33aa7bc1ad83bd4586" ] || [ "$actual_checksum" = "c61248cb34926ecdc4cfc9256330e58f" ]; then
+  if [ "$actual_checksum" = "1f9c7039ca9f5d33aa7bc1ad83bd4586" ] || \
+     [ "$actual_checksum" = "c61248cb34926ecdc4cfc9256330e58f" ] || \
+     [ "$actual_checksum" = "46caa22818757df9f32fe1df78f330e8" ]; then
     echo "Checksum validated successfully."
 
     # Use 7zip to extract the .exe file to the destination directory
