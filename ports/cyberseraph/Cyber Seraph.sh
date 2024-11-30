@@ -33,8 +33,8 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     mkdir -p ./assets
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
     pm_message "Moved .ogg files from ./gamedata to ./assets/"
-    zip -r -0 ./voidbreach.port ./assets/
-    pm_message "Zipped contents to ./voidbreach.port"
+    zip -r -0 ./cyberseraph.port ./assets/
+    pm_message "Zipped contents to ./cyberseraph.port"
     rm -Rf ./assets/
 fi
 
