@@ -38,9 +38,13 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     rm -Rf ./assets/
 fi
 
-# Prepare files
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
+# Extract and patch file
+if [ -f "./gamedata/data.win" ]; then
+    $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
+    [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
+    # Delete unneeded files
+    rm -f gamedata/*.{dll,ini,exe}
+fi
 
 # Display loading splash
 $ESUDO ./tools/splash "splash.png" 2000
