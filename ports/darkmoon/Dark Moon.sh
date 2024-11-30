@@ -30,7 +30,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Prepare files
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/\${Dark_Moon}.exe" ] && rm -f "./gamedata/\${Dark_Moon}.exe"
 
 # Display loading splash
 $ESUDO ./tools/splash "splash.png" 2000
