@@ -63,7 +63,6 @@ fi
 
 # Rename the data file
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
 # Pack all .ogg files into game.apk ./gamedata
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
