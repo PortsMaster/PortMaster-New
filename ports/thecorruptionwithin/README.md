@@ -1,10 +1,16 @@
 # Notes
 
-Thanks to [CREATOR](URL) for creating this fantastic game, which you can purchase at [STORE](URL)
+Thanks to [Cosmic Voide](https://cosmicvoid.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://cosmicvoid.itch.io)
 
+**An overview of mature and sensitive content: the game contains horror themes, pixelated violence, and other mature themes such as poisoning and imagery of the dead.**
 
 # Controls
 
-| Button  | Action   |
-| ------- | -------- |
-| ...     | ...      |
+| Button  | Action       |
+| ------- | ------------ |
+| D-PAD   | Movement     |
+| L-STICK | Mouse cursor |
+| A       | Mouse click  |
+| B       | Inventory    |
+| START   | Menu         |
+| L1      | Tutorial     |
