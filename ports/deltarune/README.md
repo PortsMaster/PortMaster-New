@@ -1,5 +1,5 @@
 ## Installation
-Download the Windows version from https://tobyfox.itch.io/deltarune and unzip to `ports/deltarune/gamedata`.
+Download Deltarune v1.10 from https://archive.org/download/dr-ver-archive (official Toby Fox archive) and unzip to `ports/deltarune/gamedata`.
 
 ## Thanks
 TobyFox -- The absolutely amazing game  
