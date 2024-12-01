@@ -47,7 +47,7 @@ if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     
     # Checksum for the Steam latest version
-    if [ "$checksum" = "1c2c56ed2614e577b16bb9274577d461" ]; then
+    if [ "$checksum" = "e0e25e5a0053184b61082e666dce9033" ]; then
         mv "./patch/game.apk.latest" "./game.apk"
         mv "./gamedata/data.win" "./gamedata/game.droid"
     # Checksum for the Steam prevamped version
