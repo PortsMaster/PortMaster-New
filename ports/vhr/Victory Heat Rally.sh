@@ -50,14 +50,14 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./libs/splash "splash.png" 1 # workaround for muOS
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./libs/splash "splash.png" 1 
     $ESUDO ./libs/splash "splash.png" 2000
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext" -c "vhr.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+$GPTOKEYB "gmloader.aarch64" -c "vhr.gptk" &
+pm_platform_helper "gmloader.aarch64"
+./gmloader.aarch64 -c "gmloader.json"
 
 # Cleanup
 pm_finish
