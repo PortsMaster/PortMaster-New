@@ -4,7 +4,7 @@ Thanks to Team D-13 for creating this game, titled [Monolith](https://team-d-13.
 
 This has been tested with the Monolith.exe full version (Jan 13, 2019) from itch.io. It supports an older Steam version, retrievable via download_depot/DepotDownloader.
 
-ROCKNIX users: you may need to realign the reticle with the mouse cursor -- move the mouse cursor to the top left corner to do this.
+**ROCKNIX Users:** Use the Steam version. You may need to realign the reticle with the mouse cursor -- move the mouse cursor to the top left corner to do this.
 
 
 # Controls
