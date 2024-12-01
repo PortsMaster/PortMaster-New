@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: apocrunner.zip, Apoc Runner.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -22,7 +21,8 @@ GAMEDIR="/$directory/ports/apocrunner"
 SPLASHFILE="splash.png"
 
 # CD and set permissions
-cd "$GAMEDIR" > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+cd "$GAMEDIR" 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x "$GAMEDIR/gmloader.aarch64"
 $ESUDO chmod +x "$GAMEDIR/tools/splash"
 
