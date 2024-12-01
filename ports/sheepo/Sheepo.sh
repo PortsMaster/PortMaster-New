@@ -54,7 +54,7 @@ if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext" -c "./sheepo.gptk" &
+$GPTOKEYB "gmloadernext" &
 pm_platform_helper "$GAMEDIR/gmloadernext"
 ./gmloadernext
 
