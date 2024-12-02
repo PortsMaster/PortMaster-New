@@ -7,7 +7,8 @@ Thanks Copperbolt for developing this game, check the game on Steam https://stor
 | Button | Action |
 |--|--| 
 |DPAD/LSTICK|Movement|
-|A/B|Attack / Interaction|
+|A|Attack / Interaction (Z)|
+|B|Contextual action (X)|
 |Select|Back to menu|
 |Start|Start|
 
