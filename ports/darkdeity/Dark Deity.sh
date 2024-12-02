@@ -17,8 +17,6 @@ source $controlfolder/control.txt
 get_controls
 
 # Setup permissions
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 echo "Loading, please wait... (might take a while!)" > $CUR_TTY
 
 # Variables
