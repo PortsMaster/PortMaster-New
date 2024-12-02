@@ -54,8 +54,8 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./lib/splash "splash.png" 1 
-    $ESUDO ./lib/splash "splash.png" 2000
+    $ESUDO ./tools/splash "splash.png" 1 
+    $ESUDO ./tools/splash "splash.png" 2000
 fi
 
 # Run the game
