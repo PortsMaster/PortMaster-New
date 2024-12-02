@@ -19,7 +19,7 @@ get_controls
 source $controlfolder/tasksetter
 
 # Variables
-GAMEDIR="/$directory/ports/superamazingwagonadventure"
+GAMEDIR="/$directory/ports/sawa"
 cd "$GAMEDIR/gamedata"
 
 # Log the execution of the script, the script overwrites itself on each launch
