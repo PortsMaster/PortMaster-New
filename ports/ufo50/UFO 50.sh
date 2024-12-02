@@ -16,9 +16,6 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-# Setup permissions
-echo "Loading, please wait... (might take a while!)" > $CUR_TTY
-
 # Variables
 GAMEDIR="/$directory/ports/ufo50"
 
@@ -56,10 +53,10 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
     $ESUDO ./libs/splash "splash.png" 2000
 fi
 
-# Run the game
-$GPTOKEYB "gmloadernext" -c "./ufo50.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloader.aarch64" -c "ufo50.gptk" &
+pm_platform_helper "$GAMEDIR/gmloader.aarch64"
+./gmloader.aarch64 -c gmloader.json
 
 # Kill processes
 pm_finish

@@ -1,7 +1,7 @@
 ## Installation
-Purchase the game on Steam and copy all the data to `ports/ufo50/gamedata`. On first run the game will be patched.
+Purchase the game on Steam and copy all the data to `ports/ufo50/assets`. On first run the game will be patched.
 
-If you are updating a prepatched game, simply delete the `ufo50/gamedata/game.droid` file and the `patchlog.txt` file, and add your new `data.win` file to `gamedata`.
+If you are updating a prepatched game, simply delete the `patchlog.txt` file, and add your new `data.win` file to `assets`.
 
 ## Performance Notes
 This port features audio compression and texture repacking in an attempt to reduce memory usage. This is necessary in order for the port to run on the linux arm handhelds targeted. These handhelds are equipped with low-end rockchip or allwinner processors

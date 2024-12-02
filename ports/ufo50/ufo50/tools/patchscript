@@ -8,7 +8,8 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
-export DATADIR="$GAMEDIR/gamedata"
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="ufo50.port"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
@@ -23,22 +24,22 @@ chmod 777 "$TOOLDIR/oggenc"
 cd "$GAMEDIR"
 
 unzip_audiogroups() {
-    # Unzip audiogroups from game.apk into $DATADIR
-    echo "Unzipping audiogroups..."
-    unzip -j -o "$GAMEDIR/game.apk" "assets/*" -d "$DATADIR"
+    # Unzip from $DATAFILE into $DATADIR
+    echo "Unzipping ${DATAFILE}..."
+    mkdir -p assets
+    unzip -j -o "$DATAFILE" "assets/*.dat" -d "$DATADIR"
     if [ $? -eq 0 ]; then
-        echo "Audiogroups unzipped successfully to $DATADIR."
+        echo "Unzipped successfully to $DATADIR."
     else
-        echo "Failed to unzip audiogroups."
+        echo "Failed to unzip file."
         exit 1
     fi
 }
 
 apply_xdelta() {
-    # UFO 50 v1.4.2 patch
     # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/data.win" ]; then
-        echo "Applying xdelta patch"
+        # v1.4.2
         output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/ufo50.xdelta" "$DATADIR/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully"
@@ -49,18 +50,16 @@ apply_xdelta() {
             echo "$output"
             exit 1
         fi
+    else
+        echo "No data.win file found to patch!"
     fi
 }
 
 compress_audio() {
-    # Compress audio
-    echo "Compressing audio..."
-    sleep 3
     mkdir -p "$TMPDIR"
 
     # Run the compression tool
     PYTHON=$(which python3)
-    DATAONLY=1
     if [ "$PREPATCH" != 1 ]; then
         echo "Running GMTools on data and audiogroups."
         $PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
@@ -83,34 +82,34 @@ compress_audio() {
     fi
 }
 
+zip_archive() {
+        zip -r -0 $DATAFILE ./assets/
+        mkdir -p saves
+}
+
 process_game() {
     # Delete unnecessary files
-    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
+    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep $DATADIR/gamedat
     echo "Removed unnecessary files"
+    
     # Check if we're using a prepatched game
-    if unzip -l "$GAMEDIR/game.apk" "assets/*" | grep -q "assets/.*\.dat"; then
+    if unzip -l "$DATAFILE" "assets/*" | grep -q "assets/.*\.dat"; then
         echo "Prepatched game detected." && sleep 1
         PREPATCH=1
         unzip_audiogroups
     fi
+    
+    echo "Unzipping a file..."
+    unzip_archive
+    echo "Applying xdelta patch"
     apply_xdelta
+    sleep 1
+    echo "Compressing audio..."
     compress_audio
-    sleep 3
-
-    # Check for .dat files and move to APK
-    if [ -n "$(ls $DATADIR/*.dat 2>/dev/null)" ]; then
-        mkdir -p ./assets
-        mv $DATADIR/*.dat ./assets/
-        echo "Moved .dat files to ./assets/"
-
-        zip -r -0 ./game.apk ./assets/
-        echo "Zipped contents to ./game.apk"
-
-        rm -rf ./assets
-        echo "Deleted assets directory"
-    else
-        echo "No .dat files found"
-    fi
+    sleep 1
+    echo "Finishing up..."
+    zip_archive
+    sleep 1
 	
     # Final completion message
     echo "Patching process complete!"
