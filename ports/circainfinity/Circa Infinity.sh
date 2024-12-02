@@ -44,7 +44,7 @@ if [ -f "$GAMEDIR/gamedata/CircaInfinity.exe" ]; then
 	rm "$GAMEDIR/gamedata/steam_api.dll"
 	rm "$GAMEDIR/gamedata/options.ini"  
 else
-	echo "The exe file is missing, skipping the extraction step!"
+	pm_message "The exe file is missing, skipping the extraction step!"
 fi
 
 # Extract the demo version
@@ -58,7 +58,7 @@ if [ -f "$GAMEDIR/gamedata/CircaInfinityDemo.exe" ]; then
 	rm "$GAMEDIR/gamedata/D3DX9_43.dll"
 	rm "$GAMEDIR/gamedata/options.ini"  
 else
-	echo "The exe file is missing, skipping the extraction step!"
+	pm_message "The exe file is missing, skipping the extraction step!"
 fi
 
 # Rename the data file
