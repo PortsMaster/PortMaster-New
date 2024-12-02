@@ -9,7 +9,7 @@ elif [ -d "/opt/tools/PortMaster/" ]; then
 elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
   controlfolder="$XDG_DATA_HOME/PortMaster"
 else
-  controlfolder="/roms/ports/PortMaster"
+  controlfolder="/roms/tools/PortMaster"
 fi
 
 source $controlfolder/control.txt
