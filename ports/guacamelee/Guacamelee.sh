@@ -49,7 +49,7 @@ export BOX86_DYNAREC_X87DOUBLE=1
 export BOX86_X87_NO80BITS=1
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
 
 export LIBGL_SHRINK=4
