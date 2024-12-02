@@ -16,7 +16,7 @@ fi
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
-source $controlfolder/tasksetter
+source $controlfolder/tasksetter  # Tasksetter is needed for handhelds with Big-Little architecture soc's.
 
 # Variables
 GAMEDIR="/$directory/ports/sawa"
@@ -41,7 +41,6 @@ bind_directories "$HOME/.local/share/WagonAdventure" "$GAMEDIR/savedata"
 # Setup path and other environment variables
 export MONO_PATH="$GAMEDIR/dlls"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-#export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib32:/usr/lib32:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin:$PATH"
 
 export FNA3D_FORCE_DRIVER=OpenGL
