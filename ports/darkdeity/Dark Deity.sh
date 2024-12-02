@@ -59,9 +59,9 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext.aarch64" -c "./darkdeity.gptk" & 
-pm_platform_helper "gmloadernext.aarch64"
-./gmloadernext.aarch64 -c gmloader.json
+$GPTOKEYB "gmloader.aarch64" -c "./darkdeity.gptk" & 
+pm_platform_helper "gmloader.aarch64"
+./gmloader.aarch64 -c gmloader.json
 
 # Kill processes
 pm_finish
