@@ -31,21 +31,24 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Prepare game files
 if [ -f "$GAMEDIR/gamedata/data.win" ]; then
-  mv gamedata/data.win gamedata/game.droid
+	mv gamedata/data.win gamedata/game.droid
+ # Delete all redundant files
+	rm "$GAMEDIR/gamedata/SuperGlitterRush.exe"  
+	rm "$GAMEDIR/gamedata/steam_appid.txt"
+	rm "$GAMEDIR/gamedata/steam_api.dll"
+ # Move audio files from gamedata folder to ./assets
+	mkdir -p ./assets
+	mv ./gamedata/* ./assets/
 
-  # Move audio files from gamedata folder to ./assets
-  mkdir -p ./assets
-  mv ./gamedata/*.dat ./gamedata/*.ogg ./assets/
-
-  # Zip all audio files into the superglitter.port
-  zip -r -0 ./superglitter.port ./assets/
-  rm -Rf "$GAMEDIR/assets/"
+ # Zip all game files into the superglitter.port
+	zip -r -0 ./superglitter.port ./assets/
+	rm -Rf "$GAMEDIR/assets/"
 fi
 
 # Assign configs and load the game
-$GPTOKEYB "gmloader.aarch64" &
-pm_platform_helper "gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish
