@@ -23,7 +23,7 @@ SPLASHFILE="splash.png"
 # CD and set permissions
 cd "$GAMEDIR" 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x "$GAMEDIR/gmloader.aarch64"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 $ESUDO chmod +x "$GAMEDIR/tools/splash"
 
 # Exports
@@ -37,9 +37,9 @@ fi
 $ESUDO ./tools/splash $SPLASHFILE 5000
 
 # Assign configs and load the game
-$GPTOKEYB "gmloader.aarch64" &
-pm_platform_helper "$GAMEDIR/gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish
