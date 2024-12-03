@@ -1,3 +1,5 @@
+#!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -11,27 +13,22 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/deltarune"
 
-# Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs32:$GAMEDIR/libs":$LD_LIBRARY_PATH
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="2 to 5 minutes"
-
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x -R $GAMEDIR/*
+
+# Exports
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+export PATCHER_TIME="2 to 5 minutes"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/gmKtool.py"
@@ -44,17 +41,27 @@ if [ ! -f patchlog.txt ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        echo "This port requires the latest version of PortMaster."
     fi
 else
     echo "Patching process already completed. Skipping."
 fi
 
-# Run game
-echo "Loading, please wait..." > $CUR_TTY
-$GPTOKEYB "gmloader" -c "deltarune.gptk" &
-pm_platform_helper "$GAMEDIR/game.apk"
-./gmloader game.apk
+# Post patcher setup
+export PORT_32BIT="Y"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+
+# Display loading splash
+if [ -f "$GAMEDIR/patchlog.txt" ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
+    $ESUDO ./tools/splash "splash.png" 2000
+fi
+
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloader.armhf" -c "haque.gptk" &
+pm_platform_helper "$GAMEDIR/gmloader.armhf"
+./gmloader.armhf -c gmloader.json
 
 # Cleanup
 pm_finish
