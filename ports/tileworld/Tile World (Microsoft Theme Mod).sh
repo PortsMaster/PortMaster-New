@@ -33,7 +33,7 @@ bind_directories ~/.tworld $GAMEDIR/conf/.tworld
 
 # set game mod
 cp -f -v $GAMEDIR/res/rc.hh.original $GAMEDIR/res/rc
-cp -f -v $GAMEDIR/res/atiles_lynx.png $GAMEDIR/res/atiles.png
+cp -f -v $GAMEDIR/res/atiles_ms.png $GAMEDIR/res/atiles.png
 
 $GPTOKEYB "tworld-hh.${DEVICE_ARCH}" -c "$GAMEDIR/tileworld.gptk" &
 pm_platform_helper "$GAMEDIR/tworld-hh.${DEVICE_ARCH}"
