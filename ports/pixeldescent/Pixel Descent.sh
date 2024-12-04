@@ -25,22 +25,31 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Pack audiogroups into apk
+if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
+    mkdir -p ./assets
+    mv ./gamedata/*.dat ./assets/ 2>/dev/null
+    pm_message "Moving .dat files from ./gamedata to ./assets/"
+    zip -r -0 ./voidbreach.port ./assets/
+    pm_message "Zipping contents to ./voidbreach.port"
+    rm -Rf ./assets/
+    pm_message "Packing audiogroups complete"
+fi
 
 # Prepare files
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/PixelDescent.exe" ] && rm -f gamedata/PixelDescent.exe
+[ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
 
 # Display loading splash
-if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
-    $ESUDO ./tools/splash "splash.png" 2000
-fi
+$ESUDO ./tools/splash "splash.png" 2000
 
-# Run the game
-$GPTOKEYB "gmloadernext" -c "./pixeldescent.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "pixeldescent.gptk" &
+pm_platform_helper "gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
-# Kill processes
+# Cleanup
 pm_finish
