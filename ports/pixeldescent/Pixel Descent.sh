@@ -22,7 +22,8 @@ GAMEDIR="/$directory/ports/pixeldescent"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x $GAMEDIR/tools/splash
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
@@ -44,11 +45,11 @@ fi
 [ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
 
 # Display loading splash
-$ESUDO ./tools/splash "splash.png" 2000
+$ESUDO ./tools/splash "splash.png" 2000 &
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "pixeldescent.gptk" &
-pm_platform_helper "gmloadernext.aarch64"
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
