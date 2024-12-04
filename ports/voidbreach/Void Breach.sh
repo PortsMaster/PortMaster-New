@@ -25,7 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Pack audiogroups into apk
@@ -46,9 +46,9 @@ fi
 $ESUDO ./tools/splash "splash.png" 2000
 
 # Assign configs and load the game
-$GPTOKEYB "gmloader.aarch64" -c "voidbreach.gptk" &
-pm_platform_helper "gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" -c "voidbreach.gptk" &
+pm_platform_helper "gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish
