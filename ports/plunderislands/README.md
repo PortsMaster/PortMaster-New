@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Tobermory for developing of this game, check it on Steam https://store.steampowered.com/app/2279370/Plunder_Islands/
+Thanks to Tobermory for developing of this game, check it on [Steam](https://store.steampowered.com/app/2279370/Plunder_Islands/)
 
 ## Controls
 
