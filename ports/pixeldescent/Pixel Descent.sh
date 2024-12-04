@@ -30,13 +30,13 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Pack audiogroups into apk
 if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
-    mkdir -p ./assets
-    mv ./gamedata/*.dat ./assets/ 2>/dev/null
-    pm_message "Moving .dat files from ./gamedata to ./assets/"
-    zip -r -0 ./voidbreach.port ./assets/
-    pm_message "Zipping contents to ./voidbreach.port"
-    rm -Rf ./assets/
-    pm_message "Packing audiogroups complete"
+  mkdir -p ./assets
+  mv ./gamedata/*.dat ./assets/ 2>/dev/null
+  pm_message "Moving .dat files from ./gamedata to ./assets/"
+  zip -r -0 ./voidbreach.port ./assets/
+  pm_message "Zipping contents to ./voidbreach.port"
+  rm -Rf ./assets/
+  pm_message "Packing audiogroups complete"
 fi
 
 # Prepare files
