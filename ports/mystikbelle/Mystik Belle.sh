@@ -59,9 +59,9 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloader.armhf" -c "mystikbelle.gptk" &
-pm_platform_helper "$GAMEDIR/gmloader.armhf"
-./gmloader.armhf -c gmloader.json
+$GPTOKEYB "gmloadernext.armhf" -c "mystikbelle.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
+./gmloadernext.armhf -c gmloader.json
 
 # Cleanup
 pm_finish
