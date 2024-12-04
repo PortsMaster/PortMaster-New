@@ -52,14 +52,14 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./tools/splash "splash.png" 1 
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./libs/splash "splash.png" 1 
     $ESUDO ./tools/splash "splash.png" 2000
 fi
 
 # Run the game
-$GPTOKEYB "gmloader.aarch64" -c "./darkdeity.gptk" & 
-pm_platform_helper "gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" -c "./darkdeity.gptk" & 
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Kill processes
 pm_finish
