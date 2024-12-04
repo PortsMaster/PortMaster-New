@@ -34,7 +34,7 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 # check if we have new enough version of PortMaster that contains xdelta3
 if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+  pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
   sleep 5
   exit 1
 fi
@@ -65,7 +65,7 @@ if [ -f "$GAMEDIR/Mezzer.exe" ]; then
 	    rm -f "$GAMEDIR/Mezzer.exe"
         fi
     else
-        echo "Error: MD5 checksum of Mezzer.exe does not match the expected checksum."
+        pm_message "Error: MD5 checksum of Mezzer.exe does not match the expected checksum."
         exit 1
     fi
 else
@@ -77,11 +77,11 @@ if [ -f "./gamedata/data.win" ]; then
     checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
     # Checksum for the data.win
     if [ "$checksum" = "02cbf4cf97b55391e3c6105cfd70fa11" ]; then
-        echo "data.win is being patched..." && \
+        pm_message "data.win is being patched..." && \
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/mezzer.xdelta gamedata/game.droid && \
         rm gamedata/data.win
     else
-        echo "Error: MD5 checksum of data.win does not match any expected version."
+        pm_message "Error: MD5 checksum of data.win does not match any expected version."
         exit 1
     fi
 else    
@@ -95,11 +95,11 @@ if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
 
     # Move all .ogg files from ./gamedata to ./assets
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
-    echo "Moved .ogg files from ./gamedata to ./assets/"
+    pm_message "Moved .ogg files from ./gamedata to ./assets/"
 
     # Zip the contents of ./mezzer.apk including the new audio files
     zip -r -0 ./mezzer.apk ./assets/
-    echo "Zipped contents to ./mezzer.apk"
+    pm_message "Zipped contents to ./mezzer.apk"
 
     # Remove the assets directory
     rm -Rf ./assets/
