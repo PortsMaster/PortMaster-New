@@ -25,17 +25,18 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Pack oggs into apk
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
     mkdir -p ./assets
     mv ./gamedata/*.ogg ./assets/ 2>/dev/null
-    pm_message "Moved .ogg files from ./gamedata to ./assets/"
+    pm_message "Moving .ogg files from ./gamedata to ./assets/"
     zip -r -0 ./thecorruptionwithin.port ./assets/
-    pm_message "Zipped contents to ./thecorruptionwithin.port"
+    pm_message "Zipping contents to ./thecorruptionwithin.port"
     rm -Rf ./assets/
+    pm_message "Packing oggs complete"
 fi
 
 # Prepare files
@@ -46,9 +47,9 @@ fi
 $ESUDO ./tools/splash "splash.png" 2000
 
 # Assign configs and load the game
-$GPTOKEYB "gmloader.aarch64" -c "thecorruptionwithin.gptk" &
-pm_platform_helper "gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" -c "thecorruptionwithin.gptk" &
+pm_platform_helper "gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish
