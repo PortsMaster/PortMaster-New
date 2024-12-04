@@ -57,7 +57,7 @@ PATH="$godot_dir:$PATH"
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "plunderislands.gptk" &
-pm_platform_helper "$runtime"
+pm_platform_helper "$godot_dir/$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/plunderislandspatched.pck"
 
 
