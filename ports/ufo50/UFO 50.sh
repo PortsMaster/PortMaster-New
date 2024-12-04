@@ -54,9 +54,9 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloader.aarch64" -c "ufo50.gptk" &
-pm_platform_helper "$GAMEDIR/gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" -c "ufo50.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Kill processes
 pm_finish
