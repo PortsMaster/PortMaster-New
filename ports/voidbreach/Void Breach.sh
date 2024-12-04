@@ -32,10 +32,11 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
     mkdir -p ./assets
     mv ./gamedata/*.dat ./assets/ 2>/dev/null
-    pm_message "Moved .dat files from ./gamedata to ./assets/"
+    pm_message "Moving .dat files from ./gamedata to ./assets/"
     zip -r -0 ./voidbreach.port ./assets/
-    pm_message "Zipped contents to ./voidbreach.port"
+    pm_message "Zipping contents to ./voidbreach.port"
     rm -Rf ./assets/
+    pm_message "Packing audiogroups complete"
 fi
 
 # Prepare files
