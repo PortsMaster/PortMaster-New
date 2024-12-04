@@ -48,7 +48,7 @@ $ESUDO ./tools/splash "splash.png" 2000
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "thecorruptionwithin.gptk" &
-pm_platform_helper "gmloadernext.aarch64"
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
