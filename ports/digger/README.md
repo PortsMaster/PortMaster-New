@@ -13,3 +13,21 @@ Special thanks to Bamboozler and Cebion from Portmaster for the compile help!
 |B/A/Y|Fire|
 |Select|Title Screen|
 |Start|Start Game|
+
+## Compile
+
+```shell
+git clone https://github.com/sobomax/digger
+cd digger
+# Edit def.h
+# Above the line with #include <stdint.h> add #include <SDL2/SDL.h>
+# On line 87 with #define ININAME, replace getenv("HOME") with SDL_GetBasePath()
+# Save changes
+# Edit scores.c
+# On line 56 with #define SFNAME, replace getenv("HOME") with SDL_GetBasePath()
+# Save changes
+# Edit GNUmakefile
+# On line 6, remove -DDIGGER_DEBUG from the CFLAGS
+# Save changes
+make -j4
+```
