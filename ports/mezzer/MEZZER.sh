@@ -85,7 +85,7 @@ if [ -f "./gamedata/data.win" ]; then
         exit 1
     fi
 else    
-    echo "data.win not in gamedata folder or game has been patched."
+    pm_message "data.win not in gamedata folder or game has been patched."
 fi
 
 # Check if there are any .ogg files in the ./gamedata directory
