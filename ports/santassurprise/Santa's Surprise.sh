@@ -28,7 +28,7 @@ cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $GPTOKEYB "gmloader" -c "./santa.gptk" &
-echo "Loading, please wait... " > /dev/tty0
+pm_message "Loading, please wait... "
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
