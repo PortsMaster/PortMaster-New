@@ -4,7 +4,11 @@ Thanks to [Bippinbits](https://bippinbits.com) for creating this great game and 
 
 Requires the Windows version: `Of Mice and Moggies.zip` -- *Sep 14, 2021*
 
-Note that Community Level downloads are functional. But the (level) Editor requires a mouse (and there's no cursor either) -- instead, you can create levels on your PC and copy them over.
+**Note:** 
+
+- The UI/buttons are tiny on small-to-medium screens, but it should be easy enough to navigate and play despite this (it requires minimal navigation to get playing, and this won't affect gameplay)
+- Community Level downloads are functional
+- The (level) Editor requires a mouse (and there's no cursor either) -- instead, you can create levels on your PC and copy them over
 
 
 ## Controls
