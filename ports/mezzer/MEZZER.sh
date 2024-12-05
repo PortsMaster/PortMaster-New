@@ -69,7 +69,7 @@ if [ -f "$GAMEDIR/Mezzer.exe" ]; then
         exit 1
     fi
 else
-    echo "Mezzer.exe not detected in /mezzer"
+    pm_message "Mezzer.exe not detected in /mezzer"
 fi
 
 # If "gamedata/data.win" exists and matches the checksum steam version
