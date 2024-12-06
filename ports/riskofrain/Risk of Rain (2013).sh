@@ -37,8 +37,15 @@ export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filen
 export PATCHER_TIME="1 to 2 minutes"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs.armhf:$LD_LIBRARY_PATH"
 export PATH="$PATH:$GAMEDIR/tools"
+
+# If previous installation (671b20f) 
+# remove patchlog.txt so that Patcher
+# will update properly
+[[ -f "$GAMEDIR/game.apk" ]] && rm "$GAMEDIR/patchlog.txt" \
+&& export PATCHER_FILE="$GAMEDIR/tools/updatescript" \
+&& export PATCHER_TIME="less than a minute"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
