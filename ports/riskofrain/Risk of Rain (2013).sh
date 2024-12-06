@@ -12,88 +12,58 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-# PortMaster info
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-GAMEDIR=/$directory/ports/riskofrain
+
+export PORT_32BIT="Y"
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
+
+GAMEDIR=/$directory/ports/riskofrain
 
 # Enable logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/lib:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/"
-export GMLOADER_PLATFORM="os_windows"
-export PORT_32BIT="Y"
 cd "$GAMEDIR"
 
-# Delete unnecessary files
-files_to_delete=(
-  "D3DX9_43.dll"
-  "GMFile.dll"
-  "GMIni.dll"
-  "GMResource.dll"
-  "GMXML.dll"
-  "MyMod.gamelog.txt"
-  "MyMod.temp"
-  "Risk of Rain.exe"
-  "steam_api.dll"
-  "steam_autocloud.vdf"
-)
+# Set file permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
+$ESUDO chmod +x "$GAMEDIR/tools/text_viewer"
 
-for file in "${files_to_delete[@]}"; do
-  if [ -f "$file" ]; then
-    rm "$file"
-    echo "Deleted $file"
-  else
-    echo "$file not found"
-  fi
-done
+# Patcher config
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+export PATCHER_TIME="1 to 2 minutes"
 
-# Check if there are any .ogg files in the current directory
-if [ -n "$(ls ./*.ogg 2>/dev/null)" ]; then
-    # Create the assets directory if it doesn't exist
-    mkdir -p ./assets
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs.armhf:$LD_LIBRARY_PATH"
+export PATH="$PATH:$GAMEDIR/tools"
 
-    # Move all .ogg files from the current directory to ./assets
-    mv ./*.ogg ./assets/
-    echo "Moved .ogg files to ./assets/"
+# If previous installation (671b20f) 
+# remove patchlog.txt so that Patcher
+# will update properly
+[[ -f "$GAMEDIR/game.apk" ]] && rm "$GAMEDIR/patchlog.txt" \
+&& export PATCHER_FILE="$GAMEDIR/tools/updatescript" \
+&& export PATCHER_TIME="less than a minute"
 
-    # Zip the contents of ./assets into ./game.apk without compression
-    zip -r -0 ./game.apk ./assets/
-    echo "Zipped contents to ./game.apk"
-
-    # Delete the assets directory after processing
-    rm -rf ./assets
-    echo "Deleted assets directory"
-else
-    echo "No .ogg files found"
-fi
-
-if [ -f "data.win" ]; then
-    checksum=$(md5sum "data.win" | awk '{print $1}')
-    if [ "$checksum" = "d32c0d93bfc23b242fe7fca90f1d07ef" ]; then
-
-        # Move Prefs.ini from the conf folder and overwrite it in the current folder
-        ini_file="conf/Prefs.ini"
-        if [ -f "$ini_file" ]; then
-            mv -f "$ini_file" "./Prefs.ini"
-        fi
-
-        # Apply the patch
-        $ESUDO $controlfolder/xdelta3 -d -s "data.win" -f "./patch/riskofrain.xdelta" "game.droid" && \
-        rm "data.win"
+# Check if patchlog.txt to skip patching
+if [ ! -f patchlog.txt ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        echo "This port requires the latest version of PortMaster."
+        text_viewer -e -f 25 -w -t "PortMaster needs to be updated" -m "This port requires the latest version of PortMaster. Please update PortMaster first. Go to https://portmaster.games/ for more info.\n\nPress SELECT to close this window."
+        exit 0
     fi
+else
+    echo "Patching process already completed. Skipping."
 fi
 
-$ESUDO chmod 666 /dev/uinput
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-$GPTOKEYB "gmloadernext" -c "./riskofrain.gptk" &
-./gmloadernext game.apk
+$GPTOKEYB "gmloadernext.armhf" -c "./riskofrain.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
+./gmloadernext.armhf -c gmloader.json
+
+pm_finish
