@@ -26,7 +26,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 $ESUDO chmod +x $GAMEDIR/tools/splash
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Pack audiogroups into apk
