@@ -1,4 +1,25 @@
 #!/bin/bash
+
+#
+#   Gato Roboto patch script
+#   Author: JanTrueno (v1.0 - 5e4f49d), kotzebuedog (v2.0)
+#   Version: 2.0
+#   
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+
+source $controlfolder/control.txt
+
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
 LOGFILE="$GAMEDIR/patchlog.txt"
@@ -9,76 +30,123 @@ echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
 export DATADIR="$GAMEDIR/gamedata"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs.aarch64:$LD_LIBRARY_PATH"
 export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
+export PATH="$GAMEDIR/tools:$controlfolder:$PATH"
 
 # Permissions
-chmod 666 /dev/uinput
 chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggdec"
 chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
-if [ -f "gamedata/data.win" ]; then
-    checksum=$(md5sum "gamedata/data.win" | awk '{print $1}')
-    
-    if [ "$checksum" = "38970c275305ccd7c9abe9a10817872e" ]; then
-        echo "Detected Steam version. Using xdelta to patch the game with Steam patch..."
-        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.steam.xdelta" "gamedata/game.droid"; then
-            echo "Steam Xdelta patch successful."
-            rm "gamedata/data.win"
-        else
-            echo "Steam Xdelta patch unsuccessful."
-        fi
-    elif [ "$checksum" = "3d64f409e0e6d30650aea4ed03a1a4a1" ]; then
-        echo "Detected GOG version. Using xdelta to patch the game with GOG patch..."
-        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.gog.xdelta" "gamedata/game.droid"; then
-            echo "GOG Xdelta patch successful."
-            rm "gamedata/data.win"
-        else
-            echo "GOG Xdelta patch unsuccessful."
-        fi
-    else
-        echo "Unknown data.win checksum. No patch applied."
+# data.win md5 sum
+DATA_WIN_STEAM_MD5="38970c275305ccd7c9abe9a10817872e"
+DATA_WIN_GOG_MD5="3d64f409e0e6d30650aea4ed03a1a4a1"
+
+# -------------------- BEGIN FUNCTIONS --------------------
+
+patch_game()
+{
+    # Patch data.win
+
+    [[ ! -f "$GAMEDIR/gamedata/data.win" ]] && echo "data.win missing" && return 1   # CRITICAL
+
+    calc_checksum=$(md5sum "$GAMEDIR/gamedata/data.win" | awk '{print $1}')
+    xdelta_patch=""
+
+    case "$calc_checksum" in
+        "$DATA_WIN_STEAM_MD5")
+            echo "Detected Steam version. Using xdelta to patch the game with Steam patch..."
+            xdelta_patch="patch.steam.xdelta"
+        ;;
+        "$DATA_WIN_GOG_MD5")
+            echo "Detected GOG version. Using xdelta to patch the game with GOG patch..."
+            xdelta_patch="patch.gog.xdelta"
+        ;;
+        *)
+            echo "Unknown data.win checksum. No patch applied."
+            return 0
+        ;;
+    esac
+
+    xdelta3 -vv -d -s "$GAMEDIR/gamedata/data.win" \
+                    -f "$GAMEDIR/patch/$xdelta_patch" \
+                        "$GAMEDIR/gamedata/game.droid"
+
+    [[ ! $? -eq 0 ]] && echo "xdelta patching failed" && return 1   # CRITICAL
+
+    echo "Steam Xdelta patch successful."
+    rm "$GAMEDIR/gamedata/data.win"
+
+    return 0
+}
+
+compress_audio()
+{
+    # Compress audio
+    echo "Compressing audio..."
+    mkdir -p "$TMPDIR"
+
+    # Run the compression tool
+    gmKtool.py -vv -m 0 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    if [[ ! $? -eq 0 ]]; then
+        echo "Audio compression failed."
+        echo "Cleaning up temporary directory $TMPDIR."
+        rm -rf "$TMPDIR"
+        return 1    # CRITICAL
     fi
-else
-    echo "data.win file not found."
-fi
 
-# Compress audio
-echo "Compressing audio..."
-sleep 3
-mkdir -p "$TMPDIR"
-
-# Run the compression tool
-PYTHON=$(which python3)
-$PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
-
-if [ $? -eq 0 ]; then
     echo "Compression completed successfully."
     mv "$TMPDIR/"* "$DATADIR"
     echo "Moved compressed files to $DATADIR."
     rmdir "$TMPDIR"
     echo "Temporary directory $TMPDIR removed."
     echo "Audio compression applied successfully."
-else
-    echo "Audio compression failed."
-    echo "Cleaning up temporary directory $TMPDIR."
-    rm -rf "$TMPDIR"
-fi
 
-# Check if there are .dat files in ./gamedata
-if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
-    # Move all .dat files from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.dat ./assets/ || exit 1
+    return 0
+}
 
-    # Zip the contents of ./game.apk including the .dat files
-    zip -r -0 ./game.apk ./assets/ || exit 1
-    rm -Rf "$GAMEDIR/assets/" || exit 1
-	
-	  # Final completion message
-    echo "Patching process complete!"
-fi
+pack_assets()
+{
+    # Check if there are any .ogg files in the current directory
+    [[ ! -n "$(ls $GAMEDIR/gamedata/*.dat 2>/dev/null)" ]] && echo "No dat file found" && return 0
+
+    # Create the assets directory if it doesn't exist
+    mkdir -p "$GAMEDIR/assets"
+
+    # Move all .dat files from the current directory to ./assets
+    mv "$GAMEDIR/gamedata/"*.dat "$GAMEDIR/assets/"
+    [[ ! $? -eq 0 ]] && echo "Cannot move Ogg files" && return 1    # CRITICAL
+
+    echo "dat files moved to assets folder"
+
+    # Zip the contents of ./assets into ./game.apk without compression
+    zip -r -0 "$GAMEDIR/gatoroboto.port" "./assets"
+    [[ ! $? -eq 0 ]] && echo "Cannot pack assets" && return 1       # CRITICAL
+    echo "Assets packed"
+
+    # Delete the assets directory after processing
+    rm -rf "./assets"
+    [[ ! $? -eq 0 ]] && echo "Cannot delete assets folder" \
+    || echo "Assets folder deleted"
+
+    return 0
+}
+
+cleanup_files()
+{
+    rm "$GAMEDIR/gamedata/"*.dll
+    rm "$GAMEDIR/gamedata/"*.exe
+    return 0
+}
+
+# --------------------- END FUNCTIONS ---------------------
+
+# Install the game
+patch_game && compress_audio && pack_assets && cleanup_files
+[[ ! $? -eq 0 ]] && echo "Cannot install the game" \
+&& echo "Patching process failed!" && exit 1 \
+|| echo "Patching process done!" && exit 0

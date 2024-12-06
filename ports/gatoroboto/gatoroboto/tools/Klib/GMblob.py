@@ -150,13 +150,13 @@ class IFFdata:
 
 class GMIFFDdata(IFFdata):
 
-    def __init__(self, fin_path, verbose, bitrate=0, audiogroup_id=0):
+    def __init__(self, fin_path, verbose, audiosettings={"bitrate": 0, "downmix": False, "resample": 0}, audiogroup_id=0):
         super().__init__(fin_path, verbose)
         
         self.audo = None
         self.audiogroup_dat = {}
         self.audiogroup_id = audiogroup_id
-        self.bitrate = bitrate
+        self.audiosettings = audiosettings
         self.updated_entries = 0
         self.no_write = False
 
@@ -305,16 +305,28 @@ class GMIFFDdata(IFFdata):
             self.fileout.write(pack('<I', audo_size))   # write audo size
             self.fileout.seek(audo_size, 1)             # jump at the end of audo chunk
 
+    def _get_oggenc_options(self):
+        options = []
+        if self.audiosettings["bitrate"] != 0:
+            options.append("-b")
+            options.append(f"{self.audiosettings['bitrate']}")
+
+        if self.audiosettings["downmix"]:
+            options.append("--downmix")
+        
+        if self.audiosettings["resample"] != 0:
+            options.append("--resample")
+            options.append(f"{self.audiosettings['resample']}")
+        
+        return options
+
     def _write_to_file_txtp_ogg(self, audo_entry):
 
         offset_start = self.fileout.tell()
         self.fileout.seek(offset_start)                 # Can't find out why, but if I don't do this
                                                         # it writes with -4 bytes offset...
 
-        if self.bitrate != 0:
-            oggenc_process = Popen(["oggenc","-Q", "-b",f"{self.bitrate}", "-o", "-", "-"],stdin=PIPE, stdout=self.fileout, stderr=DEVNULL )
-        else:
-            oggenc_process = Popen(["oggenc","-Q", "-o", "-", "-"],stdin=PIPE, stdout=self.fileout, stderr=DEVNULL )
+        oggenc_process = Popen(["oggenc","-Q", *self._get_oggenc_options(), "-o", "-", "-"],stdin=PIPE, stdout=self.fileout, stderr=DEVNULL )
         
         vgmstream_process = Popen(["vgmstream-cli",f"{self.audo[audo_entry]['txtp']}", "-p"], stdout=oggenc_process.stdin, stderr=DEVNULL )
 
@@ -333,10 +345,7 @@ class GMIFFDdata(IFFdata):
 
         self.filein.seek(4 + self.audo[audo_entry]["offset"])
 
-        if self.bitrate != 0:
-            oggenc_process = Popen(["oggenc", "-Q", "-b", f"{self.bitrate}", "-o", "-", "-"], stdin=PIPE, stdout=self.fileout, stderr=DEVNULL)
-        else:
-            oggenc_process = Popen(["oggenc","-Q","-o", "-", "-"],stdin=PIPE, stdout=self.fileout, stderr=DEVNULL)
+        oggenc_process = Popen(["oggenc", "-Q", *self._get_oggenc_options(), "-o", "-", "-"], stdin=PIPE, stdout=self.fileout, stderr=DEVNULL)
 
         if compress > 1:
             # audio is already compressed, we need to uncompress it before can compress it
@@ -385,8 +394,8 @@ class GMIFFDdata(IFFdata):
 
 class GMaudiogroup(GMIFFDdata):
 
-    def __init__(self, fin_path, verbose, bitrate, audiogroup_id):
-        super().__init__(fin_path, verbose, bitrate, audiogroup_id)
+    def __init__(self, fin_path, verbose, audiosettings, audiogroup_id):
+        super().__init__(fin_path, verbose, audiosettings, audiogroup_id)
     
     def import_sound_txtp(self, filetxtp_path, compress=0 ):
         last = len(self.audo)
@@ -420,8 +429,8 @@ class GMdata(GMIFFDdata):
     GM_DEFAULT = 0x0000
     GM_2024_6 = 0x1806
 
-    def __init__(self, fin_path, verbose, bitrate, audiogroup_filter=[]):
-        super().__init__(fin_path, verbose, bitrate, 0)
+    def __init__(self, fin_path, verbose, audiosettings, audiogroup_filter=[]):
+        super().__init__(fin_path, verbose, audiosettings, 0)
         self.gm_version = GMdata.GM_DEFAULT
 
         self.sond = None
@@ -503,7 +512,7 @@ class GMdata(GMIFFDdata):
     
     def __init_audiogroup_dat(self, audiogroup):
         if audiogroup > 0 and not f"{audiogroup}" in self.audiogroup_dat.keys():
-            self.audiogroup_dat[f"{audiogroup}"] = GMaudiogroup(self.filein_path.parents[0] / f"audiogroup{audiogroup}.dat" , self.verbose, self.bitrate, audiogroup)
+            self.audiogroup_dat[f"{audiogroup}"] = GMaudiogroup(self.filein_path.parents[0] / f"audiogroup{audiogroup}.dat" , self.verbose, self.audiosettings, audiogroup)
  
     def __sond_get_raw_entry(self,key):
 
