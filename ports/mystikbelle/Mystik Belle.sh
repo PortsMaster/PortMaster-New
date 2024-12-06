@@ -13,55 +13,53 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+export PORT_32BIT="Y"
+
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
-# Variables
+$ESUDO chmod 666 /dev/tty0
+$ESUDO chmod 666 /dev/tty1
+printf "\033c" > /dev/tty0
+printf "\033c" > /dev/tty1
+
 GAMEDIR="/$directory/ports/mystikbelle"
-
-# CD and set permissions
-cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
 
-# Exports
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="2 to 5 minutes"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+LIBDIR="$GAMEDIR/lib32"
+BINDIR="$GAMEDIR/box86"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
+cd $GAMEDIR
 
-# Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
-    if [ -f "$controlfolder/utils/patcher.txt" ]; then
-        source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb)
-    else
-        echo "This port requires the latest version of PortMaster."
-    fi
+# gl4es
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
-    echo "Patching process already completed. Skipping."
+  source "${controlfolder}/libgl_default.txt"
 fi
 
-# Post patcher setup
-export PORT_32BIT="Y"
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+# system
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$LIBDIR:/usr/lib32:/usr/local/lib/arm-linux-gnueabihf/"
 
-# Display loading splash
-if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
-    $ESUDO ./tools/splash "splash.png" 2000
-fi
+# box86
+export BOX86_ALLOWMISSINGLIBS=1
+export BOX86_LD_LIBRARY_PATH="$LIBDIR"
 
-# Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.armhf" -c "mystikbelle.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
-./gmloadernext.armhf -c gmloader.json
+if [ "$LIBGL_FB" != "" ]; then
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+fi 
 
-# Cleanup
-pm_finish
+$ESUDO rm -rf ~/.config/Mystik_Belle
+$ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle
+
+$GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
+echo "Loading, please wait... (might take a while!)" > /dev/tty0
+$GAMEDIR/box86/box86 $GAMEDIR/runner
+
+$ESUDO kill -9 $(pidof gptokeyb)
+$ESUDO systemctl restart oga_events &
+printf "\033c" > /dev/tty1
+printf "\033c" > /dev/tty0

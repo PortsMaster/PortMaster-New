@@ -34,8 +34,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Bleed2
 mkdir -p ~/.local/share
+$ESUDO rm -rf ~/.local/share/Bleed2
 ln -sfv "$gamedir/savedata" ~/.local/share/Bleed2
 
 # Remove all the dependencies in favour of system libs - e.g. the included 

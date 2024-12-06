@@ -50,10 +50,10 @@ if [[ ! -e "${DATAFOLDER}/levels/levellist.dat" ]]; then
     rm "${CONFIGFOLDER}/master.zip" > /dev/tty0 2>&1
 fi
 
-$ESUDO rm -rf ~/.config/hurrican
-ln -sfv ${CONFIGFOLDER}/conf/hurrican/ ~/.config/
-$ESUDO rm -rf ~/.local/share/hurrican
-ln -sfv ${CONFIGFOLDER}/highscores/hurrican/ ~/.local/share/
+  $ESUDO rm -rf ~/.config/hurrican
+  ln -sfv ${CONFIGFOLDER}/conf/hurrican/ ~/.config/
+  $ESUDO rm -rf ~/.local/share/hurrican
+  ln -sfv ${CONFIGFOLDER}/highscores/hurrican/ ~/.local/share/
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "hurrican" -c "$CONFIGFOLDER/hurrican.gptk" &

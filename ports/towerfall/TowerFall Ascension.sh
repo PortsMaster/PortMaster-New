@@ -76,8 +76,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/TowerFall
 mkdir -p ~/.local/share
+$ESUDO rm -rf ~/.local/share/TowerFall
 ln -sfv "$gamedir/savedata" ~/.local/share/TowerFall
 
 # Remove all the dependencies in favour of system libs - e.g. the included 

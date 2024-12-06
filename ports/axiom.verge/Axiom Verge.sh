@@ -32,8 +32,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/AxiomVerge
 mkdir -p ~/.local/share
+$ESUDO rm -rf ~/.local/share/AxiomVerge
 ln -sfv "$GAMEDIR/savedata" ~/.local/share/AxiomVerge
 
 # Remove all the dependencies in favour of system libs - e.g. the included 

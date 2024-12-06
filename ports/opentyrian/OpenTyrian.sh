@@ -33,6 +33,7 @@ fi
 
 $ESUDO rm -rf ~/.config/opentyrian
 ln -sfv $GAMEDIR/ ~/.config/
+
 cd $GAMEDIR
 $GPTOKEYB opentyrian &
 $GAMEDIR/opentyrian --data=$GAMEDIR/data 2>&1 | tee $GAMEDIR/log.txt

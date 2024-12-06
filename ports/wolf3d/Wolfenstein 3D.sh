@@ -27,8 +27,8 @@ cd $GAMEDIR
 
 # Create config dir
 rm -rf "$XDG_DATA_HOME/lzwolf"
-rm -rf "$XDG_DATA_HOME/ecwolf"
 ln -s "$GAMEDIR/cfg" "$XDG_DATA_HOME/lzwolf"
+rm -rf "$XDG_DATA_HOME/ecwolf"
 ln -s "$GAMEDIR/cfg" "$XDG_DATA_HOME/ecwolf"
 
 # Permissions
