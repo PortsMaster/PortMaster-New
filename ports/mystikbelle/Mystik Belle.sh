@@ -52,8 +52,7 @@ if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi 
 
-$ESUDO rm -rf ~/.config/Mystik_Belle
-$ESUDO ln -sfv /$GAMEDIR/conf/ ~/.config/Mystik_Belle
+bind_directories ~/.config/Mystik_Belle /$GAMEDIR/conf/
 
 $GPTOKEYB "box86" -c "$GAMEDIR/mystikbelle.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0

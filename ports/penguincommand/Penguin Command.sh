@@ -32,8 +32,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y"
 
-$ESUDO rm -rf ~/.penguin-command
-ln -sfv $GAMEDIR/conf/.penguin-command ~/
+bind_directories ~/.penguin-command $GAMEDIR/conf/.penguin-command
 
 cd $GAMEDIR
 

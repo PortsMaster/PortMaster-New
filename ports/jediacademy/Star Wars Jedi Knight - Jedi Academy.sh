@@ -27,8 +27,7 @@ sed -i "s/seta r_customwidth \".*\"/seta r_customwidth \"$DISPLAY_WIDTH\"/" "$GA
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.local/share/openjk
-ln -sfv $GAMEDIR/conf/openjk/ ~/.local/share/
+bind_directories ~/.local/share/openjk $GAMEDIR/conf/openjk/
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

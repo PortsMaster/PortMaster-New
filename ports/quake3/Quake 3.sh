@@ -23,8 +23,7 @@ GAMEDIR="/$directory/ports/quake3"
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.q3a
-ln -sfv $GAMEDIR/conf/.q3a ~/
+bind_directories ~/.q3a $GAMEDIR/conf/.q3a
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

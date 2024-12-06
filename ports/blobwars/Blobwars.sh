@@ -22,8 +22,7 @@ GAMEDIR=/$directory/ports/blobwars
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.parallelrealities/blobwars
-ln -sfv /$directory/ports/blobwars/conf/.parallelrealities/blobwars ~/
+bind_directories ~/.parallelrealities/blobwars /$directory/ports/blobwars/conf/.parallelrealities/blobwars
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

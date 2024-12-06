@@ -20,8 +20,7 @@ get_controls
 GAMEDIR=/$directory/ports/lierolibre
 
 # Set up savedata
-$ESUDO rm -rf ~/.lierolibre
-ln -sfv "$GAMEDIR/savedata/.lierolibre" ~/
+bind_directories ~/.lierolibre "$GAMEDIR/savedata/.lierolibre"
 
 # Enable logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1

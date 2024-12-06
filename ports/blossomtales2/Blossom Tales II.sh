@@ -35,14 +35,12 @@ $ESUDO mount "$monofile" "$monodir"
 # Setup savedir linux
 mkdir -p ~/.local/share
 mkdir -p "$GAMEDIR/savedata/linux"
-$ESUDO rm -rf ~/.local/share/Blossom\ Tales\ 2
-ln -sfv "$GAMEDIR/savedata/linux" ~/.local/share/Blossom\ Tales\ 2
+bind_directories ~/.local/share/Blossom\ Tales\ 2 "$GAMEDIR/savedata/linux"
 
 # Setup savedir windows
 mkdir -p ~/.config
 mkdir -p "$GAMEDIR/savedata/windows"
-$ESUDO rm -rf ~/.config/Blossom\ Tales\ 2
-ln -sfv "$GAMEDIR/savedata/windows" ~/.config/Blossom\ Tales\ 2
+bind_directories ~/.config/Blossom\ Tales\ 2 "$GAMEDIR/savedata/windows"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # Custom version of FNA included with patcher- v23, but with VorbisFile-CS added back (from v16)

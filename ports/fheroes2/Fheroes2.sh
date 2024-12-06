@@ -20,10 +20,8 @@ get_controls
 GAMEDIR=/$directory/ports/fheroes2
 
 
-$ESUDO rm -rf ~/.config/fheroes2
-ln -sfv ${GAMEDIR}/conf/fheroes2/ ~/.config/
-$ESUDO rm -rf ~/.local/share/fheroes2
-ln -sfv ${GAMEDIR}/save/fheroes2/ ~/.local/share/
+bind_directories ~/.config/fheroes2 ${GAMEDIR}/conf/fheroes2/
+bind_directories ~/.local/share/fheroes2 ${GAMEDIR}/save/fheroes2/
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 

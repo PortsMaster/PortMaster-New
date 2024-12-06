@@ -34,8 +34,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Create config dir
 mkdir -p "config"
-rm -rf "$XDG_DATA_HOME/Sonic3AIR"
-ln -s "$GAMEDIR/config" "$XDG_DATA_HOME/Sonic3AIR"
+bind_directories "$XDG_DATA_HOME/Sonic3AIR" "$GAMEDIR/config"
 
 # Game only supports 4:3, 16:9 and 16:10 aspect ratios
 if [ $ASPECT_X == 16 ]; then

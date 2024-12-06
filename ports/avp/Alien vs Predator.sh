@@ -19,8 +19,7 @@ get_controls
 GAMEDIR=/$directory/ports/avp
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf ~/.avp
-ln -sfv /$directory/ports/avp/conf ~/.avp
+bind_directories ~/.avp /$directory/ports/avp/conf
 
 cd $GAMEDIR
 

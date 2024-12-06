@@ -20,8 +20,7 @@ GAMEDIR=/$directory/ports/hex-a-hop
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.hex-a-hop
-ln -sfv /$directory/ports/hex-a-hop/conf/.hex-a-hop ~/
+bind_directories ~/.hex-a-hop /$directory/ports/hex-a-hop/conf/.hex-a-hop
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"

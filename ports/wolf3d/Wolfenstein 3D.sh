@@ -26,10 +26,8 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Create config dir
-rm -rf "$XDG_DATA_HOME/lzwolf"
-ln -s "$GAMEDIR/cfg" "$XDG_DATA_HOME/lzwolf"
-rm -rf "$XDG_DATA_HOME/ecwolf"
-ln -s "$GAMEDIR/cfg" "$XDG_DATA_HOME/ecwolf"
+bind_directories "$XDG_DATA_HOME/lzwolf" "$GAMEDIR/cfg"
+bind_directories "$XDG_DATA_HOME/ecwolf" "$GAMEDIR/cfg"
 
 # Permissions
 $ESUDO chmod 666 /dev/tty0

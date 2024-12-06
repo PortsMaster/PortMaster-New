@@ -31,8 +31,7 @@ elif [[ $whichos == *"RetroOZ"* ]]; then
   cp /home/odroid/.asoundrcfords /home/odroid/.asoundrc
 fi
 
-$ESUDO rm -rf ~/.config/opentyrian
-ln -sfv $GAMEDIR/ ~/.config/
+bind_directories ~/.config/opentyrian $GAMEDIR/
 
 cd $GAMEDIR
 $GPTOKEYB opentyrian &

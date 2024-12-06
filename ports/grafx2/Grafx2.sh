@@ -27,8 +27,7 @@ mkdir -p "$GAMEDIR/conf"
 
 $ESUDO chmod 666 /dev/uinput
 
-$ESUDO rm -rf ~/.config/grafx2
-ln -sfv $GAMEDIR/conf/.config/grafx2 ~/.config/
+bind_directories ~/.config/grafx2 $GAMEDIR/conf/.config/grafx2
 
 export XDG_DATA_HOME="$CONFDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"

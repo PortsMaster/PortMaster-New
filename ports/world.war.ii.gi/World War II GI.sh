@@ -44,8 +44,7 @@ GAMEDIR="/$directory/ports/rednukem-WWII"
   fi
 # fi
 
-$ESUDO rm -rf ~/.config/rednukem
-$ESUDO ln -s $GAMEDIR/conf/rednukem ~/.config/
+bind_directories ~/.config/rednukem $GAMEDIR/conf/rednukem
 
 cd $GAMEDIR
 

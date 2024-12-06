@@ -30,8 +30,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 
-$ESUDO rm -rf ~/.boswars
-ln -sfv $GAMEDIR/conf/.boswars ~/
+bind_directories ~/.boswars $GAMEDIR/conf/.boswars
 
 sed -i "s/\(VideoWidth = \)[0-9]\+\(,\)/\1$DISPLAY_WIDTH\2/" $GAMEDIR/conf/.boswars/preferences.lua
 sed -i "s/\(VideoHeight = \)[0-9]\+\(,\)/\1$DISPLAY_HEIGHT\2/" $GAMEDIR/conf/.boswars/preferences.lua
