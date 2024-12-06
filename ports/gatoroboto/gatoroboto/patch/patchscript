@@ -1,4 +1,19 @@
 #!/bin/bash
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+
+source $controlfolder/control.txt
+
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
 LOGFILE="$GAMEDIR/patchlog.txt"
@@ -9,15 +24,17 @@ echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
 export DATADIR="$GAMEDIR/gamedata"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs.aarch64:$LD_LIBRARY_PATH"
 export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
+export PATH="$GAMEDIR/tools:$controlfolder:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
 chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggdec"
 chmod 777 "$TOOLDIR/oggenc"
+chmod 777 "$TOOLDIR/xdelta3"
 
 cd "$GAMEDIR"
 
@@ -26,7 +43,7 @@ if [ -f "gamedata/data.win" ]; then
     
     if [ "$checksum" = "38970c275305ccd7c9abe9a10817872e" ]; then
         echo "Detected Steam version. Using xdelta to patch the game with Steam patch..."
-        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.steam.xdelta" "gamedata/game.droid"; then
+        if xdelta3 -vv -d -s "gamedata/data.win" -f "./patch/patch.steam.xdelta" "gamedata/game.droid"; then
             echo "Steam Xdelta patch successful."
             rm "gamedata/data.win"
         else
@@ -34,7 +51,7 @@ if [ -f "gamedata/data.win" ]; then
         fi
     elif [ "$checksum" = "3d64f409e0e6d30650aea4ed03a1a4a1" ]; then
         echo "Detected GOG version. Using xdelta to patch the game with GOG patch..."
-        if tools/xdelta3 -d -s "gamedata/data.win" -f "./patch/patch.gog.xdelta" "gamedata/game.droid"; then
+        if xdelta3 -vv -d -s "gamedata/data.win" -f "./patch/patch.gog.xdelta" "gamedata/game.droid"; then
             echo "GOG Xdelta patch successful."
             rm "gamedata/data.win"
         else
@@ -53,8 +70,7 @@ sleep 3
 mkdir -p "$TMPDIR"
 
 # Run the compression tool
-PYTHON=$(which python3)
-$PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+gmKtool.py -vv -m 0 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
 
 if [ $? -eq 0 ]; then
     echo "Compression completed successfully."

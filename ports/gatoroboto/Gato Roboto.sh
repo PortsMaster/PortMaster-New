@@ -22,10 +22,14 @@ GAMEDIR="/$directory/ports/gatoroboto"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+
+$ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
+$ESUDO chmod +x $GAMEDIR/tools/splash
+$ESUDO chmod +x $GAMEDIR/tools/text_viewer
+
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/patch/patchscript"
 export PATCHER_GAME="Gato Roboto" 
 export PATCHER_TIME=" 2-3 minutes"
@@ -37,7 +41,9 @@ if [ ! -f patchlog.txt ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        echo "This port requires the latest version of PortMaster."
+        text_viewer -e -f 25 -w -t "PortMaster needs to be updated" -m "This port requires the latest version of PortMaster. Please update PortMaster first. Go to https://portmaster.games/ for more info.\n\nPress SELECT to close this window."
+        exit 0
     fi
 else
     echo "Patching process already completed. Skipping."
@@ -45,14 +51,14 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO splash "splash.png" 1 # workaround for muOS
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # workaround for muOS
     $ESUDO ./tools/splash "splash.png" 2000
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+$GPTOKEYB "gmloadernext.${DEVICE_ARCH}" &
+pm_platform_helper "$GAMEDIR/gmloadernext.${DEVICE_ARCH}"
+./gmloadernext.${DEVICE_ARCH} -c gmloader.json
 
 # Kill processes
 pm_finish
