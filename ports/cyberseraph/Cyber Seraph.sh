@@ -49,7 +49,7 @@ if [ -f "./gamedata/data.win" ]; then
 fi
 
 # Display loading splash
-$ESUDO ./tools/splash "splash.png" 2000
+$ESUDO ./tools/splash "splash.png" 2000 &
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "cyberseraph.gptk" &
