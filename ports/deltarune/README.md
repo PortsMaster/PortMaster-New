@@ -1,5 +1,5 @@
 ## Installation
-Download Deltarune v1.10 from https://archive.org/download/dr-ver-archive (official Toby Fox archive) and unzip to `ports/deltarune/gamedata`.
+Download Deltarune v1.10 from https://archive.org/download/dr-ver-archive (official Toby Fox archive) and unzip to `ports/deltarune/assets`.
 
 ## Thanks
 TobyFox -- The absolutely amazing game  
