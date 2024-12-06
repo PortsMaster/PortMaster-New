@@ -45,7 +45,7 @@ fi
 [ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
 
 # Display loading splash
-$ESUDO ./tools/splash "splash.png" 2000
+$ESUDO ./tools/splash "splash.png" 2000 &
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "voidbreach.gptk" &
