@@ -8,7 +8,8 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
-export DATADIR="$GAMEDIR/gamedata"
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="vhr.port"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
@@ -25,7 +26,6 @@ cd "$GAMEDIR"
 apply_xdelta() {
     # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/data.win" ]; then
-        echo "Applying xdelta patch"
         output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/vhr.xdelta" "$DATADIR/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully"
@@ -36,18 +36,18 @@ apply_xdelta() {
             echo "$output"
             exit 1
         fi
+    else
+        echo "No data.win file found to patch!"
     fi
 }
 
 compress_audio() {
-    # Compress audio
-    echo "Compressing audio..."
-    sleep 3
     mkdir -p "$TMPDIR"
 
     # Run the compression tool
     PYTHON=$(which python3)
-    $PYTHON ./tools/gmKtool.py -vvv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    echo "Running GMTools on data and audiogroups."
+    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
 
     if [ $? -eq 0 ]; then
         echo "Compression completed successfully."
@@ -63,33 +63,26 @@ compress_audio() {
     fi
 }
 
-zip_apk() {
-    # Check for .dat files and move to APK
-    if [ -n "$(ls $DATADIR/*.dat 2>/dev/null)" ]; then
-        mkdir -p ./assets
-        mv $DATADIR/*.dat ./assets/
-        echo "Moved files to ./assets/"
-
-        zip -r -0 ./game.apk ./assets/
-        echo "Zipped contents to ./game.apk"
-
+zip_archive() {
+        zip -r -0 $DATAFILE ./assets/
         rm -rf ./assets
-        echo "Deleted assets directory"
-    else
-        echo "No .dat files found"
-    fi
+        mkdir -p saves
 }
 
 process_game() {
     # Delete unnecessary files
-    rm -rf $DATADIR/GMLive $DATADIR/*.mp4
     rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
+    mkdir -p saves && mv $DATADIR/data ./saves/data
     echo "Removed unnecessary files"
 
+    echo "Applying xdelta patch"
     apply_xdelta
-    #compress_audio
     sleep 1
-    zip_apk
+    echo "Compressing audio..."
+    compress_audio
+    sleep 1
+    echo "Finishing up..."
+    zip_archive
     sleep 1
 	
     # Final completion message
