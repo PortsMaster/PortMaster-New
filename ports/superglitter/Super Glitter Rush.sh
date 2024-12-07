@@ -26,24 +26,20 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Prepare game files
-if [ -f "$GAMEDIR/gamedata/data.win" ]; then
-	mv gamedata/data.win gamedata/game.droid
- # Delete all redundant files
-	rm "$GAMEDIR/gamedata/SuperGlitterRush.exe"  
-	rm "$GAMEDIR/gamedata/steam_appid.txt"
-	rm "$GAMEDIR/gamedata/steam_api.dll"
- # Move audio files from gamedata folder to ./assets
-	mkdir -p ./assets
-	mv ./gamedata/* ./assets/
-
- # Zip all game files into the superglitter.port
-	zip -r -0 ./superglitter.port ./assets/
-	rm -Rf "$GAMEDIR/assets/"
-fi
+if [ -f ./assets/data.win ]; then
+		mv assets/data.win assets/game.droid
+	# Delete all redundant files
+		rm ./assets/SuperGlitterRush.exe  
+		rm ./assets/steam_appid.txt
+		rm ./assets/steam_api.dll
+	# Zip all game files into the superglitter.port
+		zip -r -0 ./superglitter.port ./assets/
+		rm -Rf ./assets/
+	fi
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
