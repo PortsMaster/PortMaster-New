@@ -31,15 +31,15 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Prepare game files
 if [ -f ./assets/data.win ]; then
-		mv assets/data.win assets/game.droid
-	# Delete all redundant files
-		rm ./assets/SuperGlitterRush.exe  
-		rm ./assets/steam_appid.txt
-		rm ./assets/steam_api.dll
-	# Zip all game files into the superglitter.port
-		zip -r -0 ./superglitter.port ./assets/
-		rm -Rf ./assets/
-	fi
+	mv assets/data.win assets/game.droid
+ # Delete all redundant files
+	rm ./assets/SuperGlitterRush.exe  
+	rm ./assets/steam_appid.txt
+	rm ./assets/steam_api.dll
+ # Zip all game files into the superglitter.port
+	zip -r -0 ./superglitter.port ./assets/
+	rm -Rf ./assets/
+fi
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
