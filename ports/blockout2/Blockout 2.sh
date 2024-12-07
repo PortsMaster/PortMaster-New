@@ -49,7 +49,8 @@ export BL2_HOME=/$directory/ports/blockout2
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-bind_directories ~/.bl2 /$directory/ports/blockout2/conf/.bl2
+$ESUDO rm -rf ~/.bl2
+ln -sfv /$directory/ports/blockout2/conf/.bl2 ~/
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "blockout" -c "./blockout2.gptk" &

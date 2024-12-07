@@ -33,7 +33,8 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="/usr/lib/arm-linux-gnueabihf/":"/usr/lib32":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-bind_directories ~/.nfs2se /$directory/ports/nfs2se/conf/.nfs2se
+$ESUDO rm -rf ~/.nfs2se
+ln -sfv /$directory/ports/nfs2se/conf/.nfs2se  ~/
 
 
 # Process directories

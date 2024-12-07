@@ -34,7 +34,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-bind_directories ~/.local/share/Chasm "$gamedir/savedata"
+$ESUDO rm -rf ~/.local/share/Chasm
+ln -sfv "$gamedir/savedata" ~/.local/share/Chasm
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

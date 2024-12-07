@@ -32,7 +32,8 @@ if [ ! -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg ]; then
   fi
 fi
 
-bind_directories ~/.wolf $GAMEDIR/conf/.wolf/
+$ESUDO rm -rf ~/.wolf
+ln -sfv $GAMEDIR/conf/.wolf/ ~/
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1

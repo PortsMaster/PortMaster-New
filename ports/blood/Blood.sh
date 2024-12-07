@@ -21,7 +21,8 @@ GAMEDIR="/$directory/ports/Blood"
 
 GPTOKEYB_CONFIG="$GAMEDIR/nblood.gptk"
 
-bind_directories ~/.config/nblood $GAMEDIR/conf/nblood
+$ESUDO rm -rf ~/.config/nblood
+$ESUDO ln -s $GAMEDIR/conf/nblood ~/.config/
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1

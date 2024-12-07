@@ -50,7 +50,8 @@ fi
 # Setup savedir
 mkdir -p "$GAMEDIR/savedata"
 mkdir -p ~/.local/share
-bind_directories ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers "$GAMEDIR/savedata"
+$ESUDO rm -rf ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers
+ln -sfv "$GAMEDIR/savedata" ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers
 
 # Copy acsetup.cfg from config to gamedata
 if [ ! -f "$GAMEDIR/.initial_config_done" ]; then

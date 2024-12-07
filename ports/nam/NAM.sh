@@ -44,7 +44,8 @@ GAMEDIR="/$directory/ports/rednukem-NAM"
   fi
 # fi
 
-bind_directories ~/.config/rednukem $GAMEDIR/conf/rednukem
+$ESUDO rm -rf ~/.config/rednukem
+$ESUDO ln -s $GAMEDIR/conf/rednukem ~/.config/
 
 cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1

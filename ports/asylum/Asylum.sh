@@ -35,7 +35,8 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
-bind_directories ~/.asylum /$directory/ports/asylum/conf/.asylum
+$ESUDO rm -rf ~/.asylum
+ln -sfv /$directory/ports/asylum/conf/.asylum ~/
 
 cd $GAMEDIR
 

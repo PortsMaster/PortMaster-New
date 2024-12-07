@@ -31,7 +31,8 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 
-bind_directories ~/.holotz-castle $GAMEDIR/conf/.holotz-castle
+$ESUDO rm -rf ~/.holotz-castle
+ln -sfv $GAMEDIR/conf/.holotz-castle ~/
 
 cd $GAMEDIR
 

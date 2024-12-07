@@ -41,7 +41,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-bind_directories ~/.local/share/AnodyneFNA "$gamedir/savedata"
+$ESUDO rm -rf ~/.local/share/AnodyneFNA
+ln -sfv "$gamedir/savedata" ~/.local/share/AnodyneFNA
 
 rm -f mscorlib.dll FNA.dll Mono.*.dll
 

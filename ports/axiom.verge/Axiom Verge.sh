@@ -33,7 +33,8 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p ~/.local/share
-bind_directories ~/.local/share/AxiomVerge "$GAMEDIR/savedata"
+$ESUDO rm -rf ~/.local/share/AxiomVerge
+ln -sfv "$GAMEDIR/savedata" ~/.local/share/AxiomVerge
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

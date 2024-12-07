@@ -21,7 +21,8 @@ GAMEDIR=/$directory/ports/meritous
 
 cd $GAMEDIR
 
-bind_directories ~/.meritous /$directory/ports/meritous/conf/.meritous
+$ESUDO rm -rf ~/.meritous
+ln -sfv /$directory/ports/meritous/conf/.meritous ~/
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

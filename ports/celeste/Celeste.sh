@@ -35,7 +35,8 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p ~/.local/share
-bind_directories ~/.local/share/Celeste "$gamedir/savedata"
+$ESUDO rm -rf ~/.local/share/Celeste
+ln -sfv "$gamedir/savedata" ~/.local/share/Celeste
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

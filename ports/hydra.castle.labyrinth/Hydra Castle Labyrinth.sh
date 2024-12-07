@@ -20,7 +20,8 @@ $ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/hcl"
 
-bind_directories ~/.hydracastlelabyrinth $GAMEDIR/conf/.hydracastlelabyrinth
+$ESUDO rm -rf ~/.hydracastlelabyrinth
+ln -sfv $GAMEDIR/conf/.hydracastlelabyrinth ~/
 
 cd $GAMEDIR
 $ESUDO $controlfolder/oga_controls hcl $param_device &

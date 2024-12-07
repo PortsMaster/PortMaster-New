@@ -21,7 +21,8 @@ GAMEDIR="/$directory/ports/blockattack"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
-bind_directories ~/.local/share/blockattack $GAMEDIR/
+$ESUDO rm -rf ~/.local/share/blockattack
+ln -sfv $GAMEDIR/ ~/.local/share
 
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

@@ -32,7 +32,8 @@ to_lower_case() {
 export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 export TEXTINPUTINTERACTIVE="Y"
 
-bind_directories ~/.freesynd $GAMEDIR/conf/.freesynd
+$ESUDO rm -rf ~/.freesynd
+ln -sfv $GAMEDIR/conf/.freesynd ~/
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "freesynd" -c "freesynd.gptk" &

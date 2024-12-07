@@ -43,7 +43,8 @@ fi
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-bind_directories ~/.config/pcexhumed $GAMEDIR/conf/pcexhumed
+$ESUDO rm -rf ~/.config/pcexhumed
+$ESUDO ln -s $GAMEDIR/conf/pcexhumed ~/.config/
 cd $GAMEDIR
 
 export TEXTINPUTINTERACTIVE="Y"

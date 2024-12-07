@@ -24,7 +24,8 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
 
 $ESUDO ./oga_controls OpenLara $param_device &
-bind_directories ~/.openlara $GAMEDIR/conf/.openlara/
+$ESUDO rm -rf ~/.openlara
+ln -sfv $GAMEDIR/conf/.openlara/ ~/
 
 $ESUDO $controlfolder/oga_controls OpenLara $param_device &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./OpenLara 2>&1 | tee $GAMEDIR/log.txt

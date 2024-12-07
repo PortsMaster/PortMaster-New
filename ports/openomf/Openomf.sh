@@ -24,7 +24,8 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-bind_directories ~/.local/share/openomfproject $GAMEDIR/conf/openomfproject
+$ESUDO rm -rf ~/.local/share/openomfproject
+ln -sfv $GAMEDIR/conf/openomfproject ~/.local/share
 
 export OPENOMF_RESOURCE_DIR="$GAMEDIR/gamedata"
 export OPENOMF_PLUGIN_DIR="$GAMEDIR/plugins"

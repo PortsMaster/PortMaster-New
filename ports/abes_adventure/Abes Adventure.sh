@@ -27,7 +27,8 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-bind_directories ~/.abe /$directory/ports/abes_adventure/conf/.abe
+$ESUDO rm -rf ~/.abe
+ln -sfv /$directory/ports/abes_adventure/conf/.abe ~/
 
 $GPTOKEYB "abe.${DEVICE_ARCH}" -c "./abe.gptk" &
 ./abe.${DEVICE_ARCH}

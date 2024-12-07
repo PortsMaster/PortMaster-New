@@ -31,7 +31,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-bind_directories ~/.ceferino $GAMEDIR/conf/.ceferino
+$ESUDO rm -rf ~/.ceferino
+ln -sfv $GAMEDIR/conf/.ceferino ~/
 
 cd $GAMEDIR
 

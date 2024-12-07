@@ -35,7 +35,8 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p ~/.local/share
-bind_directories ~/.local/share/Bleed2 "$gamedir/savedata"
+$ESUDO rm -rf ~/.local/share/Bleed2
+ln -sfv "$gamedir/savedata" ~/.local/share/Bleed2
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

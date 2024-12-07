@@ -22,7 +22,8 @@ CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-bind_directories ~/.angband $GAMEDIR/conf/.angband
+$ESUDO rm -rf ~/.angband
+ln -sfv $GAMEDIR/conf/.angband ~/
 
 # Set up game resolution
 if [ ! -f $GAMEDIR/conf/.angband/Angband/sdl2init.txt ]; then

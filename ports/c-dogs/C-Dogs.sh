@@ -42,7 +42,8 @@ fi
 
 
 
-bind_directories ~/.config/cdogs-sdl $GAMEDIR/conf/cdogs-sdl/
+rm -rf ~/.config/cdogs-sdl
+ln -sfv $GAMEDIR/conf/cdogs-sdl/ ~/.config/
 
 cd $GAMEDIR/data
 

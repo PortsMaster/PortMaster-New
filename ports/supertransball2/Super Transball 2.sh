@@ -33,7 +33,8 @@ export XDG_DATA_HOME="$CONFDIR"
 export SUPERTRANSBALL2_CONFIG_DIR=$GAMEDIR/data/
 export SUPERTRANSBALL2_DATA_DIR=$GAMEDIR/data/
 
-bind_directories ~/.supertransball2 $GAMEDIR/conf/.supertransball2
+$ESUDO rm -rf ~/.supertransball2
+ln -sfv $GAMEDIR/conf/.supertransball2 ~/
 
 cd $GAMEDIR
 

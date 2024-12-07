@@ -56,7 +56,8 @@ if [ -f "/boot/rk3326-rg351v-linux.dtb" ] || [ $(cat "/storage/.config/.OS_ARCH"
   sed -i '/ctr_left_stick_aim\=0/s//ctr_left_stick_aim\=1/' $GAMEDIR/user/config.txt
 fi
 
-bind_directories ~/.abuse $GAMEDIR/conf/.abuse
+$ESUDO rm -rf ~/.abuse
+ln -sfv $GAMEDIR/conf/.abuse ~/
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "abuse" -c "$GAMEDIR/$GPTOKEYB_CONFIG" &

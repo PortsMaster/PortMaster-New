@@ -52,7 +52,8 @@ $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
 # Create config dir
-bind_directories "$HOME/.rlvm/KEY_リトルバスターズ！" "$GAMEDIR/saves"
+rm -rf "$HOME/.rlvm/KEY_リトルバスターズ！"
+ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_リトルバスターズ！"
 
 # Export libs
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH

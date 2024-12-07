@@ -31,7 +31,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 #export XDG_DATA_HOME="$CONFDIR"
 
-bind_directories ~/.armagetronad /$directory/ports/armagetronad/conf/.armagetronad
+$ESUDO rm -rf ~/.armagetronad
+ln -sfv /$directory/ports/armagetronad/conf/.armagetronad ~/
 
 cd $GAMEDIR
 

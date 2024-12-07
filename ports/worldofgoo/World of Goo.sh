@@ -53,7 +53,8 @@ if [ -d ~/.WorldOfGoo ] && [ ! -h ~/.WorldOfGoo ]; then
 fi
 
 # Setup savedir
-bind_directories ~/.WorldOfGoo "$GAMEDIR/savedata"
+$ESUDO rm -rf ~/.WorldOfGoo
+ln -sfv "$GAMEDIR/savedata" ~/.WorldOfGoo
 
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"

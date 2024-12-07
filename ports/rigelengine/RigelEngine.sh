@@ -19,7 +19,8 @@ get_controls
 GAMEDIR="/$directory/ports/RigelEngine"
 cd $GAMEDIR
 
-bind_directories ~/.local/share/lethal-guitar $GAMEDIR/conf/lethal-guitar
+$ESUDO rm -rf ~/.local/share/lethal-guitar
+ln -sfv $GAMEDIR/conf/lethal-guitar ~/.local/share/
 if [ -f "$GAMEDIR/conf/lethal-guitar/Rigel Engine/Options.json" ]; then
   if [ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]; then
     $ESUDO sed -i '/windowWidth\"\: / s/854/1920/' "$GAMEDIR/conf/lethal-guitar/Rigel Engine/Options.json"

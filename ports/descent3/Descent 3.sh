@@ -39,7 +39,8 @@ $ESUDO chmod 777 "$GAMEDIR/game"
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 
 # Create config dir
-bind_directories "$XDG_DATA_HOME/Outrage Entertainment/Descent 3" "$GAMEDIR/config"
+rm -rf "$XDG_DATA_HOME/Outrage Entertainment/Descent 3"
+ln -s "$GAMEDIR/config" "$XDG_DATA_HOME/Outrage Entertainment/Descent 3"
 
 # Source to parse d3.ini and import its settings
 source "$GAMEDIR/config/parseini.txt"
