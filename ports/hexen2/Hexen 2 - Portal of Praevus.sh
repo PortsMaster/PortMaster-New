@@ -32,8 +32,7 @@ fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf ~/.hexen2
-$ESUDO ln -sfv $GAMEDIR/conf/.hexen2 ~/
+bind_directories ~/.hexen2 $GAMEDIR/conf/.hexen2
 $ESUDO cp -f "$GAMEDIR/conf/.hexen2/portals/config.cfg" "$GAMEDIR/portals/autoexec.cfg"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"

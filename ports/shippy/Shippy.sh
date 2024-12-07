@@ -20,8 +20,7 @@ GAMEDIR=/$directory/ports/shippy
 
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf /storage/.local/share/shippy
-ln -sfv /$directory/ports/shippy /storage/.local/share/shippy
+bind_directories /storage/.local/share/shippy /$directory/ports/shippy
 
 
 cd $GAMEDIR

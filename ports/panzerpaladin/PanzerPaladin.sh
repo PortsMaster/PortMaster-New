@@ -37,8 +37,7 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p ~/.local/share/Tribute\ Games/
-$ESUDO rm -rf ~/.local/share/Tribute\ Games/PanzerPaladin
-ln -sfv "$gamedir/savedata" ~/.local/share/Tribute\ Games/PanzerPaladin
+bind_directories ~/.local/share/Tribute\ Games/PanzerPaladin "$gamedir/savedata"
 
 rm -f mscorlib.dll FNA.dll Mono.*.dll
 

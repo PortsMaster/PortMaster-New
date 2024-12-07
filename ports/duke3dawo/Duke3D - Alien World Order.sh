@@ -37,8 +37,7 @@ fi
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO rm $GAMEDIR/eduke32.log
 
-$ESUDO rm -rf ~/.config/eduke32
-$ESUDO ln -sfv "/$GAMEDIR/conf/eduke32" ~/.config/
+bind_directories ~/.config/eduke32 "/$GAMEDIR/conf/eduke32"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"

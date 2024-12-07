@@ -21,8 +21,7 @@ GAMEDIR=/$directory/ports/gigalomania
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.config/gigalomania/
-ln -sfv /$directory/ports/gigalomania/conf/ ~/.config/gigalomania
+bind_directories ~/.config/gigalomania/ /$directory/ports/gigalomania/conf/
 
 export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

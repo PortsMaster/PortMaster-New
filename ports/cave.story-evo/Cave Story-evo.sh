@@ -49,8 +49,7 @@ if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
     rm -f "$GAMEDIR/conf/nxengine/settings.dat.*"
 fi
 
-$ESUDO rm -rf ~/.local/share/nxengine
-$ESUDO ln -s $GAMEDIR/conf/nxengine ~/.local/share/
+bind_directories ~/.local/share/nxengine $GAMEDIR/conf/nxengine
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

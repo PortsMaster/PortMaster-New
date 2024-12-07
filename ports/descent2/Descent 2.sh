@@ -30,8 +30,7 @@ rm -rf "$GAMEDIR/config/gamelog.txt"
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Set config dir
-$ESUDO rm -rf ~/.$GAME
-ln -sfv $GAMEDIR/config ~/.$GAME
+bind_directories ~/.$GAME $GAMEDIR/config
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"

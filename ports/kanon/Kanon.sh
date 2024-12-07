@@ -54,8 +54,9 @@ PATH="$rlvm_dir:$PATH"
 # Create config folders
 SAVEDIRS="KEY_KANON_SE KEY_KANON_ME_ALL"
 for DIR in $SAVEDIRS; do
-    rm -rf "$HOME/.rlvm/$DIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
+    # rm -rf "$HOME/.rlvm/$DIR"
+    # ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
+    bind_directories "$HOME/.rlvm/$DIR" "$GAMEDIR/saves"
 done
 
 # Export libs

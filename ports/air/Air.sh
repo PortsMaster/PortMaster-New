@@ -61,8 +61,10 @@ fi
 
 # Create the config folders
 for SAVEDIR in "${SAVEDIR[@]}"; do
-    rm -rf "$HOME/.rlvm/$SAVEDIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
+    # Manual Merge
+    # rm -rf "$HOME/.rlvm/$SAVEDIR"
+    # ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
+    bind_directories "$HOME/.rlvm/$SAVEDIR" "$GAMEDIR/saves"
 done
 
 # Setup controls

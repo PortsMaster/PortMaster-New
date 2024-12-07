@@ -32,8 +32,7 @@ export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
 #bind_directories not compatible with single files
-$ESUDO rm -rf ~/.rockdodger_high
-ln -sfv $GAMEDIR/conf/.rockdodger_high ~/
+bind_directories ~/.rockdodger_high $GAMEDIR/conf/.rockdodger_high
 
 cd $GAMEDIR
 

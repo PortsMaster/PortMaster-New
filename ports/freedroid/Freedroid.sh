@@ -23,8 +23,7 @@ GAMEDIR=/$directory/ports/freedroid
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.freedroid_rpg
-ln -sfv /$directory/ports/freedroid/conf/.freedroid_rpg ~/
+bind_directories ~/.freedroid_rpg /$directory/ports/freedroid/conf/.freedroid_rpg
 
 
 if [[ $LOWRES == "Y" ]]; then

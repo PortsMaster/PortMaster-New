@@ -23,8 +23,7 @@ GAMEDIR="/$directory/ports/alephone-marathoninfinity"
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.alephone
-$ESUDO ln -s $GAMEDIR/conf/.alephone ~/
+bind_directories ~/.alephone $GAMEDIR/conf/.alephone
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

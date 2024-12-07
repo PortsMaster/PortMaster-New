@@ -34,8 +34,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/MONOMODDED_Bleed
-ln -sfv "$gamedir/savedata" ~/.local/share/MONOMODDED_Bleed
+bind_directories ~/.local/share/MONOMODDED_Bleed "$gamedir/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

@@ -33,8 +33,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 #export TEXTINPUTINTERACTIVE="Y"
 
-$ESUDO rm -rf ~/.freesiege
-ln -sfv /$directory/ports/freesiege/conf/.freesiege ~/
+bind_directories ~/.freesiege /$directory/ports/freesiege/conf/.freesiege
 
 cd $GAMEDIR
 

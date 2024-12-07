@@ -54,8 +54,9 @@ PATH="$rlvm_dir:$PATH"
 # Create the config folders
 SAVEDIR="KEY\智代アフター KEY_智代アフター_EN_ALL"
 for DIR in $SAVEDIRS; do
-    rm -rf "$HOME/.rlvm/$DIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
+    # rm -rf "$HOME/.rlvm/$DIR"
+    # ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
+    bind_directories "$HOME/.rlvm/$DIR" "$GAMEDIR/saves"
 done
 
 # Check and modify Gameexe.ini

@@ -26,8 +26,7 @@ sed -i "s/seta r_customwidth \".*\"/seta r_customwidth \"$DISPLAY_WIDTH\"/" "$GA
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.local/share/openjo
-ln -sfv $GAMEDIR/conf/openjo/ ~/.local/share/
+bind_directories ~/.local/share/openjo $GAMEDIR/conf/openjo/
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

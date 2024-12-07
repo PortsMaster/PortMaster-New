@@ -21,8 +21,7 @@ GAMEDIR=/$directory/ports/hocoslamfy
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.hocoslamfy
-ln -sfv /$directory/ports/hocoslamfy/conf/.hocoslamfy ~/
+bind_directories ~/.hocoslamfy /$directory/ports/hocoslamfy/conf/.hocoslamfy
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"

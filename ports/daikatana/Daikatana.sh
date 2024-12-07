@@ -32,8 +32,7 @@ echo "Loading... Please Wait." > /dev/tty0
 # Create the symlinks
 mkdir -p "$HOME/.local/share"
 mkdir -p "$GAMEDIR/savedata/gamedata"
-$ESUDO rm -rf "$HOME/.local/share/Daikatana"
-$ESUDO ln -s "$GAMEDIR/savedata" "$HOME/.local/share/Daikatana"
+bind_directories "$HOME/.local/share/Daikatana" "$GAMEDIR/savedata"
 
 # We want to avoid stale .cfg files from Desktop daikatana installs...
 rm -f "$GAMEDIR/gamedata/"*.cfg

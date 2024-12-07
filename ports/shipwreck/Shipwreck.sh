@@ -35,8 +35,7 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p ~/.local/share/Brushfire\ Games
-$ESUDO rm -rf ~/.local/share/Brushfire\ Games
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/Brushfire\ Games/Shipwreck
+bind_directories ~/.local/share/Brushfire\ Games "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # Custom version of FNA included with patcher- v23, but with VorbisFile-CS added back (from v16)

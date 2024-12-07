@@ -20,8 +20,7 @@ GAMEDIR="/$directory/ports/rocksndiamonds"
 
 $ESUDO chmod 666 /dev/tty1
 
-$ESUDO rm -rf ~/.rocksndiamonds
-ln -sfv $GAMEDIR/conf/.rocksndiamonds/ ~/
+bind_directories ~/.rocksndiamonds $GAMEDIR/conf/.rocksndiamonds/
 cd $GAMEDIR
 $ESUDO $controlfolder/oga_controls rocksndiamonds $param_device &
 ./rocksndiamonds 2>&1 | tee $GAMEDIR/log.txt

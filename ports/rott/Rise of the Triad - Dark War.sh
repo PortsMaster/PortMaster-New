@@ -45,8 +45,7 @@ if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
     $ESUDO swapon /swapfile
 fi
 
-$ESUDO rm -rf ~/.rott
-$ESUDO ln -sfv $GAMEDIR/conf/.rott ~/
+bind_directories ~/.rott $GAMEDIR/conf/.rott
 
 if [[ "$ANALOG_STICKS" == '1' ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/rott1joy.gptk"  
