@@ -57,7 +57,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 [ -f "./gamedata/Brotato.pck" ] && mv gamedata/Brotato.pck gamedata/brotato.pck
 
 $GPTOKEYB "$runtime" -c "./brotato.gptk" &
-pm_platform_helper "$runtime"
+pm_platform_helper "$godot_dir/$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/brotato.pck"
 
 $ESUDO umount "$godot_dir"
