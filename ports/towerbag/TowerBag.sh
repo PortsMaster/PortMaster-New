@@ -13,30 +13,26 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/towerbag"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
+# CD and set permissions
 cd $GAMEDIR
-
-# We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 
-$ESUDO chmod 666 /dev/uinput
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB "gmloadernext" -c "towerbag.gptk" &
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "towerbag.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-
-./gmloadernext game.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
