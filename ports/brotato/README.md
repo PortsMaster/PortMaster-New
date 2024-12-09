@@ -2,7 +2,7 @@
 
 Thanks to [Blobfish Games](https://www.blobfish.dev/) for making this wonderful roguelite.
 
-The DLC isnt supported because it requires to patch out steam and that would make it easy to pirate the dlc
+The DLC from Steam are not compatible with the Epic version of the game that is used in this port.
 Brotato wont run good on anything lower than a rk3588
 
 ## Controls
