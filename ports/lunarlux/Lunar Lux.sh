@@ -45,7 +45,7 @@ if [ ! -f patchlog.txt ]; then
         pm_message "This port requires the latest version of PortMaster."
     fi
 else
-    echo "Patching process already completed. Skipping."
+    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
