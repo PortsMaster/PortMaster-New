@@ -25,7 +25,9 @@ Thanks to [OpenTTD](https://github.com/OpenTTD/OpenTTD) for this open source ver
 |--|--| 
 |D-Pad|Move mouse|
 |B|Slow mouse down|
-|A/L1/R1/L2/R2|Mouse click|
+|A/L1/R1|Mouse click|
+|L2/R2|Zoom|
+|X|Close window|
 
 </br>
 
