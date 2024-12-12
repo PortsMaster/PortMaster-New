@@ -50,7 +50,7 @@ fi
 # Display loading splash
 if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
 [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 # muOS only workaround
-    $ESUDO ./tools/splash "splash.png" 2000
+    $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
 # Run the game
