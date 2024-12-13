@@ -33,7 +33,7 @@ $ESUDO chmod +x -R $GAMEDIR/*
 
 # check if we have new enough version of PortMaster that contains xdelta3
 if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+  pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
   sleep 5
   exit 1
 fi
@@ -50,19 +50,19 @@ if [ -f "./gamedata/data.win" ]; then
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./tools/thyswordsteam.xdelta gamedata/game.droid && \
         rm gamedata/data.win
 	rm -f "gamedata/place data.win here"
-	echo "Steam version of the game has been patched"
+	pm_message "Steam version of the game has been patched"
     # Checksum for the Itch version
     elif [ "$checksum" = "05e81de7e15b109379f91886230f8d05" ]; then
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./tools/thysworditch.xdelta gamedata/game.droid && \
         rm gamedata/data.win
         rm -f "gamedata/place data.win here"
-	echo "Itch.io version of the game has been patched"
+	pm_message "Itch.io version of the game has been patched"
     else
-        echo "Error: MD5 checksum of data.win does not match any expected version."
+        pm_message "Error: MD5 checksum of data.win does not match any expected version."
         exit 1
     fi
 else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
+    pm_message "Error: Missing files in gamedata folder or game has been patched."
 fi
 
 # dos2unix in case we need it
@@ -71,7 +71,7 @@ dos2unix "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 # Swap buttons
 "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
 export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
-export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
+export SDL_GAMECONTROLLERCONFIG="`pm_message "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
 $GPTOKEYB "gmloader" &
 
