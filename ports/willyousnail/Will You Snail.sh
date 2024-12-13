@@ -19,7 +19,7 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/willyousnail"
 
-# CD and set permissions
+# CD and log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
