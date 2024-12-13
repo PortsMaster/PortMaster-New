@@ -32,8 +32,6 @@ export GMLOADER_PLATFORM="os_windows"
 $ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
 $ESUDO chmod +x $GAMEDIR/gmloader
 
-$ESUDO chmod +x -R $GAMEDIR/*
-
 # check if we have new enough version of PortMaster that contains xdelta3
 if [ ! -f "$controlfolder/xdelta3" ]; then
   pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
