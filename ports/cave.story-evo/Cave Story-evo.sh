@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: cave.story-evo.zip, Cave Story-evo.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -14,8 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
@@ -61,6 +60,4 @@ $GPTOKEYB "nxengine-evo" -c nxengine-evo.gptk &
 
 $ESUDO kill -9 $(pidof gptokeyb) & 
 printf "\033c" >> /dev/tty1
-
-
 

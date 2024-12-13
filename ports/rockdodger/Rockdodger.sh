@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: rockdodger.zip, Rockdodger.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -14,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -31,8 +31,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-bind_files ~/.rockdodger $GAMEDIR/conf/.rockdodger
-bind_files ~/.rockdodger_high $GAMEDIR/conf/.rockdodger_high
+#bind_directories not compatible with single files
+bind_directories ~/.rockdodger_high $GAMEDIR/conf/.rockdodger_high
 
 cd $GAMEDIR
 
@@ -41,4 +41,3 @@ pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY -k -f
 
 pm_finish
-

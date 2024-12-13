@@ -14,7 +14,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 gameassembly="Chasm.exe"
@@ -58,3 +58,4 @@ $ESUDO umount "$monodir"
 
 # Disable console
 printf "\033c" >> /dev/tty1
+

@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: shippy.zip, Shippy.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -14,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -34,5 +32,3 @@ SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./shippy
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
-
-
