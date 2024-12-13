@@ -26,7 +26,7 @@ cd $GAMEDIR
 #Permissions
 $ESUDO chmod +x $GAMEDIR/tools/splash
 $ESUDO chmod +x $GAMEDIR/tools/patchscript
-$ESUDO chmod +x $GAMEDIR/gmloadernext
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
