@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: asylum.zip, Asylum.sh
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -12,8 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -35,8 +34,12 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
+<<<<<<< Updated upstream
 $ESUDO rm -rf ~/.asylum
 ln -sfv /$directory/ports/asylum/conf/.asylum ~/
+=======
+bind_files ~/.asylum /$directory/ports/asylum/conf/.asylum
+>>>>>>> Stashed changes
 
 cd $GAMEDIR
 
@@ -52,3 +55,4 @@ $GPTOKEYB "asylum" -c "./asylum.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

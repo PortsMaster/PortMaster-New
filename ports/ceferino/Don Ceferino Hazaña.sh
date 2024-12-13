@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: ceferino.zip, Don Ceferino Hazaña.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,7 +14,6 @@ else
 fi
 
 source $controlfolder/control.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -31,8 +31,12 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
+<<<<<<< Updated upstream
 $ESUDO rm -rf ~/.ceferino
 ln -sfv $GAMEDIR/conf/.ceferino ~/
+=======
+bind_files ~/.ceferino $GAMEDIR/conf/.ceferino
+>>>>>>> Stashed changes
 
 cd $GAMEDIR
 
@@ -41,3 +45,4 @@ pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
 pm_finish
+
