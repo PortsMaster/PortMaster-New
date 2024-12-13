@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to  Terarin for developing this game and offering it for free. Check it on [Steam](https://store.steampowered.com/app/1180790/ImageStriker/).
+Thanks to Terarin for developing this game and offering it for free. Get it on [Steam](https://store.steampowered.com/app/1180790/ImageStriker/).
 
 ## Controls
 
