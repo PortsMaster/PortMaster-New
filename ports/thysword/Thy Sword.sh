@@ -29,6 +29,9 @@ export GMLOADER_PLATFORM="os_windows"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Permissions
+$ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
+$ESUDO chmod +x $GAMEDIR/gmloader
+
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # check if we have new enough version of PortMaster that contains xdelta3
