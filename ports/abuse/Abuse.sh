@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: abuse.zip, Abuse.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,11 +14,9 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
-
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 GAMEDIR="/$directory/ports/Abuse"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -64,3 +63,5 @@ $GPTOKEYB "abuse" -c "$GAMEDIR/$GPTOKEYB_CONFIG" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
+
+

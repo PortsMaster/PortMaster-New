@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: abes_adventure.zip, Abes Adventure.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,7 +14,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -36,3 +37,5 @@ if [ $DEVICE_ARCH != "x86_64" ]; then
   $ESUDO systemctl restart oga_events &
   printf "\033c" > /dev/tty0
 fi
+
+
