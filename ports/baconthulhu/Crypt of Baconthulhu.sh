@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: baconthulhu.zip, Crypt of Baconthulhu.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -16,6 +17,7 @@ source $controlfolder/control.txt
 # device_info.txt will be included by default
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 
 get_controls
 
@@ -41,4 +43,5 @@ pm_platform_helper "$GAMEDIR/ohrrpgce-game"
 "./ohrrpgce-game" $DATAFILE -f
 
 pm_finish
+
 

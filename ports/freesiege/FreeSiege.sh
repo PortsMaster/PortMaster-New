@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: freesiege.zip, FreeSiege.sh
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -12,8 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -43,3 +42,4 @@ $GPTOKEYB "freesiege" -c "./freesiege.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

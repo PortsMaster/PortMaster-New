@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: meritous.zip, Meritous.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -21,7 +22,8 @@ GAMEDIR=/$directory/ports/meritous
 
 cd $GAMEDIR
 
-bind_directories ~/.meritous /$directory/ports/meritous/conf/.meritous
+$ESUDO rm -rf ~/.meritous
+ln -sfv /$directory/ports/meritous/conf/.meritous ~/
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -34,3 +36,4 @@ $GPTOKEYB "meritous" -c "./meritous.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

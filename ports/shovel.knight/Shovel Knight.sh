@@ -56,7 +56,7 @@ export BOX86_LD_LIBRARY_PATH=$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/
 export BOX86_DYNAREC=1
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-bind_directories "$XDG_DATA_HOME/Yacht Club Games" "$GAMEDIR/Yacht
+bind_directories "$XDG_DATA_HOME/Yacht Club Games" "$GAMEDIR/Yacht Club Games"
 $ESUDO chmod 666 /dev/uinput
 
 chmod +x ShovelKnight $GAMEDIR/box86/box86

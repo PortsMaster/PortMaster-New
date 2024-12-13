@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: rocksndiamonds.zip, Rocks n Diamonds.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,6 +14,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -27,4 +29,6 @@ $ESUDO $controlfolder/oga_controls rocksndiamonds $param_device &
 $ESUDO kill -9 $(pidof oga_controls)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+
+
 

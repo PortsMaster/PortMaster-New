@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: rott.zip, Rise of the Triad - The Hunt Begins.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,7 +14,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -62,3 +63,5 @@ $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
+
+
