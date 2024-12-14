@@ -29,7 +29,7 @@ $ESUDO chmod +x $GAMEDIR/tools/patchscript
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Will You Snail?"
 export PATCHER_TIME="5 to 10 minutes"
@@ -55,7 +55,7 @@ fi
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
     $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000
+    $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
 # Assign gptokeyb and load the game
