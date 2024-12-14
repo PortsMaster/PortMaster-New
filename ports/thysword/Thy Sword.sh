@@ -62,8 +62,6 @@ if [ -f "./gamedata/data.win" ]; then
         pm_message "Error: MD5 checksum of data.win does not match any expected version."
         exit 1
     fi
-else    
-    pm_message "Error: Missing files in gamedata folder or game has been patched."
 fi
 
 # dos2unix in case we need it
