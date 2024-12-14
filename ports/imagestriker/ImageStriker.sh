@@ -45,7 +45,7 @@ fi
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c gmloader.json
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
 # Cleanup
 pm_finish
