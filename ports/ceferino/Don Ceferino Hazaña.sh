@@ -30,7 +30,10 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-bind_files ~/.ceferino $GAMEDIR/conf/.ceferino
+# Must wait until bind_files comes out of beta
+$ESUDO rm -rf ~/.ceferino
+ln -sfv $GAMEDIR/conf/.ceferino ~/
+# bind_files ~/.ceferino $GAMEDIR/conf/.ceferino
 
 cd $GAMEDIR
 
