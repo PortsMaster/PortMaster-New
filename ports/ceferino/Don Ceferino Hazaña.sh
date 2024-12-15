@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -31,8 +30,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-$ESUDO rm -rf ~/.ceferino
-ln -sfv $GAMEDIR/conf/.ceferino ~/
+bind_files ~/.ceferino $GAMEDIR/conf/.ceferino
 
 cd $GAMEDIR
 
