@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR="/$directory/ports/alephone-marathon"
+GAMEDIR="/$directory/ports/alephone-marathon2"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
@@ -39,8 +39,10 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "alephone" &
-./alephone $GAMEDIR"/gamedata/Marathon"
+./alephone $GAMEDIR"/gamedata/Marathon 2"
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+
+
