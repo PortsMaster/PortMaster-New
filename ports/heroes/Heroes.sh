@@ -12,6 +12,8 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -28,7 +30,8 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 
-bind_directories ~/.heroes $GAMEDIR/conf/.heroes
+$ESUDO rm -rf ~/.heroes
+ln -sfv $GAMEDIR/conf/.heroes ~/
 
 cd $GAMEDIR
 

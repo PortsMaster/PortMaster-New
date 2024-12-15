@@ -12,6 +12,8 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -33,7 +35,8 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
-bind_files ~/.asylum /$directory/ports/asylum/conf/.asylum
+$ESUDO rm -rf ~/.asylum
+ln -sfv /$directory/ports/asylum/conf/.asylum ~/
 
 cd $GAMEDIR
 

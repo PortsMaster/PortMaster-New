@@ -12,6 +12,8 @@ else
 fi
 
 source $controlfolder/control.txt
+source $controlfolder/device_info.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -28,7 +30,8 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 
-bind_directories ~/.boswars $GAMEDIR/conf/.boswars
+$ESUDO rm -rf ~/.boswars
+ln -sfv $GAMEDIR/conf/.boswars ~/
 
 sed -i "s/\(VideoWidth = \)[0-9]\+\(,\)/\1$DISPLAY_WIDTH\2/" $GAMEDIR/conf/.boswars/preferences.lua
 sed -i "s/\(VideoHeight = \)[0-9]\+\(,\)/\1$DISPLAY_HEIGHT\2/" $GAMEDIR/conf/.boswars/preferences.lua

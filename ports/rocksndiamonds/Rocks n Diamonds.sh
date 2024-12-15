@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,12 +20,12 @@ GAMEDIR="/$directory/ports/rocksndiamonds"
 
 $ESUDO chmod 666 /dev/tty1
 
-bind_directories ~/.rocksndiamonds $GAMEDIR/conf/.rocksndiamonds/
+$ESUDO rm -rf ~/.rocksndiamonds
+ln -sfv $GAMEDIR/conf/.rocksndiamonds/ ~/
 cd $GAMEDIR
 $ESUDO $controlfolder/oga_controls rocksndiamonds $param_device &
 ./rocksndiamonds 2>&1 | tee $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof oga_controls)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
-
 

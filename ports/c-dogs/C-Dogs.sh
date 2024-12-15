@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -43,7 +42,8 @@ fi
 
 
 
-bind_directories ~/.config/cdogs-sdl $GAMEDIR/conf/cdogs-sdl/
+rm -rf ~/.config/cdogs-sdl
+ln -sfv $GAMEDIR/conf/cdogs-sdl/ ~/.config/
 
 cd $GAMEDIR/data
 
@@ -53,5 +53,4 @@ $ESUDO $controlfolder/oga_controls cdogs-sdl $param_device &
 $ESUDO kill -9 $(pidof oga_controls)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
-
 
