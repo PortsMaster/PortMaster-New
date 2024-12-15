@@ -192,15 +192,42 @@ class Stage:
         self.lights = [] # Light objects
         self.spinners = [] # Spinner objects
         
-        self.en_spawn_locs_topleft = [] # [[x,y],[x,y],[x,y]...]
-        self.en_spawn_locs_topright = [] # [[x,y],[x,y],[x,y]...]
-        self.en_spawn_locs_bottomleft = [] # [[x,y],[x,y],[x,y]...]
-        self.en_spawn_locs_bottomright = [] # [[x,y],[x,y],[x,y]...]
+        #self.en_spawn_locs_topleft = [] # [[x,y],[x,y],[x,y]...]
+        #self.en_spawn_locs_topright = [] # [[x,y],[x,y],[x,y]...]
+        #self.en_spawn_locs_bottomleft = [] # [[x,y],[x,y],[x,y]...]
+        #self.en_spawn_locs_bottomright = [] # [[x,y],[x,y],[x,y]...]
+        self.en_spawn_locs_topleft = [
+            [12, 20], [20, 20], [28, 20], [36, 20], [44, 20],
+            [12, 28], [20, 28], [28, 28], [36, 28], [44, 28],
+            [12, 36], [20, 36], [28, 36], [36, 36], [44, 36],
+            [12, 44], [20, 44], [28, 44], [36, 44], [44, 44]
+        ]
+        self.en_spawn_locs_topright = [
+            [92, 20], [100, 20], [108, 20], [116, 20], [124, 20],
+            [92, 28], [100, 28], [108, 28], [116, 28], [124, 28],
+            [92, 36], [100, 36], [108, 36], [116, 36], [124, 36],
+            [92, 44], [100, 44], [108, 44], [116, 44], [124, 44]
+        ]
+        self.en_spawn_locs_bottomleft = [
+            [12, 76], [20, 76], [28, 76], [36, 76], [44, 76],
+            [12, 84], [20, 84], [28, 84], [36, 84], [44, 84],
+            [12, 92], [20, 92], [28, 92], [36, 92], [44, 92],
+            [12, 100], [20, 100], [28, 100], [36, 100], [44, 100]
+        ]
+        self.en_spawn_locs_bottomright = [
+            [92, 76], [100, 76], [108, 76], [116, 76], [124, 76],
+            [92, 84], [100, 84], [108, 84], [116, 84], [124, 84],
+            [92, 92], [100, 92], [108, 92], [116, 92], [124, 92],
+            [92, 100], [100, 100], [108, 100], [116, 100], [124, 100]
+        ]
+
+
+
         
         if self.state != STATE_GAME_COMPLETE:
-            for yc in range(0, HEIGHT_TILES*TILEMAP_SCALE):
+            for yc in range(0, HEIGHT_TILES *TILEMAP_SCALE, TILEMAP_SCALE):
                 y = self.tmv + yc
-                for xc in range(WIDTH_TILES*TILEMAP_SCALE):
+                for xc in range(0, WIDTH_TILES *TILEMAP_SCALE, TILEMAP_SCALE):
                     x = self.tmu + xc
                     tile = pyxel.tilemaps[self.tm].get(x, y)
 
@@ -461,37 +488,25 @@ class Stage:
 
 
 
-        pyxel.rectb(24, 32, 8, 8, pyxel.COLOR_RED)
-        #print(self.lights)
-
-                    #print(f"Lights: {self.solid_rects}")
-                    #print(f"Slopes: {self.slopes}")
-                    #print(f"Pockets: {self.lights}")
+        #pyxel.rectb(24, 32, 8, 8, pyxel.COLOR_RED)
+        print(self.lights)
+        print(f"Solidrects: {self.solid_rects}")
+        print(f"Slopes: {self.slopes}")
+        print(f"Lights: {self.lights}")
 
         for slope in self.slopes:
-            #continue
-            x = slope.x  # Use the correct attribute names
+            x = slope.x
             y = slope.y
-            #w = getattr(light, "width", 8)  # Default width if attribute not found
-            #h = getattr(light, "height", 8)  # Default height if attribute not found
-            # Draw rectangle outline with lines
-            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_GREEN)
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_GREEN)
 
         for solid_rect in self.solid_rects:
-            #continue
-            x, y, w, h = solid_rect  # Extract values from the list
-            #w = getattr(light, "width", 8)  # Default width if attribute not found
-            #h = getattr(light, "height", 8)  # Default height if attribute not found
-            # Draw rectangle outline with lines
-            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_YELLOW)
+            x, y, w, h = solid_rect
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_YELLOW)
 
         for light in self.lights:
-            x = light.x  # Use the correct attribute names
+            x = light.x
             y = light.y
-            #w = getattr(light, "width", 8)  # Default width if attribute not found
-            #h = getattr(light, "height", 8)  # Default height if attribute not found
-            # Draw rectangle outline with lines
-            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_RED)
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_RED)
 
 
 
