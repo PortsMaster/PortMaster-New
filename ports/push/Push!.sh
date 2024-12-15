@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 GAMEDIR="/$directory/ports/push"
 CONFDIR="$GAMEDIR/conf"
-PYXEL_PKG="push.pyxapp_patched"
+PYXEL_PKG="main.py"
 
 cd "${GAMEDIR}"
 
@@ -31,6 +31,17 @@ bind_directories "$HOME/.config/.pyxel/push" "$CONFDIR"
 runtime="pyxel_2.2.8_python_3.11"
 export pyxel_dir="$HOME/pyxel"
 mkdir -p "${pyxel_dir}"
+
+# Patch game
+if [ -f "./gamedata/push.pyxapp" ]; then
+  pm_message "Patching game files ..."
+  unzip "./gamedata/push.pyxapp" -d "./gamedata"
+  mv ./gamedata/push/{*,.*} ./gamedata/ 2>/dev/null
+  rmdir ./gamedata/push
+  rm ./gamedata/push.pyxapp
+  python patch.py
+  pm_message "Patching complete"
+fi
 
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
@@ -60,7 +71,7 @@ source "${pyxel_dir}/bin/activate"
 export PYTHONHOME="${pyxel_dir}"
 export PYTHONPYCACHEPREFIX="${GAMEDIR}/${runtime}.cache"
 
-"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/gamedata/${PYXEL_PKG}"
+"${pyxel_dir}/bin/pyxel" run "${GAMEDIR}/gamedata/${PYXEL_PKG}"
 
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
     $ESUDO umount "${pyxel_dir}"
