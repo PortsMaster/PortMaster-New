@@ -33,7 +33,10 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
-bind_files ~/.asylum /$directory/ports/asylum/conf/.asylum
+# We need to wait until bind_files comes out of beta, for now it will remain the same.
+$ESUDO rm -rf ~/.asylum
+ln -sfv /$directory/ports/asylum/conf/.asylum ~/
+# bind_files ~/.asylum /$directory/ports/asylum/conf/.asylum
 
 cd $GAMEDIR
 
