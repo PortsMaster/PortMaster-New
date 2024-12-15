@@ -1,0 +1,81 @@
+DEBUG_MODE = False
+
+# SYSTEM
+TITLE = "Push"
+FPS = 60
+WIDTH = 240
+HEIGHT = 240
+DISPLAY_SCALE = 2
+CAPTURE_SCALE = 2
+
+VENDER_NAME = "yuta"
+APP_NAME = "push"
+
+COL_DARK_0 = 0
+COL_DARK_1 = 1
+COL_DARK_2 = 2
+COL_DARK_3 = 3
+
+COL_GREY_0 = 4
+COL_GREY_1 = 5
+COL_GREY_2 = 6
+
+COL_PINK_0 = 7
+COL_PINK_1 = 8
+
+COL_GREEN_0 = 9
+COL_GREEN_1 = 10
+
+COL_ORANGE_0 = 11
+COL_ORANGE_1 = 12
+
+COL_RED_0 = 13
+
+# TITLE
+TEXT_COPYRIGHT = "© 2010-2024 YUTA"
+TEXT_VERSION = "VER[1.1]"
+
+# TITLE - MENU
+TEXT_GAMESTART = "GAMESTART"
+TEXT_EXTRA = "EXTRA"
+TEXT_HELP = "HELP"
+TEXT_WEBSITE = "WEBSITE"
+TEXT_QUIT = "QUIT"
+
+# DIR
+LEFT = 0
+RIGHT = 1
+UP = 2
+DOWN = 3
+
+# TILES
+TILE_FLOOR  = 0     # 床
+TILE_WALL   = 1     # 壁
+TILE_BLOCK  = 3     # ブロック
+TILE_HOLE   = 5     # 穴
+TILE_GOAL   = 6     # ゴール
+TILE_PLAYER = 9     # プレーヤー
+
+# SOUNDS
+SOUND_FOCUS = 0     # フォーカス
+SOUND_SELECT = 1    # セレクト
+SOUND_CANCEL = 2    # キャンセル
+SOUND_SUCCESS = 3   # 成功
+SOUND_ACTION = 4    # アクション
+
+BGM_TITLE = 0       # タイトルBGM
+BGM_PLAY = 1        # プレイBGM
+
+BUTTON_HOLD = 25
+BUTTON_REPEAT = 8
+
+BUTTON_ID_SUBMIT = "submit"
+BUTTON_ID_CANCEL = "cancel"
+BUTTON_ID_ANY = "any"
+BUTTON_ID_MOVE_LEFT = "move_left"
+BUTTON_ID_MOVE_RIGHT = "move_right"
+BUTTON_ID_MOVE_UP = "move_up"
+BUTTON_ID_MOVE_DOWN = "move_down"
+BUTTON_ID_MENU = "menu"
+BUTTON_ID_REPLAY = "replay"
+BUTTON_ID_ACTION = "action"
