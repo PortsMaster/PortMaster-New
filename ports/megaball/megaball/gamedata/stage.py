@@ -21,37 +21,14 @@ import audio
 
 
 
-
-
-
-
+TILEMAP_SCALE = 8
+# Mokeypatch in get() from old API
 def custom_get_tile(self, x, y):
-    """
-    Recreates the `.get()` method using Pyxel's official API.
-
-    Args:
-        x (int): The x-coordinate in pixel space.
-        y (int): The y-coordinate in pixel space.
-
-    Returns:
-        int: The tile index at the given coordinates, or None if out of bounds.
-    """
-    TILE_SIZE = 8  # Size of each tile in pixels
-
-    # Convert pixel-based coordinates to tile indices
-    tile_x = x // 8
-    tile_y = y // 8
-
-    # Ensure the tile indices are within bounds
+    tile_x = x // TILEMAP_SCALE
+    tile_y = y // TILEMAP_SCALE
     if 0 <= tile_x < self.width and 0 <= tile_y < self.height:
-        # Use .pget() to fetch the tile index
         return self.pget(tile_x, tile_y)
-    return None  # Return None for out-of-bounds coordinates
-
-
-
-
-
+    return None
 pyxel.Tilemap.get = custom_get_tile
 
 
@@ -192,7 +169,7 @@ class Stage:
         self.num = num
         self.tm = 0
         self.tmu = 0
-        self.tmv = num * 16
+        self.tmv = num * 16 *TILEMAP_SCALE
         
         self.state = STATE_INTRO
         if self.num <= 0:
@@ -221,18 +198,33 @@ class Stage:
         self.en_spawn_locs_bottomright = [] # [[x,y],[x,y],[x,y]...]
         
         if self.state != STATE_GAME_COMPLETE:
-            for yc in range(HEIGHT_TILES):
+            for yc in range(0, HEIGHT_TILES*TILEMAP_SCALE):
                 y = self.tmv + yc
-                for xc in range(WIDTH_TILES):
+                for xc in range(WIDTH_TILES*TILEMAP_SCALE):
                     x = self.tmu + xc
                     tile = pyxel.tilemaps[self.tm].get(x, y)
-                    if tile == POST_TILE:
-                        self.solid_rects.append([xc*8 + 8, yc*8 + 16, 8, 8])
-                    elif tile in SLOPE_TILES:
-                        self.slopes.append([xc*8 + 8, yc*8 + 16])
-                    elif tile == LIGHT_TILE:
-                        self.lights.append(light.Light(xc*8 + 8, yc*8 + 16))
-                        
+
+
+                    #print(f"Tile at ({x}, {y}): {tile}")
+
+                    tile_index = tile[1] * TILEMAP_SCALE + tile[0]
+                    #print(f"Tile index at ({x}, {y}): {tile_index}")
+
+
+                    if tile_index == POST_TILE: #if tile == POST_TILE:
+                        #self.solid_rects.append([xc*8 + 8, yc*8 + 16, 8, 8])
+                        self.solid_rects.append([xc*8//TILEMAP_SCALE + 8, yc*8//TILEMAP_SCALE + 16, 8, 8])
+                    elif tile_index in SLOPE_TILES: #if tile == SLOPE_TILES:
+                        #self.slopes.append([xc*8 + 8, yc*8 + 16])
+                        self.slopes.append([xc*8//TILEMAP_SCALE + 8, yc*8//TILEMAP_SCALE + 16])
+                    elif tile_index == LIGHT_TILE: #if tile == LIGHT_TILE:
+                        #self.lights.append(light.Light(xc*8 + 8, yc*8 + 16))
+                        self.lights.append(light.Light(xc*8//TILEMAP_SCALE + 8, yc*8//TILEMAP_SCALE + 16))
+
+
+
+
+
                     if tile == POCKET_TILE_NW:
                         if x < self.tmu + WIDTH_TILES-1 and y < self.tmv + HEIGHT_TILES-1:
                             if pyxel.tilemaps[self.tm].get(x+1, y) == POCKET_TILE_NE and\
@@ -442,7 +434,7 @@ class Stage:
             
     def draw(self, shake_x, shake_y):
         pyxel.bltm(shake_x + 8, shake_y + 16, self.tm, self.tmu, self.tmv, 
-            WIDTH_TILES, HEIGHT_TILES, 8)
+            WIDTH_TILES *TILEMAP_SCALE, HEIGHT_TILES *TILEMAP_SCALE, 8)
             
         for i in self.lights:
             i.draw(shake_x, shake_y)
@@ -464,4 +456,46 @@ class Stage:
             pyxel.blt(44 + shake_x, 72 + shake_y, 0, 40, 80, 32, 8, 8) # "game"
             pyxel.blt(84 + shake_x, 72 + shake_y, 0, 72, 80, 32, 8, 8) # "over"
 
-        
+
+
+
+
+
+        pyxel.rectb(24, 32, 8, 8, pyxel.COLOR_RED)
+        #print(self.lights)
+
+                    #print(f"Lights: {self.solid_rects}")
+                    #print(f"Slopes: {self.slopes}")
+                    #print(f"Pockets: {self.lights}")
+
+        for slope in self.slopes:
+            #continue
+            x = slope.x  # Use the correct attribute names
+            y = slope.y
+            #w = getattr(light, "width", 8)  # Default width if attribute not found
+            #h = getattr(light, "height", 8)  # Default height if attribute not found
+            # Draw rectangle outline with lines
+            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_GREEN)
+
+        for solid_rect in self.solid_rects:
+            #continue
+            x, y, w, h = solid_rect  # Extract values from the list
+            #w = getattr(light, "width", 8)  # Default width if attribute not found
+            #h = getattr(light, "height", 8)  # Default height if attribute not found
+            # Draw rectangle outline with lines
+            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_YELLOW)
+
+        for light in self.lights:
+            x = light.x  # Use the correct attribute names
+            y = light.y
+            #w = getattr(light, "width", 8)  # Default width if attribute not found
+            #h = getattr(light, "height", 8)  # Default height if attribute not found
+            # Draw rectangle outline with lines
+            pyxel.pset(shake_x + x, shake_y + y, pyxel.COLOR_RED)
+
+
+
+
+
+
+
