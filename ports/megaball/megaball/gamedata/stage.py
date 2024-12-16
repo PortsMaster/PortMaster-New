@@ -32,9 +32,10 @@ MAX_STAGE_NUM = 15
 WIDTH_TILES = 18
 HEIGHT_TILES = 15
 
-POST_TILE = 37 #utils.get_tile_index(40, 32) # It's 37 now (not 133), no idea why ?!
+POST_TILE = 37 # utils.get_tile_index(40, 32)
 
 # tile_index : [angle, collision matrix if triangle]
+'''
 SLOPE_TILES = {
     utils.get_tile_index(56,32): [225, constants.COLLIDE_BOTTOM_RIGHT], # top-left
     utils.get_tile_index(64,32): [270, None], # top
@@ -48,6 +49,22 @@ SLOPE_TILES = {
     utils.get_tile_index(88,32): [135, constants.COLLIDE_BOTTOM_LEFT], # bottom-left 2
     utils.get_tile_index(80,40): [45, constants.COLLIDE_BOTTOM_RIGHT], # bottom-right 2
     utils.get_tile_index(88,40): [315, constants.COLLIDE_TOP_RIGHT] # top-right 2
+    #utils.get_tile_index(),
+}
+'''
+SLOPE_TILES = {
+    39: [225, constants.COLLIDE_BOTTOM_RIGHT], # top-left
+    40: [270, None], # top
+    41: [315, constants.COLLIDE_BOTTOM_LEFT], # top-right
+    47: [180, None], # left
+    49: [0, None], # right
+    55: [135, constants.COLLIDE_TOP_RIGHT], # bottom-left
+    56: [90, None], # bottom
+    57: [45, constants.COLLIDE_TOP_LEFT],  # bottom-right
+    42: [225, constants.COLLIDE_TOP_LEFT], # top-left 2
+    43: [135, constants.COLLIDE_BOTTOM_LEFT], # bottom-left 2
+    50: [45, constants.COLLIDE_BOTTOM_RIGHT], # bottom-right 2
+    51: [315, constants.COLLIDE_TOP_RIGHT] # top-right 2
     #utils.get_tile_index(),
 }
 
@@ -239,8 +256,23 @@ class Stage:
                         #self.lights.append(light.Light(xc*8 + 8, yc*8 + 16))
                         self.lights.append(light.Light(xc*8//TILEMAP_SCALE + 8, yc*8//TILEMAP_SCALE + 16))
 
-
-
+                    '''
+                    SLOPE_TILES = {
+                        39: [225, constants.COLLIDE_BOTTOM_RIGHT], # top-left
+                        40: [270, None], # top
+                        41: [315, constants.COLLIDE_BOTTOM_LEFT], # top-right
+                        47: [180, None], # left
+                        49: [0, None], # right
+                        55: [135, constants.COLLIDE_TOP_RIGHT], # bottom-left
+                        56: [90, None], # bottom
+                        57: [45, constants.COLLIDE_TOP_LEFT],  # bottom-right
+                        42: [225, constants.COLLIDE_TOP_LEFT], # top-left 2
+                        43: [135, constants.COLLIDE_BOTTOM_LEFT], # bottom-left 2
+                        50: [45, constants.COLLIDE_BOTTOM_RIGHT], # bottom-right 2
+                        51: [315, constants.COLLIDE_TOP_RIGHT] # top-right 2
+                        #utils.get_tile_index(),
+                    }
+                    '''
 
 
                     if tile == POCKET_TILE_NW:
@@ -481,10 +513,10 @@ class Stage:
         for slope in self.slopes:
             x = slope[0]
             y = slope[1]
-            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_YELLOW)
         for solid_rect in self.solid_rects:
             x, y, w, h = solid_rect
-            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_YELLOW)
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
         for light in self.lights:
             x = light.x
             y = light.y
