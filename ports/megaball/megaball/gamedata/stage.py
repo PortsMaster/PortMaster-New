@@ -17,12 +17,8 @@ import globals
 import stagedata
 import audio
 
-
-
-
-
 TILEMAP_SCALE = 8
-# Mokeypatch in get() from old API
+# Mokeypatch in get() to simulate old tilemap API
 def custom_get_tile(self, x, y):
     tile_x = x // TILEMAP_SCALE
     tile_y = y // TILEMAP_SCALE
@@ -31,21 +27,12 @@ def custom_get_tile(self, x, y):
     return None
 pyxel.Tilemap.get = custom_get_tile
 
-
-
-
-
-
-
-
-
-
 MAX_STAGE_NUM = 15
 
 WIDTH_TILES = 18
 HEIGHT_TILES = 15
 
-POST_TILE = utils.get_tile_index(40, 32)
+POST_TILE = 37 #utils.get_tile_index(40, 32) # It's 37 now (not 133), no idea why ?!
 
 # tile_index : [angle, collision matrix if triangle]
 SLOPE_TILES = {
@@ -196,6 +183,8 @@ class Stage:
         #self.en_spawn_locs_topright = [] # [[x,y],[x,y],[x,y]...]
         #self.en_spawn_locs_bottomleft = [] # [[x,y],[x,y],[x,y]...]
         #self.en_spawn_locs_bottomright = [] # [[x,y],[x,y],[x,y]...]
+
+        # Hardcode spawn locations (becuase they stopped working)
         self.en_spawn_locs_topleft = [
             [12, 20], [20, 20], [28, 20], [36, 20], [44, 20],
             [12, 28], [20, 28], [28, 28], [36, 28], [44, 28],
@@ -221,9 +210,6 @@ class Stage:
             [92, 100], [100, 100], [108, 100], [116, 100], [124, 100]
         ]
 
-
-
-        
         if self.state != STATE_GAME_COMPLETE:
             for yc in range(0, HEIGHT_TILES *TILEMAP_SCALE, TILEMAP_SCALE):
                 y = self.tmv + yc
@@ -234,8 +220,13 @@ class Stage:
 
                     #print(f"Tile at ({x}, {y}): {tile}")
 
+
+
                     tile_index = tile[1] * TILEMAP_SCALE + tile[0]
                     #print(f"Tile index at ({x}, {y}): {tile_index}")
+                    print(f"POST_TILE index: {POST_TILE}")
+                    print(f"SLOPE_TILES indices: {list(SLOPE_TILES.keys())}")
+                    print(f"LIGHT_TILE index: {LIGHT_TILE}")
 
 
                     if tile_index == POST_TILE: #if tile == POST_TILE:
@@ -483,26 +474,17 @@ class Stage:
             pyxel.blt(44 + shake_x, 72 + shake_y, 0, 40, 80, 32, 8, 8) # "game"
             pyxel.blt(84 + shake_x, 72 + shake_y, 0, 72, 80, 32, 8, 8) # "over"
 
-
-
-
-
-
-        #pyxel.rectb(24, 32, 8, 8, pyxel.COLOR_RED)
-        print(self.lights)
-        print(f"Solidrects: {self.solid_rects}")
-        print(f"Slopes: {self.slopes}")
-        print(f"Lights: {self.lights}")
-
+        # DEBUGGING
+        #print(f"Solidrects: {self.solid_rects}")
+        #print(f"Slopes: {self.slopes}")
+        #print(f"Lights: {self.lights}")
         for slope in self.slopes:
-            x = slope.x
-            y = slope.y
-            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_GREEN)
-
+            x = slope[0]
+            y = slope[1]
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
         for solid_rect in self.solid_rects:
             x, y, w, h = solid_rect
             pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_YELLOW)
-
         for light in self.lights:
             x = light.x
             y = light.y
