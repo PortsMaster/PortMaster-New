@@ -22,7 +22,7 @@ GAMEDIR="/$directory/ports/gravityblocks"
 
 # We log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x $GAMEDIR/gmloader
 
 cd "$GAMEDIR"
 
