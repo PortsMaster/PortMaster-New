@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -56,8 +55,7 @@ export BOX86_LD_LIBRARY_PATH=$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/
 export BOX86_DYNAREC=1
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO rm -rf "$XDG_DATA_HOME/Yacht Club Games"
-$ESUDO ln -s "$GAMEDIR/Yacht Club Games" "$XDG_DATA_HOME"
+bind_directories "$XDG_DATA_HOME/Yacht Club Games" "$GAMEDIR/Yacht Club Games"
 $ESUDO chmod 666 /dev/uinput
 
 chmod +x ShovelKnight $GAMEDIR/box86/box86
