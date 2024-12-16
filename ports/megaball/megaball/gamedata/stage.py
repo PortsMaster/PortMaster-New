@@ -233,18 +233,7 @@ class Stage:
                 for xc in range(0, WIDTH_TILES *TILEMAP_SCALE, TILEMAP_SCALE):
                     x = self.tmu + xc
                     tile = pyxel.tilemaps[self.tm].get(x, y)
-
-
-                    #print(f"Tile at ({x}, {y}): {tile}")
-
-
-
                     tile_index = tile[1] * TILEMAP_SCALE + tile[0]
-                    #print(f"Tile index at ({x}, {y}): {tile_index}")
-                    print(f"POST_TILE index: {POST_TILE}")
-                    print(f"SLOPE_TILES indices: {list(SLOPE_TILES.keys())}")
-                    print(f"LIGHT_TILE index: {LIGHT_TILE}")
-
 
                     if tile_index == POST_TILE: #if tile == POST_TILE:
                         #self.solid_rects.append([xc*8 + 8, yc*8 + 16, 8, 8])
@@ -255,25 +244,6 @@ class Stage:
                     elif tile_index == LIGHT_TILE: #if tile == LIGHT_TILE:
                         #self.lights.append(light.Light(xc*8 + 8, yc*8 + 16))
                         self.lights.append(light.Light(xc*8//TILEMAP_SCALE + 8, yc*8//TILEMAP_SCALE + 16))
-
-                    '''
-                    SLOPE_TILES = {
-                        39: [225, constants.COLLIDE_BOTTOM_RIGHT], # top-left
-                        40: [270, None], # top
-                        41: [315, constants.COLLIDE_BOTTOM_LEFT], # top-right
-                        47: [180, None], # left
-                        49: [0, None], # right
-                        55: [135, constants.COLLIDE_TOP_RIGHT], # bottom-left
-                        56: [90, None], # bottom
-                        57: [45, constants.COLLIDE_TOP_LEFT],  # bottom-right
-                        42: [225, constants.COLLIDE_TOP_LEFT], # top-left 2
-                        43: [135, constants.COLLIDE_BOTTOM_LEFT], # bottom-left 2
-                        50: [45, constants.COLLIDE_BOTTOM_RIGHT], # bottom-right 2
-                        51: [315, constants.COLLIDE_TOP_RIGHT] # top-right 2
-                        #utils.get_tile_index(),
-                    }
-                    '''
-
 
                     if tile == POCKET_TILE_NW:
                         if x < self.tmu + WIDTH_TILES-1 and y < self.tmv + HEIGHT_TILES-1:
@@ -423,7 +393,7 @@ class Stage:
     
     # returns None or angle
     def get_tile_angle(self, x, y): # x,y is screen pixels.
-        tile = pyxel.tilemaps[self.tm].get(
+        tile = pyxel.tilemap(self.tm).get(
             self.tmu + math.floor((x-8)/8), 
             self.tmv + math.floor((y-16)/8)
         )
@@ -436,18 +406,20 @@ class Stage:
                 tx = math.floor(abs(x - math.floor(x/8)*8))
                 ty = math.floor(abs(y - math.floor(y/8)*8))
                 
-                #print("Checking matrix x,y: {a},{b} ...".format(a=tx, b=ty))
+                print("Checking matrix x,y: {a},{b} ...".format(a=tx, b=ty))
                 
                 if constants.is_colliding_matrix(tx, ty, t[1]):
-                    #print("{a}, {b} hit triangle".format(a=x, b=y))
-                    #print("... collides.")
+                    print("{a}, {b} hit triangle".format(a=x, b=y))
+                    print("... collides.")
                     return t[0]
                 else:
-                    #print("... no collision.")
+                    print("... no collision.")
                     return None
             else:
+                print(SLOPE_TILES[tile][0])
                 return SLOPE_TILES[tile][0]
         else:
+            print('None')
             return None
         
     def update(self, last_inputs):
@@ -507,24 +479,18 @@ class Stage:
             pyxel.blt(84 + shake_x, 72 + shake_y, 0, 72, 80, 32, 8, 8) # "over"
 
         # DEBUGGING
-        #print(f"Solidrects: {self.solid_rects}")
-        #print(f"Slopes: {self.slopes}")
-        #print(f"Lights: {self.lights}")
+
+        for solid_rect in self.solid_rects:
+            x, y, w, h = solid_rect
+            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
+
         for slope in self.slopes:
             x = slope[0]
             y = slope[1]
             pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_YELLOW)
-        for solid_rect in self.solid_rects:
-            x, y, w, h = solid_rect
-            pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
+
         for light in self.lights:
             x = light.x
             y = light.y
             pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_RED)
-
-
-
-
-
-
 
