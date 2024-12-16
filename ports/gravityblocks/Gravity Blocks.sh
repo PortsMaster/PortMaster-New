@@ -29,7 +29,6 @@ cd "$GAMEDIR"
 # Exports
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=0
-export GMLOADER_SAVEDIR="$GAMEDIR/save/"
 export GMLOADER_PLATFORM="os_windows"
 
 $GPTOKEYB "gmloader" -c "gravityblocks.gptk" &
