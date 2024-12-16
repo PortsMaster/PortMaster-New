@@ -14,7 +14,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/axiom-verge"
@@ -32,9 +32,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/AxiomVerge
-mkdir -p ~/.local/share
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/AxiomVerge
+bind_directories ~/.local/share/AxiomVerge "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
@@ -67,4 +65,5 @@ unset LD_LIBRARY_PATH
 # Disable console
 printf "\033c" >> /dev/tty1
 printf "\033c" > /dev/tty0
+
 
