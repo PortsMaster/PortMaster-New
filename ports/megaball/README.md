@@ -6,6 +6,7 @@ Thanks [helpcomputer](https://helpcomputer.itch.io) (Adam) for creating this fan
 ## Controls
 
 | Button | Action        |
+| -------| ------------- |
 | D-PAD  | Movement      |
 | START  | Menu          |
 | A      | Self-destruct |
@@ -23,7 +24,7 @@ source pyxel-venv/bin/activate
 pip install pyxel
 
 # Test the game
-git clone https://github.com/tabreturn/PortMaster-New.git
+git clone https://github.com/PortsMaster/PortMaster-New.git
 cd ports/megaball
 pyxel run megaball/gamedata/main.py
 ```
