@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -23,8 +22,7 @@ GAMEDIR="/$directory/ports/alephone-marathon"
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.alephone
-$ESUDO ln -s $GAMEDIR/conf/.alephone ~/
+bind_directories ~/.alephone $GAMEDIR/conf/.alephone
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
@@ -39,6 +37,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "alephone" &
 ./alephone $GAMEDIR"/gamedata/Marathon"
 

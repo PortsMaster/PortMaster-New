@@ -13,17 +13,15 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
 GAMEDIR=/$directory/ports/worldofgoo
 CONFDIR="$GAMEDIR/conf/"
 
-CUR_TTY=/dev/tty0
-$ESUDO chmod 666 $CUR_TTY
-
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -33,8 +31,6 @@ mkdir -p "$GAMEDIR/conf"
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
-
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -53,16 +49,20 @@ if [ -d ~/.WorldOfGoo ] && [ ! -h ~/.WorldOfGoo ]; then
 fi
 
 # Setup savedir
-$ESUDO rm -rf ~/.WorldOfGoo
-ln -sfv "$GAMEDIR/savedata" ~/.WorldOfGoo
+bind_directories ~/.WorldOfGoo "$GAMEDIR/savedata"
 
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 fi 
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
 export TEXTINPUTINTERACTIVE="Y"
+
+#export BOX64_LOG=1
+#export BOX64_DLSYM_ERROR=1
+#export BOX64_SHOWSEGV=1
+#export BOX64_SHOWBT=1
 
 # Extract and organize game files if the installer exists
 WOG_FILE=$(ls *.sh 2> /dev/null | head -n 1)
@@ -75,7 +75,7 @@ if [ -f "$WOG_FILE" ]; then
     elif [ -d "data/noarch/game" ]; then
         $ESUDO mv -f data/noarch/game "$GAMEDIR/gamedata/"
     else
-        echo "Game directory not found after extraction." > "$CUR_TTY"
+        pm_message "Game directory not found after extraction."
         sleep 5
         exit 1
     fi
@@ -83,19 +83,18 @@ if [ -f "$WOG_FILE" ]; then
     if $ESUDO mv -f $(find . -name "WorldOfGoo.bin.x86_64" -print -quit) "$GAMEDIR/gamedata/WorldOfGoo.bin" 2>/dev/null; then
         $ESUDO chmod +x "$GAMEDIR/gamedata/WorldOfGoo.bin"
     else
-        echo "WorldOfGoo.bin.x86_64 not found after extraction." > "$CUR_TTY"
+        pm_message "WorldOfGoo.bin.x86_64 not found after extraction."
         sleep 5
         exit 1
     fi
 
     rm -rf data/ meta/ scripts/
     rm -f "$WOG_FILE"
-    echo "Setup complete. Have fun playing!" > "$CUR_TTY"
+    pm_message "Setup complete. Have fun playing!"
 fi
 
 $GPTOKEYB "WorldOfGoo.bin" -c "./worldofgoo.gptk" &
+pm_platform_helper "$$GAMEDIR/box64/box64"
 $GAMEDIR/box64/box64 gamedata/WorldOfGoo.bin
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
