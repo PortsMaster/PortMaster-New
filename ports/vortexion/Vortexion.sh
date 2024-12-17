@@ -16,6 +16,8 @@ source $controlfolder/control.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
+get_controls
+
 GAMEDIR="/$directory/ports/vortexion"
 CONFDIR="$GAMEDIR/conf"
 PYXEL_PKG="vortexion.pyxapp"
