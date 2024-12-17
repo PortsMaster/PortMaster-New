@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,8 +22,7 @@ GAMEDIR=/$directory/ports/meritous
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.meritous
-ln -sfv /$directory/ports/meritous/conf/.meritous ~/
+bind_directories ~/.meritous /$directory/ports/meritous/conf/.meritous
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -35,3 +35,4 @@ $GPTOKEYB "meritous" -c "./meritous.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
