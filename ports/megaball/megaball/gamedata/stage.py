@@ -392,36 +392,37 @@ class Stage:
         self.game.add_screen_shake(5, 1, queue=False)
     
     # returns None or angle
-    def get_tile_angle(self, x, y): # x,y is screen pixels.
-        tile = pyxel.tilemap(self.tm).get(
-            self.tmu + math.floor((x-8)/8), 
-            self.tmv + math.floor((y-16)/8)
+    def get_tile_angle(self, x, y):  # x, y is screen pixels
+        tile = pyxel.tilemaps[self.tm].get(
+            self.tmu + math.floor((x - 8) / 8 * TILEMAP_SCALE),
+            self.tmv + math.floor((y - 16) / 8 * TILEMAP_SCALE)
         )
-        
-        if tile in SLOPE_TILES:
-            # check if triangle matrix collision check needed.
-            if SLOPE_TILES[tile][1] is not None:
-                t = SLOPE_TILES[tile]
-                
-                tx = math.floor(abs(x - math.floor(x/8)*8))
-                ty = math.floor(abs(y - math.floor(y/8)*8))
-                
-                print("Checking matrix x,y: {a},{b} ...".format(a=tx, b=ty))
-                
+        tile_index = tile[1] * TILEMAP_SCALE + tile[0]
+        #print(tile_index)
+
+        if tile_index in SLOPE_TILES:
+            # Check if triangle matrix collision is needed
+            if SLOPE_TILES[tile_index][1] is not None:
+                t = SLOPE_TILES[tile_index]
+
+                tx = math.floor(abs(x - math.floor(x / 8) * 8 * TILEMAP_SCALE))
+                ty = math.floor(abs(y - math.floor(y / 8) * 8 * TILEMAP_SCALE))
+
+                #print(f"Checking matrix x,y: {tx},{ty} ...")
+
                 if constants.is_colliding_matrix(tx, ty, t[1]):
-                    print("{a}, {b} hit triangle".format(a=x, b=y))
-                    print("... collides.")
+                    #print(f"{x}, {y} hit triangle")
+                    #print("... collides.")
                     return t[0]
                 else:
-                    print("... no collision.")
+                    #print("... no collision.")
                     return None
             else:
-                print(SLOPE_TILES[tile][0])
-                return SLOPE_TILES[tile][0]
+                #print(SLOPE_TILES[tile_index][0])
+                return SLOPE_TILES[tile_index][0]
         else:
-            print('None')
             return None
-        
+
     def update(self, last_inputs):
         if self.num > 0: # dont allow inputs on demo/main menu stage 0.
             if self.pause_menu.is_visible:
@@ -479,7 +480,7 @@ class Stage:
             pyxel.blt(84 + shake_x, 72 + shake_y, 0, 72, 80, 32, 8, 8) # "over"
 
         # DEBUGGING
-
+        '''
         for solid_rect in self.solid_rects:
             x, y, w, h = solid_rect
             pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_BLACK)
@@ -493,4 +494,4 @@ class Stage:
             x = light.x
             y = light.y
             pyxel.rectb(shake_x + x, shake_y + y, TILEMAP_SCALE, TILEMAP_SCALE, pyxel.COLOR_RED)
-
+        '''
