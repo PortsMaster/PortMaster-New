@@ -68,10 +68,14 @@ SLOPE_TILES = {
     #utils.get_tile_index(),
 }
 
+######################################### TODO: ASSIGN POCKET TILE INDECES
+
 POCKET_TILE_NW = utils.get_tile_index(80,40)
 POCKET_TILE_NE = utils.get_tile_index(88,32)
 POCKET_TILE_SE = utils.get_tile_index(80,32)
 POCKET_TILE_SW = utils.get_tile_index(88,40)
+
+######################################### TODO: CONFIRM THESE TILE INDECES
 
 LIGHT_TILE = utils.get_tile_index(160,0)
 BLANK_TILE = utils.get_tile_index(32,24)
