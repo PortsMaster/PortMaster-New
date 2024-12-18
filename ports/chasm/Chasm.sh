@@ -14,7 +14,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 gameassembly="Chasm.exe"
@@ -34,8 +34,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Chasm
-ln -sfv "$gamedir/savedata" ~/.local/share/Chasm
+bind_directories ~/.local/share/Chasm "$gamedir/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
@@ -59,4 +58,5 @@ $ESUDO umount "$monodir"
 
 # Disable console
 printf "\033c" >> /dev/tty1
+
 
