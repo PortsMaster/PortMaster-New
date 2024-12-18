@@ -25,7 +25,7 @@ cd "${GAMEDIR}"
 > "${GAMEDIR}/log.txt" && exec > >(tee "${GAMEDIR}/log.txt") 2>&1
 
 mkdir -p "$GAMEDIR/conf"
-bind_directories "$HOME/.config/.pyxel/push" "$CONFDIR"
+bind_directories "$HOME/.pyxel/yuta/push" "$CONFDIR"
 
 # Load Pyxel runtime
 runtime="pyxel_2.2.8_python_3.11"
