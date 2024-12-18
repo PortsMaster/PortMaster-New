@@ -12,6 +12,7 @@ else
 fi
 
 source $controlfolder/control.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -33,10 +34,9 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
-# We need to wait until bind_files comes out of beta, for now it will remain the same.
-$ESUDO rm -rf ~/.asylum
-ln -sfv /$directory/ports/asylum/conf/.asylum ~/
-# bind_files ~/.asylum /$directory/ports/asylum/conf/.asylum
+# delete the remenents of the old file structure
+$ESUDO rm -rf ~/.asylum/*
+bind_directories: ~/.asylum "$GAMEDIR/conf/.asylum"
 
 cd $GAMEDIR
 
