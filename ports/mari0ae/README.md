@@ -4,7 +4,6 @@ Thanks to the Maurice Guégan for creating this game
 Thanks to the [Alesan99](https://github.com/alesan99) for the mod and tons of new game content
 
 ## Controls
-### Menu
 | Button | Action |
 |--|--| 
 | D-Pad | Character movement/Menu navigation |
