@@ -35,7 +35,6 @@ export XDG_DATA_HOME="$CONFDIR"
 $ESUDO chmod 666 /dev/uinput
 
 # delete the remenents of the old file structure
-$ESUDO rm -rf ~/.asylum/*
 bind_directories: ~/.asylum "$GAMEDIR/conf/.asylum"
 
 cd $GAMEDIR
