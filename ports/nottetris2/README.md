@@ -16,6 +16,7 @@ Thanks to Maurice and the team at [stabyourself.net](https://stabyourself.net/no
 |Select|Escape|
 |A / Y / R1 / R2|Rotate right|
 |B / X / L1 / L2|Rotate left|
+|Start + Down|Enter text entry mode (Start again to confirm text)|
 
 ## Compile
 
