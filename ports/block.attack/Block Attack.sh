@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,8 +21,7 @@ GAMEDIR="/$directory/ports/blockattack"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.local/share/blockattack
-ln -sfv $GAMEDIR/ ~/.local/share
+bind_directories ~/.local/share/blockattack $GAMEDIR/
 
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
@@ -37,3 +36,4 @@ $GPTOKEYB "blockattack.${DEVICE_ARCH}" -c "$GAMEDIR/blockattack.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
+

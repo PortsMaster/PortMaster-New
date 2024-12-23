@@ -12,7 +12,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -35,8 +34,8 @@ export XDG_DATA_HOME="$CONFDIR"
 
 $ESUDO chmod 666 /dev/uinput
 
-$ESUDO rm -rf ~/.asylum
-ln -sfv /$directory/ports/asylum/conf/.asylum ~/
+# delete the remenents of the old file structure
+bind_directories: ~/.asylum "$GAMEDIR/conf/.asylum"
 
 cd $GAMEDIR
 
