@@ -29,16 +29,12 @@ export XDG_CONFIG_HOME="$GAMEDIR/saves"
 mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
 
-export LIBGL_ES=2
-export LIBGL_GL=21
-export LIBGL_FB=4
-
-# TODO: If a port uses GL4ES (libgl.so.1) a folder named gl4es.aarch64 etc. needs to be created with the libgl.so.1 file in it. This makes sure that each cfw and device get the correct GL4ES export.
-#if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
-#  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-#else
-#  source "${controlfolder}/libgl_default.txt"
-#fi
+# If a port uses GL4ES (libgl.so.1) a folder named gl4es.aarch64 etc. needs to be created with the libgl.so.1 file in it. This makes sure that each cfw and device get the correct GL4ES export.
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
 # Port specific additional libraries should be included within the port's directory in a separate subfolder named libs.aarch64, libs.armhf or libs.x64
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
