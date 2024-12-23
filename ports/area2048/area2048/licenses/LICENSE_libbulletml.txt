@@ -1,0 +1,165 @@
+libBulletML 0.0.5
+
+* Abstract
+
+It is a C++ library to handle BulletML, the Bullet Markup
+Language. You can use BulletML in your program without bothering to
+parse XML.
+
+If you want to know BulletML more, please see following web site by
+ABA (author of BulletML):
+http://www.asahi-net.or.jp/~cs8k-cyu/bulletml/index_e.html
+
+
+* Usage
+
+You can use it with VC and BorlandC++ and gcc and I wish, almost all
+compiler that supports standard C++.
+
+An example of this library is available in my software "siroi
+danmakukun":
+http://user.ecc.u-tokyo.ac.jp/~s31552/wp/sdmkun/sdmkun-1.5.6.zip
+You can see usage of this library in src/command_bulletml.* .
+
+
+* Tutorial
+
+This library's basic usage is event driven model.
+
+0. Get XML file written in BulletML.
+
+You can use BulletML file in "siroi danmakukun". (bosses.d/*.xml in
+archive)
+
+1. Include headers
+
+#include "bulletml/bulletmlparser.h"
+#include "bulletml/bulletmlparser-tinyxml.h"
+#include "bulletml/bulletmlrunner.h"
+
+2. Create class that inherits BulletMLRunner
+
+class BulletCommand : public BulletMLRunner {
+    // ...
+
+    // the bullet you will handle
+    Bullet* bullet_;
+}
+
+3. Implement all pure virtual function defined in bulletmlrunner.h
+
+For example:
+class BulletCommand : public BulletMLRunner {
+    virtual void doVanish() {
+        bullet_->die();
+    }
+
+    // ... and other pure virtual functions
+}
+
+createSimpleBullet and createBullet method should be implemented
+carefully. In libBulletML, all bullets are divided to two
+types. createSimpleBullet type does not have <action>, createBullet
+type has <action>. For example, "siroi danmakukun" uses two class:
+Shot and Enemy.
+
+When libBulletML handle <fire> element that does not have <action>
+element, BulletMLRunner calls createSimpleBullet method with two
+arguments: direction and speed.
+
+In the other hand, if <fire> element has <action> element,
+BulletMLRunner calls createBullet method with three arguments:
+direction, speed, and state. You should not care the detail of the
+state argument. But it should be given to the class derived from
+BulletMLRunner in its constructor. The creation of this class is
+described in next section.
+
+4. Create of the class derived from BulletMLRunner
+
+In libBulletML, the batteries are divided two types. One type is the
+battery that is defined in <action label="top"> (first order battery),
+and one type is the battery that is created by the other battery
+(second, third, forth... battery).
+
+Then, you should create two constructors to handle these two kind of
+batteries.
+
+For example, first order battery is implemented like following:
+
+BulletCommand::BulletCommand(BulletMLParser* bp, Bullet* b)
+    : BulletMLRunner(bp), bullet_(b)
+
+For example, second, third... order battery is implemented like following:
+
+BulletCommand::BulletCommand(BulletMLState* bs, Bullet* b)
+    : BulletMLRunner(bs), bullet_(b)
+
+You should call this constructor when createBullet method is called.
+
+5. Create BulletML document
+
+BulletMLParser* bp = new BulletMLParserTinyXML("foo.xml");
+bp->build();
+
+Because parsing BulletML is slow, all xml files should be loaded in
+the initialization of the program.
+
+6. Create first order battery
+
+BulletCommand* bc = new BulletCommand(bp)
+
+7. Run BulletCommand in all turn.
+
+while (1) {
+  // the main loop of game
+
+  bc->run();
+}
+
+If some errors are occured, libBulletML throws BulletMLError. You can
+catch this exception.
+
+
+* Misc
+
+TinyXML is used to parse XML.
+http://www.gibaradunn.srac.org/tiny/index.shtml
+
+If you cannot understand this document (yes, it's poor document and
+writen in poor English), please ask me with email.
+
+
+* Modified BSD License
+
+Copyright (c) 2003, shinichiro.h All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * The name of the author may not be used to endorse or promote
+      products derived from this software without specific prior
+      written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+shinichiro.h
+ hamaji@nii.ac.jp
+ http://shinh.skr.jp/
