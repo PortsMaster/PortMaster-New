@@ -47,6 +47,8 @@ Your port zips will then be in `releases/`, these are suitable for posting to di
 
 ---------------------------------------------
 
+See our always up to date Packaging Documentation on our website. https://portmaster.games/packaging.html
+
 ### Portname requirements
 
 The **portname** must start with either a lowercase letter (a-z) or a number (0-9).
@@ -59,7 +61,7 @@ This name must not clash with any other existing ports.
 
 ### New Port Structure:
 
-Ports are now contained within the `port` top level directory, each port has its own sub-directory named after the port itself. Each port must adhere to the `portname` rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}` and a `gameinfo.xml`.
+Ports are now contained within the `port` top level directory, each port has its own sub-directory named after the port itself. Each port must adhere to the `portname` rules stated above. Each port must have a `port.json`, `screenshot.{jpg,png}`, `README.md`, a port script and a port directory. It may optionally include a `cover.{jpg,png}`.
 
 The script should have capital letters (like `Port Name.sh`) and must end in `.sh`, the port directory should be the same as the containing directory. Some legacy ports have different names, new ports won't be accepted unless they follow the new convention.
 
@@ -72,10 +74,11 @@ A port directory might look like the following:
   - port.json
   - README.md
   - screenshot.jpg
-  - cover.jpg
   - gameinfo.xml
+  - cover.jpg (Optional)
   - Port Name.sh
   - portname/
+    - licenses/LICENSE Files
     - <portfiles here>
 ```
 
