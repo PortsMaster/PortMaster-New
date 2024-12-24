@@ -13,13 +13,8 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/tasksetter
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
@@ -28,15 +23,10 @@ printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 
 GAMEDIR="/$directory/ports/shovelknight"
-
 cd $GAMEDIR
-
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-
-# Fix for the annoying folder structure while still working with the previous
-# one.
+# Fix for the annoying folder structure while still working with the previous one.
 if [ -d "$GAMEDIR/gamedata/shovelknight/32" ]; then
 	cd $GAMEDIR/gamedata/shovelknight/32
 else
@@ -65,14 +55,13 @@ export BOX86_LD_LIBRARY_PATH=$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/
 export BOX86_DYNAREC=1
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO rm -rf ~/.local/share/Yacht\ Club\ Games
-$ESUDO ln -s $GAMEDIR/Yacht\ Club\ Games ~/.local/share/
+bind_directories "$XDG_DATA_HOME/Yacht Club Games" "$GAMEDIR/Yacht Club Games"
 $ESUDO chmod 666 /dev/uinput
 
 chmod +x ShovelKnight $GAMEDIR/box86/box86
 $GPTOKEYB "ShovelKnight" -c "$GAMEDIR/shovelknight.gptk" &
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$TASKSET $GAMEDIR/box86/box86 ShovelKnight
+$GAMEDIR/box86/box86 ShovelKnight
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

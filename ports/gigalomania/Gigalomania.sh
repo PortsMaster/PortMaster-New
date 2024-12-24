@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,8 +22,7 @@ GAMEDIR=/$directory/ports/gigalomania
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.config/gigalomania/
-ln -sfv /$directory/ports/gigalomania/conf/ ~/.config/gigalomania
+bind_directories ~/.config/gigalomania/ /$directory/ports/gigalomania/conf/
 
 export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -35,3 +35,4 @@ $GPTOKEYB "gigalomania" -c "./gigalomania.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

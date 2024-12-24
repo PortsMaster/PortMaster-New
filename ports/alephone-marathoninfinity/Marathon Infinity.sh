@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -23,8 +22,7 @@ GAMEDIR="/$directory/ports/alephone-marathoninfinity"
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.alephone
-$ESUDO ln -s $GAMEDIR/conf/.alephone ~/
+bind_directories ~/.alephone $GAMEDIR/conf/.alephone
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 

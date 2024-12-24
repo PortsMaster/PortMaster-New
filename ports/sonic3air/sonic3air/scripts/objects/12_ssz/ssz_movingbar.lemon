@@ -1,0 +1,163 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//# address-hook(0x04536c) end(0x045398)
+function void fn04536c()
+{
+	objA0.update_address = 0x04539e
+	objA0.render_flags = render_flag.WORLD
+	objA0.box_size.y = 0x04
+	objA0.box_size.x = 0x30
+	objA0.sprite_priority = 0x0180
+	objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE2 | 0x0348)
+	objA0.mapping_offset = 0x046ada
+	objA0.velocity.y = objA0.position.y.u16
+
+	fn04539e()
+}
+
+
+//# address-hook(0x04539e) end(0x0453e0)
+function void fn04539e()
+{
+	D0 = 0x018000
+	D1 = 0x0480
+	fn0465d6()
+	D0.u16 += objA0.velocity.y
+	objA0.position.y.u16 = D0.u16
+
+	A1 = 0xffffb000
+	A2 = A0 + 0x38
+	D0.u16 = control.player1
+	D1 = isMainCharacter(CHARACTER_TAILS) ? 0x11 : 0x14
+	fn0453e6()
+
+	A1 = 0xffffb04a
+	A2 = A0 + 0x39
+	D0.u16 = control.tails
+	D1 = 0x11
+	fn0453e6()
+
+#if STANDALONE
+	// If unloaded, "free" characters still attached (2nd player Tails usually)
+	bool doUnload = shouldUnloadObjectAtPosition(objA0.position.x.u16, 0x280)
+	if (doUnload)
+	{
+		if (u8[A0 + 0x38])
+			u8[0xffffb000 + 0x2e] = 0
+		if (u8[A0 + 0x39])
+			u8[0xffffb04a + 0x2e] = 0
+
+		if (objA0.respawn_entry)
+		{
+			A2 = 0xffff0000 + objA0.respawn_entry
+			u8[A2] &= ~0x80
+		}
+		UnloadObject()
+	}
+	else
+	{
+		DrawObject()
+	}
+#else
+	DrawOrUnloadObject()
+#endif
+}
+
+
+//# address-hook(0x0453e6) end(0x045526)
+function void fn0453e6()
+{
+	if (u8[A2] == 0)
+	{
+		if (u8[A2 + 0x02] != 0)
+		{
+			--u8[A2 + 0x02]
+			if (u8[A2 + 0x02] != 0)
+				return
+			objA0.sprite_priority = 0x0180
+		}
+
+		D0.u16 = objA1.position.x.u16 - objA0.position.x.u16 + 0x28
+		if (D0.u16 >= 0x50)
+			return
+
+		D0.u16 = objA1.position.y.u16 - objA0.position.y.u16
+		if (D0.u16 >= 0x18)
+			return
+
+		if (u8[A1 + 0x2e] != 0 || u8[A1 + 0x05] >= base_state.HURT || debug_mode.state != 0)
+			return
+
+		playSound(SFX_GRAB)
+		u8[A2] = 0xff
+
+		objA1.position.y.u16 = objA0.position.y.u16 + D1.u16
+		objA1.velocity.x = 0
+		objA1.groundspeed = 0
+		u8[A1 + 0x3d] = 0
+		u8[A1 + 0x2e] = (control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+		objA1.render_flags &= ~(render_flag.FLIP_X | render_flag.FLIP_Y)
+		u8[A1 + 0x20] = 0
+
+		D0.u16 = (u8[A1 + 0x2a] & char.flag.FACING_LEFT) ? 0xe9 : 0xe5		// Player characters' hanging sprites, facing forward or back
+		objA1.animation.sprite = D0.u8
+		SetCharacterSpritePatterns()
+	}
+	else
+	{
+		objA1.position.y.u16 = objA0.position.y.u16 + D1.u16
+		if (u8[A1 + 0x05] >= base_state.HURT)
+		{
+			u8[A1 + 0x2e] = 0
+			u8[A2] = 0
+			u8[A2 + 0x02] = 0x3c
+		}
+		else
+		{
+			D1.u16 = D0.u16 & 0xff70
+			if (D1.u8 != 0)
+			{
+				u8[A1 + 0x2e] = 0
+				u8[A2] = 0
+				u8[A2 + 0x02] = 0x1e
+				objA0.sprite_priority = 0x80
+
+				D1.u16 = -0x200
+				D2.u16 = -0x400
+				if ((D0 & 0x0400) == 0)		// CONTROL_LEFT not held
+				{
+					objA0.sprite_priority = 0x0180
+					D1.s16 = -D1.s16
+					if ((D0 & 0x0800) == 0)		// CONTROL_RIGHT not held
+					{
+						D1 = 0
+						if (D0 & 0x0200)	// CONTROL_DOWN held
+						{
+							D2 = 0
+						}
+					}
+				}
+
+				objA1.velocity.x = D1.u16
+				D0 = s32[A0 + 0x2e] >> 8
+				D0.u16 += D2.u16
+				objA1.velocity.y = D0.u16
+				objA1.hitbox_extends.x = char.hitbox.x.ROLLING
+				objA1.hitbox_extends.y = char.hitbox.y.ROLLING
+				objA1.state = char.state.ROLLING
+				objA1.flags2a |= (char.flag.IN_AIR | char.flag.ROLLING)
+				u8[A1 + 0x40] = 0x01
+
+				playSound(SFX_JUMP)
+			}
+		}
+	}
+}

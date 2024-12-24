@@ -33,19 +33,17 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir and configdir
-$ESUDO rm -rf ~/.local/share/Owlboy
-$ESUDO rm -rf ~/.config/Owlboy
-mkdir -p ~/.config
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
   # Fix a problem with savedata
+   $ESUDO rm -rf ~/.local/share/Owlboy
   mkdir -p ~/.local/share/Owlboy
   cp -r "$GAMEDIR/savedata/Saves/" ~/.local/share/Owlboy
 else
-  ln -sfv "$GAMEDIR/savedata" ~/.local/share/Owlboy
+  bind_directories ~/.local/share/Owlboy "$GAMEDIR/savedata"
 fi
-ln -sfv "$GAMEDIR/savedata" ~/.config/Owlboy
+bind_directories ~/.config/Owlboy "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -20,8 +21,7 @@ GAMEDIR=/$directory/ports/shippy
 
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf /storage/.local/share/shippy
-ln -sfv /$directory/ports/shippy /storage/.local/share/shippy
+bind_directories /storage/.local/share/shippy /$directory/ports/shippy
 
 
 cd $GAMEDIR
@@ -33,3 +33,4 @@ SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./shippy
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

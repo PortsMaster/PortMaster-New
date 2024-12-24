@@ -1,0 +1,200 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+//-------------------------------------------------------//
+// Bugernaut enemies from HCZ                            //
+//-------------------------------------------------------//
+
+//# address-hook(0x087a24) end(0x087a24)
+//# alias(fn087a24) deprecated
+function void Bugernaut.Init()
+{
+	Object.InitWithUpdateAddress(addressof(Bugernaut.BaseUpdate))
+}
+
+
+//# address-hook(0x087a2a) end(0x087a38)
+//# alias(fn087a2a) deprecated
+function void Bugernaut.BaseUpdate()
+{
+	// Targets:
+	//  - 0x087a42	-> objA0.base_state = 0x00
+	//  - 0x087a74	-> objA0.base_state = 0x02
+	//  - 0x087a92	-> objA0.base_state = 0x04
+	call tableLookupAddress(0x087a3c, objA0.base_state)
+
+	Enemy.DrawOrUnload()
+}
+
+
+//# address-hook(0x087a42) end(0x087a5a)
+function void fn087a42()
+{
+	setupObjectAttributesFull(0x087ba0)
+	u32[A0 + 0x30] = 0x087bba
+
+	// "spawnChildObjects(0x087bb2)" replaced by:
+	spawnChildObject(0x087abc, 0x00, 32, 0)
+
+	++objA0.value39
+	fn087a5e()
+}
+
+
+//# address-hook(0x087a5e) end(0x087a72)
+function void fn087a5e()
+{
+	objA0.base_state = 0x02
+	objA0.countdown_value = 0x3f
+	objA0.countdown_callback = 0x087a7c
+}
+
+
+//# address-hook(0x087a74) end(0x087a78)
+function void fn087a74()
+{
+	Object.AnimationProgressByLocalA1()
+	Object.CountdownAndTrigger()
+}
+
+
+//# address-hook(0x087a7c) end(0x087a90)
+function void fn087a7c()
+{
+	objA0.base_state = 0x04
+	objA0.countdown_value = 0x7f
+	objA0.countdown_callback = 0x087a5e
+}
+
+
+//# address-hook(0x087a92) end(0x087ab8)
+function void fn087a92()
+{
+	if ((objA0.render_flags & render_flag.VISIBLE) == 0)
+		return
+
+	CheckDistanceToPlayers()
+	fn084b5c()
+
+	D0.u16 = 0x0200
+	D1 = 0x10
+	Enemy.ChaseObject()
+
+	fn087b88()
+	UpdateMovementStraightSimple()
+	Object.AnimationProgressByLocalA1()
+	Object.CountdownAndTrigger()
+}
+
+
+//# address-hook(0x087abc) end(0x087aca)
+function void fn087abc()
+{
+	// Targets:
+	//  - 0x087ad4	-> objA0.base_state = 0x00
+	//  - 0x087ae6	-> objA0.base_state = 0x02
+	//  - 0x087b4c	-> objA0.base_state = 0x04
+	call tableLookupAddress(0x087ace, objA0.base_state)
+
+	fn085180()
+}
+
+
+//# address-hook(0x087ad4) end(0x087ae4)
+function void fn087ad4()
+{
+	setupObjectAttributesBasic(0x087bac)
+	u32[A0 + 0x30] = 0x087bbf
+}
+
+
+//# address-hook(0x087ae6) end(0x087b4a)
+function void fn087ae6()
+{
+	Object.AnimationProgressByLocalA1()
+	A1 = 0xffff0000 + u16[A0 + 0x46]
+	if (objA1.update_address != addressof(Bugernaut.BaseUpdate))
+	{
+		fn087b56()
+		if (_equal())
+		{
+			objA0.base_state = 0x04
+			D0.u16 = objA0.position.x.u16
+			D1.u16 = 0x0200
+			objA0.render_flags |= render_flag.FLIP_X
+			if (D0.u16 < u16[0xffffb000 + 0x10])
+			{
+				D1.s16 = -D1.s16
+				objA0.render_flags &= ~render_flag.FLIP_X
+			}
+			objA0.velocity.x = D1.u16
+			return
+		}
+	}
+
+	objA0.render_flags &= ~render_flag.FLIP_X
+	if (objA1.render_flags & render_flag.FLIP_X)
+	{
+		objA0.render_flags |= render_flag.FLIP_X
+	}
+
+	D0.u16 = 0x0200
+	D1 = 0x20
+	Enemy.ChaseObject()
+	fn087b88()
+	UpdateMovementStraightSimple()
+}
+
+
+//# address-hook(0x087b4c) end(0x087b50)
+function void fn087b4c()
+{
+	Object.AnimationProgressByLocalA1()
+	UpdateMovementStraightSimple()
+}
+
+
+//# address-hook(0x087b56) end(0x087b86)
+function void fn087b56()
+{
+	// Search for a large Bugernaut after own parent was destroyed
+	A2 = 0xffffb128
+	for (u8 i = 0; i < 0x5a; ++i)
+	{
+		if (u32[A2] == addressof(Bugernaut.BaseUpdate))
+		{
+			D1.u8 = u8[A2 + 0x39] + 1
+			if (D1.u8 <= 4)
+			{
+				u8[A2 + 0x39] = D1.u8
+				u16[A0 + 0x46] = A2.u16
+
+				_setZeroFlagByValue(1)
+				return
+			}
+		}
+
+		A2 += 0x4a
+	}
+
+	_setZeroFlagByValue(0)
+}
+
+
+//# address-hook(0x087b88) end(0x087b9e)
+function void fn087b88()
+{
+	D0.u16 = objA0.position.y.u16
+	D1.u16 = water.height.current - 8
+	if (D0.u16 >= D1.u16)
+	{
+		objA0.velocity.y = -0x200
+	}
+}

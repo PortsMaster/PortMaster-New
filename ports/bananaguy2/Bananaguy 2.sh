@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -22,27 +21,14 @@ get_controls
 GAMEDIR=/$directory/ports/bananaguy2/
 CONFDIR="$GAMEDIR/conf/"
 
-# Ensure the conf directory exists
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 mkdir -p "$GAMEDIR/conf"
-
-# Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
-export XDG_DATA_HOME="$CONFDIR"
-
 cd $GAMEDIR
 
-# Unpack bananaguy2.zip using unzip if it exists
-if [[ -f "gamedata/bananaguy2.zip" ]]; then
-  if "libs/7zzs" x "gamedata/bananaguy2.zip" -o"gamedata"; then
-    if [[ -f "gamedata/Bananaguy2.pck" ]]; then
-      $ESUDO rm "gamedata/bananaguy2.zip"
-    fi
-  fi
-fi
-
-
-
-
+# Set the XDG environment variables for config & savefiles
+export XDG_DATA_HOME="$CONFDIR"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
@@ -64,13 +50,13 @@ $ESUDO umount "$godot_file" || true
 $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
-export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+# By default FRT sets Select as a Force Quit Hotkey, with this we disable that.
+export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS 
 
-$ESUDO chmod 666 /dev/uinput
+
 $GPTOKEYB "$runtime" -c "./bananaguy2.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "gamedata/Bananaguy2.pck"
+pm_platform_helper "$runtime"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/bananaguy2.pck"
 
 $ESUDO umount "$godot_dir"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish

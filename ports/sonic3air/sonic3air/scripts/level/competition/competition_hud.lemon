@@ -1,0 +1,613 @@
+/*
+	This script file is part of the Sonic 3 A.I.R. script software distribution.
+	Copyright (C) 2017-2024 by Eukaryot
+
+	Published under the GNU GPLv3 open source software license, see license.txt
+	or https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
+
+
+
+// Lap display
+
+//# address-hook(0x03703a) end(0x03708c)
+function void fn03703a()
+{
+	objA0.mapping_offset = 0x0370d6
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0700)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x08
+	objA0.box_size.y = 0x0c
+	objA0.position.x.u16 = getScreenWidth() + 0x50
+	objA0.position.y.u16 = 0x98
+
+	if (objA0.subtype2c != 0)
+	{
+		if (competition_mode.multiplay == 0)
+		{
+			UnloadObject()
+			return
+		}
+
+		objA0.render_flags |= render_flag.COMPETITION_P2_SCREEN
+		objA0.update_address = 0x0370b4
+		fn0370b4()
+	}
+	else
+	{
+		objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+		objA0.update_address = 0x037092
+		fn037092()
+	}
+}
+
+
+//# address-hook(0x037092) end(0x0370ae)
+function void fn037092()
+{
+	D0.u8 = min(s8(competition_mode.current_lap.player1), s8(competition_mode.laps)) % 10
+	objA0.animation.sprite = D0.u8
+	DrawObject()
+}
+
+
+//# address-hook(0x0370b4) end(0x0370d0)
+function void fn0370b4()
+{
+	D0.u8 = min(s8(competition_mode.current_lap.player2), s8(competition_mode.laps)) % 10
+	objA0.animation.sprite = D0.u8
+	DrawObject()
+}
+
+
+
+// "Finish" text
+
+//# address-hook(0x03713a) end(0x037166)
+function void fn03713a()
+{
+	objA0.mapping_offset = 0x0375fa
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0756)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x80
+	objA0.box_size.y = 0x28
+	objA0.update_address = 0x03716c
+	if (competition_mode.multiplay == 0)
+	{
+		objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+	}
+	fn03716c()
+}
+
+
+//# address-hook(0x03716c) end(0x0371bc)
+function void fn03716c()
+{
+	Object.animationUpdate(0x03750e)
+	if (objA0.state == 0x01 && objA0.animation.timer == 0x05)
+	{
+		D1.u8 = objA0.animation.frame
+		if (D1.u8 == 0x1f)
+		{
+			playSound(0xad)
+		}
+		else if (D1.u8 == 0x01 || D1.u8 == 0x0b || D1.u8 == 0x15)
+		{
+			playSound(0xa7)
+		}
+	}
+
+	fn0371be()
+	if (u16[0xffffeee6] == 0)
+	{
+		DrawObject()
+	}
+}
+
+
+//# address-hook(0x0371be) end(0x037398)
+function void fn0371be()
+{
+	if (objA0.value3a == 0)
+	{
+		if (player1.control_override != 0)
+		{
+			objA0.state.both = 0x01
+			objA0.animation.sprite = 0x0a
+		}
+		else if (objA0.animation.sprite == 0x03)
+		{
+			hud.dirty.timer = 0x01
+			hud.dirty.timer.player2 = 0x01
+			objA0.value3a = 0x01
+		}
+		return
+	}
+
+	if (objA0.value3a == 0x01)
+	{
+		D0 = 0x93b63		// That is 9'59"99
+		if (D0 <= competition_mode.time_record.player1 || D0 <= competition_mode.time_record.player2)
+		{
+			objA0.value3a = 0x02
+			u16[0xffffeee8] = 0x78
+		}
+
+		D0.u8 = competition_mode.laps
+		if (D0.u8 < competition_mode.current_lap.player1)
+		{
+			objA0.state = (competition_mode.multiplay == 0) ? 3 : 4
+			objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+			objA0.value3a = 0x02
+			u16[0xffffeee8] = 0x78
+			if (competition_mode.multiplay != 0 && competition_mode.game_mode == 0)
+			{
+				u16[0xffffeee8] = 0x0168
+			}
+			hud.dirty.timer = 0x80
+
+			fn037430()
+			playSound(0x6a)
+
+			D0.u8 = competition_mode.laps
+			if (D0.u8 < competition_mode.current_lap.player2)
+			{
+				objA0.state = 0x06
+				objA0.render_flags &= ~render_flag.COMPETITION_P1_SCREEN
+				u16[0xffffeee8] = 0x78
+				hud.dirty.timer.player2 = 0x80
+			}
+			else
+			{
+				fn037406()
+			}
+		}
+		else if (D0.u8 < competition_mode.current_lap.player2)
+		{
+			objA0.state = 0x04
+			objA0.render_flags |= render_flag.COMPETITION_P2_SCREEN
+			objA0.value3a = 0x02
+			u16[0xffffeee8] = (competition_mode.game_mode != 0) ? 0x78 : 0x0168
+			hud.dirty.timer.player2 = 0x80
+
+			fn037406()
+			playSound(0x6a)
+		}
+		return
+	}
+
+	if (objA0.value3a != 0x02)
+	{
+		fn0373a4()
+		return
+	}
+
+	if (competition_mode.game_mode != 0)
+	{
+		if (hud.dirty.timer & 0x80)
+		{
+			if (competition_mode.multiplay != 0)
+			{
+				if ((hud.dirty.timer.player2 & 0x80) == 0)
+				{
+					jump 0x037306
+				}
+			}
+			--u16[0xffffeee8]
+			if (s16[0xffffeee8] < 0)
+			{
+				global.game_mode = (competition_mode.game_mode < 0) ? 0x50 : 0x40
+			}
+		}
+		return
+	}
+
+	if ((hud.dirty.timer & 0x80) || competition_mode.current_lap.player1 != competition_mode.laps)
+	{
+		--u16[0xffffeee8]
+		if (s16[0xffffeee8] >= 0)
+		{
+			if (competition_mode.time_record.player1 < 0x93b63 && competition_mode.time_record.player2 < 0x93b63)		// That is 9'59"99
+				return
+		}
+	}
+	else
+	{
+		if (competition_mode.time_record.player1 < 0x93b63 && competition_mode.time_record.player2 < 0x93b63)		// That is 9'59"99
+			return
+	}
+
+	// Stores time records for each track at a designated location
+	D0 = global.zone - 0x0e
+	D0.u8 = u8[0x03739f + D0.u16]
+	A1 = 0xffff7800
+	u32[A1 + D0.u16] = competition_mode.time_record.player1
+	u32[A1 + D0.u16 + 0x14] = competition_mode.time_record.player2
+	if ((hud.dirty.timer & 0x80) == 0)
+	{
+		u32[A1 + D0.u16] = 0x93b63			// That is 9'59"99
+	}
+	if ((hud.dirty.timer.player2 & 0x80) == 0)
+	{
+		u32[A1 + D0.u16 + 0x14] = 0x93b63	// That is 9'59"99
+	}
+
+	// Grand Prix progress through tracks
+	D0.u8 = global.zone - 0x0e
+	D0.u8 = u8[0x03739a + D0.u16]
+	if (D0.u8 != 0)
+	{
+		global.zone = D0.u8
+		level.restart.u8 = 1
+	}
+	else
+	{
+		global.game_mode = 0x44		// Competition Mode Results Screen
+	}
+}
+
+
+//# address-hook(0x0373a4) end(0x037404)
+function void fn0373a4()
+{
+	D0.u8 = competition_mode.laps
+	if (D0.u8 < competition_mode.current_lap.player1 && (hud.dirty.timer & 0x80) == 0)
+	{
+		objA0.state = 0x05
+		objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+		hud.dirty.timer = 0x80
+		u16[0xffffeee8] = 0x78
+		playSound(0x6a)
+	}
+
+	D0.u8 = competition_mode.laps
+	if (D0.u8 < competition_mode.current_lap.player2 && (hud.dirty.timer.player2 & 0x80) == 0)
+	{
+		objA0.state = 0x05
+		objA0.render_flags |= render_flag.COMPETITION_P2_SCREEN
+		hud.dirty.timer.player2 = 0x80
+		u16[0xffffeee8] = 0x78
+		playSound(0x6a)
+	}
+}
+
+
+
+//# address-hook(0x037406) end(0x03742e)
+function void fn037406()
+{
+	if (allocDynamicObjectAfterA0())
+	{
+		// Spawn "finish" neon text
+		objA1.update_address = 0x03713a
+		u16[A1 + 0x10] = 0x0120 + getScreenExtend()
+		u16[A1 + 0x14] = 0xb8
+		u8[A1 + 0x20] = 0x02
+		u8[A1 + 0x3a] = 0x03
+	}
+}
+
+
+//# address-hook(0x037430) end(0x0374b6)
+function void fn037430()
+{
+	// Only execute this in time attack mode
+	if (competition_mode.game_mode >= 0)
+		return
+
+	// Update Time Attack records
+	A1 = 0xffffe600 + ((global.zone - 0x0e) << 4)
+	D0 = competition_mode.time_record.player1
+	if (D0 < u32[A1])
+	{
+		u8[A1 + 0x0e] = u8[A1 + 0x0d]
+		u8[A1 + 0x0d] = u8[A1 + 0x0c]
+		u8[A1 + 0x0c] = competition_mode.character.player1
+		u32[A1 + 0x08] = u32[A1 + 0x04]
+		u32[A1 + 0x04] = u32[A1]
+		u32[A1] = D0
+		competition_mode.timeattack.new_record = 0
+	}
+	else if (D0 < u32[A1 + 0x04])
+	{
+		u8[A1 + 0x0e] = u8[A1 + 0x0d]
+		u8[A1 + 0x0d] = competition_mode.character.player1
+		u32[A1 + 0x08] = u32[A1 + 0x04]
+		u32[A1 + 0x04] = D0
+		competition_mode.timeattack.new_record = 0x01
+	}
+	else if (D0 < u32[A1 + 0x08])
+	{
+		u8[A1 + 0x0e] = competition_mode.character.player1
+		u32[A1 + 0x08] = D0
+		competition_mode.timeattack.new_record = 0x02
+	}
+
+	fn00c3c2()
+}
+
+
+
+// "Fault" text
+
+//# address-hook(0x0374b8) end(0x0374ea)
+function void fn0374b8()
+{
+	objA0.mapping_offset = 0x0375fa
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0756)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x80
+	objA0.box_size.y = 0x28
+	objA0.position.x.u16 = 0x0120 + getScreenExtend()
+	objA0.position.y.u16 = 0xb8
+	objA0.state = 0x07
+
+	objA0.update_address = 0x0374f0
+	fn0374f0()
+}
+
+
+//# address-hook(0x0374f0) end(0x037508)
+function void fn0374f0()
+{
+	if (u16[0xffffeee6] == 0)
+	{
+		UnloadObject()
+		return
+	}
+
+	Object.animationUpdate(0x03750e)
+	DrawObject()
+}
+
+
+
+// Time Display
+
+//# address-hook(0x037c8e) end(0x037cd6)
+function void fn037c8e()
+{
+	objA0.mapping_offset = 0xff7000
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0600)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x40
+	objA0.box_size.y = 0x10
+	objA0.position.x.u16 = 0xc8
+	objA0.position.y.u16 = 0x90
+	objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+
+	copyMemory(0xffff7000, 0x037e8e, 0x34)
+
+	objA0.update_address = 0x037cdc
+	fn037cdc()
+}
+
+
+//# address-hook(0x037cdc) end(0x037cfe)
+function void fn037cdc()
+{
+	A1 = addressof(player.score)							// Address: 0xfffffe26
+	A2 = 0xffff700a
+	A3 = addressof(timer.minutes)							// Address: 0xffffef61
+	D1 = competition_mode.lap_count.player1					// Address: 0xfffffe23
+	A4 = addressof(hud.dirty.timer)							// Address: 0xfffffe1e
+	A5 = addressof(competition_mode.time_record.player1)	// Address: 0xffffee52
+	A6 = 0xffff7828
+	fn037d7c()
+}
+
+
+//# address-hook(0x037d00) end(0x037d54)
+function void fn037d00()
+{
+	if (competition_mode.multiplay == 0)
+	{
+		UnloadObject()
+		return
+	}
+
+#if STANDALONE
+	objA0.mapping_offset = 0xffff7080
+#else
+	objA0.mapping_offset = 0xff7080		// Needs to be set that way for verification
+#endif
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0600)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x40
+	objA0.box_size.y = 0x10
+	objA0.position.x.u16 = 0xc8
+	objA0.position.y.u16 = 0x90
+	objA0.render_flags |= render_flag.COMPETITION_P2_SCREEN
+
+	copyMemory(0xffff7080, 0x037e8e, 0x34)
+
+	objA0.update_address = 0x037d5a
+	fn037d5a()
+}
+
+
+//# address-hook(0x037d5a) end(0x037d76)
+function void fn037d5a()
+{
+	A1 = addressof(player2.score)							// Address: 0xfffffed6
+	A2 = 0xffff708a
+	A3 = addressof(timer.minutes.player2)					// Address: 0xfffffed3
+	D1 = competition_mode.lap_count.player2					// Address: 0xffffee5d
+	A4 = addressof(hud.dirty.timer.player2)					// Address: 0xfffffec7
+	A5 = addressof(competition_mode.time_record.player2)	// Address: 0xffffee56
+	A6 = 0xffff7840
+	fn037d7c()
+}
+
+
+//# address-hook(0x037d7c) end(0x037e24)
+function void fn037d7c()
+{
+	bool goto037dd0 = false
+	if (s8[A4] > 0)
+	{
+		if (u32[A5] >= 0x93b63)		// That is 9'59"99
+		{
+			u8[A4] = 0x80
+			u32[A5] = 0x93b63		// That is 9'59"99
+			goto037dd0 = true
+		}
+		else
+		{
+			--A1
+			++u8[A1]
+			if (u8[A1] >= 60)
+			{
+				u8[A1] = 0
+				--A1
+				++u8[A1]
+				if (u8[A1] >= 60)
+				{
+					u8[A1] = 0
+					--A1
+					++u8[A1]
+				}
+			}
+		}
+	}
+
+	if (!goto037dd0)
+	{
+		D6 = u32[A3 - 0x01]
+		fn00b0e4()
+
+		if (D1.u16 < 0x05)
+		{
+			D1.u16 <<= 2
+			u32[A6 + D1.u16] = D6
+			D5 = u32[A6 + 0x14]
+			fn036f76()
+			u32[A5] = D6
+		}
+	}
+
+	++A5
+	A1 = 0x037e2a
+	D0 = u8[(A5+=1)-1] * 4
+	u32[(A2+=4)-4] = u32[A1 + D0.u16]
+	A2 += 8
+	D2 = 0
+	D0 = u8[(A5+=1)-1]
+	while (true)
+	{
+		D0.u16 -= 0x0a
+		if (D0.s16 < 0)
+			break
+
+		D2.u16 += 4
+	}
+	D0.u16 += 0x0a
+
+	u32[(A2+=4)-4] = u32[A1 + D2.u16]
+	A2 += 2
+	D0.u16 <<= 2
+	u32[(A2+=4)-4] = u32[A1 + D0.u16]
+	A2 += 8
+	D0 = u8[(A5+=1)-1]
+	D2 = 0
+	while (true)
+	{
+		D0.u16 -= 0x0a
+		if (D0.s16 < 0)
+			break
+
+		D2.u16 += 4
+	}
+	D0.u16 += 0x0a
+
+	u32[(A2+=4)-4] = u32[A1 + D2.u16]
+	A2 += 2
+	D0.u16 <<= 2
+	u32[(A2+=4)-4] = u32[A1 + D0.u16]
+
+	DrawObject()
+}
+
+
+
+//# address-hook(0x00b0e4) end(0x00b0f2)
+function void fn00b0e4()
+{
+	A1 = 0x037e52
+	D0 = D6.u8
+	D6.u8 = u8[A1 + D0.u16]
+}
+
+
+
+// Item Display
+
+//# address-hook(0x037ec2) end(0x037f14)
+function void fn037ec2()
+{
+	objA0.mapping_offset = 0x037f6a
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | 0x0750)
+	objA0.sprite_priority = 0
+	objA0.box_size.x = 0x10
+	objA0.box_size.y = 0x10
+	objA0.position.x.u16 = 0x120 + getScreenExtend()
+	objA0.position.y.u16 = 0xe0
+
+	if (objA0.subtype2c != 0)
+	{
+		if (!competition_mode.multiplay)
+		{
+			UnloadObject()
+			return
+		}
+
+		objA0.render_flags |= render_flag.COMPETITION_P2_SCREEN
+		objA0.update_address = 0x037f42
+		fn037f42()
+	}
+	else
+	{
+		objA0.render_flags |= render_flag.COMPETITION_P1_SCREEN
+		objA0.update_address = 0x037f1a
+		fn037f1a()
+	}
+}
+
+
+//# address-hook(0x037f1a) end(0x037f3c)
+function void fn037f1a()
+{
+	if (u8[0xffffb000 + 0x2b] & char.bonus.SPEED_UP)
+	{
+		objA0.animation.sprite = (global.move.speedcap == 0x0c00) ? 1 : 2
+	}
+	else
+	{
+		objA0.animation.sprite = (ring_counter == 0) ? 0 : 3
+	}
+	DrawObject()
+}
+
+
+//# address-hook(0x037f42) end(0x037f64)
+function void fn037f42()
+{
+	if (u8[0xffffb04a + 0x2b] & char.bonus.SPEED_UP)
+	{
+		objA0.animation.sprite = (global.move.speedcap.tails == 0x0c00) ? 1 : 2
+	}
+	else
+	{
+		objA0.animation.sprite = (ring_counter.player2 == 0) ? 0 : 3
+	}
+	DrawObject()
+}
+
+
+
+// Unknown
+
+//# address-hook(0x03827a) end(0x03827a)
+function void fn03827a()
+{
+}

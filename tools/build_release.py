@@ -28,7 +28,7 @@ README_FILE, SCREENSHOT_FILE, COVER_FILE, GAMEINFO_XML, PORT_JSON, PORT_SCRIPT, 
 REQUIRED_FILES = (
     (1<<README_FILE)     |
     (1<<SCREENSHOT_FILE) |
-    # (1<<GAMEINFO_XML)    |   ## Not yet required for every port.
+    (1<<GAMEINFO_XML)    |
     (1<<PORT_JSON)       |
     (1<<PORT_SCRIPT)     |
     (1<<PORT_DIR)        )
@@ -58,18 +58,19 @@ TODAY = str(datetime.datetime.today().date())
 
 ROOT_DIR = Path('.')
 
-CACHE_FILE    = ROOT_DIR / '.hash_cache'
-RELEASE_DIR   = ROOT_DIR / 'releases'
-RUNTIMES_DIR  = ROOT_DIR / 'runtimes'
-MANIFEST_FILE = RELEASE_DIR / 'manifest.json'
-STATUS_FILE   = RELEASE_DIR / 'ports_status.json'
-PORTS_DIR     = ROOT_DIR / 'ports'
+CACHE_FILE         = ROOT_DIR / '.hash_cache'
+RELEASE_DIR        = ROOT_DIR / 'releases'
+RUNTIMES_DIR       = ROOT_DIR / 'runtimes'
+MANIFEST_FILE      = RELEASE_DIR / 'manifest.json'
+STATUS_FILE        = RELEASE_DIR / 'ports_status.json'
+PORTS_DIR          = ROOT_DIR / 'ports'
+PORT_STAT_RAW_FILE = RELEASE_DIR / 'port_stats_raw.json'
 
-SPLIT_IMAGES  = True
+SPLIT_IMAGES  = False
 
-GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
+GITHUB_RUN    = (ROOT_DIR / '.github_check').is_file()
 
-LARGEST_FILE = (1024 * 1024 * 90)
+LARGEST_FILE  = (1024 * 1024 * 90)
 
 #############################################################################
 """
@@ -115,6 +116,7 @@ REPO_CONFIG = {
     'RELEASE_REPO': None,
     'REPO_NAME': None,
     'REPO_PREFIX': None,
+    'SPLIT_IMAGES': "N",
     }
 
 with open('SOURCE_SETUP.txt', 'r') as fh:
@@ -146,6 +148,45 @@ else:
     CURRENT_RELEASE_ID = "latest"
 
 #############################################################################
+
+
+PORT_STAT_RAW_DATA = None
+def get_historial_added_date(port_name, default=None):
+    """
+    Uses port_stats_raw.json to get a historial release date if it is not found.
+
+    This is used to keep info sane when moving ports between github repos.
+    """
+    global PORT_STAT_RAW_DATA
+
+    if PORT_STAT_RAW_DATA is None:
+        if not PORT_STAT_RAW_FILE.is_file():
+            return default
+
+        try:
+            with PORT_STAT_RAW_FILE.open('r') as fh:
+                PORT_STAT_RAW_DATA = json.load(fh)
+
+            if not isinstance(PORT_STAT_RAW_DATA, dict):
+                return default
+
+        except json.decoder.JSONDecodeError as err:
+            printf(f"Unable to load {str(PORT_STAT_RAW_FILE)}: {err}")
+            PORT_STAT_RAW_DATA = None
+            return default
+
+    if port_name not in PORT_STAT_RAW_DATA.get('ports', {}):
+        print(f"- {port_name} --> {default} (DEFAULT)")
+        return default
+
+    for release_id in sorted(PORT_STAT_RAW_DATA.get('releases', [])):
+        if port_name in PORT_STAT_RAW_DATA.get('release_data', {}).get(release_id, []):
+            added_date = release_id.split('_', 1)[0]
+            print(f"- {port_name} --> {added_date}")
+            return added_date
+
+    print(f"- {port_name} --> {default} (DEFAULT)")
+    return default
 
 
 def current_release_url(release_id):
@@ -237,7 +278,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
             port_data['dirs'].append(port_file.name + '/')
 
         elif port_file_type == PORT_JSON:
-            port_data['port_json'] = port_info_load(port_file)
+            port_data['port_json'] = port_info_load(port_file, port_dir.name)
             if port_data['port_json'] is None:
                 return None
 
@@ -251,7 +292,7 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
         port_data['files'][port_file.name] = port_file_type
 
     if port_data['name'] not in port_status:
-        port_date = TODAY
+        port_date = get_historial_added_date(port_data['name'], TODAY)
     else:
         port_date = port_status[port_data['name']]['date_added']
 
@@ -783,6 +824,7 @@ def port_info(file_name, ports_json, ports_status):
         }
 
     if clean_name not in ports_status:
+        default_status['date_added'] = get_historial_added_date(clean_name, TODAY)
         ports_status[clean_name] = default_status
 
     elif ports_status[clean_name]['md5'] != file_md5:
@@ -946,7 +988,7 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
             )
 
     ## Jank :|
-    if SPLIT_IMAGES:
+    if REPO_CONFIG.get('SPLIT_IMAGES', "N") == "Y":
         build_new_images_zip(old_manifest, new_manifest, port_status)
 
     utils = []
@@ -1059,7 +1101,7 @@ def main(argv):
     port_status = {}
     file_cache = None
 
-    if not GITHUB_RUN:
+    if not GITHUB_RUN or CACHE_FILE.is_file():
         file_cache = HashCache(CACHE_FILE)
 
     registered = {
