@@ -34,7 +34,7 @@ printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
 if [ -f "$GAMEDIR/libs/libicudata.so.63.bz2" ]; then
-    bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
+  bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
 fi
 
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
@@ -42,8 +42,10 @@ if [[ ! -d "${GAMEDIR}/data/" ]]; then
   BUILDER_OPTIONS=""
   if [ -f setup_heroes_of_might_and_magic_3_*.exe ]; then
     # Install from gog installer
-    FILES_TO_REMOVE="setup_heroes_of_might_and_magic_3_*.exe setup_heroes_of_might_and_magic_3_*.bin"
-    BUILDER_OPTIONS="--gog setup_heroes_of_might_and_magic_3_*.exe"
+    EXE_FILE=setup_heroes_of_might_and_magic_3_*.exe
+    BIN_FILE=setup_heroes_of_might_and_magic_3_*.bin
+    FILES_TO_REMOVE="$EXE_FILE $BIN_FILE"
+    BUILDER_OPTIONS="--gog $EXE_FILE"
   elif [ -d "${GAMEDIR}/cd1" ] && [ -d "${GAMEDIR}/cd2" ]; then
     BUILDER_OPTIONS="--cd1 ${GAMEDIR}/cd1 --cd2 ${GAMEDIR}/cd2"
     FILES_TO_REMOVE="${GAMEDIR}/cd1 ${GAMEDIR}/cd2"
