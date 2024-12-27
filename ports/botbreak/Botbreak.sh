@@ -34,7 +34,7 @@ cd $GAMEDIR
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 $GPTOKEYB "gmloader" -c ./botbreak.gptk &
-pm_platform_helper "gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader botbreak.apk
 
 pm_finish
