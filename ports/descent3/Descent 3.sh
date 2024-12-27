@@ -12,8 +12,8 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 get_controls
 
 # Variables - Set DEBUGMODE to 1 to use the Debug build
@@ -39,8 +39,7 @@ $ESUDO chmod 777 "$GAMEDIR/game"
 echo "Loading, please wait... (might take a while!)" > /dev/tty0
 
 # Create config dir
-rm -rf "$XDG_DATA_HOME/Outrage Entertainment/Descent 3"
-ln -s "$GAMEDIR/config" "$XDG_DATA_HOME/Outrage Entertainment/Descent 3"
+bind_directories "$XDG_DATA_HOME/Outrage Entertainment/Descent 3" "$GAMEDIR/config"
 
 # Source to parse d3.ini and import its settings
 source "$GAMEDIR/config/parseini.txt"
@@ -57,7 +56,7 @@ else
 fi
 
 if [ "$LIBGL_FB" != "" ]; then
-  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
   export LIBGL_DRIVERS_PATH="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
   ARG="-g $LIBGL_DRIVERS_PATH"
 fi 
