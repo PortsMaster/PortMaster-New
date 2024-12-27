@@ -34,22 +34,24 @@ printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
 if [ -f "$GAMEDIR/libs/libicudata.so.63.bz2" ]; then
-    bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
+  bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
 fi
 
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
-  FILES_TO_REMOVE=()
-  BUILDER_OPTIONS=()
+  FILES_TO_REMOVE=""
+  BUILDER_OPTIONS=""
   if [ -f setup_heroes_of_might_and_magic_3_*.exe ]; then
     # Install from gog installer
-    FILES_TO_REMOVE+=(setup_heroes_of_might_and_magic_3_*.exe setup_heroes_of_might_and_magic_3_*.bin)
-    BUILDER_OPTIONS+=("--gog" setup_heroes_of_might_and_magic_3_*.exe)
+    EXE_FILE=setup_heroes_of_might_and_magic_3_*.exe
+    BIN_FILE=setup_heroes_of_might_and_magic_3_*.bin
+    FILES_TO_REMOVE="$EXE_FILE $BIN_FILE"
+    BUILDER_OPTIONS="--gog $EXE_FILE"
   elif [ -d "${GAMEDIR}/cd1" ] && [ -d "${GAMEDIR}/cd2" ]; then
-    BUILDER_OPTIONS+=("--cd1" "${GAMEDIR}/cd1" "--cd2" "${GAMEDIR}/cd2")
-    FILES_TO_REMOVE+=("${GAMEDIR}/cd1" "${GAMEDIR}/cd2")
+    BUILDER_OPTIONS="--cd1 ${GAMEDIR}/cd1 --cd2 ${GAMEDIR}/cd2"
+    FILES_TO_REMOVE="${GAMEDIR}/cd1 ${GAMEDIR}/cd2"
   elif [ -d "${GAMEDIR}/install" ]; then
-    BUILDER_OPTIONS+=("--data" "${GAMEDIR}/install")
-    FILES_TO_REMOVE+=("${GAMEDIR}/install")
+    BUILDER_OPTIONS="--data ${GAMEDIR}/install"
+    FILES_TO_REMOVE="${GAMEDIR}/install"
   else
     echo "Missing game files, see README for more info." > $CUR_TTY
     sleep 5
@@ -58,8 +60,8 @@ if [[ ! -d "${GAMEDIR}/data/" ]]; then
     exit 1
   fi
 
-  LD_LIBRARY_PATH="${PWD}/libs:$LD_LIBRARY_PATH" bin/vcmibuilder --dest "${PWD}/data/" ${BUILDER_OPTIONS[@]}
-  $ESUDO rm -fRv ${FILES_TO_REMOVE[@]}
+  LD_LIBRARY_PATH="${PWD}/libs:$LD_LIBRARY_PATH" bin/vcmibuilder --dest "${PWD}/data/" $BUILDER_OPTIONS
+  $ESUDO rm -fRv $FILES_TO_REMOVE
   cd $GAMEDIR
 fi
 
@@ -80,4 +82,3 @@ $ESUDO systemctl restart oga_events &
 
 # Disable console
 printf "\033c" > $CUR_TTY
-
