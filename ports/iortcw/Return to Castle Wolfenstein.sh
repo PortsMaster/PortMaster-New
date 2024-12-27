@@ -20,6 +20,9 @@ if [ ! -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg ]; then
   if [ "$LOWRES" == "Y" ]; then 
     mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.480 $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
     rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
+  elif [[ -f /etc/trimui_device.txt && "x$(cat /etc/trimui_device.txt)" == "tsp" ]]; then
+      mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.tsp $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
+      rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
   elif [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]] && [[ -e "/dev/input/by-path/platform-singleadc-joypad-event-joystick" ]]; then 
     mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.rg552 $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
     rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.* 
