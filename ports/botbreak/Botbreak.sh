@@ -14,38 +14,27 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="$directory/ports/botbreak"
+GAMEDIR=/$directory/ports/botbreak
 
 # We log the execution of the script into log.txt
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Port specific additional libraries should be included within the port's directory in a separate subfolder named libs.
 # Prioritize the armhf libs to avoid conflicts with aarch64
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 
 cd $GAMEDIR
-
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c ./botbreak.gptk &
-
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
+$GPTOKEYB "gmloader" -c ./botbreak.gptk &
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader botbreak.apk
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+pm_finish
