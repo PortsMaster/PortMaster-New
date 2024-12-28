@@ -33,7 +33,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 #Prepare game files
-	#Check for compatible game version
+	#Check if demo version is present
 	if [ -f "$GAMEDIR/assets/data.win" ]; then
 		# get data.win checksum for the demo version from Itch.io
 			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
@@ -46,8 +46,8 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
-		# get data.win checksum for the demo version from Steam.io
-		checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
+			# get data.win checksum for the demo version from Steam.io
+			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 				elif [ "$checksum" == "897007bdb8ca0dd37bfe6ffffb2e7405" ]; then
 				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
 				# Rename data.win file
@@ -59,8 +59,8 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
-		# get data.win checksum for the full version from Itch.io
-		checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
+			# get data.win checksum for the full version from Itch.io
+			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 				elif [ "$checksum" == "893b350536586a318ba1ee2375045e37" ]; then
 				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
 				# Rename data.win file
@@ -71,7 +71,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
 			else 
-		#Setup files for the full Steam version
+	#		Setup files for the full Steam version
 				# Rename data.win file
 				mv assets/data.win assets/game.droid
 				#Delete all redundant files
@@ -86,9 +86,9 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 		pm_message "Data.win is missing or the game is already installed, skipping the installation" 
 fi
 
-# Swap left and right joystick for broader device compatibility
+# Swap left and right sticks for broader device compatibility
 swapabxy() {
-     # Update SDL_GAMECONTROLLERCONFIG to swap left and right sticks
+     # Update SDL_GAMECONTROLLERCONFIG to swap sticks
     if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
       # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
       SDL_swap_gpbuttons.py -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
@@ -98,7 +98,7 @@ swapabxy() {
       export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | SDL_swap_gpbuttons.py -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
     fi
 }
-if [ -f "$GAMEDIR/SDL_swap_gpbuttons.txt" ]; then
+if [ "${ANALOG_STICKS}" -lt 2 ]; then
     swapabxy
 fi
  
