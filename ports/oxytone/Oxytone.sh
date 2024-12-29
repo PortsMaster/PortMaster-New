@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PATH="$GAMEDIR/tools:$PATH"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
-$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+$ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
 
 #Prepare game files
 	#Check if compatible game files are present
