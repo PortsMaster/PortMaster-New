@@ -58,26 +58,32 @@ fi
 chmod +x ./love
 $GPTOKEYB "love" &
 ./love minilauncher
-FOLDER=$(<selected_game.txt)
+
+# see what they selected in the minilauncher
+FOLDER="$(cat selected_game.txt)"
 
 # Cleanup minilauncher
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
 
+if [ ! -z "${FOLDER}" ]; then
 
-[ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ $FOLDER/lib gamedata/lib64
-[ -f falcon_mkxp.bin ] && cp falcon_mkxp.bin "$FOLDER/falcon_mkxp.bin"
-if [ $FOLDER == "minisode2" ]; then
-  cp conf/mkxp2.conf "$FOLDER/mkxp.conf"
-else
-  cp conf/mkxp.conf $FOLDER/
-fi
+    [ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ ./$FOLDER/lib gamedata/lib64
+    [ -f falcon_mkxp.bin ] && cp falcon_mkxp.bin "./$FOLDER/falcon_mkxp.bin"
+    if [ $FOLDER == "minisode2" ]; then
+      cp conf/mkxp2.conf "./$FOLDER/mkxp.conf"
+    else
+      cp conf/mkxp.conf ./$FOLDER/
+    fi
 
-$GPTOKEYB "falcon_mkxp.bin" -c "./to_the_moon.gptk" &
-$GAMEDIR/$FOLDER/falcon_mkxp.bin
-$ESUDO rm -f selected_game.txt
+    $GPTOKEYB "falcon_mkxp.bin" -c "./to_the_moon.gptk" &
+    $GAMEDIR/$FOLDER/falcon_mkxp.bin
+    $ESUDO rm -f selected_game.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+    # Cleanup from the game
+    $ESUDO kill -9 $(pidof gptokeyb)
+    $ESUDO systemctl restart oga_events &
+    printf "\033c" > /dev/tty0
+
+fi	
