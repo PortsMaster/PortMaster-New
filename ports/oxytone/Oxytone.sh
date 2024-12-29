@@ -32,9 +32,9 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 #Prepare game files
-	#Check if demo version is present
+	#Check if compatible game are present
 	if [ -f "$GAMEDIR/assets/data.win" ]; then
-		# get data.win checksum for the demo version from Itch.io
+			# Get data.win checksum for the demo version from Itch.io
 			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 				if [ "$checksum" == "edf83c4f9f4961ecbb398bdb526c9ee7" ]; then
 				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
@@ -45,7 +45,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
-			# get data.win checksum for the demo version from Steam.io
+			# Get data.win checksum for the demo version from Steam.io
 			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 				elif [ "$checksum" == "897007bdb8ca0dd37bfe6ffffb2e7405" ]; then
 				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
@@ -58,7 +58,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
-			# get data.win checksum for the full version from Itch.io
+			# Get data.win checksum for the full version from Itch.io
 			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 				elif [ "$checksum" == "893b350536586a318ba1ee2375045e37" ]; then
 				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
@@ -70,7 +70,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
 			else 
-	#		Setup files for the full Steam version
+			# Setup files for the full Steam version
 				# Rename data.win file
 				mv assets/data.win assets/game.droid
 				#Delete all redundant files
@@ -101,7 +101,6 @@ if [ "${ANALOG_STICKS}" -lt 2 ]; then
     swapsticks
 fi
  
-
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "oxytone.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
