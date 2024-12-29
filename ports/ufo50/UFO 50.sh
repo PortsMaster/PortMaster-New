@@ -49,8 +49,8 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./libs/splash "splash.png" 1 
-    $ESUDO ./libs/splash "splash.png" 2000
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
+    $ESUDO ./tools/splash "splash.png" 2000 & 
 fi
 
 # Assign gptokeyb and load the game
