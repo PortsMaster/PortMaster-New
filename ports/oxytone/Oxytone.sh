@@ -32,7 +32,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 #Prepare game files
-	#Check if compatible game are present
+	#Check if compatible game files are present
 	if [ -f "$GAMEDIR/assets/data.win" ]; then
 			# Get data.win checksum for the demo version from Itch.io
 			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
