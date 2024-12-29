@@ -86,7 +86,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 fi
 
 # Swap left and right sticks for broader device compatibility
-swapabxy() {
+swapsticks() {
      # Update SDL_GAMECONTROLLERCONFIG to swap sticks
     if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
       # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
@@ -98,7 +98,7 @@ swapabxy() {
     fi
 }
 if [ "${ANALOG_STICKS}" -lt 2 ]; then
-    swapabxy
+    swapsticks
 fi
  
 
