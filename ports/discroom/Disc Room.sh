@@ -47,10 +47,10 @@ if [ ! -f "$GAMEDIR/gamedata/game.droid" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        pm_message "This port requires the latest version of PortMaster."
     fi
 else
-    echo "Patching process already completed. Skipping."
+    pm_message "Patching process already completed. Skipping."
 fi
 
 if [ ! -f "$GAMEDIR/gamedata/config.ini" ]; then
