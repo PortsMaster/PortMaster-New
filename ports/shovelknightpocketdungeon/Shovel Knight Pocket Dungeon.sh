@@ -35,7 +35,7 @@ export PATCHDIR=$GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Permissions
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext"
 $ESUDO chmod +x "$TOOLDIR/splash"
 
 # dos2unix in case we need it
