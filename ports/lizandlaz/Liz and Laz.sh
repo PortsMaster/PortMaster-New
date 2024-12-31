@@ -29,9 +29,13 @@ export GMLOADER_PLATFORM="os_linux"
 
 cd $GAMEDIR
 
-# Delete unneeded files and rename data.win
-rm -f gamedata/*.{dll,exe}
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+# Patch data.win
+if [ -f "./gamedata/Liz and Laz 1.exe" ]; then
+  $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
+  [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
+  # Delete unneeded files
+  rm -f gamedata/*.{dll,exe}
+fi
 
 # Check if there are any .ogg or .mp3 files in the ./gamedata directory
 if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
