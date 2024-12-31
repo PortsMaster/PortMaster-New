@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Neckbolt for developing this game, check it on [Steam](https://store.steampowered.com/app/2655470/Alruna_and_the_NecroIndustrialists/)	 
+Thanks to Neckbolt for developing this game, check it on [Steam](https://store.steampowered.com/app/2655470/Alruna_and_the_NecroIndustrialists/)
 
 ## Controls
 
