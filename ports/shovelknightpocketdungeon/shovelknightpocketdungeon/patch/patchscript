@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Set the log file
+LOGFILE="$PATCHDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
+
+echo "PATCHDIR is set to: $PATCHDIR"
+
+# Exports
+export TOOLDIR="$PATCHDIR/tools"
+export TMPDIR="$PATCHDIR/tmp"
+export PATH=$PATH:TOOLDIR
+export LD_LIBRARY_PATH="/usr/lib:$PATCHDIR/libs:$TOOLDIR/libs:$LD_LIBRARY_PATH"
+
+# Permissions
+chmod 777 "$TOOLDIR/gmKtool.py"
+chmod 777 "$TOOLDIR/oggdec"
+chmod 777 "$TOOLDIR/oggenc"
+chmod 777 "$TOOLDIR/xdelta3"
+
+
+
+cd "$PATCHDIR"
+
+process_game() {
+    # Define files to delete
+    local files_to_delete=(
+      "./gamedata/display_measure.dll"
+      "./gamedata/steam_api.dll"
+      "./gamedata/Steamworks.gml.dll"
+      "./gamedata/Shovel Knight Pocket Dungeon.exe"
+    )
+
+    # Delete unnecessary files
+    for file in "${files_to_delete[@]}"; do
+        if [ -f "$file" ]; then
+            rm "$file"
+            echo "Deleted $file"
+        else
+            echo "$file not found"
+        fi
+    done
+
+    # If "gamedata/data.win" exists and matches the checksum of the GOG or Steam versions
+    if [ -f "./gamedata/data.win" ]; then
+    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
+    
+        # Checksum for the Steam version
+        if [ "$checksum" = "126606ef753d1567f19689584cf1c204" ]; then
+	    echo "Steam data.win is being patched"
+            $ESUDO tools/xdelta3 -d -s gamedata/data.win -f ./patch/skpdsteam.xdelta gamedata/game.droid && \
+            rm gamedata/data.win
+ 	        echo "Steam data.win has been patched"
+        else
+            echo "Error: MD5 checksum of data.win does not match any expected version."
+        fi
+	fi	
+
+      # Compress audio
+    if [ -f "$PATCHDIR/compress.txt" ]; then
+        echo "Compressing audio. The process will take 5-10 minutes"
+        mkdir -p "$TMPDIR"
+        $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$PATCHDIR/gamedata/game.droid"
+
+        if [ $? -eq 0 ]; then
+            mv $TMPDIR/* "$PATCHDIR/gamedata"
+            rm "$PATCHDIR/compress.txt"
+            rmdir "$TMPDIR"
+            echo "Audio compression applied successfully."
+        else
+            echo "Audio compression failed."
+            rm -rf "$TMPDIR"
+        fi
+    fi
+
+    sleep 3
+	
+	#Delete "place game files here" and echo patching complete
+	rm -f "./gamedata/place game files here"
+	mv "$PATCHDIR/gamedata"/* "$PATCHDIR" && rm -rf "$PATCHDIR/gamedata" || exit 1
+	echo "Patching is complete!"
+}
+
+# Call the function
+process_game
