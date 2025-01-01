@@ -37,10 +37,11 @@ export PATCHDIR=$GAMEDIR
 # Permissions
 $ESUDO chmod +x "$GAMEDIR/gmloadernext"
 $ESUDO chmod +x "$TOOLDIR/splash"
+$ESUDO chmod +x "$GAMEDIR/patch/patchscript"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/patch/patcher"
+dos2unix "$GAMEDIR/patch/patchscript"
 
 cd "$GAMEDIR"
 
