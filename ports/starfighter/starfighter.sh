@@ -1,5 +1,4 @@
 #!/bin/sh
-# PORTMASTER: starfighter.zip, starfighter.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -37,9 +36,11 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # Use bind_directories to reroute that to a location within the ports folder.
 bind_directories ~/.starfighter $GAMEDIR/conf/.starfighter 
 
-pm_platform_helper "$GAMEDIR/starfighter.${DEVICE_ARCH}"
+pm_platform_helper "$GAMEDIR/starfighter"
 
+$GPTOKEYB "starfighter" &
+pm_platform_helper "$GAMEDIR/starfighter"
 cd $GAMEDIR/starfighter/share/starfighter
-../../bin/starfighter "$@"
+../../bin/starfighter
 
 pm_finish
