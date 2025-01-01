@@ -49,14 +49,13 @@ if grep -q "^pixWidth=[0-9]\+" "$GAMEDIR/Settings.ini"; then
   sed -i "s/^fsWidth=[0-9]\+/fsWidth=$DISPLAY_WIDTH/" "$GAMEDIR/Settings.ini"
   sed -i "s/^fsHeight=[0-9]\+/fsHeight=$DISPLAY_HEIGHT/" "$GAMEDIR/Settings.ini"
 else
-  echo "Possible invalid or missing settings.ini!" > $CUR_TTY
+  pm_message "Possible invalid or missing settings.ini!"
 fi
 
 # Run the game
-echo "Loading, please wait!" > $CUR_TTY
 $GPTOKEYB "sonicmania" &
+pm_platform_helper "$GAMEDIR/sonicmania"
 ./sonicmania
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
+# Cleanup
+pm_finish
