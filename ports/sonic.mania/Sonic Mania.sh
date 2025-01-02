@@ -35,34 +35,27 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 777 $GAMEDIR/sonicmania
 
 # Modify PixWidth
-MED=320 # 4:3
+MED=320  # 4:3
 HIGH=424 # 16:9
 
 # Calculate the aspect ratio as a floating-point number
 ASPECT=$(awk "BEGIN {print $DISPLAY_WIDTH / $DISPLAY_HEIGHT}")
 
 # Set WIDTH based on aspect ratio comparisons
-if awk "BEGIN {exit ($ASPECT > 1.3)}"; then
-    WIDTH=$HIGH
-elif awk "BEGIN {exit ($ASPECT <= 1.3)}"; then
-    WIDTH=$MED
-else
-    WIDTH=$MED
-fi
+WIDTH=$(awk "BEGIN {print ($ASPECT > 1.3 ? $HIGH : $MED)}")
 
-if grep -q "^PixWidth=[0-9]\+" "$GAMEDIR/settings.ini"; then
-    sed -i "s/^PixWidth=[0-9]\+/PixWidth=$WIDTH/" "$GAMEDIR/settings.ini"
-    sed -i "s/^PixWidth=[0-9]\+/fsWidth=$DISPLAY_WIDTH/" "$GAMEDIR/settings.ini"
-    sed -i "s/^PixWidth=[0-9]\+/fsHeight=$DISPLAY_HEIGHT/" "$GAMEDIR/settings.ini"
+if grep -q "^pixWidth=[0-9]\+" "$GAMEDIR/Settings.ini"; then
+  sed -i "s/^pixWidth=[0-9]\+/pixWidth=$WIDTH/" "$GAMEDIR/Settings.ini"
+  sed -i "s/^fsWidth=[0-9]\+/fsWidth=$DISPLAY_WIDTH/" "$GAMEDIR/Settings.ini"
+  sed -i "s/^fsHeight=[0-9]\+/fsHeight=$DISPLAY_HEIGHT/" "$GAMEDIR/Settings.ini"
 else
-    echo "Possible invalid or missing settings.ini!" > $CUR_TTY
+  pm_message "Possible invalid or missing settings.ini!"
 fi
 
 # Run the game
-echo "Loading, please wait!" > $CUR_TTY
-$GPTOKEYB "sonicmania" & 
+$GPTOKEYB "sonicmania" &
+pm_platform_helper "$GAMEDIR/sonicmania"
 ./sonicmania
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
+# Cleanup
+pm_finish

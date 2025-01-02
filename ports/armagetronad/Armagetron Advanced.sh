@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -31,8 +31,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 #export XDG_DATA_HOME="$CONFDIR"
 
-$ESUDO rm -rf ~/.armagetronad
-ln -sfv /$directory/ports/armagetronad/conf/.armagetronad ~/
+bind_directories ~/.armagetronad /$directory/ports/armagetronad/conf/.armagetronad
 
 cd $GAMEDIR
 

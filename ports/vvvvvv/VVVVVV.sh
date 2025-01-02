@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -20,10 +21,10 @@ GAMEDIR="/$directory/ports/VVVVVV"
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1
-$ESUDO rm -rf ~/.local/share/VVVVVV
-ln -s $GAMEDIR ~/.local/share/
+bind_directories ~/.local/share/VVVVVV $GAMEDIR
 $ESUDO $controlfolder/oga_controls VVVVVV $param_device &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./VVVVVV 2>&1 | tee $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof oga_controls)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+

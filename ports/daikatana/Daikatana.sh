@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 source $controlfolder/tasksetter
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -30,10 +29,8 @@ printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
 # Create the symlinks
-mkdir -p "$HOME/.local/share"
 mkdir -p "$GAMEDIR/savedata/gamedata"
-$ESUDO rm -rf "$HOME/.local/share/Daikatana"
-$ESUDO ln -s "$GAMEDIR/savedata" "$HOME/.local/share/Daikatana"
+bind_directories "$HOME/.local/share/Daikatana" "$GAMEDIR/savedata"
 
 # We want to avoid stale .cfg files from Desktop daikatana installs...
 rm -f "$GAMEDIR/gamedata/"*.cfg
@@ -52,6 +49,7 @@ fi
 
 if [ "$LIBGL_FB" != "" ]; then
 export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 export LIBGL_FB=1
 fi 
 

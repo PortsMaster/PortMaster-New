@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -20,8 +21,7 @@ GAMEDIR=/$directory/ports/hex-a-hop
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.hex-a-hop
-ln -sfv /$directory/ports/hex-a-hop/conf/.hex-a-hop ~/
+bind_directories ~/.hex-a-hop /$directory/ports/hex-a-hop/conf/.hex-a-hop
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -34,3 +34,4 @@ $GPTOKEYB "hex-a-hop"  -c "./hex-a-hop.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+

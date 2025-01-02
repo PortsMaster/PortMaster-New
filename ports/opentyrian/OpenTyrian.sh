@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -31,8 +32,8 @@ elif [[ $whichos == *"RetroOZ"* ]]; then
   cp /home/odroid/.asoundrcfords /home/odroid/.asoundrc
 fi
 
-$ESUDO rm -rf ~/.config/opentyrian
-ln -sfv $GAMEDIR/ ~/.config/
+bind_directories ~/.config/opentyrian $GAMEDIR/
+
 cd $GAMEDIR
 $GPTOKEYB opentyrian &
 $GAMEDIR/opentyrian --data=$GAMEDIR/data 2>&1 | tee $GAMEDIR/log.txt
@@ -46,4 +47,5 @@ fi
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+
 
