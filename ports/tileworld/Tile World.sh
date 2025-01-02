@@ -31,12 +31,8 @@ cd $GAMEDIR
 
 bind_directories ~/.tworld $GAMEDIR/conf/.tworld
 
-# set game mod
-cp -f -v $GAMEDIR/res/rc.hh.original $GAMEDIR/res/rc
-cp -f -v $GAMEDIR/res/atiles_orig.png $GAMEDIR/res/atiles.png
-
-$GPTOKEYB "tworld-hh.${DEVICE_ARCH}" -c "$GAMEDIR/tileworld.gptk" &
-pm_platform_helper "$GAMEDIR/tworld-hh.${DEVICE_ARCH}"
-./tworld-hh.${DEVICE_ARCH} -F
+$GPTOKEYB "gameselector.${DEVICE_ARCH}" -c "$GAMEDIR/gameselector.gptk" &
+pm_platform_helper "$GAMEDIR/gameselector.${DEVICE_ARCH}"
+./gameselector.${DEVICE_ARCH}
 
 pm_finish
