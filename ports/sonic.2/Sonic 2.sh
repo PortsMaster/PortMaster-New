@@ -62,7 +62,7 @@ else
 fi
 
 # Check if running Sonic 2 Absolute
-result=$(grep "^Sonic2Absolute=true" "$GAMEDIR/mods/modconfig.ini")
+result=$(grep -E "^(Sonic2Absolute|S2A)=true" "$GAMEDIR/mods/modconfig.ini")
 
 if [ -n "$result" ]; then
     GAME=sonic2absolute

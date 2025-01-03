@@ -11,7 +11,7 @@ Add your Sonic The Hedgehog 2 `Data.rsdk` file to `ports/sonic1`. You can retrie
 |DOWN + ABXY|Spindash|
 
 ## Using mods
-Open the dev menu by pressing Select and choose your mods to activate. The [Sonic 2 Absolute](https://teamforeveronline.wixsite.com/home/sonic-2-absolute) mod will use a custom binary to activate its menus.
+Open the dev menu by pressing Select and choose your mods to activate. The [Sonic 2 Absolute](https://teamforeveronline.wixsite.com/home/sonic-2-absolute) mod will use a custom binary to activate its menus. S2A 1.2.1 (and possibly later) will not work, you'll have to scroll down on the download page to download the latest mod-only version.
 
 ## Thanks
 christianhaitan -- the original port 
