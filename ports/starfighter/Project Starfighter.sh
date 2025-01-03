@@ -22,7 +22,7 @@ get_controls
 GAMEDIR=/$directory/ports/starfighter/
 CONFDIR="$GAMEDIR/conf/"
 
-mkdir -p "$GAMEDIR/conf"
+mkdir -p "$GAMEDIR/conf/.config/starfighter"
 
 cd $GAMEDIR
 
@@ -34,7 +34,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # if XDG Path does not work
 # Use bind_directories to reroute that to a location within the ports folder.
-bind_directories ~/.starfighter $GAMEDIR/conf/.starfighter 
+bind_directories ~/.starfighter $GAMEDIR/conf/.config/starfighter 
 
 pm_platform_helper "$GAMEDIR/starfighter"
 
