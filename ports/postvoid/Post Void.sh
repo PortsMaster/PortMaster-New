@@ -28,7 +28,7 @@ $ESUDO chmod +x -R $GAMEDIR/*
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Post Void"
-export PATCHER_TIME="10 minutes"
+export PATCHER_TIME="5 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # dos2unix in case we need it
