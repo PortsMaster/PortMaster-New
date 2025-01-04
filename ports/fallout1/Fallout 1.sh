@@ -20,10 +20,13 @@ PORTNAME="Fallout 1"
 
 to_lower_case() {
     for SRC in $(find "$1" -depth); do
-    DST=$(dirname "${SRC}")/$(basename "${SRC}" | tr '[A-Z]' '[a-z]')
-    if [ "${SRC}" != "${DST}" ]; then
-        [ ! -e "${DST}" ] && $ESUDO mv -vT "${SRC}" "${DST}" || echo "- ${SRC} was not renamed"
-    fi
+        DST=$(dirname "${SRC}")/$(basename "${SRC}" | tr '[A-Z]' '[a-z]')
+        if [ "${SRC}" != "${DST}" ]; then
+            [ ! -e "${DST}" ] &&
+            $ESUDO mv -vT "${SRC}" "${DST}.temp" &&
+            $ESUDO mv -vT "${DST}.temp" "${DST}" ||
+                echo "- ${SRC} was not renamed"
+        fi
     done
 }
 
