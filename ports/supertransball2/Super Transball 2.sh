@@ -13,8 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -33,8 +31,7 @@ export XDG_DATA_HOME="$CONFDIR"
 export SUPERTRANSBALL2_CONFIG_DIR=$GAMEDIR/data/
 export SUPERTRANSBALL2_DATA_DIR=$GAMEDIR/data/
 
-$ESUDO rm -rf ~/.supertransball2
-ln -sfv $GAMEDIR/conf/.supertransball2 ~/
+bind_directories ~/.supertransball2 $GAMEDIR/conf/.supertransball2
 
 cd $GAMEDIR
 

@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to NNB for creating this game! https://nnbnh.itch.io/septuple
+Thanks to NNB for creating this game and allowing us to host it! Check the game's page at [Itch.io](https://nnbnh.itch.io/septuple)
 
 ## Controls
 

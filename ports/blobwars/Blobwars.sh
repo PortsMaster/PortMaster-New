@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -22,8 +22,7 @@ GAMEDIR=/$directory/ports/blobwars
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.parallelrealities/blobwars
-ln -sfv /$directory/ports/blobwars/conf/.parallelrealities/blobwars ~/
+bind_directories ~/.parallelrealities/blobwars /$directory/ports/blobwars/conf/.parallelrealities/blobwars
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -34,4 +33,5 @@ $GPTOKEYB "blobwars.${DEVICE_ARCH}" -c "./blobwars.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
 
