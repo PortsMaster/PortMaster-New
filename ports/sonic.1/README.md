@@ -11,7 +11,7 @@ Add your Sonic The Hedgehog `Data.rsdk` file to `ports/sonic1`. You can retrieve
 |DOWN + ABXY|Spindash|
 
 ## Using mods
-Open the dev menu by pressing Select and choose your mods to activate. The [Sonic Forever](https://teamforeveronline.wixsite.com/home/sonic-1-forever) stand-alone mod will use a custom binary to activate its menus.
+Open the dev menu by pressing Select and choose your mods to activate. The [Sonic Forever](https://teamforeveronline.wixsite.com/home/sonic-1-forever) stand-alone mod will use a custom binary to activate its menus. S1F 1.5.1 (and possibly later) will not work, you'll have to scroll down on the download page to download the latest mod-only version.
 
 ## Thanks
 christianhaitan -- the original port  
