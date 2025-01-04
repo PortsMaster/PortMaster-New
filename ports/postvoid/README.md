@@ -8,13 +8,11 @@ Source: https://store.steampowered.com/app/1285670/Post_Void/
 
 | Button | Action |
 |--|--| 
-|D-pad/L-stick|Movement|
+|L-stick|Movement|
 |R-stick|Mouse/Aim|
-|L1 /L2|Slide|
-|R1/R2 |Shoot/Select|
-|A/B|Jump|
-|X/Y|Reload|
+|L2|Slide|
+|R2|Shoot/Select|
+|A|Jump|
+|X|Reload|
 |Start|Pause/Menu|
-|Select|End Run|
-
 
