@@ -13,20 +13,17 @@ else
 fi
 
 source $controlfolder/control.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/ionfury"
-
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
 sed -i 's/ScreenMode = 1/ScreenMode = 0/' $GAMEDIR/conf/eduke32/eduke32.cfg
 sed -i "s/ScreenWidth[[:space:]]*=[[:space:]]*[^[:space:]]*/ScreenWidth = $DISPLAY_WIDTH/" "$GAMEDIR/conf/eduke32/eduke32.cfg"
 sed -i "s/ScreenHeight[[:space:]]*=[[:space:]]*[^[:space:]]*/ScreenHeight = $DISPLAY_HEIGHT/" "$GAMEDIR/conf/eduke32/eduke32.cfg"
+sleep 0.3
 
 cd $GAMEDIR
 
@@ -34,21 +31,34 @@ cd $GAMEDIR
 $ESUDO rm $GAMEDIR/eduke32.log
 $ESUDO rm $GAMEDIR/fury.log
 
-bind_directories ~/.config/eduke32 $GAMEDIR/conf/eduke32
+bind_directories ~/.config/eduke32 "$GAMEDIR/conf/eduke32"
+
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Ensure Swap space is prepared or eduke32 may crash or fail to launch
-printf "\033c" > /dev/tty0
 if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
-	  echo "Preparing Swap File, please wait..." > /dev/tty0
+	  pm_message "Preparing Swap File, please wait..."
     [ -f /swapfile ] && $ESUDO swapoff -v /swapfile
     [ -f /swapfile ] && $ESUDO rm -f /swapfile
     $ESUDO fallocate -l 384M /swapfile
     $ESUDO chmod 600 /swapfile
     $ESUDO mkswap /swapfile
     $ESUDO swapon /swapfile
+    [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
+elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
+	  pm_message "Preparing Swap File, please wait..."
+    [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
+    [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
+    $ESUDO fallocate -l 384M /media/SHARE/swapfile
+    $ESUDO chmod 600 /media/SHARE/swapfile
+    $ESUDO mkswap /media/SHARE/swapfile
+    $ESUDO swapon /media/SHARE/swapfile
+    [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 fi
 
-if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == *'RG40XX'* ]]; then
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/ionfurytriggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/ionfury.gptk"
