@@ -56,6 +56,7 @@ fi
 
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.$DEVICE_ARCH/libEGL.so.1"
   export LIBGL_DRIVERS_PATH="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
   ARG="-g $LIBGL_DRIVERS_PATH"
 fi 
