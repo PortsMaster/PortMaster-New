@@ -1,7 +1,7 @@
 ## Notes
 
 Original version by:
-https://bootdiskrevolution.com
+https://bootdiskrevolution.com ([steam link](https://store.steampowered.com/app/396350/Bleed_2/))
 
 Portmaster Version: 	
 https://github.com/JohnnyonFlame/FNAPatches
