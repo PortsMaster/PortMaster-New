@@ -39,7 +39,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Ensure Swap space is prepared or eduke32 may crash or fail to launch
 if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
-	  pm_message "Preparing Swap File, please wait..."
+    pm_message "Preparing Swap File, please wait..."
     [ -f /swapfile ] && $ESUDO swapoff -v /swapfile
     [ -f /swapfile ] && $ESUDO rm -f /swapfile
     $ESUDO fallocate -l 384M /swapfile
@@ -48,7 +48,7 @@ if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
     $ESUDO swapon /swapfile
     [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
-	  pm_message "Preparing Swap File, please wait..."
+    pm_message "Preparing Swap File, please wait..."
     [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
     [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
     $ESUDO fallocate -l 384M /media/SHARE/swapfile
