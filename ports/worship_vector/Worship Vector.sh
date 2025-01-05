@@ -27,8 +27,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/uinput
-
 $GPTOKEYB "worship.bin" -c "$GAMEDIR/worship.gptk" &
 ./worship.bin
 
