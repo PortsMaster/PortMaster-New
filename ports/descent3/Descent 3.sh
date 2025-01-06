@@ -21,7 +21,6 @@ GAMEDIR="/$directory/ports/descent3"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 INIFILE="$GAMEDIR/d3.ini"
 REGFILE="$GAMEDIR/config/.Descent3Registry"
-DEBUGMODE=0
 
 
 # Use positional parameters for key mapping
