@@ -1,3 +1,13 @@
+--[[
+
+    The following script is from the Steam version of Ocean's Heart and overrides the same script
+    inside data.solarus. The override exists because the GOG release of the game is several updates
+    behind and will have shader compile errors on Mali devices. PortMaster claims no rights to the contents of this file.
+    
+    -- PortMaster Crew
+
+--]]
+
 --[[ swipe_fade.lua
 	version 1.0
 	25 Apr 2020

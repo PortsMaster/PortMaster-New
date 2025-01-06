@@ -1,3 +1,13 @@
+--[[
+
+    The following script is a modification of the original within the data.solarus file.
+    The modification exists due to a shader error with specific graphics drivers, and
+    the relevant changes are commented below for clarity.
+    
+    -- PortMaster Crew
+
+--]]
+
 --[[ map_banner.lua
 	version 1.0.1
 	27 Aug 2020
@@ -151,12 +161,14 @@ function menu:on_started()
 			)
 			for x = x_start,x_stop,gradient_dir do
 				local x_alpha = (math.abs(x_stop - x) + 1)/(GRADIENT_WIDTH + 1) --value from 0 to 1 depending on horizontal position
+                -- The original lua code here is below. On some graphics drivers, the math.floor line would fail and cause a table overflow for whatever reason.
+                -- When the IF condition is unmet, we fallback to explicitly setting the alpha value.
                 local alpha_value
                 if type(BANNER_COLOR) == "table" and #BANNER_COLOR >= 4 then
                     alpha_value = math.floor((BANNER_COLOR[4] or 255) * x_alpha)
                 else
-                    BANNER_COLOR = {255, 255, 255, 255}  -- Fallback to a default value if the condition is not met
-                    alpha_value = math.floor(255 * x_alpha)  -- Default alpha value if BANNER_COLOR is invalid
+                    BANNER_COLOR = {255, 255, 255, 255}
+                    alpha_value = math.floor(255 * x_alpha)
                 end
 
                 local gradient_color = {

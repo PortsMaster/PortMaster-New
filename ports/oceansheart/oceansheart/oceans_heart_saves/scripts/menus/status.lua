@@ -1,3 +1,13 @@
+--[[
+
+    The following script is a modification of the original within the data.solarus file.
+    The modification exists due to a shader error with specific graphics drivers, and
+    the relevant changes are commented below for clarity.
+    
+    -- PortMaster Crew
+
+--]]
+
 local multi_events = require"scripts/multi_events"
 local button_menu = require"scripts/menus/button_mapping"
 local controls_display_switch = require"scripts/menus/controls_display_switch"
@@ -66,6 +76,8 @@ function status_screen:on_started()
     --stat_name_surfaces[i]:set_text_key(stat_names[i])
   end
 
+    -- For whatever reason, a table overflow error will occur here because these strings will return nil even though they exist at the relevant locations.
+    -- The modification defaults to English strings as a fallback.
     options_strings = {
         sol.language.get_string("menu.status.save") or "Save",
         sol.language.get_string("menu.status.quit") or "Quit",
