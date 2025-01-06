@@ -1,6 +1,6 @@
 # Notes
 
-Thanks to [Backterria](https://backterria.itch.io) for creating this fantastic game, which you can grab free at [itch.io](https://backterria.itch.io/dead-knight)
+Thanks to [Backterria](https://backterria.itch.io) for creating this fantastic game, which you can grab at [itch.io](https://backterria.itch.io/dead-knight)
 
 **Notes** 
 
