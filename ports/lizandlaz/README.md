@@ -1,6 +1,6 @@
 # Notes
 
-Thanks to [Whatnot Studios](https://jdmgames.itch.io/) for creating this fantastic game, which you can purchase at [itch.io](https://jdmgames.itch.io/)
+Thanks to [Whatnot Studios](https://jdmgames.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://jdmgames.itch.io/liz-laz-1)
 
 
 # Controls
