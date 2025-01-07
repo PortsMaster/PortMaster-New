@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/portfolder/
+GAMEDIR=/$directory/ports/ticoban/
 CONFDIR="$GAMEDIR/conf"
 PYXEL_PKG="ticoban.pyxapp"
 
@@ -64,7 +64,7 @@ export PYTHONHOME="${pyxel_dir}"
 export PYTHONPYCACHEPREFIX="${GAMEDIR}/${runtime}.cache"
 
 # play the pyxel package stored in gamedata
-"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/gamedata/${PYXEL_PKG}"
+"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/ticoban/${PYXEL_PKG}"
 
 # Alternatively, run a python script file
 # "${pyxel_dir}/bin/pyxel" run gamedata/main.py
