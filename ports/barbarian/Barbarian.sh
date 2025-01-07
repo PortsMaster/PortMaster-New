@@ -52,8 +52,8 @@ export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/x86":"$GAMEDIR/box86/native":"$GAME
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.armhf/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.armhf/libEGL.so.1"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
 fi 
 
 #export TEXTINPUTINTERACTIVE="Y"
