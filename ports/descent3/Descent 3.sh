@@ -1,4 +1,5 @@
 #!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -13,7 +14,6 @@ fi
 
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 # Variables - Set DEBUGMODE to 1 to use the Debug build
@@ -21,7 +21,6 @@ GAMEDIR="/$directory/ports/descent3"
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 INIFILE="$GAMEDIR/d3.ini"
 REGFILE="$GAMEDIR/config/.Descent3Registry"
-DEBUGMODE=0
 
 
 # Use positional parameters for key mapping
@@ -56,6 +55,7 @@ fi
 
 if [ "$LIBGL_FB" != "" ]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.$DEVICE_ARCH/libEGL.so.1"
   export LIBGL_DRIVERS_PATH="$GAMEDIR/gl4es.$DEVICE_ARCH/libGL.so.1"
   ARG="-g $LIBGL_DRIVERS_PATH"
 fi 
