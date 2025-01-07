@@ -34,6 +34,7 @@ if [ -f ./assets/data.win ]; then
 	mv assets/data.win assets/game.droid
 	
 	# Delete all redundant files
+	rm ./assets/CrystalBreaker_demo.exe
 	rm ./assets/CrystalBreaker.exe
 	rm ./assets/Steamworks_x64.dll
 	rm ./assets/steam_api64.dll	
