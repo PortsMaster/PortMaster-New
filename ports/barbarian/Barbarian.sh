@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: barbarian.zip, Barbarian.sh
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
