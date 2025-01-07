@@ -30,13 +30,12 @@ key_mapping_values=""
 key_types_keys=""
 key_types_values=""
 
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
 
-# Setup permissions
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
-$ESUDO chmod 777 "$GAMEDIR/game"
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
+pm_message "Loading, please wait... (might take a while!)"
 
 # Create config dir
 bind_directories "$XDG_DATA_HOME/Outrage Entertainment/Descent 3" "$GAMEDIR/config"
@@ -66,8 +65,8 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.$DEVICE_ARCH:/usr/lib:$LD_LIBRARY_PATH"
 # Run the game
 $GPTOKEYB game -c "config/joy.gptk" & 
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+pm_platform_helper "$GAMEDIR/game"
 ./game -setdir "$GAMEDIR/gamedata" -pilot Player -nooutragelogo -nomotionblur -logfile $ARG
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events & 
-printf "\033c" >> /dev/tty1
+# Cleanup
+pm_finish
