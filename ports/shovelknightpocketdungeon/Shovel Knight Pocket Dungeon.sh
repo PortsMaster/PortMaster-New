@@ -16,33 +16,28 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/shovelknightpocketdungeon"
 
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
+
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export TOOLDIR="$GAMEDIR/tools"
-export PATH=$PATH:$TOOLDIR
-export PATCHER_FILE="$GAMEDIR/patch/patchscript"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Shovel Knight Pocket Dungeon"
 export PATCHER_TIME="5 to 10 minutes"
-export PATCHDIR=$GAMEDIR
-
-# We log the execution of the script into log.txt
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-# Permissions
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-$ESUDO chmod +x "$TOOLDIR/splash"
-$ESUDO chmod +x "$GAMEDIR/patch/patchscript"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/patch/patchscript"
+dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
+dos2unix "$GAMEDIR/tools/patchscript"
 
-cd "$GAMEDIR"
-
-# Run install if needed
-if [ ! -f "$GAMEDIR/patchlog.txt" ]; then
+# Check if patchlog.txt to skip patching
+if [ ! -f patchlog.txt ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
@@ -55,14 +50,14 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./tools/splash "splash.png" 1 
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
     $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext" &
+$GPTOKEYB "gmloadernext.aarch64" -c "skpd.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
-
+# Cleanup
 pm_finish
