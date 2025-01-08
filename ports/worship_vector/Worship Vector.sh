@@ -14,22 +14,20 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+GAMEDIR="/$directory/ports/worship"
+
 export SDL12COMPAT_USE_GAME_CONTROLLERS=1
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-GAMEDIR=/$directory/ports/worship
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "worship.bin" -c "./worship.gptk" &
+$GPTOKEYB "worship.bin" -c "$GAMEDIR/worship.gptk" &
 ./worship.bin
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish

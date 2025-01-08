@@ -13,11 +13,10 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/duke3dawo
+GAMEDIR="/$directory/ports/duke3dawo"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
@@ -37,45 +36,41 @@ fi
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO rm $GAMEDIR/eduke32.log
 
-$ESUDO rm -rf ~/.config/eduke32
-$ESUDO ln -sfv "/$GAMEDIR/conf/eduke32" ~/.config/
+bind_directories ~/.config/eduke32 "$GAMEDIR/conf/eduke32"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Ensure Swap space is prepared or eduke32 may crash or fail to launch
-   $ESUDO chmod 666 /dev/tty0
-   printf "\033c" > /dev/tty0
-	 echo "Preparing Swap File, please wait..." > /dev/tty0
-	 echo " " > /dev/tty0
-if id "ark" &>/dev/null || id "odroid" &>/dev/null; then
-    $ESUDO swapoff /swapfile
+if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
+    pm_message "Preparing Swap File, please wait..."
+    [ -f /swapfile ] && $ESUDO swapoff -v /swapfile
+    [ -f /swapfile ] && $ESUDO rm -f /swapfile
     $ESUDO fallocate -l 384M /swapfile
     $ESUDO chmod 600 /swapfile
     $ESUDO mkswap /swapfile
     $ESUDO swapon /swapfile
-else
-  if [ ! -f /storage/swapfile ]; then
-    $ESUDO swapoff /storage/swapfile
-    $ESUDO dd if=/dev/zero of=/storage/swapfile bs=1024 count=384k
-    $ESUDO chmod 600 /storage/swapfile
-    $ESUDO mkswap /storage/swapfile
-    $ESUDO sync
-    $ESUDO swapon /storage/swapfile
-  fi
+    [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
+elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
+    pm_message "Preparing Swap File, please wait..."
+    [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
+    [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
+    $ESUDO fallocate -l 384M /media/SHARE/swapfile
+    $ESUDO chmod 600 /media/SHARE/swapfile
+    $ESUDO mkswap /media/SHARE/swapfile
+    $ESUDO swapon /media/SHARE/swapfile
+    [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 fi
 
-if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32.gptk"
 fi
 
 $GPTOKEYB "eduke32.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+pm_platform_helper "$GAMEDIR/eduke32.${DEVICE_ARCH}"
 ./eduke32.${DEVICE_ARCH} awo.zip -nosetup -gamegrp e32wt.grp -xE32WT.CON
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
+pm_finish
