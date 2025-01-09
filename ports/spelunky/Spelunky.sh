@@ -33,9 +33,9 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO ./tools/splash "screenshot.png" 2000 &
 
 # Assign configs and load the game
-$GPTOKEYB "gmloader.aarch64" &
-pm_platform_helper "gmloader.aarch64"
-./gmloader.aarch64 -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish
