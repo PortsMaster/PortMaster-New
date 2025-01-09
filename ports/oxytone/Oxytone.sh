@@ -41,7 +41,7 @@ $ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
 				# Rename data.win file
 				mv assets/data.win assets/game.droid
 				# Delete all redundant files
-				rm ./assets/Oxytone Demo.exe
+				rm -f assets/*.{dll,exe}
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
@@ -52,37 +52,22 @@ $ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
 				# Rename data.win file
 				mv assets/data.win assets/game.droid
 				# Delete all redundant files
-				rm ./assets/Oxytone.exe
-				rm ./assets/Steamworks_x64.dll
-				rm ./assets/steam_api64.dll
-				# Zip all game files into the oxytone109.port
-				zip -r -0 ./oxytone109.port ./assets/
-				rm -Rf ./assets/
-			# Get data.win checksum for the full version from Itch.io
-			checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
-				elif [ "$checksum" == "893b350536586a318ba1ee2375045e37" ]; then
-				sed -i 's|"apk_path" : "oxytone.port"|"apk_path" : "oxytone109.port"|' $GMLOADER_JSON
-				# Rename data.win file
-				mv assets/data.win assets/game.droid
-				# Delete all redundant files
-				rm ./assets/Oxytone.exe
+				rm -f assets/*.{dll,exe}
 				# Zip all game files into the oxytone109.port
 				zip -r -0 ./oxytone109.port ./assets/
 				rm -Rf ./assets/
 			else 
-			# Setup files for the full Steam version
+			# Setup files for the full version
 				# Rename data.win file
 				mv assets/data.win assets/game.droid
 				#Delete all redundant files
-				rm ./assets/Oxytone.exe
-				rm ./assets/Steamworks_x64.dll
-				rm ./assets/steam_api64.dll
+				rm -f assets/*.{dll,exe}
 				# Zip all game files into the oxytone.port
 				zip -r -0 ./oxytone.port ./assets/
 				rm -Rf ./assets/
 			fi
 	else
-		pm_message "Data.win is missing or the game is already installed, skipping the installation" 
+		pm_message "Data.win is missing or the game is already installed." 
 fi
 
 # Swap left and right sticks for broader device compatibility
