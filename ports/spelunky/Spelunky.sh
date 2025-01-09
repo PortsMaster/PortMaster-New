@@ -13,30 +13,29 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/spelunky"
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs":$LD_LIBRARY_PATH
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-cd "$GAMEDIR"
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
 
-$GPTOKEYB "gmloader" -c "spelunky.gptk" &
-echo "Loading, please wait... " > $CUR_TTY
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-./gmloader game.apk
+# Display loading splash
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "screenshot.png" 1
+$ESUDO ./tools/splash "screenshot.png" 2000 &
 
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+# Assign configs and load the game
+$GPTOKEYB "gmloader.aarch64" &
+pm_platform_helper "gmloader.aarch64"
+./gmloader.aarch64 -c gmloader.json
+
+# Cleanup
+pm_finish
