@@ -46,6 +46,16 @@ fi
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 [ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
 
+# Move sound files to .apk (fixes case sensitivity problems)
+if [[ -d "gamedata/mus" ]]; then
+  echo "Zipping sound files into .apk..."
+  $ESUDO mkdir -p ./assets/
+  $ESUDO mv gamedata/sfx ./assets/
+  $ESUDO mv gamedata/mus ./assets/
+  $ESUDO zip -r -0 love3.apk ./assets/
+  $ESUDO rm -r ./assets/
+fi
+
 # Make sure uinput is accessible so we can make use of the gptokeyb controls
 $ESUDO chmod 666 /dev/uinput
 
