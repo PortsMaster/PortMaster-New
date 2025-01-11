@@ -14,7 +14,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 export gamedir="/$directory/ports/celeste"
@@ -34,9 +34,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Celeste
-mkdir -p ~/.local/share
-ln -sfv "$gamedir/savedata" ~/.local/share/Celeste
+bind_directories ~/.local/share/Celeste "$gamedir/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
@@ -73,3 +71,4 @@ $ESUDO umount "$monodir"
 
 # Disable console
 printf "\033c" >> /dev/tty1
+
