@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,8 +22,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/lib:/usr/lib:$LD_LIBRARY_PATH"
 
 GPTOKEYB_CONFIG="$GAMEDIR/nblood.gptk"
 
-$ESUDO rm -rf ~/.config/nblood
-$ESUDO ln -s $GAMEDIR/conf/nblood ~/.config/
+bind_directories ~/.config/nblood $GAMEDIR/conf/nblood
 cd $GAMEDIR
 
 $ESUDO chmod 666 /dev/tty1
