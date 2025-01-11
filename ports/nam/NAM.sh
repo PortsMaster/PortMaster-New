@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -44,8 +44,7 @@ GAMEDIR="/$directory/ports/rednukem-NAM"
   fi
 # fi
 
-$ESUDO rm -rf ~/.config/rednukem
-$ESUDO ln -s $GAMEDIR/conf/rednukem ~/.config/
+bind_directories ~/.config/rednukem $GAMEDIR/conf/rednukem
 
 cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
@@ -60,3 +59,4 @@ $GPTOKEYB "rednukem" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+
