@@ -49,10 +49,7 @@ fi
 
 # Setup savedir
 mkdir -p "$GAMEDIR/savedata"
-$ESUDO rm -rf ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers
-mkdir -p ~/.local/share
-mkdir -p "$GAMEDIR/savedata"
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers
+bind_directories ~/.local/share/ags/If\ On\ A\ Winter\'s\ Night\ Four\ Travelers "$GAMEDIR/savedata"
 
 # Copy acsetup.cfg from config to gamedata
 if [ ! -f "$GAMEDIR/.initial_config_done" ]; then
@@ -77,6 +74,3 @@ $GPTOKEYB "ags" -c "./ioawn4t.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
-
-
-
