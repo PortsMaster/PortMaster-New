@@ -30,6 +30,7 @@ export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
 export PATCHER_TIME="10 to 15 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export PATH="$TOOLDIR:$PATH"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/gmKtool.py"
@@ -52,6 +53,24 @@ fi
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
     [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
     $ESUDO ./tools/splash "splash.png" 2000 &
+fi
+
+swapabxy() {
+    # Update SDL_GAMECONTROLLERCONFIG to swap a/b and x/y button
+
+    if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
+	    # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
+        cat "$SDL_GAMECONTROLLERCONFIG_FILE" | swapabxy.py > "$GAMEDIR/gamecontrollerdb_swapped.txt"
+	    export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
+    else
+        # Other CFW use SDL_GAMECONTROLLERCONFIG
+        export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | swapabxy.py`"
+    fi
+}
+
+# Swap a/b and x/y button if needed
+if [ -f "$GAMEDIR/swapabxy.txt" ]; then
+    swapabxy
 fi
 
 # Assign gptokeyb and load the game
