@@ -63,8 +63,8 @@ if [[ -n "$itch_io_fire_arrow_x" ]]; then
 fi
 
 if [ -f "$GAMEDIR/firearrow/gamedata/data.win" ]; then
-	  mv "$GAMEDIR/firearrow/gamedata/data.win" "$GAMEDIR/firearrow/gamedata/game.droid"
-	  sleep 0.5
+    mv "$GAMEDIR/firearrow/gamedata/data.win" "$GAMEDIR/firearrow/gamedata/game.droid"
+    sleep 0.5
     mkdir -p $GAMEDIR/firearrow/assets
     mv $GAMEDIR/firearrow/gamedata/*.ogg $GAMEDIR/firearrow/assets/ 
     mv $GAMEDIR/firearrow/gamedata/game.droid $GAMEDIR/firearrow/assets/ 
@@ -78,8 +78,8 @@ if [ -f "$GAMEDIR/firearrow/gamedata/data.win" ]; then
 fi
 
 if [ -f "$GAMEDIR/firearrowx/gamedata/data.win" ]; then
-	  mv "$GAMEDIR/firearrowx/gamedata/data.win" "$GAMEDIR/firearrowx/gamedata/game.droid"
-	  sleep 0.5
+    mv "$GAMEDIR/firearrowx/gamedata/data.win" "$GAMEDIR/firearrowx/gamedata/game.droid"
+    sleep 0.5
     mkdir -p $GAMEDIR/firearrowx/assets
     mv $GAMEDIR/firearrowx/gamedata/*.ogg $GAMEDIR/firearrowx/assets/ 
     mv $GAMEDIR/firearrowx/gamedata/game.droid $GAMEDIR/firearrowx/assets/ 
