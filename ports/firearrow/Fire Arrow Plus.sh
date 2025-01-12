@@ -18,7 +18,7 @@ export PORT_32BIT="Y"
 get_controls
 
 # GAMEDIR needs to be exported or love will not 'see' the envar
-export GAMEDIR="/$directory/ports/firearrowplus"
+export GAMEDIR="/$directory/ports/firearrow"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-armhf}"
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"

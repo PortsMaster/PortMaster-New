@@ -11,9 +11,9 @@ Thanks all!
 
 <br/>
 
-For the Steam version, copy the FA1 and FAX folders into the port folder (/ports/firearrowplus/) and play.
-For the itch.io version, copy the two zip files into the port folder (/ports/firearrowplus/) and play.
-Additionally, you can copy data.win and all .ogg files from each of these folders into the respective gamedata folders (/ports/firearrowplus/firearrow/gamedata/ & /ports/firearrowplus/firearrowx/gamedata/).
+For the Steam version, copy the FA1 and FAX folders into the port folder (/ports/firearrow/) and play.
+For the itch.io version, copy the two zip files into the port folder (/ports/firearrow/) and play.
+Additionally, you can copy data.win and all .ogg files from each of these folders into the respective gamedata folders (/ports/firearrow/firearrow/gamedata/ & /ports/firearrow/firearrowx/gamedata/).
 
 <br/>
 
