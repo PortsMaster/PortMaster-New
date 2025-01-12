@@ -22,37 +22,18 @@ GAMEDIR="/$directory/ports/therush"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="The Rush"
-export PATCHER_TIME="4 to 6 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
-
-# Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
-    if [ -f "$controlfolder/utils/patcher.txt" ]; then
-        source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb)
-    else
-        pm_message "This port requires the latest version of PortMaster."
-    fi
-else
-    pm_message "Patching process already completed. Skipping."
-fi
-
 # Display loading splash
-if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
-fi
+[ -f "$GAMEDIR/game.port" ] && [ "$(md5sum "$GAMEDIR/game.port" | awk '{print $1}')" == "78f6810e8e69575be4ee577fdfc46206" ] && {  
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1  
+    $ESUDO ./tools/splash "splash.png" 2000 &  
+}
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
