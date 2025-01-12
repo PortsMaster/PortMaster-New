@@ -23,7 +23,14 @@ GAME="d1x-rebirth"
 ASPECT_X=${ASPECT_X:-4}
 ASPECT_Y=${ASPECT_Y:-3}
 
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+rm -rf "$GAMEDIR/config/gamelog.txt"
+$ESUDO chmod +x -R $GAMEDIR/*
+
+# Set config dir
+bind_directories ~/.$GAME $GAMEDIR/config
 
 # Add some cheats
 if [ ! -f "./cheats.txt" ]; then
