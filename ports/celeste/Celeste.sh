@@ -71,4 +71,3 @@ $ESUDO umount "$monodir"
 
 # Disable console
 printf "\033c" >> /dev/tty1
-
