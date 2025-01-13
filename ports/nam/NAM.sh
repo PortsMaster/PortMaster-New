@@ -47,16 +47,12 @@ GAMEDIR="/$directory/ports/rednukem-NAM"
 bind_directories ~/.config/rednukem $GAMEDIR/conf/rednukem
 
 cd $GAMEDIR
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "rednukem" &
+
 ./rednukem -game_dir $GAMEDIR/gamedata -gamegrp NAM.GRP
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-
+pm_finish
