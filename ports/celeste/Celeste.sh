@@ -22,7 +22,6 @@ export gameassembly="Celeste.exe"
 cd "$gamedir/gamedata"
 
 # Grab text output...
-$ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
@@ -62,12 +61,6 @@ if [[ ! -f "$gamedir/gamedata/.astc_done" ]]; then
 	fi
 fi
 
-# first_time_setup
 $GPTOKEYB "mono" &
 $TASKSET mono Celeste.exe 2>&1 | tee "$gamedir/log.txt"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-$ESUDO umount "$monodir"
-
-# Disable console
-printf "\033c" >> /dev/tty1
+pm_finish
