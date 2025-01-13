@@ -33,7 +33,7 @@ runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
-    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
     exit 1
   fi
