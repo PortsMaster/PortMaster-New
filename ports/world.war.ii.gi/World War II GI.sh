@@ -51,12 +51,8 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
-
 $GPTOKEYB "rednukem" &
+
 ./rednukem -game_dir $GAMEDIR/gamedata -gamegrp WW2GI.GRP
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+pm_finish
