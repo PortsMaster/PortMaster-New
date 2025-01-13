@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: cave.story-evo.zip, Cave Story-evo.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -32,9 +33,11 @@ if [ ! -f "$GAMEDIR/conf/nxengine/settings.dat" ]; then
     # Determine which settings.dat file to use based on the display width
     if [ "$DISPLAY_WIDTH" -eq 1920 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.1920" "$GAMEDIR/conf/nxengine/settings.dat"
+    elif [ "$DISPLAY_WIDTH" -eq 1280 ]; then
+        mv -f "$GAMEDIR/conf/nxengine/settings.dat.1280" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 960 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.960" "$GAMEDIR/conf/nxengine/settings.dat"
-    elif [ "$DISPLAY_WIDTH" -eq 1280 ] || [ "$DISPLAY_WIDTH" -eq 854 ]; then
+    elif [ "$DISPLAY_WIDTH" -eq 854 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.854" "$GAMEDIR/conf/nxengine/settings.dat"
     elif [ "$DISPLAY_WIDTH" -eq 720 ]; then
         mv -f "$GAMEDIR/conf/nxengine/settings.dat.720" "$GAMEDIR/conf/nxengine/settings.dat"
