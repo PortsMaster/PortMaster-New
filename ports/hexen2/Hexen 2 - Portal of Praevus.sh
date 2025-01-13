@@ -53,8 +53,4 @@ RUNMOD="-portals"
 $GPTOKEYB "glhexen2.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
 ./glhexen2.${DEVICE_ARCH} -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
-
+pm_finish

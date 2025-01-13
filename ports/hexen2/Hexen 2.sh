@@ -53,8 +53,4 @@ ADDLPARAMS="-conwidth 340 -lm_2 +viewsize 120 +gl_glows 1 +gl_extra_dynamic_ligh
 $GPTOKEYB "glhexen2.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
 ./glhexen2.${DEVICE_ARCH} -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
-
+pm_finish
