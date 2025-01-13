@@ -25,12 +25,6 @@ GPTOKEYB_CONFIG="$GAMEDIR/nblood.gptk"
 bind_directories ~/.config/nblood $GAMEDIR/conf/nblood
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "nblood" -c $GPTOKEYB_CONFIG &
 ./nblood 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-unset LD_LIBRARY_PATH
-printf "\033c" >> /dev/tty1
-
+pm_finish
