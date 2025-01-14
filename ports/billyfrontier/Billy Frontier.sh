@@ -37,8 +37,6 @@ fi
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-
-
 if [ "$ANALOG_STICKS" = "0" ]; then
   sed -i 's/up = up/up = mouse_movement_up/' billyfrontier.gptk
   sed -i 's/down = down/down = mouse_movement_down/' billyfrontier.gptk
@@ -49,6 +47,6 @@ fi
 $GPTOKEYB "BillyFrontier.${DEVICE_ARCH}" -c "./billyfrontier.gptk" &
 ./BillyFrontier.${DEVICE_ARCH}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
+pm_finish
+
 printf "\033c" > /dev/tty0
