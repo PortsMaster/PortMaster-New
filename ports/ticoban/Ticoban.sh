@@ -64,7 +64,7 @@ export PYTHONHOME="${pyxel_dir}"
 export PYTHONPYCACHEPREFIX="${GAMEDIR}/${runtime}.cache"
 
 # play the pyxel package stored in gamedata
-"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/ticoban/${PYXEL_PKG}"
+"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/${PYXEL_PKG}"
 
 # Alternatively, run a python script file
 # "${pyxel_dir}/bin/pyxel" run gamedata/main.py
