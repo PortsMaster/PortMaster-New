@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/ticoban/
+GAMEDIR=/$directory/ports/ticoban
 CONFDIR="$GAMEDIR/conf"
 PYXEL_PKG="ticoban.pyxapp"
 
