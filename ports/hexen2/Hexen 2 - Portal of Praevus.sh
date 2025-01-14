@@ -13,9 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
-#export PORT_32BIT="Y" # If using a 32 bit port
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -32,8 +30,7 @@ fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf ~/.hexen2
-$ESUDO ln -sfv $GAMEDIR/conf/.hexen2 ~/
+bind_directories ~/.hexen2 $GAMEDIR/conf/.hexen2
 $ESUDO cp -f "$GAMEDIR/conf/.hexen2/portals/config.cfg" "$GAMEDIR/portals/autoexec.cfg"
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
@@ -56,8 +53,4 @@ RUNMOD="-portals"
 $GPTOKEYB "glhexen2.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
 ./glhexen2.${DEVICE_ARCH} -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
-
+pm_finish
