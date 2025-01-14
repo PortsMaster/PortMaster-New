@@ -35,12 +35,8 @@ if [ ! -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg ]; then
   fi
 fi
 
-$ESUDO rm -rf ~/.wolf
-ln -sfv $GAMEDIR/conf/.wolf/ ~/
+bind_directories ~/.wolf $GAMEDIR/conf/.wolf/
 cd $GAMEDIR
-
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 
 whichos=$(grep "title=" "/usr/share/plymouth/themes/text.plymouth")
 if [[ $whichos == *"RetroOZ"* ]]; then
@@ -51,6 +47,5 @@ fi
 
 $GPTOKEYB $APP_TO_KILL &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./iowolfsp.aarch64 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
+
+pm_finish
