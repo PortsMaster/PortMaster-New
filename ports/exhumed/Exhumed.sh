@@ -43,19 +43,15 @@ fi
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO rm -rf ~/.config/pcexhumed
-$ESUDO ln -s $GAMEDIR/conf/pcexhumed ~/.config/
+bind_directories ~/.config/pcexhumed $GAMEDIR/conf/pcexhumed
 cd $GAMEDIR
 
 export TEXTINPUTINTERACTIVE="Y"
 
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "pcexhumed" -c "./pcexhumed.gptk" &
  ./pcexhumed
  
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
 pgrep -f pcexhumed | $ESUDO xargs kill -9
 unset TEXTINPUTINTERACTIVE
-printf "\033c" >> /dev/tty1
+
+pm_finish
