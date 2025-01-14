@@ -18,9 +18,6 @@ get_controls
 source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-# Permissions
-$ESUDO chmod 777 $GAMEDIR/sonic3air_linux
-
 # Variables
 GAMEDIR="/$directory/ports/sonic3air"
 
@@ -45,7 +42,7 @@ WINDOW_SIZE="$DISPLAY_WIDTH x $DISPLAY_HEIGHT"
 
 # Modifies screen variables in files
 sed -i 's/"WindowSize": "[^"]*"/"WindowSize": "'"$WINDOW_SIZE"'"/' "$GAMEDIR/config.json"
-sed -i "s/\"Screen Width\" : [0-9]\+/\"Screen Width\" : $ASPECT/" "$GAMEDIR/.local/share/Sonic3AIR/settings.json"
+sed -i "s/\"Screen Width\" : [0-9]\+/\"Screen Width\" : $ASPECT/" "$GAMEDIR/config/settings.json"
 
 # Run the game
 $GPTOKEYB "sonic3air_linux" -c "sonic.gptk" &
