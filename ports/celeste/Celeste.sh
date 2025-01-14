@@ -14,7 +14,7 @@ fi
 
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 export gamedir="/$directory/ports/celeste"
@@ -22,7 +22,6 @@ export gameassembly="Celeste.exe"
 cd "$gamedir/gamedata"
 
 # Grab text output...
-$ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
@@ -34,9 +33,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Celeste
-mkdir -p ~/.local/share
-ln -sfv "$gamedir/savedata" ~/.local/share/Celeste
+bind_directories ~/.local/share/Celeste "$gamedir/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
@@ -64,12 +61,6 @@ if [[ ! -f "$gamedir/gamedata/.astc_done" ]]; then
 	fi
 fi
 
-# first_time_setup
 $GPTOKEYB "mono" &
 $TASKSET mono Celeste.exe 2>&1 | tee "$gamedir/log.txt"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-$ESUDO umount "$monodir"
-
-# Disable console
-printf "\033c" >> /dev/tty1
+pm_finish
