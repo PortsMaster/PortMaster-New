@@ -13,82 +13,51 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/downwell"
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/*
 
-# check if we have new enough version of PortMaster that contains xdelta3
-if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
-  sleep 5
-  exit 1
-fi
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="Downwell"
+export PATCHER_TIME="3 to 5 minutes"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Patch game
-cd "$GAMEDIR"
+# dos2unix in case we need it
+dos2unix "$GAMEDIR/tools/gmKtool.py"
+dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
+dos2unix "$GAMEDIR/tools/patchscript"
 
-# If "gamedata/data.win" exists and matches the checksum of the itch or steam versions
-if [ -f "./gamedata/data.win" ]; then
-    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
-    
-    # Checksum for the GOG version
-    if [ "$checksum" = "fbecdea0ad4ce643e627fc9aca8e9841" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/downwellgog.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
-    # Checksum for the Steam version
-    elif [ "$checksum" = "3ca6acd5af13997786e27bb5694fb103" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/downwellsteam.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
+# Check if patchlog.txt to skip patching
+if [ ! -f patchlog.txt ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "Error: MD5 checksum of data.win does not match any expected version."
+        pm_message "This port requires the latest version of PortMaster."
     fi
-else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
+else
+    pm_message "Patching process already completed. Skipping."
 fi
 
-# Pack Audio into apk and move game files to the right place
-if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
-    # Move all audiogroup.dat from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.dat ./assets/ || exit 1
-    mv ./gamedata/*.ogg ./assets/ || exit 1
-    echo "Moved audiogroup.dat files from ./gamedata to ./assets/"	
-
-    # Zip the contents of ./game.apk including the new .ogg and .wav files
-    zip -r -0 ./game.apk ./assets/ || exit 1
-    echo "Zipped contents to ./game.apk"
-    rm -Rf "$GAMEDIR/assets/" || exit 1
-
-    # cleanup if extra files were copied in from steam or gog
-    rm -Rf "$GAMEDIR/gamedata/Downwell.exe" \
-           "$GAMEDIR/gamedata/"*.dll \
-           "$GAMEDIR/gamedata/"*.ico \
-           $GAMEDIR/gamedata/gog* \
-           $GAMEDIR/gamedata/unins000*
-
-    # Move all files from gamedir/gamedata to gamedir and delete gamedata folder
-    mv "$GAMEDIR/gamedata"/* "$GAMEDIR" && rm -rf "$GAMEDIR/gamedata" || exit 1
-    echo "Moving and Cleaning of game files done"
+# Display loading splash
+if [ -f "$GAMEDIR/patchlog.txt" ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
+    $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
-$ESUDO chmod 666 /dev/uinput
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "downwell.gptk"  &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
-$GPTOKEYB "gmloadernext" -c ./downwell.gptk &
-
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-
-./gmloadernext game.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
