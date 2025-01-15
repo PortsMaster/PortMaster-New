@@ -13,10 +13,13 @@ Thanks to [Grahf Metal](https://grahfmetal.itch.io) for creating this fantastic 
 | Y             | Dismiss dialogue box          |
 | SELECT        | Pause menu                    |
 
-| Action shortcuts |
-| ---------------- |
-| L1 | Examine     |
-| L2 | Take        |
-| X  | Move        |
-| R1 | Use         |
-| R2 | Open        |
+## Action Shortcuts
+
+| Button | Action  |
+| ------ | ------- |
+| L1     | Examine |
+| L2     | Take    |
+| X      | Move    |
+| R1     | Use     |
+| R2     | Open    |
+
