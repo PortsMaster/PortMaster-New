@@ -39,7 +39,7 @@ bind_directories ~/.local/share/Timespinner "$GAMEDIR/savedata"
 $ESUDO rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 
 # Remove GOG scripts
-$ESUDO rm -r ./*.sh ./support/*.sh ./support/yad/*.sh
+$ESUDO rm -f ./*.sh ./support/*.sh ./support/yad/*.sh
 
 # Setup path and other environment variables
 # export FNA_PATCH="$GAMEDIR/dlls/SteelAssaultPatches.dll"
