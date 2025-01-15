@@ -1,5 +1,5 @@
 - Steam or GOG data files can be found in `Flashback_Data/StreamingAssets/data`, copy these files into the reminiscence/gamedata folder.
-- Amiga audio files (optional) can be copied into the reminiscence/music folder, but the files may need to be renamed from `mod.flashback-filename` to `filename.mod`.
+- Amiga audio files (optional) can be copied into the reminiscence/music folder, but the files must be in `filename.mod` format. Some sources come with files named like `mod.flashback-filename`, which will need to be renamed.
 - voice.vce file (optional) for voice acting in cutscenes should be placed in reminiscence/gamedata folder.
 
 ## Notes
