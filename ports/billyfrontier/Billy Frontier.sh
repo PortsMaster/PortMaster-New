@@ -49,4 +49,3 @@ $GPTOKEYB "BillyFrontier.${DEVICE_ARCH}" -c "./billyfrontier.gptk" &
 
 pm_finish
 
-printf "\033c" > /dev/tty0
