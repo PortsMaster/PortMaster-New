@@ -36,10 +36,10 @@ bind_directories ~/.local/share/Timespinner "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
-rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
+$ESUDO rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 
 # Remove GOG scripts
-rm -r ./*.sh ./support/*.sh ./support/yad/*.sh
+$ESUDO rm -r ./*.sh ./support/*.sh ./support/yad/*.sh
 
 # Setup path and other environment variables
 # export FNA_PATCH="$GAMEDIR/dlls/SteelAssaultPatches.dll"
