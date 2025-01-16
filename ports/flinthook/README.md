@@ -4,7 +4,7 @@ Thanks to:
 * JanTrueno for porting and patching Flinthook.
 * JohnnyOnFlame for helping me set up the patches. (And much more)
 
-##Details
+## Details
 |Detail  | info |
 |--|--|
 | Ready to Run | NO|
@@ -16,7 +16,7 @@ Thanks to:
 | Controls | Native |
 | Joysticks required | Single |
 
-##Controls:
+## Controls:
 | Button | Action |
 |--|--| 
 |A|Action|
