@@ -36,7 +36,9 @@ cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-bind_directories $HOME/.local/share/bidensovsky $GAMEDIR/conf/bibendovsky
+# This should not be replaced with a bind_directories call
+$ESUDO rm -rf ~/.local/share/bibendovsky
+# $ESUDO ln -sfv $GAMEDIR/conf/bibendovsky ~/.local/share/
 
 $ESUDO chmod 666 /dev/tty0
 $ESUDO chmod 666 /dev/tty1
