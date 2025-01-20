@@ -25,7 +25,7 @@ Thanks to:
 |--|--| 
 |A|Action|
 |B|Back|
-|D-Pad/L-Stick/R-Stick|Moves|
+|D-Pad/L-Stick/R-Stick/ABXY|Moves|
 |L1/L2|Volume down|
 |R1/R2|Volume up|
 |Start|Pause|
