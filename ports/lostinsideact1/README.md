@@ -7,8 +7,8 @@ Thanks to ayetoons for developing this game, check it on [Itch.io](https://ayeto
 | Button | Action |
 |--|--| 
 |DPAD / Left stick|Movement|
-|A|Confirm|
-|X|Close menu|
+|A|Confirm / Interact|
+|X| Swing spell / Close menu|
 |Start|Menu|
 
 
