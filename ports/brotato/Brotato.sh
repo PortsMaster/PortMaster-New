@@ -21,6 +21,9 @@ get_controls
 GAMEDIR=/$directory/ports/brotato/
 CONFDIR="$GAMEDIR/conf/"
 
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
@@ -29,10 +32,8 @@ export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-cd $GAMEDIR
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-runtime="frt_3.5.2"
+runtime="frt_3.6"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
@@ -44,7 +45,6 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
-# Setup Godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$godot_dir"
@@ -52,13 +52,14 @@ $ESUDO umount "$godot_file" || true
 $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
+
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 [ -f "./gamedata/Brotato.pck" ] && mv gamedata/Brotato.pck gamedata/brotato.pck
 
 $GPTOKEYB "$runtime" -c "./brotato.gptk" &
-pm_platform_helper "$godot_dir/$runtime"
-"$runtime" $GODOT_OPTS --main-pack "gamedata/brotato.pck"
+pm_platform_helper "$runtime"
+LD_PRELOAD="$GAMEDIR/hacksdl/hacksdl.aarch64.so" HACKSDL_DEVICE_DISABLE_0=2 "$runtime" $GODOT_OPTS --main-pack "gamedata/brotato.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish

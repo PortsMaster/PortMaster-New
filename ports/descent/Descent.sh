@@ -55,6 +55,8 @@ sed -i "s/^AspectY=[0-9]\{1,2\}/AspectY=$ASPECT_X/g" "$GAMEDIR/config/descent.cf
 # Use compatibility binary if low glibc
 if [ $CFW_GLIBC -lt 234 ]; then
 	GAME="$GAME.compat"
+else
+    GAME="$GAME.$DEVICE_ARCH"
 fi
 
 # Run game

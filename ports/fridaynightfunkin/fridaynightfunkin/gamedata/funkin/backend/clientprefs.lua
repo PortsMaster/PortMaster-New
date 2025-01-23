@@ -42,23 +42,23 @@ ClientPrefs.data = {
 }
 
 ClientPrefs.controls = {
-	note_left = {"key:a", "key:left"},
-	note_down = {"key:s", "key:down"},
-	note_up = {"key:w", "key:up"},
-	note_right = {"key:d", "key:right"},
+	note_left = {"key:y", "key:left"},
+	note_down = {"key:b", "key:down"},
+	note_up = {"key:x", "key:up"},
+	note_right = {"key:a", "key:right"},
 
-	ui_left = {"key:a", "key:left"},
-	ui_down = {"key:s", "key:down"},
-	ui_up = {"key:w", "key:up"},
-	ui_right = {"key:d", "key:right"},
+	ui_left = {"key:left"},
+	ui_down = {"key:down"},
+	ui_up = {"key:up"},
+	ui_right = {"key:right"},
 
 	volume_down = {"key:-", "key:kp-"},
 	volume_up = {"key:+", "key:kp+", "key:="},
 	volume_mute = {"key:0", "key:kp0"},
 
 	reset = {"key:r"},
-	accept = {"key:z", "key:space", "key:return"},
-	back = {"key:x", "key:backspace", "key:escape"},
+	accept = {"key:a", "key:space", "key:return"},
+	back = {"key:b", "key:backspace", "key:escape"},
 	pause = {"key:p", "key:return", "key:escape"},
 
 	fullscreen = {"key:f11"},
