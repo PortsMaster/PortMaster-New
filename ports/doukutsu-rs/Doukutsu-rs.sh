@@ -49,7 +49,7 @@ fi
 
 $GPTOKEYB "$BINARY" -c "./$BINARY.gptk" &
 
-pm_platform_helper "$BINARY"
+pm_platform_helper "$GAMEDIR/$BINARY"
 
 ./$BINARY
 
