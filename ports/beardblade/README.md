@@ -1,5 +1,7 @@
 ## Notes
 
+Thanks to the fine folks at Glovebox Games LLC for this awesome platformer.
+
 Listed controls are written with Xbox-style controls in mind (i.e. bottom face button = A, left face button = X). If your controls are set to Nintendo-style then A and X will be right and top face buttons, respectively.
 
 ## Controls
