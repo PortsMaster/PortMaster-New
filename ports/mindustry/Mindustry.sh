@@ -48,7 +48,7 @@ zip -ur "${JAR_PACKAGE}" ./
 cd "${GAMEDIR}"
 
 # load runtime
-runtime="zulu17.54.21-ca-jre17.0.13-linux.aarch64"
+runtime="zulu17.54.21-ca-jre17.0.13-linux"
 export JAVA_HOME="$HOME/zulu17.54.21-ca-jre17.0.13-linux.aarch64"
 $ESUDO mkdir -p "${JAVA_HOME}"
 
