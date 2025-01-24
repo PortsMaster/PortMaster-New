@@ -40,7 +40,7 @@ pm_platform_helper "$GAMEDIR/starfighter"
 
 $GPTOKEYB "starfighter" &
 pm_platform_helper "$GAMEDIR/starfighter"
-cd $GAMEDIR/starfighter/share/starfighter
+cd $GAMEDIR/share/starfighter
 ../../bin/starfighter
 
 pm_finish
