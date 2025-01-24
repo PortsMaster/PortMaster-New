@@ -7,8 +7,10 @@ Thanks to [Whatnot Studios](https://jdmgames.itch.io) for creating this fantasti
 
 # Controls
 
-| Button | Action              |
-| ------ | ------------------- |
-| D-PAD  | Movement            |
-| A      | Pick-up/place items |
-| B      | Jump                |
+| Button | Action                                            |
+| ------ | ------------------------------------------------- |
+| D-PAD  | Movement                                          |
+| A      | Pick-up/place items                               |
+| B      | Jump                                              |
+| R1/R2  | Restart stage                                     |
+| L1/L2  | Press at title screen to resume last play session |
