@@ -48,7 +48,7 @@ $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 # if no .gptk file is used use $GPTOKEYB "gmloader" & 
 $GPTOKEYB "gmloader" -c ./beardblade.gptk &
-pm_platform_helper "gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader beardblade.apk
 
 pm_finish
