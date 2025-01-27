@@ -22,15 +22,17 @@ GAMEDIR="/$directory/ports/roguelight"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x $GAMEDIR/tools/patchscript
+$ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
+$ESUDO chmod +x $GAMEDIR/tools/xdelta3
+$ESUDO chmod +x $GAMEDIR/tools/splash
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Roguelight"
 export PATCHER_TIME="1 minute"
-
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/patchscript"
