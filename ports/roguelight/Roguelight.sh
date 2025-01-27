@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: minidoom2.zip, Mini Doom II.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
