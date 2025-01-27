@@ -53,9 +53,9 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Run the game
-$GPTOKEYB "gmloadernext" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
 # Kill processes
 pm_finish
