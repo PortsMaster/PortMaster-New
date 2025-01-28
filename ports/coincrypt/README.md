@@ -11,7 +11,7 @@ Controls/button presses are listed in the game for you to select!
 | Button | Action |
 |--|--| 
 |L-Stick|Movement|
-|D-pad / ABXY|Select Coin|
+|D-pad / ABXY|Use/Select Coin|
 |R2|Select|
 
 
