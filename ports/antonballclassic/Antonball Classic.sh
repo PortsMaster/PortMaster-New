@@ -22,7 +22,9 @@ GAMEDIR="/$directory/ports/antonballclassic"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x $GAMEDIR/tools/splash
+$ESUDO chmod +x $GAMEDIR/tools/swapabxy.py
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
