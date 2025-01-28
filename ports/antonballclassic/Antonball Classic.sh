@@ -32,6 +32,7 @@ export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
 export PATCHER_TIME="5 to 10 seconds"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+TOOLDIR="$GAMEDIR/tools"
 export PATH="$TOOLDIR:$PATH"
 
 # dos2unix in case we need it
