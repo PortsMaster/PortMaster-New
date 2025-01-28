@@ -1,2 +1,2 @@
-## Installation
-Download the game on itch.io https://summitsphere.itch.io/antonball and copy all game data to `antonballclassic/assets`.
+## Notes
+Thanks to [Summitsphere](https://summitsphere.itch.io/) for creating this game and making it available for free!
