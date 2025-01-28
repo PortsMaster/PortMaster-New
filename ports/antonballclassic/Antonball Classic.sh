@@ -35,8 +35,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PATH="$TOOLDIR:$PATH"
 
 # dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
 dos2unix "$GAMEDIR/tools/patchscript"
 
 # Check if patchlog.txt to skip patching
