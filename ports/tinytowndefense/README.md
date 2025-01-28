@@ -4,10 +4,6 @@ Thanks to [ZeFrost](https://itch.io/profile/zefrost) for creating this great gam
 
 Requires the Linux Version of the game Tiny\_Town\_Defense.x86\_64
 
-**Notes:** 
-
-- Place file into /ports/tinytowndefense/gamedata folder.
-
 ## Controls
 
 | Button        | Action             |
