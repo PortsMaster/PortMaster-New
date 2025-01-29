@@ -1,6 +1,8 @@
 ## Building notes
 
 This is a 64-bit ARM build of the decompilation and port to modern platforms by numerous authors - see:
+
+[https://gitlab.com/ryandwyer/perfect-dark](https://gitlab.com/ryandwyer/perfect-dark)
  [https://github.com/n64decomp/perfect_dark](https://github.com/n64decomp/perfect_dark)
  [https://github.com/fgsfdsfgs/perfect_dark](https://github.com/fgsfdsfgs/perfect_dark)
 
