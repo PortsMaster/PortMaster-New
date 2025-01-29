@@ -1,5 +1,5 @@
 ## Notes
-Thanks to [Summitsphere](https://summitsphere.itch.io/) for creating this game and making it available for free!
+Thanks to [Summitsphere](https://summitsphere.com/) for creating this game.
 
 ## Controls
 
