@@ -1,9 +1,9 @@
 ## Notes
 
-Atomic Automaton Portmaster Release (https://www.portmaster.games) 
+Thanks to Pedro Fernandes, Gabriel Almeida, and [CLIIMA](https://linktr.ee/cliima_lx) for creating this game in Godot. This is my first time using Portmaster.
 
-Made in Godot Engine
-	
+[Link itch.io](https://baratasoftware.itch.io/atomicautomaton)
+
 ## Description
 The player must face endless waves of enemies, as long as possible in a challenging, action-packed environment.
 
