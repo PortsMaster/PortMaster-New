@@ -52,11 +52,8 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "./AtomicAutomaton.gptk" &
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "AtomicAutomaton.pck"
 
 $ESUDO umount "$godot_dir"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
