@@ -18,23 +18,27 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/atomic_automaton/
+GAMEDIR=/$directory/ports/portfolder/
 CONFDIR="$GAMEDIR/conf/"
 
-# Ensure the conf directory exists
-mkdir -p "$GAMEDIR/conf"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
 # Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-runtime="frt_3.5.2"
+#  If XDG Path does not work
+# Use _directories to reroute that to a location within the ports folder.
+bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder 
+
+runtime="frt_3.2.3"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
-    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
     exit 1
   fi
@@ -50,10 +54,13 @@ $ESUDO umount "$godot_file" || true
 $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
-export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+# By default FRT sets Select as a Force Quit Hotkey, with this we disable that.
+export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS 
+
 
 $GPTOKEYB "$runtime" -c "./AtomicAutomaton.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" $GODOT_OPTS --main-pack "AtomicAutomaton.pck"
+pm_platform_helper "$runtime"
+"$runtime" $GODOT_OPTS --main-pack "AtomicAutomaton.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish
