@@ -47,9 +47,6 @@ if [ -f ./assets/game.droid ]; then
 fi
 
 $GPTOKEYB "gmloader" -c "./demonslayer.gptk" &
-
-echo "Loading, please wait... " > /dev/tty0
-
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader demonslayer.port
