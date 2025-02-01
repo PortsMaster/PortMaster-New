@@ -97,6 +97,11 @@ You do not need to adhere to the existing folder structure. For example, one tes
 ## The Master Levels
 Doom II comes with an addon called The Master Levels, but they're sometimes packaged as one WAD per level. You can use a WAD editor to merge them into one WAD (example, `masterlevels.wad` how it is for the commercial `Doom + Doom II` release) and load that as a mod to `DOOM2`. If you manage to do this, you will want to also load the [Master Levels Menu Interface](https://www.doomworld.com/idgames/utils/frontends/zdmlmenu) mod so you can actually select the addon.
 
+## Building
+GZ Doom does not require building as it has `arm64.deb` artifacts available on its [releases page](https://github.com/ZDoom/gzdoom/releases).
+
+Crispy Doom is also relatively simple, see linux build instructions on the [crispy-doom repository](https://github.com/fabiangreffrath/crispy-doom/wiki/Building-on-Linux).
+
 ## Thanks
 id Software -- Original games  
 GZDoom Team -- GZDoom, see license file for individual contributions.  
