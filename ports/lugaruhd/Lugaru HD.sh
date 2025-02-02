@@ -50,7 +50,7 @@ export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
 fi
 
 # Run port
-$GPTOKEYB "$BINARY" -c "./$BINARY.gptk" &
-pm_platform_helper "$GAMEDIR/$BINARY"
+$GPTOKEYB "$BINARY.${DEVICE_ARCH}" -c "./$BINARY.gptk" &
+pm_platform_helper "$GAMEDIR/$BINARY.${DEVICE_ARCH}"
 ./$BINARY.${DEVICE_ARCH}
 pm_finish
