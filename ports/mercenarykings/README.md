@@ -1,8 +1,8 @@
 ## Notes
 
 Thanks to:
-* [Trubute Games](https://store.steampowered.com/developer/tributegames), the developers of Flinthook.
-* JanTrueno for porting and patching Flinthook.
+* [Trubute Games](https://store.steampowered.com/developer/tributegames), the developers of Mercenary Kings.
+* JanTrueno for porting and patching Mercenary Kings.
 * JohnnyOnFlame for helping me set up the patches. (And much more)
 * Garik816 for the initial packaging.
 
