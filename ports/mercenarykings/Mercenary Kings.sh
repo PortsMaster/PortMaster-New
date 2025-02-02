@@ -57,7 +57,7 @@ export SDL_NO_SIGNAL_HANDLERS=1
 rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 
 # Not patched? let's perform first time setup
-if [[ ! -f "$GAMEDIRGAMEDIR/gamedata/MONOMODDED_ParisEngine.dll" ]]; then	
+if [[ ! -f "$GAMEDIR/gamedata/MONOMODDED_ParisEngine.dll" ]]; then	
 	echo "Performing first time setup..." 2>&1 | tee /dev/tty0 "${GAMEDIR}/install_log.txt"
 
 	# Configure MonoMod settings
