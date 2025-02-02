@@ -73,7 +73,7 @@ if [[ ! -f "$GAMEDIR/gamedata/MONOMODDED_ParisEngine.dll" ]]; then
 fi
 
 $GPTOKEYB "mono" &
-pm_platform_helper "mono"
+pm_platform_helper "$monodir/bin/mono"
 $TASKSET mono --ffast-math -O=all ../MMLoader.exe ${gameassembly}
 
 # Cleanup any running gptokeyb instances, and any platform specific stuff.
