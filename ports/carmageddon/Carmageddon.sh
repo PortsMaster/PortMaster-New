@@ -22,7 +22,7 @@ GAMEDIR="/$directory/ports/carmageddon"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x $GAMEDIR/dethrace
 
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
