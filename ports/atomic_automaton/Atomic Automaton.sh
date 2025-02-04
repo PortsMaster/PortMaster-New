@@ -32,7 +32,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 #  If XDG Path does not work
 # Use _directories to reroute that to a location within the ports folder.
-bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder 
 
 runtime="frt_3.2.3"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
