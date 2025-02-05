@@ -2,7 +2,7 @@
 
 Thanks to Backterria for creating this fin little short game!
 
-##Controls
+## Controls
 
 | Button     | Action |
 |--          |--      | 
