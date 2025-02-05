@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Backterria for creating this fin little short game!
+Thanks to Backterria for creating this fun little short game!
 
 ## Controls
 
