@@ -3,9 +3,10 @@
 Thanks to Backterria for creating this fin little short game!
 
 ##Controls
-A      -Jump
-B      -Interact
-Dpad-Movement
 
-
-
+| Button     | Action |
+|--          |--      | 
+|Dpad        |Movement|
+|A button    |Jump    |
+|B button    |Ineract |
+|Start       |Enter   |
