@@ -1,7 +1,6 @@
 ## Notes
 
-Thanks to Backterria for creating this fun little short game!
-https://backterria.itch.io/the-aspect
+Thanks to [Backterria](https://backterria.itch.io/) for creating this fun little short game!
 
 ## Controls
 
