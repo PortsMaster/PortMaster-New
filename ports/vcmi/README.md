@@ -1,7 +1,7 @@
 ## Notes
 
 Thanks to [VCMI Team](https://github.com/vcmi/vcmi) for the open source Heroes of Might and Magic III engine that makes this possible.  Also thanks to the @kloptops for the porting work for portmaster.  
-Update to 1.6.0-dev was made by @ddrsoul with great help of @kloptops , @kotzebuedog and all VCMI and PortMaster community.
+Update to 1.6.5 was made by @ddrsoul with great help of @kloptops , @kotzebuedog and all VCMI and PortMaster community.
 
 ## Detailed Instructions
 
@@ -46,7 +46,7 @@ Some additional settings can be made in ./save/settings.json:
     mkdir build
     cd build
 
-	cmake .. -DBIN_DIR:FILE="bin" -DCMAKE_INSTALL_PREFIX:FILE="." -DCOPY_CONFIG_ON_BUILD="ON" -DENABLE_DEBUG_CONSOLE="OFF" -DENABLE_EDITOR="OFF" -DENABLE_ERM="OFF" -DENABLE_GITVERSION="OFF" -DENABLE_LAUNCHER="OFF" -DENABLE_LUA="OFF" -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DENABLE_MONOLITHIC_INSTALL="OFF" -DENABLE_MULTI_PROCESS_BUILDS="ON" -DENABLE_NULLKILLER_AI="ON" -DENABLE_PCH="OFF" -DENABLE_SINGLE_APP_BUILD="OFF" -DENABLE_STATIC_AI_LIBS="OFF" -DENABLE_STRICT_COMPILATION="OFF" -DENABLE_TEST="OFF" -DENABLE_TRANSLATIONS="OFF" -DFL_BACKTRACE="ON" -DFL_BUILD_BINARY="OFF" -DFL_BUILD_SHARED="OFF" -DFL_BUILD_STATIC="ON" -DFL_BUILD_TESTS="OFF" -DFL_USE_FLOAT="OFF" -DFORCE_BUNDLED_FL="ON"
+	cmake .. -DBIN_DIR:FILE="bin" -DCMAKE_INSTALL_PREFIX:FILE="." -DCOPY_CONFIG_ON_BUILD="ON" -DENABLE_DEBUG_CONSOLE="OFF" -DENABLE_EDITOR="OFF" -DENABLE_ERM="OFF" -DENABLE_LAUNCHER="OFF" -DENABLE_LUA="OFF" -DENABLE_MONOLITHIC_INSTALL="OFF" -DENABLE_MULTI_PROCESS_BUILDS="ON" -DENABLE_NULLKILLER_AI="ON" -DENABLE_PCH="OFF" -DENABLE_SINGLE_APP_BUILD="OFF" -DENABLE_STATIC_AI_LIBS="OFF" -DENABLE_STRICT_COMPILATION="OFF" -DENABLE_TEST="OFF"  -DFL_BACKTRACE="ON" -DFL_BUILD_BINARY="OFF" -DFL_BUILD_SHARED="OFF" -DFL_BUILD_STATIC="ON" -DFL_BUILD_TESTS="OFF" -DFL_USE_FLOAT="OFF" -DFORCE_BUNDLED_FL="ON" -DCMAKE_BUILD_TYPE="Release"
 
 
     make
