@@ -54,7 +54,6 @@ fi
 
 $GPTOKEYB "gmloader" -c ./theaspect.gptk &
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
 pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader game.apk
 
