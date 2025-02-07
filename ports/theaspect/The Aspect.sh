@@ -29,6 +29,9 @@ export GMLOADER_PLATFORM="os_linux"
 
 cd $GAMEDIR
 
+$ESUDO chmod u+x "$GAMEDIR/gmloader"
+$ESUDO chmod u+x "$GAMEDIR/7zzs"
+
 # Extract file
 if [ -f "./gamedata/The Aspect.exe" ]; then
   # Extract its contents in place using 7zzs
