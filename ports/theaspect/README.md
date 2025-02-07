@@ -8,5 +8,5 @@ Thanks to [Backterria](https://backterria.itch.io/) for creating this fun little
 |--          |--      | 
 |Dpad        |Movement|
 |A button    |Jump    |
-|B button    |Ineract |
+|B button    |Interact|
 |Start       |Enter   |
