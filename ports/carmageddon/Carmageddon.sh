@@ -1,8 +1,4 @@
 #!/bin/bash
-# Ported by Maciej Suminski <orson at orson dot net dot pl>
-# Built from https://github.com/orsonmmz/dethrace (branch gles)
-
-PORTNAME="Carmageddon"
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -17,19 +13,24 @@ else
 fi
 
 source $controlfolder/control.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-CUR_TTY=/dev/tty0
-$ESUDO chmod 666 $CUR_TTY
-
+# Variables
 GAMEDIR="/$directory/ports/carmageddon"
-cd "$GAMEDIR"
 
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x $GAMEDIR/dethrace
+
+# Exports
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Check for gamedata
 if [[ ! -d "DATA" ]]; then
-	echo Missing game files. Unzip the game files to $GAMEDIR. > $CUR_TTY
+	pm_message "Missing game files. Unzip the game files to $GAMEDIR."
 	sleep 5
-	printf "\033c" >> $CUR_TTY
 	exit 1
 fi
 
@@ -38,14 +39,11 @@ if [[ ! -e ".init_done" && -e "DATA/KEYMAP_0.TXT" ]]; then
 	mv init/* DATA && rm -r init && touch .init_done
 fi
 
-$ESUDO chmod 666 /dev/uinput
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+# Run the game
 $GPTOKEYB "dethrace" -c "./dethrace.gptk" &
+pm_platform_helper "$GAMEDIR/dethrace"
+./dethrace --full-screen -hires
 
-./dethrace 2>&1 | tee -a ./log.txt
-
-$ESUDO kill -9 $(pidof gptokeyb)
-unset SDL_GAMECONTROLLERCONFIG
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> $CUR_TTY
+# Cleanup
+pm_finish
 

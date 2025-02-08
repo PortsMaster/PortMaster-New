@@ -27,7 +27,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export ANALOGSTICKS="${ANALOGSTICKS:-2}"
 export ANALOG_STICKS="${ANALOG_STICKS:-2}"
 
-$ESUDO chmod 777 $GAMEDIR/q2pro
+$ESUDO chmod 777 $GAMEDIR/q2pro_legacy
+$ESUDO chmod 777 $GAMEDIR/q2pro_glsl
 $ESUDO chmod 777 $GAMEDIR/*/gamearm64.so
 
 # Copy control configs on first run

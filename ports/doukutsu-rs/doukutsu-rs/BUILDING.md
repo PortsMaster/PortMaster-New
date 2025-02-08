@@ -1,29 +1,27 @@
 ## Building notes
 
-This is a build of doukutsu-rs, see:
+This is a 64-bit ARM build of doukutsu-rs, see:
  [https://github.com/doukutsu-rs/doukutsu-rs](https://github.com/doukutsu-rs/doukutsu-rs)
-
-Thanks to Studio Pixel/Nicalis for the original game and Cave Story+. Thanks to the doukutsu-rs team for the amazing reimplementation.
 
 
 ## Compile
 
 ```
-# Ubuntu 20.04 focal, without SDL installed but with its dependencies.
-# 20.04 was used because the port does not work on ArkOS, and performance
-# may be better.
-#
-# For dependencies, see src/Dockerfile
+# Ubuntu 20.04 focal aarch64, without the SDL package installed but with its
+# dependencies:
 
-mkdir shared/doukutsu-build
-cd shared/doukutsu-build
+cd src
+./docker-setup.txt
+
+
+# In docker image:
 
 git clone https://github.com/libsdl-org/SDL
 cd SDL
 git checkout release-2.26.2
 ./configure --prefix=/usr
 make
-sudo make install
+make install
 
 cd ..
 
@@ -34,16 +32,20 @@ mkdir build
 cd build
 cmake ..
 make
-sudo cmake --install . --prefix /usr
+cmake --install . --prefix /usr
 
 cd ../..
 
 git clone https://github.com/doukutsu-rs/doukutsu-rs
 cd doukutsu-rs
-patch -p1 < ../src/doukutsu-rs.patch
+wget https://raw.githubusercontent.com/PortsMaster/PortMaster-New/refs/heads/main/ports/doukutsu-rs/doukutsu-rs/src/doukutsu-rs.patch
+patch -p1 < ./doukutsu-rs.patch
 cargo build --release
 
 cd ..
 
-# binary is doukutsu-rs/target/release/doukutsu-rs
+# The binary is doukutsu-rs/target/release/doukutsu-rs
+# To retrieve it to the host:
+
+docker cp doukutsu-build:/doukutsu-rs/target/release/doukutsu-rs .
 ```
