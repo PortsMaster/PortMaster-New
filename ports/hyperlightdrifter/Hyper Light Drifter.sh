@@ -24,6 +24,10 @@ GAMEDIR="/$directory/ports/hyperlightdrifter"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -31,11 +35,7 @@ export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Hyper Light Drifter"
 export PATCHER_TIME="8 to 10 minutes"
 
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
-
 # dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
 dos2unix "$GAMEDIR/tools/patchscript"
 dos2unix "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
@@ -68,7 +68,8 @@ fi
 if [ "$DEVICE_RAM" -le 1 ] && [ "$CFW_NAME" = "ArkOS" ]; then
     pm_message "This game may crash often on your device!"
     pm_message "Save the game at regular intervals and back up your save files!"
-    echo "This game may crash often on your device! Save the game at regular intervals and back up your save files!"
+    echo "This game may crash often on your device!"
+    echo "Save the game at regular intervals and back up your save files!"
 fi
 
 
