@@ -1,6 +1,4 @@
 #!/bin/bash
-# PORTMASTER: minidoom2.zip, Mini Doom II.sh
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -64,14 +62,13 @@ else
     pm_message "Patching process already completed. Skipping."
 fi
 
-# Check for RAM and ArkOS to display and log warning message
+# Check for 1gb RAM and ArkOS to display and log warning message
 if [ "$DEVICE_RAM" -le 1 ] && [ "$CFW_NAME" = "ArkOS" ]; then
     pm_message "This game may crash often on your device!"
-    pm_message "Save the game at regular intervals and back up your save files!"
+    pm_message "In case of a corrupt save, retrieve a backup from hyperlightdrifter/saves/HLD_BACKUPS/"
     echo "This game may crash often on your device!"
-    echo "Save the game at regular intervals and back up your save files!"
+    echo "In case of a corrupt save, retrieve a backup from hyperlightdrifter/saves/HLD_BACKUPS/"
 fi
-
 
 # Swap buttons
 "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
@@ -85,8 +82,8 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 #Echo test version
-pm_message "version 0.7"
-echo "version 0.7"
+pm_message "PM version 1.0"
+echo "PM version 1.0"
 
 $GPTOKEYB "gmloadernext.armhf" -c ./hyperlightdrifter.gptk &
 pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
