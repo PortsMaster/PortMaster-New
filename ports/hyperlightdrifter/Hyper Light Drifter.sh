@@ -31,7 +31,7 @@ export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Hyper Light Drifter"
-export PATCHER_TIME="8 to 10 minutes"
+export PATCHER_TIME="7 to 10 minutes"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/patchscript"
