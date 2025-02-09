@@ -1,4 +1,7 @@
 #!/bin/bash
+# PORTMASTER: final_quest.zip, Final Quest.sh
+
+#!/bin/bash
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -18,22 +21,17 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/portfolder/
+GAMEDIR=/$directory/ports/atomic_automaton/
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
-# Set the XDG environment variables for config & savefiles
-export XDG_DATA_HOME="$CONFDIR"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-#  If XDG Path does not work
-# Use _directories to reroute that to a location within the ports folder.
-
-runtime="frt_3.2.3"
+runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
@@ -44,6 +42,13 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
 
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
+# Set the XDG environment variables for config & savefiles
+export XDG_DATA_HOME="$CONFDIR"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+#  If XDG Path does not work
+# Use _directories to reroute that to a location within the ports folder.
+# bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder 
 
 # Setup Godot
 godot_dir="$HOME/godot"
@@ -56,10 +61,12 @@ PATH="$godot_dir:$PATH"
 # By default FRT sets Select as a Force Quit Hotkey, with this we disable that.
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS 
 
-
 $GPTOKEYB "$runtime" -c "./AtomicAutomaton.gptk" &
-pm_platform_helper "$runtime"
+pm_platform_helper "$godot_dir/$runtime"
 "$runtime" $GODOT_OPTS --main-pack "AtomicAutomaton.pck"
 
-$ESUDO umount "$godot_dir"
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "$godot_dir"
+fi
 pm_finish
+
