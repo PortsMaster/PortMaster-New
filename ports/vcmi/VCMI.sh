@@ -37,6 +37,13 @@ if [ -f "$GAMEDIR/libs/libicudata.so.63.bz2" ]; then
   bzip2 -fd "$GAMEDIR/libs/libicudata.so.63.bz2"
 fi
 
+if [ -f "vcmi165_data.zip" ]; then
+    unzip -o vcmi165_data.zip
+    if [ $? -eq 0 ]; then
+        rm vcmi165_data.zip
+    fi
+fi
+
 if [[ ! -d "${GAMEDIR}/data/" ]]; then
   FILES_TO_REMOVE=""
   BUILDER_OPTIONS=""
@@ -73,12 +80,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod 666 /dev/uinput
 
 $GPTOKEYB "vcmiclient" &
-./bin/vcmiclient 2>&1 | $ESUDO tee -a ./log.txt
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO killall -9 tee
-
-$ESUDO systemctl restart oga_events &
-
-# Disable console
-printf "\033c" > $CUR_TTY
+pm_platform_helper "$GAMEDIR/bin/vcmiclient"
+./bin/vcmiclient
+pm_finish
