@@ -31,7 +31,7 @@ export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Hyper Light Drifter"
-export PATCHER_TIME="7 to 10 minutes"
+export PATCHER_TIME="13 to 15 minutes"
 
 # dos2unix in case we need it
 dos2unix "$GAMEDIR/tools/patchscript"
@@ -62,13 +62,19 @@ else
     pm_message "Patching process already completed. Skipping."
 fi
 
+# Delete the section here between the dash lines to allow the game to run on 1gb ram device with ArkOS
+# -----------------------------------------------------------------------------------------------------------------------------
 # Check for 1gb RAM and ArkOS to display and log warning message
 if [ "$DEVICE_RAM" -le 1 ] && [ "$CFW_NAME" = "ArkOS" ]; then
-    pm_message "This game may crash often on your device!"
-    pm_message "In case of a corrupt save, retrieve a backup from hyperlightdrifter/saves/HLD_BACKUPS/"
-    echo "This game may crash often on your device!"
-    echo "In case of a corrupt save, retrieve a backup from hyperlightdrifter/saves/HLD_BACKUPS/"
+    pm_message "This game will crash often on your device!"
+    pm_message "If you wish to continue playing despite this warning..."
+    pm_message "Delete the section of the script within Hyper Light Drifter.sh"
+    echo "This game will crash often on your device!"
+    echo "If you wish to continue playing despite this warning..."
+    echo "Delete the section of the script within Hyper Light Drifter.sh"
+    exit 1
 fi
+# -----------------------------------------------------------------------------------------------------------------------------
 
 # Swap buttons
 "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
