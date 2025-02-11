@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/portfolder/
+GAMEDIR=/$directory/ports/atomic_automaton/
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -33,7 +33,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 #  If XDG Path does not work
 # Use _directories to reroute that to a location within the ports folder.
 
-runtime="frt_3.2.3"
+runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
