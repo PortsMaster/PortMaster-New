@@ -1,3 +1,6 @@
+# UFO 50 - PortMaster Modification & Wrapper
+This is a wrapper and xdelta modification for vanilla UFO50 that makes the game more manageable on retro handheld systems running linux arm64. If you are running android on a retro handheld system, you may be looking for the [unofficial android port[https://github.com/Skyline969/UFO50AndroidUnofficial] by Skyline969.
+
 ## Installation
 Purchase the game on Steam and copy all the data to `ports/ufo50/assets`. On first run the game will be patched.
 
@@ -18,8 +21,6 @@ For the more technically inclined, here are specific modifications made in order
     - Remove/hide the scaling feature since the game always scales to the display on targeted devices, and enforce 1x scaling
     - Change the video settings menu to use `Stretch to Fit`, `Maintain Aspect Ratio`, and `Integer Scale` for display options
     - Remove/hide the scale options and the CRT shader options, since CRT shaders do not work on 1x scale
-    - Flush textures during cleanup operations
-    - Use a `config.ini` file to toggle arcade mode
 
 ## Thanks
 Mossmouth -- The absolutely amazing game  
