@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: super_hexagon.zip, Super Hexagon.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
