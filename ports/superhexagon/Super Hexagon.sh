@@ -41,7 +41,7 @@ fi
 # Try to install Itch version
 if ls $GAMEDIR/gamefiles/itch/superhexagon-*-bin 1> /dev/null 2>&1; then
   pm_message "Unpacking Itch.io installer"
-  unzip "$GAMEDIR/gamefiles/itch/superhexagon-*-bin" "data/*" -d "$GAMEDIR/gamefiles/"
+  LD_LIBRARY_PATH=$GAMEDIR/libs.${DEVICE_ARCH} "$GAMEDIR/unzip" "$GAMEDIR/gamefiles/itch/superhexagon-*-bin" "data/*" -d "$GAMEDIR/gamefiles/"
   mv "$GAMEDIR/gamefiles/data/" "$GAMEDIR/gamefiles/data1/"
   mv "$GAMEDIR/gamefiles/data1/"* "$GAMEDIR/gamefiles/"
   rm -rf "$GAMEDIR/gamefiles/data1/" "$GAMEDIR/gamefiles/x86/" 
@@ -52,7 +52,7 @@ fi
 # Try to install GOG version
 if ls $GAMEDIR/gamefiles/gog/gog_super_hexagon_*.sh 1> /dev/null 2>&1; then
   pm_message "Unpacking GOG installer"
-  unzip $GAMEDIR/gamefiles/gog/gog_super_hexagon_*.sh "data/noarch/game/*" -d "$GAMEDIR/gamefiles/"
+  LD_LIBRARY_PATH=$GAMEDIR/libs.${DEVICE_ARCH} "$GAMEDIR/unzip" $GAMEDIR/gamefiles/gog/gog_super_hexagon_*.sh "data/noarch/game/*" -d "$GAMEDIR/gamefiles/"
   mv "$GAMEDIR/gamefiles/data/" "$GAMEDIR/gamefiles/data1/"
   mv "$GAMEDIR/gamefiles/data1/noarch/game/"* "$GAMEDIR/gamefiles/"
   rm -rf "$GAMEDIR/gamefiles/data1/" "$GAMEDIR/gamefiles/x86/"
@@ -121,6 +121,7 @@ fi
 $ESUDO pkill -9 box64
 $ESUDO pkill -9 superhexagon.x86_64
 pm_finish
+
 
 
 
