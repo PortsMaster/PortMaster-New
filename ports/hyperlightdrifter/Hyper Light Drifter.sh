@@ -86,10 +86,6 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
     $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
-#Echo test version
-pm_message "PM version 1.0"
-echo "PM version 1.0"
-
 $GPTOKEYB "gmloadernext.armhf" -c ./hyperlightdrifter.gptk &
 pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
 
