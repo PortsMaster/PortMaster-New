@@ -13,29 +13,23 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
 GAMEDIR=/$directory/ports/paintedheart
 CONFDIR="$GAMEDIR/conf/"
 
-CUR_TTY=/dev/tty0
-$ESUDO chmod 666 $CUR_TTY
+mkdir -p "$GAMEDIR/conf"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-# Ensure the conf directory exists
-mkdir -p "$GAMEDIR/conf"
-
-# Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
-export XDG_DATA_HOME="$GAMEDATA"
-
+export XDG_DATA_HOME="$CONFDIR"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs"
 
 
 [ -d gamedata/lib ] && rm -rf data/ meta/ scripts/ gamedata/lib gamedata/lib64
