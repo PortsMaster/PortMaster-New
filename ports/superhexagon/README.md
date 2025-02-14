@@ -36,9 +36,9 @@ More special thanks:
 
 ---
 
-This port uses the new Westonpack runtime and libcrusty to provide X11 compatibility on devices that do not support X11. The runtime is still in active development and somewhat experimentatl. If you are experiencing issues, please reach out to me on the PM discord server, so i can improve this runtime. Thanks!
+This port uses the new Westonpack runtime and libcrusty to provide X11 compatibility on devices that do not support X11. The runtime is still in active development and somewhat experimental. If you are experiencing issues, please reach out to me on the PM discord server, so i can improve this runtime. Thanks!
 
-**LEGAL DISCLAIMER:** This port includes a selfmade library that partially emulates the Steam API. This library is not does bypass DRM protection measures, nor is it cabable to do so, nor does the game actually have any protection measures. All this library does is tell the app that Steam is running, and reply with stub values to a couple of requests related to achievements and leaderboards to allow the app's online features to fail gracefully. The full source code (under MIT license) is included in the package for full disclosure.
+**LEGAL DISCLAIMER:** This port includes a selfmade library that partially emulates the Steam API. This library does not bypass DRM protection measures, nor is it capable to do so, nor does the game actually have any protection measures. All this library does is tell the app that Steam is running, and reply with stub values to a couple of requests related to achievements and leaderboards to allow the app's online features to fail gracefully. The full source code (under MIT license) is included in the package for full disclosure.
 
 ---
 
