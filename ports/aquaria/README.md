@@ -4,7 +4,7 @@ Thanks to Alec Holowka, Derek Yu and Bit-Blot for the original game and making [
 Thanks to ptitSeb for the [gl4es library](https://github.com/ptitSeb/gl4es).
 
 ## Steam depot
-If you own the game on Steam, you can download the files using `download_depot 24420 24423 1286644614355232789` in the Steam console.
+Any version of the game from Steam or GoG should work. For example, if you own the game on Steam, you can download the linux version using `download_depot 24420 24423 1286644614355232789` in the Steam console.
 
 ## Controls
 
