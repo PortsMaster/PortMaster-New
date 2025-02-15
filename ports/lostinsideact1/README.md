@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to ayetoons for developing this game, check it on [Itch.io](https://ayetoons.itch.io/lost-inside-act-1)
+Thanks to ayetoons for developing this game and for kindly allowing us to host the game on Portmaster. Check it on [Itch.io](https://ayetoons.itch.io/lost-inside-act-1)
 
 ## Controls
 
