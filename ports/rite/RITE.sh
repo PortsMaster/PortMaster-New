@@ -56,7 +56,7 @@ if [ -f "./gamedata/data.win" ]; then
     if [ "$checksum" = "b74c9aac95bd6e0a202651550e1c200c" ]; then # itch.io version
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/patch-itch.xdelta gamedata/game.droid && \
         rm gamedata/data.win
-    elif [ "$checksum" = "9d0b53caccfcd89990d2e1b936c14288" ]; then # steam version
+    elif [ "$checksum" = "e49fe35d97a2b2655b672883b4ecd8a1" ]; then # steam version
         $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/patch-steam.xdelta gamedata/game.droid && \
         rm gamedata/data.win
     else
