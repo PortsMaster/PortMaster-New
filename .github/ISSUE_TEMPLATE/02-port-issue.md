@@ -22,6 +22,7 @@ The device(s) you were using when you encountered the problem. Check all that ap
 * [ ] RGB30
 * [ ] RK2023
 * [ ] X55
+* [ ] RGXX series
 * [ ] Other device (device name here)
 * [ ] All of the above
 
@@ -37,6 +38,8 @@ The firmware you were using when you encountered the problem. If known, add vers
 * [ ] uOS
 * [ ] RetroOZ
 * [ ] TheRA
+* [ ] muOS
+* [ ] knulli
 
 ### Port: {Port Name}
 
