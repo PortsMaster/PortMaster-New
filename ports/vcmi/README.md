@@ -41,7 +41,7 @@ replace ./client/windows/GUIClasses.cpp:1404 ```boost::split(lines, CGI->general
 
 ```
 	std::string textCGItemp = CGI->generaltexth->allTexts[184];
-	boost::split(lines, textCGItemp, boost::is_any_of("n"));
+	boost::split(lines, textCGItemp, boost::is_any_of("\n"));
 ```
 	put DATA_PATHS.diff inside ./vcmi folder
  
