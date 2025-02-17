@@ -26,8 +26,8 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB "gmloadernext.aarch64" -c ./lucid.gptk &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+$GPTOKEYB "gmloadernext.${DEVICE_ARCH}" -c ./lucid.gptk &
+pm_platform_helper "$GAMEDIR/gmloadernext.${DEVICE_ARCH"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
 pm_finish
