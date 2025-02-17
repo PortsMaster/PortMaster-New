@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Steamknight](https://steamknight.itch.io/erebos) for making thsi wonderful game
+Thanks to [Steamknight](https://steamknight.itch.io/erebos) for making this wonderful game
 
 ## Controls
 
