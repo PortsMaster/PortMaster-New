@@ -27,8 +27,8 @@ cd $GAMEDIR
 ## RUN SCRIPT HERE
 if [ -f "DeathRallyWin_10.exe" ]; then
   pm_message "Extracting DeathRallyWin_10.exe"
-  $EUSDO ./7z e -y DeathRallyWin_10.exe
-  $EUSDO rm -f DeathRallyWin_10.exe
+  $ESUDO ./7z e -y DeathRallyWin_10.exe
+  $ESUDO rm -f DeathRallyWin_10.exe
 fi
 
 if [ ! -f "TR0.BPA" ]; then

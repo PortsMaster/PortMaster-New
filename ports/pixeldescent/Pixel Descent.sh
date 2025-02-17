@@ -26,31 +26,36 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 $ESUDO chmod +x $GAMEDIR/tools/splash
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-# Pack audiogroups into apk
-if [ -n "$(ls ./gamedata/*.dat 2>/dev/null)" ]; then
-  mkdir -p ./assets
-  mv ./gamedata/*.dat ./assets/ 2>/dev/null
-  pm_message "Moving .dat files from ./gamedata to ./assets/"
-  zip -r -0 ./voidbreach.port ./assets/
-  pm_message "Zipping contents to ./voidbreach.port"
-  rm -Rf ./assets/
-  pm_message "Packing audiogroups complete"
+# Zip data if necessary
+zip_archive() {
+    if [ -f "assets/data.win" ]; then
+        mv "assets/data.win" "assets/game.droid"
+    else
+        pm_message "No assets in assets dir!"
+        sleep 2
+        exit 1
+    fi
+    rm -rf assets/*.exe assets/*.dll assets/.gitkeep
+    echo "Removed unnecessary files"
+    zip -r -0 pixeldescent.port ./assets/
+    mkdir -p saves
+    rm -rf assets
+}
+
+if [ -d assets ]; then
+    zip_archive
 fi
 
-# Prepare files
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/*.exe" ] && rm -f ./gamedata/*.exe
-
 # Display loading splash
-$ESUDO ./tools/splash "splash.png" 2000 &
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
+$ESUDO ./tools/splash "splash.png" 5000 & 
 
-# Assign configs and load the game
+# Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "pixeldescent.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
 
-# Cleanup
+# Kill processes
 pm_finish
