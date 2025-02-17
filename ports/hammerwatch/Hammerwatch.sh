@@ -94,8 +94,7 @@ $ESUDO mount "$controlfolder/libs/${mono_runtime}.squashfs" "${mono_dir}"
 export PATH="$mono_dir/bin":"$PATH"
 
 $GPTOKEYB "mono" -c "$GAMEDIR/hammerwatch.gptk" &
-# unset SDL_GAMECONTROLLERCONFIG
-#pm_platform_helper "$GAMEDIR/box64.${DEVICE_ARCH}"
+pm_platform_helper "$mono_dir/bin/mono"
 
 if [ "$rocknix_mode" -eq 0 ]; then
 	# Temporary fix for older ArkOS devices until westonpack is updated
