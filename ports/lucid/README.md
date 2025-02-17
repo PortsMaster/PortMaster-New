@@ -22,7 +22,7 @@ LUCID was made for Adventure Jam 2023 in the timeframe of 2 weeks.
 
 Made with Gamemaker.
 
-## PORT PERFORMANCE NOTES: As documented within the port.json, this port is best enjoyed on devices with high res/high pixel density.
+## Performance: As documented within the port.json, this port is best enjoyed on devices with high res/high pixel density.
                            -While playable on lower res, text plays a crucial role in the gameplay, especially for first time players.
 
 ## Controls
