@@ -977,7 +977,11 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
         }
 
     for port_dir, port_data in sorted(all_ports.items(), key=lambda k: (k[1]['port_json']['attr']['title'].casefold())):
-        ports_json_output['ports'][port_data['name']] = port_data['port_json']
+        if port_data['port_json']['version'] <= PORT_INFO_ROOT_ATTRS['version']:
+            # Only add port.json files which are within the version specs.
+            ports_json_output['ports'][port_data['name']] = port_data['port_json']
+        else:
+            print(f"- Skipping [{port_dir}] `port.json` version too new.")
 
         port_data['port_json']['attr']['image'] = port_data['image_files']
 
@@ -989,6 +993,7 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
 
     ## Jank :|
     if REPO_CONFIG.get('SPLIT_IMAGES', "N") == "Y":
+        print("- Building new images.xxx.zip")
         build_new_images_zip(old_manifest, new_manifest, port_status)
 
     utils = []
