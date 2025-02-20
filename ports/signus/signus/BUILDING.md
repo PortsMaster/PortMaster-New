@@ -11,9 +11,10 @@ cd ..
 git clone https://github.com/signus-game/signus
 
 # vanilla
-cd signus/signus
+cd signus
+patch -p1 < ../signus.allowkill.patch
 
-
+cd signus
 ./bootstrap
 ./configure
 make -j8
@@ -21,7 +22,7 @@ mkdir vanilla
 mv src/signus vanilla/
 cd ..
 
-patch -p1 < ../../signus.patch
+patch -p1 < ../signus.cursor.patch
 cd signus
 make -j8
 mkdir sim-cursor
