@@ -37,6 +37,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 cp conf/mkxp.conf gamedata/
 
 $GPTOKEYB "falcon_mkxp.bin" -c "./paintedheart.gptk" &
-pm_platform_helper "$GAMEDIR/gamedata/falcon_mkxp.bin
+pm_platform_helper "$GAMEDIR/gamedata/falcon_mkxp.bin"
 $GAMEDIR/gamedata/falcon_mkxp.bin
 pm_finish
