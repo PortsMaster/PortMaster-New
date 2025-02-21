@@ -7,11 +7,12 @@
 
 | Button | Action |
 |--|--| 
-|Dpad|Movement|
-|A|Jump|
-|Start|Ok|
+|DPad|Movement|
+|L Analog|Movement|
+|A|Mouse Select|
+|B|Jump|
+|Start|Ok/Select|
 |Select|Menu|
-|Left Analog|Mouse|
-|B|Mouse Select|
+
 
 
