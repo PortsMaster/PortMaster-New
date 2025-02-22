@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -25,7 +24,7 @@ GAMEDIR=/$directory/ports/interstatedrifter
 cd "$GAMEDIR"
 
 # Set file permissions
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 $ESUDO chmod +x "$GAMEDIR/tools/toolscript"
 $ESUDO chmod +x "$GAMEDIR/tools/7zzs"
 dos2unix "$GAMEDIR/tools/toolscript"
@@ -36,7 +35,7 @@ export PATCHER_GAME="$(basename "${0%.*}")"
 export PATCHER_TIME="1 to 2 minutes"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs.armhf:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:/$GAMEDIR/libs.aarch64:$LD_LIBRARY_PATH"
 export PATH="$PATH:$GAMEDIR/tools"
 
 # Check for install_completed to skip patching
@@ -51,8 +50,8 @@ else
     pm_message "Patching process already completed. Skipping."
 fi
 
-$GPTOKEYB "gmloadernext.armhf" &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
-./gmloadernext.armhf -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 pm_finish
