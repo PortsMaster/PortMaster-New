@@ -4,6 +4,7 @@ Thanks to:
 * [Ultimo Games](https://store.steampowered.com/developer/ultimogames) for creating this awesome game and making it free. Check out the game's storepage  [here](https://store.steampowered.com/app/1383770/Interstate_Drifter_1999/).
 * JanTrueno for porting the game.
 * Sacredev  for suggesting Interstate Drifter 1999
+* TheCuriousReader for finding a compatible 64bit GMS2 runner 
 
 ## Details:
 | Feature            | Details |
