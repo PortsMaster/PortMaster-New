@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-GAMEDIR="/$directory/ports/digitamersreborn"
+GAMEDIR="/$directory/ports/digitaltamersreborn"
 BIG_SCALE=4000
 BIG_DELAY=8
 SMALL_SCALE=6000
