@@ -15,7 +15,7 @@ A thanks goes out to the following:
 | Rumble support | No |
 | Tested versions| Steam  and Epic Games | 
 | Controls | Native |
-| Joysticks required | None |
+| Joysticks required | Single |
 
 ## Controls
 
