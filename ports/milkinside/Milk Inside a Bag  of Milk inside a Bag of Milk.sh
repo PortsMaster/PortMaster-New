@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-PORTEXEC="renpy/startRENPY.sh"
+PORTEXEC="renpy/startRENPY"
 GAMEDIR="/$directory/ports/milkinside"
 
 cd $GAMEDIR
