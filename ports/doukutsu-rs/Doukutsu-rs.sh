@@ -44,14 +44,16 @@ bind_directories ~/.local/share/doukutsu-rs $GAMEDIR/conf
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [[ ${CFW_NAME} != ROCKNIX ]]; then
-  # GL4ES is not needed on rocknix
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
+  source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+  source "${controlfolder}/libgl_default.txt"
+fi
 
-  if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
-    source "${controlfolder}/libgl_${CFW_NAME}.txt"
-  else
-    source "${controlfolder}/libgl_default.txt"
-  fi
+if [ ${CFW_NAME} != ROCKNIX ] && [ "$LIBGL_FB" != "" ]; then
+  # GL4ES is not needed on rocknix -- the binary will use OpenGL when
+  # available (panfrost/adreno) and fall back on GLES for libmali.
+  # For other platforms, GLES may not work and so GL/gl4es is used
 
   if [ "$LIBGL_FB" != "" ]; then
     export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
