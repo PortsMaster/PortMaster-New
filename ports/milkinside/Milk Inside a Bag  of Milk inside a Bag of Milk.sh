@@ -75,7 +75,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [ "$CFW_NAME" = "muOS" ]; then
+if [[ "$LIBGL_FB" != "" ]]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
   export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
 fi
