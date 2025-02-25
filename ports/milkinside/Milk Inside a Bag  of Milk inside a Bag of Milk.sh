@@ -75,6 +75,11 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+if [ "$CFW_NAME" = "muOS" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
+fi
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
