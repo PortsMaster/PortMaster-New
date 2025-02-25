@@ -22,7 +22,7 @@ This script was originally run on commit 6e96dcb6762e56ec1830914e08b443cf68c19fa
 of renpy_build. You might need to move back to this commit in the future
 
 ##### install required packages 
-uodpt install vim git sudo curl clang make libreadline-dev libsqlite3-dev libassimp-dev texinfo help2man libzstd-dev libsdl2-dev
+sudo apt install vim git sudo curl clang make libreadline-dev libsqlite3-dev libassimp-dev texinfo help2man libzstd-dev libsdl2-dev
 
 ##### need the correct version of cmake 
 mkdir cmake
