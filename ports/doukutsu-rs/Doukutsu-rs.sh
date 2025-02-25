@@ -50,15 +50,12 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [ ${CFW_NAME} != ROCKNIX ] && [ "$LIBGL_FB" != "" ]; then
+if [ "${CFW_NAME}" != ROCKNIX ] && [ "$LIBGL_FB" != "" ]; then
   # GL4ES is not needed on rocknix -- the binary will use OpenGL when
   # available (panfrost/adreno) and fall back on GLES for libmali.
   # For other platforms, GLES may not work and so GL/gl4es is used
-
-  if [ "$LIBGL_FB" != "" ]; then
-    export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
-    export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
-  fi
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 fi
 
 $GPTOKEYB "$BINARY" -c "./$BINARY.gptk" &
