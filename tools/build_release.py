@@ -812,7 +812,7 @@ def port_info(file_name, ports_json, ports_status):
             # HRMMmmmmm o_o;;;;
             return
 
-        file_md5 = ports_status[clean_name]['md5']
+        file_md5  = ports_status[clean_name]['md5']
         file_size = ports_status[clean_name]['size']
 
     default_status = {
@@ -1004,7 +1004,7 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
     utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
 
-    if SPLIT_IMAGES:
+    if REPO_CONFIG.get('SPLIT_IMAGES', "N") == "Y":
         for img_id in range(1000):
             image_xxx_zip = f"images.{img_id:03d}.zip"
 
