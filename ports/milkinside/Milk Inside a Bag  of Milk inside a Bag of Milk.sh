@@ -41,7 +41,7 @@ gamefiles="$GAMEDIR/game/"
 renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
 
-$ESUDO umount "$gamefiles" || true
+$ESUDO umount "$renpydir/game" || true
 $ESUDO umount "$renpy_runtime" || true
 $ESUDO mount "$renpy_runtime" "$renpydir"
 sleep 2
