@@ -86,4 +86,9 @@ pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
 $GPTOKEYB "startRENPY" -c "milkinside.gptk"  &
 bash "./$PORTEXEC"
 
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "$renpydir/game"
+    $ESUDO umount "$renpydir"
+fi
+
 pm_finish
