@@ -20,7 +20,8 @@ Also thanks to Slayer366 for the porting work for portmaster.
 | Button | Action |
 |--|--| 
 |D-pad/L-Stick/R-Stick|Move|
-|A/Start|Enter/Make selection/In-game Menu|
+|A/Start|Enter/Make selection/Start level without moving|
+|B/Y/Select|Back/Invoke In-game Menu|
 |X|Pause|
 |L1|Page Up/Previous 10 Levels|
 |R1|Page Down/Next 10 Levels|
@@ -32,6 +33,6 @@ Also thanks to Slayer366 for the porting work for portmaster.
 ```shell
 sudo apt install -y libsdl1.2-dev libsdl-image1.2-dev libsdl-gfx1.2-dev libsdl-mixer1.2-dev libpng-dev libpng16-16 libjpeg-dev libtiff-dev libtiff5-dev libmikmod-dev libfluidsynth-dev flac libmad-ocaml-dev libasound2-dev liblzma-dev zlib1g-dev libjbig-dev libsdl2-dev libopenal-dev libglib2.0-dev libjack-dev libsndfile1-dev libreadline-dev libogg-dev libvorbis-dev libvorbisfile3 libvorbisenc2 libvorbisidec-dev libslang2-dev libtinfo-dev libsndio-dev libxinerama-dev libxrandr-dev libxss-dev libwrap0-dev libxrender-dev liblz4-dev libffi-dev libgpg-error-dev
 git clone https://github.com/slayer366/tileworld-for-handhelds
-cd tileworld-for-handhelds
+cd tileworld-for-handhelds/src
 make -j4
 ```
