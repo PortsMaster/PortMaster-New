@@ -36,7 +36,7 @@ fi
 
 
 
-renpydir="$GAMEDIR/renpy/"
+renpydir="$GAMEDIR/renpy"
 gamefiles="$GAMEDIR/game/"
 renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
