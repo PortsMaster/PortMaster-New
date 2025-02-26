@@ -34,11 +34,6 @@ export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filen
 export PATCHER_TIME="2 to 5 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
-
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
