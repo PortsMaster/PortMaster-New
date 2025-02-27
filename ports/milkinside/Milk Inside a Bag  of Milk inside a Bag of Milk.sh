@@ -36,12 +36,12 @@ fi
 
 
 
-renpydir="$GAMEDIR/renpy/"
+renpydir="$GAMEDIR/renpy"
 gamefiles="$GAMEDIR/game/"
 renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
 
-$ESUDO umount "$gamefiles" || true
+$ESUDO umount "$renpydir/game" || true
 $ESUDO umount "$renpy_runtime" || true
 $ESUDO mount "$renpy_runtime" "$renpydir"
 sleep 2
@@ -58,8 +58,8 @@ export RENPY_LESS_MEMORY=1
 if [ -d $GAMEDIR/gamefiles ]; then
     echo "Game Files found"
     $GAMEDIR/renpy/lib/py3-linux-aarch64/python ./rpatool -x $GAMEDIR/gamefiles/archive.rpa -o $GAMEDIR/gamefiles
-	 cp $GAMEDIR/gamefiles/images/* $GAMEDIR/gamefiles
-	 mv $GAMEDIR/gamefiles $GAMEDIR/game
+    cp $GAMEDIR/gamefiles/images/* $GAMEDIR/gamefiles
+    mv $GAMEDIR/gamefiles $GAMEDIR/game
     cp $GAMEDIR/patches/* $GAMEDIR/game/
     #rm $GAMEDIR/gamefiles/archive.rpa
     echo "Patching done"
@@ -85,5 +85,10 @@ fi
 pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
 $GPTOKEYB "startRENPY" -c "milkinside.gptk"  &
 bash "./$PORTEXEC"
+
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "$renpydir/game"
+    $ESUDO umount "$renpydir"
+fi
 
 pm_finish
