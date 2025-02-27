@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -61,21 +60,31 @@ else
     GUNFOV="70"
 fi
 
-if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
-      if [ ! -f $GAMEDIR/conf/.yq2/console_history.txt ]; then
-        mkdir -p $GAMEDIR/conf/.yq2
-        cp -rf $GAMEDIR/conf/yq2_triggers/* $GAMEDIR/conf/.yq2/.
-      fi
-elif [[ "${ANALOG_STICKS}" -lt 2 ]]; then
-      if [ ! -f $GAMEDIR/conf/.yq2/console_history.txt ]; then
-        mkdir -p $GAMEDIR/conf/.yq2
-        cp -rf $GAMEDIR/conf/yq2_nosticks/* $GAMEDIR/conf/.yq2/.
-      fi
+CFW_NAME=$(echo "$CFW_NAME" | tr '[:lower:]' '[:upper:]')
+if [[ "$CFW_NAME" == 'JELOS' ]] || [[ "$CFW_NAME" == 'ROCKNIX' ]]; then
+    YQ2RENDERER="soft"
+    GUNFOV="82"
 else
-      if [ ! -f $GAMEDIR/conf/.yq2/console_history.txt ]; then
-        mkdir -p $GAMEDIR/conf/.yq2
-        cp -rf $GAMEDIR/conf/yq2_default/* $GAMEDIR/conf/.yq2/.
-      fi
+    YQ2RENDERER="gles3"
+    GUNFOV="70"
+fi
+
+# Check device type
+if [ "$DEVICE_NAME" = "X55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX" ]; then
+    if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
+        mkdir -p "$GAMEDIR/conf/.yq2"
+        cp -rf "$GAMEDIR/conf/yq2_triggers/"* "$GAMEDIR/conf/.yq2/."
+    fi
+elif [ "$ANALOG_STICKS" -lt 2 ]; then
+    if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
+        mkdir -p "$GAMEDIR/conf/.yq2"
+        cp -rf "$GAMEDIR/conf/yq2_nosticks/"* "$GAMEDIR/conf/.yq2/."
+    fi
+else
+    if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
+        mkdir -p "$GAMEDIR/conf/.yq2"
+        cp -rf "$GAMEDIR/conf/yq2_default/"* "$GAMEDIR/conf/.yq2/."
+    fi
 fi
 
 bind_directories ~/.yq2 $GAMEDIR/conf/.yq2
