@@ -45,7 +45,7 @@ renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
 
 # Mounting Renpy and gamefiles
-$ESUDO umount "$gamefiles" || true
+$ESUDO umount "$renpydir/game" || true
 $ESUDO umount "$renpy_runtime" || true
 $ESUDO mount "$renpy_runtime" "$renpydir"
 sleep 2
@@ -70,7 +70,12 @@ fi
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
-$GPTOKEYB "startRENPY" -c "donottakethiscathome.gptk"  &
+$GPTOKEYB "$PORTEXEC" -c "donottakethiscathome.gptk"  &
 bash "./$PORTEXEC"
 
 pm_finish
+
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "$renpydir/game"
+    $ESUDO umount "$renpydir"
+fi
