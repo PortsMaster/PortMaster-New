@@ -13,7 +13,7 @@ from pathlib import Path
 ## Port Information
 
 PORT_INFO_ROOT_ATTRS = {
-    'version': 3,
+    'version': 4,
     'name': None,
     'items': None,
     'items_opt': None,
@@ -31,7 +31,7 @@ PORT_INFO_ATTR_ATTRS = {
     'image': None,
     'rtr': False,
     'exp': False,
-    'runtime': None,
+    'runtime': [],
     'min_glibc': "",
     'reqs': [],
     'arch': [],
@@ -183,13 +183,9 @@ def port_info_load(raw_info, source_name=None, do_default=False):
                 }
             del info['md5']
 
-        # WHOOPS! :O
-        if info.get('attr', {}).get('runtime', None) == "blank":
-            info['attr']['runtime'] = None
-
-    if info.get('version', None) == 2:
-        # :D
-        info['version'] = 3
+    # WHOOPS! :O
+    if info.get('attr', {}).get('runtime', None) == "blank":
+        info['attr']['runtime'] = None
 
     if isinstance(info.get('attr', {}).get('porter'), str):
         info['attr']['porter'] = [info['attr']['porter']]
@@ -199,8 +195,22 @@ def port_info_load(raw_info, source_name=None, do_default=False):
             key
             for key in info['attr']['reqs']]
 
-    if isinstance(info.get("version", None), str):
-        info["version"] = int(info["version"])
+    # Version 3 to 4
+    if info.get('version', None) == 3:
+        info['version'] = 4
+
+        if info['attr']['runtime'] is None:
+            info['attr']['runtime'] = []
+
+        elif isinstance(info['attr']['runtime'], str):
+            info['attr']['runtime'] = [ info['attr']['runtime'] ]
+
+    # Catch errors because who fucking uses version numbers.
+    if info.get('attr', {}).get('runtime', []) == None:
+        info['attr']['runtime'] = []
+
+    if isinstance(info.get('attr', {}).get('runtime', []), str):
+        info['attr']['runtime'] = [ info['attr']['runtime'] ]
 
     # This strips out extra stuff
     port_info = {}
