@@ -10,6 +10,8 @@ Under **GPL 3** license
 
 Based on original idea of [Z80St Software](https://sites.google.com/site/z80stsoftware) and porting for the previous version make with LUA and [TIC-80](https://tic80.com/)
 
+The objective is to rotate the pipes until they are all joined together before time runs out. At the end of each level an extra time is added and points are added for the remaining seconds.
+
 ## Installation:
 
 Simply download the correct archive for your system, extract and double-click on the executable. It's as simple as that.
