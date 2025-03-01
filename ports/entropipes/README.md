@@ -1,43 +1,48 @@
-# Ticoban
+# EntroPipes
 
-[Play online version/Juega a la versión en linea](https://son-link.github.io/ticoban-pyxel/)
+https://codeberg.org/son_link/EntroPipes
 
+© 2015-2025 Alfonso Saavedra "Son Link" http://son-link.github.io
 
-## English
+EntroPipes is a puzzle type game programming on **Python** and the retro game engine [Pyxel](https://github.com/kitao/pyxel/) for **Linux**, **Windows**, Linux base game consoles (like R36S, Anbernic, etc.) and Web Browsers.
 
-A Sobokan clone make with [Pyxel](https://github.com/kitao/pyxel) for Linux, Windows and some based Linux consoles
+Under **GPL 3** license
 
-In this game you must move the balls to the holes to go to the next level.
+Based on original idea of [Z80St Software](https://sites.google.com/site/z80stsoftware) and porting for the previous version make with LUA and [TIC-80](https://tic80.com/)
 
-### Controls
+## Installation:
 
-* A button: Accept option/Next level
-* D-Pad: Select option on menus and move player
-* Start button: Open/close pause menu
-* Select button: Restart level
+Simply download the correct archive for your system, extract and double-click on the executable. It's as simple as that.
 
-### Special thanks
+## Download:
+* [Last releases](https://codeberg.org/son_link/EntroPipes)
+* [Itch](https://son-link.itch.io/entropipes)
+* [Online](https://son_link.codeberg.page/entropipes)
+* PortMaster: Soon
 
-To the people of the Telegram channel of [Jugando En Linux](https://jugandoenlinux.com), for trying it and supporting me, and you for playing.
+## How to play:
 
-Under the GNU/GPL3 or newer license
+### Main menu
 
+|Gamepad|Keyboard|Action|
+|-------|--------|------|
+|D-pad|Arrow keys|Up/Down for select option. Left/Right: Change puzzle size|
+|A|Z|Confirm|
+|B|X|Return to main menu from Top Score and How to play|
 
-## Español
+### In game
 
-Un clon de Sokoban hecho con [Pyxel](https://github.com/kitao/pyxel) para Linux, Windows y varias consolas basadas en Linux.
+|Gamepad|Keyboard|Action|
+|-------|--------|------|
+|D-pad|Arrow keys|Move cursor|
+|A|Z|Rotate pipe|
+|Start|Enter|Pause game
+|Select/Option|Space|If game is paused, return to main menu|
 
-En este juego debes de mover las bolas hasta los agujeros para pasar al siguiente nivel.
+Press **Scape** on Linux/Windows to close the game.
 
-### Controles:
+## Puzzle editor:
 
-* Botón A: Aceptar opciones de los menus/Siguiente nivel
-* D-Pad: Desplazarse por los menús y mover el personaje
-* Botón Start: Abre/cierra el menú de pausa
-* Botón Select: Reiniciar nivel
+The puzzle editor is written on HTML and Javascript and based on the original puzzle editor make by Z80St. Simply open **editor/index.html** on your favorite web browser (tested on **Firefox** and **Chrome**) or use the online version [available here](https://son_link.codeberg.page/entropipes_editor/) and create a new issue or send push merge.
 
-### Agradecimientos
-
-* A la gente del canal de Telegram de [Jugando En Linux](https://jugandoenlinux.com), por probarlo y soportarme, y a ti por jugarlo.
-
-Bajo licencia GNU/GPL3 o más reciente
+The font of the icons has been created with (Fontello)[https://fontello.com/] and the icon pack (Pixelarticons)[https://github.com/halfmage/pixelarticons] (under MIT license).
