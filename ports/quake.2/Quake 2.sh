@@ -60,8 +60,7 @@ else
     GUNFOV="70"
 fi
 
-CFW_NAME=$(echo "$CFW_NAME" | tr '[:lower:]' '[:upper:]')
-if [[ "$CFW_NAME" == 'JELOS' ]] || [[ "$CFW_NAME" == 'ROCKNIX' ]]; then
+if [ "$CFW_NAME" == 'JELOS' ] || [ "$CFW_NAME" == 'ROCKNIX' ]; then
     YQ2RENDERER="soft"
     GUNFOV="82"
 else
@@ -70,7 +69,7 @@ else
 fi
 
 # Check device type
-if [ "$DEVICE_NAME" = "X55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX" ]; then
+if [ "$DEVICE_NAME" = "x55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX" ]; then
     if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
         mkdir -p "$GAMEDIR/conf/.yq2"
         cp -rf "$GAMEDIR/conf/yq2_triggers/"* "$GAMEDIR/conf/.yq2/."
