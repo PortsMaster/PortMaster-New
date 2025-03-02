@@ -12,10 +12,6 @@
 |L1|Back|
 |R1/L2|Skip (need to hold)|
 
-## How to install
-Drop the entire contents of the `ButterflySoup-2.20-linux/game` folder
-into the `gamefiles` folder and then run the `./Butterfly Soup.sh` script to start it.
-
 ## Notes
 Sometimes the menu navigations is a little janky, but move around enough and
 you can get where you want to go.
