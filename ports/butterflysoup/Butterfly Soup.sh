@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: butterflysoup.zip, Butterfly Soup.sh
 
 # Prelude
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
