@@ -37,6 +37,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Run port
 $GPTOKEYB "$BINARY" &
-pm_platform_helper "$GAMEDIR/$BINARY"
+pm_platform_helper "$GAMEDIR/$BINARY.${DEVICE_ARCH}"
 ./$BINARY.${DEVICE_ARCH}
 pm_finish
