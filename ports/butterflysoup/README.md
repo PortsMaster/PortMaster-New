@@ -12,15 +12,13 @@
 |L1|Back|
 |R1/L2|Skip (need to hold)|
 
-## What is this?
-This is a port of the game [Butterfly Soup](https://brianna-lei.itch.io/butterfly-soup) 
-using the framework [Portmaster](https://portmaster.games/). This does not include
-any game files, but with them you should be able to play the game on some handheld devices
-such as the RG35XXSP and other aarch64 architecture devices.
-
-## How do I use it? 
+## How to install
 Drop the entire contents of the `ButterflySoup-2.20-linux/game` folder
 into the `gamefiles` folder and then run the `./Butterfly Soup.sh` script to start it.
+
+## Notes
+Sometimes the menu navigations is a little janky, but move around enough and
+you can get where you want to go.
 
 ## Thanks To;
 * [Brianna Lei](https://linktr.ee/confettibri) for making a wonderfully sweet game (Once again please support her!)

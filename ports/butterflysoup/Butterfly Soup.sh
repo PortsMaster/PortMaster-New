@@ -21,8 +21,8 @@ get_controls
 PORTEXEC="renpy/startRENPY"
 GAMEDIR="/$directory/ports/butterflysoup"
 RUNTIME="renpy_8.1.3"
-RENPYDIR="$GAMEDIR/renpy/"
-GAMEFILES="$GAMEDIR/gamefiles/"
+RENPYDIR="$GAMEDIR/renpy"
+GAMEFILES="$GAMEDIR/gamefiles"
 RENPY_RUNTIME="$controlfolder/libs/${RUNTIME}.squashfs"
 
 cd "$GAMEDIR"
