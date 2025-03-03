@@ -40,7 +40,7 @@ export XDG_DATA_HOME="$GAMEDIR/conf"
 bind_directories ~/.renpy/ $GAMEDIR/conf/.portfolder 
 
 renpydir="$GAMEDIR/renpy"
-gamefiles="$GAMEDIR/game/"
+gamefiles="$GAMEDIR/game"
 renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
 
