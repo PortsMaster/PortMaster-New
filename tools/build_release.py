@@ -109,6 +109,27 @@ THIS_IS_ANNOYING maps "banana.duck/gameinfo.xml" to "bananaduck/gameinfo.xml"
 THIS_IS_ANNOYING = {}
 
 
+"""
+So as the images.zip file got larger, i split it into multiple `images.xxx.zip` files.
+
+This worked well but on first launch it now meant the end user had to
+download 8 or more zips as we hit over 900 ports. The PortMaster-GUI client
+kept track of what images are in each zip file, so that when it would download an updated
+images.xxx.zip file, it would know if an image had been deleted or not.
+
+However this approach meant the client had to download each images.xxx.zip
+and record what images were stored in it.
+
+The goal now is that the client on first launch download the larger images.zip file, and on
+subsequent launches fetch the images.xxx.zip files that are changed. It should also be possible
+to configura it so that only maximum number of images.xxx.zip files are downloaded or it would
+fall back to downloading the larger file.
+
+JSON_IMAGES_ZIP_IMAGES is builds up a list of images that belong to each zip.
+"""
+JSON_IMAGES_ZIP_IMAGES = {}
+
+
 #############################################################################
 ## Read CONFIG file.
 REPO_CONFIG = {
@@ -551,7 +572,7 @@ def build_gameinfo_zip(old_manifest, new_manifest):
     changes = {}
     differ = Differ()
 
-    print(f"Building gameinfo.zip")
+    print(f"\nBuilding gameinfo.zip")
     for line in differ.compare(old_files, new_files):
         # line = "  <FILENAME>:<md5SUM>"
         mode = line[:2]
@@ -627,6 +648,8 @@ def port_info_id(port_status, max_info_count=100):
 
 
 def build_new_images_zip(old_manifest, new_manifest, port_status):
+    global JSON_IMAGES_ZIP_IMAGES
+
     port_info_id_map = port_info_id(port_status)
 
     max_info_id = max(port_info_id_map.values()) + 1
@@ -646,6 +669,12 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
         old_files.sort()
 
         zip_name = f'images.{info_id:03d}.zip'
+
+        # This is used to add the images in each images.xxx.zip file.
+        JSON_IMAGES_ZIP_IMAGES[zip_name] = [
+            f"{file.replace('/', '.')}"
+            for file, digest in new_manifest.items()
+            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
 
         new_manifest[zip_name] = hash_items(new_files)
         if old_manifest.get(zip_name) == new_manifest[zip_name]:
@@ -672,10 +701,10 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
                     changes[name] = 'Added'
 
         if zip_name in old_manifest:
-            print(f"Adding {zip_name}")
+            print(f"\nAdding {zip_name}")
 
         else:
-            print(f"Updating {zip_name}")
+            print(f"\nUpdating {zip_name}")
 
         for name, mode in changes.items():
             print(f" - {mode} {name}")
@@ -704,6 +733,12 @@ def build_images_zip(old_manifest, new_manifest):
     new_files.sort()
     old_files.sort()
 
+    ## Only needed for the images.xxx.zip
+    # JSON_IMAGES_ZIP_IMAGES['images.zip'] = [
+    #     f"{file.replace('/', '.')}"
+    #     for file, digest in new_manifest.items()
+    #     if file.count('/') == 1 and file_type(Path(file)) == SCREENSHOT_FILE]
+
     new_manifest['images.zip'] = hash_items(new_files)
     if old_manifest.get('images.zip') == new_manifest['images.zip']:
         return
@@ -729,10 +764,10 @@ def build_images_zip(old_manifest, new_manifest):
                 changes[name] = 'Added'
 
     if 'images.zip' in old_manifest:
-        print("Adding images.zip")
+        print("\nAdding images.zip")
 
     else:
-        print("Updating images.zip")
+        print("\nUpdating images.zip")
 
     for name, mode in changes.items():
         print(f" - {mode} {name}")
@@ -784,9 +819,9 @@ def build_markdown_zip(old_manifest, new_manifest):
                 changes[name] = 'Added'
 
     if 'markdown.zip' in old_manifest:
-        print("Adding markdown.zip")
+        print("\nAdding markdown.zip")
     else:
-        print("Updating markdown.zip")
+        print("\nUpdating markdown.zip")
 
     for name, mode in changes.items():
         print(f" - {mode} {name}")
@@ -924,6 +959,9 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
             'url': url,
             }
 
+        if clean_name in JSON_IMAGES_ZIP_IMAGES:
+            util_json[clean_name]['images'] = JSON_IMAGES_ZIP_IMAGES[clean_name]
+
 
 def port_diff(port_name, old_manifest, new_manifest):
     """
@@ -1057,7 +1095,7 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
             )
 
     with open(RELEASE_DIR / 'ports.json', 'w') as fh:
-        json.dump(ports_json_output, fh, indent=4)
+        json.dump(ports_json_output, fh, indent=2)
 
 
 def load_manifest(manifest_file, registered=None):
@@ -1234,11 +1272,11 @@ def main(argv):
 
         if GITHUB_RUN:
             for warning in messages['warnings']:
-                print(f"::warning file=ports/{port_name}::{warning}")
+                print(f"::warning file=ports/{port_name}::{port_name}: {warning}")
                 warnings += 1
 
             for error in messages['errors']:
-                print(f"::error file=ports/{port_name}::{error}")
+                print(f"::error file=ports/{port_name}::{port_name}: {error}")
                 errors += 1
 
             continue
