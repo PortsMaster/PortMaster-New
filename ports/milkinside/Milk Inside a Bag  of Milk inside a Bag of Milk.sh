@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: milkinside.zip, Milk Inside a Bag  of Milk inside a Bag of Milk.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -37,7 +38,7 @@ fi
 
 
 renpydir="$GAMEDIR/renpy"
-gamefiles="$GAMEDIR/game/"
+gamefiles="$GAMEDIR/game"
 renpy_runtime="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$renpydir"
 
