@@ -572,7 +572,7 @@ def build_gameinfo_zip(old_manifest, new_manifest):
     changes = {}
     differ = Differ()
 
-    print(f"Building gameinfo.zip")
+    print(f"\nBuilding gameinfo.zip")
     for line in differ.compare(old_files, new_files):
         # line = "  <FILENAME>:<md5SUM>"
         mode = line[:2]
@@ -701,10 +701,10 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
                     changes[name] = 'Added'
 
         if zip_name in old_manifest:
-            print(f"Adding {zip_name}")
+            print(f"\nAdding {zip_name}")
 
         else:
-            print(f"Updating {zip_name}")
+            print(f"\nUpdating {zip_name}")
 
         for name, mode in changes.items():
             print(f" - {mode} {name}")
@@ -764,10 +764,10 @@ def build_images_zip(old_manifest, new_manifest):
                 changes[name] = 'Added'
 
     if 'images.zip' in old_manifest:
-        print("Adding images.zip")
+        print("\nAdding images.zip")
 
     else:
-        print("Updating images.zip")
+        print("\nUpdating images.zip")
 
     for name, mode in changes.items():
         print(f" - {mode} {name}")
@@ -819,9 +819,9 @@ def build_markdown_zip(old_manifest, new_manifest):
                 changes[name] = 'Added'
 
     if 'markdown.zip' in old_manifest:
-        print("Adding markdown.zip")
+        print("\nAdding markdown.zip")
     else:
-        print("Updating markdown.zip")
+        print("\nUpdating markdown.zip")
 
     for name, mode in changes.items():
         print(f" - {mode} {name}")
