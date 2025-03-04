@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: milkinside.zip, Milk Inside a Bag  of Milk inside a Bag of Milk.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
