@@ -37,7 +37,7 @@ fi
 # Savedata setup
 mkdir -p $GAMEDIR/conf
 export XDG_DATA_HOME="$GAMEDIR/conf"
-bind_directories ~/.renpy/ $GAMEDIR/conf/.portfolder 
+bind_directories ~/.renpy/ $GAMEDIR/conf/
 
 renpydir="$GAMEDIR/renpy"
 gamefiles="$GAMEDIR/game"
@@ -53,11 +53,9 @@ $ESUDO mount --bind "$gamefiles" "$renpydir/game"
 
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/gl4es:$LD_LIBRARY_PATH"
-export PYTHONHOME=$GAMEDIR/renpy/lib/py3-linux-aarch64/../../
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PYTHONHOME=$GAMEDIR/renpy/
 export PYTHONPATH=$GAMEDIR/renpy/lib/python3.9
-export RENPY_DISABLE_JOYSTICK=1
-export RENPY_LESS_MEMORY=1
 
 
 # If using gl4es
