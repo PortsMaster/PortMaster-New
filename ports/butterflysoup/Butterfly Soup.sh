@@ -74,7 +74,7 @@ if [[ "$LIBGL_FB" != "" ]]; then
 fi
 
 pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
-$GPTOKEYB2 "startRENPY" -c "butterflysoup.gptk"  &
+$GPTOKEYB2 "$PORTEXEC" -c "butterflysoup.gptk"  &
 bash "./$PORTEXEC"
 
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
