@@ -39,9 +39,9 @@ This port uses the new Westonpack runtime and libcrusty to provide X11 compatibi
 |--|--| 
 |Analog Sticks, DPad |Movement|
 |A|Attack|
-|B, Ability 1|
-|Y, Ability 2|
-|X, Ability 3|
+|B|Ability 1|
+|Y|Ability 2|
+|X|Ability 3|
 |L1|Strafe|
 |L2|Hold|
 |R1|Autofire Hold|
