@@ -13,56 +13,40 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/undertale"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs":$LD_LIBRARY_PATH
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-cd "$GAMEDIR"
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-printf "\033c" > /dev/tty0
-install() {
-    $ESUDO mkdir -p gamedata/assets/
-    $ESUDO rm -rf gamedata/*.exe gamedata/*.dll gamedata/*.ini
-    mv gamedata/*.ogg gamedata/assets/
-    mv gamedata/*.png gamedata/assets/
-    cd gamedata
-    $ESUDO ../utils/zip -r -0 ../game.apk ./assets || return 1
-    rm -rf assets/
-    cd $GAMEDIR
-    touch installed
-}
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+# Check for linux Undertale version
+[ -f "./assets/game.unx" ] && mv assets/game.unx assets/data.win
 
-if [ ! -f installed ]; then
-    echo "Performing first-time setup, please wait..." > /dev/tty0
-    install
-    if [ $? -ne 0 ]; then
-        echo "An error occurred during the installation process. Exiting." > /dev/tty0
-        exit 1
-    fi
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+	# Rename data.win file
+	mv assets/data.win assets/game.droid
+	# Delete all redundant files
+	rm -f assets/*.{dll,exe,txt}
+	# Zip all game files into the undertale.port
+	zip -r -0 ./undertale.port ./assets/
+	rm -Rf ./assets/
 fi
 
-$GPTOKEYB "gmloader" -c "undertale.gptk" &
-echo "Loading, please wait... " > /dev/tty0
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "undertale.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader game.apk
-
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
