@@ -81,7 +81,7 @@ fi
 
 # Exports post-setup
 QT_VERSION=$(ls -d $GAMEDIR/Qt-* 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR/libs.${DEVICE_ARCH}/shell:$GAMEDIR/Qt-${QT_VERSION}/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR/Qt-${QT_VERSION}/lib:$LD_LIBRARY_PATH"
 export LD_PRELOAD="$GAMEDIR/libs.${DEVICE_ARCH}/libgpucompat.so"
 export QT_QPA_PLATFORM_PLUGIN_PATH="$GAMEDIR/Qt-${QT_VERSION}/plugins"
 export QT_QPA_PLATFORM="xcb"
