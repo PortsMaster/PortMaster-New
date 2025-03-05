@@ -13,12 +13,10 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
-CUR_TTY=/dev/tty0
 GAMEDIR=/$directory/ports/wakingmars
 CONFDIR="$GAMEDIR/conf/"
 
@@ -26,16 +24,12 @@ CONFDIR="$GAMEDIR/conf/"
 
 get_controls
 
-$ESUDO chmod 666 $CUR_TTY
-$ESUDO chmod 666 /dev/uinput
-
 cd $GAMEDIR
 
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
 # Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
@@ -64,8 +58,7 @@ else
 fi
 
 $GPTOKEYB "wakingmars" -c "./$GPTK_FILE" &
+pm_platform_helper "$GAMEDIR/box86/box86"
 $GAMEDIR/box86/box86 gamedata/wakingmars
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish

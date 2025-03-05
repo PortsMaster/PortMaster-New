@@ -32,7 +32,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 value=$(( 4 + (DISPLAY_WIDTH >= 640) + 2 * (DISPLAY_WIDTH >= 1280) + 3 * (DISPLAY_WIDTH >= 1920) ))
 
 echo "Setting dpad_mouse_step and deadzone_scale to $value"
-sed -i -E "s/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = $value/g" "thefoundersofredacted.gptk"
+sed -i -E "s/(dpad_mouse_step|deadzone_scale) = [0-9]+/\1 = $value/g" "thefoundersofredacted.gptk"
 
 # Source love2d runtime
 source $controlfolder/runtimes/"love_11.5"/love.txt
