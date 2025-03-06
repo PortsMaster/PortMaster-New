@@ -49,7 +49,7 @@ fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "iosas.gptk" &
-pm_platform_helper "$GAMEDIR/gmloader.aarch64" >/dev/null
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
 
 # Kill processes
