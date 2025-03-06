@@ -33,13 +33,13 @@ bind_directories ~/.local/share/perfectdark $GAMEDIR/conf
 # Put ROM in correct place
 rom_file="./conf/data/pd.ntsc-final.z64"
 rom_md5=e03b088b6ac9e0080440efed07c1e40f
-if [[ -f "$rom_file" ]]; then
+if [ -f "$rom_file" ]; then
   echo ROM is in correct location
 else
   find . -maxdepth 2 -type f | while read file
   do
     checksum=$(md5sum "$file" | awk '{print $1}')
-    if [[ "$checksum" == "$rom_md5" ]]; then
+    if [ "$checksum" == "$rom_md5" ]; then
       echo Found ROM $file, moving it into place
       mv "$file" "$rom_file"
       break
@@ -53,10 +53,6 @@ if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
-fi
-
-if [ "$LIBGL_FB" != "" ]; then
-  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 fi
 
 $GPTOKEYB "$BINARY" &
