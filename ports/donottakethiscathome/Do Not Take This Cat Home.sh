@@ -69,7 +69,7 @@ fi
 
 pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
 $GPTOKEYB "$PORTEXEC" -c "donottakethiscathome.gptk"  &
-bash "./$PORTEXEC"
+"./$PORTEXEC"
 
 pm_finish
 
