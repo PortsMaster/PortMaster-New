@@ -19,7 +19,7 @@ Isles of Sea and Sky is a sokoban block puzzle game with Zelda-like elements and
 </div>
 
 ## Installation
-Add your game data from your Steam or Itch.io installation (v1.02a) to `ports/iosas/gamedata`. First-time run will handle sorting data.
+Add your game data from your Steam or Itch.io installation (v1.02a) to `ports/iosas/assets`. First-time run will handle sorting data.
 
 ## Default Gameplay Controls
 | Button | Action |
@@ -34,7 +34,7 @@ Add your game data from your Steam or Itch.io installation (v1.02a) to `ports/io
 The xdelta patch enables `gamedata/pm-config.ini`, which has some performance options. Testing found that `FrameSkip=40` works pretty well for the H700 chip. For no stuttering at all, you can set `IdolSFX=0` to turn off the special effect that bogs down the cpu.
 
 ## Importing / Exporting Save Data
-Steam saves are located at `\AppData\Local\IslesOfSeaAndSky` on Windows. Copy `save_v1_000.dat` or similar to `ports/iosas/gamedata` to use it. To export save data to your Steam or Itch.io install, do the reverse.
+Steam saves are located at `\AppData\Local\IslesOfSeaAndSky` on Windows. Copy `save_v1_000.dat` or similar to `ports/iosas/saves` to use it. To export save data to your Steam or Itch.io install, do the reverse.
 
 ## Thanks
 Cicada Games -- The game and [press kit materials](https://islesofseaandsky.com/press-kit) used to create the splash screens  
