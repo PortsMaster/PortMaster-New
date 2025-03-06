@@ -17,6 +17,6 @@ Disclaimer: some translations compatible with latest Steam version were found to
 ## Thanks
 TobyFox -- For the game  
 krishenriksen -- For the original box86 port  
-JohnnyOnFlame -- For GMLoader
-Jeod -- For making it possible using GMLoader
-curious_idiot -- For figuring out the 64bit compatibility
+JohnnyOnFlame -- For GMLoader 
+Jeod -- For making it possible using GMLoader 
+curious_idiot -- For figuring out the 64bit compatibility 
