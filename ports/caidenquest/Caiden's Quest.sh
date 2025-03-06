@@ -52,7 +52,7 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-$GPTOKEYB "$runtime" -c "caidensquest.gptk" &
+$GPTOKEYB "$runtime" -c "caidenquest.gptk" &
 pm_platform_helper "$godot_dir/$runtime"
 "$runtime" $GODOT_OPTS --main-pack "gamedata/Caiden's Quest.pck"
 
