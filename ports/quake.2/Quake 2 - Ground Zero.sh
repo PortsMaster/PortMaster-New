@@ -61,7 +61,7 @@ else
 fi
 
 # Check device type
-if [ "$DEVICE_NAME" = "x55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX" ]; then
+if [ "$DEVICE_NAME" = "x55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX-H" ]; then
     if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
         mkdir -p "$GAMEDIR/conf/.yq2"
         cp -rf "$GAMEDIR/conf/yq2_triggers/"* "$GAMEDIR/conf/.yq2/."
