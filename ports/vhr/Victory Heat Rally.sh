@@ -50,8 +50,8 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloader.aarch64" -c "vhr.gptk" &
-pm_platform_helper "gmloader.aarch64" >/dev/null
+$GPTOKEYB "gmloadernext.aarch64" -c "vhr.gptk" &
+pm_platform_helper "gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c "gmloader.json"
 
 # Cleanup
