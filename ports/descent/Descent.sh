@@ -45,6 +45,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export SDL_FORCE_SOUNDFONTS=1
 export SDL_SOUNDFONTS="$GAMEDIR/soundfont.sf2"
 export TEXTINPUTPRESET=$CHEATS
+export TEXTINPUTINTERACTIVE="Y"
+export TEXTINPUTNUMBERSONLY="Y"
 
 # Edit .cfg file with updated resolution and aspect ratio
 sed -i "s/^ResolutionX=[0-9]\{1,4\}/ResolutionX=$DISPLAY_WIDTH/g" "$GAMEDIR/config/descent.cfg"

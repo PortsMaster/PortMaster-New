@@ -19,25 +19,15 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/iosas"
 
+# CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="5 to 10 minutes"
-
-# CD and set permissions
-cd $GAMEDIR
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
-
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
+export PATCHER_TIME="20 to 30 minutes"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
@@ -45,22 +35,22 @@ if [ ! -f patchlog.txt ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        pm_message "This port requires the latest version of PortMaster."
     fi
 else
-    echo "Patching process already completed. Skipping."
+    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
-    $ESUDO ./libs/splash "splash.png" 8000
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO $controlfolder/splash "splash.png" 1
+    $ESUDO $controlfolder/splash "splash.png" 4000 &
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext" -c "control.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext game.apk
+$GPTOKEYB "gmloadernext.aarch64" -c "iosas.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
 # Kill processes
 pm_finish

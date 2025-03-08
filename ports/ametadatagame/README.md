@@ -13,5 +13,6 @@ EPILEPSY WARNING: Game contains flashing lights.
 | ------ | --------------------- |
 | D-PAD  | Movement              |
 | A/X    | Use selected item     |
+| Y      | Retry puzzle levels   |
 | L1/R1  | Switch selected items |
 
