@@ -41,7 +41,7 @@ dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
 dos2unix "$GAMEDIR/tools/Klib/SDL_swap_gpbuttons.py"
 dos2unix "$GAMEDIR/tools/patchscript"
 
-# Check if patchlog.txt to skip patching
+# Check if install_completed to skip patching
 if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
@@ -60,7 +60,7 @@ export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
 export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
 # Display loading splash
-if [ -f "$GAMEDIR/patchlog.txt" ]; then
+if [ -f "$GAMEDIR/install_completed" ]; then
     [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
     $ESUDO ./tools/splash "splash.png" 2000 &
 fi
