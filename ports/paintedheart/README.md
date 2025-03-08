@@ -1,7 +1,7 @@
-## Notes
-Thank you to Axilirate (https://store.steampowered.com/app/1625760/Dave_Dave_Dave/) for allowing us to make this game Ready To Run and to Damien for patching out the Steam dependencies for me!
+-Please read the controls before playing to know what you're doing while in combat. The use of Auto Hot Keys is used in this game.
 
-Please read the controls before playing to know what you're doing while in combat. The use of Auto Hot Keys is used in this game.
+Thank You to Accha and Trass for making this game on RPG Maker 
+(https://rmn.rmarchiv.de/)
 
 ## Controls
 

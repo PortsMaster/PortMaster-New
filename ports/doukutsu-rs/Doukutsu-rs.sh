@@ -28,6 +28,15 @@ cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+if [[ -e $GAMEDIR/data ]]; then
+  echo "Game files found"
+else
+  echo "Game files not found, using Aeon Genesis translation"
+  unzip cavestoryen.zip
+  mv CaveStory/* .
+  rmdir CaveStory
+fi
+
 # remove extraneous files
 rm -rf Config.dat DoConfig.exe OrgView.exe *.dll
 
@@ -35,15 +44,18 @@ bind_directories ~/.local/share/doukutsu-rs $GAMEDIR/conf
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
+if [ "${CFW_NAME}" != ROCKNIX ] && [ "$LIBGL_FB" != "" ]; then
+  # GL4ES is not needed on rocknix -- the binary will use OpenGL when
+  # available (panfrost/adreno) and fall back on GLES for libmali.
+  # For other platforms, GLES may not work and so GL/gl4es is used
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 fi
 
 $GPTOKEYB "$BINARY" -c "./$BINARY.gptk" &
