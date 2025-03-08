@@ -1,6 +1,6 @@
 # Notes
 
-Thanks to [Dylan Brown](https://dylanbrowngames.itch.io) for creating this fantastic game, which you can download free at [itch.io](https://dylanbrowngames.itch.io/gooptygoo)
+Thanks to [Dylan Brown](https://dylanbrowngames.itch.io) and permitting PortMaster to include the game files.
 
 Play Time: 10-20 minutes
 
