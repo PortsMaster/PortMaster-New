@@ -28,7 +28,7 @@ mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
 export XDG_DATA_HOME="$CONFDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 
@@ -37,6 +37,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 cp conf/mkxp.conf gamedata/
 
 $GPTOKEYB "falcon_mkxp.bin" -c "./paintedheart.gptk" &
-$pm_platform_helper
-"$GAMEDIR/gamedata/falcon_mkxp.bin"
+pm_platform_helper "$GAMEDIR/gamedata/falcon_mkxp.bin"
+$GAMEDIR/gamedata/falcon_mkxp.bin
 pm_finish
