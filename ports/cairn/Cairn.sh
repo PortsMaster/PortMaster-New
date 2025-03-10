@@ -27,7 +27,6 @@ mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
 # Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
