@@ -1,4 +1,6 @@
 ## Notes
+This port is for the 1999 PC game ["Aliens versus Predator" ](https://en.wikipedia.org/wiki/Aliens_Versus_Predator_(1999_video_game)).
+
 The following files are needed:
 - avp_huds directory
 - avp_rifs directory
