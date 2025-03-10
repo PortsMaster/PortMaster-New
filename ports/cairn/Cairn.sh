@@ -24,17 +24,13 @@ CONFDIR="$GAMEDIR/conf/"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 mkdir -p "$GAMEDIR/conf"
-cd $GAMEDIR
-
-# Set the XDG environment variables for config & savefiles
-export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
 # Patch cairn.pck file
 if [ -f "./gamedata/cairn.pck" ]; then
     $controlfolder/xdelta3 -d -s "./gamedata/cairn.pck" "./patch/cairn.xdelta3" "./gamedata/cairn-patch.pck"
-    [ $? -eq 0 ] && rm "./gamedata/cairn.pck" || echo "Patching of cairn.pck has failed"
+    [ $? -eq 0 ] && rm "./gamedata/cairn.pck" || pm_message "Patching of cairn.pck has failed"
     # Delete unneeded files
     rm -f gamedata/*.{dll,exe} 
 fi
@@ -43,7 +39,7 @@ runtime="frt_3.6"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   # Check for runtime if not downloaded via PM
   if [ ! -f "$controlfolder/harbourmaster" ]; then
-    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
     exit 1
   fi
@@ -54,10 +50,6 @@ fi
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-#  If XDG Path does not work
-# Use _directories to reroute that to a location within the ports folder.
-bind_directories ~/godot $GAMEDIR/conf/
 
 # Setup Godot
 godot_dir="$HOME/godot"
