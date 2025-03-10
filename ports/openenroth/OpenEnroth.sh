@@ -13,7 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
@@ -42,10 +41,11 @@ if [ ! -d "$GAMEDIR/gamedata/DATA" ] && [ ! -d "$GAMEDIR/gamedata/data" ]; then
     source "$controlfolder/utils/patcher.txt"
     $ESUDO kill -9 $(pidof gptokeyb)
   else
-    echo "This port requires the latest version of PortMaster." > $CUR_TTY
+    pm_message "This port requires the latest version of PortMaster."
+    exit 0
   fi
 else
-  echo "Extraction process already completed. Skipping."
+  pm_message "Extraction process already completed. Skipping."
 fi
 
 if [[ "${CFW_NAME}" == ROCKNIX ]]; then
