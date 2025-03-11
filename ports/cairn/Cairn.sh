@@ -30,7 +30,7 @@ cd $GAMEDIR
 # Patch cairn.pck file
 if [ -f "./gamedata/cairn.pck" ]; then
     $controlfolder/xdelta3 -d -s "./gamedata/cairn.pck" "./patch/cairn.xdelta3" "./gamedata/cairn-patch.pck"
-    [ $? -eq 0 ] && rm "./gamedata/cairn.pck" || pm_message "Patching of cairn.pck has failed"
+    [ $? -eq 0 ] && rm "./gamedata/cairn.pck" || echo "Patching of cairn.pck has failed"
     # Delete unneeded files
     rm -f gamedata/*.{dll,exe} 
 fi
