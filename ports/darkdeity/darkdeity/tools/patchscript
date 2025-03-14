@@ -10,6 +10,7 @@ echo "GAMEDIR is set to: $GAMEDIR"
 # Exports
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="dark_deity.port"
+export PATCHZIP="darkdeity-steam.zip"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
@@ -23,37 +24,38 @@ chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
-unzip_assets() {
-    # Unzip assets from the located .exe file into $DATADIR
-    echo "Unzipping assets from $EXE_FILE..."
-    ./tools/7za x "$EXE_FILE" -o"$DATADIR" -y
-    
-    if [ $? -eq 0 ]; then
-        echo "Assets unzipped successfully to $DATADIR."
-        rm -f "$EXE_FILE"
+check_data() {
+    echo "Checking game data..."
+    if [ -e "$DATADIR/steam"* ]; then
+        # Steam
+        export PATCHZIP="steam/darkdeity-steam.zip"
+        export PATCH="darkdeity-steam.xdelta"
+        rm -rf $DATADIR/*.dll $DATADIR/.gitkeep $DATADIR/*.exe
+    elif [ -f "$DATADIR/gog.ico" ]; then
+        # GOG
+        export PATCHZIP="gog/darkdeity-gog.zip"
+        export PATCH="darkdeity-gog.xdelta"
+        rm -rf $DATADIR/*.ico $DATADIR/goggame* $DATADIR/*.lnk \
+               $DATADIR/unins* $DATADIR/webcache.zip $DATADIR/*.dll
+               $DATADIR/.gitkeep $DATADIR/*.exe
     else
-        echo "Failed to unzip assets."
+        echo "Unable to determine assets origin!"
         exit 1
     fi
 }
 
 unzip_patch() {
-    echo "Unzipping the patch file..."
-    if [ -f "./tools/patches/darkdeity.zip.001" ]; then
-        if [ -x "$(command -v 7z)" ]; then
-            ./tools/7za x ./tools/patches/darkdeity.zip.001 -o./tools/patches
-            if [ $? -eq 0 ]; then
-                echo "Patch file successfully extracted."
-                rm ./tools/patches/darkdeity.zip.*
-            else
-                echo "Failed to extract multi-part archive."
-                exit 1
-            fi
+    if [ -f "$TOOLDIR/patches/$PATCHZIP.001" ]; then
+        echo "Unzipping the patch file..."
+        $TOOLDIR/7za x $TOOLDIR/patches/$PATCHZIP.001 -o$TOOLDIR/patches
+        if [ $? -eq 0 ]; then
+            echo "Patch file successfully extracted."
+            rm $TOOLDIR/patches/$PATCHZIP.*
         else
-            echo "7za tool is not available. Failed to extract xdelta patch."
+            echo "Failed to extract multi-part archive."
             exit 1
         fi
-    else
+    elif [ ! -f "$TOOLDIR/patches/darkdeity.xdelta" ]; then
         echo "Patch archive not found!"
         exit 1
     fi
@@ -61,12 +63,12 @@ unzip_patch() {
 apply_xdelta() {
     # Check if both data.win and darkdeity.xdelta files exist before applying the patch
     if [ -f "$DATADIR/data.win" ]; then
-        if [ -f "./tools/patches/darkdeity.xdelta" ]; then
-            output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/darkdeity.xdelta" "$DATADIR/game.droid" 2>&1)
+        if [ -f "$TOOLDIR/patches/$PATCH" ]; then
+            output=$(xdelta3 -d -s "$DATADIR/data.win" -f "$TOOLDIR/patches/$PATCH" "$DATADIR/game.droid" 2>&1)
             if [ $? -eq 0 ]; then
                 echo "Patch applied successfully"
                 echo "$output"
-                rm "$DATADIR/data.win"
+                rm -rf "$DATADIR/data.win" "$TOOLDIR/patches"/*
             else
                 echo "Failed to apply patch"
                 echo "$output"
@@ -86,14 +88,12 @@ compress_audio() {
     # Run the compression tool
     PYTHON=$(which python3)
     echo "Running GMTools on data and audiogroups."
-    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    $PYTHON $TOOLDIR/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
 
     if [ $? -eq 0 ]; then
         echo "Compression completed successfully."
         mv "$TMPDIR/"* "$DATADIR"
-        echo "Moved compressed files to $DATADIR."
         rmdir "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
         echo "Audio compression applied successfully."
     else
         echo "Audio compression failed."
@@ -110,10 +110,11 @@ zip_archive() {
 }
 
 process_game() { 
-    # Delete the files we don't need and retrieve the splash, move other files to saves folder
-    echo "Moving files around..."
-    rm -rf $DATADIR/*.dll $DATADIR/.gitkeep $DATADIR/*.exe
     mkdir -p saves
+    check_data
+    sleep 1
+    
+    # Text data must be moved to saves directory or game will crash
     [ -d "$DATADIR/Bonds" ] && mv "$DATADIR/Bonds" ./saves/Bonds
     [ -d "$DATADIR/Scenes" ] && mv "$DATADIR/Scenes" ./saves/Scenes
     [ -d "$DATADIR/Stories" ] && mv "$DATADIR/Stories" ./saves/Stories
