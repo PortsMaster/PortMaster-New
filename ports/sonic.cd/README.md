@@ -1,5 +1,5 @@
 ## Installation
-Add your Sonic CD `Data.rsdk` file to `ports/soniccd`. Using the Android apk is recommended.
+Add your Sonic CD `Data.rsdk` file to `ports/soniccd`. Using the Android apk is recommended. If you own Sonic Origins, you can follow [this] guide to make the data work with the decompilation, and you can also compile [RSDKv3](https://github.com/RSDKModding/RSDKv3-Decompilation) to enable Plus DLC and play as Knuckles and Amy.
 
 ## Default Controls
 | Button | Action |
