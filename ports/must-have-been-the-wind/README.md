@@ -1,6 +1,7 @@
 ## Notes
+Must have been the wind (https://untamed-arcade.itch.io/must-have-been-the-wind)
 
-**Thanks for Untamed Arcade for developing this lovely game!**
+**Thanks for [Untamed Arcade](https://untamed-arcade.itch.io/) for developing this lovely game!**
 
 A survival game, but you're the environment
 
