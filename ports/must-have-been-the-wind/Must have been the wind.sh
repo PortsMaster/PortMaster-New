@@ -1,6 +1,3 @@
-#!/bin/bash
-# PORTMASTER: must-have-been-the-wind.zip, Must have been the wind.sh
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
