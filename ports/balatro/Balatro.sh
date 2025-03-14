@@ -55,8 +55,8 @@ if [ -f "$GAMEFILE" ]; then
   sed -i 's/s/shadows = 'On'/shadows = 'Off'/g' globals.lua
   sed -i 's/self.F_HIDE_BG = false/self.F_HIDE_BG = true/g' globals.lua
 
-  # change controller mapping (swap A/B,X/Y to match the physical buttons) for TSP
-  if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ]; then
+  # change controller mapping (swap A/B,X/Y to match the physical buttons) for TSP/BRICK
+  if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ] || [ "${DEVICE_NAME}" = "TrimUI Brick" ]; then
     sed -i 's/self.F_SWAP_AB_BUTTONS = false/self.F_SWAP_AB_BUTTONS = true/g' globals.lua
     sed -i 's/self.F_SWAP_XY_BUTTONS = false/self.F_SWAP_XY_BUTTONS = true/g' globals.lua
   fi
@@ -101,7 +101,7 @@ if [ -f "$GAMEFILE" ]; then
   rm globals.lua
 fi
 
-if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ]; then
+if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ] || [ "${DEVICE_NAME}" = "TrimUI Brick" ]; then
   # These libs are no good.
   LIBDIR="$GAMEDIR/libs.${DEVICE_ARCH}"
 
