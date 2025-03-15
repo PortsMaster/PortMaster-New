@@ -47,7 +47,7 @@ else
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" &
+$GPTOKEYB "gmloadernext.aarch64" -c "game.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null 2>&1
 ./gmloadernext.aarch64 -c "gmloader.json"
 
