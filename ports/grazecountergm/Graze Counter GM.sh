@@ -42,8 +42,6 @@ if [ ! -f patchlog.txt ]; then
     else
         pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Assign gptokeyb and load the game
