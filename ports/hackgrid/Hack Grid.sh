@@ -1,4 +1,5 @@
 #!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -21,26 +22,8 @@ GAMEDIR=/$directory/ports/hackgrid/
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-# Ensure the conf directory exists
+
 mkdir -p "$GAMEDIR/conf"
-
-# Mount Weston runtime
-weston_dir=/tmp/weston
-$ESUDO mkdir -p "${weston_dir}"
-weston_runtime="weston_pkg_0.2"
-if [ ! -f "$controlfolder/libs/${weston_runtime}.squashfs" ]; then
-  if [ ! -f "$controlfolder/harbourmaster" ]; then
-    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
-    sleep 5
-    exit 1
-  fi
-  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${weston_runtime}.squashfs"
-fi
-if [[ "$PM_CAN_MOUNT" != "N" ]]; then
-    $ESUDO umount "${weston_dir}"
-fi
-$ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
-
 cd $GAMEDIR
 
 runtime="frt_3.3.4"
@@ -60,6 +43,10 @@ export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
+#  If XDG Path does not work
+# Use _directories to reroute that to a location within the ports folder.
+bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder 
+
 # Setup Godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"
@@ -68,9 +55,11 @@ $ESUDO umount "$godot_file" || true
 $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
-export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+# By default FRT sets Select as a Force Quit Hotkey, with this we disable that.
+export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS 
 
-$GPTOKEYB "$runtime" -c "hackgrid.gptk" &
+
+$GPTOKEYB "$runtime" -c "./hackgrid.gptk" &
 pm_platform_helper "$godot_dir/$runtime"
 LD_PRELOAD="$GAMEDIR/lib/sdl_cursor.so" "$runtime" $GODOT_OPTS --main-pack "gamedata/HackGrid.pck"
 
