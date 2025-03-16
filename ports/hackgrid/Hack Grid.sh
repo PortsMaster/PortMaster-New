@@ -43,10 +43,6 @@ export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-#  If XDG Path does not work
-# Use _directories to reroute that to a location within the ports folder.
-bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder 
-
 # Setup Godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"
