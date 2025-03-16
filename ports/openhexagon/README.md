@@ -2,7 +2,7 @@
 
 ### Steam or Itch.io (Paid)
 - Purchase the game (on Steam)[https://store.steampowered.com/app/1358090/Open_Hexagon/] or on (Itch.io)[https://vittorioromeo.itch.io/open-hexagon]
-- Download the game and copy the `Assets` and `Packs` folder to the `openhexagon` directory.
+- Download the game (Windows or Linux version) and copy the `Assets` and `Packs` folder to the `openhexagon` directory. 
 - Do not copy over any other files
 ### Github (Free)
 - Download and extract the game files (from here)[https://github.com/vittorioromeo/SSVOpenHexagonAssets/archive/refs/heads/master.zip]
@@ -27,7 +27,7 @@ Special thanks to **Vittorio Romeo** for creating this awesome game and releasin
 
 Please support the developer by purchasing the game on Steam or Itch.io.
 
-**Website:** https://superhexagon.com/
+**Website:** https://vittorioromeo.com/openhexagon.html
 
 **Steam**: https://store.steampowered.com/app/1358090/Open_Hexagon/
 
