@@ -20,7 +20,7 @@ fi
 get_controls
 
 # Variables
-GAMEDIR="$directory/ports/openrct2"
+GAMEDIR="/$directory/ports/openrct2"
 ARGS="--user-data-path=save --openrct2-data-path=engine/share/openrct2 --rct2-data-path=RCT2/ --rct1-data-path=RCT1/"
 
 # CD and set permissions
