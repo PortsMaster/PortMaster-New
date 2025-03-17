@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: pleasedonttouchanything.zip, PleaseDontTouchAnything.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -53,7 +52,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x "$GAMEDIR/gmloader"
 
 $GPTOKEYB "gmloader" -c ./pleasedonttouchanything.gptk &
-pm_platform_helper "gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
 ./gmloader pleasedonttouchanything.apk
 
 pm_finish
