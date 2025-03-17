@@ -32,9 +32,32 @@ check_data() {
         echo "Downloading Steam patch..."
         sleep 2
         for i in {001..011}; do
-            wget -O "$TOOLDIR/patches/darkdeity-steam.zip.$i" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-steam.zip.$i"
+            PATCH_FILE="$TOOLDIR/patches/darkdeity-steam.zip.$i"
+            MD5_FILE="$TOOLDIR/patches/darkdeity-steam.zip.$i.md5"
+
+            # Download patch and its MD5 checksum
+            wget -O "$PATCH_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-steam.zip.$i"
             if [ $? -ne 0 ]; then
                 echo "Error: Failed to download darkdeity-steam.zip.$i. Check your internet connection and verify the file still exists at https://github.com/JeodC/PortMaster-DarkDeity."
+                mv $LOGFILE $LOGERR
+                echo "Patching process failed!"
+                exit 1
+            fi
+
+            wget -O "$MD5_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-steam.zip.$i.md5"
+            if [ $? -ne 0 ]; then
+                echo "Error: Failed to download MD5 checksum for darkdeity-steam.zip.$i."
+                mv $LOGFILE $LOGERR
+                echo "Patching process failed!"
+                exit 1
+            fi
+
+            # Verify MD5 checksum
+            expected_md5=$(cat "$MD5_FILE")
+            downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }')
+
+            if [ "$expected_md5" != "$downloaded_md5" ]; then
+                echo "Error: MD5 checksum mismatch for darkdeity-steam.zip.$i. Expected: $expected_md5, Found: $downloaded_md5"
                 mv $LOGFILE $LOGERR
                 echo "Patching process failed!"
                 exit 1
@@ -48,9 +71,32 @@ check_data() {
         echo "Downloading GOG patch..."
         sleep 2
         for i in {001..009}; do
-            wget -O "$TOOLDIR/patches/darkdeity-gog.zip.$i" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i"
+            PATCH_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i"
+            MD5_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i.md5"
+
+            # Download patch and its MD5 checksum
+            wget -O "$PATCH_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i"
             if [ $? -ne 0 ]; then
                 echo "Error: Failed to download darkdeity-gog.zip.$i. Check your internet connection and verify the file still exists at https://github.com/JeodC/PortMaster-DarkDeity."
+                mv $LOGFILE $LOGERR
+                echo "Patching process failed!"
+                exit 1
+            fi
+
+            wget -O "$MD5_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i.md5"
+            if [ $? -ne 0 ]; then
+                echo "Error: Failed to download MD5 checksum for darkdeity-gog.zip.$i."
+                mv $LOGFILE $LOGERR
+                echo "Patching process failed!"
+                exit 1
+            fi
+
+            # Verify MD5 checksum
+            expected_md5=$(cat "$MD5_FILE")
+            downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }')
+
+            if [ "$expected_md5" != "$downloaded_md5" ]; then
+                echo "Error: MD5 checksum mismatch for darkdeity-gog.zip.$i. Expected: $expected_md5, Found: $downloaded_md5"
                 mv $LOGFILE $LOGERR
                 echo "Patching process failed!"
                 exit 1
@@ -75,7 +121,8 @@ unzip_patch() {
         $TOOLDIR/7za x $TOOLDIR/patches/$PATCHZIP.001 -o$TOOLDIR/patches
         if [ $? -eq 0 ]; then
             echo "Patch file successfully extracted."
-            rm $TOOLDIR/patches/$PATCHZIP.*
+            rm -rf $TOOLDIR/patches/$PATCHZIP.*
+            rm -rf $TOOLDIR/patches/*.md5
         else
             echo "Failed to extract multi-part archive."
             mv $LOGFILE $LOGERR
