@@ -25,43 +25,54 @@ chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
+download_patch() {
+    PATCH_FILE="$1"
+    MD5_FILE="$2"
+    URL="$3"
+    
+    # Download patch and its MD5 checksum
+    wget --progress=bar:force -O "$PATCH_FILE" "$URL"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to download $PATCH_FILE. Check your internet connection and verify the file exists at $URL."
+        mv $LOGFILE $LOGERR
+        echo "Patching process failed!"
+        exit 1
+    fi
+
+    wget --progress=bar:force -O "$MD5_FILE" "${URL}.md5"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to download MD5 checksum for $PATCH_FILE."
+        mv $LOGFILE $LOGERR
+        echo "Patching process failed!"
+        exit 1
+    fi
+
+    # Verify MD5 checksum
+    expected_md5=$(cat "$MD5_FILE" | tr '[:upper:]' '[:lower:]')  # Convert expected MD5 to lowercase
+    downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }' | tr '[:upper:]' '[:lower:]')  # Convert downloaded MD5 to lowercase
+
+    if [ "$expected_md5" != "$downloaded_md5" ]; then
+        echo "Error: MD5 checksum mismatch for $PATCH_FILE. Expected: $expected_md5, Found: $downloaded_md5"
+        mv $LOGFILE $LOGERR
+        echo "Patching process failed!"
+        exit 1
+    fi
+}
+
 check_data() {
+    # Make sure the patchdir is clean
+    rm -rf $TOOLDIR/patches/*
     echo "Checking game data..."
+
     if ls "$DATADIR"/steam* >/dev/null 2>&1; then
         # Steam
         echo "Downloading Steam patch..."
         sleep 2
         for i in {001..011}; do
             PATCH_FILE="$TOOLDIR/patches/darkdeity-steam.zip.$i"
-            MD5_FILE="$TOOLDIR/patches/darkdeity-steam.zip.$i.md5"
-
-            # Download patch and its MD5 checksum
-            wget -O "$PATCH_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-steam.zip.$i"
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to download darkdeity-steam.zip.$i. Check your internet connection and verify the file still exists at https://github.com/JeodC/PortMaster-DarkDeity."
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
-
-            wget -O "$MD5_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-steam.zip.$i.md5"
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to download MD5 checksum for darkdeity-steam.zip.$i."
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
-
-            # Verify MD5 checksum
-            expected_md5=$(cat "$MD5_FILE")
-            downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }')
-
-            if [ "$expected_md5" != "$downloaded_md5" ]; then
-                echo "Error: MD5 checksum mismatch for darkdeity-steam.zip.$i. Expected: $expected_md5, Found: $downloaded_md5"
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
+            MD5_FILE="$TOOLDIR/patchesdarkdeity-steam.zip.$i.md5"
+            PATCH_URL="https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/steam/darkdeity-steam.zip.$i"
+            download_patch "$PATCH_FILE" "$MD5_FILE" "$PATCH_URL"
         done
         export PATCHZIP="darkdeity-steam.zip"
         export PATCH="darkdeity-steam.xdelta"
@@ -73,34 +84,8 @@ check_data() {
         for i in {001..009}; do
             PATCH_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i"
             MD5_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i.md5"
-
-            # Download patch and its MD5 checksum
-            wget -O "$PATCH_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i"
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to download darkdeity-gog.zip.$i. Check your internet connection and verify the file still exists at https://github.com/JeodC/PortMaster-DarkDeity."
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
-
-            wget -O "$MD5_FILE" "https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i.md5"
-            if [ $? -ne 0 ]; then
-                echo "Error: Failed to download MD5 checksum for darkdeity-gog.zip.$i."
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
-
-            # Verify MD5 checksum
-            expected_md5=$(cat "$MD5_FILE")
-            downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }')
-
-            if [ "$expected_md5" != "$downloaded_md5" ]; then
-                echo "Error: MD5 checksum mismatch for darkdeity-gog.zip.$i. Expected: $expected_md5, Found: $downloaded_md5"
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
-            fi
+            PATCH_URL="https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i"
+            download_patch "$PATCH_FILE" "$MD5_FILE" "$PATCH_URL"
         done
         export PATCHZIP="darkdeity-gog.zip"
         export PATCH="darkdeity-gog.xdelta"
@@ -155,6 +140,8 @@ apply_xdelta() {
         fi
     else
         echo "No data.win file found to patch!"
+        echo "Patching process failed!"
+        exit 1
     fi
 }
 
@@ -173,8 +160,9 @@ compress_audio() {
         echo "Audio compression applied successfully."
     else
         echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
         rm -rf "$TMPDIR"
+        echo "Patching process failed!"
+        exit 1
     fi
 }
 
