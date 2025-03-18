@@ -10,7 +10,7 @@ Builderman
 Ecks
 Alainfigue
 
-Check out the games poage on steam here! https://store.steampowered.com/app/3200160/Blood_X_Thirsty/
+Check out the games page on steam here! https://store.steampowered.com/app/3200160/Blood_X_Thirsty/
 
 ## Controls
 
