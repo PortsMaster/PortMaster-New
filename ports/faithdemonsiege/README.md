@@ -1,6 +1,6 @@
 ## Notes
 
-A huge PortMaster thank you goes out to the creator of this game, [CrackedGhostGames](https://crackedghostgames.itch.io) 
+A huge PortMaster thank you goes out to the creator of this game,[CrackedGhostGames](https://crackedghostgames.itch.io) for allowing PortMaster to distirbute this as a ready to run port!
 Another thank you to all who tested this gem of a port. 
 
 ## Controls

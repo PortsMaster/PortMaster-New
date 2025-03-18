@@ -13,13 +13,9 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
-$ESUDO chmod 666 /dev/tty0
+get_controls
 
 GAMEDIR="/$directory/ports/faithdemonsiege"
 
@@ -28,32 +24,14 @@ export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+cd "$GAMEDIR"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd $GAMEDIR
-
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-
-fi
-
-# Rename data.win to game.droid if it exists in ./gamedata
-if [ -e "./gamedata/data.win" ]; then
-    mv ./gamedata/data.win ./gamedata/game.droid || exit 1
-fi
-
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c ./faithdemonsiege.gptk &
+$GPTOKEYB "gmloader" -c "./faith.gptk" &
+echo "Loading, please wait... " > /dev/tty0
 
 $ESUDO chmod +x "$GAMEDIR/gmloader"
+pm_platform_helper "$GAMEDIR/gmloader"
+./gmloader faithdemonsiege.port
 
-./gmloader faithdemonsiege.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish
