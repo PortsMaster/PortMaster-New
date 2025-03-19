@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: crop_and_claw.zip, Crop and Claw.sh
 
 # PortMaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
