@@ -21,10 +21,7 @@ get_controls
 
 GAMEDIR=/$directory/ports/deathroad
 SAVEDIR="$GAMEDIR/savedata/"
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
+
 
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -64,17 +61,8 @@ bind_directories ~/.madgarden "$GAMEDIR/savedata"
 #export BOX64_SHOWSEGV=1
 #export BOX64_SHOWBT=1
 
-$ESUDO chmod 666 /dev/uinput
-
-
-
-chmod +x $GAMEDIR/prog-linux
-chmod +x prog-linux $GAMEDIR/box64/box64
 $GPTOKEYB2 "prog-linux" -c "./Deathroad.gptk" &
 pm_platform_helper "$$GAMEDIR/box64/box64"
 $GAMEDIR/box64/box64 ./prog-linux
 
 pm_finish
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
