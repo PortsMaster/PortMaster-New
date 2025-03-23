@@ -1,5 +1,6 @@
 ## Controls
 The game manual is available [here](https://la-mulana.com/en/manual/l1/pc/index.php).
+
 | Button              | Action                        |
 | :------------------ | :---------------------------- |
 | D-pad or left stick | Movement                      |
