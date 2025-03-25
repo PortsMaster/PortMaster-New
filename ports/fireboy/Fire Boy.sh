@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: fireboy.zip, Fire Boy.sh
 
 # PortMaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
