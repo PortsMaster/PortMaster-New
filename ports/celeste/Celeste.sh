@@ -50,6 +50,9 @@ export FNA3D_OPENGL_FORCE_VBO_DISCARD=1
 
 # Compress all textures with ASTC codec, bringing massive vram gains
 if [[ ! -f "$gamedir/gamedata/.astc_done" ]]; then
+	# Remove any Mac dotfiles, which break the repacker
+	find $gamedir -name "._*" -exec rm -rf {} \;
+
 	chmod +x ../progressor ../repack.src ../utils/* "$gamedir/celeste-repacker"
 	../progressor \
 		--log "../repack.log" \
