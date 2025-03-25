@@ -1,6 +1,6 @@
 ## Notes
 
-Thank You SO MUCH to Weenter for developing this game and to his Music Developer, DreamWare, for creating this game together and allowing it to be ready to run on PortMaster!!!
+Thank You SO MUCH to Weenter for developing this game and to his Music Developer, DreamWare, for creating this game together and allowing it to be READY TO RUN on PortMaster!!!
 
 Controls:
 -You will first choose your stage. You can add hazardss (falling rocks and such) to the game by pressing "Start" on this screen.
