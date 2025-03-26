@@ -14,9 +14,9 @@ fi
 
 source $controlfolder/control.txt
 
-get_controls
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+get_controls
 
 GAMEDIR="/$directory/ports/loguploader"
 
