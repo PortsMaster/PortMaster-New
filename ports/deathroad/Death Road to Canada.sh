@@ -21,7 +21,7 @@ get_controls
 
 GAMEDIR=/$directory/ports/deathroad
 SAVEDIR="$GAMEDIR/savedata/"
-
+LD_LIBRARY_PATH="$GAMEDIR/libs.aarch64/"
 
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -50,7 +50,7 @@ fi
 if [ "$LIBGL_FB" != "" ]; then
 	export SDL_VIDEO_EGL_DRIVER="${GAMEDIR}/gl4es.aarch64/libEGL.so.1"
 	export SDL_VIDEO_GL_DRIVER="${GAMEDIR}/gl4es.aarch64/libGL.so.1"
-	export SDL_VIDEO_GLU_DRIVER="${GAMEDIR}/gl4es.aarch64/libGLU.so.1" ##############################
+	export SDL_VIDEO_GLU_DRIVER="${GAMEDIR}/libs.aarch64/libGLU.so.1" ##############################
 fi
 
 # Setup savedir
@@ -61,7 +61,7 @@ bind_directories ~/.madgarden "$GAMEDIR/savedata"
 #export BOX64_SHOWSEGV=1
 #export BOX64_SHOWBT=1
 
-$GPTOKEYB2 "prog-linux" -c "./Deathroad.gptk" &
+$GPTOKEYB2 "prog-linux" -c "./deathroad.gptk" &
 pm_platform_helper "$GAMEDIR/box64/box64"
 $GAMEDIR/box64/box64 ./prog-linux
 
