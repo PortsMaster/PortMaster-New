@@ -22,7 +22,6 @@ GAMEDIR="/$directory/ports/loguploader"
 
 export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$controlfolder/runtimes/love_11.5/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
@@ -84,9 +83,9 @@ else
   echo "network's down"
 fi
 
-
-$GPTOKEYB "love" -c "uploader.gptk" &
-pm_platform_helper "./bin/love"
-./bin/love "UI"
+source $controlfolder/runtimes/love_11.5/love.txt
+$GPTOKEYB "love.${DEVICE_ARCH}" -c "uploader.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN "UI"
 
 pm_finish
