@@ -61,7 +61,7 @@ bind_directories ~/.madgarden "$GAMEDIR/savedata"
 #export BOX64_SHOWSEGV=1
 #export BOX64_SHOWBT=1
 
-$GPTOKEYB2 "prog-linux" -c "./deathroad.gptk" &
+$GPTOKEYB2 "prog-linux" &
 pm_platform_helper "$GAMEDIR/box64/box64"
 $GAMEDIR/box64/box64 ./prog-linux
 
