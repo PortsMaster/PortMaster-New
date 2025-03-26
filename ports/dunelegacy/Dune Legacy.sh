@@ -43,7 +43,7 @@ if [[ ${CFW_NAME} == ROCKNIX ]]; then
   # sim-cursor is not needed on rocknix
   cp vanilla/$BINARY .
 else
-  # sim-cursor is usually needee on other CFWs
+  # sim-cursor is usually needed on other CFWs
   cp sim-cursor/$BINARY .
 fi
 
