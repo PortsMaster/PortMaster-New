@@ -13,8 +13,6 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
 get_controls
