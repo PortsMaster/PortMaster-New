@@ -31,7 +31,6 @@ cd $GAMEDIR
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
-#export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
