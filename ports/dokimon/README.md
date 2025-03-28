@@ -1,7 +1,11 @@
 # Dokimon Quest
 
 ## Installation
-Buy the game on Steam and copy all the data to `ports/dokimon/assets`. On first run the game will be patched. If there is an update to the game simply copy the new data to `ports/dokimon/assets` and the patcher will run again.
+Buy the game on Steam or Itch.io and copy all the data to `ports/dokimon/assets`. On first run the game will be patched. If there is an update to the game simply copy the new data to `ports/dokimon/assets` and the patcher will run again.
+
+https://store.steampowered.com/app/2019300/Dokimon_Quest/
+
+https://yanako-rpgs.itch.io/dokimon-quest
 
 ## Default Gameplay Controls
 | Button            | Action                                |
