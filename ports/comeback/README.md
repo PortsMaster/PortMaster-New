@@ -3,7 +3,7 @@
 Special thanks to [guselect](https://guselect.com/) for making this awesome game!
 
 Thanks to JohnnyOnFlame for GMLoader-Next and TextureRepacker via UTMT,
-kotzebuedog for GMTools Audio Compressor and JanTrueno for the Patching Interface
+Kotzebuedog for GMTools Audio Compressor and JanTrueno for the Patching Interface
 
 ## Controls
 
