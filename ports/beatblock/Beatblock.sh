@@ -26,10 +26,11 @@ cd $GAMEDIR
 
 
 if [[ -f "gamedata/Beatblock" ]]; then
+   dos2unix ./patch/shaderpatch.diff
    cd gamedata
    ../patch/unzip Beatblock
-   rm Beatblock
-   ../patch/patch -p1 < ../patch/patch.diff
+   mv Beatblock ../Beatblockold
+   ../patch/patch -p1 < ../patch/shaderpatch.diff
    cd $GAMEDIR
 fi
 # Set the XDG environment variables for config & savefiles
