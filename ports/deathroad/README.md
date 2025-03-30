@@ -8,6 +8,7 @@ https://store.steampowered.com/app/252610/Death_Road_to_Canada/
 Installation:
 -Take the Windows/Linux game files from your game folder
 -Dump them straight into /ports/deathroad/ folder
+-When prompted to overwrite a file, do not overwrite it, skip it instead
 -Launch the game via your console
 
 Steam Game files work, but you will get a tiny popup on top, may cause incompatablity with certain mods.
