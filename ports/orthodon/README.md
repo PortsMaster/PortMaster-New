@@ -6,7 +6,7 @@ Thank You SO Much to JitSauce (NonaChimera & Ark Angel) for their approval of th
 
 | Button | Action |
 |--|--| 
-|Select|Menu/Delete Save FIle/x2-Skip Cut Scene|
+|Select|Menu/Delete Save File/x2-Skip Cut Scene|
 |DPad|Movement|
 |L Analog|Movement|
 |ABXY|Gravity Control|
