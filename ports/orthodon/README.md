@@ -13,6 +13,6 @@ Thank You SO Much to JitSauce (NonaChimera & Ark Angel) for their approval of th
 |R Analog|Gravity Control|
 |R1|Jump|
 |L1|Restart Level|
-|L2/R2|Adjustments in options i.e.Sound Levels|
+|L2/R2|Adjustments in options i.e. Sound Levels|
 
 
