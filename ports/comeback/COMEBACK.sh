@@ -26,8 +26,6 @@ $ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
 $ESUDO chmod +x -R $GAMEDIR/tools/splash
 $ESUDO chmod +x -R $GAMEDIR/tools/gmKtool.py
 $ESUDO chmod +x -R $GAMEDIR/tools/patchscript 
-$ESUDO chmod +x -R $GAMEDIR/tools/xdelta3
-
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
