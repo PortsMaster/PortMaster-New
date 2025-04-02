@@ -27,15 +27,15 @@ The Wesnoth manual is available [here](https://www.wesnoth.org/manual/stable/man
 
 If you have no analog sticks, the D-pad will control the mouse.
 
-In text entry boxes, you can press `hotkey + D-pad down` to enter text interactively:
+In text entry boxes, you can press `Start + D-pad down` to enter text interactively:
 
-| Button        | Action            |
-| :-----------  | :---------------- |
-| D-pad up/down | Choose character  |
-| D-pad right   | Confirm character |
-| D-pad left    | Delete character  |
-| Start         | Confirm and exit  |
-| Select        | Cancel text entry |
+| Button          | Action            |
+| :-------------- | :---------------- |
+| D-pad up/down   | Choose character  |
+| A / D-pad right | Confirm character |
+| B / D-pad left  | Delete character  |
+| Select          | Toggle case       |
+| Start           | Confirm and exit  |
 
 ### Acknowledgements
 Thanks to David White and many other contributors for creating the game. See [here](https://wiki.wesnoth.org/Credits) for credits.
