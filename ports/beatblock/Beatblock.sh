@@ -26,7 +26,6 @@ cd $GAMEDIR
 
 
 if [[ -f "gamedata/Beatblock" ]]; then
-   dos2unix ./patch/patch.diff
    cd gamedata
    ../patch/unzip Beatblock
    mv Beatblock ../Beatblockold
