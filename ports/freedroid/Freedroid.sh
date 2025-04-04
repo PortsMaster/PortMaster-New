@@ -13,35 +13,32 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/freedroid
-
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+GAMEDIR="/$directory/ports/freedroid"
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.freedroid_rpg
-ln -sfv /$directory/ports/freedroid/conf/.freedroid_rpg ~/
-
-
-if [[ $LOWRES == "Y" ]]; then
-  if [[ -e $GAMEDIR/conf/fdrpg.cfg.lowres ]]; then
-    mv -f -v $GAMEDIR/conf/fdrpg.cfg.lowres $GAMEDIR/conf/.freedroid_rpg/fdrpg.cfg    
-    fi
-elif [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]] || [[ -e "/dev/input/by-path/platform-singleadc-joypad-event-joystick" ]]; then
-  if [[ -e $GAMEDIR/conf/fdrpg.cfg.552 ]]; then
-    mv -f -v $GAMEDIR/conf/fdrpg.cfg.552 $GAMEDIR/conf/.freedroid_rpg/fdrpg.cfg
-  fi	
-else
-  if [[ -e $GAMEDIR/conf/fdrpg.cfg.640 ]]; then
-    mv -f -v $GAMEDIR/conf/fdrpg.cfg.640 $GAMEDIR/conf/.freedroid_rpg/fdrpg.cfg
-  fi
-fi
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Fix mouse resetting on ROCKNIX
+if [[ "${CFW_NAME^^}" == 'ROCKNIX' ]] || [[ "${CFW_NAME^^}" == 'JELOS' ]]; then
+    sed -i 's/^seat \* hide_cursor.*/seat * hide_cursor 300000/' ~/.config/sway/config
+    swaymsg reload
+    sleep 1
+fi
+
+if [[ "${DISPLAY_WIDTH}" -gt 1200 ]]; then
+  fdrpgres=1280x720
+else
+  fdrpgres=640x480
+fi
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -49,12 +46,15 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
+fi 
 
-$ESUDO chmod 666 /dev/uinput
+bind_directories ~/.freedroid_rpg "$GAMEDIR/conf/.freedroid_rpg"
+
 $GPTOKEYB "freedroidRPG" -c "./freedroid.gptk" &
-./freedroidRPG
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_platform_helper "$GAMEDIR/freedroidRPG.${DEVICE_ARCH}"
+./freedroidRPG.${DEVICE_ARCH} -n -r $fdrpgres
+
+pm_finish
