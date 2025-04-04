@@ -28,7 +28,7 @@ cd $GAMEDIR
 if [[ -f "gamedata/Beatblock" ]]; then
    cd gamedata
    ../patch/unzip Beatblock
-   rm Beatblock
+   mv Beatblock ../Beatblockold
    ../patch/patch -p1 < ../patch/patch.diff
    cd $GAMEDIR
 fi
