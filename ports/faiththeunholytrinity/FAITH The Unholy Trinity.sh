@@ -26,7 +26,6 @@ PATCH_MAX_TIME=10 #In Minutes
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
 export GAME_NAME
@@ -36,11 +35,6 @@ export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filen
 export PATCHER_TIME="$PATCH_MIN_TIME to $PATCH_MAX_TIME minutes"
 export AARCH
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
