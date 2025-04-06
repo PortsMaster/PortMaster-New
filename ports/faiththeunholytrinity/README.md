@@ -22,7 +22,9 @@ For the more technically inclined, here are specific modifications made in order
     - (Steam Version Only) About 50% of steam api function calls did not check if steam was initialized, leading to some math with undefined values which would cause segfaults. Steam API functions are now wrapped in an if statement to verifed that steam is initialized.
 
 ## Thanks
-Airdorf -- For the amazing game  
+Airdorf -- For the amazing game
+- https://store.steampowered.com/app/1179080/FAITH_The_Unholy_Trinity/
+- https://www.gog.com/en/game/faith_the_unholy_trinity
 JohnnyOnFlame -- For GMLoader-Next 
 Cyril aka kotzebuedog -- For GMTools audio patcher
 Jeod -- For the UFO 50 port, which was used as reference for this port
