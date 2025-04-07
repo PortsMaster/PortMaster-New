@@ -5,7 +5,7 @@ This port supports Steam version of the game. On devices with the RK3326 process
 ## Instructions for Running
 
 - Purchase game via https://store.steampowered.com/app/1486440/Graze_Counter_GM/
-- Place all game .dat and .win files in the "/gamedata/" folder. 
+- Place all game .dat and .win files in the "/assets/" folder. 
 - On first run, the game will take a ~5 minutes to load. The port is running through compressing audio files and packing files into the .apk. Subsequent starts should go faster. 
 
 ## Controls
