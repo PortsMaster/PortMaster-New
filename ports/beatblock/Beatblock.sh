@@ -25,13 +25,24 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 
-if [[ -f "gamedata/Beatblock" ]]; then
+if [[ -f "gamedata/Beatblock-linux.zip" ]]; then
    cd gamedata
-   ../patch/unzip Beatblock
-   rm Beatblock
-   ../patch/patch -p1 < ../patch/patch.diff
+
+   mkdir tmp && cd tmp
+   $GAMEDIR/patch/unzip -o $GAMEDIR/gamedata/Beatblock-linux.zip
+   cd ..
+
+   find . -name "Beatblock" | xargs $GAMEDIR/patch/unzip
+
+   $GAMEDIR/patch/patch -p1 --binary < $GAMEDIR/patch/patch.diff
+
+   rm -rf Beatblock-linux.zip tmp
+
+   $ESUDO chmod -R a+rw .
+
    cd $GAMEDIR
 fi
+
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
