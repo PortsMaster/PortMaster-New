@@ -1,57 +1,83 @@
 #!/bin/bash
 
+# PortMaster preamble
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
   controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
 source $controlfolder/control.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/mrplatformer/
+# Adjust these to your paths and desired godot version
+GAMEDIR=/$directory/ports/mrplatformer
+godot_runtime="godot_4.2.2"
+godot_executable="godot422.$DEVICE_ARCH"
+pck_filename="mrplatformer.pck"
+gptk_filename="mrplatformer.gptk"
+
+# Logging
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Create directory for save files
 CONFDIR="$GAMEDIR/conf/"
+$ESUDO mkdir -p "${CONFDIR}"
 
-# Ensure the conf directory exists
-mkdir -p "$GAMEDIR/conf"
-
-# Set the XDG environment variables for config & savefiles
-export XDG_CONFIG_HOME="$CONFDIR"
-export XDG_DATA_HOME="$CONFDIR"
-
-cd $GAMEDIR
-
-runtime="frt_4.1.3"
-if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
-  # Check for runtime if not downloaded via PM
+# Mount Weston runtime
+weston_dir=/tmp/weston
+$ESUDO mkdir -p "${weston_dir}"
+weston_runtime="weston_pkg_0.2"
+if [ ! -f "$controlfolder/libs/${weston_runtime}.squashfs" ]; then
   if [ ! -f "$controlfolder/harbourmaster" ]; then
-    echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
     exit 1
   fi
-
-  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${weston_runtime}.squashfs"
 fi
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "${weston_dir}"
+fi
+$ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
-# Setup Godot
-godot_dir="$HOME/godot"
-godot_file="$controlfolder/libs/${runtime}.squashfs"
-$ESUDO mkdir -p "$godot_dir"
-$ESUDO umount "$godot_file" || true
-$ESUDO mount "$godot_file" "$godot_dir"
-PATH="$godot_dir:$PATH"
+# Mount Godot runtime
+godot_dir=/tmp/godot
+$ESUDO mkdir -p "${godot_dir}"
+if [ ! -f "$controlfolder/libs/${godot_runtime}.squashfs" ]; then
+  if [ ! -f "$controlfolder/harbourmaster" ]; then
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit 1
+  fi
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${godot_runtime}.squashfs"
+fi
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "${godot_dir}"
+fi
+$ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
-export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "$runtime" -c "./mrplatformer.gptk" &
-SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" "$runtime" --main-pack "mrplatformer_4.1.3.pck"
+cd $GAMEDIR
+$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
-$ESUDO umount "$godot_dir"
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Start Westonpack and Godot
+# Put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
+# LD_PRELOAD is put here because Godot runtime links against libEGL.so, and crusty is interfering with that on some systems.
+$ESUDO env $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
+LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
+--resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f \
+--rendering-driver opengl3_es --audio-driver ALSA --main-pack $GAMEDIR/$pck_filename
 
+#Clean up after ourselves
+$ESUDO $weston_dir/westonwrap.sh cleanup
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "${weston_dir}"
+    $ESUDO umount "${godot_dir}"
+fi
+pm_finish
