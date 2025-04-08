@@ -17,7 +17,6 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-ARCH=aarch64 # armhf or aarch64
 GAME_NAME=faiththeunholytrinity
 GAMEDIR="/$directory/ports/$GAME_NAME"
 PATCH_MIN_TIME=5 #In Minutes
@@ -49,9 +48,9 @@ else
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.$ARCH" -c "$GAME_NAME.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.$ARCH"
-./gmloadernext.$ARCH -c gmloader.json
+$GPTOKEYB "gmloadernext.aarch64" -c "$GAME_NAME.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup by killing processes
 pm_finish
