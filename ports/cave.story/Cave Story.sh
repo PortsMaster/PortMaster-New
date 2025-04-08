@@ -33,6 +33,9 @@ elif [[ $CFW_NAME == "muOS" ]]; then
   else
     raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
   fi
+elif [[ $CFW_NAME == "Miyoo" ]]; then
+  raloc="/mnt/sdcard/RetroArch"
+  raconf=""
 else
   raloc="/usr/bin"
   raconf=""
