@@ -17,4 +17,6 @@ wget -nv "https://github.com/${RELEASE_ORG}/${RELEASE_REPO}/releases/latest/down
 wget -nv "https://raw.githubusercontent.com/PortsMaster/PortMaster-Info/refs/heads/main/port_stats_raw.json"
 cd ..
 
+find . -name '*.png' -exec pngquant --ext .png --force 256 {} \;
+
 python3 tools/build_data.py
