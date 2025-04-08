@@ -33,7 +33,7 @@ RUNTIMES_DIR  = ROOT_DIR / 'runtimes'
 GITHUB_RUN = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE = (1024 * 1024 * 90)
-CHUNK_SIZE = (1024 * 1024 * 50)
+CHUNK_SIZE = (1024 * 1024 * (25 if '--web' in sys.argv else 50))
 
 #############################################################################
 
