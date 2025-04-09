@@ -1,0 +1,213 @@
+//----------------Sonic CD CW Logo Script---------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Timer
+#alias Object.Value1 : Object.RectAlpha
+#alias Object.Value2 : Object.BGScale
+#alias Object.Value3 : Object.Unused
+
+// States
+#alias 0 : CWLOGO_SETUP
+#alias 1 : CWLOGO_BGSCALE_INCREASE_1
+#alias 2 : CWLOGO_BGSCALE_INCREASE_2
+#alias 3 : CWLOGO_LOGO_FADEIN
+#alias 4 : CWLOGO_BGSCALE_DECREASE
+#alias 5 : CWLOGO_LOGO_FADEOUT
+
+// Callbacks & Engine States
+#alias 7 : CALLBACK_EXIT_SELECTED
+
+// Ink Effects
+#alias 2 : INK_ALPHA
+
+// Engine & Callbacks
+#alias 5 : ENGINE_ENTER_HIRESMODE
+#alias 6 : ENGINE_EXIT_HIRESMODE
+
+
+sub ObjectMain
+	switch Object.State
+	case CWLOGO_SETUP
+		Object.Rotation = 0
+		Object.BGScale = 0
+		Object.State++
+		break
+		
+	case CWLOGO_BGSCALE_INCREASE_1
+		if Object.BGScale < 2048
+			if Object.BGScale < 2048
+				Object.BGScale += 64
+			else
+				Object.BGScale += 128
+			end if
+		else
+			Object.RectAlpha = 256
+			Object.State++
+		end if
+		
+		Object.Rotation += 8
+		Object.Rotation &= 511
+		break
+		
+	case CWLOGO_BGSCALE_INCREASE_2
+		if Object.BGScale < 4096
+			if Object.BGScale < 2048
+				Object.BGScale += 64
+			else
+				Object.BGScale += 128
+			end if
+			Object.Rotation += 8
+			Object.Rotation &= 511
+		end if
+		
+		if Object.RectAlpha > 0
+			Object.RectAlpha -= 8
+		else
+			Object.State++
+		end if
+		break
+		
+	case CWLOGO_LOGO_FADEIN
+		if Object.Timer < 144
+			Object.Timer++
+		else
+			Object.Timer = 0
+			
+			// It's unknown exactly what this does, it's never referenced anywhere else
+			// And it was only added on an update too, certainly quite strange...
+			Object.Unused = 0
+			
+			Object.State++
+		end if
+		break
+		
+	case CWLOGO_BGSCALE_DECREASE
+		if Object.BGScale > 0
+			if Object.BGScale < 2048
+				Object.BGScale -= 64
+			else
+				Object.BGScale -= 128
+			end if
+			
+			Object.Rotation -= 8
+			if Object.Rotation < 0
+				Object.Rotation += 512
+			end if
+		end if
+		
+		if Object.RectAlpha < 256
+			Object.RectAlpha += 10
+		else
+			Object.State++
+			Object.RectAlpha = 256
+		end if
+		break
+		
+	case CWLOGO_LOGO_FADEOUT
+		if Object.BGScale > 0
+			if Object.BGScale < 2048
+				Object.BGScale -= 64
+			else
+				Object.BGScale -= 128
+			end if
+			
+			Object.Rotation -= 8
+			if Object.Rotation < 0
+				Object.Rotation += 512
+			end if
+		else
+			if Object.Timer == 16
+				ResetObjectEntity(Object.EntityNo, TypeName[Sonic], 0, Object.XPos, Object.YPos)
+				
+				Object.InkEffect = INK_ALPHA
+				Object.Alpha = 0
+				Object.Timer = 0
+#platform: Use_Standalone
+				Engine.State = ENGINE_EXIT_HIRESMODE
+				Object.RectAlpha = 256
+#endplatform
+			else
+				Object.Timer++
+			end if
+		end if
+		break
+		
+	end switch
+	
+	// Windows Phone 7, certainly quite the anomaly
+	if Engine.PlatformID == RETRO_WP7
+		if KeyPress[0].ButtonB == true
+			EngineCallback(CALLBACK_EXIT_SELECTED)
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	// First, draw the solid color background
+	DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 96, 255)
+	
+	// Then, draw the 8 Point Star pattern
+	Object.Scale = Object.BGScale
+	DrawSpriteFX(1, FX_ROTOZOOM, Object.XPos, Object.YPos)
+	Object.Rotation += 64
+	DrawSpriteFX(1, FX_ROTOZOOM, Object.XPos, Object.YPos)
+	Object.Rotation -= 64
+	
+	// Logo Fade In/Out
+	switch Object.State
+	case CWLOGO_BGSCALE_INCREASE_2
+	case CWLOGO_LOGO_FADEIN
+	case CWLOGO_BGSCALE_DECREASE
+		
+		// Draw the CW Logo at its own Scale
+		Object.Scale = 192
+		
+		DrawSpriteFX(0, FX_SCALE, Object.XPos, Object.YPos)
+		
+		// And then draw its own little background
+		TempValue0 = Screen.CenterX
+		TempValue0 -= 96
+		TempValue1 = Screen.CenterY
+		TempValue1 -= 48
+		DrawRect(TempValue0, TempValue1, 192, 96, 255, 149, 18, Object.RectAlpha)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Title/CWLogo.gif")
+	
+	// 0 - Christian Whitehead Logo
+	SpriteFrame(-255, -117, 510, 235, 1, 1)
+	
+	// 1 - Background
+	SpriteFrame(-32, -32, 64, 64, 1, 1)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	// (The actual CW Logo sprite is meant for Hi-res mode, which isn't available in the editor)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,162 @@
+//-----------------Sonic CD Air Bubble Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.Angle
+#alias Object.Value2	:	Object.XVelocity
+#alias Object.Value3	:	Object.YVelocity
+
+#alias Player.Value14	:	Player.DropDashCharge
+
+// States
+#alias 0	:	AIRBUBBLE_ACTIVE
+#alias 1	:	AIRBUBBLE_USED
+
+// Stage SFX
+#alias 6	:	SFX_S_BREATHING
+
+// Air Bubble Property Values
+#alias 2	:	BUBBLE_SMALL
+#alias 4	:	BUBBLE_MEDIUM
+#alias 5	:	BUBBLE_BREATHABLE
+#alias 6	:	BUBBLE_EXPLODE
+
+
+sub ObjectMain
+	if Object.State == AIRBUBBLE_ACTIVE
+		Object.Timer++
+		if Object.Timer > 15
+			Object.Timer = 0
+			if Object.Frame == 6
+				Object.Type = TypeName[Blank Object]
+			end if
+			// Property value determines the max size of the bubble
+			if Object.Frame < Object.PropertyValue
+				Object.Frame++
+			end if
+		end if
+
+		Object.YPos += Object.YVelocity
+
+		// Small bubbles fly away while sonic is pushed by water streams
+		if Player.Animation == ANI_FANROTATE
+			if Object.PropertyValue < 3
+				Object.XVelocity += 0x40000
+			end if
+		end if
+		if Player.Animation == ANI_CLINGING
+			if Object.PropertyValue < 3
+				Object.XVelocity += 0x40000
+			end if
+		end if
+
+		if Object.Frame < 6
+			Sin(Object.XPos, Object.Angle)
+			Object.XPos <<= 9
+			Object.XPos  += Object.XVelocity
+
+			Object.Angle += 4
+			Object.Angle &= 511
+		end if
+
+		if Object.iYPos < Stage.WaterLevel
+			if Object.PropertyValue == BUBBLE_BREATHABLE
+				Object.Frame = 6
+				Object.PropertyValue = BUBBLE_EXPLODE
+				Object.Timer = 0
+				Object.YVelocity = 0
+			else
+				// Despawn small and medium bubbles above water level
+				if Object.PropertyValue < 5
+					Object.Type = TypeName[Blank Object]
+				end if
+			end if
+		end if
+
+	else
+		if Object.Timer < 20
+			Object.Timer++
+			Player.Animation = ANI_BREATHING
+		else
+			Object.Type = TypeName[Blank Object]
+			
+			Player.Animation = ANI_WALKING
+			Player.AnimationSpeed = 20
+
+#platform: Use_Origins
+			if Player.State == Player_State_GlideRight
+				Player.Animation = ANI_GLIDING
+			end if
+			if Player.State == Player_State_GlideLeft
+				Player.Animation = ANI_GLIDING
+			end if
+			
+			if Player.DropDashCharge >= 20
+				Player.PrevAnimation  = ANI_WALKING
+				Player.AnimationSpeed = 200
+			end if
+#endplatform
+		end if
+	end if
+
+	if Object.OutOfBounds == true
+		Object.Type = TypeName[Blank Object]
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.Frame == 5
+		PlayerObjectCollision(C_TOUCH, -4, -4, 4, 4)
+		if CheckResult == true
+			Object.Frame = 6
+			Object.State = AIRBUBBLE_USED
+			Object.Timer = 0
+			Object.YVelocity = 0
+
+			Player.YVelocity = 0
+			Player.XVelocity = 0
+			Player.Speed = 0
+			Player.Animation = ANI_BREATHING
+			Player.AirTimer = 0
+			PlayStageSfx(SFX_S_BREATHING, false)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects.gif")
+	
+	SpriteFrame(-4, -4, 8, 8, 212, 61)		// #0 - Small Bubble
+	SpriteFrame(-4, -4, 8, 8, 212, 70)		// #1 - Small Bubble 2
+	SpriteFrame(-4, -4, 8, 8, 246, 18)		// #2 - Small Bubble 3
+	SpriteFrame(-8, -8, 16, 16, 116, 181)	// #3 - Medium Bubble
+	SpriteFrame(-8, -8, 16, 16, 116, 198)	// #4 - Medium Bubble 2
+	SpriteFrame(-16, -16, 32, 32, 148, 194)	// #5 - Big Bubble
+	SpriteFrame(-16, -16, 32, 32, 181, 201)	// #6 - Big Bubble 2
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 148, 194)	// #5 - Big Bubble
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

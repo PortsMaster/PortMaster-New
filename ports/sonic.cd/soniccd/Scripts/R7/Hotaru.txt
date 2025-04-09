@@ -1,0 +1,1293 @@
+//-------------------Sonic CD Hotaru Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Some notes:
+// - This single "Hotaru" Object controls two Hotaru badniks in gameplay
+//    - Both of these Hotarus are localised entirely within this single "Hotaru" Object
+// - However, even with this, "Hotaru" Object in the scene should be followed by two Blank Objects
+//    - This is needed for spawning flowers, since each individual Hotaru drops its own Flower
+//    - This base Hotaru object will never become a Flower, but it will become a Blank Object if its Hotarus are both destroyed
+
+// Aliases
+
+#alias Object.Value0		: Object.Timer
+
+#alias Object.Value1		: Object.StartPosX
+#alias Object.Value2		: Object.StartPosY
+
+// Stored as offsets from the base Hotaru object, not complete positions
+#alias Object.Value3		: Object.Hotaru1X
+#alias Object.Value4		: Object.Hotaru2X
+
+// (Y distance remains the same between both, see Object.HotaruRadius)
+
+// Bit-field that represents the state of the active Hotarus, bit 0 is Hotaru 1 and bit 1 is Hotaru 2
+#alias Object.Value5		: Object.ActiveHotarus
+
+// True or false, for if the floating sparks connecting the Hotarus are active
+#alias Object.Value6		: Object.EletricityActive
+
+// Y-Offset, half the distance between the two Hotarus
+#alias Object.Value7		: Object.HotaruRadius
+
+#alias Object.PropertyValue	: Object.Quality
+
+// Player Aliases
+#alias Player.Value4		: Player.InvincibleTimer
+
+// Object Score Alias
+#alias Object[26].Value0	: ObjectScore.Timer
+
+// Hotaru States
+#alias 0  : HOTARU_IDLE1
+#alias 1  : HOTARU_IDLE2
+#alias 2  : HOTARU_TRACKPLAYER
+#alias 3  : HOTARU_PAUSE
+#alias 4  : HOTARU_LIGHTSON1
+#alias 5  : HOTARU_LIGHTSOFF1
+#alias 6  : HOTARU_LIGHTSON2
+#alias 7  : HOTARU_LIGHTSOFF2
+#alias 8  : HOTARU_LIGHTSON3
+#alias 9  : HOTARU_LIGHTSOFF3
+#alias 10 : HOTARU_FLASHING
+#alias 11 : HOTARU_FLYAWAY
+#alias 12 : HOTARU_OFFSCREEN
+
+// Global SFX
+#alias 8  : SFX_G_DESTROY
+
+// Badnik Quality / Property Values
+#alias 0  : GOOD_QUALITY
+#alias 1  : BAD_QUALITY
+
+// Priority
+#alias 0  : PRIORITY_BOUNDS
+#alias 1  : PRIORITY_ACTIVE
+
+
+// Function declarations
+#function Hotaru_HotaruBreak
+
+
+function Hotaru_HotaruBreak
+	
+	// This function is called to see if the individual Hotaru being checked should break
+	
+	// Preconditions:
+	// - Object.XPos & Object.YPos are set to the positions of the Hotaru being checked (not the base Hotaru object!)
+	// - ArrayPos1 is the EntityNo of where to spawn the Hotaru, if it needs to be broken
+	
+	// This wasn't updated for Plus, so no amount of hammers or knuckles will ever work on Hotarus :(
+	
+	CheckEqual(Player.Animation, ANI_JUMPING)
+	TempValue0 = CheckResult
+	CheckEqual(Player.Animation, ANI_SPINDASH)
+	TempValue0 |= CheckResult
+	
+	if Player.Animation == ANI_FLYING
+		CheckGreater(Player.YPos, Object.YPos)
+		TempValue0 |= CheckResult
+	end if
+	
+	// Notably, the invincibility granted by time warping isn't granted here...
+	
+	if TempValue0 == true
+		ResetObjectEntity(ArrayPos1, Flower_TypeNo, 0, Object.XPos, Object.YPos)
+		Object[ArrayPos1].DrawOrder = 4
+		
+		CreateTempObject(TypeName[Smoke Puff], 0, Object.XPos, Object.YPos)
+		Object[TempObjectPos].DrawOrder = 4
+		
+		CreateTempObject(TypeName[Object Score], ObjectScore.Timer, Object.XPos, Object.YPos)
+		Object[TempObjectPos].DrawOrder = 4
+		
+		PlaySfx(SFX_G_DESTROY, false)
+		
+		if Player.YVelocity > 0
+			FlipSign(Player.YVelocity)
+		else
+			Player.YVelocity += 0xC000
+		end if
+		
+		// Grant the player some score
+		switch ObjectScore.Timer
+		case 0
+			Player.Score += 100
+			break
+			
+		case 1
+			Player.Score += 200
+			break
+			
+		case 2
+			Player.Score += 500
+			break
+			
+		case 3
+			Player.Score += 1000
+			break
+			
+		end switch
+	else
+		ArrayPos0 = Player.EntityNo
+		ArrayPos0 += 2
+		if Object[ArrayPos0].Type == TypeName[Invincibility]
+			ResetObjectEntity(ArrayPos1, Flower_TypeNo, 0, Object.XPos, Object.YPos)
+			Object[ArrayPos1].DrawOrder = 4
+			
+			CreateTempObject(TypeName[Smoke Puff], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 4
+			
+			CreateTempObject(TypeName[Object Score], ObjectScore.Timer, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 4
+			
+			PlaySfx(SFX_G_DESTROY, false)
+			
+			if Player.YVelocity > 0
+				FlipSign(Player.YVelocity)
+			end if
+			
+			// Grant the player's score
+			switch ObjectScore.Timer
+			case 0
+				Player.Score += 100
+				break
+			
+			case 1
+				Player.Score += 200
+				break
+			
+			case 2
+				Player.Score += 500
+				break
+			
+			case 3
+				Player.Score += 1000
+				break
+			
+			end switch
+		else
+			if Object.State > HOTARU_LIGHTSOFF3
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.XPos > Object.XPos
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+	end if
+	
+end function
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State = HOTARU_OFFSCREEN
+		Object.Timer = 0
+		
+		// Set the object back to its starting position
+		// Note that the Hotarus' state being set to HOTARU_OFFSCREEN means that there won't be any visible teleporting
+		Object.XPos = Object.StartPosX
+		Object.YPos = Object.StartPosY
+		
+		// Reset the Hotarus to be 70 pixels apart
+		// (Regardless of their Property Value, since that's already been reset...)
+		Object.Hotaru1X = -0x230000
+		Object.Hotaru2X = 0x230000
+		
+		Object.EletricityActive = false
+	end if
+	
+	// Even if there are really only small differences between the two's behaviours, the GOOD and BAD badnik types just have entirely different
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case HOTARU_IDLE1
+			Object.Priority = PRIORITY_ACTIVE
+			
+			// Right range of 43 pixels for Hotaru 1
+			if Object.Hotaru1X < 0x2B0000
+				// Move both Hotarus in their respective directions by a pixel
+				Object.Hotaru1X += 0x10000
+				Object.Hotaru2X -= 0x10000
+			else
+				// Turn around
+				Object.State = HOTARU_IDLE2
+			end if
+			break
+			
+		case HOTARU_IDLE2
+			// Left range of 115 pixels for Hotaru 1
+			if Object.Hotaru1X > -0x730000
+				// Move both Hotarus in their respective directions by a pixel
+				Object.Hotaru1X -= 0x10000
+				Object.Hotaru2X += 0x10000
+			else
+				// Turn around
+				Object.State = HOTARU_IDLE1
+			end if
+			break
+			
+		case HOTARU_TRACKPLAYER
+			// Make the Hotarus follow the screen
+			
+			TempValue0 = Screen.XOffset
+			TempValue0 += Screen.CenterX
+			TempValue0 <<= 16
+			TempValue1 = false
+			if Object.XPos < TempValue0
+				Object.XPos += 0x20000
+				if Object.XPos >= TempValue0
+					Object.XPos = TempValue0
+					TempValue1 = true
+				end if
+			else
+				Object.XPos -= 0x20000
+				if Object.XPos <= TempValue0
+					Object.XPos = TempValue0
+					TempValue1 = true
+				end if
+			end if
+			
+			TempValue0 = Screen.YOffset
+			TempValue0 += 104
+			TempValue0 <<= 16
+			if Object.YPos < TempValue0
+				Object.YPos += 0x20000
+				if Object.YPos >= TempValue0
+					Object.YPos = TempValue0
+					if TempValue1 == true
+						// In a good position, advance states
+						Object.State++
+					end if
+				end if
+			else
+				Object.YPos -= 0x20000
+				if Object.YPos <= TempValue0
+					Object.YPos = TempValue0
+						if TempValue1 == true
+						// In a good position, advance states
+						Object.State++
+					end if
+				end if
+			end if
+			break
+			
+		case HOTARU_PAUSE
+			if Object.Timer < 100
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			Object.Frame = Object.Timer
+			Object.Frame %= 20
+			Object.Frame /= 10
+			Object.Frame++
+			break
+			
+		// A series of very small and similar states - each frame in the flicker animation is its own state
+			
+		case HOTARU_LIGHTSON1
+			if Object.Timer < 4
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF1
+			if Object.Timer < 12
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSON2
+			if Object.Timer < 8
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF2
+			if Object.Timer < 8
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSON3
+			if Object.Timer < 12
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF3
+			if Object.Timer < 4
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.AnimationTimer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_FLASHING
+			// This is the state where the Sparks are active, although none of them are managed here
+			// Head over to ObjectDraw and ObjectPlayerInteraction for that
+			
+			if Object.Timer < 100
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			Object.Frame = Object.Timer
+			Object.Frame %= 20
+			Object.Frame /= 10
+			Object.Frame++
+			break
+			
+		case HOTARU_FLYAWAY
+			// Ascend at a rate of 2 pixels per second
+			// (This is rather slow, isn't it?)
+			Object.YPos -= 0x20000
+			
+			// Animate the Object
+			Object.Timer++
+			Object.Timer %= 20
+			Object.Frame = Object.Timer
+			Object.Frame /= 10
+			Object.Frame++
+			
+			if Object.OutOfBounds == true
+				Object.State = HOTARU_OFFSCREEN
+				Object.Timer = 0
+				
+				// Place the Hotaru back at its starting position
+				// Since state is being set to HOTARU_OFFSCREEN, there won't be any visible teleporting
+				Object.XPos = Object.StartPosX
+				Object.YPos = Object.StartPosY
+				
+				// Reset the Hotarus to be 70 pixels apart
+				// (Regardless of their initial Property Value, since that's already been reset)
+				Object.Hotaru1X = -0x230000
+				Object.Hotaru2X =  0x230000
+			end if
+			break
+			
+		case HOTARU_OFFSCREEN
+			// This state is here so that, if the Hotarus' start position is within bounds, they won't just suddently teleport in front of the player
+			if Object.OutOfBounds == true
+				Object.State = HOTARU_IDLE1
+				Object.Priority = PRIORITY_BOUNDS
+				Object.Frame = 0
+			end if
+			break
+			
+		end switch
+	else
+		switch Object.State
+		case HOTARU_IDLE1
+			Object.Priority = PRIORITY_ACTIVE
+			
+			Object.Frame = 3
+			
+			// Right range of 43 pixels for Hotaru 1
+			if Object.Hotaru1X < 0x2B0000
+				// Move both Hotarus in their respective directions by a half pixel
+				Object.Hotaru1X += 0x8000
+				Object.Hotaru2X -= 0x8000
+			else
+				// Turn around
+				Object.State = HOTARU_IDLE2
+			end if
+			break
+			
+		case HOTARU_IDLE2
+			// Left range of 115 pixels for Hotaru 1
+			if Object.Hotaru1X > -0x730000
+				// Move both Hotarus in their respective directions by a half pixel
+				Object.Hotaru1X -= 0x8000
+				Object.Hotaru2X += 0x8000
+			else
+				// Turn around again
+				Object.State = HOTARU_IDLE1
+			end if
+			break
+			
+		case HOTARU_TRACKPLAYER
+			// Make the Hotarus follow the screen
+			
+			TempValue0 = Screen.XOffset
+			TempValue0 += Screen.CenterX
+			TempValue0 <<= 16
+			TempValue1 = false
+			if Object.XPos < TempValue0
+				Object.XPos += 0x10000
+				if Object.XPos >= TempValue0
+					Object.XPos = TempValue0
+					TempValue1 = true
+				end if
+			else
+				Object.XPos -= 0x10000
+				if Object.XPos <= TempValue0
+					Object.XPos = TempValue0
+					TempValue1 = true
+				end if
+			end if
+			
+			TempValue0 = Screen.YOffset
+			TempValue0 += 104
+			TempValue0 <<= 16
+			if Object.YPos < TempValue0
+				Object.YPos += 0x10000
+				if Object.YPos >= TempValue0
+					Object.YPos = TempValue0
+					if TempValue1 == true
+						Object.State++
+					end if
+				end if
+			else
+				Object.YPos -= 0x10000
+				if Object.YPos <= TempValue0
+					Object.YPos = TempValue0
+					if TempValue1 == true
+						Object.State++
+					end if
+				end if
+			end if
+			break
+			
+		case HOTARU_PAUSE
+			if Object.Timer < 100
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			Object.Frame = Object.Timer
+			Object.Frame %= 40
+			Object.Frame /= 20
+			Object.Frame += 4
+			break
+			
+		// A series of very small and similar states - each frame in the flicker animation is its own state
+		
+		case HOTARU_LIGHTSON1
+			if Object.Timer < 10
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF1
+			if Object.Timer < 30
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSON2
+			if Object.Timer < 20
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF2
+			if Object.Timer < 20
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSON3
+			if Object.Timer < 30
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_LIGHTSOFF3
+			if Object.Timer < 10
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.AnimationTimer = 0
+				Object.State++
+			end if
+			break
+			
+		case HOTARU_FLASHING
+			// This is the state where the Sparks should be active, but Bad Hotarus have broken bulbs so they don't get to light up...
+			
+			if Object.Timer < 200
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State++
+			end if
+			Object.Frame = Object.Timer
+			Object.Frame %= 40
+			Object.Frame /= 20
+			Object.Frame += 4
+			break
+			
+		case HOTARU_FLYAWAY
+			// Ascend at a rate of 2 pixels per second
+			// (This is rather slow, isn't it?)
+			Object.YPos -= 0x20000
+			
+			// Animate the Object
+			Object.Timer++
+			Object.Timer %= 40
+			Object.Frame = Object.Timer
+			Object.Frame /= 20
+			Object.Frame += 4
+			
+			if Object.OutOfBounds == true
+				Object.State = HOTARU_OFFSCREEN
+				Object.Timer = 0
+				
+				// Place the Hotarus back at their starting positions
+				// Because the State's set to HOTARU_OFFSCREEN, that there won't be any visible teleporting
+				Object.XPos = Object.StartPosX
+				Object.YPos = Object.StartPosY
+				
+				// Reset the Hotarus to be 70 pixels apart
+				// (Ignoring their Property Value, since it got replaced by Hotaru Condition during startup)
+				Object.Hotaru1X = -0x230000
+				Object.Hotaru2X =  0x230000
+			end if
+			break
+			
+		case HOTARU_OFFSCREEN
+			// This state is here so that, if the Hotarus' start position is within bounds, they won't just visibly teleport in front of the player
+			if Object.OutOfBounds == true
+				Object.State = HOTARU_IDLE1
+				Object.Priority = PRIORITY_BOUNDS
+				Object.Frame = 0
+			end if
+			break
+			
+		end switch
+	end if
+	
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+	if Object.ActiveHotarus == 0
+		// If this object doesn't have any more alive Hotarus, than just unload now as it serves no purpose
+		ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+	end if
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	switch Object.State
+	case HOTARU_IDLE1
+	case HOTARU_IDLE2
+		// Wandering around aimlessly, just check to see if the player's entered the Hotarus' general range yet
+		PlayerObjectCollision(C_TOUCH, -64, -64, 64, 64)
+		if CheckResult == true
+			// Player stepped within range, start following them...
+			Object.State = HOTARU_TRACKPLAYER
+		end if
+		break
+		
+	case HOTARU_LIGHTSON2
+	case HOTARU_LIGHTSOFF2
+	case HOTARU_LIGHTSON3
+	case HOTARU_LIGHTSOFF3
+		if Object.Quality == GOOD_QUALITY
+			// Broken Hotarus don't have functional lights...
+			
+			if Object.Hotaru1X < 0
+				TempValue0 = Object.Hotaru1X
+				TempValue0 >>= 16
+				
+				TempValue1 = Object.Hotaru2X
+				TempValue1 >>= 16
+			else
+				TempValue0 = Object.Hotaru2X
+				TempValue0 >>= 16
+				
+				TempValue1 = Object.Hotaru1X
+				TempValue1 >>= 16
+			end if
+			
+			TempValue0 += 8
+			TempValue1 -= 8
+			
+			PlayerObjectCollision(C_TOUCH, TempValue0, -60, TempValue1, 60)
+			if CheckResult == true
+				// Player's within the sensor range, turn on the lights
+				Object.EletricityActive = true
+			end if
+		
+		end if
+		
+		// No break?
+		// Well, I suppose it's not too important...
+		
+	end switch
+	
+	// Don't do any of these further checks if the Hotaru's not even existent
+	if Object.State < HOTARU_OFFSCREEN
+		
+		// Backup the base object's position
+		TempValue6 = Object.XPos
+		TempValue7 = Object.YPos
+		
+		// Check collision for Hotaru 1
+		GetBit(TempValue1, Object.ActiveHotarus, 0)
+		if TempValue1 == true
+		
+			// Adjust the object's position to match that of Hotaru 1
+			Object.XPos += Object.Hotaru1X
+			Object.YPos -= Object.HotaruRadius
+			
+			// Check if there was collision
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				// Check if the Hotaru should be broken
+				
+				ArrayPos1 = Object.EntityNo
+				ArrayPos1++
+				CallFunction(Hotaru_HotaruBreak)
+				
+				if Object[+1].Type == Flower_TypeNo
+					// The Hotaru was destroyed, blank its according bit
+					SetBit(Object.ActiveHotarus, 0, false)
+				end if
+			end if
+			
+			// Restore the Object's position to what it was before
+			Object.XPos = TempValue6
+			Object.YPos = TempValue7
+		end if
+		
+		// Check collision for Hotaru 2
+		GetBit(TempValue1, Object.ActiveHotarus, 1)
+		if TempValue1 == true
+		
+			// Adjust the Object's Position to be where Hotaru 2 is
+			Object.XPos += Object.Hotaru2X
+			Object.YPos += Object.HotaruRadius
+			
+			// Check for collision against this Hotaru
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				// Check if the Hotaru should be destroyed or hurt the player
+				
+				ArrayPos1 = Object.EntityNo
+				ArrayPos1 += 2
+				CallFunction(Hotaru_HotaruBreak)
+				
+				if Object[+2].Type == Flower_TypeNo
+					// The Hotaru has been destroyed, so set its bit to zero
+					SetBit(Object.ActiveHotarus, 1, false)
+				end if
+			end if
+		end if
+		
+		// If needed, check for the Sparks
+		if Object.State == HOTARU_FLASHING
+			if Object.EletricityActive == true
+				
+				// That is to say, are both Hotarus active? (3 is 0b11 in bits)
+				if Object.ActiveHotarus == 3
+				
+					// Check collision for the Sparks
+					
+					// First, backup the object's position
+					Object.XPos = TempValue6
+					Object.YPos = TempValue7
+					
+					// Check collision for the middle Spark
+					PlayerObjectCollision(C_TOUCH, -12, -12, 12, 12)
+					if CheckResult == true
+						CallFunction(Player_Hit)
+					end if
+					
+					// Check collision for the left Spark
+					
+					Object.XPos = TempValue6
+					Object.XPos >>= 1
+					
+					TempValue1 = TempValue6
+					TempValue1 += Object.Hotaru1X
+					TempValue1 >>= 1
+					
+					Object.XPos += TempValue1
+					Object.YPos = TempValue7
+					Object.YPos >>= 1
+					
+					TempValue1 = TempValue7
+					TempValue1 -= Object.HotaruRadius
+					TempValue1 >>= 1
+					
+					Object.YPos += TempValue1
+					
+					PlayerObjectCollision(C_TOUCH, -12, -12, 12, 12)
+					if CheckResult == true
+						CallFunction(Player_Hit)
+					end if
+					
+					// Check collision for the right Spark
+					
+					Object.XPos = TempValue6
+					Object.XPos >>= 1
+					
+					TempValue1 = TempValue6
+					TempValue1 += Object.Hotaru2X
+					TempValue1 >>= 1
+					
+					Object.XPos += TempValue1
+					Object.YPos = TempValue7
+					Object.YPos >>= 1
+					
+					TempValue1 = TempValue7
+					TempValue1 += Object.HotaruRadius
+					TempValue1 >>= 1
+					
+					Object.YPos += TempValue1
+					
+					PlayerObjectCollision(C_TOUCH, -12, -12, 12, 12)
+					if CheckResult == true
+						CallFunction(Player_Hit)
+					end if
+					
+				end if
+			end if
+		end if
+		
+		// Restore the base object's position to what it should be
+		Object.XPos = TempValue6
+		Object.YPos = TempValue7
+		
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case HOTARU_IDLE1
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			Object.Direction = FACING_LEFT
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			Object.Direction = FACING_RIGHT
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_IDLE2
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			Object.Direction = FACING_RIGHT
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			Object.Direction = FACING_LEFT
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_TRACKPLAYER
+		// Always face the Player
+		if Player.XPos < Object.XPos
+			Object.Direction = FACING_RIGHT
+		else
+			Object.Direction = FACING_LEFT
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_PAUSE
+		Object.XPos = Screen.XOffset
+		Object.XPos += Screen.CenterX
+		Object.XPos <<= 16
+		Object.YPos = Screen.YOffset
+		Object.YPos += 104
+		Object.YPos <<= 16
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_LIGHTSON1
+	case HOTARU_LIGHTSON2
+	case HOTARU_LIGHTSON3
+	case HOTARU_FLYAWAY
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			DrawSpriteFX(6, FX_FLIP, TempValue0, TempValue1)
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			DrawSpriteFX(6, FX_FLIP, TempValue0, TempValue1)
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_LIGHTSOFF1
+	case HOTARU_LIGHTSOFF2
+	case HOTARU_LIGHTSOFF3
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		break
+		
+	case HOTARU_FLASHING
+		GetBit(CheckResult, Object.ActiveHotarus, 0)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru1X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 -= Object.HotaruRadius
+			DrawSpriteFX(6, FX_FLIP, TempValue0, TempValue1)
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		GetBit(CheckResult, Object.ActiveHotarus, 1)
+		if CheckResult == true
+			TempValue0 = Object.Hotaru2X
+			TempValue0 += Object.XPos
+			TempValue1 = Object.YPos
+			TempValue1 += Object.HotaruRadius
+			DrawSpriteFX(6, FX_FLIP, TempValue0, TempValue1)
+			DrawSpriteFX(Object.Frame, FX_FLIP, TempValue0, TempValue1)
+		end if
+		
+		if Object.EletricityActive == true
+			if Object.ActiveHotarus == 3 // Both bits in the number active, meaning that both Hotarus are alive and well
+				
+				// Draw the Middle Spark
+				TempValue0 = Object.AnimationTimer
+				TempValue0 >>= 1
+				TempValue0 += 7
+				DrawSprite(TempValue0)
+				
+				// Draw the Left Spark
+				
+				TempValue1 = Object.XPos
+				TempValue1 >>= 1
+				
+				TempValue3 = Object.XPos
+				TempValue3 += Object.Hotaru1X
+				TempValue3 >>= 1
+				
+				TempValue1 += TempValue3
+				
+				TempValue2 = Object.YPos
+				TempValue2 >>= 1
+				
+				TempValue3 = Object.YPos
+				TempValue3 -= Object.HotaruRadius
+				TempValue3 >>= 1
+				
+				TempValue2 += TempValue3
+				
+				DrawSpriteXY(TempValue0, TempValue1, TempValue2)
+				
+				// Draw the Right Spark
+				
+				TempValue1 = Object.XPos
+				TempValue1 >>= 1
+				
+				TempValue3 = Object.XPos
+				TempValue3 += Object.Hotaru2X
+				TempValue3 >>= 1
+				
+				TempValue1 += TempValue3
+				
+				TempValue2 = Object.YPos
+				TempValue2 >>= 1
+				
+				TempValue3 = Object.YPos
+				TempValue3 += Object.HotaruRadius
+				TempValue3 >>= 1
+				
+				TempValue2 += TempValue3
+				
+				DrawSpriteXY(TempValue0, TempValue1, TempValue2)
+				
+				// Animate the Sparks
+				Object.AnimationTimer++
+				Object.AnimationTimer %= 6
+				
+			end if
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Hotaru Frames
+	
+	// "Good" type frames (normal lightbulb)
+	SpriteFrame(-20, -12, 40, 24, 182, 121)
+	SpriteFrame(-12, -20, 24, 40, 231, 119)
+	SpriteFrame(-12, -20, 24, 40, 231, 160)
+	
+	// "Bad" type frames (broken lightbulb)
+	SpriteFrame(-20, -12, 40, 24, 182, 146)
+	SpriteFrame(-12, -20, 24, 40, 231, 201)
+	SpriteFrame(-12, -20, 24, 40, 206, 215)
+	
+	// blulb
+	SpriteFrame(-11, -7, 24, 24, 175, 196)
+	
+	// Eletricity Frames
+	SpriteFrame(-12, -12, 24, 24, 150, 171)
+	SpriteFrame(-12, -12, 24, 24, 175, 171)
+	SpriteFrame(-12, -12, 24, 24, 150, 196)
+	
+	// Cycle through all Hotaru objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Hotaru]
+		
+			// First, set their starting positions
+			Object[ArrayPos0].StartPosX = Object[ArrayPos0].XPos
+			Object[ArrayPos0].StartPosY = Object[ArrayPos0].YPos
+	
+			// Hotarus draw above other objects, including the Player
+			Object[ArrayPos0].DrawOrder = 5
+			
+			// Setup the Hotarus' type and initial positions
+			switch Object[ArrayPos0].Quality
+			case 0
+				// Properties of:
+				// Radius of 60 pixels
+				// Good variant, with a functioning Light
+				// Start the Hotarus 70 pixels apart (35 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x3C0000
+				Object[ArrayPos0].Quality = GOOD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x230000
+				Object[ArrayPos0].Hotaru2X = 0x230000
+				break
+				
+			case 1
+				// Properties of:
+				// Radius of 60 pixels
+				// Bad variant, with a broken Light
+				// Start the Hotarus 70 pixels apart (35 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x3C0000
+				Object[ArrayPos0].Quality = BAD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x230000
+				Object[ArrayPos0].Hotaru2X = 0x230000
+				break
+	
+			case 4
+				// Properties of:
+				// Radius of 68 pixels
+				// Good variant, with a functioning Light
+				// Start the Hotarus 100 pixels apart (50 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x440000
+				Object[ArrayPos0].Quality = GOOD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x320000
+				Object[ArrayPos0].Hotaru2X = 0x320000
+				break
+	
+			case 5
+				// Properties of:
+				// Radius of 68 pixels
+				// Bad variant, with a broken Light
+				// Start the Hotarus 100 pixels apart (50 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x440000
+				Object[ArrayPos0].Quality = BAD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x320000
+				Object[ArrayPos0].Hotaru2X = 0x320000
+				break
+	
+			case 8
+				// Properties of:
+				// Radius of 56 pixels
+				// Good variant, with a functioning Light
+				// Start the Hotarus 140 pixels apart (70 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x380000
+				Object[ArrayPos0].Quality = GOOD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x460000
+				Object[ArrayPos0].Hotaru2X = 0x460000
+				break
+	
+			case 9
+				// Properties of:
+				// Radius of 56 pixels
+				// Bad variant, with a broken Light
+				// Start the Hotarus 140 pixels apart (70 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x380000
+				Object[ArrayPos0].Quality = BAD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x460000
+				Object[ArrayPos0].Hotaru2X = 0x460000
+				break
+	
+			case 12
+				// Properties of:
+				// Radius of 18 pixels
+				// Good variant, with a functioning Light
+				// Start the Hotarus 192 pixels apart (96 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x120000
+				Object[ArrayPos0].Quality = GOOD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x600000
+				Object[ArrayPos0].Hotaru2X = 0x600000
+				break
+	
+			case 13
+				// Properties of:
+				// Radius of 18 pixels
+				// Bad variant, with a broken Light
+				// Start the Hotarus 192 pixels apart (96 pixels from the base Pos)
+				Object[ArrayPos0].HotaruRadius = 0x120000
+				Object[ArrayPos0].Quality = BAD_QUALITY
+				Object[ArrayPos0].Hotaru1X = -0x600000
+				Object[ArrayPos0].Hotaru2X = 0x600000
+				break
+	
+			end switch
+			
+			// Set both of the Object's Hotarus to active
+			SetBit(Object[ArrayPos0].ActiveHotarus, 0, true)
+			SetBit(Object[ArrayPos0].ActiveHotarus, 1, true)
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 1 // Formation
+			CheckResult = Object.PropertyValue
+			CheckResult &= 254
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			CheckNotEqual(Editor.VariableValue, false)
+			SetBit(Object.PropertyValue, 0, CheckResult)
+			break
+		case 1 // Formation
+			Object.PropertyValue &= 1
+			Editor.VariableValue &= 254
+			Object.PropertyValue |= Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	// We got a whole lot to do, we're essentially setting up a new Hotaru every time since we can't depend on values from the last frame
+	
+	// First, get the sprite to be used
+	GetBit(TempValue5, Object.Quality, 0)
+	
+	// Then, get the movement values based on the Hotaru's designated Formation
+	TempValue0 = Object.Quality
+	TempValue0 &= 254
+	
+	switch TempValue0
+	case 0
+	default // inaccurate to how it'll be in-game if given an invalid formation, but it doesn't matter too much
+		TempValue2 =  0x3C0000
+		TempValue3 = -0x230000
+		break
+	case 4
+		TempValue2 =  0x440000
+		TempValue3 = -0x320000
+		break
+	case 8
+		TempValue2 =  0x380000
+		TempValue3 = -0x460000
+		break
+	case 12
+		TempValue2 =  0x120000
+		TempValue3 = -0x600000
+		break
+	end switch
+	
+	TempValue4 = TempValue3
+	FlipSign(TempValue4)
+	
+	TempValue0 = TempValue3
+	TempValue0 += Object.XPos
+	TempValue1 = Object.YPos
+	TempValue1 -= TempValue2
+	Object.Direction = FACING_LEFT
+	DrawSpriteFX(TempValue5, FX_FLIP, TempValue0, TempValue1)
+
+	TempValue6 = TempValue4
+	TempValue6 += Object.XPos
+	TempValue7 = Object.YPos
+	TempValue7 += TempValue2
+	Object.Direction = FACING_RIGHT
+	DrawSpriteFX(TempValue5, FX_FLIP, TempValue6, TempValue7)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		// First, draw the Hotaru's movement ranges
+		DrawLine(TempValue0, TempValue1, TempValue6, TempValue1, 255, 255, 255)
+		DrawLine(TempValue6, TempValue7, TempValue0, TempValue7, 255, 255, 255)
+		
+		Object.InkEffect = 1
+		
+		// Then, draw some lines to indicate this Hotaru's following Flower entities
+		DrawArrow(Object.XPos, Object.YPos, Object[+1].XPos, Object[+1].YPos, 255, 255, 0)
+		DrawArrow(Object.XPos, Object.YPos, Object[+2].XPos, Object[+2].YPos, 255, 255, 0)
+		
+		Object.InkEffect = 0
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-20, -12, 40, 24, 182, 121)
+	SpriteFrame(-20, -12, 40, 24, 182, 146)
+
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad",  BAD_QUALITY)
+	
+	AddEditorVariable("Formation")
+	SetActiveVariable("Formation")
+	AddEnumVariable("Formation A", 0)
+	AddEnumVariable("Formation B", 4)
+	AddEnumVariable("Formation C", 8)
+	AddEnumVariable("Formation D", 12)
+end sub

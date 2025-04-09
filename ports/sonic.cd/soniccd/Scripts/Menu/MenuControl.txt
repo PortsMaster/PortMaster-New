@@ -1,0 +1,423 @@
+//----------------Sonic CD Menu Control Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Fade
+#alias Object.Value1	:	Object.ButtonYOffset
+#alias Object.Value2	:	Object.DragCurrentSelection
+#alias Object.Value3	:	Object.CurrentSelection
+#alias Object.Value4	:	Object.ButtonScroll
+#alias Object.Value5	:	Object.DragEnabled
+#alias Object.Value6	:	Object.DragYOffset
+#alias Object.Value7	:	Object.DragSmooth
+#alias Object.Direction	:	Object.YOffsetCorrection
+
+// Object[1] is a blank object only used to share values across the menu objects
+#alias Object[1].Value0	:	Object.DragPos
+#alias Object[1].Value1	:	Object.RecenterValue
+#alias Object[1].Value2	:	Object.MaxButtonCount
+#alias Object[1].Value3	:	Object.DragLimit
+#alias Object[1].Value4	:	Object.YOffSet1	//in other scripts this is used to check inputs
+#alias Object[1].Value5	:	Object.YOffSet2
+#alias Object[1].Value6	:	Object.YOffSet3
+
+// Menu Button Aliases
+#alias Object[34].State	:	MenuButton.State
+
+// States
+#alias 0	:	MENUCONTROL_SETUP
+#alias 1	:	MENUCONTROL_BUTTONS_MOVEIN
+#alias 2	:	MENUCONTROL_CONTROLS
+#alias 3	:	MENUCONTROL_BLANK
+#alias 4	:	MENUCONTROL_ENTER_TIMEATTACK
+#alias 5	:	MENUCONTROL_ENTER_DEMO
+#alias 6	:	MENUCONTROL_MENUBUTTON_CHECK
+#alias 7	:	MENUCONTROL_ENTER_TROPHIES
+#alias 8	:	MENUCONTROL_ENTER_LEADERBOARDS
+
+// MenuButton States
+#alias 2	:	MENUBUTTON_CONFIRM_SELECTION
+
+// Presentation Stages
+#alias 2	:	STAGE_P_TATTACK
+#alias 9	:	STAGE_P_THROPIES
+#alias 10	:	STAGE_P_LEADERBOARDS
+
+// Regular Stages
+#alias 0	:	STAGE_R_PPZ1A
+
+// Global SFX
+#alias 23	:	SFX_G_MENUBUTTON
+#alias 27	:	SFX_G_SELECT
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// Engine & CallBacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Device Type
+#alias 0	:	RETRO_STANDARD
+
+
+sub ObjectMain
+
+	switch Object.State
+	case MENUCONTROL_SETUP
+		Object.State = MENUCONTROL_BUTTONS_MOVEIN
+		Object.Fade  = 384
+		SetScreenFade(0, 0, 0, 255)
+		PlayMusic(Options.Soundtrack)
+		if Engine.FrameSkipTimer > -1
+			Engine.FrameSkipTimer = -1
+		end if
+		break
+
+	case MENUCONTROL_BUTTONS_MOVEIN
+		if Object.Fade > 0
+			Object.Fade -= 8
+		else
+			Object.State = MENUCONTROL_MENUBUTTON_CHECK
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	case MENUCONTROL_CONTROLS
+
+#platform: Standard
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+
+		// 2011 Steam lacks Options.PhysicalControls, so we force it here first and the other platforms can override it
+		if CheckResult == true
+#platform: Use_Origins
+			Menu.ExitFlag = true
+#endplatform
+			if KeyPress.Up == true
+				Object.CurrentSelection--
+				if Object.CurrentSelection < 1
+					Object.CurrentSelection = 1
+				else
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+			end if
+
+			if KeyPress.Down == true
+				Object.CurrentSelection++
+				if Object.CurrentSelection > Object.MaxButtonCount
+					Object.CurrentSelection = Object.MaxButtonCount
+				else
+					PlaySfx(SFX_G_MENUBUTTON, false)
+				end if
+			end if
+
+			TempValue0  = Object.CurrentSelection
+			TempValue0 -= Object.ButtonScroll
+			if TempValue0 < 1
+				Object.ButtonScroll--
+				Object.YOffsetCorrection = 3
+			end if
+
+			if TempValue0 > 4
+				Object.ButtonScroll++
+				Object.YOffsetCorrection = 0
+			end if
+			
+			//Button Movement across the screen
+			TempValue0  = Object.ButtonYOffset
+			TempValue0 -= 32
+
+			TempValue1   = Object.ButtonScroll
+			TempValue1  *= -60
+			TempValue1  -= TempValue0
+			TempValue1  += Object.YOffsetCorrection
+			TempValue1 >>= 2
+			Object.ButtonYOffset += TempValue1
+
+#platform: Use_Origins
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				Options.PhysicalControls	= false
+				Object.CurrentSelection		= 0
+				Object.DragCurrentSelection = 0
+			end if
+#endplatform
+
+#platform: Mobile
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				Options.PhysicalControls	= false
+				Object.CurrentSelection		= 0
+				Object.DragCurrentSelection = 0
+			end if
+#endplatform
+
+		else
+			if Engine.Message == MESSAGE_LOSTFOCUS
+				Object.CurrentSelection		= 0
+				Object.DragCurrentSelection = 0
+			end if
+
+			if Object.DragCurrentSelection > 0
+				Object.CurrentSelection = Object.DragCurrentSelection
+			else
+				Object.CurrentSelection = 0
+			end if
+
+			if Object.MaxButtonCount > 4
+				CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+				if CheckResult > -1
+					ArrayPos0 = CheckResult
+					if Object.DragEnabled == false
+						Object.DragEnabled = true
+						Object.DragPos	   = Object.ButtonYOffset
+						Object.DragYOffset = TouchScreen[ArrayPos0].YPos
+					else
+						//Dragging of buttons based on input
+						TempValue0  = TouchScreen[ArrayPos0].YPos
+						TempValue0 -= Object.DragYOffset
+						TempValue0 += Object.DragPos
+
+						Object.YOffSet3 = Object.YOffSet2
+						Object.YOffSet2 = Object.YOffSet1
+						Object.YOffSet1 = Object.DragSmooth
+
+						Object.DragSmooth    = TempValue0
+						Object.DragSmooth   -= Object.ButtonYOffset
+						Object.ButtonYOffset = TempValue0
+					end if
+
+					TempValue0   = Object.DragSmooth
+					TempValue0 >>= 2
+					if TempValue0 != 0
+						Object.CurrentSelection		= 0
+						Object.DragCurrentSelection = 0
+					end if
+				else
+					if Object.DragEnabled == true
+						//Sets the position to where the buttons will go post-drag
+						Object.DragEnabled   = false
+						Object.DragYOffset   = Object.ButtonYOffset
+						Object.DragYOffset <<= 8
+
+						Object.DragSmooth  += Object.YOffSet1
+						Object.DragSmooth  += Object.YOffSet2
+						Object.DragSmooth  += Object.YOffSet3
+						Object.DragSmooth >>= 2
+						Object.DragSmooth <<= 7
+
+						if Object.DragSmooth == 0
+							if Object.CurrentSelection == 0
+								Object.DragSmooth = 1		//Forces movement
+							end if
+						end if
+					end if
+
+					if Object.DragSmooth != 0
+						//Centers to whatever button is closer to the center + offset up or down depending of to where did you drag
+						Object.DragYOffset += Object.DragSmooth
+						if Object.DragYOffset < Object.DragLimit
+							Object.DragYOffset = Object.DragLimit
+							Object.DragSmooth  = 0
+						end if
+						if Object.DragYOffset > 0x5A00
+							Object.DragYOffset = 0x5A00
+							Object.DragSmooth  = 0
+						end if
+
+						if Object.DragSmooth > 0
+							Object.DragSmooth -= 32
+							if Object.DragSmooth < 0
+								Object.DragSmooth = 0
+							end if
+						else
+							Object.DragSmooth += 32
+							if Object.DragSmooth > 0
+								Object.DragSmooth = 0
+							end if
+						end if
+						
+						Object.ButtonYOffset   = Object.DragYOffset
+						Object.ButtonYOffset >>= 8
+						if Object.DragSmooth == 0
+							Object.ButtonScroll  = Object.ButtonYOffset
+							Object.ButtonScroll -= 32
+							Object.ButtonScroll /= -60
+							if Object.ButtonScroll < 0
+								Object.ButtonScroll = 0
+							end if
+
+							TempValue0  = Object.MaxButtonCount
+							TempValue0 -= 4
+							if Object.ButtonScroll > TempValue0
+								Object.ButtonScroll = TempValue0
+							end if
+						end if
+					else
+						//Drag screen re-centering
+						TempValue0  = Object.ButtonYOffset
+						TempValue0 -= 32
+						Object.RecenterValue   = Object.ButtonScroll
+						Object.RecenterValue  *= -60
+						Object.RecenterValue  -= TempValue0
+						Object.RecenterValue >>= 2
+						if Object.RecenterValue < -4
+							Object.RecenterValue = -4
+						end if
+						if Object.RecenterValue > 4
+							Object.RecenterValue = 4
+						end if
+						Object.ButtonYOffset += Object.RecenterValue
+					end if
+				end if
+			end if
+
+#platform: Use_Origins
+			if KeyPress[0].Up == true
+				Object.CurrentSelection  = Object.MaxButtonCount
+				Options.PhysicalControls = true
+			end if
+
+			if KeyPress[0].Down == true
+				Object.CurrentSelection  = 1
+				Options.PhysicalControls = true
+			end if
+#endplatform
+
+#platform: Mobile
+			if KeyPress[0].Up == true
+				Object.CurrentSelection  = Object.MaxButtonCount
+				Options.PhysicalControls = true
+			end if
+
+			if KeyPress[0].Down == true
+				Object.CurrentSelection  = 1
+				Options.PhysicalControls = true
+			end if
+#endplatform
+		end if
+
+		break
+
+	case MENUCONTROL_BLANK //Used to stop the controls temporarily
+		break
+
+	case MENUCONTROL_ENTER_TIMEATTACK
+		if Object.Fade < 320
+			Object.Fade += 8
+		else
+			Stage.ListPos = STAGE_P_TATTACK
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	case MENUCONTROL_ENTER_DEMO	//Only used in Demo versions of the game
+		if Object.Fade < 320
+			Object.Fade += 8
+		else
+			LoadVideo("Opening")
+
+
+//			if Engine.PlatformID != RETRO_WP7
+//				if Options.Soundtrack == OST_JP
+//					LoadVideo("Opening")
+//				else
+//					LoadVideo("OpeningUS")
+//				end if
+//			end if
+
+			Stage.ActiveList = REGULAR_STAGE
+			Stage.ListPos	 = STAGE_R_PPZ1A
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.Fade)
+		break
+
+	case MENUCONTROL_MENUBUTTON_CHECK
+		if MenuButton.State == MENUBUTTON_CONFIRM_SELECTION
+			Object.State = MENUCONTROL_CONTROLS
+		end if
+		break
+
+	case MENUCONTROL_ENTER_TROPHIES		//Mobile Only
+			if Object.Fade < 320
+				Object.Fade += 8
+			else
+				Stage.ListPos = STAGE_P_THROPIES
+				LoadStage()
+			end if
+			SetScreenFade(0, 0, 0, Object.Fade)
+
+		break
+
+	case MENUCONTROL_ENTER_LEADERBOARDS	//Mobile Only
+			if Object.Fade < 320
+				Object.Fade += 8
+			else
+				Stage.ListPos = STAGE_P_LEADERBOARDS
+				LoadStage()
+			end if
+			SetScreenFade(0, 0, 0, Object.Fade)
+
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+	SetMusicTrack("JP/SpecialStage.ogg", 0, 1)
+	SetMusicTrack("US/SpecialStage.ogg", 1, 270972)
+	Object[0].Type = TypeName[Menu Control]
+	Object[0].ButtonYOffset = 32
+
+#platform: Use_Origins	// they have in mind a mobile release or this is for Switch?
+	if Engine.DeviceType == RETRO_STANDARD
+		Object[0].CurrentSelection = 1
+		Options.PhysicalControls   = true
+	else
+		Options.PhysicalControls   = false
+	endif
+#endplatform
+
+#platform: Use_Standalone
+	#platform: Standard
+		Object[0].CurrentSelection = 1
+	#endplatform
+#endplatform
+#platform: Use_Standalone
+	#platform: Mobile
+		Options.PhysicalControls   = false
+	#endplatform
+#endplatform
+
+	Object[0].DragCurrentSelection = 0
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

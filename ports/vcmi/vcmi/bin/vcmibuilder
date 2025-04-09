@@ -1,0 +1,302 @@
+#!/bin/bash -e
+
+#
+# VCMI data builder script
+# Extracts game data from various sources and creates a tree with the right files
+#
+# Authors: listed in file AUTHORS in main folder
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+
+# no console arguments - print help
+if [ $# -eq 0 ] ; then
+	print_help=true
+fi
+
+INNOEXTRACT="$PWD/bin/innoextract"
+UNSHIELD="$PWD/bin/unshield"
+CUR_TTY=/dev/tty0
+
+printf "\033c" > $CUR_TTY
+echo "Building game files, this could take a few minutes." > $CUR_TTY
+
+#!/bin/bash -e
+
+#
+# VCMI data builder script
+# Extracts game data from various sources and creates a tree with the right files
+#
+# Authors: listed in file AUTHORS in main folder
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+
+# no console arguments - print help
+if [ $# -eq 0 ] ; then
+	print_help=true
+fi
+
+# command line parsing
+# can't use system getopt which is not cross-platform (BSD/Mac)
+# can't use built-in getopts which can't parse long options (too difficult to avoid - e.g. CD1/CD2)
+while [ $# -gt 0 ]
+do
+	case $1 in
+		--cd1) cd1_dir=$2           ; shift 2 ;;
+		--cd2) cd2_dir=$2           ; shift 2 ;;
+		--gog) gog_file=$2          ; shift 2 ;;
+		--data) data_dir=$2         ; shift 2 ;;
+		--dest) dest_dir=$2         ; shift 2 ;;
+		--convertMP3) useffmpeg=true; shift 1 ;;
+		--validate) validate=true   ; shift 1 ;;
+		*) print_help=true          ; shift 1 ;;
+	esac
+done
+
+if [[ -n "$print_help" ]]
+then
+	echo "VCMI data builder utility"
+	echo "Usage: vcmibuilder <options>"
+	echo "Options:"
+	echo " --cd1 DIRECTORY  " "Path to mounted first CD with Heroes 3 install files"
+	echo "                  " "Requires unshield"
+	echo
+	echo " --cd2 DIRECTORY  " "Path to second CD with Heroes 3 data files."
+	echo
+	echo " --gog EXECUTABLE " "Path to gog.com executable"
+	echo "                  " "Requires innoextract ( http://constexpr.org/innoextract/ )"
+	echo
+	echo " --data DIRECTORY " "Path to installed Heroes 3 data"
+	echo
+	echo " --convertMP3     " "Convert all mp3 files into ogg/vorbis"
+	echo "                  " "Requires ffmpeg or avconv"
+	echo
+	echo " --dest DIRECTORY " "Path where resulting data will be placed. Default is ~/.local/share/vcmi"
+	echo
+	echo " --validate       " "Run basic validness checks"
+	exit 0
+fi
+
+# test if a program version ($1) is less than the required one ($2)
+verlt() {
+	[ "$1" = "$2" ] && return 1 || \
+	[ "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+}
+
+# test presence of program $1, $2 will be passed as parameters to test presence
+test_utility ()
+{
+	$1 $2 > /dev/null 2>&1 || { echo "$1 was not found. Please install it" 1>&2 ; exit 1; }
+}
+
+# print error message and exit
+fail ()
+{
+	$2
+	echo "$1" 1>&2
+	rm -rf "$temp_dir"
+
+	exit 1
+}
+
+# print warning to stderr.
+warning ()
+{
+	echo "$1" 1>&2
+	warn_user=true
+}
+
+#checks whether specified directory exists. Also works with globs
+dir_exists() {
+	[ -d "$1" ]
+}
+
+# check if selected options are correct.
+
+if [[ -n "$data_dir" ]]
+then
+	if [[ -n "$gog_file" ]] || [[ -n "$cd1_dir" ]] || [[ -n "$cd2_dir" ]]
+	then
+		warning "Warning: Installed data dir was specified. Both gog and cd options will be ignored"
+		unset gog_file cd1_dir cd2_dir
+	fi
+fi
+
+if [[ -n "$gog_file" ]]
+then
+	test_utility "${INNOEXTRACT}"
+	if [[ -n "$cd1_dir" ]] || [[ -n "$cd2_dir" ]]
+	then
+		warning "Warning: Both gog and cd options were specified. cd options will be ignored"
+		unset cd1_dir cd2_dir
+	fi
+fi
+
+if [[ -n "$gog_file" ]]
+then
+	currentver="$($INNOEXTRACT --version | head -n1 | cut -d ' ' -f2)"
+	requiredver="1.6"
+	if verlt $currentver $requiredver;
+	then
+		fail "innoextract version is $currentver, update it to version $requiredver or higher"
+	fi
+fi
+
+if [[ -n "$useffmpeg" ]]
+then
+	ffmpeg -version > /dev/null 2>&1 && AUDIO_CONV=ffmpeg
+	avconv -version > /dev/null 2>&1 && AUDIO_CONV=avconv
+	if [[ -z "$AUDIO_CONV" ]]
+	then
+		fail "Error: neither ffmpeg nor avconv were found. Please install it."
+	fi
+fi
+
+if [[ -n "$cd1_dir" ]]
+then
+	test_utility "${UNSHIELD}" "-V"
+fi
+
+if [[ -z "$gog_file" ]] && [[ -z "$data_dir" ]] && ( [[ -z "$cd1_dir" ]] || [[ -z "$cd2_dir" ]] )
+then
+	warning "Warning: Selected options will not create complete Heroes 3 data!"
+fi
+
+# if at least one warning has been printed - ask for confirmation
+if [[ -n "$warn_user" ]]
+then
+	read -p "Do you wish to continue? (y/n) " -n 1
+	echo #print eol
+	if [[ ! $REPLY =~ ^[Yy]$ ]]
+	then
+		exit 1
+	fi
+fi
+
+if [[ -z "$dest_dir" ]]
+then
+	if [[ -z "$XDG_DATA_HOME" ]]
+	then
+		dest_dir="$HOME/.local/share/vcmi"
+	else
+		dest_dir="$XDG_DATA_HOME/vcmi"
+	fi
+fi
+
+temp_dir="$dest_dir"/buildertmp
+
+# start installation
+
+mkdir -p "$dest_dir"
+mkdir -p "$temp_dir"
+
+if [[ -n "$gog_file" ]]
+then
+	data_dir="$temp_dir"/gog
+	mkdir -p "$data_dir"
+
+	echo "Extracting GoG Files" > $CUR_TTY
+
+	# innoextract always reports error (iconv 84 error). Just test file for presence
+	test -f "$gog_file" || fail "Error: gog.com executable was not found!"
+	gog_file="$(cd "$(dirname "$gog_file")"; pwd)/$(basename "$gog_file")"
+	cd "$data_dir" && $INNOEXTRACT "$gog_file"
+	
+	# some versions of gog.com installer (or innoextract tool?) place game files inside /app directory
+	if dir_exists "$data_dir"/app/[Dd][Aa][Tt][Aa]
+	then
+		data_dir="$data_dir"/app
+	fi
+fi
+
+if [[ -n "$cd1_dir" ]]
+then
+	data_dir="$temp_dir"/cddir
+	mkdir -p "$data_dir"
+	echo "Extracting CD1" > $CUR_TTY
+
+	${UNSHIELD} -d "$data_dir" x "$cd1_dir"/_setup/data1.cab || fail "Error: failed to extract from Install Shield installer!" "rm -rf $data_dir"
+
+	# a bit tricky - different releases have different root directory. Move extracted files to data_dir
+	if [ -d "$data_dir"/Heroes3 ]
+	then
+		mv "$data_dir"/Heroes3/* "$data_dir"
+	elif [ -d "$data_dir""/Program_Files" ]
+	then
+		mv "$data_dir"/Program_Files/* "$data_dir"
+	elif [ -d "$data_dir""/LangInde_Program_Files" ]
+	then
+		mv "$data_dir"/LangInde_Program_Files/* "$data_dir"
+	else
+		echo "Error: failed to find extracted game files!"
+		echo "Extracted directories are: "
+		ls -la "$data_dir"
+		echo "Please report this on vcmi.eu"
+		exit 1;
+	fi
+fi
+
+if [[ -n "$cd2_dir" ]]
+then
+	mkdir -p "$dest_dir"/Data
+
+	echo "Extracting CD2" > $CUR_TTY
+
+	if [ -d "$cd2_dir"/heroes3 ]
+	then
+		cp "$cd2_dir"/heroes3/Data/Heroes3.vid "$dest_dir"/Data/Heroes3.vid
+		cp "$cd2_dir"/heroes3/Data/Heroes3.snd "$dest_dir"/Data/Heroes3-cd2.snd
+	else
+		cp "$cd2_dir"/Heroes3/Data/Heroes3.vid "$dest_dir"/Data/Heroes3.vid
+		cp "$cd2_dir"/Heroes3/Data/Heroes3.snd "$dest_dir"/Data/Heroes3-cd2.snd
+	fi
+fi
+
+if [[ -n "$data_dir" ]]
+then
+	# this folder is named differently from time to time
+	# bash also has `shopt -s nocaseglob` but we don't want this to
+	# accidentally influence other parts of this script
+	# since the directory names are short, we use this pattern matching
+	echo "Copying Game Files." > $CUR_TTY
+	cp -r "$data_dir"/[Dd][Aa][Tt][Aa] "$dest_dir"
+	cp -r "$data_dir"/[Mm][Aa][Pp][Ss] "$dest_dir"
+	cp -r "$data_dir"/[Mm][Pp]3 "$dest_dir"
+fi
+
+if [[ -n "$useffmpeg" ]]
+then
+	# now when all music files were installed convert them to ogg
+	echo "Converting mp3 files..." > $CUR_TTY
+
+	OIFS="$IFS"
+	IFS=$'\n'
+
+	for file in `find "$dest_dir" -type f -iname "*.mp3"`
+	do
+		echo "Converting $file"
+		ogg=${file%.*}
+		$AUDIO_CONV -y -i "$file" -acodec libvorbis "$ogg".ogg 2>/dev/null || fail "Error: failed to convert $file to ogg/vorbis using $AUDIO_CONV" "rm -f "$ogg".ogg"
+		rm -f $file
+	done
+
+	IFS="$OIFS"
+fi
+
+if [[ -n "$validate" ]]
+then
+	test -f "$dest_dir"/[Dd][Aa][Tt][Aa]/H3bitmap.lod || fail "Error: Heroes 3 data files are missing!"
+	test -f "$dest_dir"/[Dd][Aa][Tt][Aa]/H3sprite.lod || fail "Error: Heroes 3 data files are missing!"
+	test -f "$dest_dir"/[Dd][Aa][Tt][Aa]/VIDEO.VID    || fail "Error: Heroes 3 data files (CD2) are missing!"
+	#test -d "$dest_dir"/Mods/vcmi/Data                || fail "Error: VCMI data files are missing!"
+fi
+
+rm -rf "$temp_dir"
+echo "Done." > $CUR_TTY

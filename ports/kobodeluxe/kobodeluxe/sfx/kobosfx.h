@@ -1,0 +1,54 @@
+/*
+ * Kobo Deluxe Sound Effects
+ *
+ * IF YOU EDIT THIS FILE, YOU WILL NEED
+ * TO RECOMPILE THE KOBO DELUXE BINARY!
+ *
+ * NOTE:
+ *	Songs use waves 16 and up by convention, so
+ *	we need to stay away from those indices here!
+ */
+
+#define	SOUND_BGM		0
+#define	SOUND_ONEUP		1
+#define	SOUND_FINE		2
+#define	SOUND_BEAM		3
+#define	SOUND_RING		4
+
+#define	SOUND_BOMB_DETO		5
+#define	SOUND_EXPLO_NODE1	6
+#define	SOUND_EXPLO_NODE2	7
+#define	SOUND_EXPLO_ENEMY1	8
+#define	SOUND_EXPLO_ENEMY2	9
+#define	SOUND_EXPLO_PLAYER	10
+#define	SOUND_EXPLO_RING1	11
+#define	SOUND_EXPLO_RING2	12
+#define	SOUND_EXPLO_RING3	13
+#define	SOUND_EXPLO_ROCK	14
+
+#define	SOUND_BZZZT		127
+#define	SOUND_GAMEOVER		126
+#define	SOUND_READY		125
+#define	SOUND_PLAY		124
+#define	SOUND_PAUSE		123
+#define SOUND_TITLE		122
+#define	SOUND_CANCEL		121
+#define	SOUND_LAUNCH2		120
+#define	SOUND_LAUNCH		119
+#define	SOUND_RUMBLE_NODE2	118
+#define	SOUND_RUMBLE_NODE1	117
+#define	SOUND_SHOT_START	116
+#define	SOUND_SHOT		115
+#define	SOUND_SHOT_END		114
+#define	SOUND_SHOT_OVERHEAT	113
+#define	SOUND_OVERHEAT		112
+#define	SOUND_METALLIC3		111
+#define	SOUND_METALLIC2		110
+#define	SOUND_METALLIC1		109
+#define	SOUND_DAMAGE		108
+#define	SOUND_MOVE		107
+#define	SOUND_HIT3		106
+#define	SOUND_HIT2		105
+#define	SOUND_HIT1		104
+#define	SOUND_TICK		103
+#define	SOUND_ENEMYM		102

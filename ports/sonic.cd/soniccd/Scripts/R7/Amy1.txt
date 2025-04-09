@@ -1,0 +1,197 @@
+//-------------------Sonic CD Amy 1 Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+
+// Values0-1 are skipped over... possibly to keep values parallel with the Amy 2 object
+#alias Object.Value2 : Object.YVelocity
+#alias Object.Value3 : Object.Bounds.Left
+#alias Object.Value4 : Object.Bounds.Right
+
+// States
+#alias 0  : AMY1_CAUGHT
+#alias 1  : AMY1_FALLING
+
+// Player Aliases
+#alias 0  : PLAYER_SONIC_A
+
+// Collision Sides
+#alias 0  : CSIDE_FLOOR
+
+// Global SFX
+#alias 22 : SFX_G_EXPLOSION
+
+// Game Mode Aliases
+#alias 2  : MODE_TIMEATTACK
+
+
+sub ObjectMain
+	
+	// (AMY1_CAUGHT has no code here, all of that state's stuff is done over in PlayerObjectCollision)
+	
+	if Object.State == AMY1_FALLING
+		
+		// Update falling movements
+		Object.YPos += Object.YVelocity
+		
+		// Gravity of 0.125 pixels per frame
+		Object.YVelocity += 0x2000
+		
+		// Check if Amy's touched the floor
+		ObjectTileCollision(CSIDE_FLOOR, 0, 19, 0)
+		if CheckResult == true
+			
+			// Amy's landed on the ground now, replace her with an Amy 2 object
+			ResetObjectEntity(Object.EntityNo, TypeName[Amy 2], 0, Object.XPos, Object.YPos)
+			
+			Object.Frame = 4
+			Object.DrawOrder = 4
+			
+			// Set Amy's bounds to make sure she doesn't go too far
+			// they're hardcoded positions btw :(
+			Object.Bounds.Left  = 0x3EA40000 // Left bounds  (16036 with the in-game debug position display)
+			Object.Bounds.Right = 0x40000000 // Right bounds (16384 with the in-game debug position display)
+			
+#platform: Use_Origins
+			// Some additional stuff for Origins
+			
+			// Let the game know we've finished the boss!
+			// This is somewhat unused, as in ths Boss Rush, Metal Sonic already does this same thing,
+			//  so Amy never gets a turn before the stage switches
+			// In normal play this hits, though at that point it doesn't really have any effect at all
+			game.callbackParam0 = true
+			EngineCallback(NOTIFY_BOSS_END)
+			
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				// This code will never hit at all, check out above
+				
+				StopMusic()
+			end if
+#endplatform
+		
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// (The opposite case of ObjectMain, there's nothing for AMY1_FALLING at all here)
+	
+	if Object.State == AMY1_CAUGHT
+		
+		// Due to how the engine works, there's a single frame upon landing where this code is actually
+		//   being run from an Amy 2 object, so check against that
+		// This check was only introduced in an update, so it's not in the 2012 Steam version or anything
+		
+		if Object.Type == TypeName[Amy 1]
+			
+			// Check if Sonic's hit Amy
+			PlayerObjectCollision(C_TOUCH, -8, -16, 8, 16)
+			if CheckResult == true
+				// Free Amy if Sonic broke the rope (?)
+				
+				// Bounce Sonic off
+				FlipSign(Player.YVelocity)
+				Player.YVelocity >>= 1
+				
+				// And start Amy's descent
+				Object.State   = AMY1_FALLING
+				Object.Frame >>= 3
+				
+				// Create an Explosion for the rope (?) just broken
+				CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+				
+				// And that wraps up the stage!
+				Stage.TimeEnabled = false
+				
+				PlaySfx(SFX_G_EXPLOSION, false)
+				
+			end if
+			
+		end if
+		
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	
+	if Object.State == AMY1_CAUGHT
+		TempValue0   = Object.Frame
+		TempValue0 >>= 3
+		DrawSprite(TempValue0)
+		
+		// Animation is done here as well
+		Object.Frame++
+		Object.Frame &= 31
+	else
+		// Stay static while falling down
+		
+		DrawSprite(Object.Frame)
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects2.gif")
+	
+	// Erase all Amy 1 objects in the level if she's not supposed to appear
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Amy 1]
+			
+			// Only appear for Sonic
+			if Stage.PlayerListPos == PLAYER_SONIC_A	// PLAYER_SONIC in origins
+				if Options.GameMode == MODE_TIMEATTACK
+					// Don't appear in time attack, unload
+					
+					Object[ArrayPos0].Type = TypeName[Blank Object]
+				else
+					// All conditions passed - Amy can continue as normal
+					
+					// Have her draw above Sonic,
+					Object[ArrayPos0].DrawOrder = 4
+				end if
+			else
+				// Amy doesn't care about Tails, unload
+				
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			end if
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	// Amy Frames
+	
+	// 0-3 - Hanging Frames
+	SpriteFrame(-12, -20, 24, 40, 1, 170)
+	SpriteFrame(-12, -20, 24, 40, 1, 211)
+	SpriteFrame(-12, -20, 24, 40, 124, 109)
+	SpriteFrame(-12, -20, 24, 40, 1, 211)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects2.gif")
+	SpriteFrame(-12, -20, 24, 40, 1, 170)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

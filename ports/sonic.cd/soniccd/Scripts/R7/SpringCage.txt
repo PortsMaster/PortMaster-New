@@ -1,0 +1,423 @@
+//----------------Sonic CD Spring Cage Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Note - Object[+1} should be an R7Spring object
+
+// Aliases
+#alias Object.Value0 : Object.FullAngle
+#alias Object.Value1 : Object.Angle
+// Value2 is unused...
+#alias Object.Value3 : Object.LaunchTimer
+
+// R7 Spring Aliases
+#alias Object.Value0 : Object.Timer
+
+// States
+#alias 0 : SPRINGCAGE_OPEN
+#alias 1 : SPRINGCAGE_OCCUPIED
+
+// Gravity
+#alias 1 : GRAVITY_AIR
+
+// Stage SFX
+#alias 0 : SFX_S_LARGEBOOSTER	// in origins, this SFX is Launcher
+#alias 3 : SFX_S_LAUNCHER
+
+// Property Values
+#alias 0 : ROTATING_SPRING
+// Could mention the rest, but they are all based on the normal springs so...
+
+
+sub ObjectMain
+	if Object.State == SPRINGCAGE_OPEN
+		if Object.PropertyValue == ROTATING_SPRING
+			// Spin around
+			Object.FullAngle++
+			Object.FullAngle %= 48
+			
+			Object.Angle = Object.FullAngle
+			Object.Angle /= 6
+		end if
+		
+		// Update the content spring to show the correct sprite
+		switch Object.Angle
+		case 0
+			// Right
+			Object[+1].PropertyValue = 1
+			break
+		case 1
+		case 7
+			// Up right
+			Object[+1].PropertyValue = 4
+			break
+		case 2
+		case 6
+			// Up
+			Object[+1].PropertyValue = 0
+			break
+		case 3
+		case 5
+			// Up left
+			Object[+1].PropertyValue = 5
+			break
+		case 4
+			// Left
+			Object[+1].PropertyValue = 2
+			break
+		end switch
+	else
+		if Object.LaunchTimer < 90
+			if Player.State != Player_State_Death
+				Object.LaunchTimer++
+				
+				if Object.LaunchTimer == 60
+					
+					// Origins fixed the SFX the Cage uses
+					// This sound ID is only valid on Origins data files though, which is why we gotta separate it
+#platform: Use_Origins
+					PlayStageSfx(SFX_S_LAUNCHER, false)
+					Player.State = Player_State_Air_NoDropDash
+#endplatform
+					
+#platform: Use_Standalone
+					PlayStageSfx(SFX_S_LARGEBOOSTER, false)
+					Player.State = Player_State_Air
+#endplatform
+					
+					Player.Gravity = GRAVITY_AIR
+					Player.Timer = 0
+					
+					// Activate the spring
+					Object[+1].Timer = 1
+					
+					switch Object.Angle
+					case 0
+						Player.Speed     =  0x100000
+						Player.XVelocity =  0x100000
+						Player.YVelocity =  0x000000
+						break
+						
+					case 1
+					case 7
+						Player.Speed     =  0x0C0000
+						Player.XVelocity =  0x0C0000
+						Player.YVelocity = -0x0B0000
+						break
+						
+					case 2
+					case 6
+						Player.Speed     =  0x000000
+						Player.XVelocity =  0x000000
+						Player.YVelocity = -0x100000
+						break
+						
+					case 3
+					case 5
+						Player.Speed     = -0x0C0000
+						Player.XVelocity = -0x0C0000
+						Player.YVelocity = -0x0B0000
+						break
+						
+					case 4
+						Player.Speed     = -0x100000
+						Player.XVelocity = -0x100000
+						Player.YVelocity =  0x000000
+						break
+						
+					end switch
+				end if
+			else
+				Object.State = SPRINGCAGE_OPEN
+				Object.LaunchTimer = 0
+			end if
+		else
+			Object.State = SPRINGCAGE_OPEN
+			Object.LaunchTimer = 0
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == SPRINGCAGE_OPEN
+		
+		// See if the player's hopped in yet
+		PlayerObjectCollision(C_TOUCH, -28, -32, 28, 24)
+		if CheckResult == true
+			Object.State = SPRINGCAGE_OCCUPIED
+			
+			// Move the player into the cage and set them up to be launched
+			Player.XPos = Object.XPos
+			Player.YPos = Object.YPos
+			Player.State = Player_State_Static
+			Player.Animation = ANI_JUMPING
+			Player.Speed = 0
+			Player.XVelocity = 0
+			Player.YVelocity = 0
+			
+			// Make minor positioning corrections based on the cage's current angle
+			switch Object.Angle
+			case 0
+				Player.XPos += 0x200000 // 32 pixels right
+				break
+			case 1
+			case 7
+				Player.XPos += 0x180000 // 24 pixels right
+				Player.YPos -= 0x180000 // 24 pixels up
+				break
+			case 2
+			case 6
+				Player.YPos -= 0x200000 // 32 pixels up
+				break
+			case 3
+			case 5
+				Player.XPos -= 0x180000 // 24 pixels left
+				Player.YPos -= 0x180000 // 24 pixels up
+				break
+			case 4
+				Player.XPos -= 0x200000 // 32 pixels up
+				break
+			end switch
+			
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	// Jump based on what angle the cage is currently
+	switch Object.Angle
+	case 0
+		// Facing right
+		DrawSprite(1)
+		Object.Direction = 2
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	case 1
+	case 7
+		// Facing up-right
+		DrawSprite(2)
+		Object.Direction = 3
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	case 2
+	case 6
+		// Facing up
+		DrawSprite(4)
+		Object.Direction = FACING_LEFT
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	case 3
+	case 5
+		// Facing up left
+		Object.Direction = FACING_LEFT
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		Object.Direction = 2
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	case 4
+		// Facing left
+		DrawSprite(5)
+		Object.Direction = 2
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	end switch
+	
+	DrawSprite(0)
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// Base Frame
+	SpriteFrame(-8, -8, 16, 16, 90, 52)
+	
+	// Top Horizontal Half
+	SpriteFrame(-8, -28, 64, 24, 34, 96)
+	
+	// Top Diagonal Half
+	SpriteFrame(-24, -56, 56, 56, 59, 121)
+	
+	// Bottom Diagonal Half
+	SpriteFrame(-56, -24, 56, 56, 59, 121)
+	
+	// Vertical Half
+	SpriteFrame(-28, -56, 24, 64, 34, 121)
+	
+	// Bottom Horizontal Half
+	SpriteFrame(-56, -28, 64, 24, 34, 96)
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Spring Cage]
+			ArrayPos1 = ArrayPos0
+			ArrayPos1++
+			switch Object[ArrayPos0].PropertyValue
+			case 1
+				Object[ArrayPos0].Angle = 4
+				Object[ArrayPos1].PropertyValue = 2
+				break
+				
+			case 3
+				Object[ArrayPos0].Angle = 1
+				Object[ArrayPos1].PropertyValue = 1
+				break
+				
+			case 4
+				Object[ArrayPos0].Angle = 2
+				Object[ArrayPos1].PropertyValue = 4
+				break
+				
+			case 5
+				Object[ArrayPos0].Angle = 3
+				Object[ArrayPos1].PropertyValue = 5
+				break
+				
+			case 6
+				Object[ArrayPos0].Angle = 0
+				Object[ArrayPos1].PropertyValue = 2
+				break
+				
+			end switch
+			
+			Object[ArrayPos0].DrawOrder = 4
+			
+			// Move the spring to the cage
+			Object[ArrayPos1].XPos = Object[ArrayPos0].XPos
+			Object[ArrayPos1].YPos = Object[ArrayPos0].YPos
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Direction
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Direction
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	switch Object.PropertyValue
+	case 1
+		DrawSprite(5)
+		Object.Direction = 2
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 3
+		DrawSprite(2)
+		Object.Direction = 3
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 0
+	case 4
+		DrawSprite(4)
+		Object.Direction = FACING_LEFT
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 5
+		Object.Direction = FACING_LEFT
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		Object.Direction = 2
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 6
+		DrawSprite(1)
+		Object.Direction = 2
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		break
+		
+	end switch
+	
+	DrawSprite(0)
+	
+	if Editor.ShowGizmos == true
+		GetObjectType(TempValue0, "R7 Spring")
+		
+		ArrayPos1 = Object[+1].EntityNo
+		if Object[ArrayPos1].type != TempValue0
+			// Uh oh! The next object should be an R7 Spring object, but it isn't...
+			// Draw a bunch of red to let the user know
+			
+			Editor.DrawingOverlay = true
+			
+			DrawArrow(Object.XPos, Object.YPos, Object[ArrayPos1].XPos, Object[ArrayPos1].YPos, 255, 0, 0)
+			
+			TempValue0 = Object[ArrayPos1].XPos
+			TempValue0 -= 0x100000
+			
+			TempValue1 = Object[ArrayPos1].YPos
+			TempValue1 -= 0x100000
+			
+			TempValue2 = Object[ArrayPos1].XPos
+			TempValue2 += 0x100000
+			
+			TempValue3 = Object[ArrayPos1].YPos
+			TempValue3 += 0x100000
+			
+			DrawLine(TempValue0, TempValue1, TempValue2, TempValue3, 255, 0, 0)
+			DrawLine(TempValue2, TempValue1, TempValue0, TempValue3, 255, 0, 0)
+			
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 90, 52)    // Base Frame
+	SpriteFrame(-8, -28, 64, 24, 34, 96)   // Top Horizontal Half
+	SpriteFrame(-24, -56, 56, 56, 59, 121) // Top Diagonal Half
+	SpriteFrame(-56, -24, 56, 56, 59, 121) // Bottom Diagonal Half
+	SpriteFrame(-28, -56, 24, 64, 34, 121) // Vertical Half
+	SpriteFrame(-56, -28, 64, 24, 34, 96)  // Bottom Horizontal Half
+
+	AddEditorVariable("Direction")
+	SetActiveVariable("Direction")
+	AddEnumVariable("Rotating", 0)
+	AddEnumVariable("Left", 1)
+	// 2 is pointing up dupe
+	AddEnumVariable("Up-Right", 3)
+	AddEnumVariable("Up", 4)
+	AddEnumVariable("Up-Left", 5)
+	AddEnumVariable("Right", 6)
+end sub

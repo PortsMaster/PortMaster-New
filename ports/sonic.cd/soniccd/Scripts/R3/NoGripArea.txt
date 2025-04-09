@@ -1,0 +1,101 @@
+//----------------Sonic CD No Grip Area Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// ========================
+// Aliases
+// ========================
+
+#alias Object.Value0 : Object.PrevActive // (If this object was active last frame)
+
+// Ink Effect Aliases
+#alias 2 : INK_ALPHA
+
+
+// ========================
+// Subs
+// ========================
+
+sub ObjectPlayerInteraction
+	if Object.PrevActive == false
+		PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+		if CheckResult == true
+			if Player.Animation == ANI_CLIMBING
+				// If Knuckles is already climbing, let's make him drop from the wall
+				CallFunction(Player_Unstick)
+			end if
+
+			if Player.Animation == ANI_GLIDING
+				// On the other hand, if he's gliding instead, then let's make sure he isn't going to be able to climb here
+				Object.PrevActive = true
+				CallFunction(Player_ForceNoGrip)
+			end if
+		end if
+	else
+		PlayerObjectCollision(C_TOUCH, -16, -16, 16, 32) // (note the larger hitbox downwards, compared to the normal version)
+		if CheckResult == false
+			Object.PrevActive = false
+
+			// Before allowing Knuckles to climb again, let's make sure he isn't interacting with any other NoGripAreas, either
+			TempValue0 = false
+			ArrayPos0 = 32
+			while ArrayPos0 < 1056
+				if Object[ArrayPos0].Type == TypeName[NoGripArea]
+					if Object[ArrayPos0].PrevActive == true
+						TempValue0 = true
+					end if
+				end if
+
+				ArrayPos0++
+			loop
+
+			if TempValue0 == false
+				CallFunction(Player_ForceGrip)
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	// They included a debug vis for this object, how cool!
+	if Stage.DebugMode == true
+		TempValue0 = Object.iXPos
+		TempValue0 -= 16
+		TempValue0 -= Screen.XOffset
+		TempValue1 = Object.iYPos
+		TempValue1 -= 16
+		TempValue1 -= Screen.YOffset
+		if Object.PrevActive == true
+			DrawRect(TempValue0, TempValue1, 32, 48, 0, 96, 48, 255)
+		else
+			DrawRect(TempValue0, TempValue1, 32, 32, 0, 96, 48, 255)
+		end if
+	end if
+end sub
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0  = Object.XPos
+	TempValue0 -= 0x100000
+	TempValue1  = Object.YPos
+	TempValue1 -= 0x100000
+	
+	// In the actual game, the object draws in debug mode as a solid color rectangle
+	// Here, let's have an Alpha of 128 in the editor so you can see through it
+	DrawRectWorld(TempValue0, TempValue1, 32, 32, 0, 96, 48, 128)
+
+	Object.InkEffect = INK_ALPHA
+	Object.Alpha = 1
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

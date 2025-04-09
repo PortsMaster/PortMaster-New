@@ -1,0 +1,89 @@
+#!/usr/bin/guile \
+-e main -s
+!#
+
+(use-modules (ice-9 regex))
+
+;; ---------------------------------------------------------------------
+
+(define level-pattern-list
+  '((pingus-level head levelname)
+    (pingus-level head description)))
+
+(define worldmap-pattern-list
+  '((pingus-worldmap head (name description))
+    (pingus-worldmap graph nodes storydot name)))
+
+(define story-pattern-list
+  '((pingus-story title)
+    (pingus-story pages page text)))
+
+(define levelset-pattern-list
+  '((pingus-levelset (title description))))
+
+;; ---------------------------------------------------------------------
+
+(define (escape-string str)
+  (regexp-substitute/global #f "\n" 
+                            (regexp-substitute/global #f "\"" str 'pre "\\\"" 'post)
+                            'pre "\\n" 'post))
+
+(define (print-msg sexpr props)
+  (let ((str  (escape-string (apply string-append sexpr))) )
+    (cond ((not (string-null? str))
+           (display "#: ")
+           (display (assoc-ref props 'filename))
+           (display ":")
+           (display (+ (assoc-ref props 'line) 1))
+           (newline)
+           (display "msgid \"")
+           (display str)
+           (display "\"\n")
+           (display "msgstr \"\"\n")
+           (newline)
+           ))))
+
+(define (pattern-match pattern sym)
+  (cond ((list? pattern)
+         (let loop ((pat pattern))
+           (if (null? pat)
+               #f
+               (if (pattern-match (car pat) sym)
+                   #t
+                   (loop (cdr pat))))))
+        ((symbol? pattern)
+         (equal? pattern sym))
+        ((string? pattern)
+         (string-match pattern (symbol->string sym)))
+        (else 
+         (error "Unknown pattern: " pattern))))
+
+(define (grep-sexpr func pattern sexpr props)
+  (cond ((null? pattern)
+         (func sexpr props))
+        (else
+         (for-each (lambda (el)
+                     (cond ((pattern-match (car pattern) (car el))
+                            (grep-sexpr func (cdr pattern) (cdr el)
+                                        (source-properties el)
+                                        ))))
+                   sexpr))))
+
+(define (main args)
+  (read-enable 'positions)
+  (set! args (cdr args))
+  (for-each (lambda (file)
+              (let* ((port  (open-input-file file))
+                     (sexpr (list (read port))))
+                (for-each (lambda (pattern)
+                            (grep-sexpr print-msg pattern sexpr 0))
+                          (cond ((string-suffix? ".worldmap" file)  worldmap-pattern-list)
+                                ((string-suffix? ".pingus" file)    level-pattern-list)
+                                ((string-suffix? ".levelset" file)  levelset-pattern-list)
+                                ((string-suffix? ".story" file)     story-pattern-list)
+                                (else
+                                 (error "Unknown file suffix\n"))))
+                (close-port port)))
+            args))
+
+;; EOF ;;

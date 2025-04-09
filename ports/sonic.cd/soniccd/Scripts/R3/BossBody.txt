@@ -1,0 +1,567 @@
+//-----------------Sonic CD Boss Body Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.YOriginPos
+#alias Object.Value2		:	Object.YVelocity
+#alias Object.Value3		:	Object.YGearPos
+#alias Object.Value4		:	Object.AttackTimer
+#alias Object.Value5		:	Object.DamageTimer
+#alias Object.Value6		:	Object.YControllerPos
+
+// Pinball Bomb Aliases
+#alias Object.Value1		:	Object.XVelocity
+
+// Eggman Aliases
+#alias Object[-1].YPos		:	Eggman.YPos
+#alias Object[-1].Value0	:	Eggman.FrameTimer
+#alias Object[-1].State		:	Eggman.State
+#alias Object[-1].Priority	:	Eggman.Priority
+
+// Extending Platform Aliases
+#alias Object[+1].Value2	:	EPlatform.Length
+
+// States
+#alias 0	:	BOSSBODY_DESCEND
+#alias 1	:	BOSSBODY_DROP_BOMBS
+#alias 2	:	BOSSBODY_HIT_1
+#alias 3	:	BOSSBODY_DRAG_EGGMAN_1
+#alias 4	:	BOSSBODY_HIT_2
+#alias 5	:	BOSSBODY_DRAG_EGGMAN_2
+#alias 6	:	BOSSBODY_HIT_3
+#alias 7	:	BOSSBODY_DESTROYED
+
+// Eggman States
+#alias 0	:	EGGANI_IDLE
+#alias 1	:	EGGANI_HURT
+#alias 2	:	EGGANI_NERVOUS
+#alias 3	:	EGGANI_FLEE
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Function declarations
+#function BossBody_LaunchBomb
+
+
+function BossBody_LaunchBomb
+	TempValue0  = Player.YPos
+	TempValue0 -= Object.YPos
+
+	if TempValue0 < 0x2400000
+		CreateTempObject(TypeName[Pinball Bomb], 0, Object.XPos, Object.YPos)
+
+		Rand(Object[TempObjectPos].XVelocity, 0x400)
+
+		Object[TempObjectPos].XVelocity <<= 8
+
+		if Object.AttackTimer < 128
+			FlipSign(Object[TempObjectPos].XVelocity)
+			Object[TempObjectPos].XPos -= 0x80000
+		else
+			Object[TempObjectPos].XPos += 0x80000
+		end if
+
+		Object[TempObjectPos].YPos += 0x180000
+
+		Object[TempObjectPos].YVelocity = 0x30000
+
+		Object[TempObjectPos].DrawOrder = 2
+	end if
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSBODY_DESCEND
+		Object.YPos  = Player.YPos
+		Object.YPos &= 0xFFFF0000 // Truncate the value
+		// Height Limit
+		if Object.YPos < Object.YOriginPos
+			Object.YPos  = Object.YOriginPos
+			Object.Frame = 0
+		end if
+
+		if Object.YPos > Object.YVelocity
+			Object.YPos  = Object.YVelocity
+			Object.Frame = 0
+			Object.State = BOSSBODY_DROP_BOMBS
+			Object.Priority = PRIORITY_ACTIVE
+		end if
+
+		if Object.YPos != Object.YGearPos
+			Object.YGearPos = Object.YPos
+			Object.Frame++
+			Object.Frame %= 9
+		end if
+
+		Eggman.YPos = Object.YPos
+
+		Object.AttackTimer++
+		Object.AttackTimer &= 255
+
+		if Object.AttackTimer == 0
+			CallFunction(BossBody_LaunchBomb)
+		end if
+
+		if Object.AttackTimer == 128
+			CallFunction(BossBody_LaunchBomb)
+		end if
+		break
+
+	case BOSSBODY_DROP_BOMBS
+		Eggman.YPos = Object.YPos
+
+		if EPlatform.Length < 8	// if the platform didn't close, keep shooting
+			Object.AttackTimer++
+			Object.AttackTimer &= 255
+		else
+			Object.AttackTimer = 32
+		end if
+
+		if Object.AttackTimer == 0
+			CallFunction(BossBody_LaunchBomb)
+		end if
+
+		if Object.AttackTimer == 128
+			CallFunction(BossBody_LaunchBomb)
+		end if
+		break
+
+	case BOSSBODY_HIT_1
+		if Object.YPos > Object.YVelocity
+			Object.YPos -= 0x28000
+			Object.Frame++
+			Object.Frame %= 9
+		else
+			Object.YPos  = Object.YVelocity
+			Object.Frame = 0
+			Object.State = BOSSBODY_DRAG_EGGMAN_1
+		end if
+
+		Eggman.YPos = Object.YPos
+		if Object.DamageTimer == 2
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos -= 32
+			Object[TempObjectPos].iYPos += 10
+		end if
+
+		if Object.DamageTimer == 3
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos += 32
+			Object[TempObjectPos].iYPos += 6
+		end if
+
+		if Object.DamageTimer == 4
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iYPos += 4
+		end if
+		break
+
+	case BOSSBODY_DRAG_EGGMAN_1
+		Eggman.YPos = Object.YPos
+		break
+
+	case BOSSBODY_HIT_2
+		if Object.YPos > Object.YVelocity
+			Object.YPos -= 0x28000
+			Object.Frame++
+			Object.Frame %= 9
+		else
+			Object.YPos  = Object.YVelocity
+			Object.Frame = 0
+			Object.State = BOSSBODY_DRAG_EGGMAN_2
+		end if
+
+		Eggman.YPos = Object.YPos
+		if Object.DamageTimer == 2
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos -= 32
+			Object[TempObjectPos].iYPos -= 48
+		end if
+
+		if Object.DamageTimer == 3
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos += 32
+			Object[TempObjectPos].iYPos -= 52
+		end if
+
+		if Object.DamageTimer == 4
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iYPos -= 56
+		end if
+		break
+
+	case BOSSBODY_DRAG_EGGMAN_2
+		Eggman.YPos = Object.YPos
+		break
+
+	case BOSSBODY_HIT_3
+		if Object.YPos > Object.YVelocity
+			Object.YPos -= 0x28000
+			Object.Frame++
+			Object.Frame %= 9
+			Music.Volume--
+		else
+			Object.YPos  = Object.YVelocity
+			Object.Frame = 0
+			Object.State = BOSSBODY_DESTROYED
+			Object.Timer = 0
+			Object.Priority = PRIORITY_ACTIVE
+
+#platform: Use_Haptics
+			HapticEffect(76, 0, 0, 0)
+#endplatform
+		end if
+
+		if Object.DamageTimer > 0
+			Eggman.YPos   = Object.DamageTimer
+			Eggman.YPos <<= 17
+			FlipSign(Eggman.YPos)
+			Eggman.YPos += Object.YPos
+		else
+
+			if Eggman.State == EGGANI_IDLE
+				Eggman.State = EGGANI_FLEE
+				Eggman.Priority = PRIORITY_ACTIVE
+				Eggman.FrameTimer &= 7
+			end if
+
+			if Eggman.State == EGGANI_NERVOUS
+				Eggman.State = EGGANI_FLEE
+				Eggman.Priority = PRIORITY_ACTIVE
+				Eggman.FrameTimer &= 7
+			end if
+
+		end if
+
+		if Object.DamageTimer == 2
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos -= 16
+			Object[TempObjectPos].iYPos -= 52
+		end if
+
+		if Object.DamageTimer == 3
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iXPos += 16
+			Object[TempObjectPos].iYPos -= 56
+		end if
+		break
+
+	case BOSSBODY_DESTROYED
+		TempValue0  = Object.Timer
+		TempValue0 &= 3
+		if TempValue0 == 0
+			Rand(TempValue0, 128)
+			TempValue0  -= 64
+			TempValue0 <<= 16
+			TempValue0  += Object.XPos
+			Rand(TempValue1, 48)
+			TempValue1  -= 24
+			TempValue1 <<= 16
+			TempValue1  += Object.YPos
+			CreateTempObject(TypeName[Explosion], 0, TempValue0, TempValue1)
+			PlaySfx(SFX_G_EXPLOSION, false)
+		end if
+
+		Object.Timer++
+		if Object.Timer == 80
+			Player.Score += 1000
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			PlayMusic(0)
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	switch Object.State
+	case BOSSBODY_DROP_BOMBS
+	case BOSSBODY_DRAG_EGGMAN_1
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -64, -16, 64, 16)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -64, -16, 64, 16)
+#endplatform
+		if CheckResult == true
+			Player.YVelocity  = 0
+			Object.YVelocity -= 0x480000
+
+			Object.DamageTimer = 1
+			Object.State++
+
+			Eggman.State = EGGANI_HURT
+			PlaySfx(SFX_G_EXPLOSION, false)
+
+#platform: Use_Haptics
+			HapticEffect(75, 0, 0, 0)
+#endplatform
+		end if
+		break
+
+	case BOSSBODY_DRAG_EGGMAN_2
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -64, -16, 64, 16)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -64, -16, 64, 16)
+#endplatform
+		if CheckResult == true
+#platform: Use_Origins
+			EngineCallback(NOTIFY_KILL_BOSS)
+			// Tell HE2 that the boss fight ended
+			game.callbackParam0 = true
+			EngineCallback(NOTIFY_BOSS_END)
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				StopMusic()
+			end if
+#endplatform
+			Player.YVelocity  = 0
+			Object.YVelocity -= 0x800000
+			Object.DamageTimer = 1
+			Object.State++
+			PlaySfx(SFX_G_EXPLOSION, false)
+
+#platform: Use_Haptics
+			HapticEffect(75, 0, 0, 0)
+#endplatform
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case BOSSBODY_DESCEND
+	case BOSSBODY_DROP_BOMBS
+		DrawSprite(4)
+		DrawSprite(5)
+
+		if Object.AttackTimer < 128
+			if Object.AttackTimer < 8
+				TempValue0   = Object.AttackTimer
+				TempValue0 >>= 1
+				TempValue0  += 7
+			else
+				TempValue0 = 8
+			end if
+			DrawSprite(TempValue0)
+			DrawSprite(12)
+		else
+			if Object.AttackTimer < 136
+				TempValue0   = Object.AttackTimer
+				TempValue0  -= 128
+				TempValue0 >>= 1
+				TempValue0  += 11
+			else
+				TempValue0 = 12
+			end if
+			DrawSprite(8)
+			DrawSprite(TempValue0)
+		end if
+
+		DrawSprite(6)
+		DrawSprite(3)
+
+		TempValue0  = Object.Frame
+		TempValue0 /= 3
+		DrawSprite(TempValue0)
+		break
+
+	case BOSSBODY_HIT_1
+	case BOSSBODY_DRAG_EGGMAN_1
+	case BOSSBODY_HIT_2
+		TempValue0  = Object.DamageTimer
+		TempValue0 &= 1
+		if TempValue0 == 0
+			DrawSprite(4)
+			DrawSprite(5)
+			DrawSprite(3)
+		else
+			DrawSprite(16)
+			DrawSprite(17)
+			DrawSprite(15)
+		end if
+
+		if Object.DamageTimer > 0
+			Object.DamageTimer++
+			Object.DamageTimer &= 15
+		end if
+
+		TempValue0  = Object.Frame
+		TempValue0 /= 3
+		DrawSprite(TempValue0)
+		break
+
+	case BOSSBODY_DRAG_EGGMAN_2
+		TempValue1  = Object.YPos
+		TempValue1 += Object.YControllerPos
+
+		TempValue0  = Object.DamageTimer
+		TempValue0 &= 1
+		if TempValue0 == 0
+			DrawSprite(4)
+			DrawSprite(5)
+			DrawSpriteXY(18, Object.XPos, TempValue1)
+			DrawSprite(3)
+		else
+			DrawSprite(16)
+			DrawSprite(17)
+			DrawSpriteXY(19, Object.XPos, TempValue1)
+			DrawSprite(15)
+		end if
+
+		if Eggman.State == EGGANI_NERVOUS
+			if Object.YControllerPos < 0x100000
+				Object.YControllerPos += 0x8000
+			end if
+		end if
+
+		if Object.DamageTimer > 0
+			Object.DamageTimer++
+			Object.DamageTimer &= 15
+		end if
+
+		TempValue0 = Object.Frame
+		TempValue0 /= 3
+		DrawSprite(TempValue0)
+		break
+
+	case BOSSBODY_HIT_3
+		TempValue0  = Object.YPos
+		TempValue0 -= 0x200000
+
+		if TempValue0 < Object.YVelocity
+			DrawSprite(16)
+			DrawSprite(17)
+			DrawSprite(3)
+		else
+			TempValue1  = Object.YPos
+			TempValue1 += Object.YControllerPos
+
+			TempValue0  = Object.DamageTimer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				DrawSprite(4)
+				DrawSprite(5)
+				DrawSprite(3)
+			else
+				DrawSprite(16)
+				DrawSprite(17)
+				DrawSprite(15)
+			end if
+
+			if Object.YControllerPos < 0x100000
+				Object.YControllerPos += 0x8000
+			end if
+		end if
+
+		if Object.DamageTimer > 0
+			Object.DamageTimer++
+			Object.DamageTimer &= 15
+		end if
+
+		TempValue0  = Object.Frame
+		TempValue0 /= 3
+		DrawSprite(TempValue0)
+		break
+
+	case BOSSBODY_DESTROYED
+		DrawSprite(3)
+		DrawSprite(0)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	// Gear
+	SpriteFrame(-80, -16, 32, 32, 134, 0)	// #0  - Egg Tilter Gear Frame 0
+	SpriteFrame(-80, -16, 32, 32, 167, 0)	// #1  - Egg Tilter Gear Frame 1
+	SpriteFrame(-80, -16, 32, 32, 200, 0)	// #2  - Egg Tilter Gear Frame 2
+
+	// Egg Tilter
+	SpriteFrame(-64, -16, 128, 32, 1, 67)	// #3  - Body
+	SpriteFrame(-48, -32, 32, 32, 1, 100)	// #4  - EggMobile Container Right
+	SpriteFrame(16, -32, 32, 32, 34, 100)	// #5  - EggMobile Container Left
+	SpriteFrame(-24, 16, 48, 8, 148, 141)	// #6  - Bomb Launcher Frame
+
+	// Egg Tilter Bomb Launcher Right Cannon
+	SpriteFrame(-24, 24, 24, 24, 148, 149)	// #7  - Right Cannon
+	SpriteFrame(-24, 16, 24, 24, 148, 149)	// #8  - Right Cannon Fire Frame 0
+	SpriteFrame(-24, 8, 24, 24, 148, 149)	// #9  - Right Cannon Fire Frame 1
+	SpriteFrame(-24, 16, 24, 24, 148, 149)	// #10 - Right Cannon Fire Frame 2
+
+	// Egg Tilter Bomb Launcher Left Cannon
+	SpriteFrame(0, 24, 24, 24, 172, 149)	// #11 - Left Cannon
+	SpriteFrame(0, 16, 24, 24, 172, 149)	// #12 - Left Cannon Fire Frame 0
+	SpriteFrame(0, 8, 24, 24, 172, 149)		// #13 - Left Cannon Fire Frame 1
+	SpriteFrame(0, 16, 24, 24, 172, 149)	// #14 - Left Cannon Fire Frame 2
+
+	// Damage Sprites (and controller)
+	SpriteFrame(-64, -16, 128, 32, 117, 33)	// #15 - Egg Tilter Body Flicker
+	
+	SpriteFrame(-48, -32, 32, 32, 1, 133)	// #16 - EggMobile Container Right Flicker
+	SpriteFrame(16, -32, 32, 32, 34, 133)	// #17 - EggMobile Container Left Flicker
+
+	SpriteFrame(-24, -32, 48, 16, 148, 107)	// #18 - Egg Tilter Controller
+	SpriteFrame(-24, -32, 48, 16, 148, 124)	// #19 - Egg Tilter Controller Flicker
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Boss Body]
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+			Object[ArrayPos0].YGearPos   = Object[ArrayPos0].YPos
+			Object[ArrayPos0].YVelocity  = Object[ArrayPos0].YPos
+			Object[ArrayPos0].YVelocity += 0xE40000
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(2)
+	DrawSprite(3)
+	DrawSprite(4)
+	DrawSprite(5)
+	DrawSprite(6)
+	DrawSprite(1)
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects2.gif")
+
+	// Gear
+	SpriteFrame(-80, -16, 32, 32, 134, 0)	// #0  - Egg Tilter Gear Frame 0
+	// Egg Tilter
+	SpriteFrame(-64, -16, 128, 32, 1, 67)	// #1  - Body
+	SpriteFrame(-48, -32, 32, 32, 1, 100)	// #2  - EggMobile Container Right
+	SpriteFrame(16, -32, 32, 32, 34, 100)	// #3  - EggMobile Container Left
+	// Egg Tilter Bomb Launcher Right Cannon
+	SpriteFrame(-24, 24, 24, 24, 148, 149)	// #4  - Right Cannon
+	// Egg Tilter Bomb Launcher Left Cannon
+	SpriteFrame(0, 24, 24, 24, 172, 149)	// #5 - Left Cannon
+	SpriteFrame(-24, 16, 48, 8, 148, 141)	// #6  - Bomb Launcher Frame
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

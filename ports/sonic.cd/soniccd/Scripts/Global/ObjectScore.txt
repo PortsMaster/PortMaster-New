@@ -1,0 +1,92 @@
+//----------------Sonic CD Object Score Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.BadnikBonus // Used this way by Object[26]
+#alias Object.Value0	:	Object.Timer       // Used this way by temp spawned objects
+#alias Object.Value1	:	Object.Gravity     // (Stores the Player's gravity, this object itself doesn't move or need gravity or anything)
+
+// States
+#alias 0	:	OBJECTSCORE_SCORE   // Temp object spawned after destroying a badnik
+#alias 1	:	OBJECTSCORE_CONTROL // Object[26], keeping track of the Player's Badnik Bonus
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+sub ObjectDraw
+    if Object.State == OBJECTSCORE_SCORE
+#platform: Use_Origins
+        if game.playMode == BOOT_PLAYMODE_MIRRORING
+            Object.Direction = FACING_LEFT
+            DrawSpriteFX(Object.PropertyValue, FX_FLIP, Object.XPos, Object.YPos)
+        else
+            DrawSprite(Object.PropertyValue)
+        end if
+#endplatform
+
+#platform: Use_Standalone
+        DrawSprite(Object.PropertyValue)
+#endplatform
+
+        Object.YPos -= 0x20000
+
+        Object.Timer++
+        // Note:
+        // the way that CD 2011 / Origins has implemented this object & the incrementation system is inaccurate to the 1993 release.
+        // This check below only increments the combo bonus when the object despawns.
+        // -> if there is more than one Object Score on screen, it will not count up the combo bonus until they despawn.
+        if Object.Timer == 24
+            Object.Type = TypeName[Blank Object]
+            if Object[26].Type == TypeName[Object Score] // Do we already have a chain going?
+                // small note: Sonic CD 1993 *does* actually have the proper 16-hit combo bonus, but it wasn't included in the remake.
+                if Object[26].BadnikBonus < 3 // If the hit combo is less than 3 (4-hit combo bonus)...
+                    Object[26].BadnikBonus++  // Increase the count!
+                end if
+            else
+                Object[26].Type = TypeName[Object Score]
+                Object[26].BadnikBonus = 1
+            end if
+
+            Object[26].State	= OBJECTSCORE_CONTROL
+            Object[26].Gravity  = Player.Gravity
+            Object[26].Priority = PRIORITY_ACTIVE
+        end if
+    else
+        // Bug Details:
+        // This checks the Score Object's stored gravity against the Player's, and while this technically works here for resetting most of the time
+        // -> it actually causes an issue where it resets upon jumping, making the player unable to continue the combo bonus.
+        // -> Sonic CD 1993 acts more like S1 where you can continue the combo bonus after rolling, then jumping from a stand-still or from the roll.
+        // -> The only difference is that you can preserve your combo bonus in the original MCD release by standing on objects (which is a bug of that version).
+        if Object.Gravity != Player.Gravity
+            ResetObjectEntity(26, TypeName[Blank Object], 0, 0, 0)
+        end if
+    end if
+end sub
+
+
+sub ObjectStartup
+    LoadSpriteSheet("Global/Items3.gif")
+
+    SpriteFrame(-6, -4, 12, 8, 0, 246)		// #0 - 100
+    SpriteFrame(-7, -4, 13, 8, 20, 246)		// #1 - 200
+    SpriteFrame(-7, -4, 13, 8, 33, 246)		// #2 - 500
+    SpriteFrame(-8, -4, 16, 8, 0, 246)		// #3 - 1000
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+    DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+    LoadSpriteSheet("Global/Items3.gif")
+    SpriteFrame(-6, -4, 12, 8, 0, 246)		// #0 - 100
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

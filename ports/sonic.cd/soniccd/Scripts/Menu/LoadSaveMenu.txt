@@ -1,0 +1,1841 @@
+//---------------Sonic CD Load Save Menu Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0				:	Object.FadeValue
+#alias Object.Value1				:	Object.SelectedOption
+#alias Object.Direction   			:	Object.ShowDeleteButton
+#alias Object[+4].Rotation 			:	Object.SaveMode
+#alias Object[+4].Value1  			:	DeleteConfirm.Highlight
+
+// Menu Heading Aliases
+#alias Object[33].State				:	MenuHeading.State
+#alias Object[33].PropertyValue		:	MenuHeading.Header
+
+// Menu Window Aliases
+#alias Object[-1].State				:	MenuWindow.State
+
+// Back Touch
+#alias Object[1].Value4				:	Object.BackTouchPress
+
+// Save File State
+#alias Object.Rotation    			:	Object.SaveStatus // Meant to be used with [+ArrayPos0]
+#alias Object.Rotation    			:	Object.SaveOneStatus
+#alias Object[+1].Rotation			:	Object.SaveTwoStatus
+#alias Object[+2].Rotation			:	Object.SaveThreeStatus
+#alias Object[+3].Rotation			:	Object.SaveFourStatus
+
+// Save File Info
+#alias Object.Value3       			:	Object.PlayerListPos
+#alias Object.Value6      		 	:	Object.Lives
+#alias Object.Value5       			:	Object.Score
+#alias Object.Value2      		 	:	Object.StageListPos
+#alias Object.Value4       			:	Object.TimeStones
+#alias Object.PropertyValue			:	Object.SpecialListPos
+#alias Object.Scale        			:	Object.ScoreBonus
+#alias Object.Value7       			:	Object.GoodFutureList
+
+// Delete Button
+#alias Object[+1].XPos				:	Delete.XPos
+#alias Object[+1].YPos				:	Delete.YPos
+
+// States
+#alias  0	:	STATE_INITIALIZE
+#alias  1	:	STATE_MAIN_SAVE_MENU
+#alias  2	:	STATE_SAVE_SELECTED
+#alias  3	:	STATE_LOAD_SAVE
+#alias  4	:	STATE_NEW_GAME_SELECTED
+#alias  5	:	STATE_FADEIN_CHARACTERSELECT
+#alias  6	:	STATE_CHARACTER_SELECT
+#alias  7	:	STATE_CHARACTER_SELECTED
+#alias  8	:	STATE_LOAD_NEW_GAME
+#alias  9	:	STATE_FADEOUT_CHARACTERSELECT
+#alias 10	:	STATE_RETURN_TO_SAVESEL
+#alias 11	:	STATE_EXIT
+#alias 12	:	STATE_TOGGLE_DELETE_MODE
+#alias 13	:	STATE_SAVE_SELECTED_DELETE
+#alias 14	:	STATE_SLIDE_DELETE_SAVE
+#alias 15	:	STATE_FADEIN_DELETECONFIRM
+#alias 16	:	STATE_DELETE_CONFIRM
+#alias 17	:	STATE_DELETECONFIRM_SELECTED
+#alias 18	:	STATE_FADEOUT_DELETECONFIRM
+
+// Menu Heading States
+#alias 1	:	MENUHEADING_LEAVE_SCREEN
+#alias 2	:	MENUHEADING_ENTER_SCREEN
+#alias 3	:	MENUHEADING_BLANK	// used by some external scripts
+
+// Menu Heading Property Values
+#alias 5	:	MAINMENU_HEADER
+
+// Menu Window States
+#alias 3	:	MENUWINDOW_SHRINK
+
+// Menu Button States
+#alias 1	:	MENUBUTTON_BUTTONS_IN
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// Game Mode Aliases
+#alias 1	:	MODE_SAVEGAME
+
+// Save Modes
+#alias 0	:	SAVEMODE_NORMAL
+#alias 1	:	SAVEMODE_NORMAL_SELECTED
+#alias 2	:	SAVEMODE_DELETE
+#alias 3	:	SAVEMODE_DELETE_SELECTED
+
+// Buttons
+#alias -1	:	BUTTON_NONE // Touching nothing on mobile
+#alias  0	:	BUTTON_SAVE_ONE
+#alias  1	:	BUTTON_SAVE_TWO
+#alias  2	:	BUTTON_SAVE_THREE
+#alias  3	:	BUTTON_SAVE_FOUR
+#alias  4	:	BUTTON_DELETE
+
+// Save Statuses
+#alias 0	:	SAVE_NORMAL
+#alias 1	:	SAVE_NORMAL_SELECTED
+#alias 2	:	SAVE_DELETE
+#alias 3	:	SAVE_DELETE_SELECTED
+
+// Character Select Options
+#alias -1	:	PLAYER_NONE // Touching nothing on mobile
+#alias  0	:	PLAYER_SONIC_A
+#alias  1	:	PLAYER_TAILS_A
+#alias  2	:	PLAYER_BACK
+
+// Delete Confirm Options
+#alias -1	:	DELETE_NONE // Touching nothing on mobile
+#alias  0	:	DELETE_YES
+#alias  1	:	DELETE_NO
+#alias  2	:	DELETE_BACK
+
+// Presentation Stage
+#alias 0	:	STAGE_R_PPZ1A
+
+// Special Stage
+#alias 0	:	STAGE_S_SS1
+
+// Global SFX
+#alias 9	:	SFX_G_LAMPPOST
+#alias 23	:	SFX_G_MENUBUTTON
+#alias 27	:	SFX_G_SELECT
+
+// Stage SFX
+#alias 0	:	SFX_S_EVENT
+#alias 1	:	SFX_S_BACKBUTTON
+
+// Engine & Callbacks
+#alias 2	:	MESSAGE_LOSTFOCUS
+
+// Languages
+#alias 0	:	LANG_ENGLISH
+#alias 1	:	LANG_FRENCH
+#alias 2	:	LANG_ITALIAN
+#alias 3	:	LANG_DEUTSCH
+#alias 4	:	LANG_SPANISH
+#alias 5	:	LANG_JAPANESE
+
+// Function declarations
+#function LoadSaveMenu_DrawSaveFiles
+#function LoadSaveMenu_DrawDeleteNoSave
+#function LoadSaveMenu_CheckTouchSave
+#function LoadSaveMenu_SetShowDelete
+
+
+function LoadSaveMenu_DrawSaveFiles
+	switch Object[+ArrayPos0].SaveStatus
+	case SAVE_DELETE
+		if Object[+ArrayPos0].StageListPos > 0
+			Object.Alpha = 64
+			DrawSpriteScreenFX(56, FX_INK, Object.XPos, Object.YPos)
+			Object.Alpha = 255
+		end if
+		// FallThrough
+	case SAVE_NORMAL
+		if ArrayPos0 == Object.SelectedOption
+			DrawSpriteScreenFX(9, FX_INK, Object.XPos, Object.YPos)
+			TempValue0 = Object[+ArrayPos0].StageListPos
+			if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+				TempValue0--
+				TempValue0 /= 10
+				if TempValue0 >= 8
+					TempValue0 = 8
+					TempValue1 = Object[+ArrayPos0].SpecialListPos
+				else
+					TempValue2  = TempValue0
+					TempValue2 *= 10
+
+					TempValue1   = Object[+ArrayPos0].StageListPos
+					TempValue1--
+					TempValue1  -= TempValue2
+					TempValue1 >>= 2
+				end if
+				TempValue0 += 21
+				TempValue1 += 67
+				DrawSpriteScreenFX(TempValue1, FX_INK, Object.XPos, Object.YPos)
+			else
+				TempValue0 += 20
+			end if
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		else
+			TempValue0 = Object[+ArrayPos0].StageListPos
+			if Object[+ArrayPos0].StageListPos > 0
+				TempValue0--
+				TempValue0 /= 10
+				if TempValue0 >= 8
+					TempValue0 = 8
+					TempValue1 = Object[+ArrayPos0].SpecialListPos
+				else
+					TempValue2  = TempValue0
+					TempValue2 *= 10
+
+					TempValue1   = Object[+ArrayPos0].StageListPos
+					TempValue1--
+					TempValue1  -= TempValue2
+					TempValue1 >>= 2
+				end if
+				TempValue0 += 11
+				TempValue1 += 59
+				DrawSpriteScreenFX(TempValue1, FX_INK, Object.XPos, Object.YPos)
+			else
+				TempValue0 += 10
+			end if
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		end if
+		break
+
+	case SAVE_DELETE_SELECTED
+		Object.Alpha = 64
+		DrawSpriteScreenFX(56, FX_INK, Object.XPos, Object.YPos)
+		Object.Alpha = 255
+		// FallThrough
+	case SAVE_NORMAL_SELECTED
+		TempValue0   = Object.FadeValue
+		TempValue0  &= 3
+		TempValue0 >>= 1
+
+		DrawSpriteScreenFX(9, FX_INK, Object.XPos, Object.YPos)
+
+		if TempValue0 == 0
+			TempValue0 = Object[+ArrayPos0].StageListPos // Is this save used?
+			if Object[+ArrayPos0].StageListPos > 0
+				TempValue0--
+				TempValue0 /= 10
+				if TempValue0 >= 8 // Is this a special stage?
+					TempValue0 = 8
+
+					TempValue1 = Object[+ArrayPos0].SpecialListPos
+				else
+					TempValue2  = TempValue0
+					TempValue2 *= 10
+
+					TempValue1   = Object[+ArrayPos0].StageListPos
+					TempValue1--
+					TempValue1  -= TempValue2
+					TempValue1 >>= 2
+				end if
+				TempValue0 += 21
+
+				TempValue1 += 67
+				DrawSpriteScreenFX(TempValue1, FX_INK, Object.XPos, Object.YPos)
+			else
+				TempValue0 += 20 // New Game
+			end if
+			DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+		end if
+		break
+	end switch
+	
+	DrawSpriteScreenFX(8, FX_INK, Object.XPos, Object.YPos)
+	
+	if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+		TempValue0   = Object[+ArrayPos0].PlayerListPos
+		TempValue0 <<= 1
+		TempValue0  += 4
+
+		TempValue1   = Object.AnimationTimer
+		TempValue1 >>= 5
+		TempValue0  += TempValue1
+		DrawSpriteScreenFX(TempValue0, FX_INK, Object.XPos, Object.YPos)
+
+		TempValue0 = 0
+		TempValue1 = 38
+		while TempValue0 < 7
+			TempValue2 = TempValue1
+			GetBit(CheckResult, Object[+ArrayPos0].TimeStones, TempValue0)
+			if CheckResult == false
+				TempValue2 += 7
+			end if
+			DrawSpriteScreenFX(TempValue2, FX_INK, Object.XPos, Object.YPos)
+			TempValue1++
+			TempValue0++
+		loop
+	else
+		DrawSpriteScreenFX(ArrayPos0, FX_INK, Object.XPos, Object.YPos)
+	end if
+end function
+
+
+function LoadSaveMenu_DrawDeleteNoSave
+	// Draw the Delete button
+	if Object.SaveMode >= SAVEMODE_DELETE
+		if Object.SelectedOption == BUTTON_DELETE
+			DrawSpriteScreenXY(55, Delete.XPos, Delete.YPos)
+		else
+			DrawSpriteScreenXY(54, Delete.XPos, Delete.YPos)
+		end if
+	else
+		if Object.SelectedOption == BUTTON_DELETE
+			DrawSpriteScreenXY(53, Delete.XPos, Delete.YPos)
+		else
+			DrawSpriteScreenXY(52, Delete.XPos, Delete.YPos)
+		end if
+	end if
+	
+	// Slide the Delete button in or out
+	if Object.ShowDeleteButton == true
+		if Delete.YPos > 14
+			Delete.YPos -= 2
+			DrawRect(Delete.XPos, 32, 64, 18, 96, 96, 128, 255)
+		end if
+	else
+		if Delete.YPos < 32
+			Delete.YPos += 2
+		end if
+		DrawRect(Delete.XPos, 32, 64, 18, 96, 96, 128, 255)
+	end if
+end function
+
+
+// This function is shared by other scripts
+function LoadSaveMenu_CheckTouchSave
+	TempValue0 *= 40
+	TempValue0 += Screen.CenterY
+	TempValue0 -= 87
+	TempValue1  = TempValue0
+	TempValue1 += 37
+	TempValue2  = Object.XPos
+	TempValue2 += 250
+	CheckTouchRect(Object.XPos, TempValue0, TempValue2, TempValue1)
+end function
+
+
+function LoadSaveMenu_SetShowDelete
+	Object.ShowDeleteButton = false
+
+	// Read save files
+	ArrayPos0 = 0
+	while ArrayPos0 < 4
+		if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+			Object.ShowDeleteButton = true
+		end if
+		ArrayPos0++
+	loop
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case STATE_INITIALIZE
+#platform: Use_Origins
+		if Options.PhysicalControls == false
+			Object.SelectedOption = BUTTON_NONE
+		end if
+#endplatform
+
+#platform: Mobile
+		if Options.PhysicalControls == false
+			Object.SelectedOption = BUTTON_NONE
+		end if
+#endplatform
+
+		Object.XPos  = Screen.CenterX
+		Object.XPos -= 126
+		
+		if Object.FadeValue == 0
+			CallFunction(LoadSaveMenu_SetShowDelete)
+			
+			// Read save files
+			ArrayPos0 = 0
+			ArrayPos1 = 0
+			while ArrayPos0 < 4
+				Object[+ArrayPos0].PlayerListPos  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].Lives		  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].Score		  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].StageListPos	  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].TimeStones	  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].SpecialListPos = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].ScoreBonus	  = SaveRAM[ArrayPos1]
+				ArrayPos1++
+				Object[+ArrayPos0].GoodFutureList = SaveRAM[ArrayPos1]
+				ArrayPos1++
+
+				if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+					Object.ShowDeleteButton = true
+				end if
+				ArrayPos0++
+			loop
+		end if
+		
+		Delete.XPos  = Screen.CenterX
+		Delete.XPos -= 120
+		Delete.YPos  = 32
+		
+		if Object.FadeValue < 256
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue += 6
+		else
+			Object.FadeValue = 0
+			Object.Alpha	 = 255
+			Object.State	 = STATE_MAIN_SAVE_MENU
+		end if
+		break
+		
+	case STATE_MAIN_SAVE_MENU
+		// Flash a button when selected in delete mode
+		if Object.SaveMode == SAVE_DELETE_SELECTED
+			Object.AnimationTimer++
+			Object.AnimationTimer &= 63
+		else
+			Object.AnimationTimer = 0
+		end if
+		
+#platform: Standard
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+
+		// 2011 Steam lacks Options.PhysicalControls, so we force it here first and the other platforms can override it
+		if CheckResult == true
+			if Object.ShowDeleteButton == false
+				if KeyPress[0].Up == true
+					Object.SelectedOption--
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					if Object.SelectedOption < BUTTON_SAVE_ONE
+						Object.SelectedOption = BUTTON_SAVE_FOUR
+					end if
+				end if
+				if KeyPress[0].Down == true
+					Object.SelectedOption++
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					if Object.SelectedOption > BUTTON_SAVE_FOUR
+						Object.SelectedOption = BUTTON_SAVE_ONE
+					end if
+				end if
+			else
+				if KeyPress[0].Up == true
+					Object.SelectedOption--
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					if Object.SelectedOption < BUTTON_SAVE_ONE
+						Object.SelectedOption = BUTTON_DELETE
+					end if
+				end if
+				if KeyPress[0].Down == true
+					Object.SelectedOption++
+					PlaySfx(SFX_G_MENUBUTTON, false)
+					if Object.SelectedOption > BUTTON_DELETE
+						Object.SelectedOption = BUTTON_SAVE_ONE
+					end if
+				end if
+			end if
+			// Enable touch controls if the screen is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+#platform: Mobile
+				Options.PhysicalControls = false
+				Object.SelectedOption = BUTTON_NONE
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = false
+				Object.SelectedOption = BUTTON_NONE
+#endplatform
+			end if
+		else
+			// Touch Controls
+			
+			// Check if the screen is touched (used to check if a touch was released)
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3 = CheckResult
+			
+			// Check if the delete button is touched
+			if Object.ShowDeleteButton == true
+				TempValue0  = Delete.XPos
+				TempValue0 -= 4
+				TempValue1  = TempValue0
+				TempValue1 += 72
+				CheckTouchRect(TempValue0, 0, TempValue1, 32)
+			else
+				CheckResult = -1
+			end if
+
+			if CheckResult > -1
+				Object.SelectedOption = BUTTON_DELETE
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == BUTTON_DELETE
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == BUTTON_DELETE
+						Object.SelectedOption = BUTTON_NONE
+					end if
+				end if
+			end if
+			
+			// Check if save file 1 is touched
+			TempValue0 = BUTTON_SAVE_ONE
+			CallFunction(LoadSaveMenu_CheckTouchSave)
+			if CheckResult > -1
+				Object.SelectedOption = BUTTON_SAVE_ONE
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == BUTTON_SAVE_ONE
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == BUTTON_SAVE_ONE
+						Object.SelectedOption = BUTTON_NONE
+					end if
+				end if
+			end if
+			
+			// Check if save file 2 is touched
+			TempValue0 = BUTTON_SAVE_TWO
+			CallFunction(LoadSaveMenu_CheckTouchSave)
+			if CheckResult > -1
+				Object.SelectedOption = BUTTON_SAVE_TWO
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == BUTTON_SAVE_TWO
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == BUTTON_SAVE_TWO
+						Object.SelectedOption = BUTTON_NONE
+					end if
+				end if
+			end if
+			
+			// Check if save file 3 is touched
+			TempValue0 = BUTTON_SAVE_THREE
+			CallFunction(LoadSaveMenu_CheckTouchSave)
+			if CheckResult > -1
+				Object.SelectedOption = BUTTON_SAVE_THREE
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == BUTTON_SAVE_THREE
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == BUTTON_SAVE_THREE
+						Object.SelectedOption = BUTTON_NONE
+					end if
+				end if
+			end if
+			
+			// Check if save file 4 is touched
+			TempValue0 = BUTTON_SAVE_FOUR
+			CallFunction(LoadSaveMenu_CheckTouchSave)
+			if CheckResult > -1
+				Object.SelectedOption = BUTTON_SAVE_FOUR
+			else
+				if TempValue3 < 0
+					if Object.SelectedOption == BUTTON_SAVE_FOUR
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object.SelectedOption == BUTTON_SAVE_FOUR
+						Object.SelectedOption = BUTTON_NONE
+					end if
+				end if
+			end if
+			
+			CallFunction(MenuHeading_CheckTouchBack)
+			
+			// Enable physical controls if a button is pressed
+			if KeyPress[0].Up == true
+				Object.SelectedOption = BUTTON_SAVE_FOUR
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+
+			if KeyPress[0].Down == true
+				if Object.ShowDeleteButton == false
+					Object.SelectedOption = BUTTON_SAVE_ONE
+				else
+					Object.SelectedOption = BUTTON_DELETE
+				end if
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+		end if
+
+		CheckResult = false
+
+		if Object.SelectedOption > BUTTON_NONE // If a button was touched
+			if KeyPress[0].Start == true
+				CheckResult = true
+			end if
+			if KeyPress[0].ButtonA == true
+				CheckResult = true
+			end if
+		end if
+
+		if CheckResult == true
+			if Object.SelectedOption < BUTTON_DELETE // If a save file was selected
+#platform: Use_Origins
+				// this object isn't used in the final version of Origins, but it looks like they had plans to use it at first?
+				if game.continueFlag != false
+					ArrayPos0 = Object.SelectedOption
+					if Object[+ArrayPos0].StageListPos == 0
+						break	// break STATE_MAIN_SAVE_MENU
+					end if
+				end if
+#endplatform
+				switch Object.SaveMode
+				case SAVEMODE_NORMAL
+					Object.ShowDeleteButton = false
+					ArrayPos0 = Object.SelectedOption
+					Object[+ArrayPos0].SaveStatus = SAVE_NORMAL_SELECTED
+					Object.State = STATE_SAVE_SELECTED
+					PlaySfx(SFX_G_SELECT, false)
+					if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+						StopMusic()
+					else
+						if Options.TailsUnlocked == 2 // I have no idea what this means, this will always be false
+							StopMusic()
+						end if
+					end if
+					break
+					
+				case SAVEMODE_DELETE
+					ArrayPos0 = Object.SelectedOption
+					if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+						Object.ShowDeleteButton		  = false
+						Object.State				  = STATE_SAVE_SELECTED_DELETE
+						Object.SaveOneStatus		  = SAVE_NORMAL
+						Object.SaveTwoStatus		  = SAVE_NORMAL
+						Object.SaveThreeStatus		  = SAVE_NORMAL
+						Object.SaveFourStatus		  = SAVE_NORMAL
+						Object[+ArrayPos0].SaveStatus = SAVE_DELETE_SELECTED
+
+						Object.SaveMode = SAVEMODE_NORMAL
+						PlaySfx(SFX_G_LAMPPOST, false)
+					else
+						Object.SaveOneStatus	 = SAVE_NORMAL
+						Object.SaveTwoStatus	 = SAVE_NORMAL
+						Object.SaveThreeStatus	 = SAVE_NORMAL
+						Object.SaveFourStatus	 = SAVE_NORMAL
+						Object.SaveMode = SAVEMODE_NORMAL
+#platform: Use_Origins
+						if Options.PhysicalControls == false
+							Object.SelectedOption = BUTTON_NONE
+						end if
+#endplatform
+
+#platform: Mobile
+						if Options.PhysicalControls == false
+							Object.SelectedOption = BUTTON_NONE
+						end if
+#endplatform
+					end if
+					break
+				end switch
+			end if
+			
+			if Object.SelectedOption == BUTTON_DELETE
+				PlaySfx(SFX_G_LAMPPOST, false)
+				Object.State = STATE_TOGGLE_DELETE_MODE
+			end if
+		end if
+		
+		if KeyPress[0].ButtonB == true
+			Object.ShowDeleteButton = false
+			Object.FadeValue		= 248
+
+			Object.State = STATE_EXIT
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+		
+	case STATE_SAVE_SELECTED
+		if Object.FadeValue < 30
+			Object.FadeValue++
+		else
+			Object.FadeValue = 0
+			ArrayPos0 = Object.SelectedOption
+			Object[+ArrayPos0].SaveStatus = SAVE_NORMAL
+			if Object[+ArrayPos0].StageListPos > 0 // Is this save used?
+				Object.State = STATE_LOAD_SAVE
+			else
+				if Options.TailsUnlocked < 2 // I have no idea what this means, this will always be true
+					Object.State = STATE_NEW_GAME_SELECTED
+
+					Object.YPos  = 40
+					Object.YPos *= Object.SelectedOption
+					Object.YPos += Screen.CenterY
+					Object.YPos -= 87
+				else
+					Object.State = STATE_LOAD_NEW_GAME
+				end if
+			end if
+		end if
+		break
+		
+	case STATE_LOAD_SAVE
+		if Object.FadeValue < 256
+			Object.FadeValue += 8
+		else
+			ArrayPos0 = Object.SelectedOption
+
+			Options.GameMode = MODE_SAVEGAME
+			Options.SaveSlot = Object.SelectedOption
+
+			Player.Lives		= Object[+ArrayPos0].Lives
+			Player.Score		= Object[+ArrayPos0].Score
+			Player.ScoreBonus	= Object[+ArrayPos0].ScoreBonus
+
+			Good_Future_List  = Object[+ArrayPos0].GoodFutureList
+			Good_Future_List &= 0xFFFF	// 0b1111111111111111
+			Good_Future_Count = 0
+			Good_Future		  = false
+
+			MetalSonic_List   = Object[+ArrayPos0].GoodFutureList
+			MetalSonic_List >>= 16
+
+			SpecialStage.TimeStones	= Object[+ArrayPos0].TimeStones
+			SpecialStage.ListPos	= Object[+ArrayPos0].SpecialListPos
+
+			LampPost.Check = 0
+
+			Stage.ActiveList	= REGULAR_STAGE
+			Stage.ListPos		= Object[+ArrayPos0].StageListPos
+			Stage.ListPos--
+			if Stage.ListPos < 0
+				Stage.ListPos	= 0
+				Player.Lives	= 3
+				Player.Score	= 0
+			end if
+
+			if Stage.ListPos >= 80	// Check if the save is on a special stage
+				SpecialStage.NextZone	= Stage.ListPos
+				SpecialStage.NextZone  -= 80
+				Stage.ActiveList		= SPECIAL_STAGE
+
+#platform: Use_Origins
+				Stage.ActiveList		= 3
+#endplatform
+
+				Stage.ListPos			= SpecialStage.ListPos
+
+				TempValue0   = SpecialStage.NextZone
+				TempValue0  %= 10
+				TempValue0 >>= 2
+				if TempValue0 == 1
+					TempValue1   = SpecialStage.NextZone
+					TempValue1  /= 10
+					TempValue1 <<= 1
+					GetBit(TempValue0, Good_Future_List, TempValue1)
+					Good_Future_Count += TempValue0
+				end if
+			else
+				TempValue0   = Stage.ListPos
+				TempValue0  %= 10
+				TempValue0 >>= 2
+				if TempValue0 == 1
+					TempValue1   = Stage.ListPos
+					TempValue1  /= 10
+					TempValue1 <<= 1
+					GetBit(TempValue0, Good_Future_List, TempValue1)
+					Good_Future_Count += TempValue0
+				end if
+			end if
+			Stage.PlayerListPos = Object[+ArrayPos0].PlayerListPos
+
+#platform: Use_Origins
+			// normally saveSlot is just forced to 0 on the title screen, but it looks like they were planning to do a bit more than that initially? not like it matters anyways though, cause this object's unused in origins and all
+			game.callbackParam0 = Object.SelectedOption
+			EngineCallback(NOTIFY_SAVESLOT_SELECT)
+#endplatform
+
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.FadeValue)
+		break
+		
+	case STATE_NEW_GAME_SELECTED
+		TempValue0  = Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos > TempValue0
+			Object.YPos -= 8
+			if Object.YPos < TempValue0
+				Object.YPos = TempValue0
+			end if
+		else
+			Object.State = STATE_FADEIN_CHARACTERSELECT
+			Object.Alpha = 0
+
+#platform: Use_Origins
+			if Options.PhysicalControls == false
+				ArrayPos0 = Object.SelectedOption
+				Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+			end if
+#endplatform
+
+#platform: Mobile
+			if Options.PhysicalControls == false
+				ArrayPos0 = Object.SelectedOption
+				Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+			end if
+#endplatform
+
+		end if
+		break
+		
+	case STATE_FADEIN_CHARACTERSELECT
+		if Object.FadeValue < 256
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue += 8
+		else
+			Object.FadeValue = 0
+			Object.Alpha	 = 255
+			Object.State	 = STATE_CHARACTER_SELECT
+		end if
+		break
+		
+	case STATE_CHARACTER_SELECT
+		ArrayPos0 = Object.SelectedOption
+
+#platform: Standard
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+		// 2011 Steam lacks Options.PhysicalControls, so we force it here first and the other platforms can override it
+		if CheckResult == true
+			if KeyPress[0].Left == true
+				Object[+ArrayPos0].PlayerListPos--
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				if Object[+ArrayPos0].PlayerListPos < PLAYER_SONIC_A
+					Object[+ArrayPos0].PlayerListPos = PLAYER_TAILS_A
+				end if
+			end if
+			if KeyPress[0].Right == true
+				Object[+ArrayPos0].PlayerListPos++
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				if Object[+ArrayPos0].PlayerListPos > PLAYER_TAILS_A
+					Object[+ArrayPos0].PlayerListPos = PLAYER_SONIC_A
+				end if
+			end if
+
+			// Enable touch controls if the screen is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+#platform: Mobile
+				Options.PhysicalControls = false
+				Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = false
+				Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+#endplatform
+			end if
+		else
+			// Touch Controls
+			
+			if Engine.Message == MESSAGE_LOSTFOCUS
+				Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+			end if
+			
+			// Check if Sonic is pressed
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3  = CheckResult
+
+			TempValue0  = Screen.CenterX
+			TempValue0 -= 56
+
+			TempValue1  = Screen.CenterX
+			TempValue1 -= 8
+			CheckTouchRect(TempValue0, 126, TempValue1, 184)
+			if CheckResult > -1
+				Object[+ArrayPos0].PlayerListPos = PLAYER_SONIC_A
+			else
+				if TempValue3 < 0
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_SONIC_A
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_SONIC_A
+						Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+					end if
+				end if
+			end if
+			
+			// Check if Tails is pressed
+			TempValue0  = Screen.CenterX
+			TempValue0 += 8
+			TempValue1  = Screen.CenterX
+			TempValue1 += 56
+			CheckTouchRect(TempValue0, 126, TempValue1, 184)
+			if CheckResult > -1
+				Object[+ArrayPos0].PlayerListPos = PLAYER_TAILS_A
+			else
+				if TempValue3 < 0
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_TAILS_A
+						KeyPress[0].Start = true
+					end if
+				else
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_TAILS_A
+						Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+					end if
+				end if
+			end if
+			
+			// Check if the back button is pressed
+			TempValue0  = Screen.XSize
+			TempValue0 -= 76
+			CheckTouchRect(TempValue0, 192, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				Object[+ArrayPos0].PlayerListPos = PLAYER_BACK
+				Object.BackTouchPress = true
+			else
+				Object.BackTouchPress = false
+				if TempValue3 < 0
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_BACK
+						KeyPress[0].ButtonB = true
+					end if
+				else
+					if Object[+ArrayPos0].PlayerListPos == PLAYER_BACK
+						Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+					end if
+				end if
+			end if
+
+			// Enable physical controls if a button is pressed
+			if KeyPress[0].Left == true
+				Object[+ArrayPos0].PlayerListPos = PLAYER_TAILS_A
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+
+			if KeyPress[0].Right == true
+				Object[+ArrayPos0].PlayerListPos = PLAYER_SONIC_A
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+		end if
+
+		CheckResult = false
+		if KeyPress[0].Start == true
+			CheckResult = true
+		end if
+		if KeyPress[0].ButtonA == true
+			CheckResult = true
+		end if
+		if CheckResult == true
+			if Options.TailsUnlocked == true
+				PlaySfx(SFX_G_SELECT, false)
+				StopMusic()
+				Object.State = STATE_CHARACTER_SELECTED
+			else
+				if Object[+ArrayPos0].PlayerListPos == PLAYER_SONIC_A
+					PlaySfx(SFX_G_SELECT, false)
+					StopMusic()
+					Object.State = STATE_CHARACTER_SELECTED
+				else
+#platform: Mobile
+					Object[+ArrayPos0].PlayerListPos = PLAYER_NONE
+#endplatform
+				end if
+			end if
+		end if
+		
+		if KeyPress[0].ButtonB == true
+			Object.State	 = STATE_FADEOUT_CHARACTERSELECT
+			Object.FadeValue = 248
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+		
+	case STATE_CHARACTER_SELECTED
+		if Object.FadeValue < 30
+			Object.FadeValue++
+		else
+			Object.FadeValue = 0
+			Object.State = STATE_LOAD_NEW_GAME
+		end if
+		break
+		
+	case STATE_LOAD_NEW_GAME
+		if Object.FadeValue < 256
+			Object.FadeValue += 8
+		else
+			ArrayPos0	= Object.SelectedOption
+			ArrayPos1 	= Object.SelectedOption
+			ArrayPos1 <<= 3
+			SaveRAM[ArrayPos1] = Object[+ArrayPos0].PlayerListPos	// Character
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 3		// Lives
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 0		// Score
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 1		// Stage List Pos, gets down by one below this
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 0		// Time Stones
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 0		// Special Stage Pos
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 50000	// Score Bonus
+			ArrayPos1++
+			SaveRAM[ArrayPos1] = 0		// Destroyed Metal Sonic Projectors
+			WriteSaveRAM()
+
+			Options.GameMode = MODE_SAVEGAME
+			Options.SaveSlot = Object.SelectedOption
+
+			Player.Lives		= 3
+			Player.Score		= 0
+			Player.ScoreBonus	= 50000
+
+			Good_Future_List	= 0
+			Good_Future_Count	= 0
+			Good_Future			= false
+
+			Transporter_Destroyed	= false
+			MetalSonic_Destroyed	= false
+			MetalSonic_List			= 0
+
+			SpecialStage.TimeStones	= 0
+			SpecialStage.ListPos	= STAGE_S_SS1
+
+			LampPost.Check   = 0
+			Stage.ActiveList = REGULAR_STAGE
+
+			ArrayPos0 = Object.SelectedOption
+
+			Stage.ListPos = Object[+ArrayPos0].StageListPos
+			Stage.ListPos--
+			if Stage.ListPos < 0
+				Stage.ListPos = STAGE_R_PPZ1A
+			end if
+
+			Stage.PlayerListPos = Object[+ArrayPos0].PlayerListPos
+
+#platform: Use_Origins
+			// normally saveSlot is just forced to 0 on the title screen, but it looks like they were planning to do a bit more than that initially? not like it matters anyways though, cause this object's unused in origins and all
+			game.callbackParam0 = Object.SelectedOption
+			EngineCallback(NOTIFY_SAVESLOT_SELECT)
+#endplatform
+
+			LoadStage()
+			
+			if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins plus - why did they update this object in plus even if it's unused in origins? wish i knew..
+				LoadVideo("Opening")
+
+//	#platform: Mobile
+//				if Options.Soundtrack == OST_JP
+//					LoadVideo("Opening")
+//				else
+//					LoadVideo("OpeningUS")
+//				end if
+//	#endplatform
+
+			end if
+		end if
+		SetScreenFade(0, 0, 0, Object.FadeValue)
+		break
+		
+	case STATE_FADEOUT_CHARACTERSELECT
+		if Object.FadeValue > 0
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue -= 8
+		else
+			Object.Alpha = 0
+			Object.State = STATE_RETURN_TO_SAVESEL
+		end if
+		break
+		
+	case STATE_RETURN_TO_SAVESEL
+		TempValue0  = Object.SelectedOption
+		TempValue0 *= 40
+		TempValue0 += Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos < TempValue0
+			Object.YPos += 8
+			if Object.YPos > TempValue0
+				Object.YPos = TempValue0
+			end if
+			Object.Alpha = 0
+		else
+
+#platform: Use_Origins
+			if Options.PhysicalControls == false
+				Object.SelectedOption = BUTTON_NONE
+			end if
+#endplatform
+
+#platform: Mobile
+			if Options.PhysicalControls == false
+				Object.SelectedOption = BUTTON_NONE
+			end if
+#endplatform
+
+			Object.State = STATE_MAIN_SAVE_MENU
+			Object.Alpha = 255
+			Object.SaveOneStatus   = SAVE_NORMAL
+			Object.SaveTwoStatus   = SAVE_NORMAL
+			Object.SaveThreeStatus = SAVE_NORMAL
+			Object.SaveFourStatus  = SAVE_NORMAL
+			Object.SaveMode		   = SAVEMODE_NORMAL
+			CallFunction(LoadSaveMenu_SetShowDelete)
+		end if
+		break
+		
+	case STATE_EXIT
+		if Object.FadeValue > 0
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue -= 8
+		else
+			// Tell the other objects that you're leaving the menu
+			Object.Type = TypeName[Blank Object]
+			MenuWindow.State = MENUWINDOW_SHRINK	// Reset the window
+			//All of this is MenuButton Objects
+			Object[34].State = MENUBUTTON_BUTTONS_IN
+			Object[35].State = MENUBUTTON_BUTTONS_IN
+			Object[36].State = MENUBUTTON_BUTTONS_IN
+			Object[37].State = MENUBUTTON_BUTTONS_IN
+			Object[38].State = MENUBUTTON_BUTTONS_IN
+			Object[39].State = MENUBUTTON_BUTTONS_IN
+			Object[40].State = MENUBUTTON_BUTTONS_IN
+			Object[41].State = MENUBUTTON_BUTTONS_IN
+			Object[42].State = MENUBUTTON_BUTTONS_IN
+
+			MenuHeading.State  = MENUHEADING_LEAVE_SCREEN
+			MenuHeading.Header = MAINMENU_HEADER
+		end if
+		break
+		
+	case STATE_TOGGLE_DELETE_MODE
+		if Object.FadeValue < 30
+			Object.FadeValue++
+		else
+			Object.FadeValue = 0
+			Object.State = STATE_MAIN_SAVE_MENU
+
+#platform: Standard
+			Object.SelectedOption = BUTTON_SAVE_ONE
+#endplatform
+
+#platform: Use_Origins
+			if Options.PhysicalControls == true
+				Object.SelectedOption = BUTTON_SAVE_ONE
+			else
+				Object.SelectedOption = BUTTON_NONE
+			end if
+#endplatform
+
+#platform: Mobile
+			if Options.PhysicalControls == true
+				Object.SelectedOption = BUTTON_SAVE_ONE
+			else
+				Object.SelectedOption = BUTTON_NONE
+			end if
+#endplatform
+
+			if Object.SaveMode >= SAVE_DELETE
+				Object.SaveOneStatus	= SAVE_NORMAL
+				Object.SaveTwoStatus	= SAVE_NORMAL
+				Object.SaveThreeStatus	= SAVE_NORMAL
+				Object.SaveFourStatus	= SAVE_NORMAL
+				Object.SaveMode			= SAVEMODE_NORMAL
+			else
+				Object.SaveOneStatus	= SAVE_DELETE
+				Object.SaveTwoStatus	= SAVE_DELETE
+				Object.SaveThreeStatus	= SAVE_DELETE
+				Object.SaveFourStatus	= SAVE_DELETE
+				Object.SaveMode			= SAVEMODE_DELETE
+			end if
+		end if
+		break
+		
+	case STATE_SAVE_SELECTED_DELETE
+		if Object.FadeValue < 30
+			Object.FadeValue++
+		else
+			Object.FadeValue = 0
+			ArrayPos0					  = Object.SelectedOption
+			Object[+ArrayPos0].SaveStatus = SAVE_DELETE
+
+			Object.State = STATE_SLIDE_DELETE_SAVE
+
+			Object.YPos  = 40
+			Object.YPos *= Object.SelectedOption
+			Object.YPos += Screen.CenterY
+			Object.YPos -= 87
+		end if
+		break
+		
+	case STATE_SLIDE_DELETE_SAVE
+		TempValue0  = Screen.CenterY
+		TempValue0 -= 87
+		if Object.YPos > TempValue0
+			Object.YPos -= 8
+			if Object.YPos < TempValue0
+				Object.YPos = TempValue0
+			end if
+		else
+			Object.State = STATE_FADEIN_DELETECONFIRM
+			Object.Alpha = 0
+
+#platform: Standard
+			DeleteConfirm.Highlight = DELETE_YES
+#endplatform
+
+#platform: Use_Origins
+			if Options.PhysicalControls == true
+				DeleteConfirm.Highlight = DELETE_YES
+			else
+				DeleteConfirm.Highlight = DELETE_NONE
+			end if
+#endplatform
+
+#platform: Mobile
+			if Options.PhysicalControls == true
+				DeleteConfirm.Highlight = DELETE_YES
+			else
+				DeleteConfirm.Highlight = DELETE_NONE
+			end if
+#endplatform
+
+		end if
+		break
+		
+	case STATE_FADEIN_DELETECONFIRM
+		if Object.FadeValue < 256
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue += 8
+		else
+			Object.FadeValue = 0
+			Object.Alpha	 = 255
+			Object.State	 = STATE_DELETE_CONFIRM
+		end if
+		break
+		
+	case STATE_DELETE_CONFIRM
+		ArrayPos0 = Object.SelectedOption
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 63
+		
+#platform: Standard
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+		
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+
+
+		// 2011 Steam lacks Options.PhysicalControls, so we force it here first and the other platforms can override it
+		if CheckResult == true
+			if KeyPress[0].Up == true
+				DeleteConfirm.Highlight--
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				if DeleteConfirm.Highlight < DELETE_YES
+					DeleteConfirm.Highlight = DELETE_NO
+				end if
+			end if
+
+			if KeyPress[0].Down == true
+				DeleteConfirm.Highlight++
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				if DeleteConfirm.Highlight > DELETE_NO
+					DeleteConfirm.Highlight = DELETE_YES
+				end if
+			end if
+
+			// Enable touch controls if the screen is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+
+#platform: Mobile
+				Options.PhysicalControls = false
+				DeleteConfirm.Highlight = DELETE_NONE
+#endplatform
+
+#platform: Use_Origins
+				Options.PhysicalControls = false
+				DeleteConfirm.Highlight = DELETE_NONE
+#endplatform
+			end if
+		else
+			// Touch Controls
+			
+			if Engine.Message == MESSAGE_LOSTFOCUS
+				DeleteConfirm.Highlight = DELETE_NONE
+			end if
+			
+			// Check if YES is touched
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3  = CheckResult
+			TempValue0  = Screen.CenterX
+			TempValue0 -= 34
+			TempValue1  = Screen.CenterX
+			TempValue1 += 34
+			CheckTouchRect(TempValue0, 110, TempValue1, 135)
+			if CheckResult > -1
+				DeleteConfirm.Highlight = DELETE_YES
+			else
+				if TempValue3 < 0
+					if DeleteConfirm.Highlight == DELETE_YES
+						KeyPress[0].Start = true
+					end if
+				else
+					if DeleteConfirm.Highlight == DELETE_YES
+						DeleteConfirm.Highlight = DELETE_NONE
+					end if
+				end if
+			end if
+			
+			// Check if NO is touched
+			CheckTouchRect(TempValue0, 144, TempValue1, 169)
+			if CheckResult > -1
+				DeleteConfirm.Highlight = DELETE_NO
+			else
+				if TempValue3 < 0
+					if DeleteConfirm.Highlight == DELETE_NO
+						KeyPress[0].Start = true
+					end if
+				else
+					if DeleteConfirm.Highlight == DELETE_NO
+						DeleteConfirm.Highlight = DELETE_NONE
+					end if
+				end if
+			end if
+			
+			// Check if the back button is touched
+			TempValue0  = Screen.XSize
+			TempValue0 -= 76
+			CheckTouchRect(TempValue0, 192, Screen.XSize, Screen.YSize)
+			if CheckResult > -1
+				DeleteConfirm.Highlight = DELETE_BACK
+				Object.BackTouchPress = true
+			else
+				Object.BackTouchPress = false
+				if TempValue3 < 0
+					if DeleteConfirm.Highlight == DELETE_BACK
+						KeyPress[0].ButtonB = true
+					end if
+				else
+					if DeleteConfirm.Highlight == DELETE_BACK
+						DeleteConfirm.Highlight = DELETE_NONE
+					end if
+				end if
+			end if
+			
+			// Enable physical controls if a button is pressed
+			if KeyPress[0].Up == true
+				DeleteConfirm.Highlight = DELETE_NO
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+
+			if KeyPress[0].Down == true
+				DeleteConfirm.Highlight = DELETE_YES
+#platform: Mobile
+				Options.PhysicalControls = true
+#endplatform
+#platform: Use_Origins
+				Options.PhysicalControls = true
+#endplatform
+			end if
+		end if
+
+		CheckResult = false
+
+		if DeleteConfirm.Highlight > DELETE_NONE // If a button was touched
+			if KeyPress[0].Start == true
+				CheckResult = true
+			end if
+			if KeyPress[0].ButtonA == true
+				CheckResult = true
+			end if
+		end if
+
+		if CheckResult == true
+			if DeleteConfirm.Highlight == DELETE_YES
+				PlayStageSfx(SFX_S_EVENT, false)
+			else
+				PlaySfx(SFX_G_SELECT, false)
+			end if
+			Object.AnimationTimer = 0
+
+			Object.State = STATE_DELETECONFIRM_SELECTED
+		end if
+		
+		if KeyPress[0].ButtonB == true
+			ArrayPos0					  = Object.SelectedOption
+			Object[+ArrayPos0].SaveStatus = SAVE_NORMAL
+
+			Object.State = STATE_FADEOUT_DELETECONFIRM
+
+			Object.FadeValue	  = 248
+			Object.AnimationTimer = 0
+
+			PlayStageSfx(SFX_S_BACKBUTTON, false)
+		end if
+		break
+		
+	case STATE_DELETECONFIRM_SELECTED
+		if Object.FadeValue < 30
+			Object.FadeValue++
+		else
+			Object.State	 = STATE_FADEOUT_DELETECONFIRM
+			Object.FadeValue = 248
+
+			ArrayPos0					  = Object.SelectedOption
+			Object[+ArrayPos0].SaveStatus = SAVE_NORMAL
+			
+			if DeleteConfirm.Highlight == DELETE_YES
+				// Delete this save in the menu
+				Object[+ArrayPos0].PlayerListPos  = 0
+				Object[+ArrayPos0].Lives		  = 3
+				Object[+ArrayPos0].Score		  = 0
+				Object[+ArrayPos0].StageListPos   = 0
+				Object[+ArrayPos0].TimeStones	  = 0
+				Object[+ArrayPos0].SpecialListPos = 0
+				Object[+ArrayPos0].ScoreBonus	  = 50000
+				Object[+ArrayPos0].GoodFutureList = 0
+				
+				// Now delete it in SaveRAM
+				ArrayPos1 = Object.SelectedOption
+				ArrayPos1 <<= 3
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 3
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+				ArrayPos1++
+				SaveRAM[ArrayPos1] = 0
+			end if
+			
+			WriteSaveRAM()
+		end if
+		break
+		
+	case STATE_FADEOUT_DELETECONFIRM
+		if Object.FadeValue > 0
+			Object.Alpha	  = Object.FadeValue
+			Object.FadeValue -= 8
+		else
+			Object.Alpha = 0
+			Object.State = STATE_RETURN_TO_SAVESEL
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case STATE_INITIALIZE
+	case STATE_MAIN_SAVE_MENU
+	case STATE_SAVE_SELECTED
+	case STATE_LOAD_SAVE
+	case STATE_EXIT
+	case STATE_SAVE_SELECTED_DELETE
+		if Object.State != STATE_INITIALIZE
+			CallFunction(LoadSaveMenu_DrawDeleteNoSave)
+		end if
+		
+		Object.YPos  = Screen.CenterY
+		Object.YPos -= 87
+		ArrayPos0 = 0
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_NEW_GAME_SELECTED
+	case STATE_SLIDE_DELETE_SAVE
+		CallFunction(LoadSaveMenu_DrawDeleteNoSave)
+		ArrayPos0 = Object.SelectedOption
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_FADEIN_CHARACTERSELECT
+	case STATE_CHARACTER_SELECT
+	case STATE_LOAD_NEW_GAME
+	case STATE_FADEOUT_CHARACTERSELECT
+	case STATE_RETURN_TO_SAVESEL
+		DrawSpriteScreenFX(30, FX_INK, Screen.CenterX, 84)
+		TempValue0  = Screen.CenterX
+		TempValue0 -= 32
+		ArrayPos0 = Object.SelectedOption
+		if Object[+ArrayPos0].PlayerListPos == PLAYER_SONIC_A
+			DrawSpriteScreenFX(31, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(36, FX_INK, TempValue0, 164)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 136)
+		else
+			DrawSpriteScreenFX(31, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(34, FX_INK, TempValue0, 164)
+		end if
+		TempValue0 += 64
+		if Object[+ArrayPos0].PlayerListPos == PLAYER_TAILS_A
+			DrawSpriteScreenFX(32, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(37, FX_INK, TempValue0, 164)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 136)
+		else
+			DrawSpriteScreenFX(32, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(35, FX_INK, TempValue0, 164)
+		end if
+		Object.Alpha = 255
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_CHARACTER_SELECTED
+		DrawSpriteScreenFX(30, FX_INK, Screen.CenterX, 84)
+		TempValue0  = Screen.CenterX
+		TempValue0 -= 32
+		ArrayPos0 = Object.SelectedOption
+		
+		// Flash the border for the selected character
+		TempValue1   = Object.FadeValue
+		TempValue1  &= 3
+		TempValue1 >>= 1
+		
+		if Object[+ArrayPos0].PlayerListPos == PLAYER_SONIC_A
+			if TempValue1 == 0
+				DrawSpriteScreenFX(31, FX_INK, TempValue0, 136)
+			end if
+			DrawSpriteScreenFX(36, FX_INK, TempValue0, 164)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 136)
+		else
+			DrawSpriteScreenFX(31, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(34, FX_INK, TempValue0, 164)
+		end if
+		TempValue0 += 64
+		if Object[+ArrayPos0].PlayerListPos == PLAYER_TAILS_A
+			if TempValue1 == 0
+				DrawSpriteScreenFX(32, FX_INK, TempValue0, 136)
+			end if
+			DrawSpriteScreenFX(37, FX_INK, TempValue0, 164)
+			DrawSpriteScreenFX(33, FX_INK, TempValue0, 136)
+		else
+			DrawSpriteScreenFX(32, FX_INK, TempValue0, 136)
+			DrawSpriteScreenFX(35, FX_INK, TempValue0, 164)
+		end if
+		Object.Alpha = 255
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_TOGGLE_DELETE_MODE
+		// Flash the delete button
+		TempValue0   = Object.FadeValue
+		TempValue0  &= 3
+		TempValue0 >>= 1
+		
+		if Object.SaveOneStatus == SAVE_DELETE
+			if TempValue0 == 0
+				DrawSpriteScreenXY(55, Delete.XPos, Delete.YPos)
+			else
+				DrawSpriteScreenXY(54, Delete.XPos, Delete.YPos)
+			end if
+		else
+			if TempValue0 == 0
+				DrawSpriteScreenXY(53, Delete.XPos, Delete.YPos)
+			else
+				DrawSpriteScreenXY(52, Delete.XPos, Delete.YPos)
+			end if
+		end if
+		
+		Object.YPos  = Screen.CenterY
+		Object.YPos -= 87
+		ArrayPos0 = 0
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		Object.YPos += 40
+		ArrayPos0++
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_FADEIN_DELETECONFIRM
+	case STATE_DELETE_CONFIRM
+	case STATE_FADEOUT_DELETECONFIRM
+		DrawSpriteScreenFX(57, FX_INK, Screen.CenterX, 84)
+		if DeleteConfirm.Highlight == DELETE_YES
+			DrawSpriteScreenFX(76, FX_INK, Screen.CenterX, 112)
+		else
+			DrawSpriteScreenFX(75, FX_INK, Screen.CenterX, 112)
+		end if
+		if DeleteConfirm.Highlight == DELETE_NO
+			DrawSpriteScreenFX(78, FX_INK, Screen.CenterX, 146)
+		else
+			DrawSpriteScreenFX(77, FX_INK, Screen.CenterX, 146)
+		end if
+		ArrayPos0 = Object.SelectedOption
+		Object.Alpha = 255
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+		
+	case STATE_DELETECONFIRM_SELECTED
+		// Flash the selected button
+		TempValue0   = Object.FadeValue
+		TempValue0  &= 3
+		TempValue0 >>= 1
+		
+		DrawSpriteScreenFX(57, FX_INK, Screen.CenterX, 84)
+		if DeleteConfirm.Highlight == DELETE_YES
+			if TempValue0 == 0
+				DrawSpriteScreenFX(76, FX_INK, Screen.CenterX, 112)
+			else
+				DrawSpriteScreenFX(75, FX_INK, Screen.CenterX, 112)
+			end if
+		else
+			DrawSpriteScreenFX(75, FX_INK, Screen.CenterX, 112)
+		end if
+		if DeleteConfirm.Highlight == DELETE_NO
+			if TempValue0 == 0
+				DrawSpriteScreenFX(78, FX_INK, Screen.CenterX, 146)
+			else
+				DrawSpriteScreenFX(77, FX_INK, Screen.CenterX, 146)
+			end if
+		else
+			DrawSpriteScreenFX(77, FX_INK, Screen.CenterX, 146)
+		end if
+		ArrayPos0 = Object.SelectedOption
+		Object.Alpha = 255
+		CallFunction(LoadSaveMenu_DrawSaveFiles)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	switch Engine.Language
+	case LANG_ENGLISH
+		LoadSpriteSheet("Menu/MenuGfx2_EN.gif")
+		break
+	case LANG_FRENCH
+		LoadSpriteSheet("Menu/MenuGfx2_FR.gif")
+		break
+	case LANG_ITALIAN
+		LoadSpriteSheet("Menu/MenuGfx2_IT.gif")
+		break
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Menu/MenuGfx2_DE.gif")
+		break
+	case LANG_SPANISH
+		LoadSpriteSheet("Menu/MenuGfx2_ES.gif")
+		break
+	case LANG_JAPANESE
+		LoadSpriteSheet("Menu/MenuGfx2_JP.gif")
+		break
+	end switch
+	
+	SpriteFrame(4, 2, 32, 32, 389, 1)			// #0  - Save 1 Gear
+	SpriteFrame(4, 2, 32, 32, 422, 1)			// #1  - Save 2 Gear
+	SpriteFrame(4, 2, 32, 32, 455, 1)			// #2  - Save 3 Gear
+	SpriteFrame(4, 2, 32, 32, 446, 34)			// #3  - Save 4 Gear
+	SpriteFrame(3, 2, 40, 32, 259, 1)			// #4  - Mini Sonic Gear
+	SpriteFrame(3, 2, 64, 32, 259, 1)			// #5  - Mini Sonic + Hey
+	SpriteFrame(3, 2, 40, 32, 324, 1)			// #6  - Mini Tails Gear
+	SpriteFrame(3, 2, 64, 32, 324, 1)			// #7  - Mini Tails + Hey
+	SpriteFrame(45, 12, 13, 13, 488, 1)			// #8  - Triangle Detail
+	SpriteFrame(0, 0, 250, 37, 259, 421)		// #9  - Select Border
+	SpriteFrame(64, 12, 128, 16, 1, 1)			// #10 - New Game
+	SpriteFrame(64, 12, 144, 16, 259, 93)		// #11 - Palmtree Panic
+	SpriteFrame(64, 12, 144, 16, 259, 110)		// #12 - Collision Chaos
+	SpriteFrame(64, 12, 144, 16, 259, 127)		// #13 - Tidal Tempest
+	SpriteFrame(64, 12, 144, 16, 259, 144)		// #14 - Quartz Quadrant
+	SpriteFrame(64, 12, 144, 16, 259, 161)		// #15 - Wacky Workbench
+	SpriteFrame(64, 12, 144, 16, 259, 178)		// #16 - Stardust Speedway
+	SpriteFrame(64, 12, 144, 16, 259, 195)		// #17 - Metallic Madness
+	SpriteFrame(64, 12, 144, 16, 259, 212)		// #18 - Final Fever
+	SpriteFrame(64, 12, 144, 16, 259, 229)		// #19 - Special Stage
+	//Highlights
+	SpriteFrame(64, 12, 128, 16, 130, 1)		// #20 - New Game
+	SpriteFrame(64, 12, 144, 16, 259, 268)		// #21 - Palmtree Panic
+	SpriteFrame(64, 12, 144, 16, 259, 285)		// #22 - Collision Chaos
+	SpriteFrame(64, 12, 144, 16, 259, 302)		// #23 - Tidal Tempest
+	SpriteFrame(64, 12, 144, 16, 259, 319)		// #24 - Quartz Quadrant
+	SpriteFrame(64, 12, 144, 16, 259, 336)		// #25 - Wacky Workbench
+	SpriteFrame(64, 12, 144, 16, 259, 353)		// #26 - Stardust Speedway
+	SpriteFrame(64, 12, 144, 16, 259, 370)		// #27 - Metallic Madness
+	SpriteFrame(64, 12, 144, 16, 259, 387)		// #28 - Final Fever
+	SpriteFrame(64, 12, 144, 16, 259, 404)		// #29 - Special Stage
+	
+	ReadSaveRAM()
+	Options.Soundtrack = SaveRAM[38]
+	if SaveRAM[36] == true
+		Options.TailsUnlocked = true
+	end if
+	
+	SpriteFrame(-112, 0, 224, 16, 1, 477)		// #30 - Player Select
+	
+	SpriteFrame(-16, -20, 32, 40, 26, 357)		// #31 - Sonic
+	if Options.TailsUnlocked == true
+		SpriteFrame(-16, -12, 32, 32, 59, 365)	// #32 - Tails
+	else
+		SpriteFrame(-16, -12, 32, 32, 72, 332)	// #32 - Locked Tails
+	end if
+	
+	SpriteFrame(-24, -24, 48, 48, 405, 88)		// #33 - Character Border
+	
+	SpriteFrame(-14, 0, 27, 8, 454, 88)			// #34 - Sonic Name
+	if Options.TailsUnlocked == true
+		// Bug Details:
+		// This works fine everywhere else, but in the Blit releases of the game, this sprite was
+		// extended in the JP spritesheet to match the width of (unused) Japanese text sprites
+		// This difference wasn't taken into account here, causing Tails' name to be cut off in-game
+		SpriteFrame(-12, 0, 24, 8, 482, 88)		// #35 - Tails Name
+	else
+		SpriteFrame(-12, 0, 24, 8, 92, 365)		// #35 - Tails Name Locked
+	end if
+	
+	SpriteFrame(-14, 0, 27, 8, 454, 97)			// #36 - Sonic Name Highlight
+	if Options.TailsUnlocked == true
+		// Bug Details: Same as above
+		SpriteFrame(-12, 0, 24, 8, 482, 97)		// #37 - Tails Name Highlight
+	else
+		SpriteFrame(-12, 0, 24, 8, 92, 374)		// #37 - Tails Name Locked
+	end if
+	
+	SpriteFrame(224, 7, 8, 8, 404, 137)			// #38 - Green Time Stone
+	SpriteFrame(232, 7, 8, 8, 413, 137)			// #39 - Orange Time Stone
+	SpriteFrame(220, 15, 8, 8, 422, 137)		// #40 - Yellow Time Stone
+	SpriteFrame(228, 15, 8, 8, 431, 137)		// #41 - Blue Time Stone
+	SpriteFrame(236, 15, 8, 8, 440, 137)		// #42 - Cyan Time Stone
+	SpriteFrame(224, 23, 8, 8, 449, 137)		// #43 - Purple Time Stone
+	SpriteFrame(232, 23, 8, 8, 458, 137)		// #44 - Red Time Stone
+	
+	// (#45 - #51) - Time Stone Socket
+	SpriteFrame(224, 7, 8, 8, 467, 137)
+	SpriteFrame(232, 7, 8, 8, 467, 137)
+	SpriteFrame(220, 15, 8, 8, 467, 137)
+	SpriteFrame(228, 15, 8, 8, 467, 137)
+	SpriteFrame(236, 15, 8, 8, 467, 137)
+	SpriteFrame(224, 23, 8, 8, 467, 137)
+	SpriteFrame(232, 23, 8, 8, 467, 137)
+
+	SpriteFrame(0, 0, 64, 18, 404, 196)			// #52 - Delete
+	SpriteFrame(0, 0, 64, 18, 404, 215)			// #53 - Delete Highlight
+	SpriteFrame(0, 0, 64, 18, 404, 234)			// #54 - Cancel
+	SpriteFrame(0, 0, 64, 18, 404, 253)			// #55 - Cancel Highlight
+	SpriteFrame(0, 0, 250, 37, 259, 459)		// #56 - Orange Alpha
+	SpriteFrame(-112, 0, 224, 16, 1, 443)		// #57 - "Delete Save Game?"
+	SpriteFrame(-112, 0, 224, 16, 1, 460)		// #58 - Unused
+	SpriteFrame(208, 12, 8, 16, 478, 183)		// #59 - 1
+	SpriteFrame(208, 12, 8, 16, 487, 183)		// #60 - 2
+	SpriteFrame(208, 12, 8, 16, 496, 183)		// #61 - 3
+	SpriteFrame(208, 12, 8, 16, 469, 200)		// #62 - 4
+	SpriteFrame(208, 12, 8, 16, 478, 200)		// #63 - 5
+	SpriteFrame(208, 12, 8, 16, 487, 200)		// #64 - 6
+	SpriteFrame(208, 12, 8, 16, 496, 200)		// #65 - 7
+	SpriteFrame(208, 12, 8, 16, 469, 217)		// #66 - 8 (Unused)
+	// Highlights
+	SpriteFrame(208, 12, 8, 16, 478, 234)		// #67 - 1
+	SpriteFrame(208, 12, 8, 16, 487, 234)		// #68 - 2
+	SpriteFrame(208, 12, 8, 16, 496, 234)		// #69 - 3
+	SpriteFrame(208, 12, 8, 16, 469, 251)		// #70 - 4
+	SpriteFrame(208, 12, 8, 16, 478, 251)		// #71 - 5
+	SpriteFrame(208, 12, 8, 16, 487, 251)		// #72 - 6
+	SpriteFrame(208, 12, 8, 16, 496, 251)		// #73 - 7
+	SpriteFrame(208, 12, 8, 16, 469, 268)		// #74 - 8 (Unused)
+
+	SpriteFrame(-32, 0, 64, 21, 404, 319)		// #75 - Yes
+	SpriteFrame(-32, 0, 64, 21, 404, 341)		// #76 - Yes Highlight
+	SpriteFrame(-32, 0, 64, 21, 404, 363)		// #77 - No
+	SpriteFrame(-32, 0, 64, 21, 404, 385)		// #78 - No Highlight
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

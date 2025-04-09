@@ -1,0 +1,588 @@
+//-----------------Sonic CD Amy Rose Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// ========================
+// Aliases
+// ========================
+
+#alias Object.Value0 : Object.XVelocity
+#alias Object.Value1 : Object.YVelocity
+#alias Object.Value2 : Object.LeftLimit
+#alias Object.Value3 : Object.RightLimit
+#alias Object.Value4 : Object.SonicHugged
+#alias Object.Value5 : Object.Gravity
+#alias Object.Value6 : Object.FrameTimer
+#alias Object.Value7 : Object.HeartTimer
+
+// States
+#alias 0 : AMY_IDLE
+#alias 1 : AMY_CHASE
+#alias 2 : AMY_AWAIT_RIGHT
+#alias 3 : AMY_CHEER_LEFT
+#alias 4 : AMY_CHEER_RIGHT
+#alias 5 : AMY_AWAIT_LEFT
+#alias 6 : AMY_HEART_STARE
+#alias 7 : AMY_HUG
+#alias 8 : AMY_REJECTED
+
+// Priority Aliases
+#alias 0 : PRIORITY_BOUNDS
+#alias 1 : PRIORITY_ACTIVE
+
+// Gravity Aliases
+#alias 0 : GRAVITY_GROUND
+#alias 1 : GRAVITY_AIR
+
+// Player Aliases
+#alias 0 : PLAYER_SONIC_A
+
+// Collision Side Aliases
+#alias 0 : CSIDE_FLOOR
+
+// Ink Effect Aliases
+#alias 2 : INK_ALPHA
+
+// Stage SFX Aliases
+#alias 3 : SFX_S_GIGGLE
+
+// Game Mode Aliases
+#alias 2 : MODE_TIMEATTACK
+
+
+// ========================
+// Events
+// ========================
+
+sub ObjectMain
+	Object.Priority = PRIORITY_ACTIVE
+	if Player.XPos < Object.XPos
+		Object.Direction = FACING_LEFT
+	else
+		Object.Direction = FACING_RIGHT
+	end if
+	
+	switch Object.State
+	case AMY_IDLE
+		TempValue0  = Object.FrameTimer
+		TempValue0 /= 10
+		TempValue0 += 11
+		Object.Frame = TempValue0
+		Object.FrameTimer++
+		if Object.FrameTimer > 139
+			Object.FrameTimer = 0
+		end if
+		
+		// Check to see if Sonic's anywhere near, and if so, start giving chase!
+		PlayerObjectCollision(C_TOUCH, -96, -360, 96, 360)
+		if CheckResult == true
+			Object.XVelocity = 0
+			Object.State = AMY_CHASE
+			Object.Frame = 4
+			Object.FrameTimer = 0
+		end if
+		break
+
+	case AMY_CHASE
+		Object.FrameTimer++
+		switch Object.Frame
+		case 4
+		case 6
+			if Object.FrameTimer == 4
+				Object.FrameTimer = 0
+				Object.Frame++
+			end if
+			break
+
+		case 5
+		case 7
+			if Object.FrameTimer == 3
+				Object.FrameTimer = 0
+				Object.Frame++
+			end if
+			break
+
+		end switch
+
+		if Object.Frame > 7
+			Object.Frame = 4
+		end if
+
+		if Object.Direction == FACING_RIGHT
+			if Object.XVelocity < 0x20000
+				Object.XVelocity += 0x1000
+			end if
+
+			PlayerObjectCollision(C_TOUCH, -32, -360, 4, 360)
+			if CheckResult == true
+				if Player.Gravity == GRAVITY_GROUND
+					if Player.Direction == Object.Direction
+						PlayerObjectCollision(C_TOUCH, -32, -20, 4, 20)
+						if CheckResult == true
+							CheckEqual(Player.Animation, ANI_SPINDASH)
+							TempValue0 = CheckResult
+							
+							// Before commencing the hugging, make sure Sonic's not already being hugged by someone else first
+							// -> This check was only added in via an update, so it's not present in the Steam version of the game
+							CheckEqual(Object[2].Type, TypeName[Blue Shield])
+							TempValue0 |= CheckResult
+							
+							if TempValue0 == true
+								Object.State = AMY_REJECTED
+								Object.Frame = 9
+								Object.YVelocity = -0x40000
+								Object.Gravity   =  GRAVITY_AIR
+								Object.XVelocity = -0x10000
+							else
+								Object.SonicHugged = true
+								Object.State = AMY_HUG
+								Object.Frame = 8
+								Object.FrameTimer = 0
+								Player.State = Player_State_Hugged
+								PlayStageSfx(SFX_S_GIGGLE, false)
+								
+#platform: Use_Haptics
+								HapticEffect(52, 0, 0, 0)
+#endplatform
+
+								// Just one hug is enough unlock criteria
+								if Stage.DebugMode == false
+									SetAchievement(1, 100)
+								end if
+							end if
+						else
+							Object.State = AMY_HEART_STARE
+							Object.Frame = 0
+							Object.FrameTimer = 0
+							Object.XVelocity  = 0
+						end if
+
+					else
+						Object.State = AMY_HEART_STARE
+						Object.Frame = 0
+						Object.FrameTimer = 0
+						Object.XVelocity  = 0
+					end if // Player.Direction == Object.Direction
+				end if // Player.Gravity == GRAVITY_GROUND
+			end if // CheckResult == true (from the box of -32, -360, 4, 360)
+
+			if Object.XPos < Object.RightLimit
+				Object.XPos += Object.XVelocity
+			else
+				Object.XVelocity = 0
+				Object.XPos = Object.RightLimit
+
+				if Object.SonicHugged == true
+					Object.State = AMY_CHEER_RIGHT
+				else
+					Object.State = AMY_AWAIT_RIGHT
+					Object.Frame = 0
+					Object.FrameTimer = 0
+				end if
+
+			end if
+		else // Object.Direction == FACING_LEFT
+			if Object.XVelocity > -0x20000
+				Object.XVelocity -= 0x1000
+			end if
+
+			PlayerObjectCollision(C_TOUCH, -4, -360, 32, 360)
+			if CheckResult == true
+				if Player.Gravity == GRAVITY_GROUND
+					if Player.Direction == Object.Direction
+						PlayerObjectCollision(C_TOUCH, -32, -20, 4, 20)
+						if CheckResult == true
+							CheckEqual(Player.Animation, ANI_SPINDASH)
+							TempValue0 = CheckResult
+							
+							// Make sure Sonic isn't wearing a shield before having Amy grab on
+							// -> This change was only introduced in an update, the Steam version doesn't have this check
+							CheckEqual(Object[2].Type, TypeName[Blue Shield])
+							TempValue0 |= CheckResult
+							
+							if TempValue0 == true
+								Object.State = AMY_REJECTED
+								Object.Frame = 9
+								Object.YVelocity = -0x40000
+								Object.Gravity   =  GRAVITY_AIR
+								Object.XVelocity =  0x10000
+							else
+								Object.SonicHugged = true
+								Object.State = AMY_HUG
+								Object.Frame = 8
+								Object.FrameTimer = 0
+								Player.State = Player_State_Hugged
+								PlayStageSfx(SFX_S_GIGGLE, false)
+
+#platform: Use_Haptics
+								HapticEffect(52, 0, 0, 0)
+#endplatform
+
+								// Just one hug is enough unlock criteria
+								if Stage.DebugMode == false
+									SetAchievement(1, 100)
+								end if
+
+							end if
+						else
+							Object.State = AMY_HEART_STARE
+							Object.Frame = 0
+							Object.FrameTimer = 0
+							Object.XVelocity  = 0
+						end if
+					else
+						Object.State = AMY_HEART_STARE
+						Object.Frame = 0
+						Object.FrameTimer = 0
+						Object.XVelocity  = 0
+					end if // Player.Direction == Object.Direction
+				end if // Player.Gravity == GRAVITY_GROUND
+			end if // CheckResult == true (from the box of -4, -360, 32, 360)
+
+			if Object.XPos > Object.LeftLimit
+				Object.XPos += Object.XVelocity
+			else
+				Object.XVelocity = 0
+				Object.XPos = Object.LeftLimit
+
+				if Object.SonicHugged == true
+					Object.State = AMY_AWAIT_LEFT
+				else
+					Object.State = AMY_CHEER_LEFT
+					Object.Frame = 0
+					Object.FrameTimer = 0
+				end if
+			end if
+		end if
+		break
+
+	case AMY_AWAIT_RIGHT
+		Object.FrameTimer++
+		if Object.FrameTimer == 12
+			Object.FrameTimer = 0
+			Object.Frame++
+		end if
+
+		if Object.Frame > 3
+			Object.Frame = 0
+		end if
+
+		if Object.Direction == FACING_LEFT
+			Object.State = AMY_CHASE
+			Object.Frame = 4
+			Object.FrameTimer = 0
+		end if
+		break
+
+	case AMY_CHEER_LEFT
+		Object.FrameTimer++
+		if Object.FrameTimer == 12
+			Object.FrameTimer = 0
+			Object.Frame++
+		end if
+
+		if Object.Frame > 3
+			Object.Frame = 0
+		end if
+
+		if Object.Direction == FACING_RIGHT
+			Object.State = AMY_CHASE
+			Object.Frame = 4
+			Object.FrameTimer = 0
+		end if
+		break
+
+	case AMY_CHEER_RIGHT
+		if Object.FrameTimer < 8
+			Object.Frame = 0
+		else
+			if Object.FrameTimer > 47
+				if Object.Gravity == GRAVITY_GROUND
+					if Object.FrameTimer < 120
+						Object.YVelocity = -0x40000
+						Object.Gravity = GRAVITY_AIR
+						Object.Frame = 9
+					else
+						Object.FrameTimer = 0
+					end if
+				else
+					if Object.YVelocity > 0
+						Object.Frame = 0
+					end if
+				end if
+			else
+				TempValue0  = Object.FrameTimer
+				TempValue0 -= 8
+				TempValue0 %= 20
+				TempValue0 /= 10
+
+				Object.Frame  = TempValue0
+				Object.Frame += 9
+			end if
+		end if
+
+		if Object.Gravity == GRAVITY_GROUND
+			if Object.Direction == FACING_LEFT
+				Object.State = AMY_CHASE
+				Object.Frame = 4
+				Object.FrameTimer = 0
+			end if
+		end if
+
+		Object.FrameTimer++
+		break
+
+	case AMY_AWAIT_LEFT
+		if Object.FrameTimer < 8
+			Object.Frame = 0
+		else
+			if Object.FrameTimer > 47
+				if Object.Gravity == GRAVITY_GROUND
+					if Object.FrameTimer < 120
+						Object.YVelocity = -0x40000
+						Object.Gravity = GRAVITY_AIR
+						Object.Frame = 9
+					else
+						Object.FrameTimer = 0
+					end if
+				else
+					if Object.YVelocity > 0
+						Object.Frame = 0
+					end if
+				end if
+			else
+				TempValue0  = Object.FrameTimer
+				TempValue0 -= 8
+				TempValue0 %= 20
+				TempValue0 /= 10
+
+				Object.Frame  = TempValue0
+				Object.Frame += 9
+			end if
+		end if
+
+		if Object.Gravity == GRAVITY_GROUND
+			if Object.Direction == FACING_RIGHT
+				Object.State = AMY_CHASE
+				Object.Frame = 4
+				Object.FrameTimer = 0
+			end if
+		end if
+		
+		Object.FrameTimer++
+		break
+
+	case AMY_HEART_STARE
+		Object.FrameTimer++
+		if Object.FrameTimer == 12
+			Object.FrameTimer = 0
+			Object.Frame++
+		end if
+
+		if Object.Frame > 3
+			Object.Frame = 0
+		end if
+
+		PlayerObjectCollision(C_TOUCH, -4, -360, 4, 360)
+		if CheckResult == false
+			if Player.Gravity == GRAVITY_GROUND
+				// If you're not exactly above her, she'll start chasing you again
+				
+				Object.State = AMY_CHASE
+				Object.Frame = 4
+				Object.FrameTimer = 0
+			end if
+		else
+			if Player.Gravity == GRAVITY_AIR
+				// If you jump while she waits for you, she'll start chasing you again
+				
+				Object.State = AMY_CHASE
+				Object.Frame = 4
+				Object.FrameTimer = 0
+			end if
+		end if
+		break
+
+	case AMY_HUG
+		Player.Speed = 0
+		Player.XVelocity = 0
+		Player.Direction = Object.Direction
+		if Player.Animation == ANI_JUMPING
+
+			Object.State = AMY_REJECTED
+			Object.Frame = 9
+			Object.YVelocity = -0x40000
+			Object.Gravity = GRAVITY_AIR
+			if Object.Direction == FACING_RIGHT
+				Object.XVelocity = -0x10000
+			else
+				Object.XVelocity =  0x10000
+			end if
+
+		end if
+		break
+
+	case AMY_REJECTED
+		if Object.YVelocity > 0
+			Object.Frame = 10
+		end if
+
+		if Object.XVelocity > 0
+			Object.XVelocity -= 0x800
+		end if
+
+		if Object.XVelocity < 0
+			Object.XVelocity += 0x800
+		end if
+
+		Object.XPos += Object.XVelocity
+		if Object.Gravity == GRAVITY_GROUND
+
+			if Object.FrameTimer == 16
+				Object.State = AMY_CHASE
+				Object.Frame = 4
+				Object.FrameTimer = 0
+			else
+				Object.FrameTimer++
+			end if
+
+		end if
+
+		if Object.XPos > Object.RightLimit
+			Object.XPos = Object.RightLimit
+		end if
+		break
+
+	end switch
+
+	Object.HeartTimer++
+	if Object.State == AMY_HUG
+		if Object.HeartTimer > 15
+			CreateTempObject(TypeName[Love Heart], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iYPos -= 6
+			Object[TempObjectPos].InkEffect = INK_ALPHA
+			Object[TempObjectPos].Alpha = 255
+			Object.HeartTimer = 0
+		end if
+	else
+		if Object.HeartTimer > 41
+			CreateTempObject(TypeName[Love Heart], 0, Object.XPos, Object.YPos)
+			Object[TempObjectPos].iYPos -= 6
+			Object[TempObjectPos].InkEffect = INK_ALPHA
+			Object[TempObjectPos].Alpha = 255
+			Object.HeartTimer = 0
+		end if
+	end if
+
+	if Object.Gravity == GRAVITY_GROUND
+		ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0)
+	else
+		Object.YVelocity += 0x4000
+		Object.YPos += Object.YVelocity
+		ObjectTileCollision(CSIDE_FLOOR, 0, 19, 0)
+		if CheckResult == true
+			Object.YVelocity = 0
+			Object.Gravity = GRAVITY_GROUND
+		end if
+	end if
+
+	if Object.OutOfBounds == true
+		Object.Priority = PRIORITY_BOUNDS
+		Object.State = AMY_IDLE
+		Object.SonicHugged = false
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	// Idle
+	SpriteFrame(-11, -20, 22, 40, 34, 208)		// #0  - Amy Idle Frame 0
+	SpriteFrame(-11, -20, 22, 40, 57, 208)		// #1  - Amy Idle Frame 1
+	SpriteFrame(-11, -20, 22, 40, 34, 208)		// #2  - Amy Idle Frame 2
+	SpriteFrame(-11, -20, 22, 40, 126, 167)		// #3  - Amy Idle Frame 3
+
+	// Walking
+	SpriteFrame(-15, -20, 30, 40, 68, 167)		// #4  - Amy Walking Frame 0
+	SpriteFrame(-10, -20, 21, 40, 166, 101)		// #5  - Amy Walking Frame 1
+	SpriteFrame(-13, -20, 26, 40, 99, 167)		// #6  - Amy Walking Frame 2
+	SpriteFrame(-10, -20, 21, 40, 166, 101)		// #7  - Amy Walking Frame 3
+
+	// Hug
+	SpriteFrame(-12, -20, 24, 40, 181, 208)		// #8  - Amy Hug
+
+	// Jumping
+	SpriteFrame(-13, -20, 26, 40, 80, 208)		// #9  - Amy Jumping Frame 0
+	SpriteFrame(-12, -20, 24, 40, 107, 208)		// #10 - Amy Jumping Frame 1
+
+	// Looking for Sonic, frames are repeated in place of making the sprite last longer animation-wise
+	// Amy Looking Frame "0"
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #11
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #12
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #13
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #14
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #15
+
+	// Amy Looking Frame "1"
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #16
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #17
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #18
+
+	// Amy Looking Frame "2"
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #19
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #20
+	SpriteFrame(-12, -20, 22, 40, 158, 208)		// #21
+
+	// Amy Looking Frame "3"
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #22
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #23
+	SpriteFrame(-14, -20, 25, 40, 132, 208)		// #24
+	
+	// This used to be below LoadSpriteSheet, moved here for consistency with the rest
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Amy Rose]
+			//if Stage.PlayerListPos == PLAYER_TAILS_A // Standalones/Preplus check
+			if Stage.PlayerListPos != PLAYER_SONIC_A // PLAYER_SONIC in origins
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			else
+				if Options.GameMode == MODE_TIMEATTACK
+					Object[ArrayPos0].Type = TypeName[Blank Object]
+				else
+					Object[ArrayPos0].LeftLimit   = Object[ArrayPos0].XPos
+					Object[ArrayPos0].LeftLimit  -= 0x1400000
+
+					Object[ArrayPos0].RightLimit  = Object[ArrayPos0].XPos
+					Object[ArrayPos0].RightLimit += 0x400000
+
+					Object[ArrayPos0].DrawOrder = 4
+				end if
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-11, -20, 22, 40, 34, 208) // #0 - Amy Idle
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

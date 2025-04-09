@@ -1,0 +1,1 @@
+u3l5d3(ld)ll4(ur)ldldldd3(ru)r4ulurrl5dldldll3(ur)ldlddrurur4ulur5dldllururlddrur4urururd3lurl6dllurdr4uruuldrdlu4rddlurullrul

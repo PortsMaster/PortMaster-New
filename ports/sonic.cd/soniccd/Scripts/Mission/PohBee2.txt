@@ -1,0 +1,350 @@
+//------------------Sonic CD PohBee 2 Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-----------Used on Mission "M086 - Gotta Go Fast"-----------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.XOriginPos
+#alias Object.Value2		:	Object.CurrentFrame
+#alias Object.Value3		:	Object.ShootingCooldown
+#alias Object.Value4		:	Object.FrameIncrease
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// PohBee Bullet Aliases
+#alias Object.Direction		:	PohBeeBullet.Direction
+#alias Object.XPos			:	PohBeeBullet.XPos
+#alias Object.YPos			:	PohBeeBullet.YPos
+#alias Object.Value1		:	PohBeeBullet.XVelocity
+#alias Object.Value2		:	PohBeeBullet.YVelocity
+
+// States
+#alias 0	:	POHBEE2_MOVING_LEFT
+#alias 1	:	POHBEE2_TURN_RIGHT
+#alias 2	:	POHBEE2_MOVING_RIGHT
+#alias 3	:	POHBEE2_TURN_LEFT
+#alias 4	:	POHBEE2_SHOOTING_LEFT
+#alias 5	:	POHBEE2_SHOOTING_RIGHT
+#alias 6	:	POHBEE2_RESET
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Stage SFX
+#alias 7	:	SFX_S_SHOT
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+#alias 2	:	STATIONARY	// This PohBee is also good quality
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State = POHBEE2_RESET
+		Object.Timer = 0
+		Object.Direction = FACING_RIGHT
+		Object.XPos = Object.XOriginPos
+		Object.CurrentFrame = 0
+		Object.ShootingCooldown = 0
+		Object.FrameIncrease = 0
+	end if
+	
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case POHBEE2_MOVING_LEFT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown > 0
+				Object.ShootingCooldown--
+			end if
+			if Object.Timer < 256
+				Object.Timer++
+				Object.XPos -= 0x20000
+			else
+				Object.State = POHBEE2_TURN_RIGHT
+				Object.Timer = 0
+			end if
+			break
+
+		case POHBEE2_TURN_RIGHT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown > 0
+				Object.ShootingCooldown--
+			end if
+			if Object.Timer < 60
+				if Object.Timer == 30
+					Object.Direction=FACING_LEFT
+				end if
+				Object.Timer++
+			else
+				Object.State = POHBEE2_MOVING_RIGHT
+			end if
+			break
+
+		case POHBEE2_MOVING_RIGHT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown > 0
+				Object.ShootingCooldown--
+			end if
+			if Object.Timer < 256
+				Object.Timer++
+				Object.XPos += 0x20000
+			else
+				Object.State = POHBEE2_TURN_LEFT
+				Object.Timer = 0
+			end if
+			break
+
+		case POHBEE2_TURN_LEFT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown > 0
+				Object.ShootingCooldown--
+			end if
+			if Object.Timer < 60
+				if Object.Timer == 30
+					Object.Direction = FACING_RIGHT
+				end if
+				Object.Timer++
+			else
+				Object.State = POHBEE2_MOVING_LEFT
+			end if
+			break
+
+		case POHBEE2_SHOOTING_LEFT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown < 46
+				Object.ShootingCooldown++
+				if Object.ShootingCooldown == 15
+					Object.FrameIncrease = 4
+				end if
+				if Object.ShootingCooldown == 32
+					CreateTempObject(TypeName[Poh Bee Bullet],0,Object.XPos,Object.YPos)
+					PohBeeBullet[TempObjectPos].XPos -= 0xF0000
+					PohBeeBullet[TempObjectPos].YPos += 0x1B0000
+					PohBeeBullet[TempObjectPos].XVelocity = -0x40000
+					PohBeeBullet[TempObjectPos].YVelocity =  0x40000
+					PlayStageSfx(SFX_S_SHOT,0)
+				end if
+			else
+				Object.State = POHBEE2_MOVING_LEFT
+				Object.FrameIncrease = 0
+				Object.ShootingCooldown = 30
+			end if
+			break
+			
+		case POHBEE2_SHOOTING_RIGHT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.ShootingCooldown < 46
+				Object.ShootingCooldown++
+				if Object.ShootingCooldown == 15
+					Object.FrameIncrease = 4
+				end if
+				if Object.ShootingCooldown == 32
+					CreateTempObject(TypeName[Poh Bee Bullet],0,Object.XPos,Object.YPos)
+					PohBeeBullet[TempObjectPos].Direction = FACING_LEFT
+					PohBeeBullet[TempObjectPos].XPos += 0xF0000
+					PohBeeBullet[TempObjectPos].YPos += 0x1B0000
+					PohBeeBullet[TempObjectPos].XVelocity = 0x40000
+					PohBeeBullet[TempObjectPos].YVelocity = 0x40000
+					PlayStageSfx(SFX_S_SHOT,0)
+				end if
+			else
+				Object.State = POHBEE2_MOVING_RIGHT
+				Object.FrameIncrease = 0
+				Object.ShootingCooldown = 30
+			end if
+			break
+
+		case POHBEE2_RESET
+			if Object.OutOfBounds == true
+				Object.State = POHBEE2_MOVING_LEFT
+				Object.Priority = PRIORITY_BOUNDS
+			end if
+			break
+
+		end switch
+	else
+		switch Object.State
+		case POHBEE2_MOVING_LEFT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.Timer < 256
+				Object.Timer++
+				Object.XPos -= 0x10000
+			else
+				Object.State = POHBEE2_TURN_RIGHT
+				Object.Timer = 0
+			end if
+			break
+			
+		case POHBEE2_TURN_RIGHT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.Timer < 30
+				if Object.Timer == 15
+					Object.Direction = FACING_LEFT
+				end if
+				Object.Timer++
+			else
+				Object.State = POHBEE2_MOVING_RIGHT
+			end if
+			break
+			
+
+		case POHBEE2_MOVING_RIGHT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.Timer < 512
+				Object.Timer++
+				Object.XPos += 0x10000
+			else
+				Object.State = POHBEE2_TURN_LEFT
+				Object.Timer = 0
+			end if
+			break
+
+		case POHBEE2_TURN_LEFT
+			Object.Priority = PRIORITY_ACTIVE
+			if Object.Timer < 30
+				if Object.Timer == 15
+					Object.Direction = FACING_RIGHT
+				end if
+				Object.Timer++
+			else
+				Object.State = POHBEE2_MOVING_LEFT
+			end if
+			break
+
+		case POHBEE2_RESET
+			if Object.OutOfBounds == true
+				Object.State = POHBEE2_MOVING_LEFT
+				Object.Priority = PRIORITY_BOUNDS
+			end if
+			break
+		end switch
+	end if
+
+	CallFunction(StageSetup_CheckGoodFuture)
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.Quality == GOOD_QUALITY
+		if Object.State < POHBEE2_SHOOTING_LEFT
+			if Object.ShootingCooldown == 0
+				PlayerObjectCollision(C_TOUCH, -96, -64, 96, 64)
+				if CheckResult == true
+					if Object.XPos > Player.XPos
+						Object.Direction = FACING_RIGHT
+						Object.State = POHBEE2_SHOOTING_LEFT
+					else
+						Object.Direction = FACING_LEFT
+						Object.State = POHBEE2_SHOOTING_RIGHT
+					end if
+				end if
+			end if
+		end if
+	end if
+	
+	if Object.State < POHBEE2_RESET
+		PlayerObjectCollision(C_ENEMY, -20, -16, 20, 14)
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State < POHBEE2_RESET
+		if Object.Quality == GOOD_QUALITY
+			Object.CurrentFrame++
+			Object.CurrentFrame &= 3
+
+			Object.Frame   = Object.CurrentFrame
+			Object.Frame >>= 1
+			Object.Frame  += Object.FrameIncrease
+		else
+			Object.CurrentFrame++
+			Object.CurrentFrame &= 3
+
+			Object.Frame   = Object.CurrentFrame
+			Object.Frame >>= 1
+			Object.Frame  += 2
+		end if
+		DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	// Good
+	SpriteFrame(-24, -20, 48, 32, 148, 75)	// #0 - PohBee Fly frame 0
+	SpriteFrame(-24, -16, 48, 28, 148, 108)	// #1 - PohBee Fly frame 1
+	// Bad
+	SpriteFrame(-24, -20, 48, 32, 99, 133)	// #2 - PohBee Fly frame 0
+	SpriteFrame(-24, -16, 48, 28, 148, 137)	// #3 - PohBee Fly frame 1
+	// Shooting
+	SpriteFrame(-24, -20, 48, 40, 197, 91)	// #4 - PohBee Shoot frame 0
+	SpriteFrame(-24, -16, 48, 36, 197, 132)	// #5 - PohBee Shoot frame 1
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Poh Bee]
+			Object[ArrayPos0].Type = TypeName[PohBee2]
+		end if
+		if Object[ArrayPos0].Type == TypeName[PohBee2]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	// Good
+	SpriteFrame(-24, -20, 48, 32, 148, 75)	// #0 - PohBee Fly
+	// Bad
+	SpriteFrame(-24, -20, 48, 32, 99, 133)	// #2 - PohBee Fly
+	
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad",  BAD_QUALITY)
+	AddEnumVariable("Good, Stationary",  STATIONARY)
+end sub
+
+

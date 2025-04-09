@@ -1,0 +1,323 @@
+//---------------Sonic CD R6 Boss C Setup Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.PaletteBank
+#alias Object.Value4	:	Object.LightTile
+#alias Object.Value5	:	Object.ElectricTile
+#alias Object.Value6	:	Object.BounceFloorAnim
+#alias Object.Value7	:	Object.BounceFloorTile
+#alias Object.Scale		:	Object.BounceFloorFlag
+#alias Object.Direction	:	Object.WebDirection
+
+// Player Aliases
+#alias Player.Value4	:	Player.InvincibleTimer
+
+// States
+#alias 2	:	R6C_SETUP_WEB_SHOCK	// Unused in boss stages
+
+// Web Directions
+#alias 0	:	VERTICAL_WEB
+#alias 1	:	HORIZONTAL_WEB
+#alias 2	:	DIAGONAL_WEB
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 0	:	SFX_S_BOUNCEFLOOR
+#alias 2	:	SFX_S_CATCH
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Tile Info
+#alias 8	:	TILEINFO_ANGLEB
+
+
+sub ObjectMain
+	TempValue0  = Object.LightTile
+	TempValue0 &= 1
+	if TempValue0 == 0
+		TempValue0   = Object.LightTile
+		TempValue0 >>= 1
+		TempValue0  += 808
+		Copy16x16Tile(579, TempValue0)
+	end if
+	Object.LightTile++
+	Object.LightTile %= 24
+
+	TempValue0  = Object.ElectricTile
+	TempValue0 %= 5
+	if TempValue0 == 0
+		TempValue0  = Object.ElectricTile
+		TempValue0 /= 5
+		TempValue0 += 820
+		Copy16x16Tile(580, TempValue0)
+		TempValue0 += 3
+		Copy16x16Tile(581, TempValue0)
+	end if
+	Object.ElectricTile++
+	Object.ElectricTile %= 15
+	
+	TempValue0  = Object.BounceFloorAnim
+	TempValue0 &= 1
+	if TempValue0 == 0
+		TempValue0  = Object.BounceFloorTile
+		TempValue0 += 826
+		Object.BounceFloorTile++
+		Object.BounceFloorTile %= 6
+		Copy16x16Tile(543, TempValue0)
+	end if
+	Object.BounceFloorAnim++
+	Object.BounceFloorAnim &= 511
+
+	Object.BounceFloorFlag = true
+
+	TempValue0   = Object.PaletteBank
+	TempValue0 >>= 1
+	SetActivePalette(TempValue0, 0, Screen.YSize)
+	Object.PaletteBank++
+	Object.PaletteBank %= 6
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue2   = Player.XPos
+	TempValue2 >>= 16
+	TempValue2  += Player.CollisionRight
+
+	TempValue3   = Player.YPos
+	TempValue3 >>= 16
+	TempValue3  += Player.CollisionBottom
+	TempValue3  += 2
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEB)
+
+	TempValue2   = Player.XPos
+	TempValue2 >>= 16
+	TempValue2  += Player.CollisionLeft
+	Get16x16TileInfo(TempValue1, TempValue2, TempValue3, TILEINFO_ANGLEB)
+	// Bug Details:
+	// Sonic Team updated the normal bounce floor (which is R6BounceFloor in Origins for the Past and Present)
+	// to prevent Knuckles from disabling his collisions when climbing onto the floor (they knew about this bug)
+	// However, they didn't update it here and in R6BossDSetup.
+	TempValue0 |= TempValue1
+	if TempValue0 == true
+		if Object.BounceFloorFlag == true
+			if Player.YVelocity > -1
+				Player.Animation = ANI_JUMPING
+				Player.Gravity = GRAVITY_AIR
+				Player.Timer = 0
+				Player.YVelocity = -0x160000
+
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+				PlayStageSfx(SFX_S_BOUNCEFLOOR, false)
+				
+#platform: Use_Haptics
+				HapticEffect(60, 0, 0, 0)
+#endplatform
+
+			end if
+		end if
+	end if
+
+	TempValue2 -= Player.CollisionLeft
+	TempValue3 -= Player.CollisionBottom
+	TempValue3 -= 2
+	// You will see constant checks for R6C_SETUP_WEB_SHOCK state
+	// but the code to reach that state is removed, since there are no shock webs on the boss stage
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEB)
+	switch TempValue0
+	case 2
+		if Player.InvincibleTimer == 0
+			Player.State = Player_State_GotHit
+			if Player.Direction == FACING_LEFT
+				Player.Speed = 0x20000
+			else
+				Player.Speed = -0x20000
+			end if
+		end if
+		break
+	case 5
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Player.InvincibleTimer == 0
+				Player.State = Player_State_GotHit
+				if Player.Direction == FACING_LEFT
+					Player.Speed = 0x20000
+				else
+					Player.Speed = -0x20000
+				end if
+			end if
+		end if
+		break
+	case 6
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == VERTICAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	case 7
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == HORIZONTAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	case 8
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == DIAGONAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	end switch
+	TempValue3 -= 4
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEB)
+	switch TempValue0
+	case 2
+		if Player.InvincibleTimer == 0
+			Player.State = Player_State_GotHit
+			if Player.Direction == FACING_LEFT
+				Player.Speed = 0x20000
+			else
+				Player.Speed = -0x20000
+			end if
+		end if
+		break
+	case 5
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Player.InvincibleTimer == 0
+				Player.State = Player_State_GotHit
+				if Player.Direction == FACING_LEFT
+					Player.Speed = 0x20000
+				else
+					Player.Speed = -0x20000
+				end if
+			end if
+		end if
+		break
+	case 6
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == VERTICAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	case 7
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == HORIZONTAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	case 8
+		if Object.State == R6C_SETUP_WEB_SHOCK
+			if Object.WebDirection == DIAGONAL_WEB
+				if Player.InvincibleTimer == 0
+					Player.State = Player_State_GotHit
+					if Player.Direction == FACING_LEFT
+						Player.Speed = 0x20000
+					else
+						Player.Speed = -0x20000
+					end if
+				end if
+			end if
+		end if
+		break
+	end switch
+	TempValue3 += 4
+	TempValue3 += Player.CollisionTop
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEB)
+	if TempValue0 == 3
+		TempValue4 = TempValue3
+		TempValue4 &= 15
+		if TempValue4 < 8
+			if Player.State != Player_State_HangBar
+				Player.State = Player_State_HangBar
+				Player.YVelocity = 0
+				Player.Animation = ANI_HANGING
+				TempValue3 &= 0x7FF0
+				TempValue3 += 4
+				TempValue3 -= Player.CollisionTop
+				Player.iYPos = TempValue3
+				PlayStageSfx(SFX_S_CATCH, false)
+				Screen.AdjustCameraY = 0
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	Object[19].Type = TypeName[R6 Setup]
+	Object[19].Priority = PRIORITY_ACTIVE
+	Object[19].DrawOrder = 2
+	
+	TempValue0 = 1
+	while TempValue0 < 3
+		RotatePalette(161, 163, 0)
+		CopyPalette(0, TempValue0)
+		TempValue0++
+	loop
+	RotatePalette(161, 163, 0)
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

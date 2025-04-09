@@ -1,0 +1,147 @@
+//-------------------Sonic CD Sonic Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// States
+#alias 0	:	SONIC_SETUP
+#alias 1	:	SONIC_TURNING
+
+// Control Mode
+#alias 0	:	CONTROLMODE_NORMAL
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+
+
+sub ObjectDraw
+	// Fill the screen with the blue background color
+	DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 96, 255)
+	
+	switch Object.State
+	case SONIC_SETUP
+		if Object.Alpha > 8
+			// Fade him in
+			
+			DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+		end if
+		
+		if Object.Timer < 256
+			Object.Timer += 8
+			
+			// Object.Alpha is a byte so it's prone to overflow, which is why we're doing this
+			
+			if Object.Timer < 256
+				Object.Alpha = Object.Timer
+			else
+				// Cap it at 255
+				Object.Alpha = 255
+			end if
+		else
+			if Object.Timer < 272
+				Object.Timer++
+			else
+				Object.Timer = 0
+				Object.State = SONIC_TURNING
+				
+				// Reset some stuff
+				LampPost.Check = 0
+				Player.ControlMode  = CONTROLMODE_NORMAL
+				Stage.PlayerListPos = PLAYER_SONIC_A	// PLAYER_SONIC in origins
+				
+				// Start the music!
+				PlayMusic(Options.Soundtrack)
+			end if
+		end if
+		break
+		
+	case SONIC_TURNING
+		TempValue0 = Object.Timer
+		TempValue0 >>= 2
+		DrawSprite(TempValue0)
+		
+		// Get Sonic's Arm Position
+		TempValue0 = 11
+		TempValue0 += Screen.CenterX
+		
+		// If at a point where Sonic's sprite is armless, then give him his arm back
+		if Object.Timer > 15
+			DrawSpriteScreenXY(5, TempValue0, 72)
+		end if
+		
+		Object.Timer++
+		if Object.Timer > 19
+			ResetObjectEntity(Object.EntityNo, TypeName[Logo], 0, Object.XPos, Object.YPos)
+			Object.Timer = 256
+			
+			// Place some other Title Screen elements into the scene now
+			
+			ArrayPos0 = Object.EntityNo
+			ArrayPos0 -= 2
+			
+			// First, add the Background into the scene, at Object[-2]
+			Object[ArrayPos0].Type = TypeName[Background]
+			Object[ArrayPos0].DrawOrder = 0
+			
+			// There's nothing on this layer anyway, but may as well I guess?
+			Stage[2].ActiveLayer = 9
+			
+			ArrayPos0++
+			
+			// And then add the 3d Clouds into Object[-1]
+			Object[ArrayPos0].Type = TypeName[Clouds]
+			
+#platform: Mobile
+			// Lite!
+			if Engine.TrialMode == true
+				if Engine.PlatformID == RETRO_ANDROID
+					ArrayPos0  = Object.EntityNo
+					ArrayPos0 += 2
+					ResetObjectEntity(ArrayPos0, TypeName[Lite Ribbon], 0, 0, 0)
+					Object[ArrayPos0].DrawOrder = 6
+				end if
+			end if
+#endplatform
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Set both of the Title Screen tracks here, both of them set to not loop
+	SetMusicTrack("JP/TitleScreen.ogg", 0, false)
+	SetMusicTrack("US/TitleScreen.ogg", 1, false)
+	
+	LoadSpriteSheet("Title/Title.gif")
+	
+	SpriteFrame(-47, -89, 96, 112, 1, 203)		// #0 - Sonic Turning Frame 0
+	SpriteFrame(-47, -89, 104, 120, 98, 203)	// #1 - Sonic Turning Frame 1
+	SpriteFrame(-47, -96, 96, 120, 1, 316)		// #2 - Sonic Turning Frame 2
+	SpriteFrame(-47, -96, 104, 120, 98, 324)	// #3 - Sonic Turning Frame 3
+	SpriteFrame(-47, -96, 104, 120, 1, 1)		// #4 - Sonic Base Frame
+	SpriteFrame(0, 0, 45, 55, 210, 203)			// #5 - Sonic Base Arm Frame
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-47, -96, 104, 120, 1, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

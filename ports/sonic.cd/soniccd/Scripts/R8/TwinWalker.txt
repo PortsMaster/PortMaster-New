@@ -1,0 +1,251 @@
+//----------------Sonic CD Twin Walker Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.XDrawPos
+#alias Object.Value2	:	Object.YDrawPos
+#alias Object.Value3	:	Object.XCollisionOffset
+#alias Object.Value4	:	Object.YCollisionOffset
+#alias Object.Value5	:	Object.Oscillation
+#alias Object.Value6	:	Object.XOriginPos
+#alias Object.Value7	:	Object.YOriginPos
+
+// States
+#alias 0	:	TWINWALKER_IDLE
+#alias 1	:	TWINWALKER_STEP
+#alias 2	:	TWINWALKER_RESET
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State    	= TWINWALKER_RESET
+		Object.XPos      	= Object.XOriginPos
+		Object.YPos      	= Object.YOriginPos
+		Object.XDrawPos		= Object.XOriginPos
+		Object.XDrawPos	   -= 0x400000
+		Object.YDrawPos		= Object.YOriginPos
+		Object.Oscillation  = 256
+	end if
+
+	switch Object.State
+	case TWINWALKER_IDLE
+		Cos(Object.XCollisionOffset, Object.Oscillation)
+		Object.XCollisionOffset *=  0x2000
+		Object.XCollisionOffset +=  Object.XPos
+		Object.XCollisionOffset &= 0xFFFF0000 // Truncate the value
+		Object.XCollisionOffset -=  Object.XDrawPos
+
+		Sin(Object.YCollisionOffset, Object.Oscillation)
+		Object.YCollisionOffset *=  0x2000
+		Object.YCollisionOffset +=  Object.YPos
+		Object.YCollisionOffset &= 0xFFFF0000 // Truncate the value
+		Object.YCollisionOffset -=  Object.YDrawPos
+		break
+
+	case TWINWALKER_STEP
+		Object.Oscillation += 4
+		Object.Oscillation &= 511
+		Cos(Object.XCollisionOffset, Object.Oscillation)
+		Object.XCollisionOffset *=  0x2000
+		Object.XCollisionOffset +=  Object.XPos
+		Object.XCollisionOffset &= 0xFFFF0000 // Truncate the value
+
+		Sin(Object.YCollisionOffset, Object.Oscillation)
+		Object.YCollisionOffset *=  0x2000
+		Object.YCollisionOffset +=  Object.YPos
+		Object.YCollisionOffset &= 0xFFFF0000 // Truncate the value
+
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+		Object.XPos = Object.XCollisionOffset
+		Object.YPos = Object.YCollisionOffset
+
+		ObjectTileCollision(CSIDE_FLOOR, 0, 40, 0)
+		if CheckResult == true
+			Object.XDrawPos = TempValue0
+			Object.YDrawPos = TempValue1
+			Object.XCollisionOffset = 0
+			Object.YCollisionOffset = 0
+			Object.Oscillation += 252
+			Object.Oscillation &= 511
+
+			Cos(TempValue0, Object.Oscillation)
+			TempValue0 *=  0x2000
+			TempValue0 +=  Object.XPos
+			TempValue0 &= 0xFFFF0000 // Truncate the value
+			TempValue0 -=  Object.XDrawPos
+
+			Object.XPos -= TempValue0
+			Object.State = TWINWALKER_IDLE
+		else
+			Object.XPos = TempValue0
+			Object.YPos = TempValue1
+			Object.XCollisionOffset -= Object.XDrawPos
+			Object.YCollisionOffset -= Object.YDrawPos
+		end if
+		break
+
+	case TWINWALKER_RESET
+		if Object.OutOfBounds == true
+			Object.State = TWINWALKER_IDLE
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < TWINWALKER_RESET
+		PlayerObjectCollision(C_PLATFORM, -24, -40, 24, -24)
+
+		TempValue0 = Object.XPos
+		TempValue1 = Object.YPos
+		Object.XPos = Object.XDrawPos
+		Object.YPos = Object.YDrawPos
+
+		PlayerObjectCollision(C_PLATFORM, -24, -40, 24, -24)
+		if CheckResult == true
+			Player.XPos += Object.XCollisionOffset
+			Player.YPos += Object.YCollisionOffset
+
+			TempValue2  = Object.XDrawPos
+			TempValue2 -= Object.XOriginPos
+			if TempValue2 < 0x2800000
+				if Object.State == TWINWALKER_IDLE
+					Object.State = TWINWALKER_STEP
+					Object.Priority = PRIORITY_ACTIVE
+				end if
+			end if
+		end if
+
+		Object.XPos = TempValue0
+		Object.YPos = TempValue1
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State < TWINWALKER_RESET
+		TempValue1 = 64
+		Cos(Object.XDrawPos, Object.Oscillation)
+		Object.XDrawPos  *=  TempValue1
+		Object.XDrawPos <<=  7
+		Object.XDrawPos  +=  Object.XPos
+		Object.XDrawPos  &= 0xFFFF0000 // Truncate the value
+
+		Sin(Object.YDrawPos, Object.Oscillation)
+		Object.YDrawPos  *=  TempValue1
+		Object.YDrawPos <<=  7
+		Object.YDrawPos  +=  Object.YPos
+		Object.YDrawPos  &= 0xFFFF0000 // Truncate the value
+
+		DrawSpriteXY(0, Object.XDrawPos, Object.YDrawPos)
+		DrawSpriteXY(1, Object.XDrawPos, Object.YDrawPos)
+		DrawSprite(0)
+		DrawSprite(1)
+
+		TempValue0 = 0
+		TempValue1 = 8
+		while TempValue0 < 7
+			Cos(TempValue2, Object.Oscillation)
+			TempValue2  *=  TempValue1
+			TempValue2 <<=  7
+			TempValue2  +=  Object.XPos
+			TempValue2  &= 0xFFFF0000 // Truncate the value
+
+			Sin(TempValue3, Object.Oscillation)
+			TempValue3  *=  TempValue1
+			TempValue3 <<=  7
+			TempValue3  +=  Object.YPos
+			TempValue3  &= 0xFFFF0000 // Truncate the value
+
+			DrawSpriteXY(1, TempValue2, TempValue3)
+			TempValue0++
+			TempValue1 += 8
+		loop
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-24, -40, 48, 80, 51, 1)	// #0 - Twin Walker Leg
+	SpriteFrame(-4, -4, 8, 8, 19, 67)		// #1 - Twin Walker Chain
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Twin Walker]
+			Object[ArrayPos0].XDrawPos    = Object[ArrayPos0].XPos
+			Object[ArrayPos0].XPos       += 0x400000
+			Object[ArrayPos0].YDrawPos    = Object[ArrayPos0].YPos
+			Object[ArrayPos0].Oscillation = 256
+			Object[ArrayPos0].XOriginPos  = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos  = Object[ArrayPos0].YPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue1 = 64
+	Cos(TempValue2, 256)
+	TempValue2  *=  TempValue1
+	TempValue2 <<=  7
+	TempValue2  +=  Object.XPos
+	TempValue2  &= 0xFFFF0000 // Truncate the value
+
+	Sin(TempValue3, 256)
+	TempValue3  *=  TempValue1
+	TempValue3 <<=  7
+	TempValue3  +=  Object.YPos
+	TempValue3  &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(0, TempValue2, TempValue3)
+	DrawSpriteXY(1, TempValue2, TempValue3)
+	DrawSprite(0)
+	DrawSprite(1)
+	TempValue0 = 0
+	TempValue1 = 8
+	while TempValue0 < 7
+		Cos(TempValue2, 256)
+		TempValue2  *=  TempValue1
+		TempValue2 <<=  7
+		TempValue2  +=  Object.XPos
+		TempValue2  &= 0xFFFF0000 // Truncate the value
+
+		Sin(TempValue3, 256)
+		TempValue3  *=  TempValue1
+		TempValue3 <<=  7
+		TempValue3  +=  Object.YPos
+		TempValue3  &= 0xFFFF0000 // Truncate the value
+
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		TempValue0++
+		TempValue1 += 8
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-24, -40, 48, 80, 51, 1)	// #0 - Twin Walker Leg
+	SpriteFrame(-4, -4, 8, 8, 19, 67)		// #1 - Twin Walker Chain
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

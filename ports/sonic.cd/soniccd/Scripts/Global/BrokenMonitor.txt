@@ -1,0 +1,338 @@
+//---------------Sonic CD Broken Monitor Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.PowerUpPos
+#alias Object.Value1	:	Object.Timer
+
+// Player Aliases
+#alias Player.Value0	:	Player.Rings
+#alias Player.Value3	:	Player.SpeedShoesTimer
+#alias Player.Value4	:	Player.InvincibleTimer
+#alias Player.Value5	:	Player.BlinkTimer
+
+// States
+#alias 0	:	BROKENMONITOR_SPAWN_POWERUP
+#alias 1	:	BROKENMONITOR_FADE_POWERUP
+#alias 2	:	BROKENMONITOR_BLANK
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+// Panning
+#alias 0	:	PAN_RIGHT
+#alias 1	:	PAN_LEFT
+
+// Global SFX
+#alias 10	:	SFX_G_BLUESHIELD
+#alias 20	:	SFX_G_1UP
+#alias 21	:	SFX_G_ACHIEVEMENT
+
+// Property Values
+#alias 0	:	MONITOR_BLANK
+#alias 1	:	MONITOR_RINGS
+#alias 2	:	MONITOR_SHIELD
+#alias 3	:	MONITOR_INVINCIBILITY
+#alias 4	:	MONITOR_POWER_SNEAKERS
+#alias 5	:	MONITOR_SONIC1UP
+#alias 6	:	MONITOR_TIME
+#alias 7	:	MONITOR_TAILS1UP
+#alias 8	:	MONITOR_SUPER
+
+// Origins Exclusive
+#alias 9	:	MONITOR_KNUCKLES1UP
+#alias 10	:	MONITOR_AMY1UP
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Blue Shield possesion Property Value
+#alias 1	:	ACTIVE_SHIELD
+
+sub ObjectMain
+	switch Object.State
+	case BROKENMONITOR_SPAWN_POWERUP
+		if Object.Timer < 0
+			Object.PowerUpPos += Object.Timer
+			Object.Timer	  += 0x1800
+		else
+			Object.Timer = 0
+		end if
+		
+		if Object.Timer == 0
+			Object.State	 = BROKENMONITOR_FADE_POWERUP
+			Object.InkEffect = INK_ALPHA
+			switch Object.PropertyValue
+			case MONITOR_RINGS
+				Player.Rings += 10
+				if Ring.Pan == PAN_RIGHT
+					SetSfxAttributes(1, -1, -100)
+					Ring.Pan = PAN_LEFT
+				else
+					SetSfxAttributes(2, -1, 100)
+					Ring.Pan = PAN_RIGHT
+				end if
+				
+				if Player.Rings > 999
+					Player.Rings = 999
+				end if
+				
+				if Player.Rings >= Ring.ExtraLife
+					if Options.GameMode != MODE_TIMEATTACK
+
+#platform: Use_Origins
+						if game.coinMode == false
+							Player.Lives++
+						else
+							game.callbackParam0 = 1	// Set the amount of coins to add
+							EngineCallback(NOTIFY_ADD_COIN)
+						end if
+#endplatform
+
+#platform: Use_Standalone
+						Player.Lives++
+#endplatform
+
+						if Stage.PlayerListPos == PLAYER_SONIC_A
+							PlaySfx(SFX_G_1UP, false)
+						else
+							PlaySfx(SFX_G_ACHIEVEMENT, false)
+						end if
+						
+					end if
+					
+					Ring.ExtraLife += 100
+					if Ring.ExtraLife > 300
+						Ring.ExtraLife = 1000
+					end if
+					
+					// King of the Rings Unlock Criteria
+					if Player.Rings >= 200
+						if Stage.PlayerListPos == PLAYER_SONIC_A
+							if Stage.DebugMode == false
+								SetAchievement(4, 100)
+							end if
+						end if
+					end if
+				end if
+				break
+				
+			case MONITOR_SHIELD
+				PlaySfx(SFX_G_BLUESHIELD, false)
+				Object[2].PropertyValue = ACTIVE_SHIELD
+				if Object[2].Type != TypeName[Invincibility]
+					Object[2].Type		= TypeName[Blue Shield]
+					Object[2].Priority	= PRIORITY_ACTIVE
+					Object[2].DrawOrder = 4
+					Object[2].InkEffect = INK_ALPHA
+					Object[2].Alpha		= 160
+					Object[2].XPos		= Player.XPos
+					Object[2].YPos		= Player.YPos
+				end if
+				break
+				
+			case MONITOR_INVINCIBILITY
+				Object[2].Type		= TypeName[Invincibility]
+				Object[2].Priority	= PRIORITY_ACTIVE
+				Object[2].DrawOrder = 4
+				Object[2].XPos		= Player.XPos
+				Object[2].YPos		= Player.YPos
+
+				if Options.Soundtrack == OST_JP
+					Player.InvincibleTimer = 0x4EC
+				else
+					Player.InvincibleTimer = 0x528
+				end if
+
+				Player.BlinkTimer = 0
+				Player.Visible	  = true
+				PlayMusic(2)
+				break
+				
+			case MONITOR_POWER_SNEAKERS
+				PlayMusic(3)
+				Player.Acceleration		= 0x1800
+				Player.AirAcceleration	= 0x3000
+				Player.TopSpeed			= 0xC0000
+				Player.SpeedShoesTimer	= 0x528
+				break
+				
+			case MONITOR_SONIC1UP
+#platform: Use_Origins
+			// Bug Details (kinda):
+			// For some reason, Knuckles and Amy use the Sonic monitor's switch case code, meaning 1Up.wav will play instead of Achievement.wav
+			// This doesn't matter in the context of Origins since both files point to the same sound effect in HE2's RFL parameters, but
+			// in a standalone program such as the decomps, hearing Sonic's voice while playing as another character is pretty freaky
+			case MONITOR_KNUCKLES1UP
+			case MONITOR_AMY1UP
+				if game.coinMode == false
+					Player.Lives++
+				else
+					game.callbackParam0 = 1	// Set the amount of coins to add
+					EngineCallback(NOTIFY_ADD_COIN)
+				end if
+#endplatform
+
+#platform: Use_Standalone
+				Player.Lives++
+#endplatform
+
+				PlaySfx(SFX_G_1UP, false)
+				break
+				
+			case MONITOR_TIME
+				break
+				
+			case MONITOR_TAILS1UP
+
+#platform: Use_Origins
+				if game.coinMode == false
+					Player.Lives++
+				else
+					game.callbackParam0 = 1	// Set the amount of coins to add
+					EngineCallback(NOTIFY_ADD_COIN)
+				end if
+#endplatform
+
+#platform: Use_Standalone
+				Player.Lives++
+#endplatform
+
+				PlaySfx(SFX_G_ACHIEVEMENT, false)
+				break
+				
+			case MONITOR_SUPER
+				Object[2].Type		= TypeName[Invincibility]
+				Object[2].Priority	= PRIORITY_ACTIVE
+				Object[2].DrawOrder = 4
+				Object[2].XPos		= Player.XPos
+				Object[2].YPos		= Player.YPos
+
+				Player.InvincibleTimer	= 0x528
+				Player.BlinkTimer		= 0
+				Player.Visible			= true
+				Player.Acceleration		= 0x1800
+				Player.AirAcceleration	= 0x3000
+				Player.TopSpeed			= 0xC0000
+				Player.SpeedShoesTimer	= 0x528
+				break
+				
+			end switch
+		end if
+		break
+		
+	case BROKENMONITOR_FADE_POWERUP
+		Object.Timer++
+		if Object.Timer == 30
+			Object.Timer = 0
+			Object.State = BROKENMONITOR_BLANK
+			
+			Object.PropertyValue = MONITOR_BLANK
+			Object.Priority		 = PRIORITY_BOUNDS
+		else
+			if Object.Timer > 14
+				Object.Alpha -= 16
+			end if
+		end if
+		break
+		
+	case BROKENMONITOR_BLANK
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+	
+	if Object.PropertyValue > 0
+		DrawSpriteFX(Object.PropertyValue, FX_INK, Object.XPos, Object.PowerUpPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Global/Items.gif")
+	
+	// 0 - Broken Monitor Frame
+	SpriteFrame(-16, 0, 32, 16, 51, 166)
+	
+	// 1-8 - Icons
+	SpriteFrame(-8, -8, 16, 16, 26, 7)			// #1 - Ring
+	SpriteFrame(-8, -8, 16, 16, 26, 40)			// #2 - Blue Shield
+	SpriteFrame(-8, -8, 16, 16, 26, 73)			// #3 - Invincibility
+	SpriteFrame(-8, -8, 16, 16, 26, 106)		// #4 - Power Sneakers
+
+#platform: Use_Origins
+	if game.coinMode == false
+		SpriteFrame(-8, -8, 16, 16, 26, 139)	// #5 - Sonic
+	else
+		SpriteFrame(-8, -8, 16, 16, 92, 206)	// #5 - Coins
+	end if
+#endplatform
+
+#platform: Use_Standalone
+	SpriteFrame(-8, -8, 16, 16, 26, 139)		// #5 - Sonic
+#endplatform
+
+	SpriteFrame(-8, -8, 16, 16, 26, 172)		// #6 - Time
+	
+#platform: Use_Origins
+	if game.coinMode == false
+		SpriteFrame(-8, -8, 16, 16, 59, 106)	// #7 - Tails
+	else
+		SpriteFrame(-8, -8, 16, 16, 92, 206)	// #7 - Coins
+	end if
+#endplatform
+
+#platform: Use_Standalone
+	SpriteFrame(-8, -8, 16, 16, 59, 106)		// #7 - Tails
+#endplatform
+	
+	SpriteFrame(-8, -8, 16, 16, 59, 139)		// #8 - S
+	
+#platform: Use_Origins
+	if game.coinMode == false
+		SpriteFrame(-8, -8, 16, 16, 42, 262)	// #9 - Knuckles
+	else
+		SpriteFrame(-8, -8, 16, 16, 92, 206)	// #9 - Coins
+	end if
+	if game.coinMode == false
+		SpriteFrame(-8, -8, 16, 16, 9, 262)		// #10 - Amy
+	else
+		SpriteFrame(-8, -8, 16, 16, 92, 206)	// #10 - Coins
+	end if
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, 0, 32, 16, 51, 166) // Broken Monitor
+
+	// Not to be used in-editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,268 @@
+//-----------------Sonic CD Flat Bumper Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	FLATBUMPER_MOVE_R_OR_U
+#alias 1	:	FLATBUMPER_MOVE_L_OR_D
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 4	:	PLAYER_COL_ROOF
+
+// Stage SFX
+#alias 1	:	SFX_S_BUMPER2
+
+// Property Values
+#alias 0	:	MOVE_HORIZONTALLY
+#alias 1	:	MOVE_VERTICALLY
+
+
+sub ObjectMain
+	switch Object.State
+	case FLATBUMPER_MOVE_R_OR_U
+		if Object.Timer < 96
+			Object.Timer++
+			if Object.PropertyValue == MOVE_HORIZONTALLY
+				Object.XPos += 0x10000
+			else
+				Object.YPos += 0x10000
+			end if
+		else
+			Object.State = FLATBUMPER_MOVE_L_OR_D
+		end if
+
+		break
+
+	case FLATBUMPER_MOVE_L_OR_D
+		if Object.Timer > -96
+			Object.Timer--
+			if Object.PropertyValue == MOVE_HORIZONTALLY
+				Object.XPos -= 0x10000
+			else
+				Object.YPos -= 0x10000
+			end if
+		else
+			Object.State = FLATBUMPER_MOVE_R_OR_U
+		end if
+
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = false
+	PlayerObjectCollision(C_TOUCH, -34, -16, -28, 16)	// Left
+	TempValue1 = CheckResult
+	PlayerObjectCollision(C_TOUCH, 28, -16, 34, 16)		// Right
+	TempValue2 = CheckResult
+	PlayerObjectCollision(C_BOX, -32, -14, 32, 14)		// Check if you touched the bumper
+	switch CheckResult
+	case PLAYER_COL_FLOOR
+		if Player.State == Player_State_Fly
+			Player.YVelocity = -0x40000
+		else
+			Player.YVelocity = -0x70000
+			Player.Timer = 0
+		end if
+		Player.Gravity = GRAVITY_AIR
+		TempValue0 = true
+		break
+
+	case PLAYER_COL_ROOF
+		if Player.State == Player_State_Fly
+			Player.YVelocity = 0x40000
+		else
+			Player.YVelocity = 0x70000
+			Player.Timer = 0
+		end if
+		Player.Timer = 0
+		Player.Gravity = GRAVITY_AIR
+		TempValue0 = true
+		break
+
+	end switch
+
+	if TempValue1 == true		// Check if you collided with the left side of the bumper
+		Player.Speed = -0x70000
+		Player.XVelocity = -0x70000
+		TempValue0 = true
+	end if
+	
+	if TempValue2 == true		// Check if you collided with the right side of the bumper
+		Player.Speed = 0x70000
+		Player.XVelocity = 0x70000
+		TempValue0 = true
+	end if
+
+	PlayerObjectCollision(C_TOUCH, -16, -14, 16, 0)	// Check if you collided with the center from the top
+	if CheckResult == true
+		if Player.State == Player_State_Fly
+			Player.YVelocity = -0x40000
+		else
+			Player.YVelocity = -0x70000
+			Player.Timer = 0
+		end if
+		Player.Gravity = GRAVITY_AIR
+		TempValue0 = true
+	end if
+
+	PlayerObjectCollision(C_TOUCH, -16, 0, 16, 14)	// Check if you collided with the center from the bottom
+	if CheckResult == true
+		if Player.State == Player_State_Fly
+			Player.YVelocity = 0x40000
+		else
+			Player.YVelocity = 0x70000
+			Player.Timer = 0
+		end if
+		Player.Gravity = GRAVITY_AIR
+		TempValue0 = true
+	end if
+
+	if TempValue0 == true
+		PlayStageSfx(SFX_S_BUMPER2, false)
+				
+#platform: Use_Haptics
+		HapticEffect(10, 0, 0, 0)
+#endplatform
+
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+	case TIME_PAST
+		LoadSpriteSheet("R3/Objects.gif")
+
+		SpriteFrame(-32, -16, 64, 32, 1, 75)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+
+		SpriteFrame(-32, -16, 64, 32, 132, 67)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+
+		SpriteFrame(-32, -16, 64, 32, 132, 100)
+		break
+	end switch
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	if object.PropertyValue == MOVE_HORIZONTALLY
+		TempValue0  = Object.XPos
+		TempValue0 += 0x600000
+
+		TempValue1  = Object.XPos
+		TempValue1 -= 0x600000
+
+		TempValue2  = Object.YPos
+		TempValue2 -= 0x100000
+
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue1, TempValue2, 0xC0, 32, 255, 255, 0, 255)
+			DrawArrow(Object.XPos, Object.YPos, TempValue1, Object.YPos, 255, 255, 255, 0)
+			Editor.DrawingOverlay = false
+		end if
+		
+		DrawArrow(Object.XPos, Object.YPos, TempValue0, Object.YPos, 255, 128, 0, 0)
+	else
+		TempValue0  = Object.YPos
+		TempValue0 += 0x600000
+
+		TempValue1  = Object.YPos
+		TempValue1 -= 0x600000
+
+		TempValue2  = Object.XPos
+		TempValue2 -= 0x100000
+
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue2, TempValue1, 0x32, 0xC0, 255, 255, 0, 255)
+			DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue0, 255, 255, 255, 0)
+			Editor.DrawingOverlay = false
+		end if
+		
+		DrawArrow(Object.XPos, Object.YPos, Object.XPos, TempValue1, 255, 128, 0, 0)
+	end if
+end sub
+
+
+sub RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+	switch CheckResult
+	case TIME_PRESENT
+	case TIME_PAST
+		LoadSpriteSheet("R3/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 1, 75)
+		break
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 67)
+		break
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 100)
+		break
+	end switch
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Horizontal", MOVE_HORIZONTALLY)
+	AddEnumVariable("Vertical", MOVE_VERTICALLY)
+end sub

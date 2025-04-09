@@ -1,0 +1,356 @@
+//------------------Sonic CD R3 Setup Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.DeformTimer
+#alias Object.Value2			:	Object.BumperOscillation
+#alias Object.Value3			:	Object.TurnDirection
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Periods
+#alias 1	:	TIME_PAST
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 1	:	SFX_S_BUMPER2
+#alias 6	:	SFX_S_MINIBUMPER
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Tile Info
+#alias 1	:	TILEINFO_DIRECTION
+#alias 6	:	TILEINFO_ANGLEA
+
+// Deformation Layer
+#alias 1	:	DEFORM_FG_WATER
+#alias 2	:	DEFORM_BG
+
+
+sub ObjectMain
+	if Object.TurnDirection == false
+		if Object.BumperOscillation < 0x300000
+			Object.BumperOscillation += 0x10000
+		else
+			Object.TurnDirection = true
+		end if
+	else
+		if Object.BumperOscillation > -0x300000
+			Object.BumperOscillation -= 0x10000
+		else
+			Object.TurnDirection = false
+		end if
+	end if
+
+	if HUD.CurrentTimePeriod != TIME_PAST
+		RotatingDrum_Timer++
+		RotatingDrum_Timer %= 20
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue2   = Player.XPos
+	TempValue2 >>= 16
+	
+	TempValue4  = TempValue2
+	TempValue2 -= 8
+	TempValue4 += 8
+
+	TempValue3   = Player.YPos
+	TempValue3 >>= 16
+
+	if Player.YVelocity >= 0
+		TempValue3 += Player.CollisionBottom
+		TempValue3 -= 2
+	else
+		TempValue3 += Player.CollisionTop
+		TempValue3 += 2
+	end if
+
+	TempValue5 = TempValue3
+	TempValue7 = 0
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEA)
+	switch TempValue0
+	case 1
+		TempValue7 = 1
+		break
+
+	case 3
+		TempValue7 = 3
+		Get16x16TileInfo(TempValue6, TempValue2, TempValue3, TILEINFO_DIRECTION)
+		break
+
+	case 5
+		TempValue7 = 2
+		break
+
+	end switch
+
+	// Note:
+	// So, funny story about this code segment here below, it has a bias.
+	// When you encounter the tiles using these values, like the ones in CCZ2A at x-3376 and y-1080, the right most two tiles will send the player right.
+	// While when you bounce on the left ones, the player will stay on top until they gets bounced by the tile that curves over to the left.
+
+
+	Get16x16TileInfo(TempValue0, TempValue4, TempValue5, TILEINFO_ANGLEA)
+	switch TempValue0
+	case 1
+		TempValue7 = 1
+		break
+
+	case 3
+#platform: Use_Origins
+		if Player.Animation == ANI_CLIMBING
+			// Before bouncing him away, let's make sure Knuckles is in his normal air state, first
+			CallFunction(Player_CancelClimb)
+		end if
+#endplatform
+		TempValue7 = 3
+		Get16x16TileInfo(TempValue6, TempValue4, TempValue5, TILEINFO_DIRECTION)
+		break
+
+	case 5
+		TempValue7 = 2
+		break
+
+	end switch
+
+	switch TempValue7
+	case 1
+		if Player.YVelocity >= 0
+			Player.Gravity = GRAVITY_AIR
+			PlayStageSfx(SFX_S_BUMPER2, false)
+				
+				
+#platform: Use_Haptics
+			HapticEffect(11, 0, 0, 0)
+#endplatform
+
+			if Player.State == Player_State_Fly
+				Player.YVelocity = -0x40000
+			else
+				Player.YVelocity = -0x70000
+			end if
+
+			if Player.State == Player_State_Hurt
+				
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+				Player.Timer = 0
+			end if
+		else
+			if Player.Gravity == GRAVITY_AIR
+				Player.YVelocity = 0x40000
+				PlayStageSfx(SFX_S_BUMPER2, false)
+			end if
+		end if
+		break
+
+	case 2
+		if Player.Gravity == GRAVITY_AIR
+			PlayStageSfx(SFX_S_MINIBUMPER, false)
+				
+#platform: Use_Haptics
+			HapticEffect(11, 0, 0, 0)
+#endplatform
+
+			if Player.YVelocity >= 0
+				Player.YVelocity = -0x40000
+			else
+				Player.YVelocity =  0x40000
+			end if
+		end if
+		break
+
+	case 3
+		if Player.Gravity == GRAVITY_AIR
+			PlayStageSfx(SFX_S_BUMPER2, false)
+				
+#platform: Use_Haptics
+			HapticEffect(11, 0, 0, 0)
+#endplatform
+
+			if Player.YVelocity >= 0
+				if Player.State == Player_State_Fly
+					Player.YVelocity = -0x40000
+				else
+					Player.YVelocity = -0x70000
+				end if
+			else
+				Player.YVelocity = 0x40000
+			end if
+
+			if TempValue6 == 0
+				if Player.XVelocity > 0
+					FlipSign(Player.XVelocity)
+					Player.XVelocity  *= 5
+					Player.XVelocity >>= 2
+					if Player.XVelocity > -0x20000
+						Player.XVelocity = -0x20000
+					end if
+				else
+					if Player.XVelocity > -0x20000
+						Player.XVelocity = -0x20000
+					end if
+				end if
+			else
+				if Player.XVelocity < 0
+					FlipSign(Player.XVelocity)
+					Player.XVelocity  *= 5
+					Player.XVelocity >>= 2
+					if Player.XVelocity < 0x20000
+						Player.XVelocity = 0x20000
+					end if
+				else
+					if Player.XVelocity < 0x20000
+						Player.XVelocity = 0x20000
+					end if
+				end if
+			end if
+			Player.Speed = Player.XVelocity
+		end if
+		break
+	end switch
+
+	TempValue3   = Player.YPos
+	TempValue3 >>= 16
+
+	TempValue5   = TempValue3
+	TempValue3  -= 6
+	TempValue5  += 6
+
+	TempValue2   = Player.XPos
+	TempValue2 >>= 16
+
+	if Player.XVelocity > 0
+		TempValue2 += 8
+	else
+		TempValue2 -= 8
+	end if
+
+	TempValue4 = TempValue2
+	TempValue7 = 0
+	Get16x16TileInfo(TempValue0, TempValue2, TempValue3, TILEINFO_ANGLEA)
+	switch TempValue0
+	case 3
+		TempValue7 = 1
+		break
+
+	case 5
+		TempValue7 = 2
+		break
+
+	case 7
+		TempValue7 = 1
+		break
+
+	end switch
+
+	Get16x16TileInfo(TempValue0, TempValue4, TempValue5, TILEINFO_ANGLEA)
+	switch TempValue0
+	case 3
+		TempValue7 = 1
+		break
+
+	case 5
+		TempValue7 = 2
+		break
+
+	case 7
+		TempValue7 = 1
+		break
+
+	end switch
+
+	switch TempValue7
+	case 1
+#platform: Use_Origins
+		if Player.Animation == ANI_CLIMBING
+			// Before bouncing him away, let's make sure Knuckles is in his normal air state, first
+			CallFunction(Player_CancelClimb)
+		end if
+#endplatform
+		if Player.XVelocity > 0
+			Player.XVelocity = -0x50000
+		else
+			Player.XVelocity = 0x50000
+		end if
+		Player.Speed = Player.XVelocity
+#platform: Use_Origins
+		Player.Timer = 0
+#endplatform
+		PlayStageSfx(SFX_S_BUMPER2, false)
+		break
+
+	case 2
+		if Player.XVelocity > 0
+			Player.XVelocity = -0x40000
+		else
+			Player.XVelocity = 0x40000
+		end if
+		Player.Speed = Player.XVelocity
+		PlayStageSfx(SFX_S_MINIBUMPER, false)
+				
+#platform: Use_Haptics
+		HapticEffect(11, 0, 0, 0)
+#endplatform
+		break
+
+	end switch
+end sub
+
+
+sub ObjectDraw
+	Object.DeformTimer++
+	if Object.DeformTimer > 3
+		TileLayer[0].DeformationOffsetW++
+		TileLayer[1].DeformationOffset++
+		Object.DeformTimer = 0
+	end if
+end sub
+
+
+sub ObjectStartup
+	Object[29].Type = TypeName[R3 Setup]
+	Object[29].Priority = PRIORITY_ACTIVE
+	Object[29].DrawOrder = 0
+
+	SetLayerDeformation(DEFORM_BG, 128, 6, 0, 0, 0)
+	SetLayerDeformation(DEFORM_FG_WATER, 64, 4, 0, 0, 0)
+
+	Stage.WaterLevel = 1472
+
+	if HUD.CurrentTimePeriod == TIME_PAST
+		RotatingDrum_Timer = 1
+	else
+		RotatingDrum_Timer = 0
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

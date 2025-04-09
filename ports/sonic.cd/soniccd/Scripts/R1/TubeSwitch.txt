@@ -1,0 +1,234 @@
+//----------------Sonic CD Tube Switch Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.OnObject
+#alias Object.Value1	:	Object.LaunchSpeed
+#alias Object.Value2	:	Object.LedgeStop
+
+// Player Aliases
+#alias Player.Value6	:	Player.MinRollSpeed
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+#alias 1	:	GRAVITY_AIR
+
+// Collision Modes
+#alias 0	:	CMODE_FLOOR
+#alias 1	:	CMODE_LWALL
+#alias 2	:	CMODE_ROOF
+#alias 3	:	CMODE_RWALL
+
+// Global SFX
+#alias 7	:	SFX_G_RELEASE
+
+// Property Values
+#alias 0	:	HORIZONTAL_TUBE
+#alias 1	:	VERTICAL_TUBE
+#alias 2	:	BOOST_ANGLE_TUBE
+#alias 3	:	BOOST_VERTICAL_TUBE
+#alias 4	:	HORIZONTAL_EXIT_TUBE
+#alias 5	:	VERTICAL_EXIT_TUBE
+#alias 6	:	SPEED_LIMITED_TUBE
+#alias 7	:	EXIT_ANGLE_TUBE
+#alias 8	:	EXIT_BOOST_TUBE
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+#platform: Use_Origins
+	if CheckResult == true
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			if Player.State == Player_State_LedgePullUp
+				CheckResult   = false
+				Object.LedgeStop = true
+			end if
+		end if
+	end if
+#endplatform
+	if CheckResult == true
+		switch Object.PropertyValue
+		case HORIZONTAL_TUBE
+#platform: Use_Origins
+			if Object.LedgeStop == true
+				Player.Speed  = 1
+				Object.LedgeStop = false
+			end if
+#endplatform
+			if Player.Speed > 0
+				if Player.State != Player_State_TubeRoll
+					PlaySfx(SFX_G_RELEASE, false)
+				end if
+
+				Player.Direction = FACING_RIGHT
+				Player.State	 = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+
+				Player.MinRollSpeed = 0xA0000
+
+				if Player.Speed < 0xA0000
+					Player.Speed = 0xA0000
+				end if
+			else
+				if Player.Gravity == GRAVITY_GROUND
+
+					if Player.Speed > -0x20000
+						Player.Speed = -0x20000
+					end if
+
+				end if
+				Player.State = Player_State_Roll
+				Player.Animation = ANI_JUMPING
+			end if
+			break
+
+		case VERTICAL_TUBE
+			if Player.State != Player_State_TubeRoll
+				PlaySfx(SFX_G_RELEASE, false)
+			end if
+			Player.Gravity	 = GRAVITY_GROUND
+			Player.State	 = Player_State_TubeRoll
+			Player.Animation = ANI_JUMPING
+			Player.CollisionMode = CMODE_RWALL
+			Player.Angle = 64
+			Player.Speed = 0x100000
+			Player.MinRollSpeed = 0x100000
+			break
+
+		case BOOST_ANGLE_TUBE
+			if Object.OnObject == false
+			
+				if Player.CollisionMode == CMODE_FLOOR
+					Player.CollisionMode = CMODE_ROOF
+					FlipSign(Player.Speed)
+					Player.Angle = 128
+				else
+					Player.CollisionMode = CMODE_FLOOR
+					FlipSign(Player.Speed)
+					Player.Angle = 0
+					Player.YPos += 0x40000
+				end if
+
+				Player.State = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+
+			end if
+			break
+
+		case BOOST_VERTICAL_TUBE
+			if Player.YVelocity < 0
+
+				Player.Gravity	 = GRAVITY_GROUND
+				Player.State	 = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.CollisionMode = CMODE_LWALL
+				Player.Angle = 192
+				Player.MinRollSpeed = 0xA0000
+				Player.Speed = Player.YVelocity
+				FlipSign(Player.Speed)
+
+			end if
+			break
+
+		case HORIZONTAL_EXIT_TUBE
+			if Player.Speed < 0
+				if Player.State != Player_State_TubeRoll
+					PlaySfx(SFX_G_RELEASE, false)
+				end if
+
+				Player.State	 = Player_State_TubeRoll
+				Player.Animation = ANI_JUMPING
+				Player.MinRollSpeed = 0xA0000
+			else
+				Player.State	 = Player_State_Roll
+				Player.Animation = ANI_JUMPING
+			end if
+			break
+
+		case VERTICAL_EXIT_TUBE
+			if Player.Gravity == GRAVITY_AIR
+				Player.XVelocity = Object.LaunchSpeed
+				Player.Speed	 = Object.LaunchSpeed
+			else
+				if Player.CollisionMode == CMODE_LWALL
+					Player.Angle = 196
+					Cos256(TempValue0, Player.Angle)
+					TempValue0  *= Player.Speed
+					TempValue0 >>= 8
+					if TempValue0 != 0
+						Object.LaunchSpeed = TempValue0
+					end if
+				end if
+			end if
+			break
+
+		case SPEED_LIMITED_TUBE
+			if Player.State == Player_State_TubeRoll
+
+				if Player.YVelocity < -0x60000
+					Player.YVelocity = -0x60000
+				end if
+
+			else
+				Player.Animation = ANI_JUMPING
+			end if
+			break
+
+		case EXIT_ANGLE_TUBE
+			if Player.State == Player_State_TubeRoll
+				Object.PropertyValue = EXIT_BOOST_TUBE
+			end if
+			break
+
+		case EXIT_BOOST_TUBE
+			if Player.Gravity == GRAVITY_AIR
+				Player.YVelocity = -0xA8000
+				Object.PropertyValue = EXIT_ANGLE_TUBE
+			end if
+			break
+
+		end switch
+		
+		Object.OnObject = true
+
+#platform: Use_Origins
+		if Player.State == Player_State_Climb
+			Player.Animation = ANI_CLIMBING
+		end if
+#endplatform
+	else
+		Object.OnObject = false
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0  = Object.XPos
+	TempValue0 -= 0x80000
+	TempValue1  = Object.YPos
+	TempValue1 -= 0x80000
+
+	DrawSpriteXY(0, TempValue0, TempValue1)
+
+	TempValue0 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+
+	TempValue1 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+
+	TempValue0 -= 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67)		// #0 - "T" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

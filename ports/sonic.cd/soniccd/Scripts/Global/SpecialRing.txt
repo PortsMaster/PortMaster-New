@@ -1,0 +1,346 @@
+//---------------Sonic CD Special Ring Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Player.Value0	:	Player.Rings
+
+// Decomp usage only, to check which behaviour of the special ring animation should be used for 2011 data files
+#alias Object.Value7	:	Object.CheckVersion
+
+// States
+#alias 0	:	SPECIALRING_IDLE
+#alias 1	:	SPECIALRING_BLANK
+
+// Game Mode Aliases
+#alias 1	:	MODE_SAVEGAME
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+
+// Global SFX
+#alias 18	:	SFX_G_SPECIALRING
+#alias 24	:	SFX_G_FLYING
+#alias 25	:	SFX_G_TIRED
+
+// Decomp Usage alias
+#alias 0	:	UPDATED_VERSION
+#alias 1	:	OLD_VERSION
+
+#alias 2	:	TEXTINFO_ROWCOUNT // Menu Alias
+
+
+sub ObjectMain
+	if Object.State == SPECIALRING_IDLE
+		if Player.Rings > 49
+			PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+			if CheckResult == true
+				Object[0].Type = TypeName[Blank Object]
+				Object[1].Type = TypeName[Blank Object]
+
+				Player.ControlMode = CONTROLMODE_NONE
+
+				Player.Direction = FACING_RIGHT
+
+				ResetObjectEntity(2, TypeName[Blank Object], 0, 0, 0)
+
+				Object.DrawOrder = 4
+
+				Object.State = SPECIALRING_BLANK
+
+#platform: Use_Origins
+				Object.Frame = 32
+#endplatform
+
+#platform: Use_Standalone
+				// reduce the frame amount for steam datafiles
+				if Object.CheckVersion != UPDATED_VERSION
+					Object.Frame = 16
+				else
+					Object.Frame = 32
+				end if
+#endplatform
+
+				StopSFX(SFX_G_FLYING)
+				StopSFX(SFX_G_TIRED)
+				PlaySfx(SFX_G_SPECIALRING, false)
+				Player.Left  = false
+				Player.Right = false
+				
+#platform: Use_Haptics
+				HapticEffect(40, 0, 0, 0)
+#endplatform
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case SPECIALRING_IDLE
+
+		if Player.Rings > 49
+			TempValue0 = Object.Frame
+
+#platform: Use_Standalone	// 2011 Scripts
+			if Object.CheckVersion != UPDATED_VERSION
+				// Old Steam Animation
+				TempValue0 >>= 3
+				DrawSprite(TempValue0)
+			else
+				// Updated animation
+				TempValue0 >>= 2
+				if TempValue0 > 3
+					Object.Direction = FACING_LEFT
+				else
+					Object.Direction = FACING_RIGHT
+				end if
+				DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+			end if
+
+#endplatform
+
+#platform: Use_Origins	// Origins animation, Same as 2011 mobile
+			TempValue0   = Object.Frame
+			TempValue0 >>= 2
+
+			if TempValue0 > 3
+				Object.Direction = FACING_LEFT
+			else
+				Object.Direction = FACING_RIGHT
+			end if
+
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+#endplatform
+
+			Object.Frame++
+			if Object.Frame > 31
+				Object.Frame = 0
+			end if
+		end if
+		break
+
+	case SPECIALRING_BLANK
+		TempValue0   = Object.Frame
+		TempValue0 >>= 2
+
+#platform: Use_Standalone	// 2011 Scripts
+		if Object.CheckVersion != UPDATED_VERSION
+			// Old Steam vanish animation
+			TempValue0   = Object.Frame
+			TempValue0 >>= 2
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+			Object.Frame++
+			if Object.Frame > 31
+				Object.Direction = FACING_LEFT
+			end if
+			if Object.Frame > 47
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		else
+			// Updated vanish animation
+			if TempValue0 > 11
+				Object.Direction = FACING_LEFT
+			else
+				Object.Direction = FACING_RIGHT
+			end if
+
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+			CheckEqual(TempValue0, 11)
+			if CheckResult == true
+				Object.Direction = FACING_LEFT
+					DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+			else
+				if TempValue0 == 15
+					Object.Direction = FACING_LEFT
+					DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+				end if
+			end if
+
+			Object.Frame++
+			if Object.Frame > 63
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+#endplatform
+
+#platform: Use_Origins	// Origins animation, Same as 2011 mobile
+		if TempValue0 > 11
+			Object.Direction = FACING_LEFT
+		else
+			Object.Direction = FACING_RIGHT
+		end if
+
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		if TempValue0 == 11
+			Object.Direction = FACING_LEFT
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			if TempValue0 == 15
+				Object.Direction = FACING_LEFT
+				DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+			end if
+		end if
+
+		Object.Frame++
+		if Object.Frame > 63
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+		end if
+#endplatform
+		break
+	endswitch
+end sub
+
+
+sub ObjectStartup
+	if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+		LoadSpriteSheet("Global/Items2.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		LoadSpriteSheet("Global/Items2_t.gif")
+	end if
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("Global/Items2_k.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("Global/Items2_a.gif")
+	end if
+	// Special Ring Frames
+	SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+	SpriteFrame(-28, -32, 56, 64, 199, 131)	// #1  - Special Ring Frame 1
+	SpriteFrame(-24, -32, 48, 64, 148, 1)	// #2  - Special Ring Frame 2
+	SpriteFrame(-16, -32, 32, 64, 223, 66)	// #3  - Special Ring Frame 3
+	SpriteFrame(-12, -32, 24, 64, 197, 1)	// #4  - Special Ring Frame 4
+	SpriteFrame(-16, -32, 32, 64, 223, 66)	// #5  - Special Ring Frame 5
+	SpriteFrame(-24, -32, 48, 64, 148, 1)	// #6  - Special Ring Frame 6
+	SpriteFrame(-28, -32, 56, 64, 199, 131)	// #7  - Special Ring Frame 7
+	
+	// Vanishing Frames
+	SpriteFrame(0, -32, 32, 64, 222, 1)		// #8  - Ring Vanishing Frame 0
+	SpriteFrame(-16, -32, 48, 64, 101, 66)	// #9  - Ring Vanishing Frame 1
+	SpriteFrame(-24, -32, 56, 64, 150, 66)	// #10 - Ring Vanishing Frame 2
+	SpriteFrame(0, -32, 32, 64, 156, 131)	// #11 - Ring Vanishing Frame 3
+	SpriteFrame(-24, -32, 56, 64, 150, 66)	// #12 - Ring Vanishing Frame 4
+	SpriteFrame(-16, -32, 48, 64, 101, 66)	// #13 - Ring Vanishing Frame 5
+	SpriteFrame(0, -32, 32, 64, 222, 1)		// #14 - Ring Vanishing Frame 6
+	SpriteFrame(-32, -32, 32, 64, 124, 131)	// #15 - Ring Vanishing Frame 7
+#endplatform
+	
+#platform: Use_Decomp
+	// Custom decomp check of versions
+	// Checks the amount of rows Credits_Console has, a file that doesn't exist on mobile data files.
+	// if it's equal or less than 1 (depending of platform), means there's no such file in the game, therefore we're using a mobile data file, and the updated animation is needed
+	// otherwise, it means we are playing with a Steam/Blit datafile, and as such we need to use the old animation
+	SetupMenu(MENU_1, 0, 0, 0)
+	LoadTextFile(MENU_1, "Data/Game/Credits_Console.txt", false)
+	GetTextInfo(CheckResult, MENU_1, TEXTINFO_ROWCOUNT, 0, 0)
+	if CheckResult > 1
+		ArrayPos0 = 32
+		while ArrayPos0 < 1056
+			if Object[ArrayPos0].Type == TypeName[Special Ring]
+				Object[ArrayPos0].CheckVersion = OLD_VERSION
+			end if
+			ArrayPos0++
+		loop
+	end if
+#endplatform
+
+#platform: Use_Standalone
+	if CheckResult > 1
+		// Special Ring Frames (Blit)
+		SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+		SpriteFrame(-24, -32, 48, 64, 148, 1)	// #1  - Special Ring Frame 1
+		SpriteFrame(-12, -32, 24, 64, 197, 1)	// #2  - Special Ring Frame 2
+		SpriteFrame(-24, -32, 48, 64, 101, 66)	// #3  - Special Ring Frame 3
+		
+		// Vanishing Frames
+		SpriteFrame(0, -32, 32, 64, 222, 1)		// #4  - Ring Vanishing Frame 0
+		SpriteFrame(-16, -32, 48, 64, 150, 66)	// #5  - Ring Vanishing Frame 1
+		SpriteFrame(-24, -32, 56, 64, 199, 66)	// #6  - Ring Vanishing Frame 2
+		SpriteFrame(-32, -32, 64, 64, 191, 131)	// #7  - Ring Vanishing Frame 3
+		SpriteFrame(-24, -32, 56, 64, 199, 66)	// #8  - Ring Vanishing Frame 4
+		SpriteFrame(-16, -32, 48, 64, 150, 66)	// #9  - Ring Vanishing Frame 5
+		SpriteFrame(0, -32, 32, 64, 222, 1)		// #10 - Ring Vanishing Frame 6
+		SpriteFrame(-32, -32, 64, 64, 126, 131)	// #11 - Ring Vanishing Frame 7
+	else
+		// Special Ring Frames (Mobile)
+		SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+		SpriteFrame(-28, -32, 56, 64, 199, 131)	// #1  - Special Ring Frame 1
+		SpriteFrame(-24, -32, 48, 64, 148, 1)	// #2  - Special Ring Frame 2
+		SpriteFrame(-16, -32, 32, 64, 223, 66)	// #3  - Special Ring Frame 3
+		SpriteFrame(-12, -32, 24, 64, 197, 1)	// #4  - Special Ring Frame 4
+		SpriteFrame(-16, -32, 32, 64, 223, 66)	// #5  - Special Ring Frame 5
+		SpriteFrame(-24, -32, 48, 64, 148, 1)	// #6  - Special Ring Frame 6
+		SpriteFrame(-28, -32, 56, 64, 199, 131)	// #7  - Special Ring Frame 7
+		
+		// Vanishing Frames
+		SpriteFrame(0, -32, 32, 64, 222, 1)		// #8  - Ring Vanishing Frame 0
+		SpriteFrame(-16, -32, 48, 64, 101, 66)	// #9  - Ring Vanishing Frame 1
+		SpriteFrame(-24, -32, 56, 64, 150, 66)	// #10 - Ring Vanishing Frame 2
+		SpriteFrame(0, -32, 32, 64, 156, 131)	// #11 - Ring Vanishing Frame 3
+		SpriteFrame(-24, -32, 56, 64, 150, 66)	// #12 - Ring Vanishing Frame 4
+		SpriteFrame(-16, -32, 48, 64, 101, 66)	// #13 - Ring Vanishing Frame 5
+		SpriteFrame(0, -32, 32, 64, 222, 1)		// #14 - Ring Vanishing Frame 6
+		SpriteFrame(-32, -32, 32, 64, 124, 131)	// #15 - Ring Vanishing Frame 7
+	end if
+#endplatform
+	
+	// If all Time Stones are collected, we don't need any Special Stages anymore
+	if SpecialStage.TimeStones >= 0x7F
+		ArrayPos0 = 32
+		while ArrayPos0 < 1056
+			if Object[ArrayPos0].Type == TypeName[Special Ring]
+				ResetObjectEntity(ArrayPos0, TypeName[Blank Object], 0, 0, 0)
+			end if
+			ArrayPos0++
+		loop
+	end if
+	
+	// In Time Attack, we shouldn't enter any Special Stages
+	if Options.GameMode > MODE_SAVEGAME
+		ArrayPos0 = 32
+		while ArrayPos0 < 1056
+			if Object[ArrayPos0].Type == TypeName[Special Ring]
+				ResetObjectEntity(ArrayPos0, TypeName[BlankObject], 0, 0, 0)
+			end if
+			ArrayPos0++
+		loop
+	end if
+	
+	// That 'Lite!' on the banner wasn't joking, better remove all Special Rings!
+	if Engine.TrialMode == true
+		ArrayPos0 = 32
+		while ArrayPos0 < 1056
+			if Object[ArrayPos0].Type == TypeName[Special Ring]
+				ResetObjectEntity(ArrayPos0, TypeName[BlankObject], 0, 0, 0)
+			end if
+			ArrayPos0++
+		loop
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

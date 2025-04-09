@@ -1,0 +1,650 @@
+//----------------Sonic CD Eggman Mobile Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.TargetYPos
+#alias Object.Value2		:	Object.YVelocity
+#alias Object.Value3		:	Object.ThrusterAnimation
+#alias Object.Value4		:	Object.FrameTimer
+#alias Object.Value5		:	Object.SpikesAnimation
+#alias Object.Value6		:	Object.EggmanAnimation
+#alias Object.Value7		:	Object.FaceFrame	// Indirectly atleast
+#alias Object.PropertyValue	:	Object.FaceTimer
+#alias Object.Scale			:	Object.TriggerElecArc
+
+// FloorControl aliases
+#alias Object[+1].State		:	FloorControl.State
+#alias Object[+1].Value0	:	FloorControl.Timer
+#alias Object[+1].Type		:	FloorControl.Type
+
+// Boss Barrier 2 alias
+#alias Object[-1].State		:	BossBarrier2.State
+
+// Fade Screen aliases
+#alias Object.Value1		:	FadeScreen.EggMobileEntityNo
+
+// Steam Cloud aliases
+#alias Object.YPos			:	SteamCloud.YPos
+#alias Object.Value1		:	SteamCloud.XVelocity
+#alias Object.Value2		:	SteamCloud.YVelocity
+
+// States
+#alias 0	:	R6_EGG_IDLE
+#alias 1	:	R6_EGG_START
+#alias 2	:	R6_EGG_INTRO
+#alias 3	:	R6_EGG_SET_ROUTE_1
+#alias 4	:	R6_EGG_ASCEND_1
+#alias 5	:	R6_EGG_SET_ROUTE_2
+#alias 6	:	R6_EGG_ASCEND_2
+#alias 7	:	R6_EGG_SET_ROUTE_3
+#alias 8	:	R6_EGG_ASCEND_3
+#alias 9	:	R6_EGG_ROOF_DRILL
+#alias 10	:	R6_EGG_DESTROYED
+#alias 11	:	R6_EGG_PANICKING
+#alias 12	:	R6_EGG_ESCAPE
+
+// FloorControl States
+#alias 0	:	FLOORCONTROL_INACTIVE
+#alias 1	:	FLOORCONTROL_SETUP_CRUMBLE
+#alias 3	:	FLOORCONTROL_ELEC_ARC
+#alias 4	:	FLOORCONTROL_TILE_SWAP
+
+// Boss Barrier States
+#alias 2	:	BOSSBARRIER2_OPEN
+
+// Eggman Animations
+#alias 0	:	EGGANI_IDLE
+#alias 1	:	EGGANI_HURT
+#alias 2	:	EGGANI_DEFEAT
+#alias 3	:	EGGANI_PANIC
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Stage SFX
+#alias 10	:	SFX_S_BUZZSAW
+#alias 11	:	SFX_S_BOSSHIT
+
+// Function declarations
+#function R6_EGG_DESCEND
+#function R6_EGG_MOVE
+#function R6_EGG_ROUTE_1ST_FLOOR
+#function R6_EGG_ROUTE_2ST_FLOOR
+#function R6_EGG_STEAM
+
+
+function R6_EGG_DESCEND
+	Object.YPos		 += Object.YVelocity
+	Object.YVelocity -= 256
+	if Object.YPos >= Object.TargetYPos
+		Object.YPos = Object.TargetYPos
+		Object.YVelocity = 0
+
+		Object.ThrusterAnimation = 0
+		Object.FrameTimer = 0
+
+		Object.State++
+	end if
+end function
+
+
+function R6_EGG_MOVE
+	Object.YPos		 += Object.YVelocity
+	Object.YVelocity -= 0x1000
+	if Object.YPos <= Object.TargetYPos
+		Object.YPos		 = Object.TargetYPos
+		Object.YVelocity = 0
+
+		Object.ThrusterAnimation = 0
+		Object.FrameTimer 		 = 0
+		Object.SpikesAnimation	 = 0
+
+		Object.AnimationTimer = 0
+		Object.AnimationSpeed = 0
+
+		Object.State++
+	end if
+end function
+
+
+function R6_EGG_ROUTE_1ST_FLOOR
+	TempValue0  = Object.YPos
+	TempValue0 += 0x780000
+
+	if Player.YPos < TempValue0
+		if FloorControl.State < FLOORCONTROL_TILE_SWAP
+			FloorControl.State = FLOORCONTROL_INACTIVE
+			FloorControl.Timer = 0
+			if Object.FaceTimer > 0
+				Object.Timer = 1200
+			end if
+		else
+			if FloorControl.Timer > 270
+				FloorControl.State = FLOORCONTROL_INACTIVE
+				FloorControl.Timer = 0
+			else
+				Object.Timer &= 511
+			end if
+		end if
+
+		if Object.Timer < 1200
+			if Object.Timer == 0
+				Object.SpikesAnimation = 1
+				PlayStageSfx(SFX_S_BUZZSAW, false)
+			end if
+
+			Object.Timer += 4
+			TempValue0  = Object.Timer
+			TempValue0 &= 511
+			Sin(Object.YPos, TempValue0)
+			Object.YPos <<= 9
+			Object.YPos  += Object.TargetYPos
+		else
+			Object.Timer	 = 0
+			Object.YVelocity = -0x10000
+			
+			Object.ThrusterAnimation = 1
+			Object.FrameTimer		 = 0
+
+			FloorControl.State = FLOORCONTROL_SETUP_CRUMBLE
+			Object.State++
+		end if
+	end if
+end function
+
+
+function R6_EGG_ROUTE_2ST_FLOOR
+	TempValue0  = Object.YPos
+	TempValue0 += 0x780000
+
+	if Player.YPos < TempValue0
+		Object.TriggerElecArc = true
+		if FloorControl.State < FLOORCONTROL_TILE_SWAP
+			FloorControl.State = FLOORCONTROL_INACTIVE
+			FloorControl.Timer = 0
+			if Object.FaceTimer > 0
+				Object.Timer = 1200
+			end if
+		else
+			if FloorControl.Timer > 270
+				FloorControl.State = FLOORCONTROL_INACTIVE
+				FloorControl.Timer = 0
+			else
+				Object.Timer &= 511
+			end if
+		end if
+
+		if Object.Timer < 1200
+			if Object.Timer == 0
+				Object.SpikesAnimation = 1
+				PlayStageSfx(SFX_S_BUZZSAW, false)
+			end if
+
+			Object.Timer += 4
+			TempValue0  = Object.Timer
+			TempValue0 &= 511
+			Sin(Object.YPos, TempValue0)
+			Object.YPos <<= 9
+			Object.YPos  += Object.TargetYPos
+		else
+			Object.Timer	 = 0
+			Object.YVelocity = -0x10000
+
+			Object.ThrusterAnimation = 1
+			Object.FrameTimer		 = 0
+
+			FloorControl.State = FLOORCONTROL_SETUP_CRUMBLE
+
+			Object.TriggerElecArc = false
+			Object.State++
+		end if
+	else
+
+		if Object.OutOfBounds == true
+			Object.SpikesAnimation = 0
+			Object.AnimationTimer  = 0
+			Object.AnimationSpeed  = 0
+		end if
+
+		if FloorControl.State < FLOORCONTROL_ELEC_ARC
+			if Object.TriggerElecArc == true
+				FloorControl.State = FLOORCONTROL_ELEC_ARC
+				FloorControl.Timer = 0
+			end if
+		end if
+	end if
+end function
+
+
+function R6_EGG_STEAM
+	if Object.AnimationTimer == 0
+		PlaySfx(SFX_G_EXPLOSION, false)
+	end if
+	
+	if Object.AnimationTimer < 12
+		CreateTempObject(TypeName[Steam Cloud], 0, Object.XPos, Object.YPos)
+
+		SteamCloud[TempObjectPos].YPos -= 0x480000
+
+		Rand(SteamCloud[TempObjectPos].XVelocity, 0x200)
+		SteamCloud[TempObjectPos].XVelocity  -= 0x100
+		SteamCloud[TempObjectPos].XVelocity <<= 10
+
+		Rand(SteamCloud[TempObjectPos].YVelocity, 0x100)
+		SteamCloud[TempObjectPos].YVelocity  *= -0x400
+	end if
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case R6_EGG_IDLE
+		if Player.XPos > Object.XPos
+			Object.State++
+			Object.TriggerElecArc = false
+		end if
+		break
+
+	case R6_EGG_START
+		Object.Timer++
+		if Object.Timer == 120
+			Object.Timer = 0
+
+			Object.YVelocity  = 0x30000
+			Object.TargetYPos = 0x6200000
+
+			Object.ThrusterAnimation = 1
+			Object.FrameTimer		 = 0
+
+			Object.State++
+		end if
+		break
+
+	case R6_EGG_INTRO
+		CallFunction(R6_EGG_DESCEND)
+		break
+
+	case R6_EGG_SET_ROUTE_1
+		CallFunction(R6_EGG_ROUTE_1ST_FLOOR)
+		if Object.State > R6_EGG_SET_ROUTE_1
+			Object.TargetYPos = 0x4280000
+		end if
+		break
+
+	case R6_EGG_ASCEND_1
+		CallFunction(R6_EGG_MOVE)
+		break
+
+	case R6_EGG_SET_ROUTE_2
+		CallFunction(R6_EGG_ROUTE_2ST_FLOOR)
+		if Object.State > R6_EGG_SET_ROUTE_2
+			Object.TargetYPos = 0x2280000
+		end if
+		break
+
+	case R6_EGG_ASCEND_2
+		CallFunction(R6_EGG_MOVE)
+		break
+
+	case R6_EGG_SET_ROUTE_3
+		CallFunction(R6_EGG_ROUTE_2ST_FLOOR)
+		if Object.State > R6_EGG_SET_ROUTE_3
+			Object.TargetYPos = 0x1300000
+		end if
+		break
+
+	case R6_EGG_ASCEND_3
+		CallFunction(R6_EGG_MOVE)
+		break
+
+	case R6_EGG_ROOF_DRILL
+		if Object.Timer == 0
+			Object.XPos += 0x20000
+		else
+			Object.XPos -= 0x20000
+		end if
+		Object.Timer++
+		Object.Timer &= 1
+		break
+
+	case R6_EGG_DESTROYED
+		Object.YPos		 += Object.YVelocity
+		Object.YVelocity += 0x1000
+
+		Player.Speed = 0
+
+		if Object.Timer == 0
+			Object.XPos += 0x20000
+		else
+			Object.XPos -= 0x20000
+		end if
+		Object.Timer++
+		Object.Timer &= 1
+
+		if Object.YPos >= 0x2A00000
+			Object.YPos 	 = 0x2A00000
+			Object.Timer	 = 0
+			Object.YVelocity = 0
+
+			Object.EggmanAnimation = EGGANI_PANIC
+
+			SetTileLayerEntry(500, 0, 20, 5)
+			SetTileLayerEntry(501, 0, 21, 5)
+			SetTileLayerEntry(506, 0, 22, 5)
+
+			Object.State++
+		end if
+
+		if Player.XPos > Object.TargetYPos
+			Player.XPos  = Object.TargetYPos
+			Player.XPos += 0x500000
+		else
+			Player.XPos  = Object.TargetYPos
+			Player.XPos -= 0x500000
+		end if
+
+		CallFunction(R6_EGG_STEAM)
+		break
+
+	case R6_EGG_PANICKING
+		Player.Speed = 0
+		if Player.XPos > Object.XPos
+			Player.XPos  = Object.XPos
+			Player.XPos += 0x500000
+		else
+			Player.XPos  = Object.XPos
+			Player.XPos -= 0x500000
+		end if
+
+		CallFunction(R6_EGG_STEAM)
+		Object.Timer++
+
+		if Object.Timer == 180
+			BossBarrier2.State = BOSSBARRIER2_OPEN
+		end if
+
+		if Object.Timer == 240
+			Object.State++
+			Object.SpikesAnimation = 3
+			CreateTempObject(TypeName[Fade Screen], 0, Object.XPos, Object.YPos)
+			FadeScreen[TempObjectPos].EggMobileEntityNo = Object.EntityNo
+		end if
+		break
+
+	case R6_EGG_ESCAPE
+		Player.Speed = 0
+		if Player.XPos > Object.XPos
+			Player.XPos  = Object.XPos
+			Player.XPos += 0x500000
+		else
+			Player.XPos  = Object.XPos
+			Player.XPos -= 0x500000
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -22, 40, 22, 64)
+	if CheckResult == true
+		CallFunction(Player_Hit)
+	end if
+	
+	if Player.Animation != ANI_HURT
+		if Object.FaceTimer == 0
+#platform: Use_Standalone
+			PlayerObjectCollision(C_TOUCH, -64, -48, 64, 16)
+			TempValue0  = CheckResult
+			PlayerObjectCollision(C_TOUCH, -32, 16, 32, 32)
+			TempValue0 |= CheckResult
+#endplatform
+#platform: Use_Origins
+			PlayerObjectCollision(C_ENEMY, -64, -48, 64, 16)
+			TempValue0  = CheckResult
+			PlayerObjectCollision(C_ENEMY, -32, 16, 32, 32)
+			TempValue0 |= CheckResult
+#endplatform
+			if TempValue0 == true
+				TempValue0 = false
+				if Player.Animation == ANI_JUMPING
+					TempValue0 = true
+				end if
+#platform: Use_Origins
+				if Stage.PlayerListPos == PLAYER_AMY
+					if Player.Animation == ANI_HAMMER_JUMP
+						TempValue0 = true
+					end if
+					if Player.Animation == ANI_HAMMER_DASH
+						TempValue0 = true
+					end if
+				end if
+				if Stage.PlayerListPos == PLAYER_KNUCKLES
+					if Player.Animation == ANI_GLIDING
+						TempValue0 = true
+					end if
+					if Player.Animation == ANI_GLIDING_STOP
+						TempValue0 = true
+					end if
+				end if
+#endplatform
+
+				if TempValue0 == true
+#platform: Use_Haptics
+					HapticEffect(75, 0, 0, 0)
+#endplatform
+					Object.FaceTimer = 120
+
+					FlipSign(Player.Speed)
+					Player.Speed >>= 1
+
+					FlipSign(Player.YVelocity)
+					Player.YVelocity >>= 1
+					Player.XVelocity   = Player.Speed
+
+					if Object.State < R6_EGG_ROOF_DRILL
+						PlayStageSfx(SFX_S_BOSSHIT, false)
+						Object.EggmanAnimation = EGGANI_HURT
+						Object.Frame		   = 0
+					else
+
+#platform: Use_Origins
+						EngineCallback(NOTIFY_KILL_BOSS)
+						// Tell HE2 that the boss fight ended
+						game.callbackParam0 = true
+						EngineCallback(NOTIFY_BOSS_END)
+						if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+							StopMusic()
+						end if
+#endplatform
+
+						Object.State = R6_EGG_DESTROYED
+
+						Object.SpikesAnimation = 2
+						Object.AnimationTimer  = 0
+						Object.EggmanAnimation = EGGANI_DEFEAT
+						Object.FaceFrame	   = 0
+						Object.Frame		   = 0
+
+						Object.TargetYPos = Object.XPos
+
+						FloorControl.Type = TypeName[Blank Object]
+
+						Copy16x16Tile(810, 863)
+
+						PlaySfx(SFX_G_EXPLOSION, false)
+					end if
+				else
+					CallFunction(Player_Hit)
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+
+	switch Object.EggmanAnimation
+	case EGGANI_IDLE
+		TempValue0  = Object.FaceFrame
+		TempValue0 /= 10
+		TempValue0 += 2
+
+		Object.FaceFrame++
+		Object.FaceFrame %= 20
+
+		Object.Direction  = Object.Frame
+		Object.Direction /= 25
+
+		Object.Frame++
+		Object.Frame %= 50
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case EGGANI_HURT
+		Object.Direction  = Object.Frame
+		Object.Direction /= 10
+		Object.Frame++
+		Object.Frame %= 20
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		if Object.FaceTimer > 0
+			Object.FaceTimer--
+		else
+			Object.EggmanAnimation = EGGANI_IDLE
+			Object.FaceFrame	   = 0
+			Object.Frame		   = 0
+		end if
+		break
+
+	case EGGANI_DEFEAT
+		DrawSprite(5)
+		break
+
+	case EGGANI_PANIC
+		Object.Direction  = Object.Frame
+		Object.Direction /= 25
+
+		Object.Frame++
+		Object.Frame %= 50
+		DrawSpriteFX(6, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	end switch
+	
+	switch Object.SpikesAnimation
+	case 0
+		DrawSprite(7)
+		break
+
+	case 1
+		TempValue0   = Object.AnimationTimer
+		TempValue0 >>= 7
+		TempValue0  += 7
+		DrawSprite(TempValue0)
+
+		Object.AnimationTimer += Object.AnimationSpeed
+		Object.AnimationTimer &= 511
+		
+		if Object.AnimationSpeed < 128
+			Object.AnimationSpeed++
+		end if
+		break
+
+	case 2
+		TempValue0  = Object.AnimationTimer
+		TempValue0 /= 3
+		if TempValue0 < 4
+			TempValue0 += 11
+			DrawSprite(TempValue0)
+		end if
+		Object.AnimationTimer++
+		Object.AnimationTimer %= 30
+		break
+
+	end switch
+
+	switch Object.ThrusterAnimation
+	case 0
+		TempValue0 = Object.FrameTimer
+		TempValue0 >>= 1
+		TempValue0 += 19
+		DrawSprite(TempValue0)
+		Object.FrameTimer++
+		Object.FrameTimer &= 3
+		break
+
+	case 1
+		TempValue0  = Object.FrameTimer
+		TempValue0 /= 3
+		TempValue0 += 15
+		DrawSprite(TempValue0)
+		Object.FrameTimer++
+		Object.FrameTimer %= 12
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects2.gif")
+	// Egg Razor
+	SpriteFrame(-64, -48, 128, 96, 66, 1)	// #0  - Egg Razor Machine
+	SpriteFrame(-64, -16, 128, 32, 66, 98)	// #1  - Egg Razor Destroyed
+
+	// Eggman
+	SpriteFrame(-24, -21, 48, 24, 116, 131)	// #2  - Eggman Idle Frame 0
+	SpriteFrame(-24, -21, 48, 24, 116, 156)	// #3  - Eggman Idle Frame 1
+	SpriteFrame(-24, -21, 48, 24, 116, 181)	// #4  - Eggman Hurt
+	SpriteFrame(-28, -37, 48, 40, 124, 215)	// #5  - Eggman Defeat
+	SpriteFrame(-24, -29, 48, 32, 1, 219)	// #6  - Eggman Worry
+
+	// Egg Razor Spikes
+	SpriteFrame(-16, -80, 32, 32, 195, 1)	// #7  - Spikes Frame 0
+	SpriteFrame(-16, -80, 32, 32, 195, 34)	// #8  - Spikes Frame 1
+	SpriteFrame(-16, -80, 32, 32, 195, 67)	// #9  - Spikes Frame 2
+	SpriteFrame(-16, -80, 32, 32, 195, 100)	// #10 - Spikes Frame 3
+
+	// Egg Razor Steam
+	SpriteFrame(-12, -80, 24, 32, 228, 51)	// #11 - Steam Frame 0
+	SpriteFrame(-12, -80, 24, 32, 228, 84)	// #12 - Steam Frame 1
+	SpriteFrame(-12, -80, 24, 32, 231, 117)	// #13 - Steam Frame 2
+	SpriteFrame(-12, -80, 24, 32, 231, 150)	// #14 - Steam Frame 3
+
+	// Egg Razor Thruster
+	SpriteFrame(-16, 48, 32, 32, 198, 133)	// #15 - Thruster Frame 0
+	SpriteFrame(-16, 48, 32, 24, 206, 199)	// #16 - Thruster Frame 1
+	SpriteFrame(-16, 48, 32, 32, 198, 166)	// #17 - Thruster Frame 2
+	SpriteFrame(-16, 48, 32, 24, 206, 224)	// #18 - Thruster Frame 3
+	SpriteFrame(-16, 48, 32, 24, 206, 199)	// #19 - Thruster Frame 4
+	SpriteFrame(-16, 48, 32, 24, 206, 224)	// #20 - Thruster Frame 5
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects2.gif")
+	// Egg Razor
+	SpriteFrame(-64, -48, 128, 96, 66, 1)	// #0  - Egg Razor Machine
+	// Eggman
+	SpriteFrame(-24, -21, 48, 24, 116, 131)	// #2  - Eggman Idle Frame 0
+	// Egg Razor Spikes
+	SpriteFrame(-16, -80, 32, 32, 195, 1)	// #7  - Spikes Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

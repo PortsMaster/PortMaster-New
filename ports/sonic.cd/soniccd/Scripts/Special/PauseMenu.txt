@@ -1,0 +1,1355 @@
+//-----------------Sonic CD Pause Menu Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+
+// How long the Pause Menu should initially slide out for
+#alias Object.PropertyValue : Object.ExtendTime
+
+#alias Object.Value0 : Object.Timer
+
+// The current highlighted selection, check out the PAUSEMENU_SEL_* aliases right down below
+#alias Object.Value1 : Object.CurrentSelection
+
+// Selection Aliases
+#alias -1 : PAUSEMENU_SEL_NULL
+#alias  0 : PAUSEMENU_SEL_CONTINUE
+#alias  1 : PAUSEMENU_SEL_RESTART
+#alias  2 : PAUSEMENU_SEL_EXIT
+#alias  3 : PAUSEMENU_SEL_DEVMENU
+
+// X Position of the underline that's underneat the Options texts
+#alias Object.Value2 : Object.UnderlinePos
+
+// X Position for the Black Bar behind the Pause Text
+// This is accompanied by PauseBarYPos, check out below for more about Value4 since it's multi-use in this Object
+#alias Object.Value3 : Object.PauseBarXPos
+
+// Value4 has different uses across this Object's various States
+
+// In states 0-2:
+	// Value 4 is used to hold the Y Position of the White Rectangle
+	#alias Object.Value4 : Object.WhiteRectPos
+	
+	// And then, this holds the position of that White Rectangle from the previous frame during those states
+	// -> See ObjectDraw for more info
+	#alias Object.Value5 : Object.PrevWhiteRectPos
+
+// In states 4-5:
+	// Value 4 is used to hold the Y Position of the Pause text & its bar
+	// Check out PauseBarXPos too, though that one's just a normal Value and only has one use
+	#alias Object.Value4 : Object.PauseBarYPos
+
+// For clarity's sake, the two types of Value 4 uses are aliases differently
+
+// Just a bool, essentially useless since restarts are always disabled in Special Stages so there's no reason for this to be here
+// Check out its initial use for more info, but this Object's pretty much a copy of the Global version, where the variable *is* used for actual purpose
+#alias Object.Value6 : Object.RestartDisabled
+
+// Position of the stuff on the right side (options, black bar, etc.)
+#alias Object.XPos : Object.SelectionBarPos
+
+// values for the tiny 'lil sonic :)
+#alias Object.Frame          : Object.SonicFrame
+#alias Object.AnimationTimer : Object.SonicTimer
+
+// States
+
+// This Object can't have its value setup via a normal loop in ObjectStartup since it doesn't even exist
+// normally - it's spawned in by the Sonic Object instead - so the first state is for initialising its values
+#alias 0 : PAUSEMENU_INIT
+
+// Once the Object is setup, all the shape parts of it slide in, including the white background, pause bar, and other black bar to the right
+#alias 1 : PAUSEMENU_SLIDEIN
+
+// After that, now the Sprite aspects of it fade in, like the Options and Pause text
+#alias 2 : PAUSEMENU_FADEIN
+
+// Yup, now we're in the main state!
+// This is where all the good stuff is done, of course
+#alias 3 : PAUSEMENU_MAIN
+
+// Upon selecting any option, the selected option will flash for a few moments...
+#alias 4 : PAUSEMENU_FLASH
+
+// ... and after that comes a branch of fate - choose a path!
+
+// If you selected the Continue option, then...
+	// Close the Pause Menu, and resume the normal game
+	#alias 5 : PAUSEMENU_CLOSE
+
+// If you selected any other option, then...
+	// Make the Pause Menu consume the screen, and exit the level or whatever afterwards
+	#alias 6 : PAUSEMENU_EXIT
+
+// One of the updates changed the left bounds for how far the Pause Menu should go
+// Originally was -32, but the current version is -64
+// That's about a two frames difference, isn't that interesting?
+#alias -64 : PAUSEMENU_LEFTMOST
+
+// Player Aliases
+#alias 0 : PLAYER_SONIC_A
+#alias 1 : PLAYER_TAILS_A
+
+// Presentation Stages
+#alias 0 : STAGE_P_TITLE
+#alias 2 : STAGE_P_TIMEATTACK
+
+// Languages
+#alias 0 : LANG_ENGLISH
+#alias 1 : LANG_FRENCH
+#alias 2 : LANG_ITALIAN
+#alias 3 : LANG_DEUTSCH
+#alias 4 : LANG_SPANISH
+#alias 5 : LANG_JAPANESE
+
+// Screen Aliases
+// This Object uses a hardcoded constant of 240 rather often, rather than Screen.YSize, so this is here just to clarify stuff a bit
+#alias 240 : SCREEN_YSIZE
+
+// Global SFX
+#alias 23 : SFX_G_MENUBUTTON
+#alias 27 : SFX_G_SELECT
+
+// Ink Effect Aliases
+#alias 2 : INK_ALPHA
+
+// Game Mode Aliases
+#alias 2 : MODE_TIMEATTACK
+
+// Engine Messages
+// (Strange to describe, but they're essentially system-level stuff that the engine transmits to the scripts)
+#alias 2 : MESSAGE_LOSTFOCUS
+#alias 3 : MESSAGE_YES_SELECTED
+#alias 4 : MESSAGE_NO_SELECTED
+
+// Engine Callbacks
+#alias 6 : CALLBACK_RESTART_SELECTED
+#alias 7 : CALLBACK_EXIT_SELECTED
+
+// Tile Layer Types
+#alias 4 : LAYER_3DSKY
+
+
+sub ObjectMain
+	switch Object.State
+	case PAUSEMENU_INIT
+		// Object just got spawned, setup everything here
+		
+		// Start the right Bar to be, well, off to the right
+		Object.SelectionBarPos = Screen.XSize
+		
+		// And then make the left Pause bar start all the way to the left
+		Object.PauseBarXPos = 0
+		
+		Object.Timer = 0
+		
+		// The Object uses alpha effects to fade-in the test, so get that all set up too
+		Object.InkEffect = INK_ALPHA
+		Object.Alpha = 0
+		
+		// Some languages have longer text than others
+		// LANG_FRENCH is the longest, while the standard LANG_ENGLISH version is the shortest
+		switch Engine.Language
+		case LANG_ENGLISH
+		case LANG_JAPANESE
+			Object.ExtendTime = 12
+			break
+			
+		case LANG_FRENCH
+			Object.ExtendTime = 15
+			break
+			
+		// A bit of fall-through could probably be used on these last three entries, but it isn't
+		// Oh well
+		
+		case LANG_ITALIAN
+			Object.ExtendTime = 13
+			break
+			
+		case LANG_DEUTSCH
+			Object.ExtendTime = 13
+			break
+			
+		case LANG_SPANISH
+			Object.ExtendTime = 13
+			break
+			
+		end switch
+		
+		// Disable Restarting if needed... but it's always gonna be disabled
+		if Player.Lives < 2
+			Object.RestartDisabled = true
+		else
+			
+			// This version of the Pause Menu is only used in Special Stages anyway... so why is this check here?
+			// Likely just a result of copy-pasting the maingame one, if I had to guess, as that one
+			// has the same check there despite it being the opposite situation, where it'll never be true since it's only used in regular/bonus stages
+#platform: Use_Standalone
+			if Stage.ActiveList == SPECIAL_STAGE
+				Object.RestartDisabled = true
+			else
+				Object.RestartDisabled = false
+			end if
+#endplatform
+			
+#platform: Use_Origins
+			// Origins messed up the Active List IDs ("SPECIAL_STAGE" points to the Bonus Stage list now!) so we check via a direct ID instead here
+			if Stage.ActiveList == 3
+				Object.RestartDisabled = true
+			else
+				Object.RestartDisabled = false
+			end if
+#endplatform
+			
+		end if
+#platform: Use_Origins
+		// On Origins, Physical Controls are enforced as the default
+		Options.PhysicalControls = true
+#endplatform
+		
+#platform: Mobile
+		// On Mobile though, have a default selection (or don't) based on if the Player's using a physical gamepad or not
+		if Options.TouchControls == true
+			Object.CurrentSelection = PAUSEMENU_SEL_NULL
+			Options.PhysicalControls = false
+		else
+			// (Implicitly making the starting selection PAUSEMENU_SEL_CONTINUE - ID 0)
+			Options.PhysicalControls = true
+		end if
+#endplatform
+		
+		Object.State++
+		break
+		
+	case PAUSEMENU_SLIDEIN
+		
+		// Slide the Pause bar in
+		Object.PauseBarXPos = Object.Timer
+		Object.PauseBarXPos *= Screen.XSize
+		Object.PauseBarXPos /= 12
+		
+		// And then move the background white rectangle in
+		Object.WhiteRectPos = Object.Timer
+		Object.WhiteRectPos *= SCREEN_YSIZE
+		Object.WhiteRectPos /= 12
+		
+		// And then slide the right bar in too
+		
+		TempValue0 = Object.Timer
+		TempValue0 <<= 7
+		TempValue0 /= 12
+		
+		Object.SelectionBarPos = Screen.XSize
+		Object.SelectionBarPos -= TempValue0
+		
+		if Object.Timer < Object.ExtendTime
+			// Haven't reached where we should yet, keep moving...
+			
+			Object.Timer++
+		else
+			// Get ready to go to the next state
+			
+			// Setup the Underline initial position
+			Object.UnderlinePos = Object.SelectionBarPos
+			Object.UnderlinePos += 48
+			
+			Object.Timer = 0
+			
+			Object.State++
+		end if
+		break
+		
+	case PAUSEMENU_FADEIN
+		if Object.Timer < 256
+			Object.Timer += 16
+			
+			// Because Object.Alpha is a byte and will overflow if over 255,
+			// we have to do this instead
+			if Object.Timer < 255
+				Object.Alpha = Object.Timer
+			else
+				Object.Alpha = 255
+			end if
+		else
+			// Next state
+			
+			Object.Timer = 0
+			
+			// Just to make sure it's at full opacity
+			Object.Alpha = 255
+			
+			Object.State++
+		end if
+		break
+		
+	case PAUSEMENU_MAIN
+
+	// There's normally a `if Options.PhysicalControls == true` path here, but to keep 2012 Steam datafiles working we gotta do this roundabout way instead
+#platform: Standard
+		// Let's assume the variable doesn't exist, force Physical Controls
+		CheckResult = true
+#endplatform
+
+#platform: Mobile
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+	
+#platform: Use_Origins
+		CheckEqual(Options.PhysicalControls, true)
+#endplatform
+	
+		
+		if CheckResult == true
+			// Update Physical Controls
+			
+			if KeyPress[0].Up == true
+				
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				
+				// Reset all the stuff
+				
+				Object.Timer = 0
+				
+				// Sonic should resume his normal stance
+				Object.SonicTimer = 0
+				Object.SonicFrame = 0
+				
+				// Move the bar all the way over to the right
+				Object.UnderlinePos = Screen.XSize
+				
+				// And of course, bump down the current selection by one
+				Object.CurrentSelection--
+				
+				// Enforce different upwards loop points based on if the 4th Dev Menu option is available or not
+				if Options.DevMenuFlag == true
+					if Object.CurrentSelection < PAUSEMENU_SEL_CONTINUE
+						Object.CurrentSelection = PAUSEMENU_SEL_DEVMENU
+					end if
+				else
+					if Object.CurrentSelection < PAUSEMENU_SEL_CONTINUE
+						Object.CurrentSelection = PAUSEMENU_SEL_EXIT
+					end if
+				end if
+				
+				// If restart is disabled (which it always should be here) then don't let the player select it
+				if Object.RestartDisabled == true
+					if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+						// Move them to the PAUSEMENU_SEL_CONTINUE instead
+						Object.CurrentSelection--
+					end if
+				end if
+				
+			end if
+			
+			if KeyPress[0].Down == true
+				
+				PlaySfx(SFX_G_MENUBUTTON, false)
+				
+				// Reset some stuff
+				
+				Object.Timer = 0
+				
+				Object.SonicTimer = 0
+				Object.SonicFrame = 0
+				
+				// Move the line back offscreen
+				Object.UnderlinePos = Screen.XSize
+				
+				// And of course, move a selection down
+				Object.CurrentSelection++
+				
+				// The Dev Menu adds a 4th entry, so the wrap around value is different too
+				if Options.DevMenuFlag == true
+					if Object.CurrentSelection > PAUSEMENU_SEL_DEVMENU
+						Object.CurrentSelection = PAUSEMENU_SEL_CONTINUE
+					end if
+				else
+					if Object.CurrentSelection > PAUSEMENU_SEL_EXIT
+						Object.CurrentSelection = PAUSEMENU_SEL_CONTINUE
+					end if
+				end if
+				
+				// If restarting is disabled (always the case here in Special Stages) then
+				// move the player's selection to PAUSEMENU_SEL_EXIT instead
+				if Object.RestartDisabled == true
+					if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+						Object.CurrentSelection++
+					end if
+				end if
+				
+			end if
+			
+			// You can use either Start or A to close a selection, the other two buttons won't do anything though...
+			if KeyPress[0].Start == true
+				PlaySfx(SFX_G_SELECT, false)
+				Object.State = PAUSEMENU_FLASH
+				Object.Alpha = 248
+				Object.Timer = 0
+			end if
+			
+			if KeyPress[0].ButtonA == true
+				PlaySfx(SFX_G_SELECT, false)
+				Object.State = PAUSEMENU_FLASH
+				Object.Alpha = 248
+				Object.Timer = 0
+			end if
+			
+#platform: Mobile
+			// If the Player's touched the screen at all, then switch to Touch Controls
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			
+			if CheckResult > -1
+				Options.PhysicalControls = false
+				Object.CurrentSelection = PAUSEMENU_SEL_NULL
+			end if
+#endplatform
+		else
+			
+			// If the Player's not even in the game, then reset the current selection
+			if Engine.Message == MESSAGE_LOSTFOCUS
+				Object.CurrentSelection = PAUSEMENU_SEL_NULL
+			end if
+			
+			// From here, now we do a whole lotta stuff with touch controls, where we check manually for every option
+			// For the most part, each chunk of code here is the same, only with one or two minor differences
+			
+			// See if the Player's tapped the screen at all, and store the result into TempValue3
+			// This value is used throughout this entire touch controls section
+			CheckTouchRect(0, 0, Screen.XSize, Screen.YSize)
+			TempValue3 = CheckResult
+			
+			// And now, check for the Continue button
+			
+			// See if the Player's tapped it
+			CheckTouchRect(TempValue0, 32, Screen.XSize, 64)
+			
+			if CheckResult > -1
+				// If the player has their finger over the Continue button but hasn't relased it yet, then just keep it selected
+				// but don't actually activate it yet
+				
+				Object.CurrentSelection = PAUSEMENU_SEL_CONTINUE
+			else
+				if TempValue3 < 0
+					// The Player doesn't have their finger on the screen *nor* the Continue button
+					
+					if Object.CurrentSelection == PAUSEMENU_SEL_CONTINUE
+						// The Player's released their finger while on the button, so let's start Continuing now
+						
+						PlaySfx(SFX_G_SELECT, false)
+						Object.State = PAUSEMENU_FLASH
+						Object.Alpha = 248
+						Object.Timer = 0
+					end if
+				else
+					// The Player's finger is on the screen but not on the Continue option, so make them deselect
+					
+					if Object.CurrentSelection == PAUSEMENU_SEL_CONTINUE
+						Object.CurrentSelection = PAUSEMENU_SEL_NULL
+					end if
+				end if
+			end if
+			
+			// Now, the Restart button
+			// As said before, RestartDisabled is always gonna be true in a Special Stage so this whole chunk of code is essentially useless...
+			
+			// Yeah, I guess they just kept it here anyway because it looked cool or something idk
+			if Object.RestartDisabled == false
+				
+				// See if the Player's got their finger over the Restart button
+				CheckTouchRect(TempValue0, 80, Screen.XSize, 112)
+				
+				if CheckResult > -1
+					// If they do, then make the current selection Restart
+					
+					Object.CurrentSelection = PAUSEMENU_SEL_RESTART
+				else
+					if TempValue3 < 0
+						// The Player isn't touching the screen at all
+						
+						if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+							// The Player released their finger while hovering over Restart, so let's restart then!
+							
+							PlaySfx(SFX_G_SELECT, false)
+							Object.State = PAUSEMENU_FLASH
+							Object.Alpha = 248
+							Object.Timer = 0
+						end if
+					else
+						// The finger has their player on the screen, but not over the Continue button
+						
+						if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+							Object.CurrentSelection = PAUSEMENU_SEL_NULL
+						end if
+					end if
+				end if
+				
+			end if
+			
+			// After that comes the wonderful, Exit button!
+			
+			// See if there's a finger on it
+			CheckTouchRect(TempValue0, 128, Screen.XSize, 160)
+			
+			if CheckResult > -1
+				// If there is, then make it the current selection
+				
+				Object.CurrentSelection = PAUSEMENU_SEL_EXIT
+			else
+				// The Player isn't currently on the Exit button
+				
+				if TempValue3 < 0
+					// And, the Player isn't touching the screen at all!
+					
+					if Object.CurrentSelection == PAUSEMENU_SEL_EXIT
+						// So in that case, if they were on it for at least one frame before, then let's go ahead and Exit
+						
+						PlaySfx(SFX_G_SELECT, false)
+						Object.State = PAUSEMENU_FLASH
+						Object.Alpha = 248
+						Object.Timer = 0
+					end if
+				else
+					// The Player's finger is on the screen, but not on the Exit button
+					
+					if Object.CurrentSelection == PAUSEMENU_SEL_EXIT
+						Object.CurrentSelection = PAUSEMENU_SEL_NULL
+					end if
+				end if
+			end if
+			
+			// Yup, and now the Dev Menu button!
+			// It only shows under the most special conditions, they say...
+			
+			if Options.DevMenuFlag == true
+				
+				// Check to see if the Player's touching it
+				CheckTouchRect(TempValue0, 176, Screen.XSize, 208)
+				
+				if CheckResult > -1
+					// If they are, then make it selected
+					
+					Object.CurrentSelection = PAUSEMENU_SEL_DEVMENU
+				else
+					// The Player's not touching the Dev Menu button
+					
+					if TempValue3 < 0
+						// Additionally, they're not touching the screen at all either
+						
+						if Object.CurrentSelection == PAUSEMENU_SEL_DEVMENU
+							// If they were touching the Dev Menu button last frame, then assume a button press
+							
+							PlaySfx(SFX_G_SELECT, false)
+							Object.State = PAUSEMENU_FLASH
+							Object.Alpha = 248
+							Object.Timer = 0
+						end if
+					else
+						// The Player's holding the screen, but they're not touching the Dev Menu button
+						
+						if Object.CurrentSelection == PAUSEMENU_SEL_DEVMENU
+							// So just let the button go
+							Object.CurrentSelection = PAUSEMENU_SEL_NULL
+						end if
+					end if
+				end if
+				
+			end if
+			
+			// And now, after all that's done, check for actual, physical inputs
+			
+			if KeyPress[0].Up == true
+				
+				// If Up was pressed, then go to the bottommost entry
+				// This'll vary if the Dev Menu is active, of course
+				
+				if Options.DevMenuFlag == true
+					Object.CurrentSelection = PAUSEMENU_SEL_DEVMENU
+				else
+					Object.CurrentSelection = PAUSEMENU_SEL_EXIT
+				end if
+				
+#platform: Mobile
+				// And set Physical Controls to active, now that the player's actually pressed something
+				
+				Options.PhysicalControls = true
+#endplatform
+			end if
+			
+			if KeyPress[0].Down == true
+				
+				// If Down was pressed, then just go to the topmost entry
+				// Nothing further needed here
+				
+				Object.CurrentSelection = PAUSEMENU_SEL_CONTINUE
+				
+#platform: Mobile
+				// And similarly, set Physical Controls to be active for the same reason as before
+				
+				Options.PhysicalControls = true
+#endplatform
+			end if
+		end if
+		
+		// Progress mini Sonic's animation
+		
+		if Object.Timer < 60
+			// Make him stand all nice and polite for a second...
+			
+			Object.Timer++
+		else
+			// But once that second's over, gotta get moving!
+			
+			// Get the topmost bit of Sonic's Animation Timer
+			Object.SonicFrame = Object.SonicTimer
+			Object.SonicFrame >>= 4
+			
+			// And then bump it up one more to match with the Sprite Frame IDs
+			Object.SonicFrame++
+			
+			Object.SonicTimer++
+			Object.SonicTimer &= 31
+		end if
+		break
+		
+	case PAUSEMENU_FLASH
+		
+		// In this state, the Timer is used to control the selected sprite's visibility, or flashing
+		// So, let's progress that value
+		Object.Timer++
+		Object.Timer &= 3
+		
+		// Slide the underline text away
+		Object.UnderlinePos += 4
+		
+		// First, fade the texts out
+		if Object.Alpha > 0
+			Object.Alpha -= 8
+		else
+			if Object.CurrentSelection == PAUSEMENU_SEL_CONTINUE
+				// If on the Continue option, then make the Pause Menu move away rather than cover the screen
+				
+				Object.UnderlinePos = Object.SelectionBarPos
+				Object.UnderlinePos += 48
+				
+				// Set the initial Y position for the bottom bar
+				// -> Normally, during the rest of the Pause Menu states, it's a direct constant 202,
+				//    rather than reading from a variable, which is why the new variable is initially being set here
+				Object.PauseBarYPos = 202
+				
+				Object.Timer = 0
+				Object.Alpha = 128
+				
+				Object.State = PAUSEMENU_CLOSE
+				
+				// Resume the stage now, rather than when the Pause Menu is fully out of the way
+				Stage.State = STAGE_RUNNING
+			else
+				
+				// The following code is dependant on the current platform
+				// Origins uses the Standard platform code, of course
+#platform: Standard
+				Object.UnderlinePos = Object.SelectionBarPos
+				Object.UnderlinePos += 48
+				StopMusic()
+				Object.State = PAUSEMENU_EXIT
+#endplatform
+				
+#platform: Mobile
+				// On Mobile, we got a whole lot of Engine Message stuff to worry about
+				
+				if Engine.Message < MESSAGE_YES_SELECTED
+					switch Object.CurrentSelection
+					case PAUSEMENU_SEL_RESTART
+						EngineCallback(CALLBACK_RESTART_SELECTED)
+						break
+						
+					case PAUSEMENU_SEL_EXIT
+						EngineCallback(CALLBACK_EXIT_SELECTED)
+						break
+						
+					case PAUSEMENU_SEL_DEVMENU
+						// For the Dev Menu, don't prompt any extra confirmation and just start sliding away already
+						
+						Object.UnderlinePos = Object.SelectionBarPos
+						Object.UnderlinePos += 48
+						StopMusic()
+						
+						Object.State = PAUSEMENU_EXIT
+						break
+						
+					end switch
+				else
+					if Engine.Message == MESSAGE_NO_SELECTED
+						
+						// Nevermind, let's go back instead
+						
+						// Reset everything and resume back to normal
+						
+						Object.Timer = 0
+						
+						Object.SonicTimer = 0
+						Object.SonicFrame = 0
+						Object.UnderlinePos = Screen.XSize
+						
+						if Options.PhysicalControls == false
+							Object.CurrentSelection = PAUSEMENU_SEL_NULL
+						end if
+						
+						Object.State = PAUSEMENU_MAIN
+						Object.Alpha = 255
+						
+					else
+						// Yup, the Player truly wants to leave
+						
+						Object.UnderlinePos = Object.SelectionBarPos
+						Object.UnderlinePos += 48
+						StopMusic()
+						
+						Object.State = PAUSEMENU_EXIT
+					end if
+				end if
+#endplatform
+			end if
+		end if
+		break
+		
+	case PAUSEMENU_CLOSE
+		if Object.Alpha > 0
+			// Closing the Pause Menu...
+			
+			// Fade out the text
+			Object.Alpha -= 8
+			
+			// And move all the other shapes out of the way
+			Object.SelectionBarPos += 16
+			Object.UnderlinePos += 16
+			Object.PauseBarYPos += 16
+			
+		else
+			// The Objects are already moving now, let's continue the music too!
+			ResumeMusic()
+			
+			// Erase this current Pause Menu Object, as it's no longer needed
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			
+			if Engine.FrameSkipSetting > 0
+				Engine.FrameSkipTimer = 0
+			end if
+			
+			// Make the Floor render in High Quality mode now
+			// (...shouldn't this be done when the stage state is reset? why is it being done afterwards?)
+			TileLayer[0].Type = LAYER_3DSKY
+			
+		end if
+		break
+		
+	case PAUSEMENU_EXIT
+		if Object.SelectionBarPos > PAUSEMENU_LEFTMOST
+			// Not arrived at the destination yet, keep on moving
+			
+			Object.SelectionBarPos -= 16
+			Object.UnderlinePos += 16
+		else
+			
+			// From here, jump to the handling needed
+			
+			switch Object.CurrentSelection
+			case PAUSEMENU_SEL_RESTART
+				// You should never be able to restart a Special Stage, so this piece of code goes unused...
+				
+				LampPost.Check = 0
+				Player.Lives--
+				
+				LoadStage()
+				break
+				
+			case PAUSEMENU_SEL_EXIT
+				// Before Exiting, reset everything for the next playthrough
+				
+				Good_Future_Count = 0
+				Good_Future_List = 0
+				
+				Good_Future			  = false
+				Transporter_Destroyed = false
+				MetalSonic_Destroyed  = false
+				
+				Stage.ActiveList = PRESENTATION_STAGE
+				
+				LampPost.Check = 0
+				
+				// Time Attack should return to the TA Menu, but otherwise go back to the Title Screen
+				if Options.GameMode == MODE_TIMEATTACK
+					Stage.ListPos = STAGE_P_TIMEATTACK
+					TimeAttack.Result = 0
+				else
+					Stage.ListPos = STAGE_P_TITLE
+				end if
+				
+				LoadStage()
+				break
+				
+			case PAUSEMENU_SEL_DEVMENU
+				// To get to the Dev Menu, we need to reset the entire game rather than directly opening the menu or anything like that
+				Engine.State = RESET_GAME
+				break
+				
+			end switch
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case PAUSEMENU_INIT
+	case PAUSEMENU_SLIDEIN
+	case PAUSEMENU_FADEIN
+		
+		// Draw the White Rectangle Background
+		
+		// Don't draw it if it's at the bottom of the screen already
+		if Object.PrevWhiteRectPos < SCREEN_YSIZE
+			if Object.WhiteRectPos > Object.PrevWhiteRectPos
+				
+				// Note that the Stage State is currently paused, in other words nothing is getting rendered
+				// -> That means that, if we were to simply draw a white tint rectangle from 0,0 to whereever,
+				//    it would overlap with what was drawn the previous frame, and that would continously stack
+				// -> Because of that, we have to not draw the entire tint rect at once, but
+				//    draw only the difference from the previous frame every time instead
+				
+				// Find how tall the tint rectangle should be
+				TempValue0 = Object.WhiteRectPos
+				TempValue0 -= Object.PrevWhiteRectPos
+				
+				// Now, draw it at the previous rect position with the height found from earlier
+				DrawRect(0, Object.PrevWhiteRectPos, 384, TempValue0, 255, 255, 255, 128)
+				Object.PrevWhiteRectPos = Object.WhiteRectPos
+				
+			end if
+		end if
+		
+		// Fall through to the next part
+		// Note - Originally, there was a whole identical duplicate of the below code here, but Origins actually cleaned it up
+		//        and made it easier for our eyes! How nice of them!
+		
+	case PAUSEMENU_MAIN
+		
+		// First, draw all the waves on the right
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 0)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 32)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 64)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 96)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 128)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 160)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 192)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 224)
+		
+		// Draw the black rectangle on top of them too
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 128
+		DrawRect(TempValue0, 0, 128, Screen.YSize, 0, 0, 0, 255)
+		
+		// Draw the Pause bar
+		DrawRect(0, 202, Object.PauseBarXPos, 13, 0, 0, 0, 255)
+		DrawSpriteScreenFX(4, FX_INK, 0, 202)
+		
+		// Update Underline scrolling
+		
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 48
+		
+		if Object.UnderlinePos > TempValue0
+			TempValue1 = TempValue0
+			TempValue1 -= Object.UnderlinePos
+			TempValue1 >>= 3
+			
+			// Move the unedrline to the left
+			Object.UnderlinePos += TempValue1
+		end if
+		
+		// Draw the Continue text
+		
+		TempValue1 = 48
+		DrawSpriteScreenFX(6, FX_INK, TempValue0, TempValue1)
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_CONTINUE
+			// If it's the current selection, then draw the underline and mini Sonic next to it
+			
+			DrawSpriteScreenFX(5, FX_INK, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenFX(Object.SonicFrame, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		// Move down to the Selection text position
+		TempValue1 += 48
+		
+		// Draw the Continue sprite, based on whether it's enabled or not
+		// (It's always gonna be disabled anyway though)
+		if Object.RestartDisabled == false
+			DrawSpriteScreenFX(7, FX_INK, TempValue0, TempValue1)
+		else
+			DrawSpriteScreenFX(10, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+			// If it's the current selection, then draw the underline underneath and along with Sonic next to it
+			// -> As said earlier though, Restart's always disabled in Special Stages so...
+			
+			DrawSpriteScreenFX(5, FX_INK, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenFX(Object.SonicFrame, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		// Now, move to the Exit text position
+		TempValue1 += 48
+		
+		// Draw the Exit text
+		DrawSpriteScreenFX(8, FX_INK, TempValue0, TempValue1)
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_EXIT
+			// If Exit is currently selected, then draw the underline and Sonic along with with
+			
+			DrawSpriteScreenFX(5, FX_INK, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenFX(Object.SonicFrame, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		// Last but certainly not least, move to the Dev Menu text pos
+		TempValue1 += 48
+		
+		if Options.DevMenuFlag == true
+			
+			// Draw the Dev Menu text
+			DrawSpriteScreenFX(9, FX_INK, TempValue0, TempValue1)
+			
+			if Object.CurrentSelection == PAUSEMENU_SEL_DEVMENU
+				// And if it's the current selection, then do the usual
+				
+				DrawSpriteScreenFX(5, FX_INK, Object.UnderlinePos, TempValue1)
+				DrawSpriteScreenFX(Object.SonicFrame, FX_INK, TempValue0, TempValue1)
+			end if
+		end if
+		break
+		
+	case PAUSEMENU_FLASH
+		
+		// Draw all the Bars
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 0)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 32)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 64)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 96)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 128)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 160)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 192)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 224)
+		
+		// And a black rectangle on top of those bars
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 128
+		DrawRect(TempValue0, 0, 128, Screen.YSize, 0, 0, 0, 255)
+		
+		// Then, draw the Pause text bar
+		DrawRect(0, 202, Object.PauseBarXPos, 13, 0, 0, 0, 255)
+		DrawSpriteScreenXY(4, 0, 202)
+		
+		// Get the X Positions for the texts
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 48
+		
+		// And now, the Y position for the Continue text
+		TempValue1 = 48
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_CONTINUE
+			
+			// Draw the Continue text, but only every other second frame
+			if Object.Timer < 2
+				DrawSpriteScreenXY(6, TempValue0, TempValue1)
+			end if
+			
+			// And then of course, the underline and Sonic come after
+			DrawSpriteScreenXY(5, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenXY(Object.SonicFrame, TempValue0, TempValue1)
+			
+		else
+			// Nothing special to do here, just draw the Continue text with a fade out effect
+			
+			DrawSpriteScreenFX(6, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		// Then comes the Restart text
+		TempValue1 += 48
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_RESTART
+			// As said many times before, you can't restart in Special Stages, so this all goes unused
+			
+			// Flash the Restart text
+			if Object.Timer < 2
+				DrawSpriteScreenXY(7, TempValue0, TempValue1)
+			end if
+			
+			// And then draw the underline and Sonic too
+			DrawSpriteScreenXY(5, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenXY(Object.SonicFrame, TempValue0, TempValue1)
+			
+		else
+			if Object.RestartDisabled == false
+				// This part kinda goes unused too
+				
+				DrawSpriteScreenFX(7, FX_INK, TempValue0, TempValue1)
+			else
+				// Draw the greyed out Restart text, fading out
+				
+				DrawSpriteScreenFX(10, FX_INK, TempValue0, TempValue1)
+			end if
+		end if
+		
+		// After that comes the Exit text
+		TempValue1 += 48
+		
+		if Object.CurrentSelection == PAUSEMENU_SEL_EXIT
+			
+			// Flash it as needed
+			if Object.Timer < 2
+				DrawSpriteScreenXY(8, TempValue0, TempValue1)
+			end if
+			
+			// And then, as with all the others, draw the underline and Sonic too
+			DrawSpriteScreenXY(5, Object.UnderlinePos, TempValue1)
+			DrawSpriteScreenXY(Object.SonicFrame, TempValue0, TempValue1)
+			
+		else
+			// The player didn't choose to exit, so fade out the Exit text
+			DrawSpriteScreenFX(8, FX_INK, TempValue0, TempValue1)
+		end if
+		
+		// And then, the elusive Dev Menu
+		TempValue1 += 48
+		
+		if Options.DevMenuFlag == true
+		
+			if Object.CurrentSelection == PAUSEMENU_SEL_DEVMENU
+				
+				// Flash the Dev Menu text
+				if Object.Timer < 2
+					DrawSpriteScreenXY(9, TempValue0, TempValue1)
+				end if
+				
+				// Underneath it, draw the underline
+				DrawSpriteScreenXY(5, Object.UnderlinePos, TempValue1)
+				
+				// But to the left, draw Sonic
+				DrawSpriteScreenXY(Object.SonicFrame, TempValue0, TempValue1)
+				
+			else
+				// Fade out the Dev Menu text
+				
+				DrawSpriteScreenFX(9, FX_INK, TempValue0, TempValue1)
+			end if
+			
+		end if
+		break
+		
+	case PAUSEMENU_CLOSE
+		// This is the state where the Pause Menu is leaving the screen, after the player chose to resume the game
+		
+		if Object.Alpha < 128
+			// Draw the white fade-in rectangle, around the entire screen
+			
+			// The stage is resumed now, meaning it's drawing again, which is why
+			//  we can do the entire screen at once rather than the old `only difference` system needed before
+			
+			DrawRect(0, 0, Screen.XSize, SCREEN_YSIZE, 255, 255, 255, Object.Alpha)
+		end if
+		
+		// On top of that fade rectangle, draw the Pause Menu
+		
+		// First, all the waves
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 0)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 32)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 64)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 96)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 128)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 160)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 192)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 224)
+		
+		// Then, draw the black rectangle on the right
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 128
+		DrawRect(TempValue0, 0, 128, Screen.YSize, 0, 0, 0, 255)
+		
+		// Draw the Pause text's Bar
+		DrawRect(0, Object.PauseBarYPos, Screen.XSize, 13, 0, 0, 0, 255)
+		
+		// And then, draw the actual Pause text on top of that
+		DrawSpriteScreenXY(4, 0, Object.PauseBarYPos)
+		
+		// From here, the only text drawn is that of the current selection
+		// So, jump as needed
+		switch Object.CurrentSelection
+		case PAUSEMENU_SEL_CONTINUE
+			DrawSpriteScreenXY(6, Object.UnderlinePos, 48)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 48)
+			break
+			
+		case PAUSEMENU_SEL_RESTART
+			// Huh? Why is the Continue sprite being used here?
+			// The Restart sprite is frame 7...
+			DrawSpriteScreenXY(6, Object.UnderlinePos, 96)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 96)
+			break
+			
+		case PAUSEMENU_SEL_EXIT
+			DrawSpriteScreenXY(8, Object.UnderlinePos, 144)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 144)
+			break
+			
+		case PAUSEMENU_SEL_DEVMENU
+			if Options.DevMenuFlag == true
+				DrawSpriteScreenXY(9, Object.UnderlinePos, 192)
+				DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 192)
+			end if
+			break
+			
+		end switch
+		break
+		
+	case PAUSEMENU_EXIT
+		// This is the state where the Pause Menu envelopes the screen, after choosing an option that isn't Continue
+		
+		// Black out the right side of the screen
+		TempValue0 = Screen.XSize
+		TempValue0 -= 96
+		DrawRect(TempValue0, 0, 96, SCREEN_YSIZE, 0, 0, 0, 255)
+		
+		// Now, draw all the waves
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 0)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 32)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 64)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 96)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 128)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 160)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 192)
+		DrawSpriteScreenXY(3, Object.SelectionBarPos, 224)
+		
+		// And the black rectangle ontop of them, since it's sweeping left
+		TempValue0 = Object.SelectionBarPos
+		TempValue0 += 128
+		DrawRect(TempValue0, 0, 128, Screen.YSize, 0, 0, 0, 255)
+		
+		// Draw the option selected and its underline as well, sliding to the right
+		switch Object.CurrentSelection
+		case PAUSEMENU_SEL_CONTINUE
+			DrawSpriteScreenXY(6, Object.UnderlinePos, 48)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 48)
+			break
+			
+		case PAUSEMENU_SEL_RESTART
+			// This is still using the continue sprite...
+			DrawSpriteScreenXY(6, Object.UnderlinePos, 96)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 96)
+			break
+			
+		case PAUSEMENU_SEL_EXIT
+			DrawSpriteScreenXY(8, Object.UnderlinePos, 144)
+			DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 144)
+			break
+			
+		case PAUSEMENU_SEL_DEVMENU
+			if Options.DevMenuFlag == true
+				DrawSpriteScreenXY(9, Object.UnderlinePos, 192)
+				DrawSpriteScreenXY(Object.SonicFrame, Object.UnderlinePos, 192)
+			end if
+			break
+			
+		end switch
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Load the correct sprites for each language
+	switch Engine.Language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+		LoadSpriteSheet("Special/ScoreScreen.gif")
+		break
+		
+	case LANG_FRENCH
+		LoadSpriteSheet("Special/ScoreScreen_FR.gif")
+		break
+		
+	case LANG_ITALIAN
+		LoadSpriteSheet("Special/ScoreScreen_IT.gif")
+		break
+		
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Special/ScoreScreen_DE.gif")
+		break
+		
+	case LANG_SPANISH
+		LoadSpriteSheet("Special/ScoreScreen_ES.gif")
+		break
+		
+	end switch
+
+	// The mini character frames should, of course, be different for each character
+	if Stage.PlayerListPos == PLAYER_SONIC_A	// PLAYER_SONIC in origins
+		// 0 - Standing Sonic
+		SpriteFrame(-28, -14, 16, 24, 1, 231)
+		// 1-2 - Impatient Sonic
+		SpriteFrame(-28, -14, 16, 24, 18, 231)
+		SpriteFrame(-28, -14, 16, 24, 35, 231)
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		// 0 - Normal Tails
+		SpriteFrame(-28, -14, 16, 24, 122, 202)
+		// 1-2 - Tapping Tails
+		SpriteFrame(-28, -14, 16, 24, 139, 202)
+		SpriteFrame(-28, -14, 16, 24, 156, 202)
+	end if
+
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		// 0 - Normal Knuckles
+		SpriteFrame(-28, -14, 16, 24, 1, 256)
+		// 1-2 - Tapping Knuckles
+		SpriteFrame(-28, -14, 16, 24, 18, 256)
+		SpriteFrame(-28, -14, 16, 24, 35, 256)
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		// 0 - Normal Amy
+		SpriteFrame(-28, -14, 16, 24, 52, 256)
+		// 1-2 - Tapping Amy
+		SpriteFrame(-28, -14, 16, 24, 70, 256)
+		SpriteFrame(-28, -14, 16, 24, 88, 256)
+	end if
+#endplatform
+	// 3 - Wave
+	SpriteFrame(0, 0, 128, 32, 0, 128)
+	
+	// 4 - Pause Header
+	SpriteFrame(0, -19, 128, 32, 0, 160)
+	
+	// 5 - Underline
+	SpriteFrame(-6, 7, 128, 3, 0, 193)
+	
+	// All the remaining text Frames are different between languages
+	switch Engine.Language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+		
+		// 6 - Continue
+		SpriteFrame(0, -5, 65, 11, 0, 197)
+		
+		// 7 - Restart
+		SpriteFrame(0, -5, 55, 11, 66, 197)
+		
+		// 8 - Exit
+		SpriteFrame(0, -5, 30, 11, 0, 209)
+		
+		// 9 - Dev Menu
+		SpriteFrame(0, -5, 64, 11, 31, 209)
+		
+		// 10 - Greyed out Restart
+		SpriteFrame(0, -5, 55, 11, 52, 244)
+		break
+		
+	case LANG_FRENCH
+		
+		// 6 - Continuer
+		SpriteFrame(0, -5, 73, 11, 0, 197)
+		
+		// 7 - Recommencer
+		SpriteFrame(0, -5, 95, 11, 0, 209)
+		
+		// 8 - Quitter
+		SpriteFrame(0, -5, 53, 11, 148, 244)
+		
+		// 9 - Dev
+		SpriteFrame(0, -5, 23, 11, 96, 209)
+		
+		// 10 - Recommencer (grey)
+		SpriteFrame(0, -5, 95, 11, 52, 244)
+		break
+		
+	case LANG_ITALIAN
+		
+		// 6 - Continua
+		SpriteFrame(0, -5, 65, 11, 0, 197)
+		
+		// 7 - Ricomincia
+		SpriteFrame(0, -5, 78, 11, 0, 209)
+		
+		// 8 - Esci
+		SpriteFrame(0, -5, 28, 11, 66, 197)
+		
+		// 9 - Dev
+		SpriteFrame(0, -5, 23, 11, 79, 209)
+		
+		// 10 - Grey Ricomincia
+		SpriteFrame(0, -5, 78, 11, 52, 244)
+		break
+		
+	case LANG_DEUTSCH
+		
+		// 6 - Weiter
+		SpriteFrame(0, -5, 48, 11, 0, 197)
+		
+		// 7 - Neustart
+		SpriteFrame(0, -5, 65, 11, 0, 209)
+		
+		// 8 - Verlassen
+		SpriteFrame(0, -5, 71, 11, 49, 197)
+		
+		// 9 - Dev
+		SpriteFrame(0, -5, 23, 11, 66, 209)
+		
+		// 10 - Neustart (grey)
+		SpriteFrame(0, -5, 65, 11, 52, 244)
+		break
+		
+	case LANG_SPANISH
+		
+		// 6 - Continuar
+		SpriteFrame(0, -5, 73, 11, 0, 197)
+		
+		// 7 - Reiniciar
+		SpriteFrame(0, -5, 67, 11, 0, 209)
+		
+		// 8 - Salir
+		SpriteFrame(0, -5, 36, 11, 74, 197)
+		
+		// 9 - Dev
+		SpriteFrame(0, -5, 23, 11, 68, 209)
+		
+		// 10 - Grey Reiniciar
+		SpriteFrame(0, -5, 67, 11, 52, 244)
+		break
+		
+	end switch
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/ScoreScreen.gif")
+	SpriteFrame(-64, -16, 128, 32, 0, 160)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

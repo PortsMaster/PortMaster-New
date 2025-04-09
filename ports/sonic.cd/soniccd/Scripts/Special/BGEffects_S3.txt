@@ -1,0 +1,222 @@
+//-----------------Sonic CD BGEffects Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+// Values 0-1 are unused...
+#alias Object.Value2 : Object.PrevAngle
+#alias Object.Value3 : Object.FansTimer
+#alias Object.Value4 : Object.CrunchersTimer
+#alias Object.Value5 : Object.FansSprite
+#alias Object.Value6 : Object.CrunchersSprite
+#alias Object.Value7 : Object.ActivePalette
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectDraw
+	// Animate the Fans in the level
+	Object.FansTimer++
+	if Object.FansTimer > 2
+		Object.FansTimer = 0
+		Object.FansSprite++
+		Object.FansSprite %= 3
+		switch Object.FansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 individual tiles need to be updated to change the entire sprite
+			Copy16x16Tile(296, 520)
+			Copy16x16Tile(297, 521)
+			Copy16x16Tile(298, 522)
+			Copy16x16Tile(299, 523)
+			Copy16x16Tile(300, 524)
+			Copy16x16Tile(301, 525)
+			Copy16x16Tile(302, 526)
+			Copy16x16Tile(303, 527)
+			break
+			
+		case 1
+			Copy16x16Tile(296, 528)
+			Copy16x16Tile(297, 529)
+			Copy16x16Tile(298, 530)
+			Copy16x16Tile(299, 531)
+			Copy16x16Tile(300, 532)
+			Copy16x16Tile(301, 533)
+			Copy16x16Tile(302, 534)
+			Copy16x16Tile(303, 535)
+			break
+			
+		case 2
+			Copy16x16Tile(296, 536)
+			Copy16x16Tile(297, 537)
+			Copy16x16Tile(298, 538)
+			Copy16x16Tile(299, 539)
+			Copy16x16Tile(300, 540)
+			Copy16x16Tile(301, 541)
+			Copy16x16Tile(302, 542)
+			Copy16x16Tile(303, 543)
+			break
+			
+		end switch
+	end if
+	
+	// Animate the Crunchers in the level
+	Object.CrunchersTimer++
+	if Object.CrunchersTimer > 5
+		Object.CrunchersTimer = 0
+		Object.CrunchersSprite++
+		Object.CrunchersSprite &= 3
+		switch Object.CrunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, so 4 tiles need to be updated
+			// in order to completely change their sprite
+			Copy16x16Tile(189, 544)
+			Copy16x16Tile(190, 545)
+			Copy16x16Tile(191, 548)
+			Copy16x16Tile(192, 549)
+			break
+			
+		case 1
+			Copy16x16Tile(189, 546)
+			Copy16x16Tile(190, 547)
+			Copy16x16Tile(191, 550)
+			Copy16x16Tile(192, 551)
+			break
+			
+		case 2
+			Copy16x16Tile(189, 552)
+			Copy16x16Tile(190, 553)
+			Copy16x16Tile(191, 556)
+			Copy16x16Tile(192, 557)
+			break
+			
+		case 3
+			Copy16x16Tile(189, 554)
+			Copy16x16Tile(190, 555)
+			Copy16x16Tile(191, 558)
+			Copy16x16Tile(192, 559)
+			break
+			
+		end switch
+	end if
+	
+	// Handle the palette animation
+	Object.AnimationTimer++
+	if Object.AnimationTimer > 7
+		Object.AnimationTimer = 0
+		Object.ActivePalette++
+		Object.ActivePalette &= 3
+		SetActivePalette(Object.ActivePalette, 0, Screen.YSize)
+	end if
+	
+	// Find the difference between the current scroll pos and last scroll pos
+	TempValue1 = Object.PrevAngle
+	TempValue2 = TileLayer[0].Angle
+	
+	if TempValue1 < TempValue2
+		TempValue3 = TempValue2
+		TempValue3 -= TempValue1
+		if TempValue3 > 256
+			// Account for looping
+			TempValue1 += 512
+		end if
+	else
+		TempValue3 = TempValue1
+		TempValue3 -= TempValue2
+		if TempValue3 > 256
+			// Account for looping
+			TempValue2 += 512
+		end if
+	end if
+	
+	TempValue0 = TempValue1
+	TempValue0 -= TempValue2
+	
+	// Store the current angle for calculations next frame
+	Object.PrevAngle = TileLayer[0].Angle
+	
+	// Move the other BG layers in accordance with the difference found
+	
+	TempValue1 = 0x40000
+	TempValue2 = 0x30000
+	TempValue3 = 0x10000
+	TempValue4 = 0x20000
+	
+	TempValue1 *= TempValue0
+	TempValue2 *= TempValue0
+	TempValue3 *= TempValue0
+	TempValue4 *= TempValue0
+	
+	HParallax[1].ScrollPos += TempValue1
+	HParallax[2].ScrollPos += TempValue2
+	HParallax[3].ScrollPos += TempValue3
+	HParallax[4].ScrollPos += TempValue4
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Set stage bounds
+	Stage.XBoundary1 = 0x3400000 // 832 pixels to the left
+	Stage.XBoundary2 = 0xCC00000 // 3264 pixels to the right
+	Stage.YBoundary1 = 0x3400000 // 832 pixels upwards
+	Stage.YBoundary2 = 0xCC00000 // 3264 pixels downwards
+	
+#platform: HW_Rendering
+	// Load the map sheet if needed for HW rendering
+	
+	LoadSpriteSheet("Special/SSMap3.gif")
+#endplatform
+	
+	// Setup all BGEffects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BGEffects]
+			
+			// Set the object to always active
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			// Make the object among the first to have its draw code be run
+			Object[ArrayPos0].DrawOrder = 0
+			
+			// Set the starting angle
+			// (Assuming Sonic starts facing left)
+			Object[ArrayPos0].PrevAngle = 368
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	// Setup the alternate palettes
+	TempValue0 = 1
+	while TempValue0 < 4
+		// Shift the palette a bit between loops
+		RotatePalette(202, 205, true)
+		CopyPalette(0, TempValue0)
+		TempValue0++
+	loop
+	
+	// And shift it one last time, to restore the palette to what it was originally
+	RotatePalette(202, 205, true)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/SSMap3.gif")
+	SpriteFrame(-256, -256, 512, 512, 0, 0)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

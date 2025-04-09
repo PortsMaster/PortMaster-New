@@ -1,0 +1,351 @@
+//------------------Sonic CD Kanabun Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		: Object.Timer
+#alias Object.Value1		: Object.Angle
+#alias Object.Value2		: Object.StartPosX
+#alias Object.Value3		: Object.StartPosY
+#alias Object.Value4		: Object.Depth
+#alias Object.Value5		: Object.ReturnDrawOrder
+
+#alias Object.PropertyValue : Object.Quality
+
+// States
+#alias 0 : KANABUN_FLYL
+#alias 1 : KANABUN_FLYR
+#alias 2 : KANABUN_OFFSCREEN
+
+// Badnik Quality / Property Values
+#alias 0 : GOOD_QUALITY
+#alias 1 : BAD_QUALITY
+#alias 2 : HIGH_LAYER_GOOD
+
+// Priority
+#alias 0 : PRIORITY_BOUNDS
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.State = KANABUN_OFFSCREEN
+		Object.Timer = 0
+		Object.Angle = 256
+		Object.Direction = FACING_RIGHT
+		Object.XPos = Object.StartPosX
+		Object.YPos = Object.StartPosY
+	end if
+
+	// The different Kanabun types have their own main update routines
+	// However, their main State Switches are exactly the same, it's only the small bit of code after that differs between the two
+
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case KANABUN_FLYL
+			// This Kanabun is initially given always-active priority, in order for its OOB state to work properly
+			Object.Priority = PRIORITY_ACTIVE
+			
+			// Move left at a rate of 0.25 pixels per frame
+			Object.XPos -= 0x4000
+			
+			Object.Timer++
+			if Object.Timer == 256
+				// Turn around
+				
+				Object.State = KANABUN_FLYR
+				Object.Direction = FACING_LEFT
+			end if
+			break
+			
+		case KANABUN_FLYR
+			// When entering this state, it is assumed that Object.Timer is already 256
+			
+			// Move right, still at a rate of 0.25 pixels per frame
+			Object.XPos += 0x4000
+			
+			Object.Timer--
+			if Object.Timer == 0
+				// Turn back around again
+				
+				Object.State = KANABUN_FLYL
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+			
+		case KANABUN_OFFSCREEN
+			// Buffer state to hold the Kanabun if it went off-screen
+			if Object.OutOfBounds == true
+				Object.State = KANABUN_FLYL
+				
+				// It's safe to give it normal priority again
+				Object.Priority = PRIORITY_BOUNDS
+			end if
+			break
+			
+		end switch
+		
+		// Update the Kanabun's movement angle
+		Object.Angle += 4
+		Object.Angle &= 511
+		
+		// And animate it, too
+		Object.Frame = Object.AnimationTimer
+		Object.Frame >>= 1
+		
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 3
+	else
+		switch Object.State
+		case KANABUN_FLYL
+			// Give the Kanabun active priority so that its offscreen state will work fine when needed
+			//(or else the object will go offscreen and immediately pause, not returning to its original position)
+			Object.Priority = PRIORITY_ACTIVE
+			
+			// Go left at a rate of 0.25 pixels per frame
+			Object.XPos -= 0x4000
+			
+			Object.Timer++
+			if Object.Timer == 256
+				// Turn the other way
+				Object.State = KANABUN_FLYR
+				Object.Direction = FACING_LEFT
+			end if
+			break
+			
+		case KANABUN_FLYR
+			// Object.Timer is assumed to be 256 when going into this state
+			
+			// Go right at a rate of 0.25 pixels per frame
+			Object.XPos += 0x4000
+			
+			Object.Timer--
+			if Object.Timer == 0
+				// Turn the right way again
+				Object.State = KANABUN_FLYL
+				Object.Direction = FACING_RIGHT
+			end if
+			break
+			
+		case KANABUN_OFFSCREEN
+			// Buffer state to hold the Kanabun if it went off-screen
+			if Object.OutOfBounds == true
+				Object.State = KANABUN_FLYL
+				
+				// And give the object normal priority again, too
+				Object.Priority = PRIORITY_BOUNDS
+			end if
+			break
+
+		end switch
+
+		Object.Angle += 2
+		Object.Angle &= 511
+
+		Object.Frame = Object.AnimationTimer
+		Object.Frame >>= 2
+		Object.Frame += 6
+		
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 7
+	end if
+
+	// Make the Kanabun move around, vertically
+	// Object.Depth is 0, 2, or 4, based on how into the background the Kanabun is
+	// 0 for FG, 4 for furthest in the BG
+	// These also correspond to Sprite Frames, with smaller sprites
+	
+	Sin(Object.YPos, Object.Angle)
+	if Object.Angle < 128
+		Object.DrawOrder = 5
+		
+		Object.Depth = 0
+		if Object.YPos < -384
+			Object.Depth = 2
+		end if
+		
+		if Object.YPos > 384
+			Object.Depth = 2
+		end if
+	else
+		if Object.Angle > 384
+			Object.DrawOrder = 5
+			
+			Object.Depth = 0
+			if Object.YPos < -384
+				Object.Depth = 2
+			end if
+			
+			if Object.YPos > 384
+				Object.Depth = 2
+			end if
+		else
+			Object.DrawOrder = Object.ReturnDrawOrder
+			
+			Object.Depth = 4
+			if Object.YPos < -384
+				Object.Depth = 2
+			end if
+			
+			if Object.YPos > 384
+				Object.Depth = 2
+			end if
+		end if
+	end if
+	
+	Object.Frame += Object.Depth
+	
+	Object.YPos <<= 13
+	Object.YPos += Object.StartPosY
+	
+	// See if the Kanabun should become a Flower instead
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < KANABUN_OFFSCREEN
+		if Object.Depth == 0
+			// If in the Foreground, then act as a normal badnik
+#platform: Use_Standalone
+			PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+#endplatform
+#platform: Use_Origins
+			PlayerObjectCollision(C_ENEMY, -14, -14, 14, 14)
+#endplatform
+			if CheckResult == true
+				CallFunction(Player_BadnikBreak)
+			end if
+		else
+			// If in the BG, only interact with the player if the player is curled
+			// (Don't want to damage them unfairly!)
+			
+			if Player.Animation == ANI_JUMPING
+#platform: Use_Standalone
+				PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+#endplatform
+#platform: Use_Origins
+				PlayerObjectCollision(C_ENEMY, -14, -14, 14, 14)
+#endplatform
+				if CheckResult == true
+					CallFunction(Player_BadnikBreak)
+				end if
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.State < KANABUN_OFFSCREEN
+		DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+	
+	// All these Sprite Frames are in sets of 2 for all the depth levels of the Kanabun
+	
+	// "Good" Kanabun Frames
+	
+	// Nearest to the screen
+	SpriteFrame(-16, -16, 32, 32, 1, 100)
+	SpriteFrame(-16, -16, 32, 32, 1, 133)
+	
+	// Middle depth to the screen
+	SpriteFrame(-12, -12, 24, 24, 34, 71)
+	SpriteFrame(-12, -12, 27, 27, 62, 43)
+	
+	// Furthest away from the screen
+	SpriteFrame(-12, -12, 24, 24, 59, 71)
+	SpriteFrame(-12, -12, 24, 24, 84, 71)
+	
+	// "Bad" Kanabun Frames
+	
+	// Closest to the screen
+	SpriteFrame(-16, -16, 32, 32, 1, 34)
+	SpriteFrame(-16, -16, 32, 32, 1, 67)
+	
+	// Somewhat away from the screen
+	SpriteFrame(-12, -12, 24, 24, 34, 18)
+	SpriteFrame(-12, -12, 27, 27, 34, 43)
+	
+	// Farthest away from the screen
+	SpriteFrame(-12, -12, 24, 24, 59, 18)
+	SpriteFrame(-12, -12, 24, 24, 84, 18)
+	
+	// Find all Kanabun objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Kanabun]
+			
+			// Make the Kanabun start halfway across its movement cycle, right in the middle
+			Object[ArrayPos0].Angle = 256
+			
+			// Store the Kanabun's starating position, not only for object resetting but also for Y movement calculations
+			Object[ArrayPos0].StartPosX = Object[ArrayPos0].XPos
+			Object[ArrayPos0].StartPosY = Object[ArrayPos0].YPos
+			
+			// And setup where the Kanabun's gonna fly back to, only the Good variant can go back to the higher layer
+			if Object[ArrayPos0].Quality == HIGH_LAYER_GOOD
+				Object[ArrayPos0].Quality = GOOD_QUALITY
+				Object[ArrayPos0].ReturnDrawOrder = 3
+			else
+				Object[ArrayPos0].ReturnDrawOrder = 2
+			end if
+		end if
+
+		ArrayPos0++
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 100)
+	SpriteFrame(-16, -16, 32, 32, 1, 34)
+	SpriteFrame(-16, -16, 32, 32, 1, 100)
+
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad", BAD_QUALITY)
+	AddEnumVariable("Good (Return to high layer)", HIGH_LAYER_GOOD)
+end sub

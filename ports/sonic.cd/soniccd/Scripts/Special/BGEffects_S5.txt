@@ -1,0 +1,267 @@
+//-----------------Sonic CD BGEffects Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+// Values 0-1 are unused...
+#alias Object.Value2 : Object.PrevAngle
+#alias Object.Value3 : Object.FansTimer
+#alias Object.Value4 : Object.CrunchersTimer
+#alias Object.Value5 : Object.FansSprite
+#alias Object.Value6 : Object.CrunchersSprite
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectDraw
+	// Animate the Fan tiles throughout the level
+	Object.FansTimer++
+	if Object.FansTimer > 2
+		Object.FansTimer = 0
+		Object.FansSprite++
+		Object.FansSprite %= 3
+		switch Object.FansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 individual tiles need to be updated to change the entire sprite
+			Copy16x16Tile(174, 472)
+			Copy16x16Tile(175, 473)
+			Copy16x16Tile(176, 474)
+			Copy16x16Tile(177, 475)
+			Copy16x16Tile(183, 476)
+			Copy16x16Tile(184, 477)
+			Copy16x16Tile(185, 478)
+			Copy16x16Tile(186, 479)
+			break
+			
+		case 1
+			Copy16x16Tile(174, 480)
+			Copy16x16Tile(175, 481)
+			Copy16x16Tile(176, 482)
+			Copy16x16Tile(177, 483)
+			Copy16x16Tile(183, 484)
+			Copy16x16Tile(184, 485)
+			Copy16x16Tile(185, 486)
+			Copy16x16Tile(186, 487)
+			break
+			
+		case 2
+			Copy16x16Tile(174, 488)
+			Copy16x16Tile(175, 489)
+			Copy16x16Tile(176, 490)
+			Copy16x16Tile(177, 491)
+			Copy16x16Tile(183, 492)
+			Copy16x16Tile(184, 493)
+			Copy16x16Tile(185, 494)
+			Copy16x16Tile(186, 495)
+			break
+			
+		end switch
+	end if
+	
+	// Animate the Crunching tiles in the level
+	Object.CrunchersTimer++
+	if Object.CrunchersTimer > 5
+		Object.CrunchersTimer = 0
+		Object.CrunchersSprite++
+		Object.CrunchersSprite &= 3
+		switch Object.CrunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, each tile unique,
+			// so 4 tiles need to be updated in order to completely change their sprite
+			Copy16x16Tile(76, 496)
+			Copy16x16Tile(77, 497)
+			Copy16x16Tile(82, 500)
+			Copy16x16Tile(83, 501)
+			break
+			
+		case 1
+			Copy16x16Tile(76, 498)
+			Copy16x16Tile(77, 499)
+			Copy16x16Tile(82, 502)
+			Copy16x16Tile(83, 503)
+			break
+			
+		case 2
+			Copy16x16Tile(76, 504)
+			Copy16x16Tile(77, 505)
+			Copy16x16Tile(82, 508)
+			Copy16x16Tile(83, 509)
+			break
+			
+		case 3
+			Copy16x16Tile(76, 506)
+			Copy16x16Tile(77, 507)
+			Copy16x16Tile(82, 510)
+			Copy16x16Tile(83, 511)
+			break
+			
+		end switch
+	end if
+	
+	// Find the difference from the last and current scroll pos
+	
+	TempValue1 = Object.PrevAngle
+	TempValue2 = TileLayer[0].Angle
+	
+	// Acount for looping before doing the actual calculations
+	if TempValue1 < TempValue2
+		TempValue3 = TempValue2
+		TempValue3 -= TempValue1
+		if TempValue3 > 256
+			TempValue1 += 512
+		end if
+	else
+		TempValue3 = TempValue1
+		TempValue3 -= TempValue2
+		if TempValue3 > 256
+			TempValue2 += 512
+		end if
+	end if
+	
+	// The actual finding of the difference
+	TempValue0 = TempValue1
+	TempValue0 -= TempValue2
+	
+	// Store the current scroll pos for use next frame
+	Object.PrevAngle = TileLayer[0].Angle
+	
+	// Move the other BG layers based on the difference found
+	
+	TempValue1 = 0x10000
+	TempValue2 = 0x20000
+	
+	TempValue1 *= TempValue0
+	
+	HParallax[0].ScrollPos += TempValue1
+	
+	TempValue2 *= TempValue0
+	HParallax[2].ScrollPos += TempValue2
+	
+	// Make it only move 96 pixels max, otherwise wrap around
+	HParallax[2].ScrollPos %= 0x600000
+	
+	// And move the third layer to match
+	HParallax[3].ScrollPos = HParallax[2].ScrollPos
+	HParallax[3].ScrollPos >>= 16
+	
+	// Now, update the pseudo-3d-ness of the BG red bars using deformation
+	// Process is done from the bottom of the screen -> upwards
+	
+	// - ArrayPos0 is the current line, starting off as the number of lines to change
+	// - TempValue2 is the starting offset
+	// - TempValue3 gets applied to the offset after every line in order to make the top of the screen move less drastically to the bottom
+	
+	ArrayPos0 = 128
+	TempValue2 = 0x4000
+	TempValue3 = 0
+	while ArrayPos0 > -1
+		TempValue4  = HParallax[3].ScrollPos
+		TempValue4 *= TempValue2
+		
+		// Shift it by different amounts depending on the current renderer
+		// 14 is used for when using Software Rendering, 10 is used for Hardware
+		// Do note - swapping them around WILL crash the game!
+		// These values must've been picked with great care in order for that to happen
+		
+#platform: HW_Rendering
+		TempValue4 >>= 10
+#endplatform
+		
+#platform: SW_Rendering
+		TempValue4 >>= 14
+#endplatform
+		
+		Stage.DeformationData2[ArrayPos0] = TempValue4
+		TempValue2 -= TempValue3
+		TempValue3++
+		
+		ArrayPos0--
+	loop
+	
+#platform: HW_Rendering
+	// If using the hardware render, draw the BG as a sprite & rect here
+	
+	DrawSpriteScreenFX(0, FX_SCALE, 0, 0)
+	
+	// Draw a black rectagle across the screen
+	DrawRect(296, 0, 256, 128, 0, 0, 0, 255)
+#endplatform
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Set the stage's bounds
+	Stage.XBoundary1 = 0x3000000 // left bounds  @ 768 pixels
+	Stage.XBoundary2 = 0xD000000 // right bounds @ 3328 pixels
+	Stage.YBoundary1 = 0x3000000 // upper bounds @ 768 pixels
+	Stage.YBoundary2 = 0xD000000 // lower bounds @ 3328 pixels
+	
+#platform: HW_Rendering
+	// If needed, do some setup for hardware rendering
+	LoadSpriteSheet("Special/SSMap5.gif")
+	
+	// Seems to be a random patch in the middle of nowhere?
+	SpriteFrame(0, 0, 32, 48, 107, 384)
+#endplatform
+	
+	// Set starting scroll positions
+	
+	// Make the first parallax layer start at 176 pixels from its base position
+	HParallax[0].ScrollPos = 0xB00000
+	
+	// Set the other starting scroll position, but with respect to the screen's size to make it start in the right place
+	TempValue0 = Screen.XSize
+	TempValue0 -= 320
+	TempValue0 <<= 15
+	
+	// Base position of 96 pixels
+	HParallax[1].ScrollPos = 0x600000
+	
+	// And then subtract from that as needed
+	HParallax[1].ScrollPos -= TempValue0
+	
+	// Setup all BGEffect objects in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BGEffects]
+			
+			// Make it always active
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			// It should the first object to have its draw code run
+			Object[ArrayPos0].DrawOrder = 0
+			
+			// Set the starting angle... but why is this 192? All other ones are 368 instead...
+			Object[ArrayPos0].PrevAngle = 192
+			
+			// Set the scale for the object to draw at
+			// (Only used for hardware rendering)
+			Object[ArrayPos0].Scale = 1536
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/SSMap5.gif")
+	SpriteFrame(-256, -256, 512, 512, 0, 0)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

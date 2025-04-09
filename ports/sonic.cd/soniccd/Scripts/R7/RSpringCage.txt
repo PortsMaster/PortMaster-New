@@ -1,0 +1,494 @@
+//---------------Sonic CD R Spring Cage Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Note - Object[+1] should be an R7Spring object
+
+// Aliases
+#alias Object.Value0 : Object.FullAngle
+#alias Object.Value1 : Object.Angle
+#alias Object.Value3 : Object.RightArmOffset
+
+// R7 Spring Aliases
+#alias Object.Value0 : Object.Timer
+
+// States
+#alias 0 : RSPRINGCAGE_IDLE
+#alias 1 : RSPRINGCAGE_LOCKINPLAYER
+#alias 2 : RSPRINGCAGE_SHOOTPLAYER
+#alias 3 : RSPRINGCAGE_RESTORE
+
+// Gravity
+#alias 1 : GRAVITY_AIR
+
+// Stage SFX
+#alias 0 : SFX_S_LARGEBOOSTER // In origins, this SFX is Launcher
+#alias 1 : SFX_S_SWITCH
+
+// Property Values
+#alias 0 : ROTATING_CAGE
+#alias 1 : STATIC_CAGE
+
+
+sub ObjectMain
+	switch Object.State
+	case RSPRINGCAGE_IDLE
+		if Object.PropertyValue == ROTATING_CAGE
+			Object.FullAngle++
+			Object.FullAngle %= 48
+
+			Object.Angle = Object.FullAngle
+			Object.Angle /= 6
+		end if
+		break
+
+	case RSPRINGCAGE_LOCKINPLAYER
+		if Object.RightArmOffset > 0
+			// Close it in, 2 pixels per frame
+			Object.RightArmOffset -= 0x20000
+		else
+			PlayStageSfx(SFX_S_SWITCH, false)
+			Object.State++
+		end if
+		break
+
+	case RSPRINGCAGE_SHOOTPLAYER
+		if Player.State != Player_State_Death
+			if Object.PropertyValue == ROTATING_CAGE
+				Object.FullAngle++
+				Object.FullAngle %= 48
+				Object.Angle  = Object.FullAngle
+				Object.Angle /= 6
+			end if
+
+			Player.Animation = ANI_JUMPING
+
+			Player.XPos = Object.XPos
+			Player.YPos = Object.YPos
+
+			switch Object.Angle
+			case 0
+				Player.XPos += 0x200000 // Offset of 32 pixels right
+				break
+			case 1
+				Player.XPos += 0x180000 // Offset of 24 pixels right
+				Player.YPos -= 0x180000 // Offset of 24 pixels up
+				break
+			case 2
+				Player.YPos -= 0x200000 // Offset of 32 pixels up
+				break
+			case 3
+				Player.XPos -= 0x180000 // Offset of 24 pixels left
+				Player.YPos -= 0x180000 // Offset of 24 pixels up
+				break
+			case 4
+				Player.XPos -= 0x200000 // Offset of 32 pixels left
+				break
+			case 5
+				Player.XPos -= 0x180000 // Offset of 24 pixels left
+				Player.YPos += 0x180000 // Offset of 24 pixels down
+				break
+			case 6
+				Player.YPos += 0x200000 // Offset of 32 pixels down
+				break
+			case 7
+				Player.XPos += 0x180000 // Offset of 24 pixels right
+				Player.YPos += 0x180000 // Offset of 24 pixels down
+				break
+			end switch
+
+			if Player.JumpPress == true
+				PlayStageSfx(SFX_S_LARGEBOOSTER, false)
+				
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+				Player.Gravity = GRAVITY_AIR
+				Player.Timer = 0
+
+				// Tell the spring to start animating
+				Object[+1].Timer = 1
+
+				Object.State++
+				switch Object.Angle
+				case 0
+					Player.Speed = 0x100000
+					Player.XVelocity = 0x100000
+					Player.YVelocity = 0
+					break
+				case 1
+					Player.Speed = 0xC0000
+					Player.XVelocity = 0xC0000
+					Player.YVelocity = -720896
+					break
+				case 2
+					Player.Speed = 0
+					Player.XVelocity = 0
+					Player.YVelocity = -0x100000
+					break
+				case 3
+					Player.Speed = -0xC0000
+					Player.XVelocity = -0xC0000
+					Player.YVelocity = -720896
+					break
+				case 4
+					Player.Speed = -0x100000
+					Player.XVelocity = -0x100000
+					Player.YVelocity = 0
+					break
+				case 5
+					Player.Speed = -0xC0000
+					Player.XVelocity = -0xC0000
+					Player.YVelocity = 720896
+					break
+				case 6
+					Player.Speed = 0
+					Player.XVelocity = 0
+					Player.YVelocity = 0x100000
+					break
+				case 7
+					Player.Speed = 0xC0000
+					Player.XVelocity = 0xC0000
+					Player.YVelocity = 720896
+					break
+				end switch
+			end if
+		else
+			Object.State = RSPRINGCAGE_RESTORE
+		end if
+		break
+
+	case RSPRINGCAGE_RESTORE
+		if Object[+1].Timer == 0
+			if Object.RightArmOffset < 0x300000
+				// Opening it back up, 8 pixels per frame
+				Object.RightArmOffset += 0x80000
+			else
+				Object.State = RSPRINGCAGE_IDLE
+			end if
+		end if
+		break
+
+	end switch
+
+	// Change the spring's angle
+
+	switch Object.Angle
+	case 0
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 1
+		break
+	case 1
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 4
+		break
+	case 2
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 0
+		break
+	case 3
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 5
+		break
+	case 4
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 2
+		break
+	case 5
+		Object[+1].Direction = 2
+		Object[+1].PropertyValue = 5
+		break
+	case 6
+		Object[+1].Direction = FACING_RIGHT
+		Object[+1].PropertyValue = 3
+		break
+	case 7
+		Object[+1].Direction = 2
+		Object[+1].PropertyValue = 4
+		break
+	end switch
+
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	if Object.State == RSPRINGCAGE_IDLE
+		PlayerObjectCollision(C_TOUCH, -24, -24, 24, 24)
+		if CheckResult == true
+			Object.State = RSPRINGCAGE_LOCKINPLAYER
+
+			// Put the player inside the cage
+			Player.XPos = Object.XPos
+			Player.YPos = Object.YPos
+			Player.State = Player_State_Static
+			Player.Animation = ANI_JUMPING
+			Player.Speed = 0
+			Player.XVelocity = 0
+			Player.YVelocity = 0
+
+			// 8 possible directions, 8 possible jump locations~
+			switch Object.Angle
+			case 0
+				Player.XPos += 0x200000 // Offset of 32 pixels right
+				break
+			case 1
+				Player.XPos += 0x180000 // Offset of 24 pixels right
+				Player.YPos -= 0x180000 // Offset of 24 pixels up
+				break
+			case 2
+				Player.YPos -= 0x200000 // Offset of 32 pixels up
+				break
+			case 3
+				Player.XPos -= 0x180000 // Offset of 24 pixels left
+				Player.YPos -= 0x180000 // Offset of 24 pixels up
+				break
+			case 4
+				Player.XPos -= 0x200000 // Offset of 32 pixels left
+				break
+			case 5
+				Player.XPos -= 0x180000 // Offset of 24 pixels left
+				Player.YPos += 0x180000 // Offset of 24 pixels down
+				break
+			case 6
+				Player.YPos += 0x200000 // Offset of 32 pixels down
+				break
+			case 7
+				Player.XPos += 0x180000 // Offset of 24 pixels right
+				Player.YPos += 0x180000 // Offset of 24 pixels down
+				break
+			end switch
+		end if
+	end if
+
+end sub
+
+
+sub ObjectDraw
+
+	// Different draw routines for the 8 possible directions
+
+	switch Object.Angle
+	case 0
+		DrawSprite(1)
+		Object.Direction = 2
+		TempValue0 = Object.XPos
+		TempValue0 -= Object.RightArmOffset
+		DrawSpriteFX(1, FX_FLIP, TempValue0, Object.YPos)
+		break
+
+	case 1
+		DrawSprite(2)
+		Object.Direction = 3
+		TempValue2 = Object.RightArmOffset
+		TempValue2 >>= 1
+		TempValue0 = Object.XPos
+		TempValue0 -= TempValue2
+		TempValue1 = Object.YPos
+		TempValue1 += TempValue2
+		DrawSpriteFX(3, FX_FLIP, TempValue0, TempValue1)
+		break
+
+	case 2
+		DrawSprite(4)
+		Object.Direction = FACING_LEFT
+		TempValue1 = Object.YPos
+		TempValue1 += Object.RightArmOffset
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, TempValue1)
+		break
+
+	case 3
+		Object.Direction = FACING_LEFT
+		TempValue2 = Object.RightArmOffset
+		TempValue2 >>= 1
+		TempValue0 = Object.XPos
+		TempValue0 += TempValue2
+		TempValue1 = Object.YPos
+		TempValue1 += TempValue2
+		DrawSpriteFX(2, FX_FLIP, TempValue0, TempValue1)
+		Object.Direction = 2
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 4
+		TempValue0 = Object.XPos
+		TempValue0 += Object.RightArmOffset
+		DrawSpriteXY(5, TempValue0, Object.YPos)
+		Object.Direction = 2
+		DrawSpriteFX(5, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 5
+		Object.Direction = 3
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		Object.Direction = FACING_RIGHT
+		TempValue2 = Object.RightArmOffset
+		TempValue2 >>= 1
+		TempValue0 = Object.XPos
+		TempValue0 += TempValue2
+		TempValue1 = Object.YPos
+		TempValue1 -= TempValue2
+		DrawSpriteFX(3, FX_FLIP, TempValue0, TempValue1)
+		break
+
+	case 6
+		Object.Direction = 2
+		TempValue1 = Object.YPos
+		TempValue1 -= Object.RightArmOffset
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, TempValue1)
+		Object.Direction = 3
+		DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case 7
+		Object.Direction = 2
+		TempValue2 = Object.RightArmOffset
+		TempValue2 >>= 1
+		TempValue0 = Object.XPos
+		TempValue0 -= TempValue2
+		TempValue1 = Object.YPos
+		TempValue1 -= TempValue2
+		DrawSpriteFX(2, FX_FLIP, TempValue0, TempValue1)
+		Object.Direction = FACING_LEFT
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	end switch
+
+	DrawSprite(0)
+
+end sub
+
+
+sub ObjectStartup
+
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Cage Frames
+
+	// Pivot Post Frame
+	SpriteFrame(-8, -8, 16, 16, 90, 52)
+
+	// Top Horizontal Half
+	SpriteFrame(-8, -28, 64, 24, 34, 96)
+
+	// Top Diagonal Half
+	SpriteFrame(-24, -56, 56, 56, 59, 121)
+
+	// Bottom Diagonal Half
+	SpriteFrame(-56, -24, 56, 56, 59, 121)
+
+	// (Shared) Vertical Half
+	SpriteFrame(-28, -56, 24, 64, 34, 121)
+
+	// Bottom Horizontal Half
+	SpriteFrame(-56, -28, 64, 24, 34, 96)
+
+	// Setup all Rotating Cage objects within the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[R Spring Cage]
+		
+			// Focus on the Cage's corresponding R7 Spring object
+			ArrayPos1 = ArrayPos0
+			ArrayPos1++
+
+			Object[ArrayPos0].DrawOrder = 4
+
+			// Set the right arm to start 48 pixels back
+			Object[ArrayPos0].RightArmOffset = 0x300000
+
+			// Move the spring to the Cage's position too
+			Object[ArrayPos1].XPos = Object[ArrayPos0].XPos
+			Object[ArrayPos1].YPos = Object[ArrayPos0].YPos
+		end if
+
+		ArrayPos0++
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	Object.Direction = FACING_LEFT
+	TempValue1 = Object.YPos
+	TempValue1 += 0x300000
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, TempValue1)
+
+	if Editor.ShowGizmos == true
+		GetObjectType(TempValue0, "R7 Spring")
+
+		ArrayPos1 = Object[+1].EntityNo
+		if Object[ArrayPos1].type != TempValue0
+			// Uh oh! The next object is supposed to be a special spring, but here it isn't...
+			// Gotta let the user know!
+
+			Editor.DrawingOverlay = true
+
+			// First draw a red line from the cage to the invalid object
+			DrawArrow(Object.XPos, Object.YPos, Object[ArrayPos1].XPos, Object[ArrayPos1].YPos, 255, 0, 0)
+
+			// And now draw an X
+
+			TempValue0 = Object[ArrayPos1].XPos
+			TempValue0 -= 0x100000
+
+			TempValue1 = Object[ArrayPos1].YPos
+			TempValue1 -= 0x100000
+
+			TempValue2 = Object[ArrayPos1].XPos
+			TempValue2 += 0x100000
+
+			TempValue3 = Object[ArrayPos1].YPos
+			TempValue3 += 0x100000
+
+			DrawLine(TempValue0, TempValue1, TempValue2, TempValue3, 255, 0, 0)
+			DrawLine(TempValue2, TempValue1, TempValue0, TempValue3, 255, 0, 0)
+
+			Editor.DrawingOverlay = false
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-28, -56, 24, 64, 34, 121)
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Rotate", 0)
+	AddEnumVariable("Static", 1)
+end sub

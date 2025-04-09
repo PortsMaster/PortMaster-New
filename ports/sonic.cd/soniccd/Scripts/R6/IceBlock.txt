@@ -1,0 +1,298 @@
+//-----------------Sonic CD Ice Block Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.YVelocity
+
+// States
+#alias 0	:	ICEBLOCK_FALLING
+#alias 1	:	ICEBLOCK_BREAKICE
+
+// Stage SFX
+#alias 4	:	SFX_S_GLASSSMASH
+
+// Property Values
+#alias 0	:	CHARACTER_ICEBLOCK
+#alias 1	:	BIG_CHUNK_ICEBLOCK
+#alias 2	:	MEDIUM_CHUNK_ICEBLOCK
+#alias 3	:	CENTRAL_CHUNK_ICEBLOCK // Used, but it doesn't do anything
+#alias 4	:	SMALL_CHUNK_ICEBLOCK
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Directions
+#alias 2	:	FACING_UPEND_RIGHT
+#alias 3	:	FACING_UPEND_LEFT
+
+// Function declarations
+#function IceBlock_CreateIceChunks
+
+
+function IceBlock_CreateIceChunks
+	CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  =  4
+	Object[TempObjectPos].XPos		-=  0x110000
+	Object[TempObjectPos].YPos		-=  0xD0000
+	Object[TempObjectPos].XVelocity  = -0x10000
+	Object[TempObjectPos].YVelocity  = -0x10000
+	Object[TempObjectPos].Direction  =  FACING_RIGHT
+
+	CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  =  4
+	Object[TempObjectPos].XPos		+=  0x110000
+	Object[TempObjectPos].YPos		-=  0xD0000
+	Object[TempObjectPos].XVelocity  =  0x10000
+	Object[TempObjectPos].YVelocity  = -0x10000
+	Object[TempObjectPos].Direction  =  FACING_LEFT
+
+	CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  =  4
+	Object[TempObjectPos].XPos		-=  0x110000
+	Object[TempObjectPos].YPos		+=  0xD0000
+	Object[TempObjectPos].XVelocity  = -0x10000
+	Object[TempObjectPos].YVelocity  =  0x10000
+	Object[TempObjectPos].Direction  =  FACING_UPEND_RIGHT
+
+	CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  = 4
+	Object[TempObjectPos].XPos		+= 0x110000
+	Object[TempObjectPos].YPos		+= 0xD0000
+	Object[TempObjectPos].XVelocity  = 0x10000
+	Object[TempObjectPos].YVelocity  = 0x10000
+	Object[TempObjectPos].Direction  = FACING_UPEND_LEFT
+
+	CreateTempObject(TypeName[Ice Block], CENTRAL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder = 4
+	Object[TempObjectPos].Direction = FACING_RIGHT
+
+	CreateTempObject(TypeName[Ice Block], MEDIUM_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  =  4
+	Object[TempObjectPos].YPos		-=  0x110000
+	Object[TempObjectPos].YVelocity  = -0x10000
+	Object[TempObjectPos].Direction  =  FACING_LEFT
+
+	CreateTempObject(TypeName[Ice Block], MEDIUM_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+	Object[TempObjectPos].DrawOrder  = 4
+	Object[TempObjectPos].YPos		+= 0x110000
+	Object[TempObjectPos].YVelocity  = 0x10000
+	Object[TempObjectPos].Direction  = FACING_UPEND_LEFT
+	
+			
+#platform: Use_Haptics
+	HapticEffect(11, 0, 0, 0)
+#endplatform
+
+end function
+
+
+sub ObjectMain
+	switch Object.PropertyValue
+	case CHARACTER_ICEBLOCK
+		if Object.State == ICEBLOCK_FALLING
+			Object.YPos += Object.YVelocity
+			Object.YVelocity += Player.GravityStrength
+			if Object.YVelocity > 0x140000
+				Object.YVelocity = 0x140000
+			end if
+
+			ObjectTileCollision(CSIDE_FLOOR, 0, 24, 0)
+			if CheckResult == true
+				Object.State = ICEBLOCK_BREAKICE
+				Object.YVelocity = 0
+				PlayStageSfx(SFX_S_GLASSSMASH, false)
+			end if
+
+#platform: Use_Origins
+			if CheckResult == false
+				ObjectTileCollision(CSIDE_FLOOR, 0, 22, 0)
+				if CheckResult == true
+					Object.State	 = ICEBLOCK_BREAKICE
+					Object.YVelocity = 0
+					PlayStageSfx(SFX_S_GLASSSMASH, 0)
+				end if
+			end if
+#endplatform
+			Player.XPos = Object.XPos
+			Player.YPos = Object.YPos
+		else
+			if Object.Timer < 16
+				Object.Timer++
+				if Object[0].Type == TypeName[PlayerObject]
+					if Player.JumpPress == true
+						CallFunction(IceBlock_CreateIceChunks)
+						Object.Type = TypeName[Blank Object]
+
+						CallFunction(Player_Action_Jump)
+
+						Player.Visible = true
+						Player.ObjectInteraction = true
+					end if
+				end if
+			else
+				CallFunction(IceBlock_CreateIceChunks)
+				Object.Type = TypeName[Blank Object]
+
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+				CallFunction(Player_Hit)
+
+				Player.Visible = true
+				Player.ObjectInteraction = true
+			end if
+		end if
+		break
+
+	case BIG_CHUNK_ICEBLOCK
+		if Object.Timer < 10
+			Object.Timer++
+			Object.XPos += Object.XVelocity
+			Object.YPos += Object.YVelocity
+		else
+			Object.Type = TypeName[Blank Object]
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder =  4
+			Object[TempObjectPos].XVelocity =  0
+			Object[TempObjectPos].YVelocity = -0x10000
+
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder =  4
+			Object[TempObjectPos].XVelocity = -0x10000
+			Object[TempObjectPos].YVelocity =  0
+
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 4
+			Object[TempObjectPos].XVelocity = 0x10000
+			Object[TempObjectPos].YVelocity = 0
+
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 4
+			Object[TempObjectPos].XVelocity = 0
+			Object[TempObjectPos].YVelocity = 0x10000
+		end if
+		break
+
+	case MEDIUM_CHUNK_ICEBLOCK
+		if Object.Timer < 16
+			Object.Timer++
+			Object.XPos += Object.XVelocity
+			Object.YPos += Object.YVelocity
+		else
+			Object.Type = TypeName[Blank Object]
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder =  4
+			Object[TempObjectPos].XVelocity =  0
+			Object[TempObjectPos].YVelocity = -0x10000
+
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder =  4
+			Object[TempObjectPos].XVelocity = -0x10000
+			Object[TempObjectPos].YVelocity =  0x10000
+
+			CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, Object.XPos, Object.YPos)
+			Object[TempObjectPos].DrawOrder = 4
+			Object[TempObjectPos].XVelocity = 0x10000
+			Object[TempObjectPos].YVelocity = 0x10000
+		end if
+		break
+
+	case CENTRAL_CHUNK_ICEBLOCK
+		if Object.Timer < 1
+			Object.Timer++
+		else
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+
+	case SMALL_CHUNK_ICEBLOCK
+		if Object.Timer < 12
+			Object.Timer++
+			Object.XPos += Object.XVelocity
+			Object.YPos += Object.YVelocity
+		else
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.PropertyValue, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	// #0 - Character Ice Block
+	// #1 - Ice Chunk (Big)
+	// #2 - Ice Chunk (Medium)
+	// #3 - Ice Chunk (Medium)
+	// #4 - Ice Chunk (Small)
+
+	if Stage.PlayerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("R6/Objects.gif")
+		SpriteFrame(-24, -24, 48, 48, 34, 18)
+		SpriteFrame(-8, -12, 16, 24, 206, 1)
+		SpriteFrame(-8, -8, 16, 16, 66, 1)
+		SpriteFrame(-8, -8, 16, 16, 66, 1)
+		SpriteFrame(-4, -4, 8, 8, 34, 67)
+	end if
+
+	if Stage.PlayerListPos == PLAYER_TAILS_A
+		LoadSpriteSheet("R6/Objects3.gif")
+		SpriteFrame(-24, -24, 48, 48, 1, 101)
+		SpriteFrame(-8, -12, 16, 24, 50, 86)
+		SpriteFrame(-8, -8, 16, 16, 50, 111)
+		SpriteFrame(-8, -8, 16, 16, 50, 111)
+		SpriteFrame(-4, -4, 8, 8, 50, 128)
+	end if
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("R6/Objects4.gif")
+		SpriteFrame(-24, -24, 48, 48, 1, 194)
+		SpriteFrame(-8, -12, 16, 24, 99, 194)
+		SpriteFrame(-8, -8, 16, 16, 99, 219)
+		SpriteFrame(-8, -8, 16, 16, 99, 219)
+		SpriteFrame(-4, -4, 8, 8, 99, 236)
+	end if
+
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("R6/Objects4.gif")
+		SpriteFrame(-24, -24, 48, 48, 50, 194)
+		SpriteFrame(-8, -12, 16, 24, 99, 194)
+		SpriteFrame(-8, -8, 16, 16, 99, 219)
+		SpriteFrame(-8, -8, 16, 16, 99, 219)
+		SpriteFrame(-4, -4, 8, 8, 99, 236)
+	end if
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-24, -24, 48, 48, 34, 18)	// #0 - Sonic Ice Block
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

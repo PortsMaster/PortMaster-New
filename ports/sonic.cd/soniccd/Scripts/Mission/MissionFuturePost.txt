@@ -1,0 +1,189 @@
+//------------Sonic CD Mission Future Post Script-------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//----Used on Mission "M100 - Reverse Time Traveler Redux"----//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.CollisionPlane
+
+// States
+#alias 0	:	MFUTUREPOST_IDLE
+#alias 1	:	MFUTUREPOST_ROTATE
+#alias 2	:	MFUTUREPOST_USED
+
+// Warp Destination
+#alias 2	:	WARPDEST_FUTURE
+
+// Collision Plane
+#alias 1	:	COLLISION_PLANE_B
+
+// Property Values
+#alias 0	:	DRAWING_PLANE_A
+#alias 1	:	DRAWING_PLANE_B
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Global SFX
+#alias 12	:	SFX_G_FUTURE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectPlayerInteraction
+	switch Object.State
+	case MFUTUREPOST_IDLE
+		if Player.CollisionPlane == Object.CollisionPlane
+			PlayerObjectCollision(C_TOUCH,-8,-24,8,32)
+			if CheckResult == true
+				Warp.Destination = WARPDEST_FUTURE
+
+				Object.State	= MFUTUREPOST_ROTATE
+				Object.Priority	= PRIORITY_ACTIVE
+				Object.Frame	= 1
+
+				PlaySfx(SFX_G_FUTURE, false)
+			end if
+		end if
+		break
+
+	case MFUTUREPOST_USED
+		if Object.OutOfBounds == true
+			TempValue0  = Stage.Minutes
+			TempValue0 *= 60
+			TempValue0 += Stage.Seconds
+
+			if Object.Timer == 0
+				Object.Timer  = TempValue0
+				Object.Timer += 10
+			else
+				if TempValue0 >= Object.Timer
+					// Reset the post
+					Object.State = MFUTUREPOST_IDLE
+					Object.Timer = 0
+					Object.Priority = PRIORITY_BOUNDS
+				end if
+			end if
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case MFUTUREPOST_IDLE
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	case MFUTUREPOST_ROTATE
+		DrawSprite(0)
+		Object.Timer++
+		if Object.Timer == 64
+			Object.Timer = 0
+			Object.State = MFUTUREPOST_USED
+		end if
+		DrawSprite(Object.Frame)
+
+		TempValue0  = Object.Timer
+		TempValue0 &= 1
+
+		Object.Frame += TempValue0
+		if Object.Frame > 8
+			Object.Frame = 1
+		end if
+		break
+
+	case MFUTUREPOST_USED
+		DrawSprite(0)
+		DrawSprite(5)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+	// Future Post Head
+	SpriteFrame(-16, -40, 32, 16, 52, 239)		// #1 - Post Head
+	SpriteFrame(-8, -40, 16, 16, 51, 183)		// #2 - Post Head Flip 1
+	SpriteFrame(-3, -40, 8, 16, 68, 183)		// #3 - Post Head Flip 2
+	SpriteFrame(-8, -40, 16, 16, 52, 200)		// #4 - Post Head Flip 3
+	SpriteFrame(-16, -40, 32, 16, 85, 239)		// #5 - Post Head Backwards
+	SpriteFrame(-8, -40, 16, 16, 51, 183)		// #6 - Post Head Flip 1
+	SpriteFrame(-3, -40, 8, 16, 68, 183)		// #7 - Post Head Flip 2
+	SpriteFrame(-8, -40, 16, 16, 52, 200)		// #8 - Post Head Flip 3
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Future Post]
+			if Object[ArrayPos0].PropertyValue == DRAWING_PLANE_B
+				Object[ArrayPos0].DrawOrder 	 = 1
+				Object[ArrayPos0].CollisionPlane = COLLISION_PLANE_B
+			end if
+
+			if Options.GameMode == MODE_TIMEATTACK
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+			end if
+		end if
+		ArrayPos0++
+	loop
+
+	Transporter_Destroyed = true
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // CollisionPlane
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // CollisionPlane
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+	SpriteFrame(-16, -40, 32, 16, 52, 239)		// #1 - Post Head
+
+	AddEditorVariable("CollisionPlane")
+	SetActiveVariable("CollisionPlane")
+	AddEnumVariable("Plane A", 0)
+	AddEnumVariable("Plane B", 1)
+end sub
+
+
+

@@ -1,0 +1,195 @@
+//--------------------Sonic CD HUD Script---------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+// Not all of these are used here in the HUD script, some are just used as a way for other objects to globally transmit values
+#alias Object.Value0 : Object.UFOsCount     // Initially set via a loop in the UFO script
+#alias Object.Value1 : Object.TimeSeconds   // Displayed time
+#alias Object.Value2 : Object.TimeFrames    // Hidden and used for time processing, this value is managed by Special Setup instead of here
+#alias Object.Value3 : Object.Rings
+#alias Object.Value4 : Object.LastUFOType   // Used by UFOs for ring streak bonus
+#alias Object.Value5 : Object.SpeedShoes    // Used to transmit between player and UFO
+#alias Object.Value6 : Object.BonusUFONo    // "No" akin to Entity No, not as in "is there no UFO?"
+#alias Object.Value7 : Object.WaterTimer    // Used in making time deplete faster when wet
+
+// Game Mode Aliases
+#alias 2 : MODE_TIMEATTACK
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectDraw
+	// Find the initial X Position to draw the HUD elements
+	TempValue1 = Screen.CenterX
+	TempValue1 -= 128
+	
+	// Draw the "UFO" graphic
+	DrawSpriteScreenXY(10, TempValue1, 10)
+	
+	// Draw the first digit of the UFOs counter
+	TempValue0 = Object.UFOsCount
+	TempValue0 /= 10
+	TempValue1 += 24
+	DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+	
+	// Draw the second digit of the UFOs counter
+	TempValue0 = Object.UFOsCount
+	TempValue0 %= 10
+	TempValue1 += 8
+	DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+	
+	// Draw the "Time" Graphic
+	TempValue1 += 48
+	DrawSpriteScreenXY(11, TempValue1, 16)
+	
+	if Options.GameMode < MODE_TIMEATTACK
+		// In one of the normal game modes, where this object is the one keeping track of the time
+		
+		// First digit of time
+		TempValue0 = Object.TimeSeconds
+		TempValue0 /= 100
+		TempValue1 += 40
+		DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+		
+		// Second digit of time
+		TempValue0 = Object.TimeSeconds
+		TempValue0 %= 100
+		TempValue0 /= 10
+		TempValue1 += 8
+		DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+		
+		// Last digit of time
+		TempValue0 = Object.TimeSeconds
+		TempValue0 %= 10
+		TempValue1 += 8
+		DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+		
+		TempValue1 += 64
+	else
+		// In Time Attack, where the global Stage.* variables are used for tracking time instead
+		
+		// First things first, cap the timer at half an hour
+		// That's quite a while... why are you still here?
+		// (Note - this wasn't in the initial version of the game, it came from a mobile update & Origins)
+		if Stage.Minutes > 29
+			Stage.Minutes = 30
+			Stage.Seconds = 0
+			Stage.MilliSeconds = 0
+		end if
+		
+		// Now, actually draw the number
+		
+		// First draw the minutes
+		TempValue1 += 40
+		DrawNumbers(0, TempValue1, 11, Stage.Minutes, 2, 8, 1)
+		
+		// Then draw the seconds tick
+		TempValue1 += 8
+		DrawSpriteScreenXY(13, TempValue1, 11)
+		
+		// And draw the following seconds
+		TempValue1 += 16
+		DrawNumbers(0, TempValue1, 11, Stage.Seconds, 2, 8, 1)
+		
+		// Then draw the milliseconds tick
+		TempValue1 += 8
+		DrawSpriteScreenXY(14, TempValue1, 11)
+		
+		// And draw its corresponding milliseconds
+		TempValue1 += 16
+		DrawNumbers(0, TempValue1, 11, Stage.MilliSeconds, 2, 8, 1)
+		
+		// And the add the remaining X space left to temp1, in order to make other HUD elements appear in their right positions
+		TempValue1 += 32
+		
+	end if
+	
+	// Draw the "Rings" Graphic
+	DrawSpriteScreenXY(12, TempValue1, 16)
+	
+	// Draw the first digit of the Rings counter
+	TempValue0 = Object.Rings
+	TempValue0 /= 100
+	TempValue1 += 32
+	DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+	
+	// Then draw the second digit of the Rings counter
+	TempValue0 = Object.Rings
+	TempValue0 %= 100
+	TempValue0 /= 10
+	TempValue1 += 8
+	DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+	
+	// And finally, draw the last, third digit of the Rings counter
+	TempValue0 = Object.Rings
+	TempValue0 %= 10
+	TempValue1 += 8
+	DrawSpriteScreenXY(TempValue0, TempValue1, 11)
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Special/Objects.gif")
+	
+	// Place the HUD object into reserved object slot 4 and initialise its values
+	Object[4].Type = TypeName[HUD]
+	
+	// The object should always be run, regardless if it's within camera bounds or not
+	Object[4].Priority = PRIORITY_ACTIVE
+	
+	// Make the HUD draw ontop of all other sprites, too
+	Object[4].DrawOrder = 6
+	
+	// Reset the last cleared UFO type
+	// (Needs to be set to -1 and not just default 0 because the Rings UFO uses type 0)
+	Object[4].LastUFOType = -1
+	
+	// 0-9 - Numbers 0-9
+	SpriteFrame(0, 0, 8, 13, 206, 84)
+	SpriteFrame(0, 0, 8, 13, 215, 84)
+	SpriteFrame(0, 0, 8, 13, 224, 84)
+	SpriteFrame(0, 0, 8, 13, 233, 84)
+	SpriteFrame(0, 0, 8, 13, 242, 84)
+	SpriteFrame(0, 0, 8, 13, 206, 98)
+	SpriteFrame(0, 0, 8, 13, 215, 98)
+	SpriteFrame(0, 0, 8, 13, 224, 98)
+	SpriteFrame(0, 0, 8, 13, 233, 98)
+	SpriteFrame(0, 0, 8, 13, 242, 98)
+	
+	// 10 - UFO Counter Graphic
+	SpriteFrame(0, 0, 24, 16, 206, 58)
+	
+	// 11 - Time Graphic
+	SpriteFrame(0, 0, 24, 8, 231, 58)
+	
+	// 12 - Rings Graphic
+	SpriteFrame(0, 0, 31, 8, 206, 75)
+	
+	// 13 - Single Tick Graphic
+	SpriteFrame(0, 0, 8, 13, 224, 112)
+	
+	// 14 - Double Tick Graphic
+	SpriteFrame(0, 0, 8, 13, 233, 112)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(0, 0, 24, 16, 206, 58)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

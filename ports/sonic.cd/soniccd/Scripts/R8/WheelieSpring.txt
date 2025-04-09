@@ -1,0 +1,276 @@
+//--------------Sonic CD Wheelie Spring Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Alias
+#alias Object.Value0	:	Object.Timer
+
+// Player Alias
+#alias Player.Value7	:	Player.AnimationReserve
+
+// States
+#alias 0	:	WHEELIESPRING_MOVING_RIGHT
+#alias 1	:	WHEELIESPRING_MOVING_LEFT
+
+// Global SFX
+#alias 11	:	SFX_G_SPRING
+
+// Property Value
+#alias 0	:	RED_SPRING
+#alias 2	:	YELLOW_SPRING
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+#alias 1	:	GRAVITY_AIR
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+#alias 1	:	CSIDE_LWALL
+#alias 3	:	CSIDE_ROOF	// Yes, Roof is used instead of CSIDE_RWALL, don't ask
+
+sub ObjectMain
+	if Object.State == WHEELIESPRING_MOVING_RIGHT
+		if Object.Timer < 96
+			Object.Timer++
+			Object.XPos += 0x10000
+			ObjectTileGrip(CSIDE_FLOOR, 8, 15, 0)
+			if CheckResult == false
+				Object.State = WHEELIESPRING_MOVING_LEFT
+				Object.Timer = -64
+			else
+				ObjectTileCollision(CSIDE_LWALL, 40, -16, 0)
+				if CheckResult == true
+					Object.State = WHEELIESPRING_MOVING_LEFT
+					Object.Timer = -64
+				end if
+			end if
+			ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		else
+			Object.State = WHEELIESPRING_MOVING_LEFT
+			Object.Timer = -64
+		end if
+	else
+		if Object.Timer < 96
+			Object.Timer++
+			Object.XPos -= 0x10000
+			ObjectTileGrip(CSIDE_FLOOR, -8, 15, 0)
+			if CheckResult == false
+				Object.State = WHEELIESPRING_MOVING_RIGHT
+				Object.Timer = -64
+			else
+				ObjectTileCollision(CSIDE_ROOF, -40, -16, 0)
+				if CheckResult == true
+					Object.State = WHEELIESPRING_MOVING_RIGHT
+					Object.Timer = -64
+				end if
+			end if
+			ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+		else
+			Object.State = WHEELIESPRING_MOVING_RIGHT
+			Object.Timer = -64
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Player.State != Player_State_Static
+		if Player.YVelocity >= 0
+			PlayerObjectCollision(C_BOX, -16, -16, 16, 16)
+
+			PlayerObjectCollision(C_TOUCH, -15, -18, 15, -12)
+			if CheckResult == true
+				Object.Frame = 1
+				
+#platform: Use_Origins
+				Player.State	= Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State	= Player_State_Air
+#endplatform
+
+				Player.Gravity	= GRAVITY_AIR
+
+				if Object.PropertyValue == RED_SPRING
+					Player.YVelocity = -0x100000
+				else
+					Player.YVelocity = -0xA0000
+				end if
+
+				Player.AnimationReserve = ANI_WALKING
+				if Player.Animation == ANI_RUNNING
+					Player.AnimationReserve = ANI_RUNNING
+				end if
+				if Player.Animation == ANI_PEELOUT
+					Player.AnimationReserve = ANI_PEELOUT
+				end if
+
+				Player.Animation = ANI_BOUNCING
+				Player.Timer	 = 0
+
+				PlaySfx(SFX_G_SPRING, false)
+			end if
+		end if
+		if Player.Gravity == GRAVITY_GROUND
+			PlayerObjectCollision(C_BOX, -16, -20, 16, 16)
+
+			PlayerObjectCollision(C_TOUCH, -15, -18, 15, -12)
+			if CheckResult == true
+				Object.Frame = 1
+				
+#platform: Use_Origins
+				Player.State	= Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State	= Player_State_Air
+#endplatform
+
+				Player.Gravity 	= GRAVITY_AIR
+				if Object.PropertyValue == RED_SPRING
+					Player.YVelocity = -0x100000
+				else
+					Player.YVelocity = -0xA0000
+				end if
+				Player.Animation = ANI_BOUNCING
+				Player.Timer	= 0
+
+				PlaySfx(SFX_G_SPRING, false)
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.PropertyValue == RED_SPRING
+		if Object.Frame == 0
+			DrawSprite(0)
+		else
+			Object.Frame++
+
+			TempValue0   = Object.Frame
+			TempValue0 >>= 1
+			switch TempValue0
+			case 0
+			case 1
+				DrawSprite(0)
+				break
+			case 2
+			case 6
+				DrawSprite(2)
+				break
+			case 3
+			case 4
+			case 5
+				DrawSprite(4)
+				break
+			end switch
+			
+			if Object.Frame > 12
+				Object.Frame = 0
+			end if
+		end if
+	else
+		if Object.Frame == 0
+			DrawSprite(1)
+		else
+			Object.Frame++
+
+			TempValue0   = Object.Frame
+			TempValue0 >>= 1
+			switch TempValue0
+			case 0
+			case 1
+				DrawSprite(1)
+				break
+			case 2
+			case 6
+				DrawSprite(3)
+				break
+			case 3
+			case 4
+			case 5
+				DrawSprite(5)
+				break
+			end switch
+
+			if Object.Frame > 12
+				Object.Frame = 0
+			end if
+		end if
+	end if
+	
+	TempValue0  = Object.Timer
+	TempValue0 += 64
+	TempValue0 %= 18
+	TempValue0 /= 9
+	TempValue0 += 6
+	DrawSprite(TempValue0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-16, -16, 32, 16, 84, 1)	// #0 - Red Spring
+	SpriteFrame(-16, -16, 32, 16, 84, 183)	// #1 - Yellow Spring
+	SpriteFrame(-16, -8, 32, 8, 84, 1)		// #2 - Red Spring Head
+	SpriteFrame(-16, -8, 32, 8, 84, 183)	// #3 - Yellow Spring Head
+	SpriteFrame(-16, -40, 32, 40, 84, 18)	// #4 - Red Spring Launch
+	SpriteFrame(-16, -40, 32, 40, 215, 34)	// #5 - Yellow Spring Launch
+	SpriteFrame(-8, 0, 16, 16, 233, 0)		// #6 - Wheel Frame 0
+	SpriteFrame(-8, 0, 16, 16, 233, 17)		// #7 - Wheel Frame 1
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 2
+			break
+		case 0 // springType
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 2
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 2
+			break
+		case 0 // springType
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 2
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+	DrawSprite(3)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-16, -24, 32, 16, 84, 1)	// #0 - Red Spring
+	SpriteFrame(-16, -24, 32, 16, 84, 183)	// #1 - Yellow Spring (Padding, as they are actually prop val 2)
+	SpriteFrame(-16, -24, 32, 16, 84, 183)	// #2 - Yellow Spring
+	SpriteFrame(-8, -8, 16, 16, 233, 0)		// #3 - Wheel Frame 0
+
+	AddEditorVariable("springType")
+	SetActiveVariable("springType")
+	AddEnumVariable("Red Spring", RED_SPRING)
+	AddEnumVariable("Yellow Spring", YELLOW_SPRING)
+end sub

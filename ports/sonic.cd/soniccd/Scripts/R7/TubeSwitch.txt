@@ -1,0 +1,306 @@
+//----------------Sonic CD Tube Switch Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.InTube
+#alias Object.Value2 : Object.LedgeStop
+// Player Aliases
+#alias Player.Value6 : Player.MinRollSpeed
+
+// Collision Modes
+#alias 0 : CMODE_FLOOR
+#alias 1 : CMODE_LWALL
+#alias 2 : CMODE_ROOF
+#alias 3 : CMODE_RWALL
+
+// Gravity
+#alias 0 : GRAVITY_GROUND
+#alias 1 : GRAVITY_AIR
+
+// Property Values
+#alias 0 : TUBESW_ENTER_H_L
+#alias 1 : TUBESW_ENTER_V
+#alias 2 : TUBESW_ENTER_V_TUBE
+#alias 3 : TUBESW_H_LABYRINTH
+#alias 4 : TUBESW_ENTER_H_R
+#alias 5 : TUBESW_V_LABYRINTH
+#alias 6 : TUBESW_LABYRINTH_SPRING
+#alias 7 : TUBESW_LABYRINTH_EXIT_UPWARDS
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_TOUCH, -16, -16, 16, 16)
+#platform: Use_Origins
+	if CheckResult == true
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			if Player.State == Player_State_LedgePullUp
+				CheckResult      = false
+				Object.LedgeStop = true
+			end if
+		end if
+	end if
+#endplatform
+	if CheckResult == true
+		switch Object.PropertyValue
+		case TUBESW_ENTER_H_L
+#platform: Use_Origins
+			if Object.LedgeStop == true
+				Player.Speed     = 1
+				Object.LedgeStop = false
+			end if
+#endplatform
+			if Object.InTube == false
+				if Player.State != Player_State_TubeAirRoll
+					Player.State = Player_State_TubeAirRoll
+					Player.Gravity = GRAVITY_GROUND
+					Player.Animation = ANI_JUMPING
+					Player.MinRollSpeed = 0xD0000
+				else
+					Player.State = Player_State_Roll
+					Player.Animation = ANI_JUMPING
+				end if
+			end if
+			break
+			
+		case TUBESW_ENTER_V
+			
+#platform: Use_Origins
+			Player.State = Player_State_Air_NoDropDash
+#endplatform
+			
+#platform: Use_Standalone
+			Player.State = Player_State_Air
+#endplatform
+			
+			Player.Animation = ANI_JUMPING
+			if Player.Gravity == GRAVITY_AIR
+				if Player.YVelocity < 0
+					Player.YVelocity = -0xD0000
+				else
+					Player.YVelocity = 0xD0000
+				end if
+			else
+				switch Player.CollisionMode
+				case CMODE_LWALL
+					if Player.Speed < 0
+						Player.YVelocity = 0xD0000
+					else
+						Player.YVelocity = -0xD0000
+					end if
+					break
+				case CMODE_RWALL
+					if Player.Speed < 0
+						Player.YVelocity = -0xD0000
+					else
+						Player.YVelocity = 0xD0000
+					end if
+					break
+				end switch
+			end if
+			Player.Gravity = GRAVITY_AIR
+			Player.XPos = Object.XPos
+			Player.XVelocity = 0
+			Player.Speed = 0
+			break
+
+		case TUBESW_ENTER_V_TUBE
+			if Object.InTube == false
+				if Player.State != Player_State_TubeAirRoll
+					Player.XPos = Object.XPos
+					Player.State = Player_State_TubeAirRoll
+					Player.Animation = ANI_JUMPING
+					Player.MinRollSpeed = 0xD0000
+					Player.CollisionMode = CMODE_RWALL
+					Player.Angle = 64
+					Player.Gravity = GRAVITY_GROUND
+					Player.XVelocity = 0
+					if Player.YVelocity < 0
+						Player.Speed = -0xD0000
+					else
+						Player.Speed = 0xD0000
+					end if
+					Player.YVelocity = 0
+					Player.Right = false
+					Player.Left = false
+				else
+					
+#platform: Use_Origins
+				Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+				Player.State = Player_State_Air
+#endplatform
+					Player.Animation = ANI_JUMPING
+					switch Player.CollisionMode
+					case 1
+						if Player.Speed < 0
+							Player.YVelocity = 0xD0000
+						else
+							Player.YVelocity = -0xD0000
+						end if
+						break
+					case 3
+						if Player.Speed < 0
+							Player.YVelocity = -0xD0000
+						else
+							Player.YVelocity = 0xD0000
+						end if
+						break
+					end switch
+					Player.Gravity = GRAVITY_AIR
+					Player.XPos = Object.XPos
+					Player.XVelocity = 0
+					Player.Speed = 0
+				end if
+			end if
+			break
+
+		case TUBESW_H_LABYRINTH
+			if Object.InTube == false
+				if Player.CollisionMode == CMODE_ROOF
+					Player.CollisionMode = CMODE_FLOOR
+					Player.Angle = 0
+					FlipSign(Player.Speed)
+					FlipSign(Player.XVelocity)
+				end if
+			end if
+			break
+
+		case TUBESW_ENTER_H_R
+			if Object.InTube == false
+				Player.State = Player_State_Roll
+				Player.Animation = ANI_JUMPING
+				if Player.XPos < Object.XPos
+					if Player.Speed < 0xA0000
+						Player.Speed = 0xA0000
+					end if
+					Player.Direction = FACING_RIGHT
+				else
+					if Player.Speed > -0xA0000
+						Player.Speed = -0xA0000
+					end if
+					Player.Direction = FACING_LEFT
+				end if
+			end if
+			break
+
+		case TUBESW_V_LABYRINTH
+			if Player.YVelocity < 0
+				if Player.State != Player_State_TubeAirRoll
+					if Player.Left == true
+						Player.State = Player_State_TubeAirRoll
+						Player.Gravity = GRAVITY_GROUND
+						Player.CollisionMode = CMODE_RWALL
+						Player.Angle = 64
+						Player.Animation = ANI_JUMPING
+						Player.MinRollSpeed = 0xD0000
+						Player.Speed = -0xD0000
+						Player.XVelocity = 0
+						Player.YVelocity = 0
+						Player.XPos -= 0x80000
+					end if
+					
+					if Player.Right == true
+						Player.State = Player_State_TubeAirRoll
+						Player.Gravity = GRAVITY_GROUND
+						Player.CollisionMode = CMODE_LWALL
+						Player.Angle = 192
+						Player.Animation = ANI_JUMPING
+						Player.MinRollSpeed = 0xD0000
+						Player.Speed = 0xD0000
+						Player.XVelocity = 0
+						Player.YVelocity = 0
+						Player.XPos += 0x80000
+					end if
+				end if
+			end if
+			break
+
+		case TUBESW_LABYRINTH_SPRING
+			if Object.InTube == false
+				
+#platform: Use_Origins
+				// In Origins, both versions of the Air state are checked against just in case
+				CheckEqual(Player.State, Player_State_Air_NoDropDash)
+				TempValue0 = CheckResult
+				CheckEqual(Player.State, Player_State_Air)
+				TempValue0 |= CheckResult
+				if TempValue0 != false
+					Player.XPos = Object.XPos
+					Player.XVelocity = 0
+					Player.Speed = 0
+				end if
+#endplatform
+				
+#platform: Use_Standalone
+				// In Standalone, we don't have any pesky Dropdash to worry about
+				if Player.State == Player_State_Air
+					Player.XPos = Object.XPos
+					Player.XVelocity = 0
+					Player.Speed = 0
+				end if
+#endplatform
+				
+			end if
+			break
+
+		case TUBESW_LABYRINTH_EXIT_UPWARDS
+			if Object.InTube == false
+				if Player.CollisionMode == CMODE_ROOF
+					Player.CollisionMode = CMODE_FLOOR
+					Player.Angle += 128
+					FlipSign(Player.Speed)
+					FlipSign(Player.XVelocity)
+				end if
+			end if
+			break
+
+		end switch
+
+		Object.InTube = true
+	else
+		Object.InTube = false
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	// This object doesn't have a debug view, so this is custom
+	// It draws a square out of tubeswitch icons
+
+	TempValue0 = Object.XPos
+	TempValue0 -= 0x80000
+	TempValue1 = Object.YPos
+	TempValue1 -= 0x80000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue0 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue1 += 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	TempValue0 -= 0x100000
+	DrawSpriteXY(0, TempValue0, TempValue1)
+	
+	if Editor.ShowGizmos == true
+		// Draw the tube switch's hitbox, purposefully ignoring Editor.DrawingOverlay
+		
+		TempValue0 = Object.iXPos
+		TempValue0 -= 16
+		TempValue1 = Object.iYPos
+		TempValue1 -= 16
+		DrawRectOutline(TempValue0, TempValue1, 32, 32, 255, 255, 255, 255)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // "T" (ubeswitch) icon
+
+	// TODO: how would you even name these
+end sub

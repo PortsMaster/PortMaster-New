@@ -1,0 +1,273 @@
+//-----------------Sonic CD Noro Noro Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.Spikes
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	NORONORO_FINDGROUND
+#alias 1	:	NORONORO_ROLLLEFT
+#alias 2	:	NORONORO_ROLLRIGHT
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 1	:	SFX_S_SPIKES
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	
+	// Firstly, animate the object
+	Object.Frame++
+	Object.Frame %= 60
+	
+	switch Object.State
+	case NORONORO_FINDGROUND
+		
+		// Check to see if the Noro Noro's on the floor
+		ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+		
+		if CheckResult == true
+			// If it is, then advance states
+			Object.State = NORONORO_ROLLLEFT
+		else
+			// The Noro Noro's still in the air, so move down a pixel
+			Object.YPos += 0x10000
+		end if
+		break
+		
+	case NORONORO_ROLLLEFT
+		
+		// Roll 0.25 pixels left
+		Object.XPos -= 0x4000
+		
+		Object.Timer--
+		if Object.Timer == -320
+			Object.State = NORONORO_ROLLRIGHT
+			Object.Direction = FACING_LEFT
+		end if
+		
+		ObjectTileGrip(CSIDE_FLOOR, 0, 16, 0)
+		if CheckResult == 0
+			Object.State = NORONORO_ROLLRIGHT
+			Object.Timer = 0
+			Object.Direction = FACING_LEFT
+		end if
+		break
+		
+	case NORONORO_ROLLRIGHT
+		Object.XPos += 0x4000
+		Object.Timer++
+		if Object.Timer == 320
+			Object.State = NORONORO_ROLLLEFT
+			Object.Direction = FACING_RIGHT
+		end if
+		
+		ObjectTileGrip(CSIDE_FLOOR, 0, 16, 0)
+		if CheckResult == 0
+			Object.State = NORONORO_ROLLLEFT
+			Object.Timer = 0
+			Object.Direction = FACING_RIGHT
+		end if
+		break
+		
+	end switch
+	
+	CallFunction(StageSetup_CheckGoodFuture)
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// There's a small difference in interaction based on if the Player is in the air or not
+	// If in the air - Spikes are checked first, *then* the Noro Noro itself
+	// In on the ground - the Noro Noro is checked upon first, *then* Spikes are checked
+	
+	// This only applies to Spikes Noro Noros, normal ones are just about the same regardless of the Player's aerial state
+	
+	if Player.Gravity == GRAVITY_AIR
+		
+		if Object.Quality == GOOD_QUALITY
+			// Spiked Noro Noro variant
+			
+			// Make sure this Object hasn't been turned into a Flower yet
+			if Object.Type == TypeName[Noro Noro]
+				if Object.State > NORONORO_FINDGROUND
+					PlayerObjectCollision(C_TOUCH, -96, -256, 96, 256)
+					
+					if CheckResult == true
+						if Object.Spikes == false
+							// If Spikes aren't already out, then play the SFX
+							PlayStageSfx(SFX_S_SPIKES, false)
+						end if
+						
+						// Eject the Spikes!
+						Object.Spikes = true
+					else
+						// The Player's out of range, retract the Spikes for now...
+						Object.Spikes = false
+					end if
+					
+					// Spikes hitbox
+					if Object.Spikes == true
+						PlayerObjectCollision(C_TOUCH, -8, -18, 8, -2)
+						
+						if CheckResult == true
+							// Directly damage the Player
+							CallFunction(Player_Hit)
+						end if
+					end if
+				end if
+			end if
+		end if
+		
+		// Normal Noro Noro hitbox
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -14, -14, 14, 14)
+#endplatform
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	else
+		
+		// First, check the Noro Noro's hitbox
+#platform: Use_Standalone
+		PlayerObjectCollision(C_TOUCH, -14, -14, 14, 14)
+#endplatform
+#platform: Use_Origins
+		PlayerObjectCollision(C_ENEMY, -14, -14, 14, 14)
+#endplatform
+		if CheckResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+		
+		if Object.Quality == GOOD_QUALITY
+			
+			// Make sure the Noro Noro hasn't already been detroyed yet
+			if Object.Type == TypeName[Noro Noro]
+				if Object.State > NORONORO_FINDGROUND
+					PlayerObjectCollision(C_TOUCH, -96, -256, 96, 256)
+					
+					if CheckResult == true
+						if Object.Spikes == false
+							// If Spikes aren't out already, then play the SFX for ejected the Spikes
+							PlayStageSfx(SFX_S_SPIKES, false)
+						end if
+						
+						// Get the Spikes ready
+						Object.Spikes = true
+					else
+						// Bring the Spikes back in for now...
+						Object.Spikes = false
+					end if
+					
+					// Check for the Spikes hitbox
+					if Object.Spikes == true
+						PlayerObjectCollision(C_TOUCH, -8, -18, 8, -2)
+						
+						if CheckResult == true
+							CallFunction(Player_Hit)
+						end if
+					end if
+				end if
+			end if
+		end if
+		
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.Quality == GOOD_QUALITY
+		// Spikes Noro Noro
+		DrawSpriteFX(Object.Spikes, FX_FLIP, Object.XPos, Object.YPos)
+	else
+		// Normal Noro Noro
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+	
+	if Object.Frame > 29
+		DrawSpriteFX(3, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Noro Noro Frames
+	
+	// Spikes Ejecting Frame
+	SpriteFrame(-16, -24, 32, 40, 1, 150)
+	
+	// Spikes Ejected Frame
+	SpriteFrame(-16, -24, 32, 40, 34, 150)
+	
+	// Spikes Retracted Frame
+	SpriteFrame(-16, -16, 32, 32, 66, 117)
+	
+	// Blinking Frame
+	SpriteFrame(-16, -8, 16, 8, 67, 18)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Type
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-16, -24, 32, 40, 34, 150)
+	SpriteFrame(-16, -16, 32, 32, 66, 117)
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

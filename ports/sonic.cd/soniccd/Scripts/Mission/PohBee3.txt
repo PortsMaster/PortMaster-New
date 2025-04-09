@@ -1,0 +1,341 @@
+//------------------Sonic CD PohBee 3 Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//-------Used on Mission "M110 - Extreme! Gotta Go Fast"------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.XOriginPos
+#alias Object.Value2		:	Object.YOriginPos
+#alias Object.Value3		:	Object.PohBeeOscillation
+#alias Object.Value4		:	SpikeBallN1.Oscillation
+#alias Object.Value5		:	SpikeBallN2.Oscillation
+#alias Object.Value6		:	SpikeBallN2.Rotation
+#alias Object.Value7		:	Object.SBallDistance
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// States
+#alias 0	:	POHBEE3_MOVING_RIGHT
+#alias 1	:	POHBEE3_MOVING_LEFT
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	if Object.OutOfBounds == true
+		Object.XPos  = Object.XOriginPos
+		Object.Timer = 0
+		Object.State = POHBEE3_MOVING_RIGHT
+	end if
+
+	Object.Rotation += 16
+	Object.Rotation &= 2047
+
+	if Object.Quality == GOOD_QUALITY
+		SpikeBallN2.Rotation += 20
+		SpikeBallN2.Rotation &= 2047
+		switch Object.State
+		case POHBEE3_MOVING_RIGHT
+			Object.Direction = FACING_LEFT
+			if Object.Timer < 64
+				Object.Timer++
+				Object.XPos += 0x20000
+			else
+				Object.State = POHBEE3_MOVING_LEFT
+				Object.Timer = 0
+			end if
+			break
+		case POHBEE3_MOVING_LEFT
+			Object.Direction = FACING_RIGHT
+			if Object.Timer < 64
+				Object.Timer++
+				Object.XPos -= 0x20000
+			else
+				Object.State = POHBEE3_MOVING_RIGHT
+				Object.Timer = 0
+			end if
+			break
+		end switch
+		
+		Object.PohBeeOscillation += 16
+		Object.PohBeeOscillation &= 511
+		Sin(Object.YPos, Object.PohBeeOscillation)
+		Object.YPos <<= 12
+		Object.YPos  += Object.YOriginPos
+
+		TempValue0    = Object.Rotation
+		TempValue0  >>= 2
+		Sin(SpikeBallN1.Oscillation, TempValue0)
+		SpikeBallN1.Oscillation >>= 2
+		SpikeBallN1.Oscillation  += 272
+		SpikeBallN1.Oscillation  *= 120
+		SpikeBallN1.Oscillation >>= 7
+
+		TempValue0   = SpikeBallN2.Rotation
+		TempValue0 >>= 2
+		Sin(SpikeBallN2.Oscillation, TempValue0)
+		SpikeBallN2.Oscillation >>= 2
+		SpikeBallN2.Oscillation += 288
+		SpikeBallN2.Oscillation *= 112
+		SpikeBallN2.Oscillation >>= 7
+	else
+		switch Object.State
+		case POHBEE3_MOVING_RIGHT
+			Object.Direction = FACING_LEFT
+			if Object.Timer < 128
+				Object.Timer++
+				Object.XPos += 0x10000
+			else
+				Object.State = POHBEE3_MOVING_LEFT
+				Object.Timer = 0
+			end if
+			break
+
+		case POHBEE3_MOVING_LEFT
+			Object.Direction = FACING_RIGHT
+			if Object.Timer < 128
+				Object.Timer++
+				Object.XPos -= 0x10000
+			else
+				Object.State = POHBEE3_MOVING_RIGHT
+				Object.Timer = 0
+			end if
+			break
+		end switch
+
+		Object.PohBeeOscillation += 12
+		Object.PohBeeOscillation &= 511
+		Sin(Object.YPos, Object.PohBeeOscillation)
+		Object.YPos <<= 11
+		Object.YPos  += Object.YOriginPos
+
+		TempValue0    = Object.Rotation
+		TempValue0  >>= 2
+		Sin(SpikeBallN1.Oscillation, TempValue0)
+		
+		SpikeBallN1.Oscillation >>= 2
+		SpikeBallN1.Oscillation  += 272
+		SpikeBallN1.Oscillation  *= 120
+		SpikeBallN1.Oscillation >>= 7
+	end if
+
+	Object.SBallDistance  = Object.YPos
+	Object.SBallDistance += 0xD0000
+
+	CallFunction(StageSetup_CheckGoodFuture)
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_ENEMY, -20, -16, 20, 14)
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+
+	TempValue0 = Object.XPos
+	TempValue1 = Object.YPos
+
+	Cos(Object.XPos, SpikeBallN1.Oscillation)
+	Object.XPos *= 0x2A00
+	Object.XPos += TempValue0
+
+	Sin(Object.YPos, SpikeBallN1.Oscillation)
+	Object.YPos *= 0x2A00
+	Object.YPos += Object.SBallDistance
+
+	PlayerObjectCollision(C_TOUCH, -9, -9, 9, 9)
+	if CheckResult == true
+		CallFunction(Player_Hit)
+	end if
+
+	if Object.Quality == GOOD_QUALITY
+		Cos(Object.XPos, SpikeBallN2.Oscillation)
+		Object.XPos *= 0x1200
+		Object.XPos += TempValue0
+
+		Sin(Object.YPos, SpikeBallN2.Oscillation)
+		Object.YPos *= 0x1200
+		Object.YPos += Object.SBallDistance
+
+		PlayerObjectCollision(C_TOUCH, -9, -9, 9, 9)
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+	end if
+
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+end sub
+
+
+sub ObjectDraw
+	if Object.Quality == GOOD_QUALITY
+		// First Spike Ball chain
+		TempValue0 = 0
+		TempValue1 = 4
+		while TempValue0 < 10
+			Cos(TempValue2, SpikeBallN1.Oscillation)
+			TempValue2 *= TempValue1
+			TempValue2 <<= 7
+			TempValue2 += Object.XPos
+			Sin(TempValue3, SpikeBallN1.Oscillation)
+			TempValue3 *= TempValue1
+			TempValue3 <<= 7
+			TempValue3 += Object.SBallDistance
+			DrawSpriteXY(2, TempValue2, TempValue3)
+			TempValue0++
+			TempValue1 += 8
+		loop
+		
+		// First Spike Ball
+		Cos(TempValue2, SpikeBallN1.Oscillation)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+		Sin(TempValue3, SpikeBallN1.Oscillation)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.SBallDistance
+		DrawSpriteXY(3, TempValue2, TempValue3)
+
+		// Second Spike Ball chain
+		TempValue0 = 0
+		TempValue1 = 4
+		while TempValue0 < 4
+			Cos(TempValue2, SpikeBallN2.Oscillation)
+			TempValue2 *= TempValue1
+			TempValue2 <<= 7
+			TempValue2 += Object.XPos
+			Sin(TempValue3, SpikeBallN2.Oscillation)
+			TempValue3 *= TempValue1
+			TempValue3 <<= 7
+			TempValue3 += Object.SBallDistance
+			DrawSpriteXY(2, TempValue2, TempValue3)
+			TempValue0++
+			TempValue1 += 8
+		loop
+
+		// Second Spike Ball
+		Cos(TempValue2, SpikeBallN2.Oscillation)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+		Sin(TempValue3, SpikeBallN2.Oscillation)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.SBallDistance
+		DrawSpriteXY(3, TempValue2, TempValue3)
+	else
+		TempValue0 = 0
+		TempValue1 = 4
+		while TempValue0 < 10
+			Cos(TempValue2, SpikeBallN1.Oscillation)
+			TempValue2 *= TempValue1
+			TempValue2 <<= 7
+			TempValue2 += Object.XPos
+			Sin(TempValue3, SpikeBallN1.Oscillation)
+			TempValue3 *= TempValue1
+			TempValue3 <<= 7
+			TempValue3 += Object.SBallDistance
+			DrawSpriteXY(2, TempValue2, TempValue3)
+			TempValue0++
+			TempValue1 += 8
+		loop
+		Cos(TempValue2, SpikeBallN1.Oscillation)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+		Sin(TempValue3, SpikeBallN1.Oscillation)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.SBallDistance
+		DrawSpriteXY(4, TempValue2, TempValue3)
+	end if
+	
+	Object.AnimationTimer++
+	Object.AnimationTimer &= 3
+
+	Object.Frame = Object.AnimationTimer
+	Object.Frame >>= 1
+	DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+	// PohBee
+	SpriteFrame(-19, -20, 48, 36, 75, 140)	// #0 - PohBee frame 0
+	SpriteFrame(-19, -20, 48, 36, 124, 140)	// #1 - PohBee frame 1
+
+	// Spike Ball
+	SpriteFrame(-8, -8, 16, 16, 58, 114)	// #2 - Spike ball joint
+	// Good
+	SpriteFrame(-12, -12, 24, 24, 230, 67)	// #3 - Spike Ball
+	// Bad
+	SpriteFrame(-12, -12, 24, 24, 75, 114)	// #4 - Broken Spike Ball
+	
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[PohBee3]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Condition
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Condition
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+	// PohBee
+	SpriteFrame(-19, -20, 48, 36, 75, 140)	// #0 - PohBee frame 0
+
+	// Spike Ball
+	SpriteFrame(-8, -8, 16, 16, 58, 114)	// #2 - Spike ball joint
+	// Good
+	SpriteFrame(-12, -12, 24, 24, 230, 67)	// #3 - Spike Ball
+	// Bad
+	SpriteFrame(-12, -12, 24, 24, 75, 114)	// #4 - Broken Spike Ball
+	
+	AddEditorVariable("Condition")
+	SetActiveVariable("Condition")
+	AddEnumVariable("Good", GOOD_QUALITY)
+	AddEnumVariable("Bad",  BAD_QUALITY)
+end sub
+
+

@@ -1,0 +1,589 @@
+###############################################################################
+# layout_city.des: City-like layouts; streets, houses, rooms ...
+#
+# TODO: Move layout_regular_city and layout_chaotic_city here?
+###############################################################################
+
+: crawl_require("dlua/util.lua")
+: crawl_require("dlua/layout/layout.lua")
+: crawl_require("dlua/layout/procedural.lua")
+: crawl_require("dlua/layout/zonify.lua")
+: crawl_require("dlua/layout/omnigrid.lua")
+: crawl_require("dlua/layout/theme.lua")
+
+{{
+  function area_within(bounds, minx, miny, padx, pady)
+    if padx == nil then padx = 0 end
+    if pady == nil then pady = 0 end
+    -- Decide size first
+    local sx = crawl.random_range(minx,bounds.x2-bounds.x1+1-2*padx)
+    local sy = crawl.random_range(miny,bounds.y2-bounds.y1+1-2*pady)
+    -- Now position
+    local px = crawl.random_range(bounds.x1+padx, bounds.x2-padx-sx+1)
+    local py = crawl.random_range(bounds.y1+pady, bounds.y2-pady-sy+1)
+    -- Create bounds
+    return { x1 = px, y1 = py, x2 = px+sx-1, y2 = py+sy-1 }
+  end
+
+}}
+
+##############################################################
+# layout_stronghold
+#
+# Use grid techniques to build up clusters of odd-shaped dwellings that
+# look a little like fortified cities.
+# TODO: - Fix the problem causing buildings to butt up against each
+# other, they shouldn't do this at all.
+# - Use a better method of adding doors, this one adds to many.
+# - Fill in more space around the edges
+# - Differentiate in D a little
+# - Add decor in rooms if enough space - pillars, statues, whatever.
+#
+# TODO: Remove small wall blocks in Dis, then add to Dis:1-6 at
+#       weight 10.
+#
+NAME:   layout_stronghold
+DEPTH:  D:9-, Pan
+WEIGHT: 10
+ORIENT: encompass
+TAGS:   overwritable layout allow_dup unrand layout_type_city
+{{
+  if is_validating() then return; end
+  local gxm,gym = dgn.max_bounds()
+  extend_map { width = gxm, height = gym, fill = 'x' }
+
+  local grid_opts = {
+    guaranteed_divides = 8,
+    subdivide_initial_chance = 100,
+    subdivide_level_multiplier = util.random_range_real(.95,.97),
+    minimum_size = crawl.random_range(3,6),
+  }
+
+  local bounds = omnigrid.padded_bounds(2,10)
+  local grid = omnigrid.subdivide(bounds.x1,bounds.y1,bounds.x2,bounds.y2,grid_opts)
+
+  local room_materials = crawl.one_chance_in(3)
+
+  -- Setup all the callbacks for weighting different selections
+  -- during grid connect-up
+
+  local function hasedge(group)
+    if group.has_edge == nil then
+      -- Don't allow edge cells to be considered
+      for i,cell in ipairs(group) do
+        local got = { false,false,false,false }
+        for i,b in ipairs(cell.borders) do got[b.dir+1]=true end
+        group.has_edge = util.contains(got,false)
+      end
+    end
+    return group.has_edge
+  end
+
+  local wgroup = function(group)
+    if hasedge(group) then return 0
+    elseif group.would_link then return 0 end
+    return 10 * (#group)
+  end
+  local function countborders(cell)
+    local groups = {}
+    local numgroups = 0
+    for i,b in ipairs(cell.borders) do
+      if #(b.with.group)>1 and groups[b.with.group] == nil then
+        numgroups = numgroups + 1
+        groups[b.with.group] = true
+      end
+    end
+    return groups,numgroups
+  end
+
+  local wcell = function(cell)
+    if cell.borders_left == 0 then return 0 end
+    -- Is this a bigger group already?
+    if #(cell.group)>1 then return 10 end
+    local groups,numgroups = countborders(cell)
+    if numgroups > 1 then
+      -- Once it borders more than 1 big group this cell
+      -- would effectively link the two together so,
+      -- stop considering it
+      cell.group.would_link = true
+      return 0
+    elseif numgroups == 1 then
+      -- If we border exactly one group then that group
+      -- is the only one to consider
+      for g,v in pairs(groups) do cell.link_to = g end
+    end
+    -- Otherwise no groups, therefore this cell is eligible to
+    -- form a new one
+    return 10
+  end
+  local wbord = function(b)
+    if b.style ~= nil or b.len<3 or hasedge(b.with.group) then return 0
+    elseif b.with.group == b.of.group then return 5 -- Internal linkup
+    elseif #(b.of.group)>1 then
+      if b.with.group.would_link then return 0 end
+      local groups,numgroups = countborders(b.of)
+      if numgroups > 1 then
+        b.with.group.would_link = true
+        return 0
+      end
+      return 10
+    elseif b.of.link_to == nil then return 10 -- Any border
+    elseif b.of.link_to == b.with.group then return 10 -- Correct
+    else return 0 end -- Wrong group
+  end
+
+  -- Connect up the cells
+  local groups = omnigrid.connect {
+    grid = grid, min_border_length = 3,
+    -- min_groups = crawl.random_range(math.floor(#grid/8),math.floor(#grid/4)),
+    max_iterations = 100,
+    group_weight = wgroup, cell_weight = wcell, border_weight = wbord,
+    style_func = function(border,cell,groups,count)
+      -- Maybe pick a random material for the group this cell is part of
+      if room_materials and cell.group.wall_type == nil then
+        cell.group.wall_type = theme.room_material()
+      end
+      return "internal"
+    end }
+
+  local function rendercell(cell)
+    -- Examine all the borders and adjust bounds if this room needs to butt up
+    -- against some of the cell edges to connect to adjacent cells
+    local has_any = false
+    for i,b in ipairs(cell.borders) do
+      if b.style == "internal" then
+        has_any = true
+        if b.dir==0 then bounds.y1 = b.y1
+        elseif b.dir==1 then bounds.x1 = b.x1
+        elseif b.dir==2 then bounds.y2 = b.y2
+        elseif b.dir==3 then bounds.x2 = b.x2 end
+      end
+    end
+    if has_any then
+      -- Draw container wall
+      cell.fill = cell.group.wall_type or 'x'
+      fill_area(cell)
+      -- Carve out insides
+      fill_area{x1 = cell.x1+1, x2 = cell.x2-1, y1 = cell.y1 + 1, y2 = cell.y2 - 1, fill = '.' }
+      -- Now loop through the borders again and open up those walls
+      for i,b in ipairs(cell.borders) do
+        if b.style == "internal" then
+          -- Chance to draw a partitioning wall (on one border only)
+          if b.is_wall == nil then
+            if crawl.one_chance_in(4) then
+              b.is_wall = crawl.coinflip()
+              b.inverse.is_wall = not b.is_wall
+            else
+              b.is_wall,b.inverse.is_wall = false,false
+            end
+          end
+          if not b.is_wall then
+            local fill = { x1 = b.x1, y1 = b.y1, x2 = b.x2, y2 = b.y2, fill = '.' }
+            if b.dir % 2 == 0 then
+              fill.x1,fill.x2 = fill.x1+1,fill.x2-1
+            else
+              fill.y1,fill.y2 = fill.y1+1,fill.y2-1
+            end
+            fill_area(fill)
+          end
+        end
+      end
+    else
+      -- Fill space
+      -- TODO: We don't need to fill all space around map edges, will create a
+      -- more interesting border if we don't ...
+      cell.fill = '.'
+      fill_area(cell)
+      -- Chance to add some rock to the space
+      if crawl.x_chance_in_y(4,5) then
+        local room = area_within(cell, 1, 1, 1, 1)
+        room.fill = 'x'
+        fill_area(room)
+      end
+    end
+  end
+
+  for i,area in ipairs(grid) do
+    rendercell(area)
+  end
+
+  -- Create doors
+  connect_adjacent_rooms { replace = "+", min = 100, max = 400 }
+  -- Create a small number of extra doors (allowing more than one door on some wall)
+  connect_adjacent_rooms { replace = "+", min = 0, max = 400,
+                           check_distance = 3 }
+
+  -- Fill disconnects
+  zonify.map_fill_zones(_G, 1, 'x')
+
+  if not room_materials then
+    theme.level_material(_G)
+  end
+}}
+
+##############################################################
+# layout_irregular_city
+#
+# A map with many boxes, about half of which are rectangular
+#  and most of which are hollow.
+#
+# If you think this layout makes a lot of place attempts, look
+#  at layout_chaotic_city in dgn_layouts.cc.  It can make as
+#  many as 5000, although 4000 is more likely.
+#
+NAME:   layout_irregular_city
+DEPTH:  D:9-, Pan
+WEIGHT: 15 (D), 10 (Pan)
+ORIENT: encompass
+TAGS:   overwritable layout allow_dup unrand layout_type_city
+TAGS:   no_rotate no_hmirror no_vmirror
+{{
+    local stage_count = 3
+
+    local min_size      = { 15,   6,    4 }
+    local max_size      = { 40,  18,   10 }
+    local max_doors     = {  8,   4,    2 }
+    local percent_solid = {  0,  10,   40 }
+    local in_distance   = {  6,   5,    3 }
+
+    local base_wall_type = util.random_choose_weighted(
+    {   {'x', 7},
+        {'c', 2},
+        {'v', 1}   })
+    if you.in_branch("Dis") then
+        base_wall_type = 'x'
+    end
+    local base_wall_frequency = crawl.random_range(0, 900)
+
+    local gxm, gym = dgn.max_bounds()
+    extend_map{width = gxm, height = gym, fill = base_wall_type}
+
+    make_irregular_box { x1 = 5, y1 = 5, x2 = gxm - 6, y2 = gym - 6,
+                         div_x = gxm / 6, div_y = gym / 6,
+                         in_x = 8, in_y = 8;
+                         door_count = 0, wall = base_wall_type }
+    local min_x = 8
+    local max_x = gxm - 9
+    local min_y = 8
+    local max_y = gym - 9
+
+    local stage_end = {}
+    if crawl.coinflip() then
+        stage_end[1] = crawl.random_range(10, 25)
+    else
+        stage_end[1] = 0
+    end
+    if crawl.x_chance_in_y(2, 3) then
+        stage_end[2] = stage_end[1] + crawl.random_range(50, 200)
+    else
+        stage_end[2] = stage_end[1]
+    end
+    stage_end[3] = stage_end[2] + crawl.random_range(500, 1000)
+
+    local current_stage = 1
+    for i = 1, stage_end[stage_count] do
+        while i > stage_end[current_stage] do
+            current_stage = current_stage + 1
+        end
+
+        local size_x = crawl.random_range(min_size[current_stage],
+                                          max_size[current_stage])
+        local size_y = crawl.random_range(min_size[current_stage],
+                                          max_size[current_stage])
+        local x = crawl.random_range(min_x, max_x - size_x)
+        local y = crawl.random_range(min_y, max_y - size_y)
+
+        local blocked = find_in_area {x1 = x - 1, x2 = x + size_x + 1,
+                                      y1 = y - 1, y2 = y + size_y + 1,
+                                      find = "xcvb+", find_vault = true }
+        if not blocked then
+            local door_count = crawl.random_range(1, max_doors[current_stage])
+            local floor = '.'
+            local wall = util.random_choose_weighted(
+            {   {base_wall_type, base_wall_frequency},
+                {'x',            50},
+                {'c',            30},
+                {'v',            20},
+                {'b',            1}   })
+
+            if you.in_branch("Dis") then
+                wall = 'x'
+            end
+
+            if crawl.x_chance_in_y(percent_solid[current_stage], 100) then
+                door_count = 0
+                floor = wall
+            end
+
+            local div_x = size_x / crawl.random_range(4, 8)
+            local div_y = size_y / crawl.random_range(4, 8)
+            make_irregular_box { x1 = x, x2 = x + size_x,
+                                 y1 = y, y2 = y + size_y,
+                                 div_x = div_x, div_y = div_y,
+                                 in_x = in_distance[current_stage],
+                                 in_y = in_distance[current_stage],
+                                 door_count = door_count,
+                                 wall = wall, floor = floor }
+        end
+    end
+}}
+MAP
+ENDMAP
+
+##############################################################
+# layout_onion_city
+#
+# A map with many boxes for rooms, mostly inside each other.
+#
+NAME:   layout_onion_city
+DEPTH:  Elf, Pan
+WEIGHT: 10 (Elf), 5 (Pan)
+ORIENT: encompass
+KFEAT:  ~ = closed_clear_door
+TAGS:   overwritable layout allow_dup unrand layout_type_city
+TAGS:   unrand no_rotate no_hmirror no_vmirror
+{{
+  local depth_fraction = you.depth_fraction()
+
+  -- spacing between rooms
+  local spacing_min = 1.9 + depth_fraction * 0.6
+  local spacing_range = 0.85 + crawl.random_real() * 1.15
+
+  -- the chance a room contains only a single smaller room
+  local single_room_chance = crawl.random_range(1, 2 + depth_fraction * 6)
+
+  -- the chance a room split into 2 splits into (at least) 3
+  local further_subdivide_percent =  crawl.random_range(50, 80)
+                                   - math.floor(depth_fraction * 30)
+
+  -- Randomize all parameters in Pan
+  if (you.in_branch("pan")) then
+    spacing_min = 1.8 + crawl.random_real() * 0.95
+    spacing_range = 0.95 + crawl.random_real() * 1.05
+    single_room_chance = math.min(crawl.random_range(1, 10),
+                                  crawl.random_range(1, 10))
+    further_subdivide_percent = crawl.random_range(40, 90)
+  end
+
+  -- this function makes one or more rooms to fill the area
+  function onion_room (x1, y1, x2, y2)
+    local spacing = math.floor(spacing_min + crawl.random_real()*spacing_range)
+    local inner_size_min = spacing * 2 + 3 + spacing_min
+    local size_x = x2 - x1 + 1
+    local size_y = y2 - y1 + 1
+
+    -- center gap is included in room after division
+    local div_x_min = x1 + spacing     + 2
+    local div_x_max = x2 - spacing * 2 - 2
+    local div_y_min = y1 + spacing     + 2
+    local div_y_max = y2 - spacing * 2 - 2
+    local div_x_chance = math.max(0, div_x_max - div_x_min + 1)
+    local div_y_chance = math.max(0, div_y_max - div_y_min + 1)
+    local total_chance = single_room_chance + div_x_chance + div_y_chance
+
+    local chosen = crawl.random_range(0, total_chance - 1)
+    if (chosen < single_room_chance) then
+      -- place a single room
+
+      make_box       { x1=x1, y1=y1, x2=x2, y2=y2 }
+      make_box_doors { x1=x1, y1=y1, x2=x2, y2=y2, number=1 }
+      if (size_x >= inner_size_min and size_y >= inner_size_min) then
+          onion_room (x1 + spacing + 1, y1 + spacing + 1,
+                      x2 - spacing - 1, y2 - spacing - 1)
+      end
+
+    elseif (chosen < single_room_chance + div_x_chance) then
+      -- place 2 rooms along x
+
+      local division = crawl.random_range(div_x_min, div_x_max)
+      local x2in = division
+      local x1in = division + spacing + 1
+      local size_x1 = x2in - x1   + 1
+      local size_x2 = x2   - x1in + 1
+
+      -- left room
+      if (crawl.x_chance_in_y(further_subdivide_percent, 100)) then
+          onion_room (x1, y1, x2in, y2)
+      else
+        make_box       { x1=x1, y1=y1, x2=x2in, y2=y2 }
+        make_box_doors { x1=x1, y1=y1, x2=x2in, y2=y2, number=1 }
+        if(size_x1 >= inner_size_min and size_y >= inner_size_min) then
+          onion_room (x1   + spacing + 1, y1 + spacing + 1,
+                      x2in - spacing - 1, y2 - spacing - 1)
+        end
+      end
+
+      -- right room
+      if (crawl.x_chance_in_y(further_subdivide_percent, 100)) then
+        onion_room (x1in, y1, x2, y2)
+      else
+        make_box       { x1=x1in, y1=y1, x2=x2, y2=y2 }
+        make_box_doors { x1=x1in, y1=y1, x2=x2, y2=y2, number=1 }
+        if(size_x2 >= inner_size_min and size_y >= inner_size_min) then
+          onion_room (x1in + spacing + 1, y1 + spacing + 1,
+                      x2   - spacing - 1, y2 - spacing - 1)
+        end
+      end
+
+    else
+      -- place 2 rooms along y
+
+      local division = crawl.random_range(div_y_min, div_y_max)
+      local y2in = division
+      local y1in = division + spacing + 1
+      local size_y1 = y2in - y1   + 1
+      local size_y2 = y2   - y1in + 1
+
+      -- top room
+      if (crawl.x_chance_in_y(further_subdivide_percent, 100)) then
+        onion_room (x1, y1, x2, y2in)
+      else
+        make_box       { x1=x1, y1=y1, x2=x2, y2=y2in }
+        make_box_doors { x1=x1, y1=y1, x2=x2, y2=y2in, number=1 }
+        if(size_x >= inner_size_min and size_y1 >= inner_size_min) then
+          onion_room (x1 + spacing + 1, y1   + spacing + 1,
+                      x2 - spacing - 1, y2in - spacing - 1)
+        end
+      end
+
+      -- bottom room
+      if (crawl.x_chance_in_y(further_subdivide_percent, 100)) then
+        onion_room (x1, y1in, x2, y2)
+      else
+        make_box       { x1=x1, y1=y1in, x2=x2, y2=y2 }
+        make_box_doors { x1=x1, y1=y1in, x2=x2, y2=y2, number=1 }
+        if(size_x >= inner_size_min and size_y2 >= inner_size_min) then
+            onion_room (x1 + spacing + 1, y1in + spacing + 1,
+                        x2 - spacing - 1, y2   - spacing - 1)
+        end
+      end
+    end
+  end
+
+  -- This function adds windows to walls near doors
+  -- and makes some doors clear
+  function add_windows (x1, y1, x2, y2, window_chance)
+    for x = x1, x2 do
+      for y = y1, y2 do
+        if (mapgrd[x][y] == '+') then
+          local xmm = x - 2
+          local xm  = x - 1
+          local xp  = x + 1
+          local xpp = x + 2
+          local ymm = y - 2
+          local ym  = y - 1
+          local yp  = y + 1
+          local ypp = y + 2
+
+          if (crawl.random_real() < window_chance) then
+            mapgrd[x][y] = '~'
+          end
+
+          if (mapgrd[xm][y] == '.' and mapgrd[xp][y] == '.') then
+            -- north window
+            if (mapgrd[xm][ym ] == '.' and
+                mapgrd[x ][ym ] == 'x' and mapgrd[xp][ym ] == '.' and
+                mapgrd[xm][ymm] == '.' and
+                mapgrd[x ][ymm] == 'x' and mapgrd[xp][ymm] == '.' and
+                crawl.random_real() < window_chance) then
+              mapgrd[x][ymm] = 'm'
+            end
+            -- south window
+            if (mapgrd[xm][yp ] == '.' and
+                mapgrd[x ][yp ] == 'x' and mapgrd[xp][yp ] == '.' and
+                mapgrd[xm][ypp] == '.' and
+                mapgrd[x ][ypp] == 'x' and mapgrd[xp][ypp] == '.' and
+                crawl.random_real() < window_chance) then
+              mapgrd[x][ypp] = 'm'
+            end
+          else
+            -- west window
+            if (mapgrd[xm ][ym]  == '.' and
+                mapgrd[xm ][y ]  == 'x' and mapgrd[xm ][yp]  == '.' and
+                mapgrd[xmm][ym]  == '.' and
+                mapgrd[xmm][y ]  == 'x' and mapgrd[xmm][yp]  == '.' and
+                crawl.random_real() < window_chance) then
+              mapgrd[xmm][y] = 'm'
+            end
+            -- easy window
+            if (mapgrd[xp ][ym]  == '.' and
+                mapgrd[xp ][y ]  == 'x' and mapgrd[xp ][yp]  == '.' and
+                mapgrd[xpp][ym]  == '.' and
+                mapgrd[xpp][y ]  == 'x' and mapgrd[xpp][yp]  == '.' and
+                crawl.random_real() < window_chance) then
+              mapgrd[xpp][y] = 'm'
+            end
+          end
+        end
+      end
+    end
+  end
+
+
+  local gxm, gym = dgn.max_bounds()
+  extend_map{width = gxm, height = gym, fill = 'x'}
+
+  local BORDER = 8
+  local MAX_X = gxm - BORDER - 1
+  local MAX_Y = gym - BORDER - 1
+
+  fill_area{fill = 'x'}
+  fill_area { x1 = BORDER, y1 = BORDER, x2 = MAX_X, y2 = MAX_Y, fill = "." }
+
+  local spacing = math.floor(spacing_min + crawl.random_real() * spacing_range)
+  local size_min = spacing_min + 3
+  local areas = layout.get_areas_around_primary_vault(_G, BORDER, BORDER,
+                                                          MAX_X, MAX_Y)
+  for i = 1, #areas do
+
+    -- move soft edges inward so that they don't hit the walls
+    -- we don't move soft edges in
+
+    if (not areas[i].x_min_is_soft) then
+      areas[i].x_min = areas[i].x_min + spacing
+    end
+    if (not areas[i].x_max_is_soft) then
+      areas[i].x_max = areas[i].x_max - spacing
+    end
+    if (not areas[i].y_min_is_soft) then
+      areas[i].y_min = areas[i].y_min + spacing
+    end
+    if (not areas[i].y_max_is_soft) then
+      areas[i].y_max = areas[i].y_max - spacing
+    end
+
+    -- add the rooms if there is enough space
+
+    local size_x = areas[i].x_max - areas[i].x_min + 1
+    local size_y = areas[i].y_max - areas[i].y_min + 1
+    if(size_x >= size_min and size_y >= size_min) then
+      onion_room (areas[i].x_min, areas[i].y_min,
+                  areas[i].x_max, areas[i].y_max)
+    end
+  end
+
+  -- the map is already connected in a tree, but more doors is nice
+  connect_adjacent_rooms { min = 200, max = 500, replace = '+',
+                          check_distance = crawl.random_range(5, 8) }
+
+  -- add windows to Elf
+  if (you.in_branch("Elf")) then
+    add_windows (1, 1, gxm - 2, gym - 2, 0.2 + crawl.random_real() * 0.3)
+  end
+}}
+MAP
+ENDMAP
+
+##############################################################
+# layout_geometric_city
+#
+# I (infiniplex) need to revise and add this one.  This
+# placeholder included here because I budgeted space for it when
+# working out the rations of layout types per branch.
+#
+#NAME:   layout_geometric_city
+#DEPTH:  Pan
+#WEIGHT: 25
+#ORIENT: encompass
+#TAGS:   overwritable layout allow_dup unrand layout_type_city
+#TAGS:   no_rotate no_vmirror no_hmirror

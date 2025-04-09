@@ -1,0 +1,172 @@
+//---------------Sonic CD Horizontal Door Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+#alias Object.Value1			:	Object.CloseBehaviour
+
+// HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Push Button alias
+#alias Object.PropertyValue		:	PushButton.Pressed
+
+// Property Values
+// At startup is used to set it's direction, so 0 is facing right, 1 facing left
+#alias 0	:	CLOSED_DOOR
+#alias 1	:	OPEN_DOOR
+
+// Push Button Property Values
+#alias 1	:	PUSHBUTTON_PRESSED
+
+// Time Periods
+#alias 2	:	TIME_GOOD_FUTURE
+
+// Player Collision
+#alias 0	:	PLAYER_COL_NONE
+
+// Collision Modes
+#alias 0	:	CMODE_FLOOR
+
+// Priority
+#alias 3	:	PRIORITY_XBOUNDS
+
+// Function declarations
+#function HorizontalDoor_CheckClose
+
+function HorizontalDoor_CheckClose
+#platform: Use_Origins
+	CheckResult = false
+	if Object.CloseBehaviour == 0
+		TempValue0  = Object.YPos
+		TempValue0 -= 0x300000
+		if Player.YPos < TempValue0
+			CheckResult = true
+		end if
+	else
+		TempValue0 = Object.XPos
+		if Object.Direction == FACING_RIGHT
+			Object.XPos += 0x80000
+		else
+			Object.XPos -= 0x80000
+		end if
+		PlayerObjectCollision(C_TOUCH, -400, -100, 400, -20)
+		Object.XPos = TempValue0
+	end if
+#endplatform
+end function
+
+sub ObjectMain
+	switch Object.PropertyValue
+	case CLOSED_DOOR
+		if Object.Timer > 0
+			Object.Timer -= 0x80000
+			if Object.Direction == FACING_RIGHT
+				Object.XPos += 0x80000
+			else
+				Object.XPos -= 0x80000
+			end if
+		end if
+
+		if PushButton[-1].Pressed == true
+			Object.PropertyValue = OPEN_DOOR
+		end if
+		break
+		
+	case OPEN_DOOR
+		if Object.Timer < 0x800000
+			Object.Timer += 0x80000
+			if Object.Direction == FACING_RIGHT
+				Object.XPos -= 0x80000
+			else
+				Object.XPos += 0x80000
+			end if
+		end if
+
+#platform: Use_Standalone
+		TempValue0  = Object.YPos
+		TempValue0 -= 0x300000
+		if Player.YPos < TempValue0
+			Object.PropertyValue = CLOSED_DOOR
+		end if
+#endplatform
+#platform: Use_Origins
+		CallFunction(HorizontalDoor_CheckClose)
+		if CheckResult != false
+			Object.PropertyValue = CLOSED_DOOR
+		end if
+#endplatform
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_BOX, -64, -8, 64, 8)
+	if CheckResult > PLAYER_COL_NONE
+		Player.CollisionMode = CMODE_FLOOR
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	if HUD.CurrentTimePeriod < 2	// Past or Present
+		LoadSpriteSheet("R4/Objects.gif")
+		SpriteFrame(-64, -8, 128, 16, 18, 69)	// Horizontal Door
+	else
+		LoadSpriteSheet("R4/Objects3.gif")
+		SpriteFrame(-64, -8, 128, 16, 62, 211)	// Horizontal Door
+	end if
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Horizontal Door]
+			Object[ArrayPos0].Priority  = PRIORITY_XBOUNDS
+#platform: Use_Standalone
+			Object[ArrayPos0].Direction = Object[ArrayPos0].PropertyValue
+#endplatform
+#platform: Use_Origins
+			TempValue0  = Object[ArrayPos0].PropertyValue
+			TempValue0 &= 1
+			Object[ArrayPos0].Direction = TempValue0
+			TempValue0   = Object[ArrayPos0].PropertyValue
+			TempValue0 >>= 1
+			TempValue0  &= 1
+			Object[ArrayPos0].CloseBehaviour = TempValue0
+#endplatform
+			Object[ArrayPos0].PropertyValue = CLOSED_DOOR
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.Direction  = Object.PropertyValue
+	Object.Direction &= 1
+	DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+	if CheckResult < 2	// Past or Present
+		LoadSpriteSheet("R4/Objects.gif")
+		SpriteFrame(-64, -8, 128, 16, 18, 69)	// Horizontal Door
+	else
+		LoadSpriteSheet("R4/Objects3.gif")
+		SpriteFrame(-64, -8, 128, 16, 62, 211)	// Horizontal Door
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "Direction")
+end sub

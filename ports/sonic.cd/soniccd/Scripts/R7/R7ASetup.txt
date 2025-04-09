@@ -1,0 +1,283 @@
+//-----------------Sonic CD R7 A Setup Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.PaletteTimer
+#alias Object.Value1	:	Object.ActivePalette
+#alias Object.Value2	:	Object.FlamesTimer
+
+// Collision Modes
+#alias 0	:	CMODE_FLOOR
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Tile Info
+#alias 0	:	TILEINFO_INDEX
+#alias 8	:	TILEINFO_ANGLEB
+
+
+// Function declarations
+#function R7Setup_GetLoopTileInfo
+
+
+function R7Setup_GetLoopTileInfo
+	// Gets info from out of bounds chunks, located past the signpost
+
+	// Precondition:
+	//   - TempValue0 is the chunk ID of the chunk currentbly being checked against
+
+	TempValue3 = Player.XPos
+	TempValue3 >>= 16
+	TempValue3 &= 255
+	TempValue3 += 0x3100
+
+	TempValue0 -= 16
+	TempValue0 >>= 2
+	TempValue0 <<= 8
+	TempValue4 = Player.YPos
+	TempValue4 >>= 16
+	TempValue4 &= 255
+	TempValue4 += TempValue0
+
+	Get16x16TileInfo(TempValue0, TempValue3, TempValue4, TILEINFO_INDEX)
+end function
+
+
+sub ObjectMain
+
+	// Palette cycling
+	// Despite banks 0-5 being set up earler, only banks 0-1 are used here
+	Object.PaletteTimer++
+	if Object.PaletteTimer == 5
+		Object.PaletteTimer = 0
+		Object.ActivePalette++
+		Object.ActivePalette &= 1
+		SetActivePalette(Object.ActivePalette, 0, 240)
+	end if
+
+	if Object.FlamesTimer > 0
+		Object.FlamesTimer--
+	end if
+
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	// "Layers" are managed here
+	// (In reality, chunks are swapped on-the-fly in order to make it appear as if the player's moving behind/in front of them)
+
+	// Get the position of the chunk the player's currently in
+	TempValue1 = Player.XPos
+	TempValue1 >>= 23
+	TempValue2 = Player.YPos
+	TempValue2 >>= 23
+
+	// And find what chunk ID it corresponds to
+	GetTileLayerEntry(TempValue0, 0, TempValue1, TempValue2)
+
+	// If applicable, jump to the loop chunk set it corresponds to
+	switch TempValue0
+	case 16
+	case 17
+	case 18
+	case 19
+		// Loop chunks, open from left side
+		CallFunction(R7Setup_GetLoopTileInfo)
+		if Player.CollisionMode == CMODE_FLOOR
+			if TempValue0 == 1001
+				TempValue1 &= 1022
+				TempValue2 &= 1022
+				SetTileLayerEntry(20, 0, TempValue1, TempValue2)
+				TempValue1++
+				SetTileLayerEntry(21, 0, TempValue1, TempValue2)
+				TempValue1--
+				TempValue2++
+				SetTileLayerEntry(22, 0, TempValue1, TempValue2)
+				TempValue1++
+				SetTileLayerEntry(23, 0, TempValue1, TempValue2)
+			end if
+		else
+			if Player.Speed > 0
+				if TempValue0 == 1003
+					TempValue1 &= 1022
+					TempValue2 &= 1022
+					SetTileLayerEntry(20, 0, TempValue1, TempValue2)
+					TempValue1++
+					SetTileLayerEntry(21, 0, TempValue1, TempValue2)
+					TempValue1--
+					TempValue2++
+					SetTileLayerEntry(22, 0, TempValue1, TempValue2)
+					TempValue1++
+					SetTileLayerEntry(23, 0, TempValue1, TempValue2)
+				end if
+			end if
+		end if
+		break
+
+	case 20
+	case 21
+	case 22
+	case 23
+		// Loop chunks, open from right side
+		CallFunction(R7Setup_GetLoopTileInfo)
+		if Player.CollisionMode == CMODE_FLOOR
+			if TempValue0 == 1000
+				TempValue1 &= 1022
+				TempValue2 &= 1022
+				SetTileLayerEntry(16, 0, TempValue1, TempValue2)
+				TempValue1++
+				SetTileLayerEntry(17, 0, TempValue1, TempValue2)
+				TempValue1--
+				TempValue2++
+				SetTileLayerEntry(18, 0, TempValue1, TempValue2)
+				TempValue1++
+				SetTileLayerEntry(19, 0, TempValue1, TempValue2)
+			end if
+		else
+			if Player.Speed < 0
+				if TempValue0 == 1002
+					TempValue1 &= 1022
+					TempValue2 &= 1022
+					SetTileLayerEntry(16, 0, TempValue1, TempValue2)
+					TempValue1++
+					SetTileLayerEntry(17, 0, TempValue1, TempValue2)
+					TempValue1--
+					TempValue2++
+					SetTileLayerEntry(18, 0, TempValue1, TempValue2)
+					TempValue1++
+					SetTileLayerEntry(19, 0, TempValue1, TempValue2)
+				end if
+			end if
+		end if
+		break
+
+	case 24
+	case 25
+	case 26
+	case 27
+		// Wavy chunks, open from left side
+		CallFunction(R7Setup_GetLoopTileInfo)
+		if TempValue0 == 1001
+			TempValue1 &= 1022
+			TempValue2 &= 1022
+			SetTileLayerEntry(28, 0, TempValue1, TempValue2)
+			TempValue1++
+			SetTileLayerEntry(29, 0, TempValue1, TempValue2)
+			TempValue1--
+			TempValue2++
+			SetTileLayerEntry(30, 0, TempValue1, TempValue2)
+			TempValue1++
+			SetTileLayerEntry(31, 0, TempValue1, TempValue2)
+		end if
+		break
+
+	case 28
+	case 29
+	case 30
+	case 31
+		// Wavy chunks, open from right side
+		CallFunction(R7Setup_GetLoopTileInfo)
+		if TempValue0 == 1000
+			TempValue1 &= 1022
+			TempValue2 &= 1022
+			SetTileLayerEntry(24, 0, TempValue1, TempValue2)
+			TempValue1++
+			SetTileLayerEntry(25, 0, TempValue1, TempValue2)
+			TempValue1--
+			TempValue2++
+			SetTileLayerEntry(26, 0, TempValue1, TempValue2)
+			TempValue1++
+			SetTileLayerEntry(27, 0, TempValue1, TempValue2)
+		end if
+		break
+
+	end switch
+
+	if Object.FlamesTimer == 0
+
+		// Get the absolute version of the Player's speed
+		TempValue0 = Player.Speed
+		if TempValue0 < 0
+			FlipSign(TempValue0)
+		end if
+
+		// Is the player going at a speed above 10 pixels?
+		if TempValue0 > 0xA0000
+			TempValue3 = Player.XPos
+			TempValue3 >>= 16
+
+			TempValue4 = Player.YPos
+			TempValue4 >>= 16
+			TempValue4 += 8
+
+			// See if the player's on a fire-compatible tile
+			Get16x16TileInfo(TempValue0, TempValue3, TempValue4, TILEINFO_ANGLEB)
+
+			if TempValue0 == 1
+				Object.FlamesTimer = 4
+
+				// Spawn a Flame Trail behind the player
+				CreateTempObject(TypeName[Fire Trail], 0, Player.XPos, Player.YPos)
+				if Player.Speed < 0
+					Object[TempObjectPos].Direction = FACING_LEFT
+				else
+					Object[TempObjectPos].Direction = FACING_RIGHT
+				end if
+				Object[TempObjectPos].DrawOrder = 4
+				Object[TempObjectPos].iYPos += Player.CollisionBottom
+
+			end if
+		end if
+	end if
+
+end sub
+
+
+sub ObjectStartup
+
+	// Place the object into the scene and make it always active
+	Object[19].Type = TypeName[R7 Setup]
+	Object[19].Priority = PRIORITY_ACTIVE
+
+	// Setup the palette cycle
+
+	// First, copy the main palette bank into banks 1-5
+	// (Side note - 1-5? But only banks 0-1 are actually used throughout the stage...)
+	CopyPalette(0, 1)
+	CopyPalette(0, 2)
+	CopyPalette(0, 3)
+	CopyPalette(0, 4)
+	CopyPalette(0, 5)
+
+	// And now insert the modified colors into the alternate palette banks
+	TempValue0 = 0
+	TempValue1 = 0
+	TempValue2 = 32
+	while TempValue0 < 2
+		LoadPalette("R7A_PalCycle.act", TempValue0, 160, TempValue1, TempValue2)
+		TempValue0++
+		TempValue1 += 32
+		TempValue2 += 32
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,132 @@
+//---------------Sonic CD Vertical Door Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.DoorHeight
+
+// Push Button Aliases
+#alias Object.PropertyValue		:	PushButton.Pressed
+
+// States
+#alias 0	:	VERTICALDOOR_CLOSED
+#alias 1	:	VERTICALDOOR_OPEN
+
+// Property Values
+#alias 0	:	CHECK_FROM_LEFT
+#alias 1	:	CHECK_FROM_RIGHT
+
+
+sub ObjectMain
+	if Object.State == VERTICALDOOR_CLOSED
+		if PushButton[+1].Pressed == true
+			Object.State = VERTICALDOOR_OPEN
+		end if
+
+		if Object.DoorHeight > 0
+			Object.DoorHeight -= 0x40000
+			Object.YPos		  += 0x40000
+		end if
+	else
+		if Object.DoorHeight < 0x400000
+			Object.DoorHeight += 0x40000
+			Object.YPos		  -= 0x40000
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.PropertyValue == CHECK_FROM_LEFT
+		if Object.State == VERTICALDOOR_OPEN
+			PlayerObjectCollision(C_BOX, -8, -32, 8, 32)
+
+			PlayerObjectCollision(C_TOUCH, -64, -128, -32, 128)
+			if CheckResult == true
+				Object.State = VERTICALDOOR_CLOSED
+			end if
+		else
+			PlayerObjectCollision(C_BOX, -8, -32, 8, 64)
+		end if
+	else
+		if Object.State == VERTICALDOOR_OPEN
+			PlayerObjectCollision(C_BOX, -8, -32, 8, 32)
+
+			PlayerObjectCollision(C_TOUCH, 32, -128, 64, 128)
+			if CheckResult == true
+				Object.State = VERTICALDOOR_CLOSED
+			end if
+		else
+			PlayerObjectCollision(C_BOX, -8, -32, 8, 64)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-8, -32, 16, 64, 239, 1)	// #0 - Vertical Door
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // checkSide
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // checkSide
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(0)
+	if editor.ShowGizmos == true
+		TempValue1  = Object.YPos
+		TempValue1 -= 0x800000
+		TempValue0  = Object.XPos
+		if Object.PropertyValue == CHECK_FROM_LEFT
+			TempValue0 -= 0x400000
+			DrawRectOutline(TempValue0, TempValue1, 0x20, 0x100, 255, 255, 0, 255)
+		else
+			TempValue0 += 0x200000
+			DrawRectOutline(TempValue0, TempValue1, 0x20, 0x100, 255, 255, 0, 255)
+		end if
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-8, -32, 16, 64, 239, 1)	// #0 - Vertical Door
+
+	AddEditorVariable("checkSide")
+	SetActiveVariable("checkSide")
+	AddEnumVariable("Check from left", CHECK_FROM_LEFT)
+	AddEnumVariable("Check from right",  CHECK_FROM_RIGHT)
+end sub

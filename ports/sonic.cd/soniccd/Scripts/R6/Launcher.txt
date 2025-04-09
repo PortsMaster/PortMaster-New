@@ -1,0 +1,194 @@
+//------------------Sonic CD Launcher Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.XOriginPos
+
+// States
+#alias 0	:	LAUNCHER_IDLE
+#alias 1	:	LAUNCHER_DASH
+#alias 2	:	LAUNCHER_EJECT_PLAYER
+#alias 3	:	LAUNCHER_RECOIL
+#alias 4	:	LAUNCHER_RESET
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Stage SFX
+#alias 6	:	SFX_S_LAUNCHER
+
+
+sub ObjectMain
+	if Player.State != Player_State_Static
+		Object.State = LAUNCHER_IDLE
+		Object.Timer = 0
+	end if
+
+	switch Object.State
+	case LAUNCHER_DASH
+		Object.XPos += 0xC0000
+		Player.XPos  = Object.XPos
+
+		Player.iYPos = Player.CollisionBottom
+		FlipSign(Player.YPos)
+		Player.YPos -= 0x30000
+		Player.YPos += Object.YPos
+
+		ObjectTileGrip(CSIDE_FLOOR, 32, 4, 0)
+		if CheckResult == false
+			Object.State++
+		end if
+		break
+
+	case LAUNCHER_EJECT_PLAYER
+		Player.XPos += 0xC0000
+
+		Player.iYPos = Player.CollisionBottom
+		FlipSign(Player.YPos)
+		Player.YPos -= 0x30000
+		Player.YPos += Object.YPos
+		Object.State++
+		break
+
+	case LAUNCHER_RECOIL
+		if Object.Timer == 0
+			Player.XPos += 0xC0000
+		end if
+
+#platform: Use_Origins
+		Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+		Player.State = Player_State_Air
+#endplatform
+
+		Player.Animation = ANI_WALKING
+
+		Player.Speed	 = 0xC2000
+		Player.XVelocity = 0xC2000
+
+		Player.iYPos = Player.CollisionBottom
+		FlipSign(Player.YPos)
+		Player.YPos -= 0x30000
+		Player.YPos += Object.YPos
+
+		if Object.Timer < 2
+			Object.Timer++
+		else
+			Object.State++
+		end if
+
+		Object.XPos -= 0x40000
+		if Object.XPos < Object.XOriginPos
+			Object.XPos		= Object.XOriginPos
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State	= LAUNCHER_IDLE
+		end if
+
+		if Object.OutOfBounds == true
+			Object.XPos		= Object.XOriginPos
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State	= LAUNCHER_IDLE
+		end if
+		break
+
+	case LAUNCHER_RESET
+		Object.XPos -= 0x40000
+		if Object.XPos < Object.XOriginPos
+			Object.XPos		= Object.XOriginPos
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State	= LAUNCHER_IDLE
+		end if
+		
+		if Object.OutOfBounds == true
+			Object.XPos		= Object.XOriginPos
+			Object.Priority = PRIORITY_BOUNDS
+			Object.State	= LAUNCHER_IDLE
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == LAUNCHER_IDLE
+		PlayerObjectCollision(C_BOX, -24, -26, -18, 4)
+		PlayerObjectCollision(C_TOUCH, -20, -16, 20, 4)
+		if CheckResult == true
+			Object.State = LAUNCHER_DASH
+			Player.State = Player_State_Static
+
+			Player.Animation = ANI_LAUNCHER
+			Player.Direction = FACING_RIGHT
+
+			Player.XPos  = Object.XPos
+			Player.iYPos = Player.CollisionBottom
+			FlipSign(Player.YPos)
+			Player.YPos -= 0x30000
+			Player.YPos += Object.YPos
+
+			Player.YVelocity = 0
+
+			Object.Priority	= PRIORITY_ACTIVE
+
+			Player.TrackScroll	= false
+			Player.Gravity		= GRAVITY_AIR
+
+			PlayStageSfx(SFX_S_LAUNCHER, false)
+			
+#platform: Use_Haptics
+			HapticEffect(30, 0, 0, 0)
+#endplatform
+
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	
+	SpriteFrame(-28, -28, 56, 32, 83, 1)	// #0 - Launcher
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Launcher]
+			Object[ArrayPos0].XOriginPos = Object[ArrayPos0].XPos
+			Object[ArrayPos0].DrawOrder  = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	
+	SpriteFrame(-28, -28, 56, 32, 83, 1)	// #0 - Launcher
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

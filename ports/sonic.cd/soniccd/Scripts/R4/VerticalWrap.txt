@@ -1,0 +1,139 @@
+//---------------Sonic CD Vertical Wrap Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.WaterEntityPos
+#alias Object.Value1	:	Object.MinWaterHeight
+#alias Object.Value2	:	Object.MoveWater
+
+// Property Values
+#alias 0	:	DISABLE_WATER
+#alias 1	:	DISABLE_WATER_PLAYER
+
+// This also disables water when conditions are met
+#alias 2	:	SWAP_WATER_HEIGHT
+#alias 3	:	SWAP_WATER_HEIGHT_PLAYER
+
+#alias 4	:	DISABLE_WATER_LOWER_MIN
+#alias 5	:	DISABLE_WATER_PLAYER_LOWER_MIN
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	if Player.XPos > Object.XPos
+		Stage.YBoundary2 = 2048
+		if Object.OutOfBounds == true
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+
+		if Stage.NewWaterLevel > Object.MinWaterHeight
+			Stage.NewWaterLevel = Object.MinWaterHeight
+			ArrayPos0 = Object.WaterEntityPos
+			Object[ArrayPos0].YPos   = Screen.YOffset
+			Object[ArrayPos0].YPos  += 256
+			Object[ArrayPos0].YPos <<= 16
+			if Object.MoveWater == true
+				// this gets triggered once you leave the wrap section
+				if Object[ArrayPos0].YPos < Object.MinWaterHeight
+					Object[ArrayPos0].YPos = Object.MinWaterHeight
+				end if
+			end if
+		end if
+	else
+		if Object.PropertyValue == DISABLE_WATER
+			// Y - 3072 in map coords
+			if Stage.NewWaterLevel < 0xC000000
+				Stage.NewWaterLevel = 0xC000000
+				ArrayPos0 = Object.WaterEntityPos
+				Object[ArrayPos0].YPos = 0xC000000
+			end if
+		else
+			if Player.YPos > Object.YPos
+				// Y - 3072 in map coords
+				if Stage.NewWaterLevel < 0xC000000
+					Stage.NewWaterLevel = 0xC000000
+					ArrayPos0 = Object.WaterEntityPos
+					Object[ArrayPos0].YPos = 0xC000000
+				end if
+			end if
+		end if
+		
+		Stage.YBoundary2 = 2304
+		Object.Priority  = PRIORITY_ACTIVE
+		if Player.YVelocity >= 0
+			if Screen.YOffset > 2047
+				Player.YPos -= 0x8000000	// Y - 2048 in map coords
+				Screen.YOffset -= 2048
+			end if
+		end if
+		if Player.YVelocity <= 0
+			if Screen.YOffset < 1
+				Player.YPos += 0x8000000	// Y - 2048 in map coords
+				Screen.YOffset += 2048
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Water]
+			TempValue0 = ArrayPos0
+		end if
+		ArrayPos0++
+	loop
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Vertical Wrap]
+			Object[ArrayPos0].WaterEntityPos = TempValue0
+			switch Object[ArrayPos0].PropertyValue
+			case DISABLE_WATER
+			case DISABLE_WATER_PLAYER
+				Object[ArrayPos0].MinWaterHeight = 0x5340000
+				Object[ArrayPos0].MoveWater = false
+				break
+			case SWAP_WATER_HEIGHT
+			case SWAP_WATER_HEIGHT_PLAYER
+				Object[ArrayPos0].PropertyValue -= 2
+				Object[ArrayPos0].MinWaterHeight = 0x5A00000
+				Object[ArrayPos0].MoveWater = true
+				break
+			case DISABLE_WATER_LOWER_MIN
+			case DISABLE_WATER_PLAYER_LOWER_MIN
+				Object[ArrayPos0].PropertyValue -= 2
+				Object[ArrayPos0].MinWaterHeight = 0x5100000
+				Object[ArrayPos0].MoveWater = false
+				break
+			end switch
+		end if
+		ArrayPos0++
+	loop
+
+	if Player.XPos > 0x3200000
+		Stage.YBoundary2 = 2048
+	end if
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

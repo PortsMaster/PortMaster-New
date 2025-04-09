@@ -1,0 +1,364 @@
+//--------------Sonic CD HPlatformMedium2 Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Pressed
+
+#alias Object.Value1			:	Object.PlatformY
+#alias Object.Value2			:	Object.ChangeY
+
+#alias Object.Value3			:	Object.PlatformX
+#alias Object.Value4			:	Object.ChangeX
+
+#alias Object.Value5			:	Object.Angle
+#alias Object.Value6			:	Object.Oscillation
+
+#alias Object.Value7			:	Object.Cooldown
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Period Aliases
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Property Values
+#alias 0	:	START_MOVING_RIGHT
+#alias 1	:	START_MOVING_RIGHT_W/SPRING
+#alias 2	:	START_MOVING_RIGHT_W/CONV
+#alias 3	:	START_MOVING_LEFT
+#alias 4	:	START_MOVING_LEFT_W/SPRING
+#alias 5	:	START_MOVING_LEFT_W/CONV
+
+
+sub ObjectMain
+	
+	// Update the Platform's Oscillation value
+	// Do note, that because this Oscillation is per-object and
+	// not global, that means Platforms won't be synced
+	Object.Oscillation++
+	if Object.Oscillation == 312
+		Object.Oscillation = 0
+	end if
+	
+	// From this Oscillation value, get the Platform's Angle to be at
+	// This resulting value will range from 0 to 510
+	Object.Angle = Object.Oscillation
+	Object.Angle <<= 6
+	Object.Angle /= 39
+	
+	// And then from this Angle, get the base X Change Value
+	Sin(Object.ChangeX, Object.Angle)
+	
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/CONV
+		Object.ChangeX *= 0x1800
+		Object.ChangeX += 0x300000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object.ChangeX -= Object.PlatformX
+		break
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/CONV
+		Object.ChangeX *= -0x1800
+		Object.ChangeX -= 0x300000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object.ChangeX -= Object.PlatformX
+		break
+	case START_MOVING_RIGHT_W/SPRING
+		Object.ChangeX *= 0x1800
+		Object.ChangeX += 0x300000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object[+1].XPos  = Object.ChangeX
+		Object[+1].XPos -= 0x100000
+		Object[+1].YPos  = Object.YPos
+		Object[+1].YPos -= 0x180000
+		Object[+2].XPos  = Object.ChangeX
+		Object[+2].XPos += 0x100000
+		Object[+2].YPos  = Object.YPos
+		Object[+2].YPos -= 0x180000
+		Object.ChangeX  -= Object.PlatformX
+		break
+	case START_MOVING_LEFT_W/SPRING
+		Object.ChangeX *= -0x1800
+		Object.ChangeX -= 0x300000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object[+1].XPos  = Object.ChangeX
+		Object[+1].XPos -= 0x100000
+		Object[+1].YPos  = Object.YPos
+		Object[+1].YPos -= 0x180000
+		Object[+2].XPos  = Object.ChangeX
+		Object[+2].XPos += 0x100000
+		Object[+2].YPos  = Object.YPos
+		Object[+2].YPos -= 0x180000
+		Object.ChangeX  -= Object.PlatformX
+		break
+		
+	end switch
+	
+	if Object.Pressed == true
+		if Object.PlatformY < 16
+			Object.PlatformY++
+			TempValue0 = Object.PlatformY
+			TempValue0 &= 3
+			if TempValue0 == 3
+				Object.ChangeY = 0x10000
+			else
+				Object.ChangeY = 0
+			end if
+		else
+			Object.ChangeY = 0
+		end if
+	else
+		if Object.PlatformY > 0
+			Object.PlatformY--
+			TempValue0 = Object.PlatformY
+			TempValue0 &= 3
+			if TempValue0 == 3
+				Object.ChangeY = -0x10000
+			else
+				Object.ChangeY = 0
+			end if
+		else
+			Object.ChangeY = 0
+		end if
+	end if
+	
+	Object.Pressed = false
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// First, back up the Object's base position
+	TempValue0 = Object.XPos
+	
+	// Then, move the Object to where its Platform is
+	Object.XPos = Object.PlatformX
+	
+	// From here, jump as needed to the special handling type to be used
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_LEFT
+		// Standard Platform
+		
+		PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+		
+		if CheckResult == true
+			
+			// Let the Platform Object know that the Player's on it so that it can dip
+			Object.Pressed = true
+			
+			// And move the Player along with the Platform
+			Player.XPos += Object.ChangeX
+			Player.YPos += Object.ChangeY
+			
+		end if
+		break
+		
+	case START_MOVING_RIGHT_W/CONV
+	case START_MOVING_LEFT_W/CONV
+		// Conveyor Platform
+		if Object.Cooldown == 0
+			PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+			
+			if CheckResult == true
+				
+				// Now that the Player's on the Platform, let the Platform know
+				Object.Pressed = true
+				
+				// And from here, carry the Player along with the Platform
+				Player.XPos += Object.ChangeX
+				Player.YPos += Object.ChangeY
+				
+				// But also move them in them with the Conveyor Belt too
+				if ConveyorBelt_Flag == 0
+					Player.XPos += ConveyorBelt_Speed
+				else
+					Player.XPos -= ConveyorBelt_Speed
+				end if
+				
+				// However, since this Platform is a conveyor belt Platform, there's a brief cooldown activated if the Player
+				// is seen to be on the Platform's edge
+				// This is here so that they don't get into a loop of pushed off -> regrabbed -> pushed off -> regrabbed -> [...]
+				// since that makes things look quite... odd
+				
+				if Player.Animation == ANI_FLAILINGLEFT
+					Object.Cooldown = 30
+				end if
+				
+				if Player.Animation == ANI_FLAILINGRIGHT
+					Object.Cooldown = 30
+				end if
+			end if
+		else
+			// Hold for a moment...
+			Object.Cooldown--
+		end if
+		break
+		
+	end switch
+	
+	// And now restore the Platform to its base Position
+	Object.XPos = TempValue0
+	
+end sub
+
+
+sub ObjectDraw
+	
+	// Move the Platform as needed for its dipping
+	Object.YPos += Object.ChangeY
+	
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/SPRING
+		// Right-going Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= 0x1800
+		Object.PlatformX += 0x300000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_RIGHT_W/CONV
+		// Right-going Conveyor Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= 0x1800
+		Object.PlatformX += 0x300000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		DrawSpriteXY(1, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/SPRING
+		// Left-moving Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= -0x1800
+		Object.PlatformX -= 0x300000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_LEFT_W/CONV
+		// Left-moving Conveyor Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= -0x1800
+		Object.PlatformX -= 0x300000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		DrawSpriteXY(1, Object.PlatformX, Object.YPos)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Load different Sprites for the different Time Periods
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		break
+		
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		break
+		
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		break
+		
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		break
+		
+	end switch
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue2 = 0
+	
+	switch Object.PropertyValue
+	case 2
+		TempValue2 = 1
+	case 0
+	case 1
+		TempValue0 = 0x1800
+		TempValue1 = 0x300000
+		break
+		
+	case 5
+		TempValue2 = 1
+	case 3
+	case 4
+		TempValue0 = -0x1800
+		TempValue1 = -0x300000
+		break
+		
+	end switch
+	
+	DrawSprite(0)
+	DrawSprite(TempValue2)
+	
+	if Editor.ShowGizmos == true
+		
+		TempValue3 = Object.XPos
+		TempValue3 &= 0xFFFF0000 // Truncate the value
+		
+		Sin(TempValue4, 128)
+		TempValue4 *= TempValue0
+		TempValue4 += TempValue1
+		TempValue4 += Object.XPos
+		TempValue4 &= 0xFFFF0000 // Truncate the value
+		
+		Editor.DrawingOverlay = true
+		
+		// Draw the Platform's path
+		
+		DrawLine(TempValue3, Object.YPos, TempValue4, Object.YPos, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	// TODO: using present graphics here, yada yada daba daba doo
+	SpriteFrame(-32, -16, 64, 32, 34, 51)
+	SpriteFrame(-32, -16, 64, 16, 1, 208)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,312 @@
+//-----------------Sonic CD CPlatform Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.LedgeLeft
+#alias Object.Value1	:	Object.LedgeRight
+#alias Object.Value2	:	Object.Timer
+#alias Object.Value3	:	Object.NoBlocks
+#alias Object.Value4	:	Object.YVelocity
+
+// States
+#alias 0	:	CPLATFORM_ACTIVE
+#alias 1	:	CPLATFORM_WAIT_R
+#alias 2	:	CPLATFORM_WAIT_L
+#alias 3	:	CPLATFORM_CRUMBLE_L
+#alias 4	:	CPLATFORM_CRUMBLE_R
+#alias 5	:	CPLATFORM_RESPAWNWAIT
+#alias 6	:	CPLATFORM_FALLINGBLOCK
+
+// Stage SFX
+#alias 0	:	SFX_S_CRUMBLE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Property Values
+#alias 1	:	PLATFORM_DEBRIS_1
+#alias 2	:	PLATFORM_DEBRIS_2
+
+
+sub ObjectMain
+
+	switch Object.State
+	
+	// Nothing for CPLATFORM_ACTIVE here
+	// Initial triggering of crumbling is all handled in ObjectPlayerInteraction instead
+	
+	case CPLATFORM_WAIT_R
+		if Object.Timer > 0
+			Object.Timer--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			
+			Object.State = CPLATFORM_CRUMBLE_R
+		end if
+		break
+		
+	case CPLATFORM_WAIT_L
+		if Object.Timer > 0
+			Object.Timer--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			
+			Object.State = CPLATFORM_CRUMBLE_L
+		end if
+		break
+		
+	case CPLATFORM_CRUMBLE_L
+		Object.Timer++
+		if Object.Timer == 10
+			Object.Timer = 0
+			if Object.LedgeLeft < Object.LedgeRight
+				Object.NoBlocks--
+				Object.LedgeLeft += 16
+				
+				// Start spawning fragments
+				
+				// First, get the XPos to start at
+				TempValue0 = Object.LedgeLeft
+				TempValue0 -= 8
+				TempValue0 <<= 16
+				TempValue0 += Object.XPos
+				
+				// Then get the YPos, 8 pixels above this base object
+				TempValue1 = Object.YPos
+				TempValue1 -= 0x80000
+				
+				// Spawning of the First Fragment
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLINGBLOCK
+				Object[TempObjectPos].YVelocity = -0x10000
+				Object[TempObjectPos].PropertyValue = PLATFORM_DEBRIS_1
+				
+				// Put the second piece 16 pixels down
+				TempValue1 += 0x100000
+
+				// Spawning of the Second Fragment
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLINGBLOCK
+				Object[TempObjectPos].PropertyValue = PLATFORM_DEBRIS_2
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		break
+		
+	case CPLATFORM_CRUMBLE_R
+		Object.Timer++
+		if Object.Timer == 10
+			Object.Timer = 0
+			if Object.LedgeRight > Object.LedgeLeft
+				Object.NoBlocks--
+				Object.LedgeRight -= 16
+				
+				// Start making the Fragments
+				
+				// First, find the target XPos
+				TempValue0 = Object.LedgeRight
+				TempValue0 += 8
+				TempValue0 <<= 16
+				TempValue0 += Object.XPos
+				
+				// Then, make the target YPos 8 pixels above this base object
+				TempValue1 = Object.YPos
+				TempValue1 -= 0x80000
+				
+				// Create the first Fragment
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLINGBLOCK
+				Object[TempObjectPos].YVelocity = -0x10000
+				Object[TempObjectPos].PropertyValue = PLATFORM_DEBRIS_1
+				
+				// Second piece should be 16 pixels down
+				TempValue1 += 0x100000
+				
+				// Create the second Fragment
+				CreateTempObject(TypeName[CPlatform], 0, TempValue0, TempValue1)
+				Object[TempObjectPos].State = CPLATFORM_FALLINGBLOCK
+				Object[TempObjectPos].PropertyValue = PLATFORM_DEBRIS_2
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		break
+		
+	case CPLATFORM_RESPAWNWAIT
+		// This state acts as a buffer of sorts, so that the platform doesn't respawn while it's still visible to the player
+		// It also acts as a soft reset, of sorts
+		if Object.OutOfBounds == true
+			Object.State = CPLATFORM_ACTIVE
+			Object.NoBlocks = Object.PropertyValue
+			
+			Object.LedgeLeft = Object.PropertyValue
+			Object.LedgeLeft <<= 3
+			
+			Object.LedgeRight = Object.LedgeLeft
+			FlipSign(Object.LedgeLeft)
+			
+			Object.Priority = PRIORITY_BOUNDS
+			Object.Timer = 0
+		end if
+		break
+		
+	case CPLATFORM_FALLINGBLOCK
+		// Apply a gravity of 0.25 pixels per frame
+		Object.YVelocity += 0x4000
+		if Object.YVelocity > 0
+			Object.YPos += Object.YVelocity
+		end if
+		
+		if Object.OutOfBounds == true
+			// Unload when no longer needed
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.State == CPLATFORM_ACTIVE
+		PlayerObjectCollision(C_PLATFORM, Object.LedgeLeft, -16, Object.LedgeRight, 16)
+		
+		if CheckResult == true
+			Object.Timer = 1
+			Object.Priority = PRIORITY_ACTIVE
+			
+			if Player.XPos > Object.XPos
+				Object.State = CPLATFORM_WAIT_R
+			else
+				Object.State = CPLATFORM_WAIT_L
+			end if
+		end if
+	else
+		PlayerObjectCollision(C_PLATFORM, Object.LedgeLeft, -16, Object.LedgeRight, 16)
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+
+	switch Object.State
+	case CPLATFORM_ACTIVE
+	case CPLATFORM_WAIT_R
+	case CPLATFORM_WAIT_L
+	case CPLATFORM_CRUMBLE_R
+		// Draw the Platform piece by piece, starting from the left
+		TempValue0 = 0
+		TempValue1 = Object.LedgeLeft
+		TempValue1 <<= 16
+		TempValue1 += 0x80000
+		TempValue1 += Object.XPos
+		while TempValue0 < Object.NoBlocks
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 += 0x100000
+		loop
+		break
+		
+	case CPLATFORM_CRUMBLE_L
+		// Draw the Platform piece by piece, starting from the right
+		TempValue0 = 0
+		TempValue1 = Object.LedgeRight
+		TempValue1 <<= 16
+		TempValue1 -= 0x80000
+		TempValue1 += Object.XPos
+		while TempValue0 < Object.NoBlocks
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 -= 0x100000
+		loop
+		break
+		
+	case CPLATFORM_FALLINGBLOCK
+		DrawSprite(Object.PropertyValue)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Setup the Ledge Sizes for all CPlatform Objects present in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[CPlatform]
+			Object[ArrayPos0].NoBlocks = Object[ArrayPos0].PropertyValue
+			
+			Object[ArrayPos0].LedgeLeft = Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].LedgeLeft <<= 3
+			
+			Object[ArrayPos0].LedgeRight = Object[ArrayPos0].LedgeLeft
+			
+			FlipSign(Object[ArrayPos0].LedgeLeft)
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	// Ledge Frame
+	SpriteFrame(-8, -16, 16, 32, 108, 51)
+	
+	// Broken Ledge Frames
+	SpriteFrame(-8, -8, 16, 16, 108, 51)
+	SpriteFrame(-8, -8, 16, 16, 108, 67)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // BlocksNo
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // BlocksNo
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	TempValue0 = 0
+	TempValue1 = Object.PropertyValue
+	TempValue1 <<= 19
+	TempValue1 -= 0x80000
+	TempValue1 += Object.XPos
+	while TempValue0 < Object.PropertyValue
+		DrawSpriteXY(0, TempValue1, Object.YPos)
+		TempValue0++
+		TempValue1 -= 0x100000
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-8, -16, 16, 32, 108, 51)
+	
+	AddEditorVariable("BlocksNo")
+	SetActiveVariable("BlocksNo")
+end sub

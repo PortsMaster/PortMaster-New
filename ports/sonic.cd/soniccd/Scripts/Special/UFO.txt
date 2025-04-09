@@ -1,0 +1,373 @@
+//--------------------Sonic CD UFO Script---------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.YPos : Object.ZPos
+
+#alias Object.Value0 : Object.TargetNode
+#alias Object.Value1 : Object.XVelocity
+#alias Object.Value2 : Object.ZVelocity
+#alias Object.Value3 : Object.Timer
+#alias Object.Value4 : Object.ScreenXPos // Difference from the center of the camera (which is where Sonic is always located)
+#alias Object.Value5 : Object.ScreenDepth
+
+// HUD Alias
+#alias Object.Value0 : HUD.UFOsCount       // Initially set via a loop in the UFO script
+#alias Object.Value1 : HUD.TimeSeconds     // Displayed time
+#alias Object.Value3 : HUD.Rings
+#alias Object.Value4 : HUD.LastUFOType     // Used by UFOs for ring streak bonus
+#alias Object.Value5 : HUD.SpeedShoesTimer // Used to transmit between player and UFO
+#alias Object.Value6 : HUD.BonusUFONo      // "No" akin to Entity No, not as in "is there no UFO?"
+
+// UFOPowerUp Aliases
+#alias Object.Value0 : UFOPowerUp.ExplosionDir
+#alias Object.Value1 : UFOPowerUp.ExplosionXVel
+#alias Object.Value2 : UFOPowerUp.ExplosionYVel
+#alias Object.Value4 : UFOPowerUp.YVelocity
+#alias Object.Value5 : UFOPowerUp.ScreenDepth
+#alias Object.Value7 : UFOPowerUp.StartResults
+
+// SFX Aliases
+#alias 1 : SFX_G_RING
+
+// Property Value
+#alias 0 : UFO_CONTENTS_RINGS
+#alias 1 : UFO_CONTENTS_SPEEDSHOES
+#alias 2 : UFO_CONTENTS_TIME
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	// Update movement
+	if Object.Timer == 0
+		ArrayPos0 = Object.TargetNode
+		if Object[ArrayPos0].Type != TypeName[UFO Node]
+			Object.TargetNode = Object.EntityNo
+			Object.TargetNode++
+			ArrayPos0 = Object.TargetNode
+		end if
+		
+		Object.XPos = Object[ArrayPos0].XPos
+		Object.ZPos = Object[ArrayPos0].ZPos
+		Object.Timer = Object[ArrayPos0].PropertyValue
+		Object.Timer *= 2
+		
+		ArrayPos0++
+		Object.TargetNode++
+		if Object[ArrayPos0].Type != TypeName[UFO Node]
+			Object.TargetNode = Object.EntityNo
+			Object.TargetNode++
+			ArrayPos0 = Object.TargetNode
+		end if
+		
+		Object.XVelocity = Object[ArrayPos0].XPos
+		Object.XVelocity -= Object.XPos
+		Object.XVelocity /= Object.Timer
+		
+		Object.ZVelocity = Object[ArrayPos0].ZPos
+		Object.ZVelocity -= Object.ZPos
+		Object.ZVelocity /= Object.Timer
+	else
+		// Following a node - just update movement for now
+		
+		Object.Timer--
+		Object.XPos += Object.XVelocity
+		Object.ZPos += Object.ZVelocity
+	end if
+	
+	// Check player interaction in this (rather lengthy) process
+	
+	// X difference
+	TempValue0 = Object.XPos
+	TempValue0 -= TileLayer[0].XPos
+	TempValue0 >>= 8
+	
+	// Z mutliplier
+	TempValue1 = Object.ZPos
+	TempValue1 -= TileLayer[0].ZPos
+	TempValue1 >>= 8
+	
+	// Calculating the X difference
+	Sin(TempValue2, TileLayer[0].Angle)
+	TempValue2 *= TempValue1
+	Cos(TempValue3, TileLayer[0].Angle)
+	TempValue3 *= TempValue0
+	Object.ScreenXPos = TempValue2
+	Object.ScreenXPos -= TempValue3
+	Object.ScreenXPos >>= 9
+	
+	// Calculating the Z difference
+	Cos(TempValue2, TileLayer[0].Angle)
+	TempValue2 *= TempValue1
+	Sin(TempValue3, TileLayer[0].Angle)
+	TempValue3 *= TempValue0
+	Object.ScreenDepth = TempValue2
+	Object.ScreenDepth += TempValue3
+	Object.ScreenDepth >>= 9
+	
+	// Long list of checks for the hitbox detection
+	
+	// The Player has to be more than 54 pixels off the ground, but lower than 122 pixels towards the sky
+	if Player.YPos > 0x360000
+		if Player.YPos < 0x7A0000
+			
+			// The UFO has to be within the 2100 range from the player, who's at a depth of 0x5800 normally
+			if Object.ScreenDepth < 0x58C8
+				if Object.ScreenDepth > 0x5094
+					
+					// The UFO has to be between -0.125 and +0.125 pixels away from the screen centre
+					if Object.ScreenXPos > -0x2000
+						if Object.ScreenXPos < 0x2000
+							
+							// All those checks passed, let's destroy this UFO!
+							
+							TempValue0 = Object.ScreenXPos
+							TempValue0 *= 192
+							TempValue0 /= Object.ScreenDepth
+							TempValue0 += Screen.CenterX
+							TempValue0 <<= 16
+							
+							TempValue1 = TileLayer[0].YPos
+							TempValue1 >>= 8
+							TempValue1 -= 0x6000
+							TempValue1 *= 96
+							TempValue1 /= Object.ScreenDepth
+							TempValue1 += 128
+							TempValue1 <<= 16
+							
+							// Play the ring SFX
+							PlaySfx(SFX_G_RING, false)
+							
+#platform: Use_Haptics
+							// Do shake index 55 to really sell the impact of hitting a floating UFO
+							HapticEffect(55, 0, 0, 0)
+#endplatform
+							
+							switch Object.PropertyValue
+							case UFO_CONTENTS_RINGS
+								// Decrease the UFO count and give some bonus rings
+								HUD[4].UFOsCount--
+								if HUD[4].LastUFOType == Object.PropertyValue
+									// If the last UFO caught was a rings variant too, then double the player's rings rather than adding 20
+									HUD[4].Rings <<= 1
+								else
+									HUD[4].Rings += 20
+								end if
+								break
+								
+							case UFO_CONTENTS_SPEEDSHOES
+								// Decrease the UFO count and give the player some new faster shoes
+								HUD[4].UFOsCount--
+								HUD[4].SpeedShoesTimer = 600
+								break
+								
+							case UFO_CONTENTS_TIME
+								// Aadd some time to the clock
+								// (Not decreasing the UFO count because time UFOs don't count towards the whole)
+								HUD[4].TimeSeconds += 30
+								break
+								
+							end switch
+							
+							HUD[4].LastUFOType = Object.PropertyValue
+							
+							// Create the UFO powerup icon
+							CreateTempObject(TypeName[UFO PowerUp], Object.PropertyValue, TempValue0, TempValue1)
+							Rand(UFOPowerUp[TempObjectPos].ExplosionDir, 100)
+							UFOPowerUp[TempObjectPos].ExplosionXVel = TempValue0
+							UFOPowerUp[TempObjectPos].ExplosionYVel = TempValue1
+							UFOPowerUp[TempObjectPos].YVelocity = -0x40000
+							UFOPowerUp[TempObjectPos].ScreenDepth = 0x58C8
+							
+							// If the last UFO was just destroyed, then signal that to the PowerUp object too
+							if HUD[4].UFOsCount == 0
+								UFOPowerUp[TempObjectPos].StartResults = true
+							end if
+							
+							// Blank this UFO object since it's been
+							ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+							
+							// And now, close a whole lotta end if's...
+							
+						end if
+					end if
+				end if
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	if Object.ScreenDepth > 256 // Don't draw if the UFO is too close to the screen
+		
+		// Do some maths to find the position & scale the UFO should be at
+		
+		Object.Scale = 0xC00000
+		Object.Scale /= Object.ScreenDepth
+		
+		TempValue0 = 768
+		TempValue0 -= Object.Scale
+		TempValue0 /= 6
+		
+		TempValue1 = Object.ScreenDepth
+		TempValue1 >>= 12
+		
+		if TempValue0 > 0
+			Object.Scale += TempValue0
+			Object.Scale -= TempValue1
+		end if
+		
+		TempValue0 = Object.ScreenXPos
+		TempValue0 *= 192
+		TempValue0 /= Object.ScreenDepth
+		TempValue0 += Screen.CenterX
+		
+		TempValue1 = TileLayer[0].YPos
+		TempValue1 >>= 8
+		TempValue1 -= 0x6000
+		TempValue1 *= 96
+		TempValue1 /= Object.ScreenDepth
+		TempValue1 += 128
+		
+		// Draw the UFO now
+		DrawSpriteScreenFX(Object.PropertyValue, FX_SCALE, TempValue0, TempValue1)
+		
+		// Find the ground position
+		TempValue1 = TileLayer[0].YPos
+		TempValue1 >>= 8
+		TempValue1 *= 96
+		TempValue1 /= Object.ScreenDepth
+		TempValue1 += 128
+		
+		// Draw the shadow on the ground
+		DrawSpriteScreenFX(3, FX_SCALE, TempValue0, TempValue1)
+		
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Special/Objects.gif")
+	
+	// UFO Frames
+	
+	// 0 - 10 Rings Variant
+	SpriteFrame(-40, -28, 80, 56, 1, 1)
+	
+	// 1 - Speed Shoes Variant
+	SpriteFrame(-40, -28, 80, 56, 82, 1)
+	
+	// 2 - Extra Time Variant
+	SpriteFrame(-40, -28, 80, 56, 163, 1)
+	
+	// 3 - UFO Shadow Frame
+	SpriteFrame(-40, -8, 80, 16, 1, 117)
+	
+	// Cycle through all UFO objects in the scene and set them up
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[UFO]
+			
+			// Set the UFO to always be active
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			if Object[ArrayPos0].PropertyValue < 2
+				
+				// Increase the UFO count
+				HUD[4].UFOsCount++
+				
+			else
+				
+				// Bonus UFO Spawn point, delete the UFO for right now and store its EntityPos into the HUD value
+				// (We need to make sure the Time UFO is spawned in the correct slot because of its Nodes)
+				
+				Object[ArrayPos0].Type = TypeName[Blank Object]
+				HUD[4].BonusUFONo = ArrayPos0
+				
+			end if
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Contents
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Contents
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+	
+	if Editor.ShowGizmos == true
+		// Draw arrows to show the network of UFO nodes
+		
+		Editor.DrawingOverlay = true
+		
+		ArrayPos1 = Object.EntityNo
+		ArrayPos0 = Object.EntityNo
+		ArrayPos0++
+		
+		// TODO: change this to "UFO Node" once GetObjectType works with spaces
+		GetObjectType(TempValue0, "UFONode")
+		
+		while Object[ArrayPos0].Type == TempValue0
+			DrawArrow(Object[ArrayPos1].XPos, Object[ArrayPos1].ZPos, Object[ArrayPos0].XPos, Object[ArrayPos0].ZPos, 255, 255, 0)
+			ArrayPos0++
+			ArrayPos1++
+		loop
+		
+		ArrayPos0 = Object.EntityNo
+		ArrayPos0++
+		if ArrayPos1 != Object.EntityNo
+			DrawArrow(Object[ArrayPos1].XPos, Object[ArrayPos1].ZPos, Object[ArrayPos0].XPos, Object[ArrayPos0].ZPos, 255, 255, 0)
+		end if
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-40, -28, 80, 56, 1, 1)
+	SpriteFrame(-40, -28, 80, 56, 82, 1)
+	SpriteFrame(-40, -28, 80, 56, 163, 1)
+
+	AddEditorVariable("Contents")
+	SetActiveVariable("Contents")
+	AddEnumVariable("10 Rings", UFO_CONTENTS_RINGS)
+	AddEnumVariable("Speed Shoes", UFO_CONTENTS_SPEEDSHOES)
+	AddEnumVariable("Extra Time", UFO_CONTENTS_TIME)
+end sub

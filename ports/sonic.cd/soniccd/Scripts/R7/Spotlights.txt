@@ -1,0 +1,658 @@
+//-----------------Sonic CD Spotlights Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+
+// Position for where the checkpoint should progress to its next version
+#alias Object.Value1			:	Object.Checkpoint
+
+// The colors the Spotlight should use
+// Just like everything else, these colors are in RRGGBB
+#alias Object.Value2			:	Object.PrimaryBaseColor
+#alias Object.Value3			:	Object.SecondaryBaseColor
+#alias Object.Value4			:	Object.PrimaryDisplayColor
+#alias Object.Value5			:	Object.SecondaryDisplayColor
+
+// There are several different types of spotlights that appear in the stage
+#alias Object.Value0			:	Object.SpotlightType
+// 0 - Pair of two primary ones
+//     - Using SSZ1A's, it's the two big green ones
+// 1 - Single primary one
+//     - Using SSZ1A's, it's a single green one
+// 2 - Pair of two secondary ones
+//     - Using SSZ1A's, it's the two yellow ones
+// 3 - Single small primary one
+//     - Using SSZ1A's, it's a single small green one
+// 4 - Pair of primary and secondary
+//     - Using SSZ1A's, the pair of a small green one with a big yellow one
+// Then it loops back
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Face Buffer Flags
+#alias 3	:	FACE_FLAG_COLOURED_2D
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Function declarations
+#function Spotlights_UpdateCorner
+
+
+function Spotlights_UpdateCorner
+	
+	// Called individually for each corner in a spotlight to update it
+	
+	// Preconditions:
+	//   - ArrayPos0 is the ID of the vertex that should be changes
+	//   - TempValue0 is the X multiplier for how much extra this vertex should move
+	//   - TempValue1 is the Y multiplier for how much extra this vertex should move
+	//      (These last two values are here since spotlights aren't uniform in width - they can be skewed to uneven dimensions as well)
+	
+	
+	Sin(TempValue2, Object.Rotation)
+	TempValue2 *= TempValue1
+	
+	Cos(TempValue3, Object.Rotation)
+	TempValue3 *= TempValue0
+	
+	VertexBuffer[ArrayPos0].x = TempValue2
+	VertexBuffer[ArrayPos0].x -= TempValue3
+	VertexBuffer[ArrayPos0].x >>= 9
+	VertexBuffer[ArrayPos0].x += Object.XPos
+	
+	Cos(TempValue2, Object.Rotation)
+	TempValue2 *= TempValue1
+	
+	Sin(TempValue3, Object.Rotation)
+	TempValue3 *= TempValue0
+	
+	VertexBuffer[ArrayPos0].y = TempValue2
+	VertexBuffer[ArrayPos0].y += TempValue3
+	VertexBuffer[ArrayPos0].y >>= 9
+	VertexBuffer[ArrayPos0].y += 256
+	
+end function
+
+
+sub ObjectMain
+	TempValue0 = Oscillation
+	TempValue0 <<= 2
+	
+	// Get some smooth arc movement values
+	
+	Sin(TempValue1, TempValue0)
+	TempValue1 >>= 5
+	TempValue1 += 64
+	
+	Cos(TempValue2, TempValue0)
+	TempValue2 >>= 5
+	TempValue2 += 64
+	
+	// Make the spotlight colors oscillate
+	
+	Object.PrimaryDisplayColor = TempValue1
+	Object.PrimaryDisplayColor <<= 24
+	Object.PrimaryDisplayColor += Object.PrimaryBaseColor
+	
+	Object.SecondaryDisplayColor = TempValue2
+	Object.SecondaryDisplayColor <<= 24
+	Object.SecondaryDisplayColor += Object.SecondaryBaseColor
+	
+	// Check if the current spotlight type should be switched
+	
+	TempValue0 = Screen.XOffset
+	TempValue0 += Screen.CenterX
+	if TempValue0 > Object.Checkpoint
+		TempValue0 -= Object.Checkpoint
+		if TempValue0 > 440
+			// Move the next checkpoint ahead
+			Object.Checkpoint += 880
+			
+			// Trigger the next spotlight type to start
+			Object.SpotlightType++
+			
+			if Object.SpotlightType > 4
+				// Loop back
+				Object.SpotlightType = 0
+			end if
+		end if
+	else
+		TempValue0 -= Object.Checkpoint
+		if TempValue0 < -440
+			// Move the next checkpoint back
+			Object.Checkpoint -= 880
+			
+			// Trigger the next spotlight type to start
+			Object.SpotlightType--
+			
+			if Object.SpotlightType < 0
+				// Loop ahead
+				Object.SpotlightType = 4
+			end if
+		end if
+	end if
+	
+	// Scroll the spotlight
+	Object.XPos = Object.Checkpoint
+	Object.XPos -= Screen.XOffset
+	
+	// Different handlings for the different types of spotlights
+	switch Object.SpotlightType
+	case 0
+		// Pair of two primary spotlights
+		
+		// Make these spotlights draw above the rest of the stage & its objects
+		Object.DrawOrder = 5
+		
+		// 2 rectangles means 8 vertices and 2 faces
+		3DScene.NoVertices = 8
+		3DScene.NoFaces = 2
+		
+		// 1st Spotlight offset - move it a bit to the left
+		Object.XPos -= 48
+		
+		// Mirror the face color to match the targetted color
+		FaceBuffer[0].Color = Object.PrimaryDisplayColor
+		FaceBuffer[1].Color = Object.PrimaryDisplayColor
+		
+		
+		// First do spotlight 1 (the left one)
+		
+		// Get the base rotation for the spotlight
+		
+		TempValue0 = Oscillation
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		if Object.Rotation > 0
+			// Enforce that the spotlight never goes towards the left
+			FlipSign(Object.Rotation)
+		end if
+		Object.Rotation /= 10
+		Object.Rotation += 512
+		
+		// And now move all the vertexes for it
+		
+		// Top right
+		ArrayPos0 = 0
+		TempValue0 = -16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		
+		// And now update the other spotlight (to the right)
+		
+		// Move the sedong spotlight to the right
+		// (48 px from the base spotlight position)
+		Object.XPos += 96
+		
+		TempValue0 = Oscillation
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation /= 10
+		Object.Rotation += 512
+		
+		// Top right
+		TempValue0 = -16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		break
+		
+	case 1
+		// Single primary spotlight
+		
+		// Make this object draw in the background
+		Object.DrawOrder = 2
+		
+		// 1 rectangle means 4 vertices and 1 face
+		3DScene.NoVertices = 4
+		3DScene.NoFaces = 1
+		
+		// Set its color to what it should be
+		FaceBuffer[0].Color = Object.PrimaryDisplayColor
+		
+		// Handle spotlight movement
+		TempValue0 = Oscillation
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation >>= 3
+		Object.Rotation += 512
+		
+		// Top right
+		ArrayPos0 = 0
+		TempValue0 = -16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 16
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		break
+		
+	case 2
+		// Two secondary spotlights
+		
+		// Make it draw above everything else again
+		Object.DrawOrder = 5
+		
+		// 2 spotlight rectangles means 8 vertices and 2 faces
+		3DScene.NoVertices = 8
+		3DScene.NoFaces = 2
+		
+		// Set the display colors...
+		FaceBuffer[0].Color = Object.SecondaryDisplayColor
+		FaceBuffer[1].Color = Object.SecondaryDisplayColor
+		
+		// ...and then apply the spotlight offset...
+		Object.XPos -= 48
+		
+		// ..but then set the colors again? Why is this done twice?
+		FaceBuffer[0].Color = Object.SecondaryDisplayColor
+		FaceBuffer[1].Color = Object.SecondaryDisplayColor
+		
+		// Make the spotlight move
+		TempValue0 = Oscillation
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation >>= 4
+		Object.Rotation += 500
+		
+		// Move all the vertexes as needed
+		
+		// Top right
+		ArrayPos0 = 0
+		TempValue0 = -20
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 20
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -10
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 10
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		
+		// Do spotlight 2 now, starting with its small X offset
+		Object.XPos += 96
+		
+		TempValue0 = Oscillation
+		TempValue0 += 32
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation >>= 3
+		Object.Rotation += 508
+		
+		// Top right
+		TempValue0 = -16
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 16
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 8
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		break
+		
+	case 3
+		// Single small primary spotlight
+		
+		// This version should draw above everything else as well
+		Object.DrawOrder = 5
+		
+		// 1 spotlight rectangle has four corners and one face
+		3DScene.NoVertices = 4
+		3DScene.NoFaces = 1
+		
+		FaceBuffer[0].Color = Object.PrimaryDisplayColor
+		
+		// Bounce the spotlight as needed
+		TempValue0 = 512
+		TempValue0 -= Oscillation
+		TempValue0 *= 3
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation /= 12
+		Object.Rotation += 520
+		
+		// Top right
+		ArrayPos0 = 0
+		TempValue0 = -12
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 12
+		TempValue1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -4
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 4
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		ArrayPos0++
+		break
+		
+	case 4
+		// A pair of primary and secondary spotlights
+		
+		// This variant should draw in the BG
+		Object.DrawOrder = 2
+		
+		// 2 rectangles means that there should be 8 vertices and 2 faces
+		3DScene.NoVertices = 8
+		3DScene.NoFaces = 2
+		
+		Object.XPos -= 48
+		
+		FaceBuffer[0].Color = Object.PrimaryDisplayColor
+		FaceBuffer[1].Color = Object.SecondaryDisplayColor
+		
+		// First do spotlight 1
+		
+		// Update its rotation
+		TempValue0 = Oscillation
+		TempValue0 += 64
+		TempValue0 <<= 2
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation /= 20
+		Object.Rotation += 496
+		
+		// Top right
+		ArrayPos0 = 0
+		TempValue0 = -14
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 14
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -4
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 4
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		
+		// Do spotlight 2 now
+		
+		// Total shift of 48 from its starting position, keeping the above subtraction of 48 in mind
+		Object.XPos += 96
+		
+		// Rotate the spotlight
+		TempValue0 = Oscillation
+		TempValue0 <<= 1
+		Sin(Object.Rotation, TempValue0)
+		Object.Rotation >>= 4
+		Object.Rotation += 520
+		
+		// Top right
+		TempValue0 = -24
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Top left
+		ArrayPos0++
+		TempValue0 = 24
+		TempValue1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom right
+		ArrayPos0++
+		TempValue0 = -16
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		// Bottom left
+		ArrayPos0++
+		TempValue0 = 16
+		TempValue1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+		
+		ArrayPos0++
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	// The spotlights are all 3d, so instead of drawing sprites, draw the entire 3d scene instead
+	Draw3DScene()
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Reset the 3d stuff
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixTranslateXYZ(MAT_VIEW, 0, 0, 0)
+	
+	// Setup the first spotlight
+	FaceBuffer[0].a = 0
+	FaceBuffer[0].b = 1
+	FaceBuffer[0].c = 2
+	FaceBuffer[0].d = 3
+	FaceBuffer[0].Flag = FACE_FLAG_COLOURED_2D
+	
+	// Setup the second spotlight
+	FaceBuffer[1].a = 4
+	FaceBuffer[1].b = 5
+	FaceBuffer[1].c = 6
+	FaceBuffer[1].d = 7
+	FaceBuffer[1].Flag = FACE_FLAG_COLOURED_2D
+	
+	// Loop through all obejcts in the stage and setup all Spotlights objects
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Spotlights]
+			
+			// Spotlights should always be active
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			// The default draw priority for a spotlight should be above the stage & objects but below the HUD
+			Object[ArrayPos0].DrawOrder = 5
+			
+			// And set up the initial starting checkpoint value as well
+			Object[ArrayPos0].Checkpoint = Screen.CenterX
+			
+			// Setup the Spotlight's colors based on the current time period
+			switch HUD.CurrentTimePeriod
+			case TIME_PRESENT
+				// Present gets standard colors - set the primary spotlight to green
+				Object[ArrayPos0].PrimaryBaseColor = 128
+				Object[ArrayPos0].PrimaryBaseColor <<= 16
+				TempValue0 = 224
+				TempValue0 <<= 8
+				Object[ArrayPos0].PrimaryBaseColor += TempValue0
+				Object[ArrayPos0].PrimaryBaseColor += 128
+				
+				// Set the secondary spotlight to yellow
+				Object[ArrayPos0].SecondaryBaseColor = 224
+				Object[ArrayPos0].SecondaryBaseColor <<= 16
+				TempValue0 = 224
+				TempValue0 <<= 8
+				Object[ArrayPos0].SecondaryBaseColor += TempValue0
+				Object[ArrayPos0].SecondaryBaseColor += 0
+				break
+				
+			// No case 1 since spotlights didn't even exist in the Past...
+			
+			case TIME_GOOD_FUTURE
+				// The Good Future gets nice and bright colors - primary spotlight is brown
+				Object[ArrayPos0].PrimaryBaseColor = 192
+				Object[ArrayPos0].PrimaryBaseColor <<= 16
+				TempValue0 = 128
+				TempValue0 <<= 8
+				Object[ArrayPos0].PrimaryBaseColor += TempValue0
+				Object[ArrayPos0].PrimaryBaseColor += 0
+				
+				// And the secondary spotlight is blue
+				Object[ArrayPos0].SecondaryBaseColor = 0
+				Object[ArrayPos0].SecondaryBaseColor <<= 16
+				TempValue0 = 192
+				TempValue0 <<= 8
+				Object[ArrayPos0].SecondaryBaseColor += TempValue0
+				Object[ArrayPos0].SecondaryBaseColor += 224
+				break
+				
+			case TIME_BAD_FUTURE
+				// Bad Future gets cool and fancy colors, primary spotlight is pink
+				Object[ArrayPos0].PrimaryBaseColor = 224
+				Object[ArrayPos0].PrimaryBaseColor <<= 16
+				TempValue0 = 64
+				TempValue0 <<= 8
+				Object[ArrayPos0].PrimaryBaseColor += TempValue0
+				Object[ArrayPos0].PrimaryBaseColor += 128
+				
+				// And secondary spotlight is purple
+				Object[ArrayPos0].SecondaryBaseColor = 224
+				Object[ArrayPos0].SecondaryBaseColor <<= 16
+				TempValue0 = 128
+				TempValue0 <<= 8
+				Object[ArrayPos0].SecondaryBaseColor += TempValue0
+				Object[ArrayPos0].SecondaryBaseColor += 192
+				break
+				
+			end switch
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	// Set the initial screen offset, this is used in calculations for cycling spotlights
+	Screen.XOffset = Player.XPos
+	Screen.XOffset >>= 16
+	Screen.XOffset -= Screen.CenterX
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Icon
+
+	// This object uses 3d, so there's not really any good way to show it in the editor...
+	// It's normally placed out of bounds though, so it doesn't matter too much anyway
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

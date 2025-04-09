@@ -1,0 +1,313 @@
+//---------------Sonic CD Flower Pod Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// PodSeed Aliases
+#alias Object.Value1	:	Object.ParentPod
+#alias Object.Value2	:	Object.XVelocity
+#alias Object.Value3	:	Object.YVelocity
+
+// States
+#alias 0	:	FLOWERPOD_IDLE
+#alias 1	:	FLOWERPOD_EXPLOSION
+#alias 2	:	FLOWERPOD_VANISH
+#alias 3	:	FLOWERPOD_TRIGGER_ACTFINISH
+#alias 4	:	FLOWERPOD_CONTROL_PLAYER
+
+// Control Modes
+#alias -1	:	CONTROLMODE_NONE
+
+// Ink Effects
+#alias 2	:	INK_ALPHA
+
+// Gravity
+#alias 0	:	GRAVITY_GROUND
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Pod Seed Property Values
+#alias 1	:	TRIGGER_RESULTS
+
+
+sub ObjectMain
+	switch Object.State
+	case FLOWERPOD_IDLE
+		TempValue0  = Object.YPos
+		TempValue0 += 0x40005A
+		if Player.YPos < TempValue0
+			Stage.NewXBoundary1   = Object.XPos
+			Stage.NewXBoundary1 >>= 16
+			Stage.NewXBoundary1  -= Screen.CenterX
+
+			Stage.NewXBoundary2 = Object.XPos
+			Stage.NewXBoundary2 >>= 16
+			Stage.NewXBoundary2 += Screen.CenterX
+		end if
+
+		if Object.Timer < 60
+			Object.Frame = 1
+		else
+			TempValue0   = Object.Timer
+			TempValue0  -= 60
+			TempValue0 >>= 1
+			switch TempValue0
+			case 0
+				Object.Frame = 2
+				break
+			case 1
+			case 2
+				Object.Frame = 1
+				break
+			case 3
+				Object.Frame = 2
+				break
+			case 4
+			case 5
+				Object.Frame = 1
+				break
+			case 6
+				Object.Frame = 2
+				break
+			end switch
+		end if
+
+		Object.Timer++
+		if Object.Timer == 74
+			Object.Timer = 0
+		end if
+		break
+
+	case FLOWERPOD_EXPLOSION
+		if Object.Timer < 120
+			Object.Timer++
+
+			TempValue0  = Object.Timer
+			TempValue0 &= 3
+			if TempValue0 == 3
+				Rand(TempValue0, 64)
+				TempValue0  -= 32
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+
+				Rand(TempValue1, 40)
+				TempValue1  -= 40
+				TempValue1 <<= 16
+				TempValue1  += Object.YPos
+
+				CreateTempObject(TypeName[Explosion], 0, TempValue0, TempValue1)
+				PlaySfx(SFX_G_EXPLOSION, false)
+			end if
+		else
+			Object.State = FLOWERPOD_VANISH
+			Object.Timer = 256
+			Object.InkEffect = INK_ALPHA
+			Object.Alpha = 255
+
+			TempValue0  = Object.XPos
+			TempValue0 -= 0x30000
+			TempValue1  = Object.YPos
+			TempValue1 -= 0x180000
+			CreateTempObject(TypeName[Pod Seed], TRIGGER_RESULTS, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity = -0x20000
+			Object[TempObjectPos].YVelocity = -0x60000
+			Object[TempObjectPos].ParentPod = Object.EntityNo
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity = -0x15554
+			Object[TempObjectPos].YVelocity = -0x60000
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity = -0xAAAA
+			Object[TempObjectPos].YVelocity = -0x60000
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity =  0
+			Object[TempObjectPos].YVelocity = -0x60000
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity =  0xAAAA
+			Object[TempObjectPos].YVelocity = -0x60000
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity =  0x15554
+			Object[TempObjectPos].YVelocity = -0x60000
+
+			TempValue0 += 0x10000
+			CreateTempObject(TypeName[Pod Seed], 0, TempValue0, TempValue1)
+			Object[TempObjectPos].XVelocity =  0x20000
+			Object[TempObjectPos].YVelocity = -0x60000
+		end if
+		break
+
+	case FLOWERPOD_VANISH
+		if Object.Timer > 0
+			Object.Timer -= 16
+			Object.Alpha  = Object.Timer
+		end if
+		break
+
+	case FLOWERPOD_TRIGGER_ACTFINISH
+		if Player.ControlMode == CONTROLMODE_NONE
+			Player.Left 	= false
+			Player.Right 	= true
+			Player.Up 		= false
+			Player.Down 	= false
+			Player.JumpHold = false
+		end if
+
+		TempValue0  = Object.XPos
+		TempValue0 += 0xA00000
+
+		if Player.XPos > TempValue0
+			PlayMusic(1)
+			Object.State = FLOWERPOD_CONTROL_PLAYER
+			Object[30].Type = TypeName[ActFinish]
+			Object[30].DrawOrder = 6
+			Object[30].Priority  = PRIORITY_ACTIVE
+		end if
+		break
+
+	case FLOWERPOD_CONTROL_PLAYER
+		if Player.ControlMode == CONTROLMODE_NONE
+			Player.Right = true
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == FLOWERPOD_IDLE
+//		if Player.Animation == ANI_JUMPING // Standalone/Preplus check
+
+		CheckResult = false
+		if Player.Animation == ANI_JUMPING
+			CheckResult = true
+		end if
+#platform: Use_Origins
+		if Stage.PlayerListPos == PLAYER_KNUCKLES
+			if Player.Animation == ANI_GLIDING
+				CheckResult = true
+			end if
+			if Player.Animation == ANI_GLIDING_STOP
+				CheckResult = true
+			end if
+		end if
+		if Stage.PlayerListPos == PLAYER_AMY
+			if Player.Animation == ANI_HAMMER_DASH
+				CheckResult = true
+			end if
+			if Player.Animation == ANI_HAMMER_JUMP
+				CheckResult = true
+			end if
+		end if
+#endplatform
+		if CheckResult == true
+#platform: Use_Origins
+			PlayerObjectCollision(C_ENEMY, -28, -46, 28, 6)
+#endplatform
+#platform: Use_Standalone
+			PlayerObjectCollision(C_TOUCH, -28, -46, 28, 6)
+#endplatform
+			if CheckResult == true
+				Stage.TimeEnabled = false
+
+				Object.State = FLOWERPOD_EXPLOSION
+				Object.Frame = 3
+				Object.Timer = 0
+
+				Player.YVelocity >>= 1
+				FlipSign(Player.YVelocity)
+				
+#platform: Use_Haptics
+				HapticEffect(55, 0, 0, 0)
+#endplatform
+
+#platform: Use_Origins
+				// Tell HE2 that the boss fight ended
+				game.callbackParam0 = true
+				EngineCallback(NOTIFY_BOSS_END)
+#endplatform
+			end if
+		end if
+	end if
+	TempValue0   = Screen.CenterX
+	TempValue0  += 40
+	TempValue0 <<= 16
+
+	TempValue1   = Object.XPos
+	TempValue1  += TempValue0
+
+	if Player.XPos > TempValue1
+		Player.XPos  = TempValue1
+		Player.Speed = 0
+		Player.XVelocity = 0
+		if Player.Gravity == GRAVITY_GROUND
+			Player.YVelocity = 0
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.State < FLOWERPOD_VANISH
+		DrawSprite(0)
+		DrawSprite(Object.Frame)
+	else
+		DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+		DrawSpriteFX(Object.Frame, FX_INK, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects3.gif")
+
+	SpriteFrame(-32, 6, 64, 42, 1, 55)		// #0 - FlowerPod Stem
+	SpriteFrame(-32, -48, 64, 54, 1, 1)		// #1 - FlowerPod Bulb
+	SpriteFrame(-32, -48, 64, 54, 1, 98)	// #2 - FlowerPod Bulb Flash
+	SpriteFrame(-32, -10, 64, 16, 1, 153)	// #3 - FlowerPod Bulb Destroyed
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Flower Pod]
+			TempValue0   = Screen.CenterX
+			TempValue0  -= 160
+			TempValue0 <<= 16
+			Object[ArrayPos0].XPos -= TempValue0
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects3.gif")
+
+	SpriteFrame(-32, 6, 64, 42, 1, 55)		// #0 - FlowerPod Stem
+	SpriteFrame(-32, -48, 64, 54, 1, 1)		// #1 - FlowerPod Bulb
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

@@ -1,0 +1,109 @@
+//---------------Sonic CD Vert Platform Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.YCollisionOffset
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.Angle
+
+// Property Values
+#alias 0	:	START_MOVING_DOWN
+#alias 1	:	START_MOVING_UP
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+
+
+sub ObjectMain
+	Object.Angle   = Oscillation
+	Object.Angle <<= 1
+
+	if Object.PropertyValue == START_MOVING_UP
+		Object.Angle += 256
+	end if
+
+	Sin(Object.YVelocity, Object.Angle)
+	Object.YVelocity *= 0x1800
+	Object.YVelocity += Object.YPos
+	Object.YVelocity &= 0xFFFF0000 // Truncate the value
+	Object.YVelocity -= Object.YCollisionOffset
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = Object.YPos
+	Object.YPos = Object.YCollisionOffset
+
+	PlayerObjectCollision(C_PLATFORM, -32, -9, 32, 12)
+	if CheckResult == PLAYER_COL_FLOOR
+		Player.YPos += Object.YVelocity
+	end if
+
+	Object.YPos = TempValue0
+end sub
+
+
+sub ObjectDraw
+	Sin(Object.YCollisionOffset, Object.Angle)
+	Object.YCollisionOffset *= 0x1800
+	Object.YCollisionOffset += Object.YPos
+	Object.YCollisionOffset &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(0, Object.XPos, Object.YCollisionOffset)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Vertical Platform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // startDir
+			CheckResult = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // startDir
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Vertical Platform
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+end sub

@@ -1,0 +1,265 @@
+//---------------Sonic CD Boss Curtain Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+#alias Object.Value1			:	Object.LeftCurtainTile
+#alias Object.Value2			:	Object.RightCurtainTile
+
+// Boss Wing Alias
+#alias Object.Value7			:	BossWing.EggMobileEntity
+
+// Egg Mobile Alias
+#alias Object[-3].Value4		:	EggMobile.WingOffset
+
+// Helper 1 Aliases
+#alias Object[-2].Value0		:	Helper1.BossHealth
+#alias Object[-2].Value1		:	Helper1.Controller
+#alias Object[-2].Value4		:	Helper1.LeftBound
+#alias Object[-2].Value5		:	Helper1.RightBound
+#alias Object[-2].Value6		:	Helper1.CenterBound
+
+// Helper 2 Alias
+#alias Object[-1].Value6		:	Helper2.CutsceneRightBound
+
+// R8 Setup Alias
+#alias Object[19].Value1		:	R8Setup.CurrentPalette
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	BOSSCURTAIN_WAIT_PLAYER
+#alias 1	:	BOSSCURTAIN_SPAWN_BOSS
+#alias 2	:	BOSSCURTAIN_SET_BOUNDS
+
+// Time Periods
+#alias 1	:	TIME_PAST
+
+// Soundtrack
+#alias 0	:	OST_JP
+
+// Tile Info
+#alias 0	:	TILEINFO_INDEX
+
+// Fade Music Property Values
+#alias 0	:	FADEMUSIC_TO_BOSS
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSCURTAIN_WAIT_PLAYER
+		if Player.XPos > Object.XPos
+			// This check doesn't make sense
+			// is a boss stage, you're already forced to be in the future
+			if HUD.CurrentTimePeriod > 1
+				if Options.Soundtrack == OST_JP
+					SetMusicTrack("JP/FinalBoss.ogg", 4, true)
+				else
+					SetMusicTrack("US/FinalBoss.ogg", 4, true)
+				end if
+			end if
+			
+			Object.State++
+		end if
+		break
+		
+	case BOSSCURTAIN_SPAWN_BOSS
+		if Object.Timer < 240
+			Object.Timer++
+			
+			if Object.Timer == 140
+				CreateTempObject(TypeName[Fade Music], FADEMUSIC_TO_BOSS, Object.XPos, Object.YPos)
+			end if
+		else
+			Object.Timer = 0
+			R8Setup.CurrentPalette = 0
+			ArrayPos0 = Object.EntityNo
+			ArrayPos0 -= 3
+			Object[-3].Type = TypeName[Egg Mobile]
+
+			Object[-7].Type = TypeName[Boss Wing]
+			BossWing[-7].EggMobileEntity = ArrayPos0
+
+			Object[-6].Type = TypeName[Boss Wing]
+			BossWing[-6].EggMobileEntity = ArrayPos0
+
+			Object[-5].Type = TypeName[Boss Wing]
+			BossWing[-5].EggMobileEntity = ArrayPos0
+
+			Object[-4].Type = TypeName[Boss Wing]
+			BossWing[-4].EggMobileEntity = ArrayPos0
+			
+			Helper1.BossHealth   = 4
+			Helper1.CenterBound  = Object.XPos
+
+			Helper1.LeftBound    = Object.XPos
+			Helper1.LeftBound   -= 0x7C0000
+
+			Helper1.RightBound   = Object.XPos
+			Helper1.RightBound  += 0x7C0000
+			
+			EggMobile.WingOffset = 0x1000
+
+			Helper1.Controller   = Helper1Controller_FourWings
+
+			Helper2.CutsceneRightBound = Stage.XBoundary2
+			Object.State++
+		end if
+		break
+
+	case BOSSCURTAIN_SET_BOUNDS
+		if Object.Alpha > 0
+			Object.Alpha -= 4
+		end if
+
+		Object.LeftCurtainTile  -= 0x20000
+		Object.RightCurtainTile += 0x20000
+
+		TempValue1   = Object.LeftCurtainTile
+		TempValue1 >>= 16
+		TempValue1  += 7
+
+		TempValue3   = Object.RightCurtainTile
+		TempValue3 >>= 16
+		TempValue3  -= 7
+
+		TempValue2   = Object.iYPos
+		TempValue2  -= 92
+
+		TempValue0   = 0
+		while TempValue0 < 12
+			// Swap tiles to fake motion on the curtain background
+			Set16x16TileInfo(0, TempValue1, TempValue2, TILEINFO_INDEX)
+			TempValue1 -= 16
+			Set16x16TileInfo(395, TempValue1, TempValue2, TILEINFO_INDEX)
+			TempValue1 += 16
+			Set16x16TileInfo(0, TempValue3, TempValue2, TILEINFO_INDEX)
+			TempValue3 += 16
+			Set16x16TileInfo(395, TempValue3, TempValue2, TILEINFO_INDEX)
+			TempValue3 -= 16
+			TempValue2 += 16
+			TempValue0++
+		loop
+		
+		if Object.Timer < 120
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+			// Wide resolutions get forced to fight in a 320px wide area
+			if Screen.XSize > 320
+				ResetObjectEntity(Object.EntityNo, TypeName[Forcefield], 240, Object.XPos, Object.YPos)
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, Object.XPos, Object.YPos)
+			end if
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	// Player Right Bound
+	TempValue0   = Player.CollisionRight
+	TempValue0 <<= 16
+	TempValue0  += Player.XPos
+
+	// Stage Bound
+	TempValue1   = Stage.XBoundary2
+	TempValue1 <<= 16
+
+	// Stop the player from advancing if the player right bound pos is after the stage bound pos
+	if TempValue0 > TempValue1
+		Player.XVelocity = 0
+		Player.Speed     = 0
+		Player.XPos      = TempValue1
+
+		TempValue0   = Player.CollisionRight
+		TempValue0 <<= 16
+		Player.XPos -= TempValue0
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.DrawOrder == 2
+		DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 0, Object.Alpha)
+		SetDrawListEntityRef(Object.EntityNo, 3, Screen[3].DrawListSize)
+		Screen[3].DrawListSize++
+		Object.DrawOrder = 3
+	else
+		TempValue0 = 0
+		while TempValue0 < 6
+			DrawSpriteXY(TempValue0, Object.LeftCurtainTile, Object.YPos)
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.RightCurtainTile, Object.YPos)
+			TempValue0++
+		loop
+		Object.DrawOrder = 2
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-8, -96, 16, 32, 134, 187)	// #0 - Curtain Center Section 1
+	SpriteFrame(-8, -64, 16, 32, 134, 187)	// #1 - Curtain Center Section 2
+	SpriteFrame(-8, -32, 16, 32, 134, 187)	// #2 - Curtain Center Section 3
+	SpriteFrame(-8, 0, 16, 32, 134, 187)	// #3 - Curtain Center Section 4
+	SpriteFrame(-8, 32, 16, 32, 134, 187)	// #4 - Curtain Center Section 5
+	SpriteFrame(-8, 64, 16, 32, 134, 187)	// #5 - Curtain Center Section 6
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Boss Curtain]
+			Object[ArrayPos0].Direction = FACING_LEFT
+			Object[ArrayPos0].DrawOrder = 2
+			Object[ArrayPos0].Alpha     = 224
+
+			Object[ArrayPos0].LeftCurtainTile   = Object[ArrayPos0].XPos
+			Object[ArrayPos0].LeftCurtainTile  -= 0x80000
+
+			Object[ArrayPos0].RightCurtainTile  = Object[ArrayPos0].XPos
+			Object[ArrayPos0].RightCurtainTile += 0x80000
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.Direction = FACING_LEFT
+
+	TempValue1  = Object.XPos
+	TempValue1 -= 0x80000
+	TempValue2  = Object.XPos
+	TempValue2 += 0x80000
+	
+	TempValue0  = 0
+	while TempValue0 < 6
+		DrawSpriteXY(TempValue0, TempValue1, Object.YPos)
+		DrawSpriteFX(TempValue0, FX_FLIP, TempValue2, Object.YPos)
+		TempValue0++
+	loop
+	Object.DrawOrder = 2
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-8, -96, 16, 32, 134, 187)	// #0 - Curtain Center Section 1
+	SpriteFrame(-8, -64, 16, 32, 134, 187)	// #1 - Curtain Center Section 2
+	SpriteFrame(-8, -32, 16, 32, 134, 187)	// #2 - Curtain Center Section 3
+	SpriteFrame(-8, 0, 16, 32, 134, 187)	// #3 - Curtain Center Section 4
+	SpriteFrame(-8, 32, 16, 32, 134, 187)	// #4 - Curtain Center Section 5
+	SpriteFrame(-8, 64, 16, 32, 134, 187)	// #5 - Curtain Center Section 6
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

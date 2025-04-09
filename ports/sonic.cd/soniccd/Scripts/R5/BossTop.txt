@@ -1,0 +1,159 @@
+//------------------Sonic CD Boss Top Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+
+// These Bounds Values:
+// Before the Boss Fight starts, BoundsR is enforced here, the Boss Top Object
+// While the Boss Fight is starting up, the stage's normal right bound is stored in OldBoundsR
+// During the Boss Fight, new (not BoundsR) right bound is enforced in the Boss Platform Object
+// After the Boss Right, right bounds is restored to normal based on what was stored to OldBoundsR previously
+#alias Object.Value1	:	Object.BoundsR
+#alias Object.Value2	:	Object.OldBoundsR
+
+// States
+#alias 0	:	BOSSTOP_IDLE
+#alias 1	:	BOSSTOP_MOVEBOUNDS
+#alias 2	:	BOSSTOP_BOSSFIGHT
+
+// Ink Effect
+#alias 0	:	INK_NONE
+
+
+sub ObjectMain
+	
+	switch Object.State
+	case BOSSTOP_MOVEBOUNDS
+		if Object.Timer < 55
+			Object.Timer++
+			
+			// Move the Bounds left by 2px
+			Object.BoundsR -= 0x20000
+		else
+			Object.State = BOSSTOP_BOSSFIGHT
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.State == BOSSTOP_IDLE
+		
+		// Get the Player's full X Position, including a small offset for their hitbox
+		TempValue0 = Player.CollisionRight
+		TempValue0 <<= 16
+		TempValue0 += Player.XPos
+		
+		// And then get this object's right border
+		TempValue1 = Object.BoundsR
+		
+		// See if the Player is past the Object's Right Bounds
+		if TempValue0 > TempValue1
+			// If they are, then move the Player back in
+			
+			Player.XVelocity = 0
+			Player.Speed = 0
+			
+			Player.XPos = TempValue1
+			
+			// CollisionRight is in screen-space, while XPos is in world-space, so shift it right by 16
+			TempValue0 = Player.CollisionRight
+			TempValue0 <<= 16
+			
+			// And now adjust the Player's Position accordingly, to account for their right hitbox
+			Player.XPos -= TempValue0
+		end if
+		
+	end if
+
+end sub
+
+
+sub ObjectDraw
+	
+	// Different draw routines based on the Object's current effect
+	if Object.InkEffect == INK_NONE
+		
+		// Draw the Boss Top
+		DrawSprite(0)
+		
+		TempValue0 = Object.XPos
+		
+		// 24 pixels to the left, draw the left Pole
+		TempValue0 -= 0x180000
+		DrawSpriteXY(1, TempValue0, Object.YPos)
+		
+		// 48 pixels to the right of that (24 pixels right absolute)
+		// draw the right Pole
+		TempValue0 += 0x300000
+		DrawSpriteXY(1, TempValue0, Object.YPos)
+		
+	else
+		// This Object's Ink Effect is set to INK_ALPHA when the boss is exploding
+		// (It's set from the Boss Platform Object, which controls most of the fight)
+		
+		// Draw the Boss's Top, and its flashing red overlay frame
+		DrawSprite(0)
+		DrawSpriteFX(2, FX_INK, Object.XPos, Object.YPos)
+		
+		// Draw the left Pole 24 pixels to the right, and its red overlay flashing frame ontop it as well
+		TempValue0 = Object.XPos
+		TempValue0 -= 0x180000
+		DrawSpriteXY(1, TempValue0, Object.YPos)
+		DrawSpriteFX(3, FX_INK, TempValue0, Object.YPos)
+		
+		// And don't forget the right pole either, 48 pixels to the right of that,
+		// which adds up to a 24 pixel + gain total, along with the flashing red overlay
+		// frame for this one too
+		TempValue0 += 0x300000
+		DrawSpriteXY(1, TempValue0, Object.YPos)
+		DrawSpriteFX(3, FX_INK, TempValue0, Object.YPos)
+		
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+	
+	// Base Boss Top Frame
+	SpriteFrame(-32, -24, 64, 48, 1, 1)
+	
+	// Pole Frame
+	SpriteFrame(-4, 24, 8, 88, 66, 1)
+	
+	// Flashing Boss Top Frame
+	SpriteFrame(-32, -24, 64, 48, 75, 1)
+	
+	// Flashing Pole Frame
+	SpriteFrame(-4, 24, 8, 88, 140, 1)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-32, -24, 64, 48,  1, 1)
+	SpriteFrame( 20,  24, 8,  88, 66, 1)
+	SpriteFrame(-28,  24, 8,  88, 66, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

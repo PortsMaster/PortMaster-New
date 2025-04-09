@@ -1,0 +1,289 @@
+//---------------Sonic CD Breakable Wall Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.XVelocity
+#alias Object.Value1			:	Object.YVelocity
+
+// The object isn't cleared upon being destroyed, it's just given a new state and made hidden instead...
+#alias Object.State				:	Object.Destroyed
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Period Aliases
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Global SFX
+#alias 22	:	SFX_G_EXPLOSION
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+// Property Values
+#alias 0	:	BREAKWALL
+#alias 1	:	BREAKWALL_DEBRIS_1
+#alias 2	:	BREAKWALL_DEBRIS_2
+#alias 3	:	BREAKWALL_DEBRIS_3
+#alias 4	:	BREAKWALL_DEBRIS_4
+#alias 5	:	BREAKWALL_DEBRIS_5
+#alias 6	:	BREAKWALL_DEBRIS_6
+#alias 7	:	BREAKWALL_DEBRIS_7
+#alias 8	:	BREAKWALL_DEBRIS_8
+
+
+sub ObjectMain
+
+	if Object.PropertyValue > 0
+
+		// Update Movements
+		Object.XPos += Object.XVelocity
+		Object.YPos += Object.YVelocity
+		
+		// Apply a Gravity of 0.25 px per frame
+		Object.YVelocity += 0x4000
+		
+		if Object.OutOfBounds == true
+			// Unload when no longer needed
+			Object.Type = TypeName[Blank Object]
+		end if
+		
+	else
+		if Object.Destroyed == true
+		
+			// Check to see if the Player's *not* within this giant range
+			PlayerObjectCollision(C_TOUCH, -384, -256, 384, 256)
+			
+			if CheckResult == false
+				
+				// The Player is nowhere near this object, so it's safe to reset since it's likely out of view now
+				Object.Destroyed = false
+				Object.Priority = PRIORITY_BOUNDS
+				
+			end if
+			
+			// Why a standard Object.OutOfBounds check isn't used is beyond me...
+			
+		end if
+	end if
+
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	if Object.PropertyValue < 1
+		if Object.Destroyed == false
+			CheckResult = false
+			if Player.Animation == ANI_JUMPING
+				CheckResult = true
+			end if
+#platform: Use_Origins
+			if Stage.PlayerListPos == PLAYER_KNUCKLES
+				CheckResult = true
+			end if
+			if Stage.PlayerListPos == PLAYER_AMY
+				if Player.Animation == ANI_HAMMER_JUMP
+					CheckResult = true
+				end if
+				if Player.Animation == ANI_HAMMER_DASH
+					CheckResult = true
+				end if
+			end if
+#endplatform
+			if CheckResult == true
+#platform: Use_Origins
+				PlayerObjectCollision(C_ENEMY, -18, -48, 18, 48)
+#endplatform
+#platform: Use_Standalone
+				PlayerObjectCollision(C_TOUCH, -18, -48, 18, 48)
+#endplatform
+				if CheckResult == true
+					Object.Destroyed = true
+					Object.Priority = PRIORITY_ACTIVE
+					PlaySfx(SFX_G_EXPLOSION, false)
+					
+					// Spawn all the Wall Fragments
+					// - TempValue1 is left position  (8 pixels left  from this object's position)
+					// - TempValue2 is right position (8 pixels right from this object's position)
+					// - TempValue3 is Y Position, starting 24 pixels from this object's position
+					
+					TempValue1 = Object.XPos
+					TempValue1 -= 0x80000
+					
+					TempValue2 = Object.XPos
+					TempValue2 += 0x80000
+					
+					TempValue3 = Object.YPos
+					TempValue3 -= 0x180000
+					
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_1, TempValue1, TempValue3)
+					Object[TempObjectPos].XVelocity = -0x10000
+					Object[TempObjectPos].YVelocity = -0x20000
+					Object[TempObjectPos].DrawOrder = 5
+
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_2, TempValue2, TempValue3)
+					Object[TempObjectPos].XVelocity = 0x10000
+					Object[TempObjectPos].YVelocity = -0x20000
+					Object[TempObjectPos].DrawOrder = 5
+					
+					TempValue3 += 0x100000
+					
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_3, TempValue1, TempValue3)
+					Object[TempObjectPos].XVelocity = -0x20000
+					Object[TempObjectPos].YVelocity = -0x10000
+					Object[TempObjectPos].DrawOrder = 5
+
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_4, TempValue2, TempValue3)
+					Object[TempObjectPos].XVelocity = 0x20000
+					Object[TempObjectPos].YVelocity = -0x10000
+					Object[TempObjectPos].DrawOrder = 5
+					
+					TempValue3 += 0x100000
+					
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_5, TempValue1, TempValue3)
+					Object[TempObjectPos].XVelocity = -0x40000
+					Object[TempObjectPos].YVelocity = 0
+					Object[TempObjectPos].DrawOrder = 5
+
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_6, TempValue2, TempValue3)
+					Object[TempObjectPos].XVelocity = 0x40000
+					Object[TempObjectPos].YVelocity = 0
+					Object[TempObjectPos].DrawOrder = 5
+					
+					TempValue3 += 0x100000
+					
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_7, TempValue1, TempValue3)
+					Object[TempObjectPos].XVelocity = -0x20000
+					Object[TempObjectPos].YVelocity = 0x10000
+					Object[TempObjectPos].DrawOrder = 5
+
+					CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_8, TempValue2, TempValue3)
+					Object[TempObjectPos].XVelocity = 0x20000
+					Object[TempObjectPos].YVelocity = 0x10000
+					Object[TempObjectPos].DrawOrder = 5
+				end if
+			else
+				PlayerObjectCollision(C_BOX, -16, -48, 16, 48)
+				PlayerObjectCollision(C_TOUCH, -16, -48, 16, 48)
+				if CheckResult == true
+					if Player.XPos < Object.XPos
+						Player.XPos = Player.CollisionLeft
+						Player.XPos <<= 16
+						Player.XPos += Object.XPos
+						Player.XPos -= 0x100000
+					else
+						Player.XPos = Player.CollisionRight
+						Player.XPos <<= 16
+						Player.XPos += Object.XPos
+						Player.XPos += 0x100000
+					end if
+				end if
+			end if
+		end if
+	end if
+	
+end sub
+
+
+sub ObjectDraw
+	
+	if Object.Destroyed == false
+		DrawSprite(Object.PropertyValue)
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -48, 32, 96, 223, 141)
+		TempValue0 = 223
+		TempValue1 = 239
+		TempValue2 = 141
+		break
+		
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -48, 32, 96, 132, 1)
+		TempValue0 = 132
+		TempValue1 = 148
+		TempValue2 = 1
+		break
+		
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -48, 32, 96, 66, 1)
+		TempValue0 = 66
+		TempValue1 = 82
+		TempValue2 = 1
+		break
+		
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -48, 32, 96, 99, 1)
+		TempValue0 = 99
+		TempValue1 = 115
+		TempValue2 = 1
+		break
+		
+	end switch
+
+	TempValue2 += 16
+	SpriteFrame(-8, -8, 16, 16, TempValue0, TempValue2)
+	SpriteFrame(-8, -8, 16, 16, TempValue1, TempValue2)
+
+	TempValue2 += 16
+	SpriteFrame(-8, -8, 16, 16, TempValue0, TempValue2)
+	SpriteFrame(-8, -8, 16, 16, TempValue1, TempValue2)
+	
+	TempValue2 += 16
+	SpriteFrame(-8, -8, 16, 16, TempValue0, TempValue2)
+	SpriteFrame(-8, -8, 16, 16, TempValue1, TempValue2)
+	
+	TempValue2 += 16
+	SpriteFrame(-8, -8, 16, 16, TempValue0, TempValue2)
+	SpriteFrame(-8, -8, 16, 16, TempValue1, TempValue2)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+
+	if Editor.ShowGizmos == true
+		TempValue0 = Object.iXPos
+		TempValue0 -= 16
+		TempValue1 = Object.iYPos
+		TempValue1 -= 48
+
+		DrawRectOutline(TempValue0, TempValue1, 32, 96, 255, 255, 255, 255)
+	end if
+	
+	// TODO: perhaps it would be cool to show the deactivation hitbox, but at the same time, is it even that important anways?
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// TODO: support other time periods
+	// Surely there's a better way to do it than a load of unique and boring checkCurrentStageFolder checks?
+	SpriteFrame(-16, -48, 32, 96, 223, 141)
+
+
+	// Although used by the object, it shouldn't be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

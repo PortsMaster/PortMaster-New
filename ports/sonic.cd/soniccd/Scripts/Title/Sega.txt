@@ -1,0 +1,267 @@
+//--------------------Sonic CD Sega Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.RectAlpha
+#alias Object.Value3	:	Object.Unused
+
+// There is an Object.Value7 used by the decomp in Logo
+// to figure out what version of the mountains display
+// since this is the only object loaded at the start
+
+// States
+#alias 0	:	SEGA_SETUP
+#alias 1	:	SEGA_FADEIN
+#alias 2	:	SEGA_JINGLE
+#alias 3	:	SEGA_FADEOUT
+#alias 4	:	SEGA_END
+
+// Ink Effect Aliases
+#alias 2	:	INK_ALPHA
+
+// Stage SFX
+#alias 0	:	SFX_S_SEGA
+
+// Callbacks & Engine States
+#alias 0	:	CALLBACK_DISPLAYLOGOS
+#alias 7	:	CALLBACK_EXIT_SELECTED
+
+#alias 5	:	ENGINE_ENTER_HIRESMODE
+
+// game.titleMode Aliases
+#alias 0	:	DONT_SKIP_LOGOS
+#alias 1	:	SKIP_LOGOS				// this is set by HE2
+
+// game.mainMenuMode Aliases
+#alias 0	:	MAINMENUMODE_NONE		// Starts with this, but gets swapped on MenuButton
+
+
+sub ObjectMain
+	switch Object.State
+	case SEGA_SETUP
+		// Setup not only the Object, but some other useful game values as well
+		
+		ReadSaveRAM()
+		// First, restore the Soundtrack setting to what it should be
+		Options.Soundtrack = SaveRAM[38]
+		
+		// Some more initialisation code follows, varies between platforms
+		
+#platform: Use_Origins
+		if game.titleMode != DONT_SKIP_LOGOS
+			
+			game.titleMode = DONT_SKIP_LOGOS
+			Object.State = SEGA_END
+			
+		else
+			if game.mainMenuMode != MAINMENUMODE_NONE
+				
+				// If returning from another Menu (ie Soundtrack) then just skip to the end
+				// and don't play the Sega screen again
+				// -> This value isn't reset here though, it's reset a few lines down
+				
+				Object.State = SEGA_END
+				
+			else
+				
+				// Nope, nothing special is needed, so let's just show the normal Sega splash!
+				
+				Object.State = SEGA_FADEIN
+				
+			end if
+		end if
+		
+		Object.Timer = 480
+#endplatform
+		
+#platform: Use_Standalone
+		// Origins has all these settings on the wrapper side of things,
+		// so this isn't needed there
+		if SaveRAM[32] == true
+			Engine.BGMVolume = SaveRAM[33]
+			Engine.SFXVolume = SaveRAM[34]
+		end if
+		Options.Soundtrack = SaveRAM[38]
+		Object.State = SEGA_FADEIN
+		Object.Timer = 384
+
+		Engine.State = ENGINE_ENTER_HIRESMODE
+#endplatform
+		
+		Object.Alpha = 255
+		Object.InkEffect = INK_ALPHA
+		
+		// Start the screen off all black
+		SetScreenFade(0, 0, 0, 255)
+		
+		// And move the Object to the centre of the screen
+		Object.iXPos = Screen.CenterX
+
+#platform: Use_Origins
+		game.mainMenuMode = MAINMENUMODE_NONE
+#endplatform
+		break
+
+	case SEGA_FADEIN
+		if Object.Timer > 0
+			// Fade in, 8 by 8
+			Object.Timer -= 8
+		else
+			if Engine.OnlineActive < 2
+				// Make sure the Engine's ready to go too before moving on just yet!
+				Object.State = SEGA_JINGLE
+			end if
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+
+	case SEGA_JINGLE
+		// Hold for a moment, to let the player bask in this wonderful screen
+		
+		Object.Timer++
+		
+		if Object.Timer == 160
+			// Nope that's over, off we go again
+			
+			Object.Timer = 0
+			Object.State = SEGA_FADEOUT
+		end if
+		
+		if Object.Timer == 2
+			// Play the SFX almost immediatly after entering this state
+			PlayStageSfx(SFX_S_SEGA, false)
+		end if
+		break
+
+	case SEGA_FADEOUT
+		// Do note - this state is kinda messed up, they forget a break at the end so
+		// this state doesn't reallly fade out
+		
+#platform: Use_Standalone
+		if Object.RectAlpha < 256
+			Object.RectAlpha += 8
+		endif
+#endplatform
+		
+		if Object.Alpha > 7
+			Object.Alpha -= 8
+		else
+			if Object.Timer == 16
+
+#platform: Use_Standalone
+				ResetObjectEntity(Object.EntityNo, TypeName[CWLogo], 0, Object.XPos, Object.YPos)
+				Object.Unused = 96
+#endplatform
+
+#platform: Use_Origins
+				// this never even hits in origins and yet they changed it anyway lol
+				
+				ResetObjectEntity(Object.EntityNo, TypeName[Sonic], 0, Object.XPos, Object.YPos)
+#endplatform
+
+				Object.InkEffect = INK_ALPHA
+				Object.Alpha = 0
+				Object.Timer = 0
+			else
+				Object.Timer++
+			end if
+		end if
+		
+		// No break used here so it falls through
+		// On Origins, this means the Fade Out doesn't really happen...
+		// Standalone doesn't have the following state at all though so it doesn't need to worry about the missing break
+		
+	case SEGA_END
+#platform: Use_Origins
+		// The name's a bit odd - this Object is used to skip the sequence,
+		//  but it's also how the sequence ends, thanks to the missing break from above
+		
+		// For simplicity here, I've just chosen to stick with "End"
+		
+		// But anyway, this state just moves on with the title sequence, nothing too special
+		
+		ResetObjectEntity(Object.EntityNo, TypeName[Sonic], 0, Object.XPos, Object.YPos)
+		Object.InkEffect = INK_ALPHA
+		Object.Alpha = 0
+		Object.Timer = 0
+		
+		// There's even a break here, isn't that cool?
+		break
+#endplatform
+		
+	end switch
+	
+	// If you really wanna i guess
+	if Engine.PlatformID == RETRO_WP7
+		if KeyPress[0].ButtonB == true
+			EngineCallback(CALLBACK_EXIT_SELECTED)
+		end if
+	end if
+	
+end sub
+
+
+
+sub ObjectDraw
+	// First, draw the background
+	DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 96, 255)
+	
+#platform: Use_Origins
+	// Using the pixel art version of the sprite
+	
+	if Object.Alpha > 8
+		DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+	end if
+#endplatform
+	
+#platform: Use_Standalone
+	// Using the High-Quality version of the sprite
+	
+	Object.Scale = 128
+	DrawSpriteFX(0, FX_SCALE, Object.XPos, Object.YPos)
+	
+	// Draw another blue layer on top of it, to give it a blue fade
+	DrawRect(0, 0, Screen.XSize, Screen.YSize, 0, 0, 96, Object.RectAlpha)
+#endplatform
+	
+end sub
+
+
+sub ObjectStartup
+	
+#platform: Use_Origins
+	// Using the pixel version of the sprite
+	
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-49, -16, 98, 31, 106, 1)
+	
+#endplatform
+	
+#platform: Use_Standalone
+	// Using the High-Quality version of the sprite
+	
+	LoadSpriteSheet("Title/Sega.gif")
+	SpriteFrame(-255, -87, 510, 174, 1, 1)
+#endplatform
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-49,-16,98,31,106,1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

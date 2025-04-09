@@ -1,0 +1,210 @@
+//-----------------Sonic CD BGEffects Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+// Values 0-1 are unused...
+#alias Object.Value2 : Object.PrevAngle
+#alias Object.Value3 : Object.FansTimer
+#alias Object.Value4 : Object.CrunchersTimer
+#alias Object.Value5 : Object.FansSprite
+#alias Object.Value6 : Object.CrunchersSprite
+
+// Priority
+#alias 1 : PRIORITY_ACTIVE
+
+// Deformation Layer
+#alias 2 : DEFORM_BG
+
+
+sub ObjectDraw
+	// Animate the Fans
+	Object.FansTimer++
+	if Object.FansTimer > 2
+		Object.FansTimer = 0
+		Object.FansSprite++
+		Object.FansSprite %= 3
+		switch Object.FansSprite
+		case 0
+			// Fans are 4x4 tiles, with 8 unique tiles in them, so
+			// 8 tiles need to be updated to change the entire sprite
+			Copy16x16Tile(260, 420)
+			Copy16x16Tile(259, 421)
+			Copy16x16Tile(258, 422)
+			Copy16x16Tile(257, 423)
+			Copy16x16Tile(264, 424)
+			Copy16x16Tile(263, 425)
+			Copy16x16Tile(262, 426)
+			Copy16x16Tile(261, 427)
+			break
+			
+		case 1
+			Copy16x16Tile(260, 428)
+			Copy16x16Tile(259, 429)
+			Copy16x16Tile(258, 430)
+			Copy16x16Tile(257, 431)
+			Copy16x16Tile(264, 432)
+			Copy16x16Tile(263, 433)
+			Copy16x16Tile(262, 434)
+			Copy16x16Tile(261, 435)
+			break
+			
+		case 2
+			Copy16x16Tile(260, 436)
+			Copy16x16Tile(259, 437)
+			Copy16x16Tile(258, 438)
+			Copy16x16Tile(257, 439)
+			Copy16x16Tile(264, 440)
+			Copy16x16Tile(263, 441)
+			Copy16x16Tile(262, 442)
+			Copy16x16Tile(261, 443)
+			break
+			
+		end switch
+	end if
+	
+	// Animate the Crunchers
+	Object.CrunchersTimer++
+	if Object.CrunchersTimer > 5
+		Object.CrunchersTimer = 0
+		Object.CrunchersSprite++
+		Object.CrunchersSprite &= 3
+		switch Object.CrunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, so 4 tiles need to be updated
+			// in order to completely change their sprite
+			Copy16x16Tile(99, 444)
+			Copy16x16Tile(98, 445)
+			Copy16x16Tile(101, 448)
+			Copy16x16Tile(100, 449)
+			break
+			
+		case 1
+			Copy16x16Tile(99, 446)
+			Copy16x16Tile(98, 447)
+			Copy16x16Tile(101, 450)
+			Copy16x16Tile(100, 451)
+			break
+			
+		case 2
+			Copy16x16Tile(99, 452)
+			Copy16x16Tile(98, 453)
+			Copy16x16Tile(101, 456)
+			Copy16x16Tile(100, 457)
+			break
+			
+		case 3
+			Copy16x16Tile(99, 454)
+			Copy16x16Tile(98, 455)
+			Copy16x16Tile(101, 458)
+			Copy16x16Tile(100, 459)
+			break
+			
+		end switch
+	end if
+	
+	// Find the difference between the current scroll and last scroll pos
+	TempValue1 = Object.PrevAngle
+	TempValue2 = TileLayer[0].Angle
+	if TempValue1 < TempValue2
+		TempValue3 = TempValue2
+		TempValue3 -= TempValue1
+		if TempValue3 > 256
+			// Account for looping
+			TempValue1 += 512
+		end if
+	else
+		TempValue3 = TempValue1
+		TempValue3 -= TempValue2
+		if TempValue3 > 256
+			// Account for looping (but now the other way!)
+			TempValue2 += 512
+		end if
+	end if
+	
+	TempValue0 = TempValue1
+	TempValue0 -= TempValue2
+	
+	// Store the current angle for use next frame
+	Object.PrevAngle = TileLayer[0].Angle
+	
+	// Move all the other BG layers in accordance with the difference from last frame
+	
+	TempValue1 = 0x02000 // This value isn't used, though it corresponds to the first unused background layer
+	TempValue2 = 0x20000
+	TempValue3 = 0x10000
+	
+	TempValue1 *= TempValue0 // See above
+	TempValue2 *= TempValue0
+	TempValue3 *= TempValue0
+	
+	// Presumably there was one more parallax updating here before that got cut, my best guess is that it'd be something like
+//	HParallax[1].ScrollPos += TempValue1
+	// That would update the background water in the scene, provided the layer is left enabled
+	// HParallax[0] is an option too, that would be the unused wave BG layer (disabled too)
+	
+	HParallax[2].ScrollPos += TempValue2
+	HParallax[3].ScrollPos += TempValue3
+	
+end sub
+
+
+sub ObjectStartup
+	
+	// Setup stage bounds
+	Stage.XBoundary1 = 0x3800000  // 896 pixels to the left
+	Stage.XBoundary2 = 0xC800000  // 3200 pixels to the right
+	Stage.YBoundary1 = 0x3800000  // 896 pixels upwards
+	Stage.YBoundary2 = 0xC800000  // 3200 pixels downwards
+	
+	// Set the initial BG position
+	
+	// Move the first layer 15 pixels to the right
+	// -> I don't believe this does anything, though, as it's shifting the unused BG layer which later gets disabled anyway...
+	HParallax[0].ScrollPos += 0xF0000
+	
+#platform: HW_Rendering
+	// Load the stage map sprite if using the hardware render
+	
+	LoadSpriteSheet("Special/SSMap1.gif")
+#endplatform
+	
+	// Setup all BGEffect objects present in the level
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BGEffects]
+			
+			// Set this object to always active
+			Object[ArrayPos0].Priority = PRIORITY_ACTIVE
+			
+			// Make it be among the first things to be processed for drawing
+			Object[ArrayPos0].DrawOrder = 0
+			
+			// Starting angle, assuming that Sonic is starting facing left
+			Object[ArrayPos0].PrevAngle = 368
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+	SetLayerDeformation(DEFORM_BG, 128, 16, 0, 0, 0)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Special/SSMap1.gif")
+	SpriteFrame(-256, -256, 512, 512, 0, 0)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

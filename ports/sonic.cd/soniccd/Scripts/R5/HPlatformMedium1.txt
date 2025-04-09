@@ -1,0 +1,428 @@
+//--------------Sonic CD HPlatformMedium1 Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Pressed
+
+#alias Object.Value1			:	Object.PlatformY
+#alias Object.Value2			:	Object.ChangeY
+
+#alias Object.Value3			:	Object.PlatformX
+#alias Object.Value4			:	Object.ChangeX
+
+#alias Object.Value5			:	Object.Angle
+
+#alias Object.Value6			:	Object.Cooldown
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// Time Period Aliases
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Property Values
+#alias 0	:	START_MOVING_RIGHT
+#alias 1	:	START_MOVING_RIGHT_W/SPRING
+#alias 2	:	START_MOVING_RIGHT_W/CONV
+#alias 3	:	START_MOVING_LEFT
+#alias 4	:	START_MOVING_LEFT_W/SPRING
+#alias 5	:	START_MOVING_LEFT_W/CONV
+
+
+sub ObjectMain
+	
+	Object.Angle += 2
+	Object.Angle &= 511
+	
+	Sin(Object.ChangeX, Object.Angle)
+	
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/CONV
+		// Right-moving Platform
+		Object.ChangeX *= 0x1000
+		Object.ChangeX += 0x200000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object.ChangeX -= Object.PlatformX
+		break
+		
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/CONV
+		// Left-moving Platform
+		Object.ChangeX *= -0x1000
+		Object.ChangeX -= 0x200000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		Object.ChangeX -= Object.PlatformX
+		break
+		
+	case START_MOVING_RIGHT_W/SPRING
+		// Right-moving Carrier Object
+		Object.ChangeX *= 0x1000
+		Object.ChangeX += 0x200000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		
+		// Move the first Following Object
+		
+		// Make it 16 Pixels to the left
+		Object[+1].XPos  = Object.ChangeX
+		Object[+1].XPos -= 0x100000
+		
+		// And 24 pixels above
+		Object[+1].YPos  = Object.YPos
+		Object[+1].YPos -= 0x180000
+		
+		// And then move the next Follower Object
+		
+		// Make this one 16 pixels to the right
+		Object[+2].XPos  = Object.ChangeX
+		Object[+2].XPos += 0x100000
+		
+		// And also 24 pixels above
+		Object[+2].YPos  = Object.YPos
+		Object[+2].YPos -= 0x180000
+		
+		Object.ChangeX -= Object.PlatformX
+		break
+		
+	case START_MOVING_LEFT_W/SPRING
+		// Left-moving Carrier Object
+		Object.ChangeX *= -0x1000
+		Object.ChangeX -= 0x200000
+		Object.ChangeX += Object.XPos
+		Object.ChangeX &= 0xFFFF0000 // Truncate the value
+		
+		// Moving the first Follower Object
+		
+		// Move it 16 pixels to the left from this Object
+		Object[+1].XPos  = Object.ChangeX
+		Object[+1].XPos -= 0x100000
+		
+		// And 24 pixels above
+		Object[+1].YPos  = Object.YPos
+		Object[+1].YPos -= 0x180000
+		
+		// And then the second Following Object
+		
+		// 16 pixels, but this time to the right!
+		Object[+2].XPos  = Object.ChangeX
+		Object[+2].XPos += 0x100000
+		
+		// But this part's still 24 pixels up, yeah
+		Object[+2].YPos  = Object.YPos
+		Object[+2].YPos -= 0x180000
+		
+		Object.ChangeX -= Object.PlatformX
+		break
+		
+	end switch
+	
+	// Object.Pressed is originally set in ObjectPlayerInteraction
+	
+	if Object.Pressed == true
+		if Object.PlatformY < 16
+			Object.PlatformY++
+			TempValue0  = Object.PlatformY
+			TempValue0 &= 3
+			if TempValue0 == 3
+				// Dip the Platform down by a pixel
+				Object.ChangeY = 0x10000
+			else
+				Object.ChangeY = 0
+			end if
+		else
+			Object.ChangeY = 0
+		end if
+	else
+		if Object.PlatformY > 0
+			Object.PlatformY--
+			TempValue0  = Object.PlatformY
+			TempValue0 &= 3
+			if TempValue0 == 3
+				// Restore the Platform upwards a little
+				Object.ChangeY = -0x10000
+			else
+				Object.ChangeY = 0
+			end if
+		else
+			Object.ChangeY = 0
+		end if
+	end if
+	
+	// Reset Object.Pressed to be set again later this frame by ObjectPlayerInteraction
+	Object.Pressed = false
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+	
+	// First, back up the Object's base Position
+	TempValue0 = Object.XPos
+	
+	// Now, move the Object to where its Platform is
+	Object.XPos = Object.PlatformX
+	
+	// From here, jump to the further handling type needed
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_LEFT
+		// Standard Platform type
+		
+		PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+		
+		if CheckResult == true
+			
+			// Since the Player's on the Platform, let the Platform Object know so that it can dip if needed
+			Object.Pressed = true
+			
+			// And move the Player along with the Platform
+			Player.XPos += Object.ChangeX
+			Player.YPos += Object.ChangeY
+			
+		end if
+		break
+		
+	case START_MOVING_RIGHT_W/CONV
+	case START_MOVING_LEFT_W/CONV
+		// Conveyor Platform
+		
+		if Object.Cooldown == 0
+			PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+			
+			if CheckResult == true
+				
+				// The Player's on the Platform, let the Platform Object know so that it can dip as needed
+				Object.Pressed = true
+				
+				// Carry the Player along with the Platform in order to keep them on
+				Player.XPos += Object.ChangeX
+				Player.YPos += Object.ChangeY
+				
+				// And then push the Player as needed for the Conveyor
+				if ConveyorBelt_Flag == 0
+					Player.XPos += ConveyorBelt_Speed
+				else
+					Player.XPos -= ConveyorBelt_Speed
+				end if
+				
+				// If the Player is in a Flailing animation, then they're on the edge of the Platform
+				// However! This is a Conveyor Platform!
+				
+				// So to prevent an issue where the Player gets pushed off, regrabbed the next frame, then pushed off, then [...]
+				// There's a cooldown if the Player is detected to be on the edge
+				
+				// Perhaps half a second may be a bit long for the cooldown, but it serves its use nonetheless
+				
+				if Player.Animation == ANI_FLAILINGLEFT
+					Object.Cooldown = 30
+				end if
+				
+				if Player.Animation == ANI_FLAILINGRIGHT
+					Object.Cooldown = 30
+				end if
+				
+			end if
+		else
+			// Don't want to catch the Player again just yet, hold...
+			Object.Cooldown--
+		end if
+		break
+		
+	// cases 1/4 don't have anything
+	// They shouldn't interact with the Player, since they have Springs riding atop them
+	// so the Player shouldn't be able to land on the Platform itself
+		
+	end switch
+	
+	// And now restore the Object's Position
+	Object.XPos = TempValue0
+	
+end sub
+
+
+sub ObjectDraw
+	
+	// Move the Object to where its new Y position should be
+	Object.YPos += Object.ChangeY
+	
+	switch Object.PropertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/SPRING
+		// Right-moving Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= 0x1000
+		Object.PlatformX += 0x200000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_RIGHT_W/CONV
+		// Right-moving Conveyor Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= 0x1000
+		Object.PlatformX += 0x200000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		DrawSpriteXY(1, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/SPRING
+		// Left-moving Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= -0x1000
+		Object.PlatformX -= 0x200000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		break
+		
+	case START_MOVING_LEFT_W/CONV
+		// Left-moving Conveyor Platform
+		Sin(Object.PlatformX, Object.Angle)
+		Object.PlatformX *= -0x1000
+		Object.PlatformX -= 0x200000
+		Object.PlatformX += Object.XPos
+		Object.PlatformX &= 0xFFFF0000 // Truncate the value
+		DrawSpriteXY(0, Object.PlatformX, Object.YPos)
+		DrawSpriteXY(1, Object.PlatformX, Object.YPos)
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("R5/Objects.gif")
+	
+	// Use different Sprites for the different Time Periods
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		break
+		
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		break
+		
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		break
+		
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		break
+		
+	end switch
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Direction
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Direction
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	TempValue2 = 0
+	
+	switch Object.PropertyValue
+	case 2
+		TempValue2 = 1
+	default
+	case 0
+	case 1
+		TempValue0 = 0x1000
+		TempValue1 = 0x200000
+		break
+		
+	case 5
+		TempValue2 = 1
+	case 3
+	case 4
+		TempValue0 = -0x1000
+		TempValue1 = -0x200000
+		break
+		
+	end switch
+	
+	DrawSprite(0)
+	DrawSprite(TempValue2)
+	
+	if Editor.ShowGizmos == true
+		Editor.DrawingOverlay = true
+		
+		// Draw the Platform's path
+		
+		TempValue3 = Object.XPos
+		TempValue3 &= 0xFFFF0000 // Truncate the value
+		
+		Sin(TempValue4, 128)
+		TempValue4 *= TempValue0
+		TempValue4 += TempValue1
+		TempValue4 += Object.XPos
+		TempValue4 &= 0xFFFF0000 // Truncate the value
+		
+		DrawLine(TempValue3, Object.YPos, TempValue4, Object.YPos, 255, 255, 255)
+		
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	// TODO using present frames here, something something other time perids
+	SpriteFrame(-32, -16, 64, 32, 34, 51)
+	SpriteFrame(-32, -16, 64, 16, 1, 208)
+
+	AddEditorVariable("Direction")
+	SetActiveVariable("Direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Right (Spring)", 1)
+	AddEnumVariable("Right (Conveyor)", 2)
+	AddEnumVariable("Left", 3)
+	AddEnumVariable("Left (Spring)", 4)
+	AddEnumVariable("Left (Conveyor)", 5)
+end sub

@@ -1,0 +1,321 @@
+//----------------Sonic CD Big Bomb Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value3	:	Object.LeftBound
+#alias Object.Value4	:	Object.RightBound
+#alias Object.Value5	:	Object.SavedYPos
+
+// Big Bomb Fireball aliases
+#alias Object.Value1	:	BBFireBall.XVelocity
+#alias Object.Value2	:	BBFireBall.YVelocity
+
+// State
+#alias 0	:	BIGBOMB_SETUP
+#alias 1	:	BIGBOMB_MOVE_LEFT
+#alias 2	:	BIGBOMB_MOVE_RIGHT
+#alias 3	:	BIGBOMB_WAIT_PLAYER
+#alias 4	:	BIGBOMB_PREPARE_FUSE
+#alias 5	:	BIGBOMB_START_FUSE
+#alias 6	:	BIGBOMB_EXPLODE
+
+// Animations
+#alias 0	:	BOMBANI_IDLE
+#alias 1	:	BOMBANI_WALKING
+#alias 2	:	BOMBANI_SPOTTED
+#alias 3	:	BOMBANI_EXPLOSION
+
+// Stage SFX
+#alias 5	:	SFX_S_BOMB
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Priority
+#alias 1	:	PRIORITY_ACTIVE
+
+// Collision Planes
+#alias 0	:	COLLISION_PLANE_A
+
+// Property Values
+#alias 0	:	MOVING_BOMB
+#alias 1	:	STATIC_BOMB
+
+
+sub ObjectMain
+	switch Object.State
+	case BIGBOMB_SETUP
+		Object.Priority = PRIORITY_ACTIVE
+		ObjectTileCollision(CSIDE_FLOOR, 0, 27, 0)
+		if CheckResult == true
+			if Object.PropertyValue == STATIC_BOMB
+				Object.State = BIGBOMB_WAIT_PLAYER
+
+				Object.Direction = FACING_LEFT
+
+				Object.Animation = BOMBANI_IDLE
+			else
+				Object.State = BIGBOMB_MOVE_LEFT
+				Object.Animation = BOMBANI_WALKING
+
+				Object.LeftBound  = Object.XPos
+				Object.LeftBound -= 0xC0000
+
+				Object.RightBound  = Object.XPos
+				Object.RightBound += 0xC0000
+			end if
+		else
+			Object.YPos += 0x10000
+		end if
+		break
+
+	case BIGBOMB_MOVE_LEFT
+		Object.XPos -= 0xA000
+		if Object.XPos < Object.LeftBound
+			Object.Direction = FACING_LEFT
+			Object.State = BIGBOMB_MOVE_RIGHT
+		end if
+
+		ObjectTileGrip(CSIDE_FLOOR, 0, 27, 0)
+		PlayerObjectCollision(C_TOUCH, -96, -128, 96, 27)
+		if CheckResult == true
+			Object.State = BIGBOMB_START_FUSE
+			Object.Animation = BOMBANI_SPOTTED
+		end if
+		break
+
+	case BIGBOMB_MOVE_RIGHT
+		Object.XPos += 0xA000
+		if Object.XPos > Object.RightBound
+			Object.Direction = FACING_RIGHT
+			Object.State = BIGBOMB_MOVE_LEFT
+		end if
+
+		ObjectTileGrip(CSIDE_FLOOR, 0, 27, 0)
+		PlayerObjectCollision(C_TOUCH, -96, -128, 96, 27)
+		if CheckResult == true
+			Object.State = BIGBOMB_START_FUSE
+			Object.Animation = BOMBANI_SPOTTED
+		end if
+		break
+
+	case BIGBOMB_WAIT_PLAYER
+		PlayerObjectCollision(C_TOUCH, -96, -128, 96, 27)
+		if CheckResult == true
+			Object.Animation = BOMBANI_WALKING
+			Object.State++
+		end if
+		break
+
+	case BIGBOMB_PREPARE_FUSE
+		Object.XPos += 0x20000
+		ObjectTileGrip(CSIDE_FLOOR, 24, 27, 0)
+		if CheckResult == false
+			Object.State = BIGBOMB_START_FUSE
+			Object.Animation = BOMBANI_SPOTTED
+		end if
+		break
+
+	case BIGBOMB_START_FUSE
+		if Object.Timer < 30
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.Animation = BOMBANI_EXPLOSION
+			Object.AnimationTimer = 0
+			Object.SavedYPos = Object.YPos
+			Object.State++
+		end if
+		break
+
+	case BIGBOMB_EXPLODE
+		if Object.Timer < 120
+			Object.Timer++
+			Object.SavedYPos += 0x4000
+		else
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity = -0x30000
+			BBFireBall[TempObjectPos].YVelocity = -0x62000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity = -0x20000
+			BBFireBall[TempObjectPos].YVelocity = -0x52000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity = -0x10000
+			BBFireBall[TempObjectPos].YVelocity = -0x42000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity =  0
+			BBFireBall[TempObjectPos].YVelocity = -0x32000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity =  0x10000
+			BBFireBall[TempObjectPos].YVelocity = -0x42000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity =  0x20000
+			BBFireBall[TempObjectPos].YVelocity = -0x52000
+
+			CreateTempObject(TypeName[BB Fireball], 0, Object.XPos, Object.YPos)
+			BBFireBall[TempObjectPos].XVelocity =  0x30000
+			BBFireBall[TempObjectPos].YVelocity = -0x62000
+
+			CreateTempObject(TypeName[Explosion], 0, Object.XPos, Object.YPos)
+			ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+
+			PlayStageSfx(SFX_S_BOMB, false)
+			
+#platform: Use_Haptics
+			HapticEffect(77, 0, 0, 0)
+#endplatform
+
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Player.CollisionPlane == COLLISION_PLANE_A
+		PlayerObjectCollision(C_TOUCH, -18, -18, 18, 18)
+		if CheckResult == true
+			CallFunction(Player_Hit)
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.Animation
+	case BOMBANI_IDLE
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(2, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case BOMBANI_WALKING
+		TempValue0 = Object.AnimationTimer
+		TempValue0 /= 20
+		TempValue0 *= 3
+		TempValue0 += 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		TempValue0++
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		TempValue0++
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		Object.AnimationTimer++
+		Object.AnimationTimer %= 80
+		break
+
+	case BOMBANI_SPOTTED
+		TempValue0 = Object.AnimationTimer
+		TempValue0 /= 20
+		TempValue0 *= 3
+		TempValue0 += 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		TempValue0++
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		TempValue0++
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		break
+
+	case BOMBANI_EXPLOSION
+		TempValue0 = Object.AnimationTimer
+		TempValue0 /= 3
+		TempValue0 += 15
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.SavedYPos)
+		Object.AnimationTimer++
+		Object.AnimationTimer %= 6
+		DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Walking frames
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #0  - Big Bomb body frame 0
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #1  - Big Bomb legs frame 0
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #2  - Big Bomb fuse frame 0
+
+	SpriteFrame(-20, -22, 40, 40, 67, 82)	// #3  - Big Bomb body frame 1
+	SpriteFrame(-12, 3, 32, 24, 150, 85)	// #4  - Big Bomb legs frame 1
+	SpriteFrame(-4, -46, 8, 24, 176, 18)	// #5  - Big Bomb fuse frame 1
+
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #6  - Big Bomb body frame 2
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #7  - Big Bomb legs frame 2
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #8  - Big Bomb fuse frame 2
+
+	SpriteFrame(-20, -22, 40, 40, 67, 82)	// #9  - Big Bomb body frame 3
+	SpriteFrame(-20, 3, 48, 24, 109, 60)	// #10 - Big Bomb legs frame 3
+	SpriteFrame(-4, -46, 8, 24, 176, 18)	// #11 - Big Bomb fuse frame 3
+
+	// Explosion charge
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #12 - Big Bomb body frame 4
+	SpriteFrame(-20, 3, 40, 24, 109, 85)	// #13 - Big Bomb legs frame 4
+	
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #14 - Big Bomb active fuse frame 0
+	SpriteFrame(-4, -44, 8, 24, 158, 18)	// #15 - Big Bomb active fuse frame 1
+	SpriteFrame(-4, -44, 8, 24, 167, 18)	// #16 - Big Bomb active fuse frame 2
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[BigBomb]	// um....?
+			// Allan please add missing code
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Walking frames
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #0  - Big Bomb body frame 0
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #1  - Big Bomb legs frame 0
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #2  - Big Bomb fuse frame 0
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Moving Bomb", 0)
+	AddEnumVariable("Static Bomb", 1)
+end sub

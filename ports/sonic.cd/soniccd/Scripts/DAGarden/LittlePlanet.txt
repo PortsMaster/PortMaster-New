@@ -1,0 +1,287 @@
+//---------------Sonic CD Little Planet Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.ZoomDepth
+#alias Object.Value2	:	Object.RotationLimit
+#alias Object.Value3	:	Object.RotationSpeed
+#alias Object.Value4	:	Object.RotationDirection
+#alias Object.Value5	:	Object.ZoomIn
+#alias Object.Value6	:	Object.Drag
+#alias Object.Value7	:	Object.TouchInput
+
+// MenuControl Alias
+#alias Object[0].State	:	MenuControl.State
+
+// MenuControl States
+#alias 2	:	MENUCONTROL_IDLE
+
+sub ObjectMain
+	if MenuControl.State == MENUCONTROL_IDLE
+		// Update Little Planet control
+		// Most of the things here are for physical controllers - touch input is handled in the Touch Buttons object
+
+		// Planet Movement
+		if KeyDown[0].Left == true
+			if Object.XPos > -0x400
+				Object.XPos--
+			end if
+		end if
+
+		if KeyDown[0].Right == true
+			if Object.XPos < 0x400
+				Object.XPos++
+			end if
+		end if
+
+		if KeyDown[0].Up == true
+			Object.YPos--
+		end if
+
+		if KeyDown[0].Down == true
+			Object.YPos++
+		end if
+
+		// Rotation
+		// Previously ButtonB, Origins change
+		if KeyDown[0].Start == true	// Increase rotation speed
+			if Object.RotationDirection == FACING_LEFT
+				if Object.RotationSpeed < 256
+					Object.RotationSpeed += 2
+				end if
+			else
+				if Object.RotationSpeed > -256
+					Object.RotationSpeed -= 2
+				end if
+			end if
+		end if
+
+		if KeyPress[0].Start == true		// Flip Rotation
+			Object.RotationDirection++
+			Object.RotationDirection &= 1
+			Object.RotationSpeed = 0
+		end if
+
+		// Zooming
+		if KeyDown[0].ButtonC == true		// Zoom In/Out
+			if Object.ZoomIn == false
+				if Object.ZoomDepth < 0x4000
+					Object.ZoomDepth += 8
+				end if
+			else
+				if Object.ZoomDepth > 48
+					Object.ZoomDepth -= 8
+				end if
+			end if
+		end if
+
+		if KeyPress[0].ButtonC == true		// Switch Zoom In / Zoom Out
+			Object.ZoomIn++
+			Object.ZoomIn &= 1
+		end if
+
+		// Touch Input Planet Movement
+		CheckTouchRect(0, 32, Screen.XSize, 208)
+		if CheckResult > -1
+			if Object.TouchInput != CheckResult
+				Object.Drag = false
+			end if
+			ArrayPos0 = CheckResult
+			if Object.Drag == false
+				Object.Drag = true
+				Object.TouchInput = CheckResult
+				Object[0].XPos = TouchScreen[ArrayPos0].XPos
+				Object[0].YPos = TouchScreen[ArrayPos0].YPos
+				Object[1].XPos = Object.XPos
+				Object[1].YPos = Object.YPos
+			else
+				TempValue0   = TouchScreen[ArrayPos0].XPos
+				TempValue0  -= Object[0].XPos
+				TempValue0  *= Object.ZoomDepth
+				TempValue0 >>= 11
+				TempValue0  += Object[1].XPos
+				TempValue1   = TempValue0
+				TempValue1  -= Object.XPos
+				if TempValue1 < 0
+					FlipSign(TempValue1)
+				end if
+				if TempValue1 < 14
+					Object.XPos = TempValue0
+				end if
+				TempValue0   = TouchScreen[ArrayPos0].YPos
+				TempValue0  -= Object[0].YPos
+				TempValue0  *= Object.ZoomDepth
+				TempValue0 >>= 11
+				TempValue0  += Object[1].YPos
+				TempValue1   = TempValue0
+				TempValue1  -= Object.YPos
+				if TempValue1 < 0
+					FlipSign(TempValue1)
+				end if
+				if TempValue1 < 14
+					Object.YPos = TempValue0
+				end if
+			end if
+		else
+			Object.Drag = false
+		end if
+	end if
+
+	Object.RotationLimit += Object.RotationSpeed
+	if Object.RotationLimit < 0
+		Object.RotationLimit += 0x2000
+	end if
+	Object.RotationLimit &= 0x1FFF
+
+	Object.Rotation   = Object.RotationLimit
+	Object.Rotation >>= 4
+end sub
+
+
+sub ObjectDraw
+	if Object.Frame == 22
+		DrawRect(0, 32, Screen.XSize, 176, 64, 64, 32, 176)
+	end if
+
+	if Object.ZoomDepth > 0
+		TempValue0   = Object.XPos
+		TempValue0 <<= 11
+		TempValue0  /= Object.ZoomDepth
+		TempValue0  += Screen.CenterX
+
+		TempValue1   = Object.YPos
+		TempValue1 <<= 11
+		TempValue1  /= Object.ZoomDepth
+		TempValue1  += 120
+
+		Object.Scale  = 0x20000
+		Object.Scale /= Object.ZoomDepth
+		DrawSpriteScreenFX(Object.Frame, FX_ROTOZOOM, TempValue0, TempValue1)
+
+		TempValue2   = Object.AnimationTimer
+		TempValue2 >>= 3
+		TempValue3   = Object.Frame
+		switch TempValue2
+		case 0
+			TempValue3++
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 1
+			TempValue3 += 2
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 2
+			TempValue3 += 3
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 3
+			TempValue3 += 4
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 4
+			TempValue3 += 5
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 24
+			TempValue3 += 6
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 25
+			TempValue3 += 7
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 26
+			TempValue3 += 8
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 27
+			TempValue3 += 9
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		case 28
+			TempValue3 += 10
+			DrawSpriteScreenFX(TempValue3, FX_ROTOZOOM, TempValue0, TempValue1)
+			break
+
+		end switch
+		Object.AnimationTimer++
+		Object.AnimationTimer &= 511
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("DAGarden/LittlePlanet.gif")
+
+	SpriteFrame(-126, -126, 252, 252, 0, 0)		// #0  - Little Planet
+	SpriteFrame(95, -70, 16, 16, 256, 257)		// #1  - Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 256, 274)		// #2  - Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 256, 299)		// #3  - Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 256, 332)		// #4  - Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 256, 373)		// #5  - Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 273, 257)		// #6  - Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 281, 274)		// #7  - Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 289, 299)		// #8  - Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 297, 332)		// #9  - Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 297, 365)		// #10 - Vulkan Smoke Frame 9
+	SpriteFrame(-126, -126, 252, 252, 256, 0)	// #11 - Little Planet Good Future
+	SpriteFrame(95, -70, 16, 16, 330, 257)		// #12 - GF Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 330, 274)		// #13 - GF Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 330, 299)		// #14 - GF Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 330, 332)		// #15 - GF Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 330, 373)		// #16 - GF Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 347, 257)		// #17 - GF Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 355, 274)		// #18 - GF Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 363, 299)		// #19 - GF Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 371, 332)		// #20 - GF Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 371, 365)		// #21 - GF Vulkan Smoke Frame 9
+	SpriteFrame(-126, -126, 252, 252, 0, 256)	// #22 - Little Planet Bad Future
+	SpriteFrame(95, -70, 16, 16, 404, 257)		// #23 - BF Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 404, 274)		// #24 - BF Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 404, 299)		// #25 - BF Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 404, 332)		// #26 - BF Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 404, 373)		// #27 - BF Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 421, 257)		// #28 - BF Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 429, 274)		// #29 - BF Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 437, 299)		// #30 - BF Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 445, 332)		// #31 - BF Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 445, 365)		// #32 - BF Vulkan Smoke Frame 9
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Little Planet]
+			Object[ArrayPos0].XPos = 0
+			Object[ArrayPos0].YPos = 0
+			Object[ArrayPos0].ZoomDepth		= 384
+			Object[ArrayPos0].RotationSpeed = -8
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("DAGarden/LittlePlanet.gif")
+	SpriteFrame(-126, -126, 252, 252, 0, 0)		// #0  - Little Planet
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

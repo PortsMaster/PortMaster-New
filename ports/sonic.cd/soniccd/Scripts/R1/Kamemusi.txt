@@ -1,0 +1,284 @@
+//-----------------Sonic CD Kamemusi Script-------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.FireTimer
+
+#alias Object.PropertyValue	:	Object.Quality
+
+// Bullet Aliases
+#alias Object.Value1		:	Bullet.XVelocity
+#alias Object.Value2		:	Bullet.YVelocity
+
+// States
+#alias 0	:	KAMEMUSI_MOVE_LEFT
+#alias 1	:	KAMEMUSI_MOVE_RIGHT
+#alias 2	:	KAMEMUSI_SHOOT
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Stage SFX
+#alias 1	:	SFX_S_SHOT
+
+// Badnik Quality / Property Values
+#alias 0	:	GOOD_QUALITY
+#alias 1	:	BAD_QUALITY
+
+
+sub ObjectMain
+	if Object.Quality == GOOD_QUALITY
+		switch Object.State
+		case KAMEMUSI_MOVE_LEFT
+			Object.Frame++
+			Object.Frame %= 60
+
+			Object.XPos -= 0xAAAA
+
+			Object.Timer--
+			if Object.Timer == -192
+				Object.State = KAMEMUSI_MOVE_RIGHT
+				Object.Direction = FACING_LEFT
+			end if
+
+			ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)	// Check if there's no more floor
+			if CheckResult == false
+				Object.State = KAMEMUSI_MOVE_RIGHT
+				Object.Timer = -192
+				Object.Direction = FACING_LEFT
+			end if
+
+			if Object.FireTimer > -1
+				PlayerObjectCollision(C_TOUCH, -64, -64, 64, 64)
+				if CheckResult == true
+					Object.State = KAMEMUSI_SHOOT
+					Object.DrawOrder = 4
+				end if
+			else
+				Object.FireTimer++
+			end if
+			break
+
+		case KAMEMUSI_MOVE_RIGHT
+			Object.Frame++
+			Object.Frame %= 60
+
+			Object.XPos += 0xAAAA
+
+			Object.Timer++
+			if Object.Timer == 192
+				Object.State = KAMEMUSI_MOVE_LEFT
+				Object.Direction = FACING_RIGHT
+			end if
+
+			ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)	// Check if there's no more floor
+			if CheckResult == false
+				Object.State = KAMEMUSI_MOVE_LEFT
+				Object.Timer = 192
+				Object.Direction = FACING_RIGHT
+			end if
+
+			if Object.FireTimer > -1
+				PlayerObjectCollision(C_TOUCH, -64, -64, 64, 64)
+				if CheckResult == true
+					Object.State = KAMEMUSI_SHOOT
+					Object.DrawOrder = 4
+				end if
+			else
+				Object.FireTimer++
+			end if
+			break
+
+		case KAMEMUSI_SHOOT
+			if Object.FireTimer == 60
+				CreateTempObject(TypeName[Bullet], 0, Object.XPos, Object.YPos)
+				Bullet[TempObjectPos].XVelocity = -0x20000
+				Bullet[TempObjectPos].YVelocity = -0x50000
+			end if
+
+			if Object.FireTimer == 62
+				CreateTempObject(TypeName[Bullet], 0, Object.XPos, Object.YPos)
+				Bullet[TempObjectPos].XVelocity = 0x20000
+				Bullet[TempObjectPos].YVelocity = -0x50000
+				PlayStageSfx(SFX_S_SHOT, false)
+			end if
+
+			if Object.FireTimer == 64
+				Object.State = Object.Direction
+				Object.FireTimer = -120
+				Object.DrawOrder = 3
+			else
+				Object.FireTimer++
+			end if
+
+			break
+		end switch
+	else
+		switch Object.State
+		case KAMEMUSI_MOVE_LEFT
+			Object.Frame++
+			Object.Frame %= 12
+
+			Object.XPos -= 0x3800
+
+			Object.Timer--
+			if Object.Timer == -384
+				Object.State = KAMEMUSI_MOVE_RIGHT
+				Object.Direction = FACING_LEFT
+			end if
+
+			ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+			if CheckResult == false
+				Object.State = KAMEMUSI_MOVE_RIGHT
+				Object.Timer = -384
+				Object.Direction = FACING_LEFT
+			end if
+
+			if Object.FireTimer == 82
+				Object.State = KAMEMUSI_SHOOT
+				Object.FireTimer = 0
+			else
+				Object.FireTimer++
+			end if
+
+			break
+
+		case KAMEMUSI_MOVE_RIGHT
+			Object.Frame++
+			Object.Frame %= 12
+
+			Object.XPos += 0x3800
+			Object.Timer++
+			if Object.Timer == 384
+				Object.State = KAMEMUSI_MOVE_LEFT
+				Object.Direction = FACING_RIGHT
+			end if
+
+			ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+			if CheckResult == false
+				Object.State = KAMEMUSI_MOVE_LEFT
+				Object.Timer = 384
+				Object.Direction = FACING_RIGHT
+			end if
+
+			if Object.FireTimer == 82
+				Object.State = KAMEMUSI_SHOOT
+				Object.FireTimer = 0
+			else
+				Object.FireTimer++
+			end if
+			break
+
+		case KAMEMUSI_SHOOT	// in his broken state, the shoot will fail
+			if Object.FireTimer == 14
+				Object.State = Object.Direction
+				Object.FireTimer = 0
+			else
+				Object.FireTimer++
+			end if
+			break
+
+		end switch
+	end if
+	CallFunction(StageSetup_CheckGoodFuture)	// Check if it should be a flower
+end sub
+
+
+sub ObjectPlayerInteraction
+#platform: Use_Standalone
+	PlayerObjectCollision(C_TOUCH, -16, -14, 16, 14)
+#endplatform
+#platform: Use_Origins
+	PlayerObjectCollision(C_ENEMY, -16, -14, 16, 14)
+#endplatform
+	if CheckResult == true
+		CallFunction(Player_BadnikBreak)
+	end if
+end sub
+
+
+sub ObjectDraw
+	if Object.Quality == GOOD_QUALITY
+		if Object.State < KAMEMUSI_SHOOT
+			TempValue0  = Object.Frame
+			TempValue0 /= 30
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+	else
+		if Object.State < KAMEMUSI_SHOOT
+			TempValue0  = Object.Frame
+			TempValue0 /= 6
+			TempValue0 += 2
+			DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(4, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	// Good Quality
+	SpriteFrame(-16, -15, 32, 29, 223, 34)	// #0 - Kamemusi Movement Frame 0
+	SpriteFrame(-16, -14, 32, 28, 223, 93)	// #1 - Kamemusi Movement Frame 1
+	// Bad Quality
+	SpriteFrame(-16, -15, 32, 29, 223, 34)	// #2 - Old Kamemusi Movement Frame 0
+	SpriteFrame(-16, -14, 32, 28, 223, 64)	// #3 - Old Kamemusi Movement Frame 1
+	
+	SpriteFrame(-16, -17, 32, 31, 223, 122)	// #4 - Kamemusi Shoot Position
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // type
+			Object.PropertyValue = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(Object.PropertyValue)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	
+	SpriteFrame(-16, -15, 32, 29, 223, 34)	// #0 - Kamemusi
+	SpriteFrame(-16, -15, 32, 29, 223, 34)	// #1 - Old Kamemusi
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", GOOD_QUALITY)
+	AddEnumVariable("Bad Quality", BAD_QUALITY)
+end sub

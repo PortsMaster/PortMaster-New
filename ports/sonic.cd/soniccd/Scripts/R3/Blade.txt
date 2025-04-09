@@ -1,0 +1,133 @@
+//--------------Sonic CD Kama Kama Blade Script---------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.XVelocity
+#alias Object.Value1		:	Object.YVelocity
+#alias Object.Value2		:	Object.KamaKamaEntityNo
+#alias Object.PropertyValue	:	Object.LaunchTimer
+
+// States
+#alias 0	:	BLADE_LAUNCH
+#alias 1	:	BLADE_BLANK
+#alias 2	:	BLADE_DEFLECTED
+
+// Stage SFX
+#alias 5	:	SFX_S_BLADES
+
+
+sub ObjectMain
+	Object.XPos += Object.XVelocity
+	Object.YPos += Object.YVelocity
+
+	Object.Frame++
+	Object.Frame %= 24
+
+	switch Object.State
+	case BLADE_LAUNCH
+		ArrayPos0 = Object.KamaKamaEntityNo
+		// if the Kama Kama that launched this is destroyed, destroy the blade
+		if Object[ArrayPos0].Type != TypeName[Kama Kama]
+			Object.Type = TypeName[Blank Object]
+		end if
+
+		if Object.LaunchTimer > 0
+			Object.LaunchTimer--
+		else
+			Object.State = BLADE_BLANK
+			PlayStageSfx(SFX_S_BLADES, false)
+			if Object.Direction == FACING_RIGHT
+				Object.XVelocity = -0x30000
+			else
+				Object.XVelocity = 0x30000
+			end if
+		end if
+		break
+
+	case BLADE_DEFLECTED
+		Object.YVelocity += 0x3000
+		break
+
+	end switch
+
+	if Object.OutOfBounds == true
+		Object.Type = TypeName[Blank Object]
+	else
+		TempValue0   = Screen.YOffset
+		TempValue0  -= 8
+		TempValue0 <<= 16
+		if Object.YPos < TempValue0
+			Object.Type = TypeName[Blank Object]
+		end if
+		
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == BLADE_BLANK
+		PlayerObjectCollision(C_TOUCH, -8, -6, 8, 6)
+		if CheckResult == true
+			// Check if the blades will bounce on the player
+			CheckEqual(Player.Animation, ANI_JUMPING)
+			TempValue0  = CheckResult
+			CheckEqual(Player.Animation, ANI_SPINDASH)
+			TempValue0 |= CheckResult
+
+			if TempValue0 == true
+				Object.State = BLADE_DEFLECTED
+
+				Object.YVelocity = -0x80000
+				if Object.Direction == FACING_RIGHT
+					if Player.XVelocity > 0x8000
+						FlipSign(Object.XVelocity)
+					end if
+				else
+					if Player.XVelocity < -0x8000
+						FlipSign(Object.XVelocity)
+					end if
+				end if
+			else
+				CallFunction(Player_Hit)
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0   = Object.Frame
+	TempValue0 >>= 2
+	DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 198, 68)	// #0 - Blade Frame 0
+	SpriteFrame(-8, -8, 16, 16, 215, 68)	// #1 - Blade Frame 1
+	SpriteFrame(-8, -8, 16, 16, 232, 68)	// #2 - Blade Frame 2
+	SpriteFrame(-8, -8, 16, 16, 198, 85)	// #3 - Blade Frame 3
+	SpriteFrame(-8, -8, 16, 16, 215, 85)	// #4 - Blade Frame 4
+	SpriteFrame(-8, -8, 16, 16, 232, 85)	// #5 - Blade Frame 5
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 198, 68)	// #0 - Blade
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

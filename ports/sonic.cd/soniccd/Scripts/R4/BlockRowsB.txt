@@ -1,0 +1,291 @@
+//----------------Sonic CD Block Rows B Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.XVelocity
+#alias Object.Value2	:	Object.OnObject
+
+// HUD Alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	BLOCKROWSB_MOVE_RIGHT
+#alias 1	:	BLOCKROWSB_MOVE_LEFT
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 2	:	PLAYER_COL_LWALL
+#alias 3	:	PLAYER_COL_RWALL
+#alias 4	:	PLAYER_COL_ROOF
+
+// Gravity
+#alias 1	:	GRAVITY_AIR
+
+// Priority
+#alias 3	:	PRIORITY_XBOUNDS
+
+
+
+sub ObjectMain
+	if Object.State == BLOCKROWSB_MOVE_RIGHT
+		Object.XVelocity += 0x8000
+		if Object.XVelocity >= 0xC00000
+			Object.XVelocity = 0xC00000
+			Object.State = BLOCKROWSB_MOVE_LEFT
+		end if
+	else
+		Object.XVelocity -= 0x8000
+		if Object.XVelocity <= 0
+			Object.XVelocity = 0
+			Object.State = BLOCKROWSB_MOVE_RIGHT
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0 = Object.XPos
+	TempValue1 = 0
+	TempValue2 = 0
+	Object.XPos -= 0x600000
+	Object.XPos += Object.XVelocity
+
+	PlayerObjectCollision(C_BOX, -32, -32, 32, 32)
+	switch CheckResult
+	case PLAYER_COL_FLOOR
+		if Object.State == BLOCKROWSB_MOVE_RIGHT
+			Player.XPos += 0x8000
+		else
+			Player.XPos -= 0x8000
+		end if
+
+		if Player.Speed == 0
+			if Object.OnObject == false
+				// Truncate these values
+				Player.XPos		 &= 0xFFFF0000
+				Object.XVelocity &= 0xFFFF0000
+				Object.OnObject = true
+			end if
+		else
+			Object.OnObject = false
+		end if
+		break
+
+	case PLAYER_COL_LWALL
+		TempValue1 = true
+		break
+
+	case PLAYER_COL_RWALL
+		TempValue2 = true
+		break
+
+	end switch
+
+	Object.XPos = TempValue0
+	if Object.PropertyValue > 1
+		PlayerObjectCollision(C_BOX, -160, -32, -128, 32)
+		if CheckResult == PLAYER_COL_RWALL
+			TempValue2 = true
+		end if
+	end if
+
+	PlayerObjectCollision(C_BOX, 128, -32, 160, 32)
+	if CheckResult == PLAYER_COL_LWALL
+		TempValue1 = true
+	end if
+
+	if TempValue1 == true
+		if TempValue2 == true
+			CallFunction(Player_Kill)
+		end if
+	end if
+
+	if Player.Gravity == GRAVITY_AIR
+		Object.OnObject = false
+	end if
+end sub
+
+
+sub ObjectDraw
+	TempValue0  = Object.XPos
+	TempValue0 -= 0x600000
+	TempValue0 += Object.XVelocity
+	DrawSpriteXY(0, TempValue0, Object.YPos)
+	DrawSpriteXY(1, TempValue0, Object.YPos)
+	DrawSpriteXY(2, TempValue0, Object.YPos)
+	DrawSpriteXY(3, TempValue0, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	switch HUD.CurrentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R4/Objects.gif")
+		TempValue0 = 163
+		TempValue1 = 1
+		TempValue2 = 196
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 157
+		TempValue2 = 34
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 190
+		TempValue2 = 34
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 223
+		TempValue2 = 34
+		break
+
+	end switch
+
+	// Cube of blocks
+	SpriteFrame(-32, -32, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(0, -32, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(-32, 0, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(0, 0, 32, 32, TempValue0, TempValue1)
+
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Block Rows B]
+			Object[ArrayPos0].Priority = PRIORITY_XBOUNDS
+			switch Object[ArrayPos0].PropertyValue
+			case 1
+				Object[ArrayPos0].XVelocity = 0x400000
+				break
+
+			case 2
+				Object[ArrayPos0].XVelocity = 0x800000
+				break
+
+			case 3
+				Object[ArrayPos0].XVelocity = 0xC00000
+				Object[ArrayPos0].State = BLOCKROWSB_MOVE_LEFT
+				break
+				
+			case 4
+				Object[ArrayPos0].XVelocity = 0x800000
+				Object[ArrayPos0].State = BLOCKROWSB_MOVE_LEFT
+				break
+
+			end switch
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0  = Object.XPos
+	TempValue0 -= 0x600000
+	switch object.PropertyValue
+	case 1
+		Tempvalue0 += 0x400000
+		break
+	case 2
+		Tempvalue0 += 0x800000
+		break
+	case 3
+		Tempvalue0 += 0xC00000
+		break
+	case 4
+		Tempvalue0 += 0x800000
+		break
+	end switch
+	DrawSpriteXY(0, TempValue0, Object.YPos)
+	DrawSpriteXY(1, TempValue0, Object.YPos)
+	DrawSpriteXY(2, TempValue0, Object.YPos)
+	DrawSpriteXY(3, TempValue0, Object.YPos)
+	TempValue1  = Object.XPos
+	TempValue1 -= 0x600000
+	TempValue1 += 0xC00000
+	TempValue2  = Object.XPos
+	TempValue2 -= 0x600000
+	if object.PropertyValue < 3
+		DrawArrow(Tempvalue0, Object.YPos, Tempvalue1, Object.YPos, 255, 128, 0)
+	else
+		DrawArrow(Tempvalue0, Object.YPos, TempValue2, Object.YPos, 255, 128, 0)
+	end if
+
+	if Editor.ShowGizmos == true
+		TempValue3  = Object.YPos
+		TempValue3 -= 0x200000
+		TempValue4  = Object.XPos
+		TempValue4 -= 0x600000
+		Editor.DrawingOverlay = true
+		DrawRectOutline(TempValue4, TempValue3, 0xC0, 0x40, 255, 255, 255, 255)
+		TempValue4 -= 0x200000
+		DrawRectOutline(TempValue4, TempValue3, 0x100, 0x40, 255, 255, 0, 255)
+		if object.PropertyValue < 3
+			DrawArrow(Object.XPos, Object.YPos, TempValue2, Object.YPos, 255, 255, 255)
+		else
+			DrawArrow(Object.XPos, Object.YPos, TempValue1, Object.YPos, 255, 255, 255)
+		end if
+		Editor.DrawingOverlay = false
+	end if
+end sub
+
+
+sub RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+	switch CheckResult
+	case TIME_PRESENT
+		LoadSpriteSheet("R4/Objects.gif")
+		TempValue0 = 163
+		TempValue1 = 1
+		TempValue2 = 196
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 157
+		TempValue2 = 34
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 190
+		TempValue2 = 34
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R4/Objects2.gif")
+		TempValue0 = 1
+		TempValue1 = 223
+		TempValue2 = 34
+		break
+
+	end switch
+
+	// Cube of blocks
+	SpriteFrame(-32, -32, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(0, -32, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(-32, 0, 32, 32, TempValue0, TempValue1)
+	SpriteFrame(0, 0, 32, 32, TempValue0, TempValue1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

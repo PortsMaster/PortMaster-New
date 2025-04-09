@@ -1,0 +1,248 @@
+//-----------------Sonic CD Water Burst Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.FrameTimer
+#alias Object.Value1	:	Object.Timer
+#alias Object.Value1	:	BurstSplash.XVelocity
+#alias Object.Value2	:	BurstSplash.YVelocity
+
+// Control Mode
+#alias -1	:	CONTROLMODE_NONE
+#alias 0	:	CONTROLMODE_NORMAL
+
+// Priority
+#alias 3	:	PRIORITY_XBOUNDS
+
+
+sub ObjectMain
+	Object.Timer++
+	if Object.Timer == 8
+		Rand(TempValue0, 80)
+		TempValue0  -= 40
+		TempValue0 <<= 16
+		TempValue0  += Object.XPos
+
+		Rand(TempValue1, 16)
+		TempValue1  -= 8
+		TempValue1 <<= 16
+		TempValue1  += Object.YPos
+		TempValue1  -= 0x300000
+
+		CreateTempObject(TypeName[Burst Splash], 0, TempValue0, TempValue1)
+		Rand(BurstSplash[TempObjectPos].XVelocity, 10)
+		BurstSplash[TempObjectPos].XVelocity  -= 5
+		BurstSplash[TempObjectPos].XVelocity <<= 13
+		BurstSplash[TempObjectPos].YVelocity   = -0x20000
+
+		Object.Timer = 0
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_PLATFORM, -48, -66, 48, -32)
+	if CheckResult == true
+		Player.YPos += 0x20000
+	end if
+
+	PlayerObjectCollision(C_TOUCH, -128, -24, 128, 400)
+	if CheckResult == true
+		if Player.State != Player_State_Death
+			if Player.State != Player_State_Drown
+				Player.State	 = Player_State_WaterCurrent
+				Player.Animation = ANI_FANROTATE
+
+				Player.ControlMode = CONTROLMODE_NONE
+				Player.Left		= false
+				Player.Right	= false
+				Player.Up		= false
+				Player.Down		= false
+
+				Player.YVelocity = -0x100000
+				Player.Timer = 0
+			end if
+		end if
+
+		PlayerObjectCollision(C_TOUCH, -128, 48, 128, 332)
+		if CheckResult == true
+			TempValue0   = Object.XPos
+			TempValue0  -= Player.XPos
+			TempValue0 >>= 2
+
+			if TempValue0 > 0x100000
+				TempValue0 = 0x100000
+			end if
+
+			if TempValue0 < -0x100000
+				TempValue0 = -0x100000
+			end if
+
+			Player.XPos += TempValue0
+		end if
+	else
+		if Player.State == Player_State_WaterCurrent
+			
+#platform: Use_Origins
+			Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+			Player.State = Player_State_Air
+#endplatform
+
+			Player.ControlMode = CONTROLMODE_NORMAL
+			Player.Animation   = ANI_BOUNCING
+
+			Player.XVelocity = 0
+			Player.Speed	 = 0
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	Object.YPos  = Stage.NewWaterLevel
+	Object.YPos -= 0x300000 // Y - 48 in map coords
+
+	TempValue0   = Oscillation
+	TempValue0 <<= 2
+	Sin(TempValue1, TempValue0)
+	TempValue1 <<= 9
+	Object.YPos += TempValue1
+
+	TempValue0  = Object.FrameTimer
+	TempValue0 /= 3
+	TempValue0 += 8
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	Object.FrameTimer++
+	Object.FrameTimer %= 12
+	DrawSprite(Object.Frame)
+
+	TempValue0  = Object.Frame
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+	
+	Object.Frame++
+	Object.Frame &= 3
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R4/Objects3.gif")
+
+	SpriteFrame(-56, -80, 112, 32, 143, 46)		// #0  - Water Burst frame 0
+	SpriteFrame(-56, -80, 112, 32, 143, 79)		// #1  - Water Burst frame 1
+	SpriteFrame(-56, -80, 112, 32, 143, 112)	// #2  - Water Burst frame 2
+	SpriteFrame(-56, -80, 112, 32, 143, 145)	// #3  - Water Burst frame 3
+
+	SpriteFrame(-56, 48, 112, 32, 143, 46)		// #4  - Current frame 0
+	SpriteFrame(-56, 48, 112, 32, 143, 79)		// #5  - Current frame 1
+	SpriteFrame(-56, 48, 112, 32, 143, 112)		// #6  - Current frame 2
+	SpriteFrame(-56, 48, 112, 32, 143, 145)		// #7  - Current frame 3
+
+	SpriteFrame(-32, -64, 64, 32, 126, 178)		// #8  - Current frame 4
+	SpriteFrame(-32, -64, 64, 32, 61, 178)		// #9  - Current frame 5
+	SpriteFrame(-32, -64, 64, 32, 191, 178)		// #10 - Current frame 6
+	SpriteFrame(-32, -64, 64, 32, 191, 211)		// #11 - Current frame 7
+
+	SpriteFrame(-32, -32, 64, 32, 126, 178)		// #12 - Current frame 8
+	SpriteFrame(-32, -32, 64, 32, 61, 178)		// #13 - Current frame 9
+	SpriteFrame(-32, -32, 64, 32, 191, 178)		// #14 - Current frame 10
+	SpriteFrame(-32, -32, 64, 32, 191, 211)		// #15 - Current frame 11
+
+	SpriteFrame(-32, 0, 64, 32, 126, 178)		// #16 - Current frame 12
+	SpriteFrame(-32, 0, 64, 32, 61, 178)		// #17 - Current frame 13
+	SpriteFrame(-32, 0, 64, 32, 191, 178)		// #18 - Current frame 14
+	SpriteFrame(-32, 0, 64, 32, 191, 211)		// #19 - Current frame 15
+
+	SpriteFrame(-32, 32, 64, 32, 126, 178)		// #20 - Current frame 16
+	SpriteFrame(-32, 32, 64, 32, 61, 178)		// #21 - Current frame 17
+	SpriteFrame(-32, 32, 64, 32, 191, 178)		// #22 - Current frame 18
+	SpriteFrame(-32, 32, 64, 32, 191, 211)		// #23 - Current frame 19
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Water Burst]
+			Object[ArrayPos0].DrawOrder = 4
+			Object[ArrayPos0].Priority = PRIORITY_XBOUNDS
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	TempValue0  = 0
+	TempValue0 /= 3
+	TempValue0 += 8
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+
+	DrawSprite(0)
+
+	TempValue0  = 0
+	TempValue0 += 4
+	DrawSprite(TempValue0)
+	
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R4/Objects3.gif")
+
+	SpriteFrame(-56, -80, 112, 32, 143, 46)		// #0  - Water Burst frame 0
+	SpriteFrame(-56, -80, 112, 32, 143, 79)		// #1  - Water Burst frame 1
+	SpriteFrame(-56, -80, 112, 32, 143, 112)	// #2  - Water Burst frame 2
+	SpriteFrame(-56, -80, 112, 32, 143, 145)	// #3  - Water Burst frame 3
+
+	SpriteFrame(-56, 48, 112, 32, 143, 46)		// #4  - Current frame 0
+	SpriteFrame(-56, 48, 112, 32, 143, 79)		// #5  - Current frame 1
+	SpriteFrame(-56, 48, 112, 32, 143, 112)		// #6  - Current frame 2
+	SpriteFrame(-56, 48, 112, 32, 143, 145)		// #7  - Current frame 3
+
+	SpriteFrame(-32, -64, 64, 32, 126, 178)		// #8  - Current frame 4
+	SpriteFrame(-32, -64, 64, 32, 61, 178)		// #9  - Current frame 5
+	SpriteFrame(-32, -64, 64, 32, 191, 178)		// #10 - Current frame 6
+	SpriteFrame(-32, -64, 64, 32, 191, 211)		// #11 - Current frame 7
+
+	SpriteFrame(-32, -32, 64, 32, 126, 178)		// #12 - Current frame 8
+	SpriteFrame(-32, -32, 64, 32, 61, 178)		// #13 - Current frame 9
+	SpriteFrame(-32, -32, 64, 32, 191, 178)		// #14 - Current frame 10
+	SpriteFrame(-32, -32, 64, 32, 191, 211)		// #15 - Current frame 11
+
+	SpriteFrame(-32, 0, 64, 32, 126, 178)		// #16 - Current frame 12
+	SpriteFrame(-32, 0, 64, 32, 61, 178)		// #17 - Current frame 13
+	SpriteFrame(-32, 0, 64, 32, 191, 178)		// #18 - Current frame 14
+	SpriteFrame(-32, 0, 64, 32, 191, 211)		// #19 - Current frame 15
+
+	SpriteFrame(-32, 32, 64, 32, 126, 178)		// #20 - Current frame 16
+	SpriteFrame(-32, 32, 64, 32, 61, 178)		// #21 - Current frame 17
+	SpriteFrame(-32, 32, 64, 32, 191, 178)		// #22 - Current frame 18
+	SpriteFrame(-32, 32, 64, 32, 191, 211)		// #23 - Current frame 19
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

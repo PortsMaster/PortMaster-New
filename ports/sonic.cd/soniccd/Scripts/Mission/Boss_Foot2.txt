@@ -1,0 +1,365 @@
+//-----------------Sonic CD Boss Foot 2 Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+//---------Used on Mission "M099 - Eggman: Speed Up"----------//
+
+// Aliases
+#alias Object.Value0	:	Object.LegsEntity
+#alias Object.Value1	:	Object.BodyEntity
+#alias Object.Value2	:	Object.XOffSet
+#alias Object.Value4	:	Object.LegSide
+#alias Object.Value5	:	Object.YOffSet
+#alias Object.Value6	:	Object.XVelocity
+#alias Object.Value7	:	Object.YVelocity
+
+// Leg Joint Aliases
+#alias Object.XPos		:	LegJoint.XPos
+#alias Object.YPos		:	LegJoint.YPos
+#alias Object.Value0	:	LegJoint.BodyEntity
+#alias Object.Value4	:	LegJoint.LegJointSide
+
+#alias Object.Value5	:	LegJointR.YOffSet
+#alias Object.Value1	:	LegJointR.LegREntity
+
+// Legs Aliases
+#alias Object.XPos		:	Legs.XPos
+#alias Object.YPos		:	Legs.YPos
+#alias Object.Value0	:	Legs.LegJointEntity
+#alias Object.Value4	:	Legs.LegSide
+
+#alias Object.Value1	:	LegR.FootREntity
+
+// Body Aliases
+#alias Object.XPos		:	Body.XPos
+#alias Object.YPos		:	Body.YPos
+#alias Object.Value0	:	Body.FaceEntity
+#alias Object.Value1	:	Body.LegJointREntity
+
+// Face Aliases
+#alias Object.XPos		:	Face.XPos
+#alias Object.YPos		:	Face.YPos
+#alias Object.Animation	:	Face.Animation
+#alias Object.Direction	:	Face.FaceTimer
+
+// Foot Aliases
+#alias Object.XPos		:	FootR.XPos
+#alias Object.YPos		:	FootR.YPos
+
+// Player Aliases
+#alias Player.Value4	:	Player.InvincibleTimer
+
+// States
+#alias 0	:	BOSSFOOT2_SETUP
+#alias 1	:	BOSSFOOT2_STEP
+#alias 2	:	BOSSFOOT2_HANDLE_STEP
+#alias 3	:	BOSSFOOT2_STEP_OPPOSITE
+#alias 4	:	BOSSFOOT2_HANDLE_STEP_OPPOSITE
+#alias 5	:	BOSSFOOT2_LANDING
+#alias 6	:	BOSSFOOT2_DESTROYED
+
+// Eggman Animations
+#alias 1	:	EGGANI_LAUGH
+
+// Collision Sides
+#alias 0	:	CSIDE_FLOOR
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+
+// Stage SFX
+#alias 0	:	SFX_S_MECHSTEP
+
+// Function declarations
+#function BossFoot2_HandleMovement
+#function BossFoot2_StepEarthQuake
+#function BossFoot2_SaveFootPosition
+#function BossFoot2_CheckStepHeight
+#function BossFoot2_Unused
+
+function BossFoot2_HandleMovement
+	ArrayPos0 = Object.LegsEntity
+
+	Object.XPos  = Legs[ArrayPos0].XPos
+	Object.XPos -= 0xB0000
+	Object.XPos += Object.XVelocity
+
+	Object.YPos  = Legs[ArrayPos0].YPos
+	Object.YPos += 0xE0000
+	Object.YPos += Object.YVelocity
+end function
+
+
+function BossFoot2_StepEarthQuake
+	SetBit(Object.LegSide, 4, 1)
+
+	ArrayPos0 = Object.LegsEntity
+	SetBit(Legs[ArrayPos0].LegSide, 4, 1)
+
+	ArrayPos1 = Legs[ArrayPos0].LegJointEntity
+	SetBit(LegJoint[ArrayPos1].LegJointSide, 4, 1)
+
+	Screen.ShakeY = 4
+
+	ArrayPos0 = Object.BodyEntity
+	ArrayPos0++
+	if LegJointR[ArrayPos0].YOffSet > 2
+		ArrayPos0--
+		Body[ArrayPos0].YPos -= 0x18000
+
+		ArrayPos0--
+		Face[ArrayPos0].YPos -= 0x18000
+	end if
+
+	PlayStageSfx(SFX_S_MECHSTEP, false)
+end function
+
+
+function BossFoot2_SaveFootPosition
+	GetBit(TempValue0, Object.LegSide, 4)
+	if TempValue0 == false
+		CallFunction(BossFoot2_HandleMovement)
+	else
+		GetBit(TempValue0, Object.LegSide, 5)
+		if TempValue0 == true
+			TempValue6 = Object.XOffSet
+			TempValue7 = Object.YOffSet
+			if Object.State != BOSSFOOT2_STEP_OPPOSITE
+				FlipSign(TempValue6)
+				FlipSign(TempValue7)
+			end if
+
+			ArrayPos0 = Object.LegsEntity
+			Legs[ArrayPos0].XPos -= TempValue6
+			Legs[ArrayPos0].YPos += TempValue7
+
+			ArrayPos1 = Legs[ArrayPos0].LegJointEntity
+			LegJoint[ArrayPos1].XPos -= TempValue6
+			LegJoint[ArrayPos1].YPos += TempValue7
+
+			ArrayPos0 = LegJoint[ArrayPos1].BodyEntity
+			Body[ArrayPos0].XPos -= TempValue6
+			Body[ArrayPos0].YPos += TempValue7
+
+			ArrayPos1 = Body[ArrayPos0].FaceEntity
+			Face[ArrayPos1].XPos -= TempValue6
+			Face[ArrayPos1].YPos += TempValue7
+		end if
+	end if
+end function
+
+
+function BossFoot2_Unused
+	TempValue0 = Object.YPos
+	ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+	if CheckResult == true
+		GetBit(TempValue0, Object.LegSide, 5)
+		if TempValue0 == true
+			TempValue0 -= Object.YPos
+
+			ArrayPos0 = Object.LegsEntity
+			Legs[ArrayPos0].YPos -= TempValue0
+
+			ArrayPos1 = Legs[ArrayPos0].LegJointEntity
+			LegJoint[ArrayPos1].YPos -= TempValue0
+
+			ArrayPos0 = LegJoint[ArrayPos1].BodyEntity
+			Body[ArrayPos1].YPos -= TempValue0
+
+			ArrayPos1 = Body[ArrayPos0].FaceEntity
+			Face[ArrayPos1].YPos -= TempValue0
+		end if
+	end if
+end function
+
+// Probably made to be make sure the boss doesn't glitch with the extended walking area
+function BossFoot2_CheckStepHeight
+	CheckEqual(Object.iYPos, 436)
+	TempValue0   = CheckResult
+	CheckGreater(Object.iYPos, 436)
+	CheckResult |= TempValue0
+	if CheckResult == true
+		Object.iYPos = 436
+		ArrayPos0 = Object.LegsEntity
+		Object.YVelocity  = Object.YPos
+		Object.YVelocity -= Legs[ArrayPos0].YPos
+		Object.YVelocity -= 0xE0000
+	end if
+end function
+
+
+sub ObjectMain
+	switch Object.State
+	case BOSSFOOT2_SETUP
+		TempValue0  = 0x4000
+		TempValue0 *= Object.PropertyValue	// Set off
+		TempValue0 /= 10
+
+		Object.XOffSet   = TempValue0
+		Object.YOffSet   = TempValue0
+		Object.YOffSet <<= 1
+
+		Object.XVelocity = -0x80000
+		Object.YVelocity =  0x100000
+
+		SetBit(Object.LegSide, 0, 1)
+		CallFunction(BossFoot2_HandleMovement)
+		Object.State=BOSSFOOT2_HANDLE_STEP
+		break
+
+	case BOSSFOOT2_STEP
+		Object.XVelocity -= Object.XOffSet
+		Object.YVelocity += Object.YOffSet
+
+		TempValue1 = true
+		GetBit(TempValue0, Object.LegSide, 4)
+		CheckResult = TempValue0
+		GetBit(TempValue0, Object.LegSide, 7)
+		CheckResult &= TempValue0
+
+		if CheckResult == true
+
+			if Object.YVelocity >= 0xC0000
+				SetBit(Object.LegSide, 0, 1)
+				Object.State = BOSSFOOT2_HANDLE_STEP
+				TempValue1 = false
+			end if
+
+		else
+
+			if Object.YVelocity >= 0x100000
+				SetBit(Object.LegSide, 0, 1)
+				Object.State = BOSSFOOT2_HANDLE_STEP
+				TempValue1 = false
+			end if
+
+		end if
+
+		if TempValue1 == true
+			CallFunction(BossFoot2_SaveFootPosition)
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+			TempValue2  = CheckResult
+			CallFunction(BossFoot2_CheckStepHeight)
+			TempValue2 |= CheckResult
+			if TempValue2 == true
+				CallFunction(BossFoot2_StepEarthQuake)
+			end if
+		end if
+		break
+
+	case BOSSFOOT2_HANDLE_STEP
+		GetBit(TempValue0, Object.LegSide, 4)
+		if TempValue0 == false
+			CallFunction(BossFoot2_HandleMovement)
+
+			ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+			TempValue2  = CheckResult
+			CallFunction(BossFoot2_CheckStepHeight)
+			TempValue2 |= CheckResult
+			if TempValue2 == true
+				CallFunction(BossFoot2_StepEarthQuake)
+			end if
+		end if
+		break
+
+	case BOSSFOOT2_STEP_OPPOSITE
+		Object.XVelocity += Object.XOffSet
+		Object.YVelocity -= Object.YOffSet
+
+		if Object.YVelocity <= 0
+			Object.XVelocity = 0
+			Object.YVelocity = 0
+			SetBit(Object.LegSide, 0, 1)
+			Object.State = BOSSFOOT2_HANDLE_STEP_OPPOSITE
+		end if
+		CallFunction(BossFoot2_SaveFootPosition)
+		break
+
+	case BOSSFOOT2_HANDLE_STEP_OPPOSITE
+		CallFunction(BossFoot2_HandleMovement)
+		break
+
+	case BOSSFOOT2_LANDING
+		ArrayPos0 = Object.BodyEntity
+		ArrayPos1 = Body[ArrayPos0].LegJointREntity
+
+		ArrayPos0 = LegJointR[ArrayPos1].LegREntity
+		ArrayPos1 = LegR[ArrayPos0].FootREntity
+
+		Object.XPos  = FootR[ArrayPos1].XPos
+		Object.XPos -= 0xA0000
+		Object.YPos  = FootR[ArrayPos1].YPos
+		break
+	case BOSSFOOT2_DESTROYED
+		GetBit(TempValue0, Object.LegSide, 4)
+		if TempValue0 == false
+			Object.XOffSet -= 0x660
+		else
+			Object.XOffSet += 0x660
+		end if
+		Object.YOffSet += 0x1660
+		
+		Object.XPos += Object.XOffSet
+		Object.YPos += Object.YOffSet
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+			Object.Priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State < BOSSFOOT2_DESTROYED
+		if Player.InvincibleTimer == 0
+			PlayerObjectCollision(C_TOUCH, -28, -20, 26, 20)
+			if CheckResult == true
+
+				ArrayPos0 = Object.LegsEntity
+				ArrayPos1 = Legs[ArrayPos0].LegJointEntity
+				ArrayPos0 = LegJoint[ArrayPos1].BodyEntity
+				ArrayPos1 = Body[ArrayPos0].FaceEntity
+
+				Face[ArrayPos1].Animation = EGGANI_LAUGH
+				Face[ArrayPos1].FaceTimer = 180
+				
+				Player.State = Player_State_GotHit
+				if Player.XPos > Object.XPos
+					Player.Speed =  0x20000
+				else
+					Player.Speed = -0x20000
+				end if
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+
+	SpriteFrame(-32, -20, 58, 40, 1, 66)	// #0 - EGG-HVC-001 Foot
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-32, -20, 58, 40, 1, 66)	// #0 - EGG-HVC-001 Foot
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

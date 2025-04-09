@@ -1,0 +1,394 @@
+//----------------Sonic CD Death Event Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1			:	Object.Text1Pos
+#alias Object.Value2			:	Object.Text2Pos
+
+#alias Object.Value3			:	Object.Timer
+#alias Object.Value5			:	Object.StagePosP
+#alias Object.Value6			:	Object.TimeOver
+
+// HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	DEATHEVENT_GAMEOVER
+#alias 1	:	DEATHEVENT_TIMEOVER
+#alias 2	:	DEATHEVENT_FADEOUT
+#alias 3	:	DEATHEVENT_TIMEATTACK
+#alias 4	:	DEATHEVENT_HOLDOVERRESTART
+#alias 5	:	DEATHEVENT_FADEOUTRESTART
+
+// Player Aliases
+#alias 0	:	PLAYER_SONIC_A
+#alias 1	:	PLAYER_TAILS_A
+
+// Game Mode Aliases
+#alias 1	:	MODE_SAVEGAME
+
+// Callback & Engine States
+#alias 8	:	ENGINE_WAIT
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+#alias 1	:	TIME_PAST
+#alias 2	:	TIME_GOOD_FUTURE
+#alias 3	:	TIME_BAD_FUTURE
+
+// Presentation Stages
+#alias 0	:	STAGE_P_TITLE
+#alias 2	:	STAGE_P_TATTACK
+
+
+sub ObjectMain
+	switch Object.State
+	case DEATHEVENT_GAMEOVER
+#platform: Use_Origins
+		 // Origins handles the time over of Classic Mode through here
+		if game.playMode == BOOT_PLAYMODE_CLASSIC
+			CheckEqual(Object.TimeOver, false)
+			TempValue0  = CheckResult
+			CheckEqual(Stage.Minutes, 9)
+			TempValue0 &= CheckResult
+			CheckEqual(Stage.Seconds, 59)
+			TempValue0 &= CheckResult
+			CheckEqual(Stage.MilliSeconds, 99)
+			TempValue0 &= CheckResult
+			
+			TempValue0 |= game.timeOver
+			
+			if TempValue0 != false
+				Object.TimeOver = true
+			end if
+		end if
+#endplatform
+		// [Fallthrough]
+	case DEATHEVENT_TIMEOVER
+
+#platform: Use_Origins
+		Object.TimeOver |= Object.State
+		
+		// In Boss Rush, you can't Game Over (thankfully..?)
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			Object.Type = TypeName[Blank Object]
+		end if
+#endplatform
+
+		TempValue0  = Screen.CenterX
+		TempValue0 -= 40
+		if Object.Text1Pos < TempValue0
+			Object.Text1Pos += 16
+			if Object.Text1Pos > TempValue0
+				Object.Text1Pos = TempValue0
+			end if
+		end if
+		
+		TempValue0 += 80
+		if Object.Text2Pos > TempValue0
+			Object.Text2Pos -= 16
+			if Object.Text2Pos < TempValue0
+				Object.Text2Pos = TempValue0
+			end if
+		end if
+		
+		if Object.Timer < 288
+			Object.Timer += 4
+		else
+
+#platform: Use_Origins
+			if Object.TimeOver == true
+				if LampPost.Check > 0
+					Rec_Milliseconds = 99
+					Rec_Seconds		 = 59
+					Rec_Minutes		 = 9
+					game.timeOver	 = true
+				else
+					Rec_Milliseconds = 0
+					Rec_Seconds		 = 0
+					Rec_Minutes		 = 0
+				end if
+			end if
+#endplatform
+
+			if Object.State == DEATHEVENT_GAMEOVER
+				Stage.ActiveList	  = PRESENTATION_STAGE
+				Stage.ListPos		  = STAGE_P_TITLE
+				LampPost.Check		  = 0
+
+				Transporter_Destroyed = false
+				MetalSonic_Destroyed  = false
+				
+				if Options.GameMode == MODE_SAVEGAME
+					ArrayPos1   = Options.SaveSlot
+					ArrayPos1 <<= 3
+					ArrayPos1++
+					if SaveRAM[ArrayPos1] < 3
+						SaveRAM[ArrayPos1] = 3
+					end if
+					
+					WriteSaveRAM()
+				end if
+			end if
+
+#platform: Use_Origins
+			if Object.State == DEATHEVENT_GAMEOVER
+				game.callbackParam0 = game.timeOver // Tell HE2 that the time over state
+				EngineCallback(NOTIFY_TIME_OVER)
+			end if
+			
+			if Object.State == DEATHEVENT_TIMEOVER
+				Player.deadResetRings = true
+			end if
+#endplatform
+
+#platform: Use_Standalone
+			if Object.State == DEATHEVENT_TIMEOVER
+				Rec_Milliseconds	= 0
+				Rec_Seconds			= 0
+				Rec_Minutes			= 0
+			end if
+#endplatform
+			LoadStage()
+		end if
+		
+		if Object.Timer > 0
+			Music.Volume -= 2
+			SetScreenFade(0, 0, 0, Object.Timer)
+		else
+			// Looking at index 1? What's that for?
+			
+			if KeyPress[1].ButtonA == true
+				Object.Timer = 0
+			end if
+			
+			if KeyPress[1].ButtonB == true
+				Object.Timer = 0
+			end if
+			
+			if KeyPress[1].ButtonC == true
+				Object.Timer = 0
+			end if
+		end if
+		break
+		
+	case DEATHEVENT_FADEOUT
+#platform: Use_Origins
+		CheckNotEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+		TempValue0   = CheckResult
+		// Check if the player is replaying the stage from My Data & Rankings
+		CheckNotEqual(game.oneStageFlag, false)
+		CheckResult &= TempValue0
+		
+		if CheckResult != false
+			LampPost.Check		= 0
+			Object.StagePosP	= Stage.ListPos
+
+			game.callbackResult = -1				// Reset any callback result
+			game.callbackParam0 =  0				// 0 - Normal Retry, anything else - Show current and best time
+			game.callbackParam1 =  Object.StagePosP	// Get current stage
+			game.callbackParam2 =  0				// Unknown
+			EngineCallback(NOTIFY_STAGE_RETRY)		// This will change callbackResult's value
+			
+			Object.State = DEATHEVENT_HOLDOVERRESTART
+		else
+			if Object.Timer < 288
+				Music.Volume -= 2
+				Object.Timer += 4
+			else
+				Object.StagePosP = Stage.ListPos
+				
+				switch HUD.CurrentTimePeriod
+				case TIME_PRESENT
+					break
+					
+				case TIME_PAST
+					Object.StagePosP--
+					break
+					
+				case TIME_GOOD_FUTURE
+					Object.StagePosP -= 2
+					break
+					
+				case TIME_BAD_FUTURE
+					Object.StagePosP -= 3
+					break
+					
+				end switch
+				
+				if game.playMode != BOOT_PLAYMODE_MISSION
+					LoadStage()
+				else
+					Stage.ListPos = Object.StagePosP
+				end if
+			end if
+			
+			SetScreenFade(0, 0, 0, Object.Timer)
+		end if
+		
+		Player.deadResetRings = true
+#endplatform
+
+#platform: Use_Standalone
+		if Object.Timer < 288
+			Music.Volume -= 2
+			Object.Timer += 4
+		else
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, Object.Timer)
+#endplatform
+		break
+		
+	case DEATHEVENT_TIMEATTACK
+		if Object.Timer < 288
+			Music.Volume -= 2
+			Object.Timer += 4
+		else
+			TimeAttack.Result	= 0
+			LampPost.Check		= 0
+			Stage.ActiveList	= PRESENTATION_STAGE
+			Stage.ListPos		= STAGE_P_TATTACK
+			LoadStage()
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+
+#platform: Use_Origins
+		game.callbackParam0 = StageStatsUsabilityParam1	// Enemies destroyed by any means
+		game.callbackParam1 = StageStatsUsabilityParam2	// Enemies destroyed by rolling
+		game.callbackParam2 = 0
+		EngineCallback(NOTIFY_STATS_ENEMY)
+		
+		game.callbackParam0 = StageStatsUsabilityParam3	// Get Lamp post check
+		EngineCallback(NOTIFY_STATS_PARAM_1)
+		
+		game.callbackParam0 = StageStatsUsabilityParam4	// Get player state?, Lamp Post related
+		EngineCallback(NOTIFY_STATS_CHARA_ACTION)
+		
+		StageStatsUsabilityParam1 = 0
+		StageStatsUsabilityParam2 = 0
+		StageStatsUsabilityParam3 = 0
+		StageStatsUsabilityParam4 = 0
+		StatsUsabilityParam1 = 0
+		StatsUsabilityParam2 = 0
+		StatsUsabilityParam3 = 0
+		StatsUsabilityParam4 = 0
+#endplatform
+		break
+		
+#platform: Use_Origins
+	case DEATHEVENT_HOLDOVERRESTART
+		if game.callbackResult >= 0
+			Object.Timer = 0
+			Object.State++
+		end if
+		break
+		
+	case DEATHEVENT_FADEOUTRESTART
+		if Object.Timer < 288
+			Music.Volume -= 2
+			Object.Timer += 4
+		else
+			if game.callbackResult == false
+				Engine.State = ENGINE_WAIT
+			else
+				LoadStage()
+			end if
+		end if
+		
+		SetScreenFade(0, 0, 0, Object.Timer)
+		break
+		
+#endplatform
+	end switch
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case DEATHEVENT_GAMEOVER
+#platform: Use_Origins
+		// In Mirror Mode, draw the sprites in reverse so that it'll look correct when mirrored
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			Object.Direction = FACING_LEFT
+			DrawSpriteScreenFX(2, FX_FLIP, Object.Text1Pos, 96)
+			DrawSpriteScreenFX(0, FX_FLIP, Object.Text2Pos, 96)
+		else
+			DrawSpriteScreenXY(0, Object.Text1Pos, 96)
+			DrawSpriteScreenXY(2, Object.Text2Pos, 96)
+		end if
+#endplatform
+
+#platform: Use_Standalone
+		DrawSpriteScreenXY(0, Object.Text1Pos, 96)
+		DrawSpriteScreenXY(2, Object.Text2Pos, 96)
+#endplatform
+		break
+		
+	case DEATHEVENT_TIMEOVER
+#platform: Use_Origins
+		// Mirror Mode's gonna flip everything, so let's flip ourselves first!
+		if game.playMode == BOOT_PLAYMODE_MIRRORING
+			Object.Direction = FACING_LEFT
+			DrawSpriteScreenFX(2, FX_FLIP, Object.Text1Pos, 96)
+			DrawSpriteScreenFX(1, FX_FLIP, Object.Text2Pos, 96)
+		else
+			DrawSpriteScreenXY(1, Object.Text1Pos, 96)
+			DrawSpriteScreenXY(2, Object.Text2Pos, 96)
+		end if
+#endplatform
+
+#platform: Use_Standalone
+		DrawSpriteScreenXY(1, Object.Text1Pos, 96)
+		DrawSpriteScreenXY(2, Object.Text2Pos, 96)
+#endplatform
+		break
+		
+	end switch
+end sub
+
+
+sub ObjectStartup
+	if Stage.PlayerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Global/Display.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A
+		LoadSpriteSheet("Global/Display_t.gif")
+	end if
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("Global/Display_k.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("Global/Display_a.gif")
+	end if
+#endplatform
+	
+	// 0 - "Game"
+	SpriteFrame(-32, 0, 64, 16, 0, 189)
+	
+	// 1 - "Time"
+	SpriteFrame(-28, 0, 56, 16, 65, 189)
+	
+	// 2 - "Over"
+	SpriteFrame(-32, 0, 64, 16, 122, 189)
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

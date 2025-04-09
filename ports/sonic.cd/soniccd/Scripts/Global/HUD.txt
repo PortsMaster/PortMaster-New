@@ -1,0 +1,564 @@
+//-------------------Sonic CD HUD Script----------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value3 : Object.DrawFunction
+#alias Object.Value4 : Object.FlashTimer
+#alias Object.Value5 : Object.PrevTimePeriod
+#alias Object.Value6 : Object.TimeOver
+
+#alias Object.PropertyValue	: Object.CurrentTimePeriod
+
+// Player Aliases
+#alias Player.Value0 : Player.Rings
+
+#alias 0 : PLAYER_SONIC_A
+#alias 1 : PLAYER_TAILS_A
+
+// Warp Destination
+#alias 1 : WARPDEST_PAST
+#alias 2 : WARPDEST_FUTURE
+
+// Device Type
+#alias 0 : RETRO_STANDARD
+
+// Function declarations
+#function HUD_DrawStandard
+#function HUD_DrawMobile
+
+
+function HUD_DrawStandard
+#platform: Use_Origins
+	TempValue6 = game.coinMode
+	
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		// In Missions, don't draw the main HUD here
+		// Instead, signal to the HE2 part of the engine to draw it from there
+		
+		if game.missionEnd == false
+			game.hudEnable = HUDENABLE_ON
+		end if
+		
+		// These pair of temps aren't really used, at least with what's set here
+		TempValue1 = 69
+		TempValue5 = 212
+		
+		// In Mission mode, this script is used to monitor Time Period changes
+		// -> Nothing's still drawn here, though
+		TempValue6 = true
+	else
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			// In Boss Rush, have the Engine draw the HUD rather than here from script
+			game.hudEnable = HUDENABLE_ON
+			
+			// Similarly, these pair of values aren't exactly used here, either
+			TempValue1 = 69
+			TempValue5 = 212
+			
+			// In Boss Rush, we use lives rather than Coins
+			TempValue6 = false
+		else
+			if game.coinMode != false
+				game.hudEnable = HUDENABLE_ON
+			end if
+			
+			// First, draw the Score/Time/Rings text
+			DrawSpriteScreenXY(10, 17, 13)
+
+			// Record the current time
+			TempValue2 = Stage.Minutes
+			TempValue3 = Stage.Seconds
+			TempValue4 = Stage.MilliSeconds
+			
+			// Check if the timer's minutes are passing 9
+			CheckGreater(TempValue2, 9)
+			
+			TempValue5 = CheckResult
+			
+			// Or check to see if the Time Over override is active
+			CheckNotEqual(Object.TimeOver, false)
+			
+			// Combine the previous two results into one
+			CheckResult |= TempValue5
+			
+			if CheckResult != false		// If we exceeded the 10 minutes, display 9'59'99
+				TempValue2 = 9
+				TempValue3 = 59
+				TempValue4 = 99
+			end if
+			
+			// Start flashing Time at minute 9
+			if TempValue2 == 9
+				if Object.FlashTimer > 7
+					DrawSpriteScreenXY(11, 17, 29)
+				end if
+			end if
+#endplatform
+
+#platform: Use_Standalone
+			// First, draw the Score/Time/Rings text
+			DrawSpriteScreenXY(10, 17, 13)
+
+			// Start flashing Time at minute 9
+			if Stage.Minutes == 9
+				if Object.FlashTimer > 7
+					DrawSpriteScreenXY(11, 17, 29)
+				end if
+			end if
+#endplatform
+			
+			// Flash the Rings text if the player doesn't have rings
+			if Player.Rings == 0
+				if Object.FlashTimer > 7
+					DrawSpriteScreenXY(12, 17, 45)
+				end if
+			end if
+			
+			// Draw the timer's tick marks
+			DrawSpriteScreenXY(13, 67, 29)
+			
+			// Now, draw all the numbers
+			DrawNumbers(0, 104, 13, Player.Score, 6, 8, false)	// Score
+
+#platform: Use_Standalone
+			DrawNumbers(0, 104, 29, Stage.MilliSeconds, 2, 8, true) // Milliseconds
+			DrawNumbers(0, 80, 29, Stage.Seconds, 2, 8, 1)			// Seconds
+			DrawNumbers(0, 56, 29, Stage.Minutes, 1, 8, 1)			// Minutes
+#endplatform
+
+#platform: Use_Origins
+			DrawNumbers(0, 104, 29, TempValue4, 2, 8, true)		// Milliseconds
+			DrawNumbers(0, 80, 29, TempValue3, 2, 8, true)		// Seconds
+			DrawNumbers(0, 56, 29, TempValue2, 1, 8, true)		// Minutes
+#endplatform
+
+			DrawNumbers(0, 80, 45, Player.Rings, 3, 8, false)	// Rings
+			
+			if Stage.DebugMode == true // In Debug Mode, draw the position of the Player
+				// Get the truncated X Position of the Player
+				TempValue0  = Player.XPos
+				TempValue0 >>= 16
+				
+				// Set screen XPos for this value
+				TempValue1  = Screen.XSize
+				TempValue1 -= 24
+				
+				// Draw the X Position numbers
+				DrawNumbers(0, TempValue1, 13, TempValue0, 5, 8, true)
+				
+				// Get the truncated Y Position of the Player
+				TempValue0   = Player.YPos
+				TempValue0 >>= 16
+				
+				if TempValue0 < 0
+					// YPos is always drawn as positive
+					FlipSign(TempValue0)
+				end if
+				
+				// Draw the Y Position
+				DrawNumbers(0, TempValue1, 29, TempValue0, 5, 8, true)
+
+				TempValue1 -= 42
+				// Draw the X/Y icons
+				DrawSpriteScreenXY(14, TempValue1, 15)
+				DrawSpriteScreenXY(21, TempValue1, 31)
+			end if
+#platform: Use_Origins
+		end if
+	end if
+	
+	if TempValue6 == false // Using Lives
+#endplatform
+		// Get the current Time Period, then add it's equivalent sprite id
+		TempValue0  = Object.CurrentTimePeriod
+		TempValue0 += 17
+		// Now, draw the corresponding life icon for the time period
+		DrawSpriteScreenXY(TempValue0, 16, 212)
+		// Draw the X/times icon
+		DrawSpriteScreenXY(14, 32, 220)
+		
+		// Only draw as many digits as the Lives has
+		if Player.Lives < 10
+			DrawNumbers(0, 40, 217, Player.Lives, 1, 8, true)
+			TempValue1 = 52
+		else
+			DrawNumbers(0, 48, 217, Player.Lives, 2, 8, true)
+			TempValue1 = 60
+		end if
+		TempValue5 = 214
+#platform: Use_Origins
+	else // Using Coins
+		// This TempValue0 isn't really used...
+		TempValue0 = Object.CurrentTimePeriod
+		// See if the Time Period's changed
+		if Object.PrevTimePeriod != Object.CurrentTimePeriod
+			Object.PrevTimePeriod = Object.CurrentTimePeriod
+			
+			game.callbackParam0 = Object.CurrentTimePeriod	// Signal the new period over to the engine
+			EngineCallback(NOTIFY_FUTURE_PAST)
+		end if
+		
+		// In Missions, Coins shouldn't be drawn here
+		if game.playMode != BOOT_PLAYMODE_MISSION
+			// Get the current Time Period
+			TempValue0 = Object.CurrentTimePeriod
+			
+			// And bump it up by 22 to match the Coins Sprite Frame IDs
+			TempValue0 += 22
+			
+			// Draw the Coins icon
+			DrawSpriteScreenXY(TempValue0, 16, 212)
+			
+			// Draw the two halves of the "COINS" text
+			DrawSpriteScreenXY(26, 33, 213)
+			DrawSpriteScreenXY(27, 51, 213)
+			
+			// X
+			DrawSpriteScreenXY(28, 36, 222)
+			
+			// And then, the actual Coin count
+			DrawNumbers(29, 59, 220, game.coinCount, 3, 8, false)
+		end if
+		
+		TempValue1 = 69
+		TempValue5 = 212
+	end if
+#endplatform
+	
+	switch Warp.Destination
+	// Draw the past sign, flicker it while trying to warp
+	case WARPDEST_PAST
+		if Warp.Timer < 100
+			DrawSpriteScreenXY(15, TempValue1, TempValue5)
+		else
+			TempValue0  = Warp.Timer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				DrawSpriteScreenXY(15, TempValue1, TempValue5)
+			end if
+		end if
+		break
+		
+	case WARPDEST_FUTURE
+	// Draw the future sign, flicker it while trying to warp
+		if Warp.Timer < 100
+			DrawSpriteScreenXY(16, TempValue1, TempValue5)
+		else
+			TempValue0  = Warp.Timer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				DrawSpriteScreenXY(16, TempValue1, TempValue5)
+			end if
+		end if
+		break
+	end switch
+end function
+
+
+function HUD_DrawMobile
+	// Aside from being inside a function, this is the same code from the original mobile release
+	
+	// Draw the Score, Time, Rings text
+	DrawSpriteScreenXY(10, 17, 9)
+	
+	// Start flashing Time at minute 9
+	if Stage.Minutes == 9
+		if Object.FlashTimer > 7
+			DrawSpriteScreenXY(11, 17, 25)
+		end if
+	end if
+	// Flash the Rings text at 0 rings
+	if Player.Rings == 0
+		if Object.FlashTimer > 7
+			DrawSpriteScreenXY(12, 17, 41)
+		end if
+	end if
+	
+	// Draw the timer's tick marks
+	DrawSpriteScreenXY(13, 67, 25)
+	
+	// Now, draw all the numbers
+	DrawNumbers(0, 104, 9, Player.Score, 6, 8, false)
+	
+	DrawNumbers(0, 104, 25, Stage.MilliSeconds, 2, 8, true) // Milliseconds
+	DrawNumbers(0, 80, 25, Stage.Seconds, 2, 8, true)		// Seconds
+	DrawNumbers(0, 56, 25, Stage.Minutes, 1, 8, true)		// Minutes
+
+	DrawNumbers(0, 80, 41, Player.Rings, 3, 8, false)
+	
+	// Debug Mode coordinates drawing
+	if Stage.DebugMode == true
+		// Get the truncated X Position of the Player
+		TempValue0   = Player.XPos
+		TempValue0 >>= 16
+
+		// Set screen XPos for this value
+		TempValue1  = Screen.XSize
+		TempValue1 -= 16
+		
+		// Draw the X Position numbers
+		DrawNumbers(0, TempValue1, 25, TempValue0, 5, 8, true)
+		
+		// Get the truncated Y Position of the Player
+		TempValue0   = Player.YPos
+		TempValue0 >>= 16
+		
+		if TempValue0 < 0
+			// YPos is always drawn as positive
+			FlipSign(TempValue0)
+			
+		end if
+		
+		// Draw the Y Position
+		DrawNumbers(0, TempValue1, 41, TempValue0, 5, 8, true)
+
+		TempValue1 -= 42
+		
+		// Draw the X/Y icons
+		DrawSpriteScreenXY(14, TempValue1, 27)
+		DrawSpriteScreenXY(21, TempValue1, 43)
+	end if
+	
+	// Lives Counter
+	
+	// Get the X Position to draw the life icon at
+	TempValue1  = Screen.XSize
+	TempValue1 -= 48
+	// Get the current Time Period, then add it's equivalent sprite id
+	TempValue0  = Object.CurrentTimePeriod
+	TempValue0 += 17
+	// Now, draw the corresponding life icon for the time period
+	DrawSpriteScreenXY(TempValue0, TempValue1, 8)
+
+	TempValue1 += 16
+	// Draw the X/times icon
+	DrawSpriteScreenXY(14, TempValue1, 16)
+	
+	// Only draw as many digits as the Lives has
+	if Player.Lives < 10
+		TempValue1 += 8
+		DrawNumbers(0, TempValue1, 13, Player.Lives, 1, 8, true)
+	else
+		TempValue1 += 16
+		DrawNumbers(0, TempValue1, 13, Player.Lives, 2, 8, true)
+		TempValue1 -= 8
+	end if
+	
+	switch Warp.Destination
+	// Draw the past sign, flicker it while trying to warp
+	case WARPDEST_PAST
+		TempValue1 -= 79
+		if Warp.Timer < 100
+			DrawSpriteScreenXY(15, TempValue1, 8)
+		else
+			TempValue0  = Warp.Timer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				DrawSpriteScreenXY(15, TempValue1, 8)
+			end if
+		end if
+		break
+	// Draw the future sign, flicker it while trying to warp
+	case WARPDEST_FUTURE
+		TempValue1 -= 79
+		if Warp.Timer < 100
+			DrawSpriteScreenXY(16, TempValue1, 8)
+		else
+			TempValue0  = Warp.Timer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				DrawSpriteScreenXY(16, TempValue1, 8)
+			end if
+		end if
+		break
+	end switch
+	
+end function
+
+
+sub ObjectDraw
+	if Player.Rings == 0
+		Object.FlashTimer++
+		
+		if Object.FlashTimer == 16
+			Object.FlashTimer = 0
+		end if
+	else
+		if Stage.Minutes == 9
+			Object.FlashTimer++
+			
+			if Object.FlashTimer == 16
+				Object.FlashTimer = 0
+			end if
+		end if
+	end if
+
+#platform: Use_Origins
+	if game.timeOver != false
+		Object.TimeOver = true
+	end if
+#endplatform
+	
+	// Call the corresponding drawing function for the HUD
+	CallFunction(Object.DrawFunction)
+end sub
+
+
+sub ObjectStartup
+	// Standard Platforms and Mobile Platforms have different drawing routines
+	// In Origins, only the Standard version was updated and the Mobile version was left
+	if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+		LoadSpriteSheet("Global/Display.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_TAILS_A // PLAYER_TAILS in origins
+		LoadSpriteSheet("Global/Display_t.gif")
+	end if
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("Global/Display_K.gif")
+	end if
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("Global/Display_A.gif")
+	end if
+
+	if Engine.DeviceType == RETRO_STANDARD
+		Object[24].DrawFunction = HUD_DrawStandard
+	else
+		Object[24].DrawFunction = HUD_DrawMobile
+	end if
+#endplatform
+
+	// Has to be this way to ensure steam 2011 cd will still work
+#platform: Use_Standalone
+	#platform: Standard
+		Object[24].DrawFunction = HUD_DrawStandard
+	#endplatform
+#endplatform
+	
+#platform: Use_Standalone
+	#platform: Mobile
+		Object[24].DrawFunction = HUD_DrawMobile
+	#endplatform
+#endplatform
+
+	// 0-9 - Number Digits
+	SpriteFrame(0, 0, 8, 11, 1, 50)
+	SpriteFrame(0, 0, 8, 11, 10, 50)
+	SpriteFrame(0, 0, 8, 11, 19, 50)
+	SpriteFrame(0, 0, 8, 11, 28, 50)
+	SpriteFrame(0, 0, 8, 11, 1, 62)
+	SpriteFrame(0, 0, 8, 11, 10, 62)
+	SpriteFrame(0, 0, 8, 11, 19, 62)
+	SpriteFrame(0, 0, 8, 11, 28, 62)
+	SpriteFrame(0, 0, 8, 11, 1, 74)
+	SpriteFrame(0, 0, 8, 11, 10, 74)
+	
+	// 10 - Score, Time, Rings text
+	SpriteFrame(0, 0, 39, 43, 1, 1)
+	
+	// 11 - Red Time text
+	SpriteFrame(0, 0, 31, 11, 1, 119)
+	
+	// 12 - Red Rings text
+	SpriteFrame(0, 0, 39, 11, 1, 131)
+	
+	// 13 - Tick marks
+	SpriteFrame(0, 0, 29, 4, 1, 45)
+	
+	// 14 - Yellow X (used for debug & lives count)
+	SpriteFrame(0, 0, 8, 8, 1, 98)
+	
+	// 15 -Past Sign
+	SpriteFrame(0, 0, 32, 16, 90, 67)
+	
+	// 16 - Future Sign
+	SpriteFrame(0, 0, 32, 16, 123, 67)
+	
+	// 17 - Present Life Icon
+	SpriteFrame(0, 0, 16, 16, 187, 189)
+	
+	// 18 - Past Life Icon
+	SpriteFrame(0, 0, 16, 16, 204, 189)
+	
+	// 19-20 - Future Life Icon (duplicated)
+	SpriteFrame(0, 0, 16, 16, 237, 223)
+	SpriteFrame(0, 0, 16, 16, 237, 223)
+	
+	// 21 - Debug Y
+	SpriteFrame(0, 0, 8, 8, 10, 98)
+
+#platform: Use_Origins
+	// 22 - Coins Icon
+	SpriteFrame(0, 0, 16, 16, 186, 108)
+	
+	// 23 - Past Coins Icon
+	SpriteFrame(0, 0, 16, 16, 1, 257)
+	
+	// 24-25 - Future Coins Icon (duplicated as well)
+	SpriteFrame(0, 0, 16, 16, 18, 257)
+	SpriteFrame(0, 0, 16, 16, 18, 257)
+	
+	// 26 - "COI"
+	SpriteFrame(0, 0, 18, 7, 203, 108)
+	
+	// 27 - "NS"
+	SpriteFrame(0, 0, 18, 7, 203, 116)
+	
+	// 28 - Small X (used for the Coins count)
+	SpriteFrame(0, 0, 6, 6, 186, 125)
+	
+	// 29-38 - Small Numbers, for the Coins counter
+	SpriteFrame(0, 0, 8, 8, 19, 98)
+	SpriteFrame(0, 0, 8, 8, 28, 98)
+	SpriteFrame(0, 0, 8, 8, 33, 119)
+	SpriteFrame(0, 0, 8, 8, 213, 1)
+	SpriteFrame(0, 0, 8, 8, 213, 10)
+	SpriteFrame(0, 0, 8, 8, 213, 19)
+	SpriteFrame(0, 0, 8, 8, 213, 28)
+	SpriteFrame(0, 0, 8, 8, 213, 37)
+	SpriteFrame(0, 0, 8, 8, 213, 46)
+	SpriteFrame(0, 0, 8, 8, 213, 55)
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // TimePeriod
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // TimePeriod
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(0, 0, 39, 43, 1, 1)
+	
+	AddEditorVariable("TimePeriod")
+	SetActiveVariable("TimePeriod")
+	AddEnumVariable("Present", 0)
+	AddEnumVariable("Past", 1)
+	AddEnumVariable("Good Future", 2)
+	AddEnumVariable("Bad Future", 3)
+end sub

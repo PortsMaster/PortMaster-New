@@ -1,0 +1,172 @@
+//-----------------Sonic CD Freeze Jet Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.TimerResetFreq
+#alias Player.Value4	:	Player.InvincibleTimer
+
+// States
+#alias 0	:	FREEZEJET_STARTUP
+#alias 1	:	FREEZEJET_SHOT_BEAM
+#alias 2	:	FREEZEJET_STOPPING_BEAM
+#alias 3	:	FREEZEJET_COOLDOWN
+
+// Warp Destination
+#alias 0	:	WARPDEST_NONE
+
+
+sub ObjectMain
+	switch Object.State
+	case FREEZEJET_STARTUP
+		if Object.Timer < 120
+			Object.Timer++
+			Object.Frame = 2
+		else
+			Object.Timer = 0
+			Object.State++
+			Object.Frame = 1
+		end if
+		break
+
+	case FREEZEJET_SHOT_BEAM
+		if Object.Timer < 160
+			TempValue0  = Object.Timer
+			TempValue0 &= 1
+			if TempValue0 == 0
+				Object.Frame++
+			end if
+			if Object.Frame > 6
+				Object.Frame = 3
+				Object.Direction++
+				Object.Direction &= FACING_LEFT
+			end if
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State++
+			Object.Frame = 7
+		end if
+		break
+
+	case FREEZEJET_STOPPING_BEAM
+		if Object.Timer < 24
+			TempValue0  = Object.Timer
+			TempValue0 &= 3
+			if TempValue0 == 0
+				Object.Frame++
+			end if
+			if Object.Frame > 12
+				Object.Frame = 7
+				Object.Direction++
+				Object.Direction &= FACING_LEFT
+			end if
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.TimerResetFreq = 7
+			Object.State++
+		end if
+		break
+
+	case FREEZEJET_COOLDOWN
+		if Object.Timer < 120
+			TempValue0  = Object.Timer
+			TempValue0 &= Object.TimerResetFreq
+			if TempValue0 == 0
+				Object.Frame++
+				Object.TimerResetFreq++
+				Object.TimerResetFreq <<= 1
+				Object.TimerResetFreq--
+			end if
+			if Object.Frame > 12
+				Object.Frame = 7
+				Object.Direction++
+				Object.Direction &= FACING_LEFT
+			end if
+			Object.Timer++
+		else
+			Object.Timer = 0
+			Object.State = FREEZEJET_SHOT_BEAM
+			Object.Frame = 1
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == FREEZEJET_SHOT_BEAM
+		PlayerObjectCollision(C_TOUCH, -16, 0, 16, 60)
+		if CheckResult == true
+			if Player.InvincibleTimer == 0
+				if Warp.Destination > WARPDEST_NONE
+					if Warp.Timer > 99
+						if Warp.Timer < 220
+							Warp.Destination = WARPDEST_NONE
+						end if
+					end if
+					Warp.Timer = 0
+				end if
+				Player.State = Player_State_Static
+
+				Player.Visible			 = false
+				Player.ObjectInteraction = false
+
+				Player.Speed	 = 0
+				Player.XVelocity = 0
+				Player.YVelocity = 0
+
+				CreateTempObject(TypeName[Ice Block], 0, Player.XPos, Player.YPos)
+				Object[TempObjectPos].DrawOrder = 4
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-32, -8, 64, 16, 1, 1)	// #0  - Freeze Jet Machine
+
+	SpriteFrame(-16, 0, 32, 36, 1, 46)	// #1  - Freeze Beam frame 0
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #2  - Freeze Beam frame 1
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #3  - Freeze Beam frame 2
+	SpriteFrame(-16, 0, 32, 60, 1, 22)	// #4  - Freeze Beam frame 3
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #5  - Freeze Beam frame 4
+	SpriteFrame(-16, 4, 32, 64, 1, 18)	// #6  - Freeze Beam frame 5
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #7  - Freeze Beam frame 6
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #8  - Freeze Beam frame 7
+	SpriteFrame(-16, 0, 32, 60, 1, 22)	// #9  - Freeze Beam frame 8
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #10 - Freeze Beam frame 9
+	SpriteFrame(-16, 0, 0, 0, 1, 46)	// #11 - Freeze Beam frame 10
+	SpriteFrame(-16, 4, 32, 64, 1, 18)	// #12 - Freeze Beam frame 11
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-32, -8, 64, 16, 1, 1)	// #0  - Freeze Jet Machine
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

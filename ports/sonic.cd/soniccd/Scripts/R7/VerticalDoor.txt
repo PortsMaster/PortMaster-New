@@ -1,0 +1,208 @@
+//---------------Sonic CD Vertical Door Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			: Object.DrawPosY
+
+// HUD Alias
+#alias Object[24].PropertyValue	: HUD.CurrentTimePeriod
+
+// States
+#alias 0 : VERTICALDOOR_CLOSED
+#alias 1 : VERTICALDOOR_START_OPENING
+#alias 2 : VERTICALDOOR_END_CLOSING
+#alias 3 : VERTICALDOOR_END_OPENED
+#alias 4 : VERTICALDOOR_END_CLOSING_METAL
+#alias 5 : VERTICALDOOR_START_OPENED
+#alias 6 : VERTICALDOOR_END_CLOSED_SONIC
+
+// Time Periods
+#alias 2 : TIME_GOOD_FUTURE
+
+// Stage SFX
+#alias 3 : SFX_S_DOORCLOSE
+
+
+sub ObjectMain
+	switch Object.State
+	case VERTICALDOOR_START_OPENING
+		if Object.DrawPosY < 0x400000
+			Object.DrawPosY += 0x20000
+			Object.YPos -= 0x20000
+		else
+			Object.State = VERTICALDOOR_START_OPENED
+		end if
+		break
+		
+	case VERTICALDOOR_END_CLOSING
+		if Object.DrawPosY > 0x00000
+			Object.DrawPosY -= 0x20000
+			Object.YPos += 0x20000
+		else
+			Object.State = VERTICALDOOR_END_CLOSED_SONIC
+		end if
+		break
+		
+	case VERTICALDOOR_END_OPENED
+		TempValue0 = Player.CollisionRight
+		TempValue0 += 16
+		TempValue0 <<= 16
+		TempValue0 += Object.XPos
+		if Player.XPos > TempValue0
+			// The Player is past the door, meaning Sonic's won
+			
+#platform: Use_Origins
+			// There can only be one, let the game know we've killed Metal Sonic
+			// -> This doesn't really seem to do much, the NOTIFY_BOSS_END is what triggers all the fancy screens and such
+			EngineCallback(NOTIFY_KILL_BOSS)
+#endplatform
+			
+			// From here, do the standard closing routine
+			Object.State = VERTICALDOOR_END_CLOSING
+			PlayStageSfx(SFX_S_DOORCLOSE, false)
+		else
+			if Object[+2].XPos > Object.XPos
+				// If Metal Sonic is past the door
+				Object.State = VERTICALDOOR_END_CLOSING_METAL
+				PlayStageSfx(SFX_S_DOORCLOSE, false)
+			end if
+		end if
+		break
+		
+	case VERTICALDOOR_END_CLOSING_METAL
+		if Object.DrawPosY > 0x00000
+			Object.DrawPosY -= 0x20000
+			Object.YPos += 0x20000
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	switch Object.State
+	case VERTICALDOOR_CLOSED
+		// Act as a tall vertical wall
+		PlayerObjectCollision(C_BOX, -16, -32, 16, 64)
+		break
+		
+	case VERTICALDOOR_START_OPENING
+	case VERTICALDOOR_START_OPENED
+		// Acting as a comparatively shorter wall (it's still pretty tall though!)
+		PlayerObjectCollision(C_BOX, -16, -32, 16, 32)
+		break
+		
+	case VERTICALDOOR_END_CLOSING
+	case VERTICALDOOR_END_CLOSED_SONIC
+		// Acting as a *really* tall vertical wall
+		PlayerObjectCollision(C_BOX, -16, -32, 16, 128)
+		
+		// Enforce right bounds, make sure the player doesn't leave where they should be
+		TempValue0 = Player.CollisionRight
+		TempValue0 <<= 16
+		TempValue0 += Player.XPos
+		TempValue1 = Stage.XBoundary2
+		TempValue1 <<= 16
+		if TempValue0 > TempValue1
+			Player.XVelocity = 0
+			Player.Speed = 0
+			Player.XPos = TempValue1
+			TempValue0 = Player.CollisionRight
+			TempValue0 <<= 16
+			Player.XPos -= TempValue0
+		end if
+		break
+		
+	case VERTICALDOOR_END_OPENED
+		// Somewhat tall vertical wall
+		PlayerObjectCollision(C_BOX, -16, -32, 16, 32)
+		
+		// And enforce right bounds here too
+		TempValue0 = Player.CollisionRight
+		TempValue0 <<= 16
+		TempValue0 += Player.XPos
+		TempValue1 = Stage.XBoundary2
+		TempValue1 <<= 16
+		if TempValue0 > TempValue1
+			Player.XVelocity = 0
+			Player.Speed = 0
+			Player.XPos = TempValue1
+			TempValue0 = Player.CollisionRight
+			TempValue0 <<= 16
+			Player.XPos -= TempValue0
+		end if
+		break
+		
+	case VERTICALDOOR_END_CLOSING_METAL
+		// Only enforcing right bounds, no need for collision checks anymore
+		TempValue0 = Player.CollisionRight
+		TempValue0 <<= 16
+		TempValue0 += Player.XPos
+		TempValue1 = Object.XPos
+		TempValue1 -= 0x100000
+		if TempValue0 > TempValue1
+			Player.XVelocity = 0
+			Player.Speed = 0
+			Player.XPos = TempValue1
+			TempValue0 = Player.CollisionRight
+			TempValue0 <<= 16
+			Player.XPos -= TempValue0
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+
+	// Draw the extension sprite
+	TempValue0 = Object.DrawPosY
+	TempValue0 >>= 1
+	TempValue0 += Object.YPos
+	DrawSpriteXY(0, Object.XPos, TempValue0)
+
+	// Draw the base sprite
+	DrawSprite(1)
+
+end sub
+
+
+sub ObjectStartup
+
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Good future gets different sprites from other time periods
+	if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+		SpriteFrame(-16, -32, 32, 32, 117, 219)
+		SpriteFrame(-16, 0, 32, 32, 117, 219)
+	else
+		SpriteFrame(-16, -32, 32, 32, 1, 1)
+		SpriteFrame(-16, 0, 32, 32, 1, 1)
+	end if
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-16, 0, 32, 32, 1, 1) // Sticking with the normal variant here...
+	SpriteFrame(-16, -32, 32, 32, 1, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

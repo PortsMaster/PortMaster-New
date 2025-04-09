@@ -1,0 +1,247 @@
+//----------------Sonic CD Metal Sonic Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0		:	Object.Timer
+#alias Object.Value1		:	Object.BaseY // (Metal Sonic's Y position without the oscillating effect)
+// (Value2 is unused)
+#alias Object.Value3		:	Object.Speed
+#alias Object.Value4		:	Object.FrameTimer
+
+// Spike Debris Aliases
+#alias Object.iXPos			:	Debris.iXPos
+#alias Object.iYPos			:	Debris.iYPos
+#alias Object.Value0		:	Debris.XVelocity
+#alias Object.Value1		:	Debris.YVelocity
+
+// Amy Aliases
+#alias Object[-1].XPos		:	Amy.XPos
+#alias Object[-1].YPos		:	Amy.YPos
+#alias Object[-1].Direction	:	Amy.Direction
+#alias Object[-1].Frame		:	Amy.Frame
+#alias Object[-1].State		:	Amy.State
+
+// States
+#alias 0	:	METALSONIC_WAIT
+#alias 1	:	METALSONIC_APPROACH
+#alias 2	:	METALSONIC_CATCH_AMY
+#alias 3	:	METALSONIC_RISE
+#alias 4	:	METALSONIC_HOVER
+#alias 5	:	METALSONIC_FLEE
+
+// Amy States
+#alias 4	:	AMY_KIDNAP
+
+// Stage SFX
+#alias 8	:	SFX_S_CRUMBLE
+#alias 9	:	SFX_S_AMYCAPTURED
+
+
+sub ObjectMain
+	switch Object.State
+	case METALSONIC_WAIT	// Starts in this state, gets switched to METALSONIC_APPROACH by Amy
+		break
+
+	case METALSONIC_APPROACH
+		Object.XPos -= 0x30000
+		Object.Frame++
+		Object.Frame &= 1
+
+		TempValue0 = 0
+
+		ArrayPos0 = Object.EntityNo
+		ArrayPos0++
+		while TempValue0 < 3
+			if Object[ArrayPos0].Type > TypeName[Blank Object]
+				TempValue1  = Object[ArrayPos0].XPos
+				TempValue1 += 0x240000
+
+				if Object.XPos < TempValue1
+					// Destroy Spikes
+					Object[ArrayPos0].Type = TypeName[Blank Object]
+					TempValue2   = Object[ArrayPos0].PropertyValue
+					TempValue2 <<= 2
+
+					// Create Debris
+					CreateTempObject(TypeName[Spike Debris], TempValue2, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos)
+					Debris[TempObjectPos].iXPos -= 9
+					Debris[TempObjectPos].iYPos -= 9
+					Debris[TempObjectPos].XVelocity = -0x10000
+					Debris[TempObjectPos].YVelocity = -0x30000
+					TempValue2++
+
+					CreateTempObject(TypeName[Spike Debris], TempValue2, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos)
+					Debris[TempObjectPos].iXPos += 8
+					Debris[TempObjectPos].iYPos -= 9
+					Debris[TempObjectPos].XVelocity =  0x10000
+					Debris[TempObjectPos].YVelocity = -0x30000
+					TempValue2++
+
+					CreateTempObject(TypeName[Spike Debris], TempValue2, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos)
+					Debris[TempObjectPos].iXPos -= 9
+					Debris[TempObjectPos].iYPos += 8
+					Debris[TempObjectPos].XVelocity = -0x10000
+					Debris[TempObjectPos].YVelocity = -0x18000
+					TempValue2++
+
+					CreateTempObject(TypeName[Spike Debris], TempValue2, Object[ArrayPos0].XPos, Object[ArrayPos0].YPos)
+					Debris[TempObjectPos].iXPos += 8
+					Debris[TempObjectPos].iYPos += 8
+					Debris[TempObjectPos].XVelocity =  0x10000
+					Debris[TempObjectPos].YVelocity = -0x18000
+					TempValue2++
+
+
+					PlayStageSfx(SFX_S_CRUMBLE, false)
+
+#platform: Use_Haptics
+					HapticEffect(96, 0, 0, 0)
+#endplatform
+				end if
+			end if
+
+			ArrayPos0++
+			TempValue0++
+		loop
+
+		TempValue0  = Amy.XPos
+		TempValue0 += 0x200000
+		if Object.XPos < TempValue0
+			Object.State = METALSONIC_CATCH_AMY
+			Object.Frame = 2
+			Object.BaseY = Object.YPos
+			Amy.Frame = 8
+			Amy.State = AMY_KIDNAP
+			PlayStageSfx(SFX_S_AMYCAPTURED, false)
+		end if
+		break
+
+	case METALSONIC_CATCH_AMY
+		if Object.Timer > 8
+			if Player.XPos < Object.XPos
+				Object.Direction = FACING_LEFT
+			else
+				Object.Direction = FACING_RIGHT
+			end if
+		end if
+
+		Sin(Object.YPos, Object.Timer)
+		Object.YPos <<= 9
+		Object.YPos  += Object.BaseY
+
+		Object.Timer += 8
+		if Object.Timer > 607
+			Object.State = METALSONIC_RISE
+			Object.Timer = 0
+		end if
+		break
+
+	case METALSONIC_RISE
+		if Player.XPos < Object.XPos
+			Object.Direction = FACING_LEFT
+		else
+			Object.Direction = FACING_RIGHT
+		end if
+
+		if Object.Timer < 40
+			Object.Timer++
+			Object.BaseY -= 0x20000
+			Object.YPos -= 0x20000
+		else
+			Object.State = METALSONIC_HOVER
+			Object.Timer = 256
+		end if
+		break
+
+	case METALSONIC_HOVER
+		if Player.XPos < Object.XPos
+			Object.Direction = FACING_LEFT
+		else
+			Object.Direction = FACING_RIGHT
+		end if
+
+		Sin(Object.YPos, Object.Timer)
+		Object.YPos <<= 9
+		Object.YPos  += Object.BaseY
+
+		Object.Timer += 8
+		if Object.Timer > 976
+			Object.State = METALSONIC_FLEE
+			Object.Direction = FACING_RIGHT
+		end if
+		break
+
+	case METALSONIC_FLEE
+		if Object.Speed < 0x60000
+			Object.Speed += 0x2000
+		end if
+		Object.XPos += Object.Speed
+
+		if Object.OutOfBounds == true
+			// Erase Metal
+			TempValue0 = Object.EntityNo
+			ResetObjectEntity(TempValue0, TypeName[Blank Object], 0, 0, 0)
+			// Erase Amy
+			TempValue0--
+			ResetObjectEntity(TempValue0, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectDraw
+	if Object.State < METALSONIC_CATCH_AMY
+		DrawSprite(Object.Frame)
+	else
+		Amy.XPos = Object.XPos
+		Amy.YPos = Object.YPos
+		Amy.Direction = Object.Direction
+
+		TempValue0   = Object.FrameTimer
+		TempValue0 >>= 1
+		TempValue0  += 3
+		DrawSpriteFX(TempValue0, FX_FLIP, Object.XPos, Object.YPos)
+
+		Object.FrameTimer++
+		Object.FrameTimer &= 7
+		DrawSpriteFX(Object.Frame, FX_FLIP, Object.XPos, Object.YPos)
+	end if
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	// Overdrive Attack
+	SpriteFrame(-24, -16, 48, 32, 67, 68)	// #0 - Overdrive Attack Frame 0
+	SpriteFrame(-24, -16, 48, 32, 116, 68)	// #1 - Overdrive Attack Frame 1
+
+	// Metal Idle
+	SpriteFrame(-16, -24, 32, 48, 1, 108)	// #2 - Idle
+
+	// Booster
+	SpriteFrame(-24, -12, 24, 24, 214, 43)	// #3 - Booster Frame 0
+	SpriteFrame(0, 0, 2, 2, 165, 68)		// #4 - Booster Frame 1 / Cheat Sprite
+	SpriteFrame(-28, -16, 32, 32, 165, 68)	// #5 - Booster Frame 2
+	SpriteFrame(0, 0, 2, 2, 165, 68)		// #6 - Booster Frame 3 / Cheat Sprite
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-24, -16, 48, 32, 67, 68)	// #0 - Overdrive Attack Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

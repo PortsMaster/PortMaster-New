@@ -1,0 +1,229 @@
+//---------------Sonic CD Crumble Ledge 3 Script--------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.HitboxLeft
+#alias Object.Value1	:	Object.HitboxRight
+#alias Object.Value2	:	Object.Timer
+#alias Object.Value3	:	Object.Length
+#alias Object.Value4	:	Object.YVelocity
+
+// States
+#alias 0	:	CLEDGE3_IDLE
+#alias 1	:	CLEDGE3_DELAY_FROM_RIGHT
+#alias 2	:	CLEDGE3_DELAY_FROM_LEFT
+#alias 3	:	CLEDGE3_COLLAPSE_RIGHT
+#alias 4	:	CLEDGE3_COLLAPSE_LEFT
+#alias 5	:	CLEDGE3_RESTORE	// Unused
+
+#alias 6	:	CLEDGE3_DEBRIS
+
+// Stage SFX
+#alias 0	:	SFX_S_CRUMBLE
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case CLEDGE3_DELAY_FROM_RIGHT
+		if Object.Timer > 0
+			Object.Timer--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			Object.State = CLEDGE3_COLLAPSE_RIGHT
+		end if
+		break
+
+	case CLEDGE3_DELAY_FROM_LEFT
+		if Object.Timer > 0
+			Object.Timer--
+		else
+			PlayStageSfx(SFX_S_CRUMBLE, false)
+			Object.State = CLEDGE3_COLLAPSE_LEFT
+		end if
+		break
+
+	case CLEDGE3_COLLAPSE_RIGHT
+		Object.Timer++
+		if Object.Timer == 12
+			Object.Timer = 0
+			if Object.HitboxRight > Object.HitboxLeft
+				Object.Length--
+				Object.HitboxRight -= 16
+				TempValue0   = Object.HitboxRight
+				TempValue0  += 8
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+				CreateTempObject(TypeName[Crumble Ledge 3], 0, TempValue0, Object.YPos)
+				Object[TempObjectPos].State = CLEDGE3_DEBRIS
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+		break
+
+	case CLEDGE3_COLLAPSE_LEFT
+		Object.Timer++
+		if Object.Timer == 12
+
+			Object.Timer = 0
+			if Object.HitboxLeft < Object.HitboxRight
+				Object.Length--
+
+				Object.HitboxLeft += 16
+				TempValue0   = Object.HitboxLeft
+				TempValue0  -= 8
+				TempValue0 <<= 16
+				TempValue0  += Object.XPos
+
+				CreateTempObject(TypeName[Crumble Ledge 3], 0, TempValue0, Object.YPos)
+				Object[TempObjectPos].State = CLEDGE3_DEBRIS
+			else
+				ResetObjectEntity(Object.EntityNo, TypeName[Blank Object], 0, 0, 0)
+			end if
+
+		end if
+		break
+
+	case CLEDGE3_RESTORE
+		if Object.OutOfBounds == true
+			Object.State  = CLEDGE3_IDLE
+			Object.Length = Object.PropertyValue
+
+			Object.HitboxLeft   = Object.PropertyValue
+			Object.HitboxLeft <<= 3
+
+			Object.HitboxRight  = Object.HitboxLeft
+			FlipSign(Object.HitboxLeft)
+
+			Object.Priority = PRIORITY_BOUNDS
+			Object.Timer = 0
+		end if
+		break
+
+	case CLEDGE3_DEBRIS
+		Object.YVelocity += 0x4000
+		if Object.YVelocity > 0
+			Object.YPos += Object.YVelocity
+		end if
+
+		if Object.OutOfBounds == true
+			Object.Type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == CLEDGE3_IDLE
+		PlayerObjectCollision(C_PLATFORM, Object.HitboxLeft, -17, Object.HitboxRight, 16)
+		if CheckResult == true
+			Object.Timer = 1
+			Object.Priority = PRIORITY_ACTIVE
+			if Player.XPos > Object.XPos
+				Object.State = CLEDGE3_DELAY_FROM_RIGHT
+			else
+				Object.State = CLEDGE3_DELAY_FROM_LEFT
+			end if
+		end if
+	else
+		PlayerObjectCollision(C_PLATFORM, Object.HitboxLeft, -17, Object.HitboxRight, 16)
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case CLEDGE3_IDLE
+	case CLEDGE3_DELAY_FROM_RIGHT
+	case CLEDGE3_DELAY_FROM_LEFT
+	case CLEDGE3_COLLAPSE_RIGHT
+		TempValue0   = 0
+		TempValue1   = Object.HitboxLeft
+		TempValue1 <<= 16
+		TempValue1  += 0x80000
+		TempValue1  += Object.XPos
+		while TempValue0 < Object.Length
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 += 0x100000
+		loop
+		break
+
+	case CLEDGE3_COLLAPSE_LEFT
+		TempValue0   = 0
+		TempValue1   = Object.HitboxRight
+		TempValue1 <<= 16
+		TempValue1  -= 0x80000
+		TempValue1  += Object.XPos
+		while TempValue0 < Object.Length
+			DrawSpriteXY(0, TempValue1, Object.YPos)
+			TempValue0++
+			TempValue1 -= 0x100000
+		loop
+		break
+
+	case CLEDGE3_DEBRIS
+		DrawSprite(Object.Frame)
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects2.gif")
+
+	SpriteFrame(-8, -32, 16, 48, 163, 1)	// #0 - Ledge
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Crumble Ledge 3]
+			Object[ArrayPos0].Length		= Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].HitboxLeft	= Object[ArrayPos0].PropertyValue
+			Object[ArrayPos0].HitboxLeft  <<= 3
+			Object[ArrayPos0].HitboxRight	= Object[ArrayPos0].HitboxLeft
+			FlipSign(Object[ArrayPos0].HitboxLeft)
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	Object.Length		= Object.PropertyValue
+	Object.HitboxLeft   = Object.PropertyValue
+	Object.HitboxLeft <<= 3
+	Object.HitboxRight  = Object.HitboxLeft
+	FlipSign(Object.HitboxLeft)
+
+	TempValue0   = 0
+	TempValue1   = Object.HitboxLeft
+	TempValue1 <<= 16
+	TempValue1  += 0x80000
+	TempValue1  += Object.XPos
+	while TempValue0 < Object.Length
+		DrawSpriteXY(0, TempValue1, Object.YPos)
+		TempValue0++
+		TempValue1 += 0x100000
+	loop
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects2.gif")
+
+	SpriteFrame(-8, -32, 16, 48, 163, 1)	// #0 - Ledge
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end sub

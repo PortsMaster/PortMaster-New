@@ -1,0 +1,151 @@
+//---------------Sonic CD Rise Platform Script----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Raising
+#alias Object.Value1	:	Object.Timer
+#alias Object.Value2	:	Object.YPlayerFloor
+#alias Object.Value3	:	Object.RiseTimer
+#alias Object.Value4	:	Object.YVelocity
+#alias Object.Value5	:	Object.YOriginPos
+
+// States
+#alias 0	:	RISEPLATFORM_IDLE
+#alias 1	:	RISEPLATFORM_CRUMBLE
+#alias 2	:	RISEPLATFORM_RISE
+#alias 3	:	RISEPLATFORM_FLOAT
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case RISEPLATFORM_IDLE
+		Object.YPlayerFloor = 0
+		if Object.Raising == true
+			Object.State = RISEPLATFORM_CRUMBLE
+			Object.Priority  = PRIORITY_ACTIVE
+			Object.YVelocity = -0x40000
+			Object.RiseTimer = 0
+		end if
+		break
+
+	case RISEPLATFORM_CRUMBLE
+		Object.YPlayerFloor = Object.YVelocity
+		if Object.RiseTimer < 8
+			Object.RiseTimer++
+		else
+			Object.RiseTimer = 0
+			Object.State = RISEPLATFORM_RISE
+		end if
+		if Object.OutOfBounds == true
+			Object.YPos = Object.YOriginPos
+			Object.State = RISEPLATFORM_IDLE
+			Object.Timer = 0
+		end if
+		break
+
+	case RISEPLATFORM_RISE
+		if Object.YVelocity < 0
+			Object.YVelocity += 0x2000
+		else
+			Object.State = RISEPLATFORM_FLOAT
+		end if
+		Object.YPlayerFloor = Object.YVelocity
+		if Object.OutOfBounds == true
+			Object.YPos  = Object.YOriginPos
+			Object.State = RISEPLATFORM_IDLE
+			Object.Timer = 0
+		end if
+		break
+
+	case RISEPLATFORM_FLOAT
+		if Object.Raising == true
+			if Object.Timer < 16
+				Object.Timer++
+				TempValue0  = Object.Timer
+				TempValue0 &= 3
+				if TempValue0 == 3
+					Object.YPlayerFloor = 0x10000
+				else
+					Object.YPlayerFloor = 0
+				end if
+			else
+				Object.YPlayerFloor = 0
+			end if
+		else
+			if Object.Timer > 0
+				Object.Timer--
+				TempValue0  = Object.Timer
+				TempValue0 &= 3
+				if TempValue0 == 3
+					Object.YPlayerFloor = -0x10000
+				else
+					Object.YPlayerFloor = 0
+				end if
+			else
+				Object.YPlayerFloor = 0
+			end if
+		end if
+
+		if Object.OutOfBounds == true
+			Object.YPos = Object.YOriginPos
+			Object.State = RISEPLATFORM_IDLE
+			Object.Timer = 0
+		end if
+		break
+
+	end switch
+	Object.Raising = false
+end sub
+
+
+sub ObjectPlayerInteraction
+	PlayerObjectCollision(C_PLATFORM, -32, -9, 32, 12)
+	if CheckResult == true
+		Object.Raising = true
+		Player.YPos += Object.YPlayerFloor
+	end if
+end sub
+
+
+sub ObjectDraw
+	Object.YPos += Object.YPlayerFloor
+	DrawSprite(0)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Rise Platform
+
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Rise Platform]
+			Object[ArrayPos0].YOriginPos = Object[ArrayPos0].YPos
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 101, 109)	// #0 - Rise Platform
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

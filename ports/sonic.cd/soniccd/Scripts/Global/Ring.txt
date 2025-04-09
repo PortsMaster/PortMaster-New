@@ -1,0 +1,172 @@
+//-------------------Sonic CD Ring Script---------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.PropertyValue	:	Object.DrawingPlane
+
+// Drawing Plane Aliases
+#alias 0	:	DRAWINGPLANE_A
+#alias 1	:	DRAWINGPLANE_B
+
+// Player Alias
+#alias Player.Value0		:	Player.Rings
+
+// Pan
+#alias 0	:	PAN_RIGHT
+#alias 1	:	PAN_LEFT
+
+// Player
+#alias 0	:	PLAYER_SONIC_A
+
+// Game Mode Aliases
+#alias 2	:	MODE_TIMEATTACK
+
+// Global SFX
+#alias 20	:	SFX_G_1UP
+#alias 21	:	SFX_G_ACHIEVEMENT
+
+
+sub ObjectPlayerInteraction
+	if Player.State != Player_State_Hurt
+
+		if Player.CollisionPlane == Object.DrawingPlane
+
+			PlayerObjectCollision(C_TOUCH, -8, -8, 8, 8)
+			if CheckResult == true
+				Object.Type = TypeName[Ring Sparkle]
+				Player.Rings++
+				if Player.Rings > 999
+					Player.Rings = 999
+				end if
+				
+				if Player.Rings >= Ring.ExtraLife
+					if Options.GameMode != MODE_TIMEATTACK
+#platform: Use_Origins
+						if game.coinMode == false
+							Player.Lives++
+						else
+							game.callbackParam0 = 1	// Set the amount of coins to add
+							EngineCallback(NOTIFY_ADD_COIN)
+						end if
+#endplatform
+
+#platform: Use_Standalone
+						Player.Lives++
+#endplatform
+
+						if Stage.PlayerListPos == PLAYER_SONIC_A	// PLAYER_SONIC in origins
+							PlaySfx(SFX_G_1UP, false)
+						else
+							PlaySfx(SFX_G_ACHIEVEMENT, false)
+						end if
+					end if
+
+					Ring.ExtraLife += 100
+
+					// You can only achieve 3 extra lives via rings
+					if Ring.ExtraLife > 300
+						Ring.ExtraLife = 1000
+					end if
+
+					// King of the Rings achievement criteria
+					if Player.Rings >= 200
+						if Stage.PlayerListPos == PLAYER_SONIC_A // PLAYER_SONIC in origins
+							if Stage.DebugMode == false
+								SetAchievement(4, 100)
+							end if
+						end if
+					end if
+				end if
+
+				if Ring.Pan == PAN_RIGHT
+					SetSfxAttributes(1, -1, -100)
+					Ring.Pan = PAN_LEFT
+				else
+					SetSfxAttributes(2, -1, 100)
+					Ring.Pan = PAN_RIGHT
+				end if
+			end if
+
+		end if
+
+	end if
+
+end sub
+
+
+sub ObjectDraw
+	DrawSprite(Ring.Frame)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 1, 1)		// #0 - Ring Frame 0
+	SpriteFrame(-8, -8, 16, 16, 1, 18)		// #1 - Ring Frame 1
+	SpriteFrame(-8, -8, 16, 16, 1, 35)		// #2 - Ring Frame 2
+	SpriteFrame(-8, -8, 16, 16, 1, 52)		// #3 - Ring Frame 3
+	SpriteFrame(-8, -8, 16, 16, 1, 69)		// #4 - Ring Frame 4
+	SpriteFrame(-8, -8, 16, 16, 1, 86)		// #5 - Ring Frame 5
+	SpriteFrame(-8, -8, 16, 16, 1, 103)		// #6 - Ring Frame 6
+	SpriteFrame(-8, -8, 16, 16, 1, 120)		// #7 - Ring Frame 7
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Ring]
+			if Object[ArrayPos0].DrawingPlane == DRAWINGPLANE_A
+				Object[ArrayPos0].DrawOrder = 4
+			else
+				Object[ArrayPos0].DrawOrder = 2
+			end if
+		end if
+		ArrayPos0++
+	loop
+
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Plane Type
+			CheckResult  = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Plane Type
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	Object.InkEffect = Object.PropertyValue
+	DrawSpriteFX(0, FX_INK, Object.XPos, Object.YPos)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)		// #0 - Ring Frame 0
+
+	AddEditorVariable("Plane Type")
+	SetActiveVariable("Plane Type")
+	AddEnumVariable("Plane A", 0)
+	AddEnumVariable("Plane B", 1)
+end sub

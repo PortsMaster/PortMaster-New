@@ -1,0 +1,273 @@
+//-----------------Sonic CD Lamp Post Script------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.Timer
+
+// Player Aliases
+#alias Player.Value0			:	Player.Rings
+
+//HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	LAMPPOST_IDLE
+#alias 1	:	LAMPPOST_ROTATE
+#alias 2	:	LAMPPOST_USED
+
+// Collision Sides
+#alias 1	:	CSIDE_LWALL
+#alias 2	:	CSIDE_RWALL
+
+#alias 9	:	SFX_G_LAMPPOST
+
+// Time Periods
+#alias 0	:	TIME_PRESENT
+
+
+sub ObjectPlayerInteraction
+	
+	if Object.State == LAMPPOST_IDLE
+		
+		PlayerObjectCollision(C_TOUCH, -8, -32, 8, 32)
+		if CheckResult == true
+			LampPost.Check = Object.EntityNo
+			
+			if Player.XPos < Object.XPos
+				LampPost.Side = -0x180000
+				
+				// Code to avoid getting stuck in a wall it seems?
+				ObjectTileCollision(CSIDE_RWALL, -24, 0, 0)
+				if CheckResult == true
+					LampPost.Side = 0
+				end if
+				
+			else
+				LampPost.Side = 0x180000
+				
+				ObjectTileCollision(CSIDE_LWALL, 24, 0, 0)	// Code to avoid getting stuck in a wall i guess?
+				if CheckResult == true
+					LampPost.Side = 0
+				end if
+				
+			end if
+			
+			// Record a bunch of values
+#platform: Use_Origins
+			recStage = Stage.ListPos
+			recScore = Player.Score
+			recRing  = Player.Rings
+#endplatform
+			
+			Rec_Milliseconds = Stage.MilliSeconds
+			Rec_Seconds		 = Stage.Seconds
+			Rec_Minutes		 = Stage.Minutes
+
+#platform: Use_Origins
+			StatsUsabilityParam1 = StageStatsUsabilityParam1
+			StatsUsabilityParam2 = StageStatsUsabilityParam2
+			StatsUsabilityParam3 = StageStatsUsabilityParam3
+			StatsUsabilityParam4 = StageStatsUsabilityParam4
+			StatsUsabilityParam5 = StageStatsUsabilityParam5
+#endplatform
+
+			Object.State = LAMPPOST_ROTATE
+			Object.Timer = 384
+			PlaySfx(SFX_G_LAMPPOST, false)
+				
+#platform: Use_Haptics
+			HapticEffect(20, 0, 0, 0)
+#endplatform
+			
+#platform: Use_Origins
+			// Let the Engine know if we've hit a checkpoint
+			if Options.AttractMode == false
+				EngineCallback(NOTIFY_TOUCH_CHECKPOINT)
+			end if
+#endplatform
+			
+		end if
+
+	end if
+end sub
+
+
+sub ObjectDraw
+	
+	switch Object.State
+	case LAMPPOST_IDLE
+		DrawSprite(0)
+		break
+
+	case LAMPPOST_ROTATE
+		DrawSprite(1)
+
+		Cos(TempValue0, Object.Timer)
+		TempValue0 <<= 10
+		Sin(TempValue1, Object.Timer)
+		TempValue1 <<= 10
+
+		TempValue0 += Object.XPos
+		TempValue1 += Object.YPos
+		TempValue1 -= 0x180000
+		DrawSpriteXY(2, TempValue0, TempValue1)
+
+		Object.Timer += 16
+		if Object.Timer > 896
+			Object.Timer = 0
+			Object.State = LAMPPOST_USED
+		end if
+		break
+
+	case LAMPPOST_USED
+		DrawSprite(1)
+		Object.Timer++
+		if Object.Timer == 8
+			Object.Timer = 0
+		end if
+
+		TempValue0  = Object.YPos
+		TempValue0 -= 0x200000
+		if Object.Timer > 3
+			DrawSpriteXY(4, Object.XPos, TempValue0)
+		else
+			DrawSpriteXY(3, Object.XPos, TempValue0)
+		end if
+		break
+	end switch
+end sub
+
+
+sub ObjectStartup
+	
+	LoadSpriteSheet("Global/Items.gif")
+	
+	SpriteFrame(-8, -40, 16, 64, 1, 137)	// #0 - Lamp Post Idle
+	SpriteFrame(-8, -24, 16, 48, 1, 153)	// #1 - Lamp Post Body
+	SpriteFrame(-8, -8, 16, 16, 1, 137)		// #2 - Lamp Post Blue Head
+	SpriteFrame(-8, -8, 16, 16, 1, 236)		// #3 - Lamp Post Yellow Head
+	SpriteFrame(-8, -8, 16, 16, 18, 236)	// #4 - Lamp Post Red Head
+	
+#platform: Use_Origins
+	if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+		if LampPost.Check > 31
+			ArrayPos0	 = LampPost.Check
+			Player.XPos  = Object[ArrayPos0].XPos
+			Player.XPos += LampPost.Side
+			Player.YPos  = Object[ArrayPos0].YPos
+
+			Object[ArrayPos0].State = LAMPPOST_USED
+
+			Player.Score = recScore
+
+			if Player.deadResetRings == true
+				Player.Rings = 0
+				Player.deadResetRings = false
+			else
+				Player.Rings = recRing
+			end if
+			
+			Ring.ExtraLife  = 100
+			Ring.ExtraLife += Player.Rings
+
+			TempValue0  = Player.Rings
+			TempValue0 %= 100
+
+			Ring.ExtraLife -= TempValue0
+			if Ring.ExtraLife > 300
+				Ring.ExtraLife = 1000
+			end if
+
+			Stage.MilliSeconds	= Rec_Milliseconds
+			Stage.Seconds		= Rec_Seconds
+			Stage.Minutes		= Rec_Minutes
+		end if
+	else
+		if Warp.XPos == 0
+			if HUD.CurrentTimePeriod == TIME_PRESENT
+				if LampPost.Check > 31
+					ArrayPos0	 = LampPost.Check
+					Player.XPos  = Object[ArrayPos0].XPos
+					Player.XPos += LampPost.Side
+					Player.YPos  = Object[ArrayPos0].YPos
+
+					Object[ArrayPos0].State = LAMPPOST_USED
+
+					Player.Score = recScore
+					if Player.deadResetRings == true
+						Player.Rings = 0
+						Player.deadResetRings = false
+					else
+						Player.Rings = recRing
+					end if
+					
+					Ring.ExtraLife  = 100
+					Ring.ExtraLife += Player.Rings
+
+					TempValue0  = Player.Rings
+					TempValue0 %= 100
+
+					Ring.ExtraLife -= TempValue0
+					if Ring.ExtraLife > 300
+						Ring.ExtraLife = 1000
+					end if
+					
+					Stage.MilliSeconds	= Rec_Milliseconds
+					Stage.Seconds		= Rec_Seconds
+					Stage.Minutes		= Rec_Minutes
+				else
+					game.timeOver = false
+				end if
+			end if
+		end if
+	end if
+	
+	if StageStatsUsabilityParam5 == 0
+		StageStatsUsabilityParam1 = StatsUsabilityParam1
+		StageStatsUsabilityParam2 = StatsUsabilityParam2
+		StageStatsUsabilityParam3 = StatsUsabilityParam3
+		StageStatsUsabilityParam4 = StatsUsabilityParam4
+		StageStatsUsabilityParam5 = StatsUsabilityParam5
+	end if
+	StageStatsUsabilityParam5 = 0
+#endplatform
+
+#platform: Use_Standalone
+	if Warp.XPos == 0
+		if HUD.CurrentTimePeriod == TIME_PRESENT
+			if LampPost.Check > 31
+				ArrayPos0	 = LampPost.Check
+				Player.XPos  = Object[ArrayPos0].XPos
+				Player.XPos += LampPost.Side
+				Player.YPos  = Object[ArrayPos0].YPos
+
+				Object[ArrayPos0].State = LAMPPOST_USED
+
+				Stage.MilliSeconds	= Rec_Milliseconds
+				Stage.Seconds		= Rec_Seconds
+				Stage.Minutes		= Rec_Minutes
+			end if
+		end if
+	end if
+
+#endplatform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -40, 16, 64, 1, 137)	// #0 - Lamp Post Idle
+
+	// unused, BUT there are values in the editor which suggest it's "lampPostID"
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

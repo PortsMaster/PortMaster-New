@@ -1,0 +1,305 @@
+//----------------Sonic CD Score Chute Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.Timer
+#alias Object.Value1	:	Object.ScoreBonus
+
+// Player Aliases
+#alias Player.Value4	:	Player.InvincibleTimer
+#alias Player.Value5	:	Player.BlinkTimer
+
+// States
+#alias 0	:	SCORECHUTE_IDLE
+#alias 1	:	SCORECHUTE_CATCH_PLAYER
+#alias 2	:	SCORECHUTE_INSERT_1
+#alias 3	:	SCORECHUTE_INSERT_2
+#alias 4	:	SCORECHUTE_GIVE_POINTS
+#alias 5	:	SCORECHUTE_PULL_PLAYER
+#alias 6	:	SCORECHUTE_EJECT_PLAYER
+#alias 7	:	SCORECHUTE_COOLDOWN
+
+// Players
+#alias 0	:	PLAYER_SONIC_A
+
+// Stage SFX
+#alias 2	:	SFX_S_SCORECHUTE
+#alias 3	:	SFX_S_CHUTEEXIT
+
+// Priority
+#alias 0	:	PRIORITY_BOUNDS
+#alias 1	:	PRIORITY_ACTIVE
+
+
+sub ObjectMain
+	switch Object.State
+	case SCORECHUTE_CATCH_PLAYER
+		if Object.Timer < 8
+			Object.Timer++
+			Player.XPos  = Object.XPos
+			Player.YPos  = Object.YPos
+			Player.YPos -= 0x80000
+			Player.YVelocity = 0
+			Player.XVelocity = 0
+			Player.Speed = 0
+		else
+			Object.State = SCORECHUTE_INSERT_1
+			Object.Timer = 0
+			Player.YVelocity = 0
+			Player.XVelocity = 0
+			Player.Visible   = false
+			if Player.BlinkTimer > 0
+				Player.InvincibleTimer = 0
+				Player.BlinkTimer = 0
+			end if
+			Player.State = Player_State_Static
+		end if
+		break
+
+	case SCORECHUTE_INSERT_1
+		if Object.Timer < 8
+			Object.Timer++
+			Player.XPos = Object.XPos
+			Player.YPos = Object.YPos
+			Player.YPos -= 0x80000
+		else
+			Object.State = SCORECHUTE_INSERT_2
+			Object.Timer = 0
+		end if
+		break
+
+	case SCORECHUTE_INSERT_2
+		if Object.Timer < 4
+			Object.Timer++
+		else
+			Object.State = SCORECHUTE_GIVE_POINTS
+			Object.Timer = 0
+		end if
+		// in case of time over
+		if Player.State == Player_State_Death
+			Object.State = SCORECHUTE_COOLDOWN
+			Object.Timer = 0
+			Player.Visible = true
+		end if
+		break
+
+	case SCORECHUTE_GIVE_POINTS
+		if Object.ScoreBonus < 4
+			if Object.Timer == 32
+				CreateTempObject(TypeName[Object Score], 0, Object.XPos, Object.YPos)
+				Player.Score += 100
+			end if
+		end if
+		if Object.ScoreBonus < 3
+			if Object.Timer == 64
+				CreateTempObject(TypeName[Object Score], 0, Object.XPos, Object.YPos)
+				Player.Score += 100
+			end if
+		end if
+		if Object.Timer < 80
+			Object.Timer++
+		else
+			Object.State = SCORECHUTE_PULL_PLAYER
+			Object.Timer = 0
+		end if
+		// in case of time over
+		if Player.State == Player_State_Death
+			Object.State = SCORECHUTE_COOLDOWN
+			Object.Timer = 0
+			Player.Visible = true
+		end if
+		break
+
+	case SCORECHUTE_PULL_PLAYER
+		if Object.Timer < 4
+			Object.Timer++
+		else
+			Object.State = SCORECHUTE_EJECT_PLAYER
+			Object.Timer = 0
+		end if
+		if Player.State == Player_State_Death	// in case of time over
+			Object.State = SCORECHUTE_COOLDOWN
+			Object.Timer = 0
+			Player.Visible = true
+		end if
+		break
+
+	case SCORECHUTE_EJECT_PLAYER
+		if Object.Timer < 8
+			Object.Timer++
+		else
+			Object.State = SCORECHUTE_COOLDOWN
+			Object.Timer = 0
+
+#platform: Use_Origins
+			Player.State = Player_State_Air_NoDropDash
+#endplatform
+
+#platform: Use_Standalone
+			Player.State = Player_State_Air
+#endplatform
+
+			Player.Visible = true
+			Player.Animation = ANI_JUMPING
+
+			Player.ObjectInteraction = true
+
+			Player.YVelocity = -0x74000
+			Player.Timer = 0
+			PlayStageSfx(SFX_S_CHUTEEXIT, false)
+		end if
+		break
+
+	case SCORECHUTE_COOLDOWN
+		if Object.Timer < 120
+			Object.Timer++
+		else
+			Object.State = SCORECHUTE_IDLE
+			Object.Timer = 0
+			Object.ScoreBonus++
+		end if
+		break
+
+	end switch
+
+	if Object.OutOfBounds == true
+		Object.ScoreBonus = 0
+		Object.Priority   = PRIORITY_BOUNDS
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	if Object.State == SCORECHUTE_IDLE
+		if Player.YVelocity >= 0
+			PlayerObjectCollision(C_TOUCH, -16, -8, 16, 16)
+			if CheckResult == true
+				Object.State = SCORECHUTE_CATCH_PLAYER
+				Object.Priority = PRIORITY_ACTIVE
+
+				Player.Animation = ANI_JUMPING
+				Player.ObjectInteraction = false
+
+				PlayStageSfx(SFX_S_SCORECHUTE, false)
+
+#platform: Use_Haptics
+				HapticEffect(55, 0, 0, 0)
+#endplatform
+
+			end if
+		end if
+	end if
+end sub
+
+
+sub ObjectDraw
+	switch Object.State
+	case SCORECHUTE_CATCH_PLAYER
+		DrawSprite(0)
+		break
+
+	case SCORECHUTE_INSERT_1
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	case SCORECHUTE_INSERT_2
+		DrawSprite(0)
+		DrawSprite(2)
+		break
+
+	case SCORECHUTE_GIVE_POINTS
+		TempValue0   = Object.Timer
+		TempValue0  &= 7
+		TempValue0 >>= 2
+		if TempValue0 > 0
+			DrawSprite(0)
+		end if
+		break
+
+	case SCORECHUTE_PULL_PLAYER
+		DrawSprite(0)
+		DrawSprite(2)
+		break
+
+	case SCORECHUTE_EJECT_PLAYER
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	end switch
+end sub
+
+
+sub ObjectStartup
+#platform: Use_Standalone
+	LoadSpriteSheet("R3/Objects.gif")
+	SpriteFrame(-24, -8, 48, 16, 117, 233)			// #0 - Score Chute Active
+
+	if Stage.PlayerListPos == PLAYER_SONIC_A
+		SpriteFrame(-16, -24, 32, 16, 2, 240)		// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 35, 241)		// #2 - Jump Insert Frame 1
+	else
+		SpriteFrame(-12, -20, 24, 12, 228, 244)		// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 211, 247)		// #2 - Jump Insert Frame 1
+	end if
+#endplatform
+
+#platform: Use_Origins
+	if Stage.PlayerListPos == PLAYER_SONIC
+		LoadSpriteSheet("R3/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 117, 233)	// #0 - Score Chute Active
+		SpriteFrame(-16, -24, 32, 16, 2, 240)	// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 35, 241)	// #2 - Jump Insert Frame 1
+	end if
+
+	if Stage.PlayerListPos == PLAYER_TAILS
+		LoadSpriteSheet("R3/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 117, 233)	// #0 - Score Chute Active
+		SpriteFrame(-12, -20, 24, 12, 228, 244)	// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 211, 247)	// #2 - Jump Insert Frame 1
+	end if
+
+	if Stage.PlayerListPos == PLAYER_KNUCKLES
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-24, -8, 48, 16, 99, 133)	// #0 - Score Chute Active
+		SpriteFrame(-16, -24, 32, 16, 66, 150)	// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 116, 150)	// #2 - Jump Insert Frame 1
+	end if
+
+	if Stage.PlayerListPos == PLAYER_AMY
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-24, -8, 48, 16, 99, 133)	// #0 - Score Chute Active
+		SpriteFrame(-16, -24, 32, 16, 66, 133)	// #1 - Jump Insert Frame 0
+		SpriteFrame(-8, -16, 16, 8, 99, 150)	// #2 - Jump Insert Frame 1
+	end if
+#endplatform
+
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Score Chute]
+			Object[ArrayPos0].DrawOrder = 4
+		end if
+		ArrayPos0++
+	loop
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+	
+	SpriteFrame(-24, -8, 48, 16, 117, 233)	// #0 - Score Chute Active
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

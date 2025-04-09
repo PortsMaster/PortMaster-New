@@ -1,0 +1,149 @@
+//-----------------Sonic CD Penguin Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0			:	Object.YVelocity
+#alias Object.Value1			:	Object.Hops
+
+// HUD alias
+#alias Object[24].PropertyValue	:	HUD.CurrentTimePeriod
+
+// States
+#alias 0	:	PENGUIN_HOPRIGHT
+#alias 1	:	PENGUIN_HOPLEFT
+
+// Collision Side Aliases
+#alias 0	:	CSIDE_FLOOR
+
+// Time Period Aliases
+#alias 2	:	TIME_GOOD_FUTURE
+
+
+sub ObjectMain
+	Object.YPos += Object.YVelocity
+	
+	// Apply a gravity of about 0.17 pixels per frame
+	Object.YVelocity += 0x2C00
+	
+	switch Object.State
+	case PENGUIN_HOPRIGHT
+		
+		// Move the Penguin a pixel right
+		Object.XPos += 0x10000
+		
+		// Collision is only to be checked when falling faster than 4px a frame
+		if Object.YVelocity > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			
+			if CheckResult == true
+				
+				// Bounce back up, at a starting rate of 5px per frame
+				Object.YVelocity = -0x50000
+				
+				Object.Hops++
+				if Object.Hops == 2
+					// Turn around
+					
+					Object.Hops = 0
+
+					Object.State	 = PENGUIN_HOPLEFT
+					Object.Direction = FACING_LEFT
+				end if
+			end if
+		end if
+		break
+		
+	case PENGUIN_HOPLEFT
+		
+		// Move the Penguin a pixel to the left
+		Object.XPos -= 0x10000
+		
+		// Only check for colliison when falling, at a rate faster than 4px downwards
+		if Object.YVelocity > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			
+			if CheckResult == true
+				// Bounce right back up, 5px per frame is the starting rate
+				Object.YVelocity = -0x50000
+				
+				Object.Hops++
+				if Object.Hops == 2
+					// Turn around
+					
+					Object.Hops = 0
+
+					Object.State	 = PENGUIN_HOPRIGHT
+					Object.Direction = FACING_RIGHT
+				end if
+			end if
+		end if
+		break
+		
+	end switch
+	
+end sub
+
+
+sub ObjectDraw
+	if MetalSonic_Destroyed == true
+		if Object.YVelocity < 0
+			DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+		else
+			DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+		end if
+	else
+		
+		if HUD.CurrentTimePeriod == TIME_GOOD_FUTURE
+			if Object.YVelocity < 0
+				DrawSpriteFX(0, FX_FLIP, Object.XPos, Object.YPos)
+			else
+				DrawSpriteFX(1, FX_FLIP, Object.XPos, Object.YPos)
+			end if
+		end if
+		
+	end if
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	
+	SpriteFrame(-8, -12, 16, 24, 222, 66)
+	SpriteFrame(-8, -12, 16, 24, 239, 66)
+	
+	// Used to be below LoadSpriteSheet, moved here for consistency
+	ArrayPos0 = 32
+	while ArrayPos0 < 1056
+		if Object[ArrayPos0].Type == TypeName[Penguin]
+		
+			// Start bouncing up, at a rate of 5px per frame
+			Object[ArrayPos0].YVelocity = -0x50000
+			
+			// Start facing right, to correspond with the starting state of PENGUIN_HOPRIGHT
+			Object[ArrayPos0].Direction = FACING_RIGHT
+			
+		end if
+		
+		ArrayPos0++
+	loop
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKDraw
+	DrawSprite(0)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-8, -12, 16, 24, 222, 66)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end sub

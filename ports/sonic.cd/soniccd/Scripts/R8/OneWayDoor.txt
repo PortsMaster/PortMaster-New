@@ -1,0 +1,199 @@
+//---------------Sonic CD One Way Door Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value1	:	Object.YOffset
+
+// States
+#alias 0	:	ONEWAYDOOR_CLOSE
+#alias 1	:	ONEWAYDOOR_OPEN
+
+// Property Values
+#alias 1	:	OPEN_FROM_LEFT
+#alias 2	:	OPEN_FROM_RIGHT
+#alias 3	:	OPEN_FROM_LEFT_NO_LIGHTS
+
+// Collision
+#alias 1	:	PLAYER_COL_FLOOR
+#alias 2	:	PLAYER_COL_LWALL
+#alias 3	:	PLAYER_COL_RWALL
+#alias 4	:	PLAYER_COL_ROOF
+
+
+sub ObjectMain
+	if Object.State == ONEWAYDOOR_CLOSE
+		if Object.YOffset > 0
+			Object.YOffset -= 0x20000
+		end if
+	else
+		if Object.YOffset < 0x200000
+			Object.YOffset += 0x20000
+		end if
+	end if
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0   = Object.YPos
+	TempValue1   = Player.YPos
+	Object.YPos -= Object.YOffset
+	PlayerObjectCollision(C_BOX, -8, -48, 8, -16)
+	if CheckResult > PLAYER_COL_FLOOR
+		Player.YPos = TempValue1
+	end if
+
+	Object.YPos  = TempValue0
+	Object.YPos += Object.YOffset
+	PlayerObjectCollision(C_BOX, -8, -16, 8, 16)
+	if CheckResult > PLAYER_COL_FLOOR
+		Player.YPos = TempValue1
+	end if
+
+	Object.YPos = TempValue0
+	if Object.PropertyValue == OPEN_FROM_RIGHT
+		PlayerObjectCollision(C_TOUCH, -96, -48, 8, 16)
+	else
+		PlayerObjectCollision(C_TOUCH, -8, -48, 96, 16)
+	end if
+
+	Object.State = CheckResult
+end sub
+
+
+sub ObjectDraw
+	Object.Frame  = Object.AnimationTimer
+	Object.Frame /= 3
+	switch Object.PropertyValue
+	case OPEN_FROM_LEFT
+		TempValue0  = Object.YOffset
+		FlipSign(TempValue0)
+		TempValue0 += Object.YPos
+		DrawSpriteXY(0, Object.XPos, TempValue0)
+		Object.Frame += 6
+		DrawSpriteXY(Object.Frame, Object.XPos, TempValue0)
+		TempValue0  = Object.YOffset
+		TempValue0 += Object.YPos
+		DrawSpriteXY(1, Object.XPos, TempValue0)
+		Object.Frame += 2
+		DrawSpriteXY(Object.Frame, Object.XPos, TempValue0)
+		break
+
+	case OPEN_FROM_RIGHT
+		TempValue0  = Object.YOffset
+		FlipSign(TempValue0)
+		TempValue0 += Object.YPos
+		DrawSpriteXY(0, Object.XPos, TempValue0)
+		Object.Frame += 2
+		DrawSpriteXY(Object.Frame, Object.XPos, TempValue0)
+		TempValue0  = Object.YOffset
+		TempValue0 += Object.YPos
+		DrawSpriteXY(1, Object.XPos, TempValue0)
+		Object.Frame += 2
+		DrawSpriteXY(Object.Frame, Object.XPos, TempValue0)
+		break
+
+	case OPEN_FROM_LEFT_NO_LIGHTS
+		TempValue0 = Object.YOffset
+		FlipSign(TempValue0)
+		TempValue0 += Object.YPos
+		DrawSpriteXY(0, Object.XPos, TempValue0)
+		TempValue0 = Object.YOffset
+		TempValue0 += Object.YPos
+		DrawSpriteXY(1, Object.XPos, TempValue0)
+		break
+	end switch
+
+	Object.AnimationTimer++
+	Object.AnimationTimer %= 6
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-8, -48, 16, 32, 58, 131)	// #0 - Left One Way Door
+	SpriteFrame(-8, -16, 16, 32, 58, 131)	// #1 - Right One Way Door
+
+	SpriteFrame(-16, -36, 8, 8, 50, 173)	// #2 - Left Door Lights (left side) frame 0
+	SpriteFrame(-16, -36, 8, 8, 59, 173)	// #3 - Left Door Lights (left side) frame 1
+	SpriteFrame(-16, -4, 8, 8, 50, 173)		// #4 - Right Door Lights (left side) frame 0
+	SpriteFrame(-16, -4, 8, 8, 59, 173)		// #5 - Right Door Lights (left side) frame 1
+
+	SpriteFrame(8, -36, 8, 8, 50, 164)		// #6 - Left Door Lights (right side) frame 0
+	SpriteFrame(8, -36, 8, 8, 59, 164)		// #7 - Left Door Lights (right side) frame 1
+	SpriteFrame(8, -4, 8, 8, 50, 164)		// #8 - Right Door Lights (right side) frame 0
+	SpriteFrame(8, -4, 8, 8, 59, 164)		// #9 - Right Door Lights (right side) frame 1
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 3
+			break
+		case 0 // type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 3
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 3
+			break
+		case 0 // type
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 3
+			break
+		end switch
+	end if
+end sub
+
+sub RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+
+	switch Object.PropertyValue
+	case 1
+		DrawSprite(6)
+		DrawSprite(8)
+		break
+	case 2
+		DrawSprite(2)
+		DrawSprite(4)
+		break
+	end switch
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-8, -48, 16, 32, 58, 131)	// #0 - Left One Way Door
+	SpriteFrame(-8, -16, 16, 32, 58, 131)	// #1 - Right One Way Door
+
+	SpriteFrame(-16, -36, 8, 8, 50, 173)	// #2 - Left Door Lights (left side) frame 0
+	SpriteFrame(-16, -36, 8, 8, 59, 173)	// #3 - Left Door Lights (left side) frame 1
+	SpriteFrame(-16, -4, 8, 8, 50, 173)		// #4 - Right Door Lights (left side) frame 0
+	SpriteFrame(-16, -4, 8, 8, 59, 173)		// #5 - Right Door Lights (left side) frame 1
+
+	SpriteFrame(8, -36, 8, 8, 50, 164)		// #6 - Left Door Lights (right side) frame 0
+	SpriteFrame(8, -36, 8, 8, 59, 164)		// #7 - Left Door Lights (right side) frame 1
+	SpriteFrame(8, -4, 8, 8, 50, 164)		// #8 - Right Door Lights (right side) frame 0
+	SpriteFrame(8, -4, 8, 8, 59, 164)		// #9 - Right Door Lights (right side) frame 1
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Null", 0)	// why do i need this?
+	AddEnumVariable("Open from the left", OPEN_FROM_LEFT)
+	AddEnumVariable("Open from the right", OPEN_FROM_RIGHT)
+	AddEnumVariable("Open from the left (no lights)", OPEN_FROM_LEFT_NO_LIGHTS)
+end sub

@@ -1,0 +1,243 @@
+//-----------------Sonic CD R Platform Script-----------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0 : Object.Angle
+#alias Object.Value1 : Object.PlatformX
+#alias Object.Value2 : Object.PlatformY
+#alias Object.Value3 : Object.ChangeX
+#alias Object.Value4 : Object.ChangeY
+#alias Object.Value5 : Object.AltAngle
+
+
+sub ObjectMain
+	
+	switch Object.PropertyValue
+	case 1
+		// Full range version of the Platform, moving counter-clockwise
+		
+		Object.Angle -= 2
+		
+		if Object.Angle < 0
+			// Wrap around
+			Object.Angle += 512
+		end if
+		break
+		
+	case 2
+		// Bottom half version of the Platform, swinging around the bottom 180 degrees
+		
+		Object.AltAngle += 2
+		Object.AltAngle &= 511
+		
+		Sin(Object.Angle, Object.AltAngle)
+		
+		Object.Angle >>= 2
+		Object.Angle += 128
+		break
+		
+	case 3
+		// Top half version of the Platform, swinging around the top 180 degrees
+		
+		Object.AltAngle += 2
+		Object.AltAngle &= 511
+		
+		Sin(Object.Angle, Object.AltAngle)
+		
+		FlipSign(Object.Angle)
+		
+		Object.Angle >>= 2
+		Object.Angle += 384
+		Object.Angle &= 511
+		break
+		
+	end switch
+	
+	// Radius value
+	TempValue1 = 96
+	
+	Cos(Object.ChangeX, Object.Angle)
+	Object.ChangeX  *= TempValue1
+	Object.ChangeX <<= 7
+	Object.ChangeX  += Object.XPos
+	Object.ChangeX  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeX  -= Object.PlatformX
+	
+	Sin(Object.ChangeY, Object.Angle)
+	Object.ChangeY  *= TempValue1
+	Object.ChangeY <<= 7
+	Object.ChangeY  += Object.YPos
+	Object.ChangeY  &= 0xFFFF0000 // Truncate the value
+	Object.ChangeY  -= Object.PlatformY
+	
+end sub
+
+
+sub ObjectPlayerInteraction
+
+	// Backup the Object's base position
+	TempValue0 = Object.XPos
+	TempValue1 = Object.YPos
+	
+	// Move the Object to its Platform's position
+	Object.XPos = Object.PlatformX
+	Object.YPos = Object.PlatformY
+	
+	// Act as a Platform for the player
+	PlayerObjectCollision(C_PLATFORM, -32, -8, 32, 8)
+	if CheckResult == true
+		
+		// Move the Player along with the Platform
+		Player.XPos += Object.ChangeX
+		Player.YPos += Object.ChangeY
+		
+		// The Platform is a Conveyor Belt as well, so move the Player in accordance with that too
+		if ConveyorBelt_Flag == 0
+			Player.XPos += ConveyorBelt_Speed
+		else
+			Player.XPos -= ConveyorBelt_Speed
+		end if
+		
+	end if
+	
+	// And now restore the Object back to its base position
+	Object.XPos = TempValue0
+	Object.YPos = TempValue1
+	
+end sub
+
+
+sub ObjectDraw
+
+	// Draw the Post Frame
+	DrawSprite(0)
+	
+	// Draw all the Chains
+	TempValue0 = 0
+	TempValue1 = 16
+	while TempValue0 < 5
+		Cos(TempValue2, Object.Angle)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+		
+		Sin(TempValue3, Object.Angle)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.YPos
+		
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		
+		TempValue0++
+		TempValue1 += 16
+	loop
+	
+	
+	Cos(Object.PlatformX, Object.Angle)
+	Object.PlatformX  *= TempValue1
+	Object.PlatformX <<= 7
+	Object.PlatformX  += Object.XPos
+	Object.PlatformX  &= 0xFFFF0000 // Truncate the value
+	
+	Sin(Object.PlatformY, Object.Angle)
+	Object.PlatformY  *= TempValue1
+	Object.PlatformY <<= 7
+	Object.PlatformY  += Object.YPos
+	Object.PlatformY  &= 0xFFFF0000 // Truncate the value
+	
+	DrawSpriteXY(2, Object.PlatformX, Object.PlatformY)
+	
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Post Frame
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	
+	// Chain Frame
+	SpriteFrame(-8, -8, 16, 16, 18, 1)
+	
+	// Conveyor Platform Frame
+	SpriteFrame(-32, -8, 64, 16, 1, 208)
+	
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult = Object.PropertyValue
+			break
+		case 0 // Range
+			CheckResult = Object.PropertyValue
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue = Editor.VariableValue
+			break
+		case 0 // Range
+			Object.PropertyValue = Editor.VariableValue
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+
+	TempValue0 = 0
+	TempValue1 = 16
+	while TempValue0 < 5
+		Cos(TempValue2, 128)
+		TempValue2 *= TempValue1
+		TempValue2 <<= 7
+		TempValue2 += Object.XPos
+		Sin(TempValue3, 128)
+		TempValue3 *= TempValue1
+		TempValue3 <<= 7
+		TempValue3 += Object.YPos
+		DrawSpriteXY(1, TempValue2, TempValue3)
+		TempValue0++
+		TempValue1 += 16
+	loop
+	
+	Cos(TempValue2, 128)
+	TempValue2 *= TempValue1
+	TempValue2 <<= 7
+	TempValue2 += Object.XPos
+	TempValue2 &= 0xFFFF0000 // Truncate the value
+	
+	Sin(TempValue3, 128)
+	TempValue3 *= TempValue1
+	TempValue3 <<= 7
+	TempValue3 += Object.YPos
+	TempValue3 &= 0xFFFF0000 // Truncate the value
+	
+	DrawSpriteXY(2, TempValue2, TempValue3)
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	SpriteFrame(-8, -8, 16, 16, 18, 1)
+	SpriteFrame(-32, -8, 64, 16, 1, 208)
+
+	AddEditorVariable("Range")
+	SetActiveVariable("Range")
+	// 0 technically exists as a "Static" type but it isn't used in the game so
+	AddEnumVariable("Full Rotation", 1)
+	AddEnumVariable("Bottom Half", 2)
+	AddEnumVariable("Top Half", 3)
+end sub

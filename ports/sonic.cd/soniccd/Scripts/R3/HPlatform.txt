@@ -1,0 +1,183 @@
+//------------Sonic CD Horizontal Platform Script-------------//
+//--------Scripted by Christian Whitehead 'The Taxman'--------//
+//-------Unpacked By Rubberduckycooly's Script Unpacker-------//
+
+// Aliases
+#alias Object.Value0	:	Object.OnObject
+#alias Object.Value1	:	Object.Timer
+#alias Object.Value2	:	Object.YVelocity
+#alias Object.Value3	:	Object.XCollisionOffset
+#alias Object.Value4	:	Object.XVelocity
+#alias Object.Value5	:	Object.Angle
+
+// Property Values
+#alias 0	:	START_MOVING_LEFT
+#alias 1	:	START_MOVING_RIGHT
+
+
+sub ObjectMain
+	Object.Angle  = Oscillation
+	Object.Angle *= 3
+	
+	if Object.PropertyValue == START_MOVING_RIGHT
+		Object.Angle += 256
+	end if
+
+	Cos(Object.XVelocity, Object.Angle)
+	Object.XVelocity *= 0x2700
+	Object.XVelocity += Object.XPos
+	Object.XVelocity &= 0xFFFF0000 // Truncate the value
+	Object.XVelocity -= Object.XCollisionOffset
+
+	if Object.OnObject == true
+		if Object.Timer < 16
+			Object.Timer++
+			TempValue0  = Object.Timer
+			TempValue0 &= 3
+
+			if TempValue0 == 3
+				Object.YVelocity = 0x10000
+			else
+				Object.YVelocity = 0
+			end if
+
+		else
+			Object.YVelocity = 0
+		end if
+	else
+		if Object.Timer > 0
+			Object.Timer--
+			TempValue0  = Object.Timer
+			TempValue0 &= 3
+			if TempValue0 == 3
+				Object.YVelocity = -0x10000
+			else
+				Object.YVelocity = 0
+			end if
+		else
+			Object.YVelocity = 0
+		end if
+	end if
+	Object.OnObject = true
+end sub
+
+
+sub ObjectPlayerInteraction
+	TempValue0  = Object.XPos
+	Object.XPos = Object.XCollisionOffset
+	PlayerObjectCollision(C_PLATFORM, -32, -16, 32, 12)
+	if CheckResult == true
+		Object.OnObject = true
+		Player.XPos += Object.XVelocity
+		Player.YPos += Object.YVelocity
+	end if
+	Object.XPos = TempValue0
+end sub
+
+
+sub ObjectDraw
+	Cos(Object.XCollisionOffset, Object.Angle)
+	Object.XCollisionOffset *= 0x2700
+	Object.XCollisionOffset += Object.XPos
+	Object.XCollisionOffset &= 0xFFFF0000 // Truncate the value
+
+	Object.YPos += Object.YVelocity
+	DrawSpriteXY(0, Object.XCollisionOffset, Object.YPos)
+end sub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 100, 1)	// #0 - Horizontal Platform
+end sub
+
+
+// ========================
+// Editor Subs
+// ========================
+
+sub RSDKEdit
+	if Editor.ReturnVariable == true
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		case 0 // type
+			CheckResult  = Object.PropertyValue
+			CheckResult &= 1
+			break
+		end switch
+	else
+		switch Editor.VariableID
+		case EDIT_VAR_PROPVAL // Property Value
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		case 0 // type
+			Object.PropertyValue  = Editor.VariableValue
+			Object.PropertyValue &= 1
+			break
+		end switch
+	end if
+end sub
+
+
+sub RSDKDraw
+	DrawSprite(0)
+	switch Object.PropertyValue
+	case START_MOVING_LEFT
+		TempValue1 = 255
+		TempValue2 = 255
+		TempValue3 = 128
+		TempValue4 = 0
+		break
+	case START_MOVING_RIGHT
+		TempValue1 = 128
+		TempValue2 = 0
+		TempValue3 = 255
+		TempValue4 = 255
+		break
+	end switch
+
+	TempValue0   = Object.XPos
+	TempValue0  -= 0x620000
+	TempValue5   = Object.YPos
+	TempValue5  -= 0x100000
+	if object.PropertyValue == START_MOVING_LEFT
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue0, TempValue5, 0xC4, 0x20, 255, 255, 255, 255)
+			DrawArrow(Object.XPos, Object.YPos, TempValue0, Object.YPos, 255, TempValue1, TempValue2, 0)
+			Editor.DrawingOverlay = false
+		end if
+	else
+		DrawArrow(Object.XPos, Object.YPos, TempValue0, Object.YPos, 255, TempValue1, TempValue2, 0)
+	end if
+	
+	TempValue0   = Object.XPos
+	TempValue0  += 0x620000
+	if object.PropertyValue == START_MOVING_RIGHT
+		if Editor.ShowGizmos == true
+			Editor.DrawingOverlay = true
+			DrawRectOutline(TempValue0, TempValue5, 0xC4, 0x20, 255, 255, 255, 255)
+			DrawArrow(Object.XPos, Object.YPos, TempValue0, Object.YPos, 255, TempValue3, TempValue4, 0)
+			Editor.DrawingOverlay = false
+		end if
+	else
+		DrawArrow(Object.XPos, Object.YPos, TempValue0, Object.YPos, 255, TempValue3, TempValue4, 0)
+	end if
+end sub
+
+
+sub RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+
+	SpriteFrame(-32, -16, 64, 32, 100, 1)	// #0 - Horizontal Platform
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", START_MOVING_LEFT)
+	AddEnumVariable("Right", START_MOVING_RIGHT)
+end sub
