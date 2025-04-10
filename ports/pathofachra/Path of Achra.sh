@@ -24,23 +24,6 @@ CONFDIR="$GAMEDIR/conf/"
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
-# Mount Weston runtime
-weston_dir=/tmp/weston
-$ESUDO mkdir -p "${weston_dir}"
-weston_runtime="weston_pkg_0.2"
-if [ ! -f "$controlfolder/libs/${weston_runtime}.squashfs" ]; then
-  if [ ! -f "$controlfolder/harbourmaster" ]; then
-    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
-    sleep 5
-    exit 1
-  fi
-  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${weston_runtime}.squashfs"
-fi
-if [[ "$PM_CAN_MOUNT" != "N" ]]; then
-    $ESUDO umount "${weston_dir}"
-fi
-$ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
-
 cd $GAMEDIR
 
 runtime="frt_3.5.2"
