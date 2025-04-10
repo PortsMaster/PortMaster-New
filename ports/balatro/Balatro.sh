@@ -62,8 +62,8 @@ if [ -f "$GAMEFILE" ]; then
   fi
 
   if [ $DISPLAY_WIDTH -le 1279 ]; then # increase the scale for smaller screens
-    sed -i 's/self.TILE_W = self.F_MOBILE_UI and 11.5 or 20/self.TILE_W = 18.25/g' globals.lua
-    sed -i 's/self.TILE_H = self.F_MOBILE_UI and 20 or 11.5/self.TILE_H = 18.25/g' globals.lua
+    sed -i 's/self.TILE_W = .*/self.TILE_W = 18.25/g' globals.lua
+    sed -i 's/self.TILE_H = .*/self.TILE_H = 18.25/g' globals.lua
   fi
 
   if [ $DISPLAY_WIDTH -le 720 ]; then # switch out the font if the screen is too small; helping with readability
