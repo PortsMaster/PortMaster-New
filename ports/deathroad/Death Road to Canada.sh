@@ -35,7 +35,11 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-
+# Patch final Level
+if ls $GAMEDIR/patch/canada-crossing-region.df 1> /dev/null 2>&1; then
+  rm -rf "$GAMEDIR/deathforth/events/exterior/region/canada-crossing-region.df" 
+  mv "$GAMEDIR/patch/canada-crossing-region.df" "$GAMEDIR/deathforth/events/exterior/region"
+fi
 
 # Setup Box64
 export LD_LIBRARY_PATH="$GAMEDIR/box64/native":"/usr/lib":"/usr/lib/aarch64-linux-gnu/":"$GAMEDIR/libs/":"$LD_LIBRARY_PATH"
