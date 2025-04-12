@@ -19,6 +19,7 @@ For the more technically inclined, here are specific modifications made in order
 
 - [GMTools](https://github.com/cdeletre/gmtools) by Cyril Deletre to resample audio at a lower bitrate
 - [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) to make some specific changes to the game
+    - Compress Textures to save memory.
     - (Steam Version Only) About 50% of steam api function calls did not check if steam was initialized, leading to some math with undefined values which would cause segfaults. Steam API functions are now wrapped in an if statement to verifed that steam is initialized.
 
 ## Thanks

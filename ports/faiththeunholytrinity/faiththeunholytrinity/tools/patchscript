@@ -29,21 +29,31 @@ cd "$GAMEDIR"
 #
 # @details
 # Verify the patch file exists and the data.win exists.
-# In addition the only the steam version currently need a xdelta patch,
-# so compare the data.win's md5sum to Steam's data.win's md5sdum.
 #
 # @notes
-# Patch files doesn't compress textures at the moment. What is does do 
-# is wrap all Steam api calls in a check for if Steam has been initialized.
+# Patch file compresses textures. Steam patch also
+# wrap all Steam api calls in a check for if Steam has been initialized.
 # This prevent segfaults from when Airdorf attempts to unlock achievements based
 # on undefined values form the API calls. GOG version has similiar code so I
-# guess the api call return defined values, unlike steam, so no patch is needed. 
+# guess the api call return defined values, unlike steam.
+# If not steam or gog. Should still work without the compressed textures
+# but ram usage gets really close to 1GB, causing occasional crashes
 #
 apply_xdelta() {
     # Check if the data.win file exists and apply xdelta
-    if [ -f "$DATADIR/data.win" ] && [ -f "./tools/patches/$GAME_NAME.xdelta" ]; then
-       if [ "$(md5sum "$DATADIR/data.win" | awk '{print $1}')" == "4cc5cb4516a82420f883abe41168b679" ]; then
-           output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/$GAME_NAME.xdelta" "$DATADIR/game.droid" 2>&1)
+    VERSION=""
+    if [ -f "$DATADIR/data.win" ]; then
+        # Check which version
+        if [ "$(md5sum "$DATADIR/data.win" | awk '{print $1}')" == "4cc5cb4516a82420f883abe41168b679" ]; then
+            echo "Steam version found"
+            VERSION="steam"
+        elif [ "$(md5sum "$DATADIR/data.win" | awk '{print $1}')" == "4a4819f61b5686efcfef1761b362112e" ]; then
+            echo "GOG version found"
+            VERSION="gog"
+        fi
+        # Check if a patchfile exists for that version
+        if [ -f "./tools/patches/$VERSION/$GAME_NAME.xdelta" ]; then
+            output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/$VERSION/$GAME_NAME.xdelta" "$DATADIR/game.droid" 2>&1)
             if [ $? -eq 0 ]; then
                 echo "Patch applied successfully"
                 echo "$output"
@@ -55,9 +65,9 @@ apply_xdelta() {
                 exit 1
             fi
         else
-		   echo "No patch file found"
-		   mv "$DATADIR/data.win" "$DATADIR/game.droid"
-		fi
+            echo "No patch file found"
+            mv "$DATADIR/data.win" "$DATADIR/game.droid"
+        fi
     else
         echo "No data.win file found to patch!"
     fi
@@ -82,7 +92,7 @@ compress_audio() {
     # Bite Rate to encode audio files at, in kbps.
     BITRATE=0 # 0 will set to auto, lowering the bitrates seems complete destroy the audio files (all go to 0 mb) so this isn't an option to save RAM for faith
 
-	# Rate to sample audio files at, in Hz.
+    # Rate to sample audio files at, in Hz.
     RESAMPLERATE=8000 # lowest support sampling rate, seems to be the only/best way to get compressed audio for faith
 
     mkdir -p "$TMPDIR"
@@ -138,7 +148,7 @@ process_game() {
     echo "Finishing up..."
     zip_archive
     sleep 1
-	
+
     # Final completion message
     echo "Patching process complete!"
 }
