@@ -23,7 +23,7 @@ if [[ $CFW_NAME == "TheRA" ]]; then
 elif [[ $CFW_NAME == "RetroOZ" ]]; then
   raloc="/opt/retroarch/bin"
   raconf="--config /home/odroid/.config/retroarch/retroarch.cfg"
-elif [[ $CFW_NAME == "ArkOS" ]]; then
+elif [[ $CFW_NAME == *"ArkOS"* ]]; then
   raloc="/usr/local/bin"
   raconf=""
 elif [[ $CFW_NAME == "muOS" ]]; then
@@ -33,6 +33,9 @@ elif [[ $CFW_NAME == "muOS" ]]; then
   else
     raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
   fi
+elif [[ $CFW_NAME == "Miyoo" ]]; then
+  raloc="/mnt/sdcard/RetroArch"
+  raconf=""
 else
   raloc="/usr/bin"
   raconf=""

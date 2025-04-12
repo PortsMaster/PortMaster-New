@@ -1,10 +1,10 @@
 # UFO 50 - PortMaster Modification & Wrapper
-This is a wrapper and xdelta modification for vanilla UFO50 that makes the game more manageable on retro handheld systems running linux arm64. If you are running android on a retro handheld system, you may be looking for the [unofficial android port[https://github.com/Skyline969/UFO50AndroidUnofficial] by Skyline969.
+This is a wrapper and xdelta modification for vanilla UFO50 that makes the game more manageable on retro handheld systems running linux arm64. If you are running android on a retro handheld system, you may be looking for the [unofficial android port](https://github.com/Skyline969/UFO50AndroidUnofficial) by Skyline969.
 
 ## Installation
 Purchase the game on Steam and copy all the data to `ports/ufo50/assets`. On first run the game will be patched.
 
-If you are updating a prepatched game, simply delete the `patchlog.txt` file, and add your new `data.win` file to `assets` *in addition to any new data you want added*. This means you can add the `ext` folder for any language updates and the `Textures` folder.
+If you are updating a prepatched game, simply add your new `data.win` file to `assets` *in addition to any new data you want added*. This means you can add the `ext` folder for any language updates and the `Textures` folder.
 
 ## Performance Notes
 This port features audio compression in an attempt to reduce memory usage. This is necessary in order for the port to run on the linux arm handhelds targeted. These handhelds are equipped with low-end rockchip or allwinner processors and usually 1-2GB of memory, alongside Mali blob drivers. Low processing power, low memory, and low VRAM are all major things to watch for when running ports on these devices. The following are known issues that are, again, **conditionally existent due to hardware and gmloader-next constraints**.
