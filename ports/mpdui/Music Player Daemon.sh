@@ -35,18 +35,18 @@ source $controlfolder/runtimes/"love_11.5"/love.txt
 # MPD Start
 if [ "$CFW_NAME" = "ROCKNIX" ]; then
     echo "Running on Rocknix with Pipewire"
-    pgrep mpd || ./mpd ./configs/pipewire/mpdconf
+    ./mpd ./configs/pipewire/mpdconf
 elif [ "$CFW_NAME" = "muOS" ]; then
     echo "Running on MuOS with Pipewire"
-    pgrep mpd || ./mpd ./configs/pipewire/mpdconf
+    ./mpd ./configs/pipewire/mpdconf
 elif [ "$CFW_NAME" = "knulli" ]; then
     echo "Running on Knulli with Pipewire ( Using special libs for SYSTEMD ) "
     export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/knullilibs:$LD_LIBRARY_PATH"
-    pgrep mpd || ./mpd ./configs/pipewire/mpdconf
+    ./mpd ./configs/pipewire/mpdconf
 else
     echo "Running on ALSA"
     export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/nonpipewire.libs:$LD_LIBRARY_PATH"
-    pgrep mpd || ./mpd mpdconf
+    ./mpd mpdconf
 fi
 
 
