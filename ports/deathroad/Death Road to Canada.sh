@@ -36,7 +36,7 @@ else
 fi
 
 # Patch final Level
-if ls $GAMEDIR/patch/canada-crossing-region.df 1> /dev/null 2>&1; then
+if [ -f "$GAMEDIR/patch/canada-crossing-region.df" ]; then
   rm -rf "$GAMEDIR/deathforth/events/exterior/region/canada-crossing-region.df" 
   mv "$GAMEDIR/patch/canada-crossing-region.df" "$GAMEDIR/deathforth/events/exterior/region"
 fi
