@@ -2,14 +2,12 @@
 
 * The game is available on [Steam](https://store.steampowered.com/app/1459010/Fallen_Leaf/)
 * The first run will need 5 to 10 min to compress the audio data so that the game can run on 1GB memory devices
-* The splashscreen on game loading is currently not displayed on rocknix devices, it shows a black screen
 * You can skip a cutscene with a long press on start
 * This game uses X360 gamepad layout for A/B/X/Y buttons, which means :
     - A button is South
     - X button is West
     - B button is East
 * In the game menu and during the gameplay you'll see indications/hints for which button you have to press. It uses North/South/West/East button indications. If the indications don't match your gamepad layout, for example you need to press East when it says to press South for jumping, you can try to remove the `swapabxy.txt` file in the `fallenleaf` folder and restart the game. You can always put back a `swapabxy.txt` file in the `fallenleaf` to re-enable the swapping of A/B and X/Y buttons.
-* If you don't want to compress the audio data you can remove the `compress.txt` file in the `fallenleaf` folder **before** you start the game for the first time. However be aware that the loading time will be longer and the game won't work if your device only have 1GB memory.
 
 ## Controls
 
