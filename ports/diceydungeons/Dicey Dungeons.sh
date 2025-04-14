@@ -41,7 +41,7 @@ if [ ! -f $DATADIR/$BINARY ]; then
 fi
 
 # Clean up data dir
-rm -r $DATADIR/*.sh $DATADIR/goggame*
+rm -r $DATADIR/*.sh
 
 # Create XDG dirs
 CONFDIR="$GAMEDIR/conf/config"
