@@ -31,10 +31,8 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Display loading splash
-if [ -f "$GAMEDIR/install_completed" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
-fi
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
+$ESUDO ./tools/splash "splash.png" 2000 &
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "$GAMEDIR/$gptk_filename" &
