@@ -1,9 +1,0 @@
-SOUNDS.RFF
-blood.rff
-*.art
-*.MAP
-*.dem
-*.DAT
-*.RFF
-*.SMK
-*.WAV

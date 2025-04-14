@@ -1,1 +1,0 @@
-Place uqm content files in /content/packages/

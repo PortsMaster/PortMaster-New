@@ -1,1 +1,0 @@
-13r12u18ldru3l3(dr)ulluu3l5(dr)dldr3u2(lluu)3l5(dr)luluulluu3l5(dr)ddluldrr3ulldlu3r3d3luld4r3u4luludrddlu5r3d5lud7rul3ruu5l3rd3u4luull3d3urrddl5rddrr4dl4(drd3luu)drl3d26ruu25l25rdd26luu26r2(uu16l16r)uu18l18ruu22lrdu4rdu17ruu17l2(dull)d

@@ -1,1 +1,0 @@
-3(dr)d5ruurlddrruudld6l3(ul)uu5rddllur3u4rddr3dldrddlu5l3(ul)uu3r3ld3(dr)d6r5uluu4ldd3ldrurruu4rdr6d6l3(ul)ur

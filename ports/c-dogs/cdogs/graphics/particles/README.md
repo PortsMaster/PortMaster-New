@@ -1,1 +1,0 @@
-The sprites in this folder have alpha / blending effects applied and should not have palette correction applied

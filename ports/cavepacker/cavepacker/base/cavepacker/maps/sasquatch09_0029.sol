@@ -1,1 +1,0 @@
-uudllrr3durr3lururdrddldl3(lu)ururur3(rd)drdl3ululuurd3ldldllur3drdrddlu

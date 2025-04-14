@@ -1,1 +1,0 @@
-urrdulldrdrluurdrd2(dlurul)
