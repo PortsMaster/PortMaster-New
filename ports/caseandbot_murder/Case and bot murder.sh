@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-GAMEDIR="/$directory/ports/case_and_bot_murder"
+GAMEDIR="/$directory/ports/caseandbot_murder"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
 # CD and set permissions
