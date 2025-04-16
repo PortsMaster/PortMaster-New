@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/dd2
+GAMEDIR=/$directory/ports/dodgindiamonds2d
 CONFDIR="$GAMEDIR/conf"
 BINARY=dd2
 
