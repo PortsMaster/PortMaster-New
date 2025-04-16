@@ -45,6 +45,12 @@ DPAD LEFT - 4
 START - ENTER  
 SELECT -  ESC  
 
+## COMPATIBILITY
+
+If there is no mouse cursor visible, update the below setting in fheroes2/fheroes2/fheroes2.cfg to on
+
+cursor soft rendering = on
+
 ## CHANGELOG
 
 Update 1.1.1 -> 1.1.2
