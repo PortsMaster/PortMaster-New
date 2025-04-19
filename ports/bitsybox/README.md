@@ -16,8 +16,6 @@ Use the online [game editor](https://make.bitsy.org/). Also [read the doc](https
 
 ## Limitations
 
-Bitsy v8 isn't supported yet, you can only play up to Bitsy v7 games without sound. The support of v8 with sound and music is in development by Adam Le Doux as stated [here](https://ledoux.itch.io/bitsybox/devlog/772121/bitsybox-started-work-on-bitsy-v8x-support).
-
 You might get some slowdowns in the games, especially on low-end devices, but it should still be playable. Considering how the bitsy engine works in bitsybox it is the best we can do at the moment. Bitsybox is coded in C and uses the [duktap](https://github.com/svaarala/duktape) library, also coded in C, to run the bitsy engine that is coded in javascript. Javascript is known to require lot of computing power.
 
 ## Controls
