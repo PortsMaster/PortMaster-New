@@ -22,6 +22,15 @@ CONFDIR="$GAMEDIR/savedata/"
 mkdir -p "$GAMEDIR/savedata/"
 cd "$GAMEDIR/"
 
+# Warn about Panfrost incompatability on ROCKNIX
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port only supports the libMali graphics driver. Switch to from Panfrost to libMali to continue."
+    sleep 5
+    exit 1
+    fi
+fi
+
 # Unpack GOG Files
 chmod +x "$GAMEDIR/unzip"
 if ls $GAMEDIR/installer/*.sh 1> /dev/null 2>&1; then
