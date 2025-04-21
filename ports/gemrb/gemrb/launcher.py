@@ -1,5 +1,5 @@
 import pyxel
-import os
+from pathlib import Path
 
 # Define all possible games
 ALL_GAMES = [
@@ -15,21 +15,23 @@ ALL_GAMES = [
 
 
 def game_folder_valid(script_name):
-    base = os.path.dirname(os.path.abspath(__file__))
-    folder_name = os.path.splitext(script_name)[0].replace("launcher-", "")
-    folder_path = os.path.join(base, "games", folder_name)  # e.g., ./games/bg1/
+    base = Path(__file__).resolve().parent
+    folder_name = Path(script_name).stem.replace("launcher-", "")
+    folder_path = base / "games" / folder_name
 
-    if not os.path.isdir(folder_path):
+    if not folder_path.is_dir():
         return False
 
-    file_count = sum(len(files) for _, _, files in os.walk(folder_path))
+    file_count = sum(1 for file in folder_path.rglob("*") if file.is_file())
     return file_count >= 2
+
 
 # Filter valid games based on folder contents
 GAMES = [entry for entry in ALL_GAMES if game_folder_valid(entry[0])]
 
 # Always add Exit as the final option
 GAMES.append(("exit", "Exit"))
+
 UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
 BUTTON_A, BUTTON_B, BUTTON_START, BUTTON_SELECT = 4, 5, 6, 7
 
@@ -102,11 +104,12 @@ class MenuApp:
                 self.launch_script(script)
 
     def launch_script(self, script):
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(basedir, script)
+        basedir = Path(__file__).resolve().parent
+        path = basedir / script
 
         print(f"Launching and replacing with: {path}")
-        os.execv(path, [path])  # replace current process with script
+        import os
+        os.execv(str(path), [str(path)])
 
     def draw(self):
         pyxel.cls(0)
