@@ -111,12 +111,10 @@ class MenuApp:
                 self.launch_script(script)
 
     def launch_script(self, script):
-        basedir = Path(__file__).resolve().parent
-        path = basedir / script
+        path = BASE_DIR / script
 
         print(f"Launching and replacing with: {path}")
-        import os
-        os.execv(str(path), [str(path)])
+        os.execv(path, [path])
 
     def draw(self):
         pyxel.cls(0)
