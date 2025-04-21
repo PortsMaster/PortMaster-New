@@ -37,7 +37,7 @@ GAMES = [
 ]
 
 # Always add Exit as the final option
-GAMES.append(("exit", "Exit"))
+GAMES.append(("quit", "Exit"))
 
 UP, DOWN, LEFT, RIGHT = 0, 1, 2, 3
 BUTTON_A, BUTTON_B, BUTTON_START, BUTTON_SELECT = 4, 5, 6, 7
