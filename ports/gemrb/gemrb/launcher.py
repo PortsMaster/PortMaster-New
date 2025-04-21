@@ -1,33 +1,40 @@
+import os
 import pyxel
+
 from pathlib import Path
+
 
 # Define all possible games
 ALL_GAMES = [
-    ("launcher-bg1.sh", "Baldur's Gate"),
-    ("launcher-bg2.sh", "Baldur's Gate II"),
-    ("launcher-bg2ee.sh", "Baldur's Gate II EE"),
-    ("launcher-demo.sh", "GemRB Demo"),
-    ("launcher-iwd.sh", "Icewind Dale"),
-    ("launcher-how.sh", "Icewind Dale - HoW or ToTL"),
-    ("launcher-iwd2.sh", "Icewind Dale II"),
-    ("launcher-pst.sh", "Planescape: Torment"),
+    ("launcher-bg1.txt", "Baldur's Gate"),
+    ("launcher-bg2.txt", "Baldur's Gate II"),
+    ("launcher-bg2ee.txt", "Baldur's Gate II EE"),
+    ("launcher-demo.txt", "GemRB Demo"),
+    ("launcher-iwd.txt", "Icewind Dale"),
+    ("launcher-how.txt", "Icewind Dale - HoW or ToTL"),
+    ("launcher-iwd2.txt", "Icewind Dale II"),
+    ("launcher-pst.txt", "Planescape: Torment"),
 ]
 
 
-def game_folder_valid(script_name):
-    base = Path(__file__).resolve().parent
-    folder_name = Path(script_name).stem.replace("launcher-", "")
-    folder_path = base / "games" / folder_name
+BASE_DIR = Path(__file__).resolve().parent
+
+def game_folder_valid(script_path: Path) -> bool:
+    folder_name = script_path.stem.rsplit('-', 1)[-1]
+    folder_path = BASE_DIR / "games" / folder_name
 
     if not folder_path.is_dir():
         return False
 
-    file_count = sum(1 for file in folder_path.rglob("*") if file.is_file())
-    return file_count >= 2
-
+    # Check for chitin.key (case-insensitive)
+    return any(f.name.lower() == "chitin.key" for f in folder_path.rglob("*") if f.is_file())
 
 # Filter valid games based on folder contents
-GAMES = [entry for entry in ALL_GAMES if game_folder_valid(entry[0])]
+GAMES = [
+    entry
+    for entry in ALL_GAMES
+    if game_folder_valid(BASE_DIR / entry[0])
+]
 
 # Always add Exit as the final option
 GAMES.append(("exit", "Exit"))
