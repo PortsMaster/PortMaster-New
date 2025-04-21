@@ -79,45 +79,64 @@ class Input:
             self.pressed.append(BUTTON_SELECT)
 
 class FlameEffect:
-    def __init__(self, width, height, update_every=8):
+    def __init__(self, width, height, decay_pallet, update_every=8):
         self.width = width
         self.height = height
         self.buffer = [[0 for _ in range(width)] for _ in range(height)]
         self.frame_count = 0
-        self.update_every = update_every
+        self.decay_pallet = decay_pallet
+        self.max_decay = len(decay_pallet)-1
+        self.update_every = update_every  # how many frames to skip between updates
 
     def update(self):
         self.frame_count += 1
         if self.frame_count % self.update_every != 0:
-            return
+            return  # Skip this frame
 
+        # Give the base a bit more variance
         for x in range(self.width):
-            self.buffer[self.height - 1][x] = random.randint(8, 15)
+            if random.randint(0, 3):
+                self.buffer[self.height - 1][x] = self.max_decay
+            else:
+                self.buffer[self.height - 1][x] = random.randint(max(self.max_decay - 5, 1), self.max_decay-1)
 
         for y in range(self.height - 2, -1, -1):
             for x in range(self.width):
-                decay = random.randint(0, 2)
+                decay = random.randint(0, 1)
+                drift = random.randint(0, 2)
                 src_x = x
-                if random.random() > 0.5 and x > 0:
+
+                if drift == 1 and x > 0:
                     src_x -= 1
-                elif random.random() > 0.5 and x < self.width - 1:
+                elif drift == 2 and x < self.width - 1:
                     src_x += 1
 
                 below = self.buffer[y + 1][src_x]
+                # self.buffer[y][x] = max(below - (1 - decay & 1), 0)
                 self.buffer[y][x] = max(below - decay, 0)
 
     def draw(self):
         for y in range(self.height):
             for x in range(self.width):
-                colour = self.buffer[y][x]
-                if colour:
-                    pyxel.pset(x, y, colour)
+                decay = self.buffer[y][x]
+                if decay > 0:
+                    pyxel.pset(x, y, self.decay_pallet[decay])
+
 
 class MenuApp:
     def __init__(self):
         self.selected = 0
         self.input = Input()
         pyxel.init(160, 120, title="GemRB Launcher")
+        self.select_file = BASE_DIR / "game_select.txt"
+
+        # Clear game.
+        try:
+            with open(self.select_file, "w") as f:
+                f.write("quit")
+
+        except Exception as e:
+            print(f"Failed to write game selection: {e}")
 
         # Optional: tweak the colour palette
         pyxel.colors[1] = 0x050503
@@ -130,9 +149,11 @@ class MenuApp:
         pyxel.colors[8] = 0xffcc66
         pyxel.colors[9] = 0xffff99
         pyxel.colors[10] = 0xffffff
-        pyxel.colors[12] = 0x99ccff  # Pale blue for title
 
-        self.flames = FlameEffect(pyxel.width, pyxel.height)
+        # Allow a slower decay rate.
+        decay_pallet = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10]
+
+        self.flames = FlameEffect(pyxel.width, pyxel.height, decay_pallet, 3)
         pyxel.run(self.update, self.draw)
 
     def update(self):
@@ -141,14 +162,14 @@ class MenuApp:
 
         if UP in self.input.pressed:
             self.selected = (self.selected - 1) % len(GAMES)
+
         elif DOWN in self.input.pressed:
             self.selected = (self.selected + 1) % len(GAMES)
+
         elif BUTTON_A in self.input.pressed or BUTTON_START in self.input.pressed:
             script = GAMES[self.selected][0]
-            if script == "exit" or script == "quit":
-                pyxel.quit()
-            else:
-                self.launch_script(script)
+
+            self.launch_script(script)
 
     def launch_script(self, script):
         select_file = BASE_DIR / "game_select.txt"
@@ -170,7 +191,7 @@ class MenuApp:
         title_padding = 4
         menu_height = len(GAMES) * line_height
         total_height = title_height + title_padding + menu_height
-        top = (pyxel.height - total_height) // 2
+        top = (pyxel.height - total_height) // 2 - 5
 
         # Left-aligned title
         pyxel.text(10, top, title, 12)
@@ -181,6 +202,7 @@ class MenuApp:
                 pyxel.text(10, y, f"> {name}", 7)
             else:
                 pyxel.text(10, y, f"  {name}", 6)
+
 
 if __name__ == "__main__":
     MenuApp()
