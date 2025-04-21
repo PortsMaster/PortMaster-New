@@ -52,16 +52,16 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PYTHONHOME=$GAMEDIR/renpy/
 export PYTHONPATH=$GAMEDIR/renpy/lib/python3.9
 
+if [[ "$LIBGL_FB" != "" ]]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
+fi
+
 # If using gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
-fi
-
-if [[ "$LIBGL_FB" != "" ]]; then
-  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
-  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
 fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
