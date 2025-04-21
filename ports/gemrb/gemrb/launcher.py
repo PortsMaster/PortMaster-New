@@ -6,14 +6,14 @@ from pathlib import Path
 
 # Define all possible games
 ALL_GAMES = [
-    ("launcher-bg1.txt", "Baldur's Gate"),
-    ("launcher-bg2.txt", "Baldur's Gate II"),
-    ("launcher-bg2ee.txt", "Baldur's Gate II EE"),
-    ("launcher-demo.txt", "GemRB Demo"),
-    ("launcher-iwd.txt", "Icewind Dale"),
-    ("launcher-how.txt", "Icewind Dale - HoW or ToTL"),
-    ("launcher-iwd2.txt", "Icewind Dale II"),
-    ("launcher-pst.txt", "Planescape: Torment"),
+    ("bg1", "Baldur's Gate"),
+    ("bg2", "Baldur's Gate II"),
+    ("bg2ee", "Baldur's Gate II EE"),
+    ("demo", "GemRB Demo"),
+    ("iwd", "Icewind Dale"),
+    ("how", "Icewind Dale - HoW or ToTL"),
+    ("iwd2", "Icewind Dale II"),
+    ("pst", "Planescape: Torment"),
 ]
 
 
@@ -111,10 +111,17 @@ class MenuApp:
                 self.launch_script(script)
 
     def launch_script(self, script):
-        path = BASE_DIR / script
+        select_file = BASE_DIR / "game_select.txt"
 
-        print(f"Launching and replacing with: {path}")
-        os.execv(path, [path])
+        try:
+            with open(select_file, "w") as f:
+                f.write(script)
+            print(f"Wrote selected game to: {select_file}")
+        except Exception as e:
+            print(f"Failed to write game selection: {e}")
+
+        pyxel.quit()
+
 
     def draw(self):
         pyxel.cls(0)
