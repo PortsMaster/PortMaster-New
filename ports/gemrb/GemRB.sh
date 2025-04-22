@@ -114,6 +114,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "gemrb" -c "${GPTOKEYB_CFG}" textinput &
 pm_platform_helper "${GAMEDIR}/gemrb"
-$TASKSET ./gemrb -c "${GAMEDIR}/games/${GAME}/GemRB.cfg" "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
+$TASKSET ./gemrb -c "${GAMEDIR}/games/${GAME}/GemRB.cfg" "${GAMEDIR}/games/${GAME}/"
 
 pm_finish
