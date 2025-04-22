@@ -1,77 +1,56 @@
-# PortMaster Driver
+## SuperHaxagon for PortMaster
 
-This driver is intended for PortMaster builds. Learn more about PortMaster here:
+SuperHaxagon is a cross-platform, open source [Super Hexagon](http://superhexagon.com/) clone!
 
-https://portmaster.games/index.html
-
-For additional instructions on different platforms, see the original README at:
+You can obtain a free copy of the source code or the latest builds licensed under the GPLv3 at:
 
 https://github.com/RedTopper/Super-Haxagon
 
-## Controls
+### Instructions
 
-The controls are shown on the title screen, but here's a copy if it's needed:
+This port is ready to run!
 
-| Button | Action |
-|--|--| 
-|A|Select|
-|B|Back|
-|DPAD L, L1, L2, X|Rotate Left|
-|DPAD R, R1, R2, Y|Rotate Right|
-|Menu|Quit Game|
+If you downloaded a release from GitHub, you can use PortMaster's autoinstall feature described in 
+`superhaxagon/INSTALL.md` within the .zip or described in the link below.
 
-## Building
+https://portmaster.games/faq.html#do-i-have-to-use-portmaster-to-install-ports
 
-### Container Build:
+### Controls
 
-The `monkeyx/retro_builder:arm64` container requires `qeumu-aarch64-static` for arm
-emulation. This will not spin up a VM, but instead natively interpret the binaries
-inside the docker container live. This is very similar to the "chroot" method, just
-using Docker as the chroot instead.
+| Button            | Action       |
+|-------------------|--------------| 
+| A                 | Select       |
+| B                 | Back         |
+| DPAD L, L1, L2, X | Rotate Left  |
+| DPAD R, R1, R2, Y | Rotate Right |
+| Menu              | Quit Game    |
 
-(Note: If you are on an arm device, you do not need to use qeumu-aarch64-static)
+The controls are also available in game on the title screen.
 
-With that said, I am using "podman" for building these images. Things should work
-mostly the same, with the command `docker` swapped for `podman`.
+### Device compatibility
 
-These commands require root to enable the kernel flags for ARM emulation, but the
-actual build will not require it.
+SuperHaxagon supports any screen aspect ratio and is very easy to run. It should be compatible with most CFW, and has 
+been tested on Knulli, Rocknix, muOS, Crossmix, and Emuelec.
 
-```bash
-sudo podman run --rm --privileged multiarch/qemu-user-static --reset -p yes
-```
+### Acknowledgements
 
-At this point you may need to reboot your machine. Re-running the command to set
-up qemu-user-static seems to break things.
+Thank you [TwistBit](https://github.com/TwistBit) for creating all-new sound effects! And thank you to the developers in
+the PortMaster discord who provided tips and advice for porting my game.
 
-```bash
-podman run --rm --arch arm64 ubi9/ubi uname -m
-```
+And most importantly, thank you to Terry Cavanagh ([terrycavanaghgames.com](https://terrycavanaghgames.com/)), for this game would literally not
+exist without you.
 
-If aarch64 printed out, you are good to go! You should now be able to build with:
+### Related Ports
 
-```bash
-podman-compose up PortMaster
-```
+Want more Hexagon-type games for your PortMaster device? Check these out!
 
-### Other Build:
+ * Terry Cavanagh's original [Super Hexagon](https://portmaster.games/detail.html?name=superhexagon), ported by BinaryCounter
+ * Vittorio Romeo's [Open Hexagon](https://portmaster.games/detail.html?name=openhexagon), ported by BinaryCounter
 
-PortMaster has other build environments you can look into here:
+### Building
 
-https://portmaster.games/build-environments.html
+Once you have obtained a copy of the source code, the detailed building instructions are available in:
 
-Once you are in one of the above environments, you can build with the following commands:
+[/driver/SDL2-Portmaster/README.md](https://github.com/RedTopper/Super-Haxagon/blob/master/driver/SDL2-PortMaster/README.md)
 
-```bash
-mkdir build install
-cd build
-cmake -DDRIVER_PORTMASTER=TRUE -DCMAKE_INSTALL_PREFIX=../install ..
-make -j4
-make install
-```
-
-You can then zip the contents of the `install` folder and install it on your device.
-
-## License
-
-This driver follows the license scheme of the parent driver at `driver/SDL2`.
+GitHub Actions are also available to build new autoinstall.zip files automatically.
