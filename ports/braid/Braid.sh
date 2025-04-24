@@ -83,6 +83,9 @@ if [ -f "$GAMEDATA/$game_executable" ]; then
   fi
 fi
 
+# Ensure binary is executable
+$ESUDO chmod a+x "$GAMEDATA/$game_executable"
+
 # Run language selection GUI if necessary
 LANGUAGE="$(cat $GAMEDIR/selected_language.txt)"
 if [ -z "$LANGUAGE" ]; then
@@ -133,7 +136,11 @@ else
 
 fi
 
-$GPTOKEYB2 "$game_executable" -c "$GAMEDIR/$game_executable.gptk" &
+if [[ "$rocknix_mode" == 1 ]]; then
+  $GPTOKEYB2 "$game_executable" &
+else
+  $GPTOKEYB2 "$game_executable" -c "$GAMEDIR/$game_executable.gptk" &
+fi
 
 pm_platform_helper "$GAMEDATA/$game_executable"
 
