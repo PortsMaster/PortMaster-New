@@ -83,9 +83,9 @@ $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
 # Seperate the Controller/Keyboard inputs for GPTOKEY2, since its broken on arkos/amberelec
 if [ "$badgptokey_mode" -eq 0 ]; then 
-	$GPTOKEYB2 "Heist" -x "$GAMEDIR/Heist.gptk" &
+	$GPTOKEYB2 "Heist" -x &
 else
-	$GPTOKEYB2 "Heist" -c "$GAMEDIR/Heist2.gptk" &
+	$GPTOKEYB2 "Heist" -c "$GAMEDIR/Heist.gptk" &
 fi
 unset XDG_DATA_HOME
 pm_platform_helper "$GAMEDIR/box86.${DEVICE_ARCH}"
