@@ -11,66 +11,60 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
-# We source the control.txt file contents here
+export controlfolder
 source $controlfolder/control.txt
-
-# With device_info we can get dynamic device information like resolution, cpu, cfw etc.
-source $controlfolder/device_info.txt
-
-# We source custom mod files from the portmaster folder example mod_jelos.txt which containts pipewire fixes
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-GAMEDIR=/$directory/ports/theflayedman
+# device (info resolution, cpu, cfw etc.)
+source $controlfolder/device_info.txt
 
-# Enable logging
+# custom mod files from the portmaster folder example mod_jelos.txt which containts pipewire fixes
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+# variables
+GAMEDIR="/$directory/ports/theflayedman"
+
+# cd and logging
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Enter the gamedir
-cd "$GAMEDIR"
+# adjust dpad_mouse_step and deadzone_scale based on resolution width
 echo "DISPLAY_WIDTH: $DISPLAY_WIDTH"
-
-# Adjust dpad_mouse_step and deadzone_scale based on resolution width
 if [ "$DISPLAY_WIDTH" -lt 640 ]; then
-    echo "Setting dpad_mouse_step and deadzone_scale to 4"
-    sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 4/g' theflayedman.gptk
+  echo "Setting dpad_mouse_step and deadzone_scale to 4"
+  sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 4/g' theflayedman.gptk
 elif [ "$DISPLAY_WIDTH" -lt 1280 ]; then
-    echo "Setting dpad_mouse_step and deadzone_scale to 5"
-    sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 5/g' theflayedman.gptk
+  echo "Setting dpad_mouse_step and deadzone_scale to 5"
+  sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 5/g' theflayedman.gptk
 elif [ "$DISPLAY_WIDTH" -lt 1920 ]; then
-    echo "Setting dpad_mouse_step and deadzone_scale to 6"
-    sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 6/g' theflayedman.gptk
+  echo "Setting dpad_mouse_step and deadzone_scale to 6"
+  sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 6/g' theflayedman.gptk
 else
-    echo "Setting dpad_mouse_step and deadzone_scale to 7"
-    sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 7/g' theflayedman.gptk
+  echo "Setting dpad_mouse_step and deadzone_scale to 7"
+  sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 7/g' theflayedman.gptk
 fi
 
-# Setup savedir
+# set up save dir
 mkdir -p "$GAMEDIR/savedata"
 bind_directories ~/.local/share/ags/The\ Flayed\ Man "$GAMEDIR/savedata"
 
-# Copy acsetup.cfg from config to gamedata
+# copy acsetup.cfg from config to gamedata
 if [ ! -f "$GAMEDIR/.initial_config_done" ]; then
   cp config/acsetup.cfg gamedata/
   touch "$GAMEDIR/.initial_config_done"
 fi
 
-# Exports
+# exports
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 
-# We warn the user about the puzzle which needs keyboard inputs
-#./text_viewer -f 25 -w -t "Instructions" --input_file $GAMEDIR/instructions.txt
+# launch the game
+$GPTOKEYB "$GAMEDIR/ags" -c "./theflayedman.gptk" &
+pm_platform_helper "$GAMEDIR/ags"
+"$GAMEDIR/ags" ./gamedata
 
-# Launch the game
-$GPTOKEYB "ags" -c "./theflayedman.gptk" &
-./ags ./gamedata
-
-# Cleanup
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# cleanup
+pm_finish
