@@ -38,13 +38,7 @@ fi
 # Create directory for save files
 CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-    fi
-fi
+
 # Mount Weston runtime
 weston_dir=/tmp/weston
 $ESUDO mkdir -p "${weston_dir}"
