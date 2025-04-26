@@ -26,6 +26,15 @@ gptk_filename="professorlucifer.gptk"
 # Logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Check for ROCKNIX running with libMali driver.
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+    fi
+fi
+
 # Create directory for save files
 CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
