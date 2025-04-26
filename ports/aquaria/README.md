@@ -9,24 +9,28 @@ Any version of the game from Steam or GoG should work. For example, if you own t
 ## Controls
 
 ### Main controls
-|            |                                      |  
-|:-----------|:-------------------------------------|
-| Left stick | Swim, select song                    |
-| A          | Swim fast, grab wall, jump off wall  |
-| B          | Interact, sing                       |
-| X (hold)   | Look (with left stick)               |
-| Y          | Roll                                 |
-| Start      | Open/dismiss world map / recipes     |
-| Select     | Open/dismiss menu / help             |
+
+| Button      | Action                               |
+|:------------|:-------------------------------------|
+| Left stick  | Swim, select song                    |
+| A           | Swim fast, grab wall, jump off wall  |
+| B           | Interact, sing                       |
+| X (hold)    | Look (with left stick)               |
+| Y           | Roll                                 |
+| Start       | Open/dismiss world map / recipes     |
+| Select      | Open/dismiss menu / help             |
+| D-pad left  | Pause                                |
+| D-pad right | Skip cutscene                        |
 
 ### Cooking screen
-|            |                                      |  
-|:-----------|:-------------------------------------|
-| R2 / B     | Move food right (to cook)            |
-| R1         | Move food left (remove from cooking) |
-| X          | Drop food (remove from inventory)    |
-| A          | Eat food                             |
-| Y          | Cook selected foods                  |
+
+| Button      | Action                               |
+|:------------|:-------------------------------------|
+| R2 / B      | Move food right (to cook)            |
+| R1          | Move food left (remove from cooking) |
+| X           | Drop food (remove from inventory)    |
+| A           | Eat food                             |
+| Y           | Cook selected foods                  |
 
 ## Compiling
 See [BUILDING.md](https://github.com/PortsMaster/PortMaster-New/blob/main/ports/aquaria/aquaria/BUILDING.md) for building instructions.
