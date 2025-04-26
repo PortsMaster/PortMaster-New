@@ -4,6 +4,8 @@ Thanks to [Snoring Dog Games](https://snoringdoggames.itch.io/) for creating thi
 
 To support the creators' awesome work, please consider purchasing the [The Flayed Man Supporter Pack](https://snoringdoggames.itch.io/the-flayed-man-supporter-pack) -- which includes a digital artbook and soundtrack.
 
+**Note for ROCKNIX:** libMali and Panfrost work, but the cursor resets its position after a few seconds of inactivity using libMali.
+
 
 # Controls
 
