@@ -46,12 +46,13 @@ if [ ! -f "$GAMEDATA/$game_executable" ]; then
   echo Extracting game data...
   mkdir "$GAMEDATA/tmp"
   cd "$GAMEDATA/tmp"
+  $ESUDO chmod 777 "$GAMEDIR/tools/unzip"
 
   if ls "$GAMEDATA"/BraidSetup-*.sh >/dev/null 2>&1; then
     # Humble bundle installer.
     mv "$GAMEDATA"/BraidSetup*.sh "$GAMEDATA/braid_installer.zip"
 
-    unzip "$GAMEDATA/braid_installer.zip"
+    $GAMEDIR/tools/unzip "$GAMEDATA/braid_installer.zip"
 
     mv data/noarch/* "$GAMEDATA/"
     mv data/x86/* "$GAMEDATA/"
@@ -59,14 +60,14 @@ if [ ! -f "$GAMEDATA/$game_executable" ]; then
     # Gog installer.
     mv "$GAMEDATA"/gog_braid*.sh "$GAMEDATA/braid_installer.zip"
 
-    unzip "$GAMEDATA/braid_installer.zip"
+    $GAMEDIR/tools/unzip "$GAMEDATA/braid_installer.zip"
 
     mv data/noarch/game/* "$GAMEDATA/"
   fi
 
   cd $GAMEDIR
   rm -r "$GAMEDATA/tmp"
-  rm "$GAMEDATA/*.sh" "$GAMEDATA/braid_installer.zip" \
+  rm "$GAMEDATA"/*.sh "$GAMEDATA/braid_installer.zip" \
     "$GAMEDATA/launcher.bin.x86"
 fi
 
