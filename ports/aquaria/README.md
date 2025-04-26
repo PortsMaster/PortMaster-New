@@ -9,7 +9,8 @@ Any version of the game from Steam or GoG should work. For example, if you own t
 ## Controls
 
 ### Main controls
-|            |                                      |  
+
+| Button     | Action                               |
 |:-----------|:-------------------------------------|
 | Left stick | Swim, select song                    |
 | A          | Swim fast, grab wall, jump off wall  |
@@ -18,9 +19,11 @@ Any version of the game from Steam or GoG should work. For example, if you own t
 | Y          | Roll                                 |
 | Start      | Open/dismiss world map / recipes     |
 | Select     | Open/dismiss menu / help             |
+| D-pad up   | Skip cutscene                        |
 
 ### Cooking screen
-|            |                                      |  
+
+| Button     | Action                               |  
 |:-----------|:-------------------------------------|
 | R2 / B     | Move food right (to cook)            |
 | R1         | Move food left (remove from cooking) |
