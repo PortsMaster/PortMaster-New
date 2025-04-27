@@ -48,6 +48,9 @@ if [ ! -f "$GAMEDATA/$game_executable" ]; then
   cd "$GAMEDATA/tmp"
   $ESUDO chmod 777 "$GAMEDIR/tools/unzip"
 
+  # NB This sets the library path for later, too
+  LD_LIBRARY_PATH="$GAMEDIR/tools/libs.aarch64":$LD_LIBRARY_PATH
+
   if ls "$GAMEDATA"/BraidSetup-*.sh >/dev/null 2>&1; then
     # Humble bundle installer.
     mv "$GAMEDATA"/BraidSetup*.sh "$GAMEDATA/braid_installer.zip"
@@ -98,7 +101,7 @@ if [ -z "$LANGUAGE" ]; then
   ./love launcher
 fi
 
-# see what language they selected
+# See what language they selected
 LANGUAGE="$(cat $GAMEDIR/selected_language.txt)"
 if [ -z "$LANGUAGE" ]; then
   LANGUAGE=english
