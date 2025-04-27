@@ -16,6 +16,9 @@ export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
 export PATH="$GAMEDIR/tools:$PATH"
 
+# data.win md5 sum
+DATA_WIN_MD5="e38af76b306c85dcb8aa5d562e079223"
+
 # Permissions
 chmod 666 /dev/uinput
 chmod 777 "$TOOLDIR/gmKtool.py"
@@ -28,16 +31,22 @@ patch_game()
 {   
     # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/data.win" ]; then
-        output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "$GAMEDIR/patch/patch.steam" "$DATADIR/game.droid" 2>&1)
-        if [ $? -eq 0 ]; then
-            echo "Patch applied successfully"
-            echo "$output"
-            rm "$DATADIR/data.win"
-        else
-            echo "Failed to apply patch"
-            echo "$output"
-            mv $LOGFILE $LOGERR
+        checksum=$(md5sum "$DATADIR/data.win" | awk '{print $1}')
+        if [ "$checksum" != "$DATA_WIN_MD5" ]; then
+            echo "Error: Invalid MD5 checksum for data.win. Please use data.win from the latest steam version of the game."
             exit 1
+        else
+            output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "$GAMEDIR/patch/patch.steam" "$DATADIR/game.droid" 2>&1)
+            if [ $? -eq 0 ]; then
+                echo "Patch applied successfully"
+                echo "$output"
+                rm "$DATADIR/data.win"
+            else
+                echo "Failed to apply patch"
+                echo "$output"
+                mv $LOGFILE $LOGERR
+                exit 1
+            fi
         fi
     else
         echo "No data.win file found to patch!"
