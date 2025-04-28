@@ -1,6 +1,6 @@
 ## Notes
 
-Special thanks to [Mewsturbo](https://) for making this awesome game!
+Special thanks to [Mewsturbo](https://space.bilibili.com/32978058) for making this awesome game!
 
 Source: https://store.steampowered.com/app/2598080/Drift_Survivor/
 
