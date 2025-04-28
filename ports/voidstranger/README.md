@@ -2,15 +2,15 @@
 
 GitHub for this port- https://github.com/EzDzzIt/vsaarch64
  
-This port supports v1.1.1 of the Steam version of the game, or v1.1.1 of the itch.io version (itch version is patched to be equivalent to the Steam version).
+This port currently supports **v1.1.1** of the Steam version of the game, or v1.1.1 of the itch.io version (itch version is patched to be equivalent to the Steam version).
 
 ## Instructions for Running
 
--Purchase game via https://store.steampowered.com/app/2121980/Void_Stranger/ 
-
--Place all game .png, .dat, .csv, and .win files in the "/gamedata/" folder. 
-
--On first run, the game will take a 2-4 minutes to load. The port is running through patching the data.win file via xdelta, zipping audio files and other files into the .apk, and parsing the .csv game data file. Subsequent starts should go faster. 
+- Purchase game via https://store.steampowered.com/app/2121980/Void_Stranger/ 
+- In Steam, right-click the game and select "Properties..."
+- In the "Betas" tab, choose `old_version_1.1.1`. Let Steam download this version.
+- Place all game .png, .dat, .csv, and .win files in the "/gamedata/" folder. 
+- On first run, the game will take a 2-4 minutes to load. The port is running through patching the data.win file via xdelta, zipping audio files and other files into the .apk, and parsing the .csv game data file. Subsequent starts should go faster. 
 
 ## Controls
 
