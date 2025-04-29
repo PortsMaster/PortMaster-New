@@ -4,6 +4,9 @@ Thanks to:
 * [Humble Hearts LLC](https://store.steampowered.com/search/?developer=Humble%20Hearts%20LLC) for creating this awesome game! Check out the game's Steam page [here](https://store.steampowered.com/app/236090/Dust_An_Elysian_Tail/). 
 * JanTrueno for porting: Dust: an Elysian Tail.
 
+## Known issues
+* The port only exits with the GPTK Hotkey, start+select.
+
 ### Steam Instructions
 * [Open Steam console](steam://open/console)
 * Copy and paste command: download_depot 236090 236092 3643140810355546394
