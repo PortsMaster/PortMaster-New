@@ -19,10 +19,9 @@ get_controls
 # Set variables
 GAMEDIR="/$directory/ports/sonic1"
 
-# CD and set permissions
+# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs":$LD_LIBRARY_PATH
@@ -50,6 +49,8 @@ elif (( $(echo "$ASPECT == 1.33" | bc -l) )); then
     WIDTH=$MED  # 4:3
 elif (( $(echo "$ASPECT == 1.78" | bc -l) )); then
     WIDTH=$HIGH  # 16:9
+elif (( $(echo "$ASPECT == 1.15" | bc -l) )); then
+    WIDTH=274 # RPMini v2
 else
     echo "Unknown aspect ratio: $ASPECT"
     WIDTH=$MED  # Default value if aspect ratio is unknown
@@ -71,9 +72,9 @@ else
 fi
 
 # Run the game
-echo "Loading, please wait!" > $CUR_TTY
+chmod 777 ./$GAME
 $GPTOKEYB $GAME -c "sonic.gptk" &
-pm_platform_helper "$GAME"
+pm_platform_helper "$GAME" > /dev/null
 ./$GAME
 
 # Cleanup

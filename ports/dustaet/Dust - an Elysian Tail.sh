@@ -37,7 +37,14 @@ $ESUDO mount "$monofile" "$monodir"
 bind_directories "$HOME/.local/share/DustAET" "$GAMEDIR/savedata"
 
 # Remove bundled .NET libraries to use system versions
-rm -f "$GAMEDIR"/gamedata/{System*.dll,mscorlib.dll,FNA.dll,Mono.*.dll}
+abundant_files="System*.dll mscorlib.dll FNA.dll Mono.*.dll"
+
+for pattern in $abundant_files; do
+  for file in "$GAMEDIR/gamedata"/$pattern; do
+    [ -e "$file" ] && rm -f "$file"
+  done
+done
+
 
 # Setup path and other environment variables
 export MONO_IOMAP=all
@@ -71,11 +78,16 @@ if [ "$DISPLAY_WIDTH" -lt 960 ] || [ "$DISPLAY_HEIGHT" -lt 664 ]; then
   export HACKSDL_CONFIG_FILE="$GAMEDIR/tools/hacksdl.conf"
 fi
 
-if echo "$CFW_NAME" | tr '[:upper:]' '[:lower:]' | grep -q ark; then
+# Arkos hack
+cfw_lc=$(echo "$CFW_NAME" | tr '[:upper:]' '[:lower:]')
+
+case "$cfw_lc" in
+  *ark*)
     # Sound hack for rg351mp/r36
     cp tools/asoundrc ~/.asoundrc
     echo "Sound hack applied for $CFW_NAME"
-fi
+    ;;
+esac
 	
 cd "$GAMEDIR/gamedata"
 
