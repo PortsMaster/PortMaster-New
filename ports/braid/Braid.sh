@@ -46,12 +46,16 @@ if [ ! -f "$GAMEDATA/$game_executable" ]; then
   echo Extracting game data...
   mkdir "$GAMEDATA/tmp"
   cd "$GAMEDATA/tmp"
+  $ESUDO chmod 777 "$GAMEDIR/tools/unzip"
+
+  # NB This sets the library path for later, too
+  LD_LIBRARY_PATH="$GAMEDIR/tools/libs.aarch64":$LD_LIBRARY_PATH
 
   if ls "$GAMEDATA"/BraidSetup-*.sh >/dev/null 2>&1; then
     # Humble bundle installer.
     mv "$GAMEDATA"/BraidSetup*.sh "$GAMEDATA/braid_installer.zip"
 
-    unzip "$GAMEDATA/braid_installer.zip"
+    $GAMEDIR/tools/unzip "$GAMEDATA/braid_installer.zip"
 
     mv data/noarch/* "$GAMEDATA/"
     mv data/x86/* "$GAMEDATA/"
@@ -59,14 +63,14 @@ if [ ! -f "$GAMEDATA/$game_executable" ]; then
     # Gog installer.
     mv "$GAMEDATA"/gog_braid*.sh "$GAMEDATA/braid_installer.zip"
 
-    unzip "$GAMEDATA/braid_installer.zip"
+    $GAMEDIR/tools/unzip "$GAMEDATA/braid_installer.zip"
 
     mv data/noarch/game/* "$GAMEDATA/"
   fi
 
   cd $GAMEDIR
   rm -r "$GAMEDATA/tmp"
-  rm "$GAMEDATA/*.sh" "$GAMEDATA/braid_installer.zip" \
+  rm "$GAMEDATA"/*.sh "$GAMEDATA/braid_installer.zip" \
     "$GAMEDATA/launcher.bin.x86"
 fi
 
@@ -83,6 +87,9 @@ if [ -f "$GAMEDATA/$game_executable" ]; then
   fi
 fi
 
+# Ensure binary is executable
+$ESUDO chmod a+x "$GAMEDATA/$game_executable"
+
 # Run language selection GUI if necessary
 LANGUAGE="$(cat $GAMEDIR/selected_language.txt)"
 if [ -z "$LANGUAGE" ]; then
@@ -94,7 +101,7 @@ if [ -z "$LANGUAGE" ]; then
   ./love launcher
 fi
 
-# see what language they selected
+# See what language they selected
 LANGUAGE="$(cat $GAMEDIR/selected_language.txt)"
 if [ -z "$LANGUAGE" ]; then
   LANGUAGE=english
@@ -133,7 +140,11 @@ else
 
 fi
 
-$GPTOKEYB2 "$game_executable" -c "$GAMEDIR/$game_executable.gptk" &
+if [[ "$rocknix_mode" == 1 ]]; then
+  $GPTOKEYB2 "$game_executable" &
+else
+  $GPTOKEYB2 "$game_executable" -c "$GAMEDIR/$game_executable.gptk" &
+fi
 
 pm_platform_helper "$GAMEDATA/$game_executable"
 
