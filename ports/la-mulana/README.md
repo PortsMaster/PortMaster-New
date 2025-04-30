@@ -26,7 +26,7 @@ Thanks to GR3 Project for the original game and [Nigoro](http://nigoro.jp/en/) f
 
 Thanks to ptitSeb for the incredible [box86](https://github.com/ptitSeb/box86) and [gl4es](https://github.com/ptitSeb/gl4es) projects which make this port possible, and for help with debugging the port.
 
-Thanks to kdog for [hacksdl](https://github.com/cdeletre/hacksdl), a modified version of which was used in this port.
+Thanks to kdog for [hacksdl](https://github.com/cdeletre/hacksdl), a modified version of which was used in this port, and to BinaryCounter for his steamstub library.
 
 Thanks to Bamboozler and Shark for earlier versions of the port, and to Cebion for help with this version.
 
