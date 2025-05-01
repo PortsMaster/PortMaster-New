@@ -30,7 +30,7 @@ cd $GAMEDIR
 # Check for file existence before trying to manipulate them:
 [ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
 export GMLOADER_PLATFORM="os_linux"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -47,7 +47,7 @@ fi
 
 # if no .gptk file is used use $GPTOKEYB "gmloader" & 
 $GPTOKEYB "gmloader" -c ./BTL.gptk &
-pm_platform_helper "gmloader"
+pm_platform_helper "gmloader" > /dev/null
 ./gmloader BTL.apk
 
 pm_finish
