@@ -47,7 +47,7 @@ fi
 
 # if no .gptk file is used use $GPTOKEYB "gmloader" & 
 $GPTOKEYB "gmloader" -c ./BTL.gptk &
-pm_platform_helper "gmloader"
+pm_platform_helper "gmloader" > /dev/null
 ./gmloader BTL.apk
 
 pm_finish
