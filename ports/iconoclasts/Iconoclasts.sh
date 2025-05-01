@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: iconoclasts.zip, Iconoclasts.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -13,7 +14,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 export PORT_32BIT="Y"
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
@@ -21,9 +21,6 @@ export PORT_32BIT="Y"
 get_controls
 
 GAMEDIR="/$directory/ports/iconoclasts"
-
-cd $GAMEDIR
-
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # gl4es
@@ -34,9 +31,10 @@ else
 fi
 
 if [ "$LIBGL_FB" != "" ]; then
-export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
-export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
-fi 
+    export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
+    export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
+    export BOX86_FORCE_ES=31
+fi
 
 cd $GAMEDIR/gamedata
 
@@ -54,7 +52,6 @@ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/box86/native":"/usr/lib/arm-li
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/native":"$GAMEDIR/gamedata/bin32"
 
 export BOX86_DYNAREC=1
-export BOX86_FORCE_ES=31
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # load user settings
@@ -68,40 +65,34 @@ if [ ! -f 'bin32/Chowdren' ]; then
     # No game found, check for installers...
     for installer in iconoclasts_*.sh; do break; done;
     if [[ -z "$installer" ]] || [[ "$installer" == "iconoclasts_*.sh" ]]; then
-        echo "No data, no installer... nothing to do :("
-        printf "\033c" > /dev/tty1
+        pm_message "No data, no installer... nothing to do :("
         exit -1
     fi
 
-    echo "Installing from $installer..." > /dev/tty0
+    pm_message "Installing from $installer..."
 
     # extract the installer, but make sure we got the Chowdren binary present!
-    python3 ../extract.py "$installer" "data/noarch/game/bin32/Chowdren" > /dev/tty0
+    python3 ../extract.py "$installer" "data/noarch/game/bin32/Chowdren"
     if [ $? != 0 ]; then
 		rm -f bin32/Chowdren
-        echo "Install failed..." > /dev/tty0
+        pm_message "Install failed..."
         sleep 5
-        printf "\033c" > /dev/tty1
         exit -1
     fi
 fi
 
 if [ ! -f 'data/music/62SYS_title_B.dat' ]; then
-	printf "\u001b[31m" > /dev/tty0
-	echo " .########.########..########...#######..########. " > /dev/tty0
-	echo " .##.......##.....##.##.....##.##.....##.##.....## " > /dev/tty0
-	echo " .##.......##.....##.##.....##.##.....##.##.....## " > /dev/tty0
-	echo " .######...########..########..##.....##.########. " > /dev/tty0
-	echo " .##.......##...##...##...##...##.....##.##...##.. " > /dev/tty0
-	echo " .##.......##....##..##....##..##.....##.##....##. " > /dev/tty0
-	echo " .########.##.....##.##.....##..#######..##.....## " > /dev/tty0
-	printf "\u001b[0m" > /dev/tty0
-	echo " >> YOU ARE MISSING MUSIC DATA!!! <<" > /dev/tty0
-	echo " >> MUSIC PLAYBACK WILL NOT WORK! <<" > /dev/tty0
-	echo "Install the game and copy 'data/music' to 'gamedata/data/music'" > /dev/tty0
-
-	sleep 10
-	exit -1
+	echo " .########.########..########...#######..########. "
+	echo " .##.......##.....##.##.....##.##.....##.##.....## "
+	echo " .##.......##.....##.##.....##.##.....##.##.....## "
+	echo " .######...########..########..##.....##.########. "
+	echo " .##.......##...##...##...##...##.....##.##...##.. "
+	echo " .##.......##....##..##....##..##.....##.##....##. "
+	echo " .########.##.....##.##.....##..#######..##.....## "
+	echo " >> YOU ARE MISSING MUSIC DATA!!! <<"
+	echo " >> MUSIC PLAYBACK WILL NOT WORK! <<"
+	echo "Install the game and copy 'data/music' to 'gamedata/data/music'"
+    pm_message "Music data missing! See log for details."
 fi
 
 # Set executable permissions for sdcards using ext2 or similar.
@@ -109,9 +100,7 @@ chmod +x "$GAMEDIR/box86/box86"
 chmod +x "$GAMEDIR/gamedata/bin32/Chowdren"
 
 $GPTOKEYB "Chowdren" -c "$GAMEDIR/iconoclasts.gptk" &
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-$GAMEDIR/box86/box86 bin32/Chowdren 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
+pm_message "Loading, please wait... (might take a while!)"
+$GAMEDIR/box86/box86 bin32/Chowdren
+
+pm_finish
