@@ -1,9 +1,9 @@
-# Notes
+## Notes
 
 Thanks to [Omich](https://omich.itch.io) for creating this fantastic game, which you can download free at [itch.io](https://omich.itch.io/pinky)
 
 
-# Controls
+## Controls
 
 | Button       | Action                             |
 | ------------ | ---------------------------------- |

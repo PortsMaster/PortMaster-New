@@ -1,9 +1,9 @@
-# Notes
+## Notes
 
 Thanks to [Terry Cavanagh](https://terrycavanagh.itch.io) for creating this fantastic game and permitting PortMaster to include the game files.
 
 
-# Controls
+## Controls
 
 | Button | Action        |
 | ------ | ------------- |

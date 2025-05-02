@@ -1,10 +1,10 @@
-# Notes
+## Notes
 
 Thanks to [Silver Cat Studios](https://silvercatstudios.com/) for creating this fantastic game, which you can purchase on [Steam](https://store.steampowered.com/app/1389010/Deathroids)
 
 \* Might run a little slow on RK3326 handhelds
 
-# Controls
+## Controls
 
 | Button | Action   |
 | ------ | -------- |
