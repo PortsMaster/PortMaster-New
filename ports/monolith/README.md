@@ -1,4 +1,4 @@
-# Notes
+## Notes
 
 Thanks to Team D-13 for creating this game, titled [Monolith](https://team-d-13.itch.io/monolith) on itch.io, and [Star of Providence](https://store.steampowered.com/app/603960/Star_of_Providence) on Steam.
 
@@ -7,7 +7,7 @@ This has been tested with the Monolith.exe full version (Jan 13, 2019) from itch
 **ROCKNIX Users:** Use the Steam version. You may need to realign the reticle with the mouse cursor -- move the mouse cursor to the top left corner to do this.
 
 
-# Controls
+## Controls
 
 | Button  | Action            |
 | ------- | ----------------- |

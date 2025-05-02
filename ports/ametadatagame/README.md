@@ -7,7 +7,7 @@ Save by looking at the mirror.
 EPILEPSY WARNING: Game contains flashing lights.
 
 
-# Controls
+## Controls
 
 | Button | Action                |
 | ------ | --------------------- |
