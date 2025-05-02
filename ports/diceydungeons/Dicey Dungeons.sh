@@ -66,18 +66,12 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
-# Calculate deadzone_scale based on DISPLAY_WIDTH
-value=$((4*DISPLAY_WIDTH/480))
-echo "Setting dpad_mouse_step and deadzone_scale to $value"
-sed -i -E "s/(dpad_mouse_step|deadzone_scale) = .*/\1 = $value/g" \
-  "$GAMEDIR"/${BINARY}.ini
-
 # rocknix mode on rocknix panfrost; libmali not supported
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   export rocknix_mode=1
 fi
 
-$GPTOKEYB2 "$BINARY" -x &
+$GPTOKEYB "$BINARY" xbox360 &
 
 cd $DATADIR
 
