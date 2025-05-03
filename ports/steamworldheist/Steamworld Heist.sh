@@ -41,7 +41,8 @@ if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
 fi
 
 # Unpack GOG Files
-chmod +x "$GAMEDIR/unzip"
+$ESUDO chmod 777 "$GAMEDIR/unzip"
+LD_LIBRARY_PATH="$GAMEDIR/tools/libs.aarch64"
 if ls $GAMEDIR/installer/*.sh 1> /dev/null 2>&1; then
   pm_message "Unpacking GOG installer. This will take a minute or two...."
   sleep 5
