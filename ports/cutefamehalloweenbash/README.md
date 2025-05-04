@@ -5,7 +5,7 @@
 |A| Special Weapon|
 |B| Main Weapon|
 |X| Swap Weapon|
-|Y| Spwap Special Weapon |
+|Y| Swap Special Weapon |
 |R1| Key "1" |
  
 
