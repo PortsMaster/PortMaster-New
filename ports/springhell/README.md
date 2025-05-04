@@ -1,6 +1,6 @@
 ## Notes
 
- Thank You to 529Games for creating this very difficult, but VERY FUN and simplistic game! 
+ Thank You to 529Games for creating this very difficult, but VERY FUN and rewarding game! 
  Check Out the game on steam and itch.io as well! 
  But please be aware, the itch.io version HAS NOT BEEN TESTED. 
  If you own the itch.io version and it does work, please @ me in the discord.
