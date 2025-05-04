@@ -19,7 +19,7 @@ Isles of Sea and Sky is a sokoban block puzzle game with Zelda-like elements and
 </div>
 
 ## Installation
-Add your game data from your Steam or Itch.io installation (v1.02a) to `ports/iosas/assets`. First-time run will handle sorting data.
+Add your game data from your Steam to `ports/iosas/assets`. First-time run will handle sorting data. The Itch.io version is *not* supported yet!
 
 ## Default Gameplay Controls
 | Button | Action |
