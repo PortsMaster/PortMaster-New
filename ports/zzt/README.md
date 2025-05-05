@@ -1,5 +1,6 @@
 ## Notes
 Thanks to the Tim Sweeney for creating this game!
+Thanks to the [Adrian "asie" Siekierka](https://github.com/asiekierka) for maintaining and improving project!
 
 ## Controls
 | Button | Action |
