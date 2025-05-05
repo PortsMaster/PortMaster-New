@@ -1,9 +1,9 @@
-# Notes
+## Notes
 
 Thanks to Flying Islands Team for creating this game, which you can purchase on [Steam](https://store.steampowered.com/app/1645940/Flaskoman)
 
 
-# Controls
+## Controls
 
 | Button | Action            |
 | ------ | ----------------- |
