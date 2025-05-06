@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks so much to Dechro for his work on creating this fun game! Its so simplistic, but SO challenging! Great Work! Check out his game and other work here: https://dechro.itch.io/plug-away
+Thanks so much to Dechro for his work on creating this fun game! It's so straight-forward, but SO challenging! Great Work! Check out his game and other work here: https://dechro.itch.io/plug-away
 
 ## Controls
 
