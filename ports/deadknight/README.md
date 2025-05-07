@@ -1,4 +1,4 @@
-# Notes
+## Notes
 
 Thanks to [Backterria](https://backterria.itch.io) for creating this fantastic game, which you can grab at [itch.io](https://backterria.itch.io/dead-knight)
 
@@ -8,7 +8,7 @@ Thanks to [Backterria](https://backterria.itch.io) for creating this fantastic g
 - The game is still in development; updates will *likely* remain compatible with the port. But please report **on the PortMaster Discord** if some update stops working.
 
 
-# Controls
+## Controls
 
 | Button  | Action        |
 | ------- | ------------- |

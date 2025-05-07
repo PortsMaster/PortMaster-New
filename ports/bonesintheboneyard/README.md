@@ -1,9 +1,9 @@
-# Notes
+## Notes
 
 Thanks to [Whatnot Studios](https://jdmgames.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://jdmgames.itch.io/bones-in-the-boneyard)
 
 
-# Controls
+## Controls
 
 | Button | Action         |
 | ------ | -------------- |

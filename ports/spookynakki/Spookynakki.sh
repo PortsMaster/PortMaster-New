@@ -12,8 +12,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
@@ -22,12 +20,9 @@ $ESUDO chmod 666 /dev/tty0
 GAMEDIR="/$directory/ports/spookynakki"
 TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PATH="$TOOLDIR:$PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
 
 cd $GAMEDIR
 
@@ -39,9 +34,9 @@ swapabxy() {
     # Update SDL_GAMECONTROLLERCONFIG to swap a/b and x/y button
 
     if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ];then
-	      # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
+      # Knulli seems to use SDL_GAMECONTROLLERCONFIG_FILE (on rg40xxh at least)
         cat "$SDL_GAMECONTROLLERCONFIG_FILE" | swapabxy.py > "$GAMEDIR/gamecontrollerdb_swapped.txt"
-	      export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
+      export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
     else
         # Other CFW use SDL_GAMECONTROLLERCONFIG
         export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | swapabxy.py`"
@@ -54,7 +49,7 @@ $ESUDO chmod 666 /dev/uinput
 
 # Make sure execution flags are set
 $ESUDO chmod 777 "$TOOLDIR/swapabxy.py"
-$ESUDO chmod 777 "$GAMEDIR/gmloadernext"
+$ESUDO chmod 777 "$GAMEDIR/gmloadernext.aarch64"
 
 # Swap a/b and x/y button if needed
 if [ -f "$GAMEDIR/swapabxy.txt" ]; then
@@ -65,10 +60,8 @@ fi
 [ "$CFW_NAME" == "muOS" ] && splash "splash.png" 1 # workaround for muOS
 splash "splash.png" 10000 &
 
-$GPTOKEYB "gmloadernext" &
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "gmloadernext.aarch64" > /dev/null
+./gmloadernext.aarch64 -c "gmloader.json"
 
-./gmloadernext game.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+pm_finish

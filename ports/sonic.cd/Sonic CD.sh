@@ -19,10 +19,9 @@ get_controls
 # Set variables
 GAMEDIR="/$directory/ports/soniccd"
 
-# CD and set permissions
+# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs":$LD_LIBRARY_PATH
@@ -55,6 +54,8 @@ elif (( $(echo "$ASPECT == 1.33" | bc -l) )); then
     WIDTH=$MED  # 4:3
 elif (( $(echo "$ASPECT == 1.78" | bc -l) )); then
     WIDTH=$HIGH  # 16:9
+elif (( $(echo "$ASPECT == 1.15" | bc -l) )); then
+    WIDTH=274 # RPMini v2
 else
     echo "Unknown aspect ratio: $ASPECT"
     WIDTH=$MED  # Default value if aspect ratio is unknown
@@ -63,12 +64,12 @@ fi
 if grep -q "^ScreenWidth=[0-9]\+" "$GAMEDIR/settings.ini"; then
     sed -i "s/^ScreenWidth=[0-9]\+/ScreenWidth=$WIDTH/" "$GAMEDIR/settings.ini"
 else
-    echo "Possible invalid or missing settings.ini!" > $CUR_TTY
+    pm_message "Possible invalid or missing settings.ini!"
 fi
 
 # Run the game
 $GPTOKEYB "soniccd" -c "sonic.gptk" &
-pm_platform_helper "soniccd"
+pm_platform_helper "soniccd" > /dev/null
 ./soniccd
 
 # Cleanup
