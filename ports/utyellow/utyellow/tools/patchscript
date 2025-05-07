@@ -9,6 +9,7 @@ echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
 export DATADIR="$GAMEDIR/assets"
+export DATAFILE="utyellow.port"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
@@ -27,12 +28,11 @@ apply_xdelta() {
     if [ -f "$DATADIR/data.win" ]; then
         echo "Applying xdelta patch"
         if [ "$(md5sum "$DATADIR/data.win" | awk '{print $1}')" == "db15b9fb5662207e3d4b329d1c00bc70" ]; then
-            # English
-            output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/utyellow-en.xdelta" "$DATADIR/game.droid" 2>&1)
+            # English v1.1.0
+            output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/utyellow-en.xdelta" "$DATADIR/game.droid" 2>&1)
         elif [ "$(md5sum "$DATADIR/data.win" | awk '{print $1}')" == "328e499caf024644a9399b49afd4c8b7" ]; then
-            # Espanol -- For now there is no patch so just bypass it.
-            # output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/utyellow-es.xdelta" "$DATADIR/game.droid" 2>&1)
-            mv "$DATADIR/data.win" "$DATADIR/game.droid"
+            # Espanol
+            output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/utyellow-es.xdelta" "$DATADIR/game.droid" 2>&1)
         fi
         
         # Success / Failure
@@ -52,39 +52,37 @@ apply_xdelta() {
 }
 
 compress_audio() {
-    # Compress audio
     echo "Compressing audio..."
-    sleep 3
+    # Clear out the temporary directory
     mkdir -p "$TMPDIR"
+    rm -rf $TMPDIR/*
 
     # Run the compression tool
-    PYTHON=$(which python3)
-    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    echo "Running GMTools on data and audiogroups."
+    $PYTHON $TOOLDIR/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
 
     if [ $? -eq 0 ]; then
         echo "Compression completed successfully."
         mv "$TMPDIR/"* "$DATADIR"
         echo "Moved compressed files to $DATADIR."
-        rmdir "$TMPDIR"
+        rm -rf "$TMPDIR"
         echo "Temporary directory $TMPDIR removed."
         echo "Audio compression applied successfully."
+        sleep 1
     else
         echo "Audio compression failed."
         echo "Cleaning up temporary directory $TMPDIR."
         rm -rf "$TMPDIR"
+        sleep 1
     fi
 }
 
-zip_apk() {
-    # Zip data files into apk
-    zip -r -0 ./utyellow.port ./assets/
-    if [ $? -eq 0 ]; then
-        echo "Packed data files into utyellow.port."
-        rm -rf ./assets
-    else
-        echo "Failed to pack data files."
-        exit 1
-    fi
+zip_archive() {
+        echo "Finishing up..."
+        zip -r -0 $DATAFILE ./assets/
+        mkdir -p saves
+        rm -rf $DATADIR/*
+        sleep 1
 }
 
 process_game() {
@@ -93,8 +91,7 @@ process_game() {
     mv $DATADIR/splash.png .
     apply_xdelta
     compress_audio
-    sleep 1
-    zip_apk
+    zip_archive
     sleep 1
 	
     # Final completion message
