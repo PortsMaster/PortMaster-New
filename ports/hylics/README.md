@@ -1,5 +1,7 @@
 ## Notes
 
+**This port can encounter slow downs in some areas, still playable due to the nature of the game.**
+
 **Special thanks to ...**
 * ***Mason Lindroth*** - The man behind Hylics, a fun and unique game made with clay
 * *mkxp-z* - A nice fork of mkxp, making porting RPG Maker VX Ace games pretty straightforward
