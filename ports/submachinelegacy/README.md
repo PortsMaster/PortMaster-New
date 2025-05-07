@@ -1,22 +1,18 @@
-## Installation
-Purchase the game on [Steam](https://store.steampowered.com/app/1564790/Submachine_Legacy/) and copy the data over to `submachinelegacy/assets`.
+## Notes
 
-## Default Gameplay Controls (Xbox Layout)
+**Text can be hard to read on low resolution handhelds (640 x 480 and lower). Although the game should still be playable without major issues.**
+
+**Special thanks to ...**
+* ***Mateusz Skutnik*** - Developer and artist behind **Submachine Legacy**
+* *JohnnyOnFlame* - GMLoader-Next allowing to port GameMaker games.
+* *Jeod* - I used EmulationStation-ImageMaker for the cover, very useful script. Also helped me to make my first port.
+* And of course the *PortMaster community* and *devs* for their support and making this possible in the first place.
+
+## Controls
+
 | Button            | Action |
 |--                 |--|
-| START             | |
-| SELECT            | |
 | D-PAD / JOYSTICK  | Move / Move cursor |
-| A                 | |
-| B                 | |
 | X                 | Interact |
-| Y                 | |
 | L1                | Open menu |
 | R1                | Open inventory |
-| L2                | |
-| R2                | |
-
-## Thanks
-Mateusz Skutnik -- The amazing game  
-JohnnyOnFlame -- GMLoader-Next  
-PortMaster -- Testers & Devs  
