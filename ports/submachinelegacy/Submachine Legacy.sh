@@ -35,12 +35,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # Check if we need to patch the game
 if [ ! -f patchlog.txt ] || [ -f $GAMEDIR/assets/data.win ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
-        # See if we need to use an xdelta
-        ASPECT=$(awk -v w="$DISPLAY_WIDTH" -v h="$DISPLAY_HEIGHT" 'BEGIN { printf "%.2f", w / h }')
-        if [ "$ASPECT" != "1.78" ]; then
-            PATCH=1
-            export PATCH
-        fi
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
