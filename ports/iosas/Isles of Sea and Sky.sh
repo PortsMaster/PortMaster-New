@@ -21,7 +21,7 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/iosas"
 
-# CD and set permissions
+# CD and set up logging
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -32,26 +32,24 @@ export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filen
 export PATCHER_TIME="20 to 30 minutes"
 
 # Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
+if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO $controlfolder/splash "splash.png" 1
-    $ESUDO $controlfolder/splash "splash.png" 4000 &
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO $GAMEDIR/tools/splash "$GAMEDIR/splash.png" 1
+    $ESUDO $GAMEDIR/tools/splash "$GAMEDIR/splash.png" 4000 &
 fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "iosas.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+pm_platform_helper "$GAMEDIR/gmloader.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
 
 # Kill processes
