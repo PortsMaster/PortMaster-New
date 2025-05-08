@@ -12,8 +12,9 @@ This port has been possible mainly due to the following projects:
 ## HOW TO INSTALL:
 
 - Install the port files via PortMaster.
-- Download the Linux DRM-Free version of the game:
-  - https://maddymakesgamesinc.itch.io/celeste
+- Download the DRM-Free version of the game:
+  - https://maddymakesgamesinc.itch.io/celeste (linux)
+  - https://store.epicgames.com/en-US/p/celeste (windows)
 - Copy the game's data into `celeste/gamedata`.
 - Run the port, the first time setup will take a few minutes.
 - Enjoy!
