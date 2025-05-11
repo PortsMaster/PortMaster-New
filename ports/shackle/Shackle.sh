@@ -41,10 +41,9 @@ fi
 if [ -f "./gamedata/data.win" ]; then
   $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
   [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
+  # Delete unneeded files
+  rm -f gamedata/*.{dll,exe}
 fi
-
-# Delete unneeded files
-rm -f gamedata/*.{dll,exe}
 
 $GPTOKEYB "gmloader" -c ./shackle.gptk &
 
