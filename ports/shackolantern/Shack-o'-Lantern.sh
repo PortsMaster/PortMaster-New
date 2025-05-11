@@ -43,7 +43,7 @@ if [ -f "./gamedata/data.win" ]; then
   [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
 fi
 
-# Delete unneeded files and rename data.win
+# Delete unneeded files
 rm -f gamedata/*.{dll,exe}
 
 $GPTOKEYB "gmloader" -c ./shackolantern.gptk &
