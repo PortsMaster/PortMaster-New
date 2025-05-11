@@ -34,7 +34,7 @@ if [ -f "./assets/Vampire Garden.exe" ]; then
   # Extract its contents in place using 7z
   pm_message "Extracting Vampire Garden.exe ..."
   ./7z x "./assets/Vampire Garden.exe" -o"./assets/" -y
-  pm_message "Extraction and clean-up complete"
+  pm_message "Extraction complete"
 fi
 
 # Patch data.win file
