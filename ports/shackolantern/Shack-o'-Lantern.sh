@@ -34,7 +34,7 @@ if [ -f "./assets/Shack-o'-Lantern.exe" ]; then
   # Extract its contents in place using 7z
   pm_message "Extracting Shack-o'-Lantern.exe ..."
   ./7z x "./assets/Shack-o'-Lantern.exe" -o"./assets/" -y
-  pm_message "Extraction and clean-up complete"
+  pm_message "Extraction complete"
 fi
 
 # Patch data.win file
