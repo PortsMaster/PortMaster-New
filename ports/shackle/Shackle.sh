@@ -13,42 +13,48 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/shackle"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd $GAMEDIR
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Extract file
-if [ -f "./gamedata/Shackle.exe" ]; then
+if [ -f "./assets/Shackle.exe" ]; then
   # Extract its contents in place using 7z
   pm_message "Extracting Shackle.exe ..."
-  ./7z x "./gamedata/Shackle.exe" -o"./gamedata/" -y
+  ./7z x "./assets/Shackle.exe" -o"./assets/" -y
   pm_message "Extraction and clean-up complete"
 fi
 
 # Patch data.win file
-if [ -f "./gamedata/data.win" ]; then
-  $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
-  [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
+if [ -f "./assets/data.win" ]; then
+  $controlfolder/xdelta3 -d -s "./assets/data.win" "./assets/patch.xdelta3" "./assets/game.droid"
+  [ $? -eq 0 ] && rm "./assets/data.win" || pm_message "Patching of data.win has failed"
   # Delete unneeded files
-  rm -f gamedata/*.{dll,exe}
+  rm -f assets/*.{dll,exe}
 fi
 
-$GPTOKEYB "gmloader" -c ./shackle.gptk &
+# Prepare game files
+if [ -f ./assets/game.droid ]; then
+  zip -r -0 ./shackle.port ./assets/
+  rm -Rf ./assets/
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "shackle.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
+# Cleanup
 pm_finish
