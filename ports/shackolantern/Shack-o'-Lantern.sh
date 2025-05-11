@@ -37,11 +37,14 @@ if [ -f "./gamedata/Shack-o'-Lantern.exe" ]; then
   pm_message "Extraction and clean-up complete"
 fi
 
+# Patch data.win file
+if [ -f "./gamedata/data.win" ]; then
+  $controlfolder/xdelta3 -d -s "./gamedata/data.win" "./gamedata/patch.xdelta3" "./gamedata/game.droid"
+  [ $? -eq 0 ] && rm "./gamedata/data.win" || pm_message "Patching of data.win has failed"
+fi
+
 # Delete unneeded files and rename data.win
 rm -f gamedata/*.{dll,exe}
-rm -rf "gamedata/\$PLUGINSDIR"
-rm -rf "gamedata/\$TEMP"
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
 
 $GPTOKEYB "gmloader" -c ./shackolantern.gptk &
 
