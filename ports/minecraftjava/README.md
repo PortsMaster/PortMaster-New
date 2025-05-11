@@ -6,6 +6,8 @@ Thanks to BinaryCounter for its Westonpack, which makes all of this possible
 
 Thanks to the PortMaster Community who tested and made some improvements themself
 
+Thanks to MrTschnitzel for making the Forge 1.7.10 Performance mode
+
 ## Performance
 If you want the best Performance then i would recommend Vanilla 1.7.10 but regardless 1.16.5 can also run pretty good on lower end devices when you add mods, the only version that tends to be bad on lower end devices is vanilla 1.13
 ## Bugs and Unsupported Mods
