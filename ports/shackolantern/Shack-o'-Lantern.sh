@@ -33,7 +33,7 @@ cd $GAMEDIR
 if [ -f "./gamedata/Shack-o'-Lantern.exe" ]; then
   # Extract its contents in place using 7z
   pm_message "Extracting Shack-o'-Lantern.exe ..."
-  ./7z x "./gamedata/Shack-o'-Lantern.exe" -o"./gamedata/"
+  ./7z x "./gamedata/Shack-o'-Lantern.exe" -o"./gamedata/" -y
   pm_message "Extraction and clean-up complete"
 fi
 
