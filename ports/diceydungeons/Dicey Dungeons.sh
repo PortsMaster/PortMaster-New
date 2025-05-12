@@ -71,7 +71,12 @@ if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   export rocknix_mode=1
 fi
 
-$GPTOKEYB "$BINARY" xbox360 &
+# gptokeyb1 is unresponsive on muos
+if [[ "$CFW_NAME" = "muOS" ]]; then
+  $GPTOKEYB2 "$BINARY" -x &
+else
+  $GPTOKEYB "$BINARY" xbox360 &
+fi
 
 cd $DATADIR
 
