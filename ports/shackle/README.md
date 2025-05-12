@@ -10,4 +10,5 @@ Thanks [Steven Miller](https://steven-miller.itch.io) for creating this game and
 | D-PAD  | Movement |
 | A      | Continue |
 | B      | Undo     |
+| R1     | Reset    |
 | SELECT | Exit     |
