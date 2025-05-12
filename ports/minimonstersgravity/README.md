@@ -1,7 +1,7 @@
 ## Notes
 
 Thanks to Cyber Moon Games for creating the game! Check it out on Steam! https://store.steampowered.com/app/3205470/Mini_Monsters_Gravitational_Consensus/
-Please Be Aware this game does NOT run well on rk3326 devices.
+Also, thanks to BinaryCounter for WestonPack. Please Be Aware this game does NOT run well on rk3326 devices.
 
 ## Controls
 
