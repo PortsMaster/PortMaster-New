@@ -13,9 +13,6 @@ echo "Starting patchscript..."
 export DATADIR="$GAMEDIR/assets"
 export LICENSEDIR="$GAMEDIR/licenses/pizzatower"
 export DATAFILE="$GAMEDIR/pizzatower.port"
-SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json")
-[ -z "$SAVEDIR" ] && SAVEDIR="$GAMEDIR/saves"
-export SAVEDIR
 export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
 export PATH="$GAMEDIR/tools:$PATH"
@@ -24,6 +21,13 @@ cd "$GAMEDIR"
 
 # Set up trap for cleaning TMPDIR on exit
 trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
 
 # Bail if the dotnet runtime is missing or wasn't mounted
 if ! command -v dotnet >/dev/null 2>&1; then
@@ -85,16 +89,16 @@ dump_textures() {
     
     # Begin texture operations
     dotnet "$TOOLDIR/utmt-cli/UndertaleModCli.dll" \
-        dump "$GAMEDIR/assets/data.win" \
-        -e "$GAMEDIR/assets/textures" "$GAMEDIR/assets/game.droid"
+        dump "$DATADIR/data.win" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
 
     if [ $? -ne 0 ]; then
         echo "[DOTNET]: Patch failed to apply."
         exit 1
     else
-        rm -f "$GAMEDIR/assets/data.win"
-        mv "$GAMEDIR/assets/textures/" "$GAMEDIR/$SAVEDIR/textures/"
-        rm -rf $TMPDIR
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/textures/" "$SAVEDIR/textures/"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
 }
 
