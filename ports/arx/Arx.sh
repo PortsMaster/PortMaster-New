@@ -42,8 +42,6 @@ if [ ! -f "$DATADIR/data.pak" ] && [ ! -f "$DATADIR/DATA.PAK" ]; then
     pm_message "This port requires the latest version of PortMaster."
     exit 0
   fi
-else
-  pm_message "Extraction process already completed. Skipping."
 fi
 
 mkdir -p $CONFDIR/config
