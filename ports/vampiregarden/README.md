@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks [Steven Miller](https://steven-miller.itch.io) for creating this game and permitting PortMaster to distribute the files.
+Thanks [Steven Miller](https://steven-miller.itch.io) for creating this little gem and permitting PortMaster to distribute the files.
 
 
 ## Controls
