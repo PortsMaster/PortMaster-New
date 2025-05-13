@@ -39,13 +39,13 @@ java_runtime="zulu17.54.21-ca-jre17.0.13-linux"
 
 
 if [ "$DISPLAY_WIDTH" -gt 1280 ]; then
-	echo "Display width is over 1280px"
+	pm_message "Display width is over 1280px"
 	gptk_filename="revenge1920.gptk"
 elif [ "$DISPLAY_WIDTH" -gt 720 ]; then
-	echo "Display width is over 720px"
+	pm_message "Display width is over 720px"
 	gptk_filename="revenge1280.gptk"
 else
-	echo "Display width is 720px or less"
+	pm_message "Display width is 720px or less"
 	gptk_filename="revenge.gptk"
 fi
 
@@ -69,8 +69,8 @@ if [ -n "$TARFILE" ]; then
     pm_message "Game files extracted and installed to $GAMEDIR."
 fi
 
-[ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && echo "Missig game data!"
-[ -f "${GAMEDIR}/data-steam.jar" ] && echo "Steam game data is not compatible!"
+[ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && pm_message "Missig game data!"
+[ -f "${GAMEDIR}/data-steam.jar" ] && pm_message "Steam game data is not compatible!"
 
 # Sync save data for easier backup and restore, do not overwrite newer save files
 mkdir -p -m 0755 "$SAVE_SOURCE" "$SAVE_TARGET" 
