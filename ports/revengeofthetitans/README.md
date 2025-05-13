@@ -1,6 +1,6 @@
 ## Notes
 
-Special thanks to the awesome developers at Puppygames for making this banger of a game. Thanks to Binary Counter for his amazing tools and guidance, thanks to Damo for letting me copy his homework and all the testers who've helped me getting this working on a wide range of CFWs.
+Special thanks to the awesome developers at Puppygames for making this [banger of a game](https://www.puppygames.net/revenge-of-the-titans/). Thanks to Binary Counter for his amazing tools and guidance, thanks to Damo for letting me copy his homework, and all the testers who've helped me getting this working on a wide range of CFWs.
 
 ## Controls
 
