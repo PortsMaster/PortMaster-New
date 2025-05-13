@@ -39,17 +39,17 @@ java_runtime="zulu17.54.21-ca-jre17.0.13-linux"
 
 
 if [ "$DISPLAY_WIDTH" -gt 1280 ]; then
-	pm_message "Display width is over 1280px"
+	echo "Display width is over 1280px"
 	gptk_filename="revenge1920.gptk"
 elif [ "$DISPLAY_WIDTH" -gt 720 ]; then
-	pm_message "Display width is over 720px"
+	echo "Display width is over 720px"
 	gptk_filename="revenge1280.gptk"
 else
-	pm_message "Display width is 720px or less"
+	echo "Display width is 720px or less"
 	gptk_filename="revenge.gptk"
 fi
 
-pm_message "home dir ${HOME}"
+echo "home dir ${HOME}"
 
 # Create directory temp game files
 CONFDIR="$GAMEDIR/user/"
@@ -58,7 +58,7 @@ rm -rf "${HOME}/Puppygames"
 
 TARFILE=$(ls "$INSTALLDIR"/*.tar 2>/dev/null | head -n 1)
 if [ -n "$TARFILE" ]; then
-    pm_message "Unpacking game files, this takes a couple of minutes, please be patient"
+    pm_message "Unpacking game files. This takes a couple of minutes, please be patient."
 	zcat "$TARFILE" > $INSTALLDIR/tmp_extract
     tar -xf $INSTALLDIR/tmp_extract -C $INSTALLDIR
     mv "$INSTALLDIR/revenge/"* "$GAMEDIR/"\
@@ -66,7 +66,7 @@ if [ -n "$TARFILE" ]; then
 	rmdir "$INSTALLDIR/revenge"
     rm -f "$INSTALLDIR/tmp_extract"
     rm -f "$TARFILE"
-    pm_message "Game files extracted and installed to $GAMEDIR."
+    echo "Game files extracted and installed to $GAMEDIR."
 fi
 
 [ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && pm_message "Missing game data!"
@@ -82,7 +82,7 @@ fi
 # set default profile for knulli if it doesn't exist already
 if [[ ! -f "${SAVE_SOURCE}/prefs.json" && ${CFW_NAME} == "knulli"  ]]; then
   cp "$GAMEDIR/prefs.json" "${SAVE_SOURCE}/prefs.json"
-  pm_message "Saved default profile to ${SAVE_SOURCE}"
+  echo "Saved default profile to ${SAVE_SOURCE}"
 fi
 
 # Mount Weston runtime
@@ -152,7 +152,7 @@ if command -v rsync &> /dev/null; then
 	# sync save data to game dir, delete orphaned files
 	rsync -av --delete "$SAVE_SOURCE/" "$SAVE_TARGET/"
 	# cp -a "$SAVE_SOURCE/." "$SAVE_TARGET/"
-	pm_message "Save data backed to: $SAVE_TARGET"
+	echo "Save data backed to: $SAVE_TARGET"
 fi
 
 pm_finish
