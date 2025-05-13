@@ -69,7 +69,7 @@ if [ -n "$TARFILE" ]; then
     pm_message "Game files extracted and installed to $GAMEDIR."
 fi
 
-[ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && pm_message "Missig game data!"
+[ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && pm_message "Missing game data!"
 [ -f "${GAMEDIR}/data-steam.jar" ] && pm_message "Steam game data is not compatible!"
 
 # Sync save data for easier backup and restore, do not overwrite newer save files
