@@ -27,6 +27,7 @@ It is the culmination of the combined efforts of those listed in the Thanks sect
 ## Notes
 - Peppino is yellow due to the texture hacks that make this port possible. It may be fixed in the future.
 - This port uses a file `swapabxy.txt` to align device buttons with glyph prompts. If they are incorrect for you, delete `pizzatower/swapabxy.txt` and restart the game.
+- This port does not run well on low power devices like the RK3326. If you attempt to do so, try lowering the ingame options.
 
 ## Thanks
 Tour De Pizza -- The amazing game.  
