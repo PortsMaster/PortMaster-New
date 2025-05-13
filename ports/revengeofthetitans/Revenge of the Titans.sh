@@ -29,7 +29,6 @@ if [ ${CFW_NAME} == "knulli"  ]; then
   HEAP_SIZE=256
 fi
 
-chmod -R 755 "$GAMEDIR"
 cd $GAMEDIR
 
 # Logging
