@@ -49,7 +49,7 @@ else
 	gptk_filename="revenge.gptk"
 fi
 
-echo "home dir ${HOME}"
+pm_message "home dir ${HOME}"
 
 # Create directory temp game files
 CONFDIR="$GAMEDIR/user/"
@@ -58,7 +58,7 @@ rm -rf "${HOME}/Puppygames"
 
 TARFILE=$(ls "$INSTALLDIR"/*.tar 2>/dev/null | head -n 1)
 if [ -n "$TARFILE" ]; then
-    echo "Unpacking game files, this takes a couple of minutes, please be patient"
+    pm_message "Unpacking game files, this takes a couple of minutes, please be patient"
 	zcat "$TARFILE" > $INSTALLDIR/tmp_extract
     tar -xf $INSTALLDIR/tmp_extract -C $INSTALLDIR
     mv "$INSTALLDIR/revenge/"* "$GAMEDIR/"\
@@ -66,7 +66,7 @@ if [ -n "$TARFILE" ]; then
 	rmdir "$INSTALLDIR/revenge"
     rm -f "$INSTALLDIR/tmp_extract"
     rm -f "$TARFILE"
-    echo "Game files extracted and installed to $GAMEDIR."
+    pm_message "Game files extracted and installed to $GAMEDIR."
 fi
 
 [ ! -f "${GAMEDIR}/RevengeOfTheTitans.jar" ] && echo "Missig game data!"
@@ -82,7 +82,7 @@ fi
 # set default profile for knulli if it doesn't exist already
 if [[ ! -f "${SAVE_SOURCE}/prefs.json" && ${CFW_NAME} == "knulli"  ]]; then
   cp "$GAMEDIR/prefs.json" "${SAVE_SOURCE}/prefs.json"
-  echo "Saved default profile to ${SAVE_SOURCE}"
+  pm_message "Saved default profile to ${SAVE_SOURCE}"
 fi
 
 # Mount Weston runtime
@@ -152,7 +152,7 @@ if command -v rsync &> /dev/null; then
 	# sync save data to game dir, delete orphaned files
 	rsync -av --delete "$SAVE_SOURCE/" "$SAVE_TARGET/"
 	# cp -a "$SAVE_SOURCE/." "$SAVE_TARGET/"
-	echo "Save data backed to: $SAVE_TARGET"
+	pm_message "Save data backed to: $SAVE_TARGET"
 fi
 
 pm_finish
