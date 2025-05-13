@@ -11,55 +11,52 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
+export controlfolder
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/jetlancer"
 
-# Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=0
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
-export TOOLDIR="$GAMEDIR/tools"
-export PATH=$PATH:$TOOLDIR
-export PATCHER_FILE="$GAMEDIR/patch/patchscript"
-export PATCHER_GAME="Jet Lancer"
-export PATCHER_TIME="10 to 15 minutes"
-export PATCHDIR=$GAMEDIR
-
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x -R $GAMEDIR/tools/splash
+$ESUDO chmod +x -R $GAMEDIR/tools/gmKtool.py
+$ESUDO chmod +x -R $GAMEDIR/tools/patchscript
 
-# Permissions
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-$ESUDO chmod +x "$TOOLDIR/splash"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="Jet Lancer"
+export PATCHER_TIME="15 to 20 minutes"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-cd "$GAMEDIR"
-
-# Run install if needed
-if [ ! -f "$GAMEDIR/gamedata/game.droid" ]; then
+# Check if install_completed to skip patching
+if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        pm_message "This port requires the latest version of PortMaster."
+	exit 1  # Exit to prevent further execution
     fi
 else
-    echo "Patching process already completed. Skipping."
+    pm_message "Patching process already completed. Skipping."
 fi
 
-if [ ! -f "$GAMEDIR/gamedata/config.ini" ]; then
-  mv "$GAMEDIR/config.ini.default" "$GAMEDIR/gamedata/config.ini"
+# Display loading splash
+if [ -f "$GAMEDIR/install_completed" ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
+    $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
-$GPTOKEYB "gmloader" &
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader jetlancer.apk
-
+# Cleanup
 pm_finish

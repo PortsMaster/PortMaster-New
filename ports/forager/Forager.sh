@@ -31,13 +31,8 @@ export PATCHER_GAME="Forager"
 export PATCHER_TIME="5 to 10 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
-
 # Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
+if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
@@ -49,7 +44,7 @@ else
 fi
 
 # Display loading splash
-if [ -f "$GAMEDIR/patchlog.txt" ]; then
+if [ -f "$GAMEDIR/install_completed" ]; then
     [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
     $ESUDO ./tools/splash "splash.png" 2000 &
 fi
