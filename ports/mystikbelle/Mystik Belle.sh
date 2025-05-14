@@ -43,24 +43,22 @@ if [ ! -f patchlog.txt ]; then
     else
         echo "This port requires the latest version of PortMaster."
     fi
-else
-    echo "Patching process already completed. Skipping."
 fi
 
 # Post patcher setup
-export PORT_32BIT="Y"
+export PORT_32BIT="Y" # Declared here since patcher needs 64bit drivers for audio
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
-    $ESUDO ./tools/splash "splash.png" 2000
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1 
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 &
 fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.armhf" -c "mystikbelle.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
+pm_platform_helper "$GAMEDIR/gmloadernext.armhf" > /dev/null
 ./gmloadernext.armhf -c gmloader.json
 
 # Cleanup
