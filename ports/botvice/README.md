@@ -1,8 +1,10 @@
 ## Notes
 
-Special thanks to [DYA Games](https://dyagames.com/) for making this wonderful game
+Special thanks to [DYA Games](https://dyagames.com/) for making this awesome game!
 
 Source: https://dyagames.itch.io/bot-vice
+
+Thanks to JohnnyOnFlame for GMLoader-Next and TextureRepacker via UTMT, Cyril "kotzebuedog" Delétré for GMTools Audio Compressor and JanTrueno for the Patching Interface.
 
 ## Controls
 
@@ -15,7 +17,8 @@ Source: https://dyagames.itch.io/bot-vice
 |R1|Aim|
 |L1|Next Gun|
 |L2|Previous Gun|
-|Select |Space (to reconfigure controls)|
 |Select |Pause/Menu|
+|Select |Reconfigure controls in Menu|
+
 
 
