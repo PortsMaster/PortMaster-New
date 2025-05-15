@@ -22,6 +22,16 @@ CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 # Ensure the conf directory exists
+
+# Check for ROCKNIX running with libMali driver.
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+    fi
+fi
+
 mkdir -p "$GAMEDIR/conf"
 
 cd $GAMEDIR
