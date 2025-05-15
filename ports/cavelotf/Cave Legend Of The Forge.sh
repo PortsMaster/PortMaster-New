@@ -21,7 +21,6 @@ GAMEDIR=/$directory/ports/cavelotf/
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-# Ensure the conf directory exists
 
 # Check for ROCKNIX running with libMali driver.
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
@@ -32,6 +31,7 @@ if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
     fi
 fi
 
+# Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
 cd $GAMEDIR
