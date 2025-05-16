@@ -9,6 +9,7 @@ Thanks [Steven Miller](https://steven-miller.itch.io) for creating this little g
 | ------- | ----------- |
 | D-PAD   | Movement    |
 | L-STICK | Mouse move  |
+| L3      | Mouse slow  |
 | X/A     | Left click  |
 | Y       | Right click |
 | B       | Undo        |
