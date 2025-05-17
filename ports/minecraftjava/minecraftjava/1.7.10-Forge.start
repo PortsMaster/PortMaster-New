@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# PortMaster preamble
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
+
+# Adjust these to your paths and desired java version
+GAMEDIR=/$directory/ports/minecraftjava
+java_runtime="zulu8.86.0.25-ca-jdk8.0.452-linux"
+gptk_filename="minecraft.gptk"
+
+# Logging
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Create directory for save files
+CONFDIR="$GAMEDIR/conf/"
+$ESUDO mkdir -p "${CONFDIR}"
+
+# Mount Weston runtime
+weston_dir=/tmp/weston
+$ESUDO mkdir -p "${weston_dir}"
+weston_runtime="weston_pkg_0.2"
+if [ ! -f "$controlfolder/libs/${weston_runtime}.squashfs" ]; then
+  if [ ! -f "$controlfolder/harbourmaster" ]; then
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit 1
+  fi
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${weston_runtime}.squashfs"
+fi
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "${weston_dir}"
+fi
+$ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
+
+# Mount Java runtime
+export JAVA_HOME="/tmp/javaruntime/"
+$ESUDO mkdir -p "${JAVA_HOME}"
+if [ ! -f "$controlfolder/libs/${java_runtime}.squashfs" ]; then
+  if [ ! -f "$controlfolder/harbourmaster" ]; then
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit 1
+  fi
+  $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${java_runtime}.squashfs"
+fi
+$ESUDO mount "$controlfolder/libs/${java_runtime}.squashfs" "${JAVA_HOME}"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+
+cd $GAMEDIR
+$GPTOKEYB2 "java" -c "$GAMEDIR/$gptk_filename" &
+
+# RENAMING
+cd $GAMEDIR/.minecraft/versions
+for d in 1.7.10-Forge*/; do
+  mv "$d" "1.7.10-Forge"
+  break
+done
+cd 1.7.10-Forge
+for f in *.jar; do
+  mv "$f" "1.7.10-Forge.jar"
+  break
+done
+cd $GAMEDIR
+
+if [[ "$DEVICE_RAM" -eq "2" ]]; then
+XMX=1G
+elif [[ "$DEVICE_RAM" -ge "3" ]]; then
+XMX=2G
+else
+XMX=384M
+fi
+
+
+# Start Westonpack and Java
+$ESUDO env WRAPPED_LIBRARY_PATH=$GAMEDIR/libs CRUSTY_SHOW_CURSOR=1 $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
+PATH="$PATH" JAVA_HOME="$JAVA_HOME" XDG_DATA_HOME="$GAMEDIR" WAYLAND_DISPLAY= \
+/tmp/javaruntime/bin/java -Xmx$XMX "-Dfile.encoding=UTF-8" "-Dsun.stdout.encoding=UTF-8" "-Dsun.stderr.encoding=UTF-8" "-Djava.rmi.server.useCodebaseOnly=true" "-Dcom.sun.jndi.rmi.object.trustURLCodebase=false" "-Dcom.sun.jndi.cosnaming.object.trustURLCodebase=false" "-Dlog4j2.formatMsgNoLookups=true" "-Dlog4j.configurationFile=./.minecraft/versions/1.7.10-Forge/log4j2.xml" "-Dminecraft.client.jar=.minecraft/versions/1.7.10-Forge/1.7.10-Forge.jar" "-Duser.home=null" "-Dfml.ignoreInvalidMinecraftCertificates=true" "-Dfml.ignorePatchDiscrepancies=true" "-Djava.library.path=./.minecraft/versions/1.7.10/natives-linux-arm64" "-Dminecraft.launcher.brand=PM" "-Dminecraft.launcher.version=3.6.12" -cp ./.minecraft/libraries/net/minecraftforge/forge/1.7.10-10.13.4.1614-1.7.10/forge-1.7.10-10.13.4.1614-1.7.10.jar:./.minecraft/libraries/net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar:./.minecraft/libraries/org/ow2/asm/asm-all/5.0.3/asm-all-5.0.3.jar:./.minecraft/libraries/com/typesafe/akka/akka-actor_2.11/2.3.3/akka-actor_2.11-2.3.3.jar:./.minecraft/libraries/com/typesafe/config/1.2.1/config-1.2.1.jar:./.minecraft/libraries/org/scala-lang/scala-actors-migration_2.11/1.1.0/scala-actors-migration_2.11-1.1.0.jar:./.minecraft/libraries/org/scala-lang/scala-compiler/2.11.1/scala-compiler-2.11.1.jar:./.minecraft/libraries/org/scala-lang/plugins/scala-continuations-library_2.11/1.0.2/scala-continuations-library_2.11-1.0.2.jar:./.minecraft/libraries/org/scala-lang/plugins/scala-continuations-plugin_2.11.1/1.0.2/scala-continuations-plugin_2.11.1-1.0.2.jar:./.minecraft/libraries/org/scala-lang/scala-library/2.11.1/scala-library-2.11.1.jar:./.minecraft/libraries/org/scala-lang/scala-parser-combinators_2.11/1.0.1/scala-parser-combinators_2.11-1.0.1.jar:./.minecraft/libraries/org/scala-lang/scala-reflect/2.11.1/scala-reflect-2.11.1.jar:./.minecraft/libraries/org/scala-lang/scala-swing_2.11/1.0.1/scala-swing_2.11-1.0.1.jar:./.minecraft/libraries/org/scala-lang/scala-xml_2.11/1.0.2/scala-xml_2.11-1.0.2.jar:./.minecraft/libraries/lzma/lzma/0.0.1/lzma-0.0.1.jar:./.minecraft/libraries/net/sf/jopt-simple/jopt-simple/4.5/jopt-simple-4.5.jar:./.minecraft/libraries/com/google/guava/guava/17.0/guava-17.0.jar:./.minecraft/libraries/org/apache/commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar:./.minecraft/libraries/com/mojang/netty/1.8.8/netty-1.8.8.jar:./.minecraft/libraries/com/mojang/realms/1.3.5/realms-1.3.5.jar:./.minecraft/libraries/org/apache/commons/commons-compress/1.8.1/commons-compress-1.8.1.jar:./.minecraft/libraries/org/apache/httpcomponents/httpclient/4.3.3/httpclient-4.3.3.jar:./.minecraft/libraries/commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar:./.minecraft/libraries/org/apache/httpcomponents/httpcore/4.3.2/httpcore-4.3.2.jar:./.minecraft/libraries/java3d/vecmath/1.3.1/vecmath-1.3.1.jar:./.minecraft/libraries/net/sf/trove4j/trove4j/3.0.3/trove4j-3.0.3.jar:./.minecraft/libraries/com/ibm/icu/icu4j-core-mojang/51.2/icu4j-core-mojang-51.2.jar:./.minecraft/libraries/com/paulscode/codecjorbis/20101023/codecjorbis-20101023.jar:./.minecraft/libraries/com/paulscode/codecwav/20101023/codecwav-20101023.jar:./.minecraft/libraries/com/paulscode/libraryjavasound/20101123/libraryjavasound-20101123.jar:./.minecraft/libraries/com/paulscode/librarylwjglopenal/20100824/librarylwjglopenal-20100824.jar:./.minecraft/libraries/com/paulscode/soundsystem/20120107/soundsystem-20120107.jar:./.minecraft/libraries/io/netty/netty-all/4.0.10.Final/netty-all-4.0.10.Final.jar:./.minecraft/libraries/commons-io/commons-io/2.4/commons-io-2.4.jar:./.minecraft/libraries/commons-codec/commons-codec/1.9/commons-codec-1.9.jar:./.minecraft/libraries/net/java/jinput/jinput/2.0.5/jinput-2.0.5.jar:./.minecraft/libraries/net/java/jutils/jutils/1.0.0/jutils-1.0.0.jar:./.minecraft/libraries/com/google/code/gson/gson/2.2.4/gson-2.2.4.jar:./.minecraft/libraries/com/mojang/authlib/1.5.21/authlib-1.5.21.jar:./.minecraft/libraries/org/apache/logging/log4j/log4j-api/2.0-beta9/log4j-api-2.0-beta9.jar:./.minecraft/libraries/org/apache/logging/log4j/log4j-core/2.0-beta9/log4j-core-2.0-beta9.jar:./.minecraft/libraries/org/lwjgl/lwjgl/lwjgl/2.9.1/lwjgl-2.9.1.jar:./.minecraft/libraries/org/lwjgl/lwjgl/lwjgl_util/2.9.1/lwjgl_util-2.9.1.jar:./.minecraft/libraries/tv/twitch/twitch/5.16/twitch-5.16.jar:./.minecraft/versions/1.7.10-Forge/1.7.10-Forge.jar net.minecraft.launchwrapper.Launch --tweakClass cpw.mods.fml.common.launcher.FMLTweaker --username PM --version 1.7.10-Forge --gameDir ./.minecraft --assetsDir ./.minecraft/assets --assetIndex 1.7.10 --uuid 0 --accessToken 0 --userProperties "{}" --userType msa --width 640 --height 480
+
+#Clean up after ourselves
+$ESUDO $weston_dir/westonwrap.sh cleanup
+if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+    $ESUDO umount "${weston_dir}"
+    $ESUDO umount "${JAVA_HOME}"
+
+fi
+pm_finish
+
