@@ -20,13 +20,6 @@ get_controls
 
 GAMEDIR="/$directory/ports/minecraftjava"
 
-export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
-export XDG_CONFIG_HOME="$GAMEDIR/saves"
-
-mkdir -p "$XDG_DATA_HOME"
-mkdir -p "$XDG_CONFIG_HOME"
-mkdir -p $GAMEDIR/logs
-
 ## Uncomment the following file to log the output, for debugging purpose
 > "$GAMEDIR/Launcherlog.txt" && exec > >(tee "$GAMEDIR/Launcherlog.txt") 2>&1
 
