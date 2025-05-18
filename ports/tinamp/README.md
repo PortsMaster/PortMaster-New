@@ -27,8 +27,6 @@ The application scans orderly in the following positions relative to the ports a
 - ../../ROMS/audiobooks (usually the roms folder of muOS)
 - audiobooks (a folder inside the port/tinamp directory)
   
-If you want to use a different folder then the one the application comes with you need to delete or rename the audiobooks folder within the ports application directory.  
-  
 ### Bookmarks
 Bookmarks are automatically created. There is one bookmark per book. It is created/updated every 60s during playback and whenever the audio book is stopped.  
 The audio book selection shows an ! character below the book name if there is a bookmark for this audio book. If an # character is shown this audio book has a bookmark with 95% completion hinting this audio book is probably finished.  
@@ -45,7 +43,7 @@ This mode can be setup in the global settings menu. If activated it will disable
 This makes it easier for elderly people to navigate. Instead of differentiating when to press OK and when BACK they now just wait for what is blinking.  
   
 ### Battery life
-I tested different devices playing using the inbuilt speaker while not using the device for anything else. They were all setup to the same volume and almost all the time the screen was off. The playtime ranged from 15hrs (R36s clone) to 19hrs (Anberbnic RG40XXV, Powkiddy V10).  
+I tested different devices playing using the inbuilt speaker while not using the device for anything else. They were all setup to the same volume and almost all the time the screen was off. The playtime ranged from 15hrs (R36s clone, Powkiddy RGB20s) to 19hrs (Anberbnic RG40XXV, Powkiddy V10).  
   
 ### Bugs, feature requests, contact
 Please head over to the corresponding [Github repository](https://github.com/lanmarc77/tinamp) and open a ticket.  
