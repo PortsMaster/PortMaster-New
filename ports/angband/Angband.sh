@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -22,8 +22,7 @@ CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO rm -rf ~/.angband
-ln -sfv $GAMEDIR/conf/.angband ~/
+bind_directories ~/.angband $GAMEDIR/conf/.angband
 
 # Set up game resolution
 if [ ! -f $GAMEDIR/conf/.angband/Angband/sdl2init.txt ]; then
@@ -82,3 +81,4 @@ SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./angband
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
