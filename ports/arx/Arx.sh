@@ -59,6 +59,10 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+# Arx-specific optimisation in gl4es, see:
+# https://github.com/ptitSeb/gl4es/blob/master/USAGE.md
+export LIBGL_VABGRA=1
+
 # Calculate deadzone_scale based on DISPLAY_WIDTH
 value=$((6*DISPLAY_WIDTH/480))
 echo "Setting dpad_mouse_step and deadzone_scale to $value"
