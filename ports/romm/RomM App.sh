@@ -79,9 +79,9 @@ else
     PYTHON_VERSION="0.0"
 fi
 
-REQUIRED_VERSION="3.10"
+REQUIRED_VERSION="3.11"
 
-if ! compare "$PYTHON_VERSION" "$REQUIRED_VERSION"; then
+if [ "$PYTHON_VERSION" != "$REQUIRED_VERSION" ]; then
     use_runtime
 fi
 
