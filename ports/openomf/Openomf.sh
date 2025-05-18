@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -24,8 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-$ESUDO rm -rf ~/.local/share/openomfproject
-ln -sfv $GAMEDIR/conf/openomfproject ~/.local/share
+bind_directories ~/.local/share/openomfproject $GAMEDIR/conf/openomfproject
 
 export OPENOMF_RESOURCE_DIR="$GAMEDIR/gamedata"
 export OPENOMF_PLUGIN_DIR="$GAMEDIR/plugins"
@@ -37,4 +37,3 @@ $GPTOKEYB "openomf" -c "$GAMEDIR/openomf.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
-
