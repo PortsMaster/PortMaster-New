@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -20,8 +21,7 @@ $ESUDO chmod 666 /dev/tty1
 
 GAMEDIR="/$directory/ports/hcl"
 
-$ESUDO rm -rf ~/.hydracastlelabyrinth
-ln -sfv $GAMEDIR/conf/.hydracastlelabyrinth ~/
+bind_directories ~/.hydracastlelabyrinth $GAMEDIR/conf/.hydracastlelabyrinth
 
 cd $GAMEDIR
 $ESUDO $controlfolder/oga_controls hcl $param_device &
@@ -29,3 +29,4 @@ SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./hcl 2>&1 | tee $GAMEDIR/log.t
 $ESUDO kill -9 $(pidof oga_controls)
 $ESUDO systemctl restart oga_events &
 printf "\033c" >> /dev/tty1
+
