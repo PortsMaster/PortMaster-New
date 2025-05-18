@@ -13,6 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
@@ -21,8 +22,7 @@ GAMEDIR=/$directory/ports/hocoslamfy
 
 cd $GAMEDIR
 
-$ESUDO rm -rf ~/.hocoslamfy
-ln -sfv /$directory/ports/hocoslamfy/conf/.hocoslamfy ~/
+bind_directories ~/.hocoslamfy /$directory/ports/hocoslamfy/conf/.hocoslamfy
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -35,3 +35,4 @@ $GPTOKEYB "hocoslamfy" -c "./hocoslamfy.gptk" &
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty0
+
