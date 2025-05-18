@@ -21,5 +21,5 @@ Also, I want to thank @Doronimmo and @tabreturn both, from the discord, SO MUCH 
 |DPad Down|Rush|
 |Start|Pause Menu|
 |Select|Pause Menu|
-
+|L1+L2|Mustache Mode Easter Egg|
 
