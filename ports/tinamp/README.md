@@ -48,6 +48,10 @@ I tested different devices playing using the inbuilt speaker while not using the
 ### Bugs, feature requests, contact
 Please head over to the corresponding [Github repository](https://github.com/lanmarc77/tinamp) and open a ticket.  
   
+## Packaged audio books
+The packaged audio books "Lewis Carroll - Alice's Adventures in Wonderland" and "Paula Dehmel - Das grüne Haus" were taken from the public domain archive [LibriVox](https://librivox.org/).  
+License is available in the license folder as file LICENSE.LibriVox.txt.  
+
 ## Controls
 | Button | Action |
 |--|--|
@@ -58,3 +62,17 @@ Please head over to the corresponding [Github repository](https://github.com/lan
 |D-PAD UP|plus/forward/up more|
 |D-PAD DOWN|minus/backwards/down more|
 
+## Compile
+Compilation needs docker installed.  
+
+git clone https://github.com/lanmarc77/tinamp  
+  
+Everything of the following is build inside ./build directory:  
+
+make libffmpeg_aarch64 (to build ffmpeg libraries)  
+
+make libvlc_aarch64 (to build libvlc libraries)  
+
+make tinamp_aarch64 (to build the application)  
+
+make portmaster (to create a distributable portmaster .zip)
