@@ -8,17 +8,17 @@ Also, I want to thank @Doronimmo and @tabreturn both, from the discord, SO MUCH 
 
 | Button | Action |
 |--|--| 
-|L Analog|Movement|
+|D Pad|Movement|
 |R Analog|Mouse Cursor|
 |A|Select/Space|
 |B|Skip Turn|
 |X|Distract|
 |Y|Throw Knife|
 |R1|Teleport|
-|DPad Right|Link Enemies|
-|DPad Up|Sacrifice|
-|DPad Left|Ghost|
-|DPad Down|Rush|
+|L Analog Right|Link Enemies|
+|L Analog Up|Sacrifice|
+|L Analog Left|Ghost|
+|L Analog Down|Rush|
 |Start|Pause Menu|
 |Select|Pause Menu|
 |L1+L2|Mustache Mode Easter Egg|
