@@ -42,13 +42,13 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Prepare game files
 if [ -f ./assets/game.droid ]; then
-	# Delete all redundant files
-	rm -f assets/*.{dll,exe,txt}
-# Zip all game files into the paid.port
+  # Delete all redundant files
+  rm -f assets/*.{dll,exe,txt}
+  # Zip all game files into the paid.port
   zip -r -0 ./paid.port ./assets/
   # Overwrite gmloader.json
   mv -f paid-gmloader.json gmloader.json
-    rm -f $GAMEDIR/demo.port
+  rm -f $GAMEDIR/demo.port
 fi
 
 # Assign configs and load the game
