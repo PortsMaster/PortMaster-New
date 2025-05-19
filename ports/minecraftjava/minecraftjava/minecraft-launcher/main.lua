@@ -72,3 +72,27 @@ function love.keypressed(key)
         end
     end
 end
+
+function love.gamepadpressed(joystick, button)
+    local currentRowVersions = launcher:getVersionsByLoader(rows[selectedRow])
+
+    if button == "dpright" then
+        selectedColumn = math.min(selectedColumn + 1, #currentRowVersions)
+    elseif button == "dpleft" then
+        selectedColumn = math.max(selectedColumn - 1, 1)
+    elseif button == "dpdown" then
+        selectedRow = math.min(selectedRow + 1, #rows)
+        local newRowVersions = launcher:getVersionsByLoader(rows[selectedRow])
+        selectedColumn = math.min(selectedColumn, #newRowVersions)
+    elseif button == "dpup" then
+        selectedRow = math.max(selectedRow - 1, 1)
+        local newRowVersions = launcher:getVersionsByLoader(rows[selectedRow])
+        selectedColumn = math.min(selectedColumn, #newRowVersions)
+    elseif button == "a" or button == "start" or button == "1" then
+        local selectedVersion = currentRowVersions[selectedColumn]
+        if selectedVersion then
+            launcher:startVersion(selectedVersion)
+        end
+    end
+end
+

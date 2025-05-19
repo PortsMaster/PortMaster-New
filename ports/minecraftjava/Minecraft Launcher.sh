@@ -27,7 +27,7 @@ cd $GAMEDIR
 rm main.start
 
 source $controlfolder/runtimes/love_11.5/love.txt
-$GPTOKEYB "love.${DEVICE_ARCH}" -c "minecraft-launcher.gptk" &
+$GPTOKEYB "love.${DEVICE_ARCH}" &
 pm_platform_helper "$LOVE_BINARY"
 $LOVE_RUN "minecraft-launcher"
 $GAMEDIR/main.start
