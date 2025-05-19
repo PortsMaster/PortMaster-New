@@ -48,6 +48,7 @@ if [ -f ./assets/game.droid ]; then
   zip -r -0 ./paid.port ./assets/
   # Overwrite gmloader.json
   mv -f paid-gmloader.json gmloader.json
+    rm -f $GAMEDIR/demo.port
 fi
 
 # Assign configs and load the game
