@@ -1,5 +1,6 @@
 ## Notes
 
+Thanks to the KOReader team for making this wondeful E-Book Reader
 Thanks to BinaryCounter for its libCrusty.so out of Westonpack to disable native Controls
 
 ## Controls
