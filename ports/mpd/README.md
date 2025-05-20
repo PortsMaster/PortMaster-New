@@ -25,17 +25,6 @@ cd pipewire
 cd build
 make
 
-##### Getting other dependencies that could be useful 
-
-sudo apt install \
-libasound2-dev libao-dev libpulse-dev libjack-jackd2-dev libsndfile1-dev \
-libmp3lame-dev libvorbis-dev libopus-dev libwavpack-dev libflac-dev \
-libsamplerate0-dev libmodplug-dev libmad0-dev libid3tag0-dev \
-libnfs-dev libcurl4-openssl-dev libavformat-dev libavcodec-dev \
-libfaad-dev libmpdclient-dev libsidplay2-dev libshout3-dev \
-libsoxr-dev libupnp-dev libwildmidi-dev libyajl-dev \
-libzzip-dev libgme-dev libchromaprint-dev libcdio-paranoia-dev \
-libsqlite3-dev libinotifytools0-dev
 
 ##### Now compiling MPD ( version 0-23.17 )
 
@@ -43,7 +32,7 @@ wget https://www.musicpd.org/download/mpd/0.23/mpd-0.23.17.tar.xz
 bsdtar -xf mpd-0.23.17.tar.xz
 cd mpd-0.23.17
 mkdir build
-meson setup build
+meson setup build   -Djack=disabled   -Dshout=disabled   -Diso9660=disabled   -Dcdio_paranoia=disabled   -Dmad=disabled   -Dmpg123=disabled   -Dvorbis=disabled   -Dopus=disabled   -Dflac=disabled   -Dwavpack=disabled   -Dffmpeg=enabled   -Dsidplay=disabled   -Dmodplug=disabled   -Dwildmidi=disabled   -Dfluidsynth=disabled   -Dmikmod=disabled   -Dlibsamplerate=disabled   -Dsndfile=disabled   -Dsoxr=disabled   -Dsqlite=disabled   -Ddbus=disabled   -Dzeroconf=disabled   -Dwebdav=disabled   -Dnfs=disabled   -Dupnp=disabled   -Dnfs=disabled    -Dsndio=disabled   -Dpulse=disabled -Dopenal=disabled
 cd build
 ninja
 ```

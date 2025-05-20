@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/mpdui
+GAMEDIR=/$directory/ports/mpd
 CONFDIR="$GAMEDIR/conf/"
 
 mkdir -p "$GAMEDIR/conf"
@@ -41,7 +41,6 @@ elif [ "$CFW_NAME" = "muOS" ]; then
     ./mpd ./configs/pipewire/mpdconf
 elif [ "$CFW_NAME" = "knulli" ]; then
     echo "Running on Knulli with Pipewire ( Using special libs for SYSTEMD ) "
-    export LD_LIBRARY_PATH="$GAMEDIR/libs:$GAMEDIR/knullilibs:$LD_LIBRARY_PATH"
     ./mpd ./configs/pipewire/mpdconf
 else
     echo "Running on ALSA"
