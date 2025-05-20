@@ -4,7 +4,7 @@ All files included and ready to run. Thanks to [splendidland](https://www.splend
 
 This game is free but the developer accepts your support by letting you pay what you think is fair for the game. If you enjoy, please consider a contribution here: [https://splendidland.itch.io/formless-star](https://splendidland.itch.io/formless-star)
 
-**Note:** The game may display some stuck-script error during world creation, but waiting will allow the process to complete.
+**Note:** Do not press any buttons during world generation, as this may trigger a stuck script error. If it does, press "Continue running" and wait for the process to complete.
 
 
 ## Controls
