@@ -23,4 +23,5 @@ Install FreeBASIC
 git clone https://github.com/ohrrpgce/ohrrpgce.git
 cd ohrrpgce
 scons gfx=sdl2
+strip ohrrpgce-game
 ```
