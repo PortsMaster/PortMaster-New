@@ -22,8 +22,6 @@ GAMEDIR=/$directory/ports/chasmal
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-# Ensure the conf directory exists
-
 
 cd $GAMEDIR
 
