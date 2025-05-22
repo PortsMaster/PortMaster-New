@@ -33,8 +33,10 @@ fi
 
 # Performance Warning on ROCKNIX
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
     pm_message "Its recommended to use libmali on lower end devices, as performance is worse on Panfrost."
     sleep 5
+    fi
 fi
 
 # Unpack GOG Files

@@ -34,8 +34,10 @@ fi
 
 # Seizure and Performance Warning on ROCKNIX
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
     pm_message "SEIZURE WARNING. When playing on ROCKNIX, you may potentially experience screen flashing. Only some devices have this happen. Its recommended to use libmali on lower end devices, as performance is worse on Panfrost."
     sleep 6
+    fi
 fi
 
 # Unpack GOG Files
