@@ -10,8 +10,8 @@ Thanks [Steven Miller](https://steven-miller.itch.io) for creating this little g
 | D-PAD   | Movement    |
 | L-STICK | Mouse move  |
 | L3      | Mouse slow  |
-| X/A     | Left click  |
-| Y       | Right click |
+| X/A     | Snap/place  |
+| Y       | Cancel      |
 | B       | Undo        |
 | R1      | Reset       |
 | L1      | Skip level  |
