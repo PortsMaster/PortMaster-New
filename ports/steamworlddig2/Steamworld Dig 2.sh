@@ -31,20 +31,11 @@ else
     badgptokey_mode=0
 fi
 
-# Warn about Panfrost incompatability on ROCKNIX
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port only supports the libMali graphics driver. Switch to from Panfrost to libMali to continue."
-    sleep 5
-    exit 1
-    fi
-fi
 
-
-# Seizure Warning on ROCKNIX
+# Seizure and Performance Warning on ROCKNIX
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    pm_message "SEIZURE WARNING. When playing on ROCKNIX, you may potentially experience screen flashing. Only some devices have this happen. Either way proceed with caution"
-    sleep 5
+    pm_message "SEIZURE WARNING. When playing on ROCKNIX, you may potentially experience screen flashing. Only some devices have this happen. Its recommended to use libmali on lower end devices, as performance is worse on Panfrost."
+    sleep 6
 fi
 
 # Unpack GOG Files
@@ -98,11 +89,25 @@ fi
 unset XDG_DATA_HOME
 pm_platform_helper "$GAMEDIR/box64"
 
-$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_PRELOAD="$GAMEDIR/x11sdllib.aarch64/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/steamworld/libs.${DEVICE_ARCH}/":"$GAMEDIR/libs.aarch64":"/usr/lib":"/usr/lib64":"$GAMEDIR/x11sdllib.aarch64/":"$GAMEDIR/libs.x64/" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
-BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/lib:/usr/lib64/:./:lib/:lib64/:x86/" \
-LIBGL_NOBANNER=1 BOX64_DYNAREC=1 BOX64_DLSYM_ERROR=1 BOX64_SHOWSEGV=1 BOX64_SHOWBT=1 \
-XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box64" "$GAMEDIR/Dig2"
-
+#Sort out Panfrost/Adreno on Rocknix from libmali on anything else and launch accordingly
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
+	$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_PRELOAD="$GAMEDIR/x11sdllib.aarch64/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/libs.aarch64":"/usr/lib":"/usr/lib64":"$GAMEDIR/x11sdllib.aarch64/":"$GAMEDIR/libs.x64/" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
+	BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/lib:/usr/lib64/:./:lib/:lib64/:x86/" \
+	LIBGL_NOBANNER=1 BOX64_DYNAREC=1 BOX64_DLSYM_ERROR=1 BOX64_SHOWSEGV=1 BOX64_SHOWBT=1 \
+	XDG_DATA_HOME=$CONFDIR SDL_VIDEODRIVER=x11 "$GAMEDIR/box64" "$GAMEDIR/Dig2"
+    else 
+      $ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_PRELOAD="$GAMEDIR/x11sdllib.aarch64/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/libs.aarch64":"/usr/lib":"/usr/lib64":"$GAMEDIR/x11sdllib.aarch64/":"$GAMEDIR/libs.x64/" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
+      BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/lib:/usr/lib64/:./:lib/:lib64/:x86/" \
+      LIBGL_NOBANNER=1 BOX64_DYNAREC=1 BOX64_DLSYM_ERROR=1 BOX64_SHOWSEGV=1 BOX64_SHOWBT=1 \
+      XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box64" "$GAMEDIR/Dig2"
+    fi
+else
+   $ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_PRELOAD="$GAMEDIR/x11sdllib.aarch64/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/libs.aarch64":"/usr/lib":"/usr/lib64":"$GAMEDIR/x11sdllib.aarch64/":"$GAMEDIR/libs.x64/" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
+   BOX64_LD_LIBRARY_PATH="$GAMEDIR/box64/lib:/usr/lib64/:./:lib/:lib64/:x86/" \
+   LIBGL_NOBANNER=1 BOX64_DYNAREC=1 BOX64_DLSYM_ERROR=1 BOX64_SHOWSEGV=1 BOX64_SHOWBT=1 \
+   XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box64" "$GAMEDIR/Dig2"
+fi
 
 #Clean up after ourselves
 $ESUDO $weston_dir/westonwrap.sh cleanup

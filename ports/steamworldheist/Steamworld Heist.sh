@@ -31,13 +31,10 @@ else
     badgptokey_mode=0
 fi
 
-# Warn about Panfrost incompatability on ROCKNIX
+# Performance Warning on ROCKNIX
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port only supports the libMali graphics driver. Switch to from Panfrost to libMali to continue."
+    pm_message "Its recommended to use libmali on lower end devices, as performance is worse on Panfrost."
     sleep 5
-    exit 1
-    fi
 fi
 
 # Unpack GOG Files
@@ -91,11 +88,25 @@ fi
 unset XDG_DATA_HOME
 pm_platform_helper "$GAMEDIR/box86.${DEVICE_ARCH}"
 
-$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
-XDG_DATA_HOME=$CONFDIR BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
-LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
-XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/Heist"
-
+#Sort out Panfrost/Adreno on Rocknix from libmali on anything else and launch accordingly
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
+	$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+	XDG_DATA_HOME=$CONFDIR BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+	LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+	XDG_DATA_HOME=$CONFDIR SDL_VIDEODRIVER=x11 "$GAMEDIR/box86/box86" "$GAMEDIR/Heist"
+    else 
+	$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+	XDG_DATA_HOME=$CONFDIR BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+	LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+	XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/Heist"
+    fi
+else
+   $ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+   XDG_DATA_HOME=$CONFDIR BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+   LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+   XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/Heist"
+fi
 
 #Clean up after ourselves
 $ESUDO $weston_dir/westonwrap32.sh cleanup
