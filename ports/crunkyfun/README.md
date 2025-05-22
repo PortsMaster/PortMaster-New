@@ -6,7 +6,7 @@ Thanks to Carson Kompon for developing this game and offering it for free. Downl
 
 | Button | Action |
 |--|--| 
-|DPAD / Left|Stick|
+|DPAD / Left Stick|Movement|
 |A/B|Jump|
 |Select|Pause menu|
 
