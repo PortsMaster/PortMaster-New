@@ -6,6 +6,8 @@ WARNING! This game contains depictions of violence and foul language!
 ## Installation
 Download the DEMO from Steam and add the game files to `madhouse/assets`. Wishlist the game!
 
+https://store.steampowered.com/app/3727130/MADHOUSE/
+
 ## Default Gameplay Controls (Xbox Layout)
 | Button            | Action |
 |--                 |--|
