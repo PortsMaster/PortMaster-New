@@ -33,10 +33,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 #export TEXTINPUTINTERACTIVE="Y"
 
-# if XDG Path does not work
-# Use bind_directories to reroute that to a location within the ports folder.
-bind_directories ~/.portfolder $GAMEDIR/conf/.portfolder
-
 pm_platform_helper "$GAMEDIR/tinamp_aarch64"
 
 export VLC_PLUGIN_PATH=$GAMEDIR/libs/vlc
