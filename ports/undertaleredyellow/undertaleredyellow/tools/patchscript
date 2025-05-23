@@ -1,0 +1,198 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+LOGERR="$GAMEDIR/patch_error.txt"
+
+# Redirect output and error to the log file
+rm -rf "$LOGFILE" "$LOGERR"
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="undertalery.port"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+PYTHON=$(which python3)
+
+# Permissions
+chmod 666 /dev/uinput
+
+cd "$GAMEDIR" || return
+
+# First we need to verify the user placed everything correctly.
+prepare_assets() {
+
+    # Identify ut-red-yellow.zip
+    echo "Looking for Undertale Red & Yellow zip file..."
+    sleep 1
+    for zipfile in "$DATADIR"/*.zip; do
+        if unzip -l "$zipfile" 2>/dev/null | grep -q "UNDERTALE\.exe"; then
+            MOD_ZIP="$zipfile"
+            break
+        fi
+    done
+
+    if [ -z "$MOD_ZIP" ]; then
+        echo "Error: Could not find Undertale Red & Yellow zip file. Checking for unzipped assets."
+        if [ ! -f "$DATADIR/utry/UNDERTALE.exe" ]; then
+            echo "Couldn't find unzipped assets! Please copy the ut-red-yellow-zip file to the assets folder."
+            mv "$LOGFILE" "$LOGERR"
+            exit 1
+        fi
+    else
+        echo "Found ${MOD_ZIP}!"
+    fi
+
+    mkdir -p "$DATADIR/utry"
+    unzip "$MOD_ZIP" -d "$DATADIR/utry" || { echo "Failed to unzip $MOD_ZIP"; exit 1; }
+    rm -rf "$MOD_ZIP"
+
+    # Move .ogg files if any exist
+    ogg=false
+    for f in "$DATADIR/utry/"*.ogg; do
+        if [ -f "$f" ]; then
+            mv "$f" "$DATADIR"
+            ogg=true
+        fi
+    done
+
+    if ! $ogg; then
+        echo "No .ogg files to move."
+    fi
+
+    if [ -f "$DATADIR/utry/splash.png" ]; then
+        mv "$DATADIR/utry/splash.png" "$GAMEDIR" || { echo "Failed to move splash.png"; }
+    fi
+
+    mkdir -p "$TOOLDIR/patches"
+    FOUND=0
+
+    for f in "$DATADIR/utry/"*.xdelta; do
+        case "$f" in
+            *Undertalev1.0.8*)
+                dest="$TOOLDIR/patches/utry_steam.xdelta"
+                ;;
+            *v1.08_Windows_C*)
+                dest="$TOOLDIR/patches/utry_gog.xdelta"
+                ;;
+            *)
+                continue
+                ;;
+        esac
+
+        mv "$f" "$dest" || {
+            echo "Failed to move patch file: $f"
+            exit 1
+        }
+        FOUND=1
+    done
+
+    if [ $FOUND -eq 0 ]; then
+        echo "Could not find any base patch files!"
+        exit 1
+    fi
+
+    # Clean up
+    rm -f "$DATADIR"/*.dll "$DATADIR"/*.exe "$DATADIR"/.gitkeep
+    rm -rf "$DATADIR/utry"
+    echo "Finished preparing files..."
+}
+
+# Hopefully the stage is set. Now ensure they copied their Undertale game data and apply the patch.
+apply_xdelta() {
+    # Check if the data.win file exists
+    if [ -f "$DATADIR/data.win" ]; then
+        # Compute md5sum
+        FILESUM=`md5sum "$DATADIR/data.win" | awk '{ print $1 }'`
+        STEAMSUM="5903fc5cb042a728d4ad8ee9e949c6eb"
+
+        if [ "$FILESUM" != "$STEAMSUM" ]; then
+            echo "MD5 doesn't match Steam! Trying to apply the GOG patch..."
+            sleep 1
+            output=`"$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/utry_gog.xdelta" "$DATADIR/data2.win" 2>&1`
+            if [ $? -eq 0 ]; then
+                echo "Patch applied successfully"
+                echo "$output"
+                rm "$DATADIR/data.win" && mv "$DATADIR/data2.win" "$DATADIR/data.win"
+            else
+                echo "Failed to apply gog patch! Probably not GOG v1.08 Windows."
+                echo "$output"
+                mv "$LOGFILE" "$LOGERR"
+                exit 1
+            fi
+        fi    
+
+        # Apply the Steam patch
+        echo "Applying xdelta patch..."
+        output=`"$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/utry_steam.xdelta" "$DATADIR/game.droid" 2>&1`
+        if [ $? -eq 0 ]; then
+            echo "Patch applied successfully"
+            echo "$output"
+            rm "$DATADIR/data.win"
+            output=`"$controlfolder/xdelta3" -d -s "$DATADIR/game.droid" -f "./tools/patches/pm-fix.xdelta" "$DATADIR/game2.droid" 2>&1`
+            if [ $? -eq 0 ]; then
+                echo "Second patch applied successfully"
+                echo "$output"
+                rm "$DATADIR/game.droid" && mv "$DATADIR/game2.droid" "$DATADIR/game.droid"
+            else
+                echo "Failed to apply secondary patch"
+                echo "$output"
+                mv "$LOGFILE" "$LOGERR"
+                exit 1
+            fi
+        else
+            echo "Failed to apply patch"
+            echo "$output"
+            mv "$LOGFILE" "$LOGERR"
+            exit 1
+        fi
+    else
+        echo "No data.win file found to patch! Did you copy your Undertale Steam data to the assets folder?"
+    fi
+}
+
+compress_audio() {
+    mkdir -p "$TMPDIR"
+
+    # Run the compression tool
+    echo "Running GMTools on data and audiogroups."
+    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+
+    if [ $? -eq 0 ]; then
+        echo "Compression completed successfully."
+        mv "$TMPDIR/"* "$DATADIR"
+        echo "Moved compressed files to $DATADIR."
+        rm -rf "$TMPDIR"
+        echo "Temporary directory $TMPDIR removed."
+        echo "Audio compression applied successfully."
+    else
+        echo "Audio compression failed."
+        echo "Cleaning up temporary directory $TMPDIR."
+        rm -rf "$TMPDIR"
+    fi
+}
+
+zip_archive() {
+        zip -r -0 "$DATAFILE" ./assets/
+        mkdir -p saves
+        rm -rf "${DATADIR:?}"/*
+}
+
+process_game() {
+    prepare_assets || { echo "Patching process failed."; exit 1; }
+    sleep 2
+    apply_xdelta || { echo "Patching process failed."; exit 1; }
+    sleep 2
+    compress_audio || { echo "Patching process failed."; exit 1; }
+    sleep 2
+    zip_archive || { echo "Patching process failed."; exit 1; }
+}
+
+# Call the function
+process_game
