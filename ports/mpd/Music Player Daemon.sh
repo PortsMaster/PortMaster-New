@@ -40,7 +40,7 @@ elif [ "$CFW_NAME" = "muOS" ]; then
     echo "Running on MuOS with Pipewire"
     ./mpd ./configs/pipewire/mpdconf
 elif [ "$CFW_NAME" = "knulli" ]; then
-    echo "Running on Knulli with Pipewire ( Using special libs for SYSTEMD ) "
+    echo "Running on Knulli with Pipewire"
     ./mpd ./configs/pipewire/mpdconf
 else
     echo "Running on ALSA"
