@@ -32,8 +32,8 @@ TARGET_DIR="./koreader"
 if [ -f "$ZIPFILE" ]; then
     echo "Unzipping $ZIPFILE to $TARGET_DIR..."
     unzip "$ZIPFILE" -d "$TARGET_DIR"
-elif [-f "$GAMEDIR/koreader/luajit"]
-    ZIP IS ALREADY EXTRACTED
+elif [ -f "$GAMEDIR/koreader/luajit" ]; then
+    echo "ZIP IS ALREADY EXTRACTED"
 else
     echo "File $ZIPFILE does not exist 😢"
 fi
