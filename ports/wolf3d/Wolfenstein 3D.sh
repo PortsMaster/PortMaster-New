@@ -73,7 +73,7 @@ done
 # Run launcher
 chmod +xr ./love
 $GPTOKEYB "love" &
-./love launcher
+./love .
 
 # Read line from selected_game.txt
 while IFS= read -r line; do
@@ -94,7 +94,7 @@ else
 fi
 
 # If Exit chosen from launcher, quit
-if [[ $FOLDER == "Exit" ]]; then
+if [[ $FILE == "Exit" ]]; then
     exit
 else
     sed -i "s|^BaseDataPaths = .*|BaseDataPaths = \"$FOLDER;./data\";|" "$CONFIG"
