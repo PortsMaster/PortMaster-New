@@ -43,8 +43,6 @@ if [ ! -f install_completed ]; then
         pm_message "This port requires the latest version of PortMaster."
 	exit 1  # Exit to prevent further execution
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
