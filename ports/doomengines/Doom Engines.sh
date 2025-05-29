@@ -56,7 +56,7 @@ done
 # Run launcher
 chmod +xr ./love
 $GPTOKEYB "love" &
-./love launcher
+./love .
 
 # Read line from selected_game.txt
 while IFS= read -r line; do
@@ -128,27 +128,34 @@ if [ -n "$FILE" ]; then
     IFS=$TMP
 fi
 
-# Switch the engine based on the IWAD selected
-if [ "$ENGINE" = "crispydoom" ]; then
-    case "$IWAD" in
-        "iwads/heretic.wad") ENGINE="crispyheretic" ;;
-        "iwads/hexen.wad") ENGINE="crispyhexen" ;;
-        "iwads/strife1.wad") ENGINE="crispystrife" ;;
+# Normalize $ENGINE and $INI
+ENGINE_BASE="$(basename "$ENGINE")"
+IWAD_BASE=$(basename "$IWAD")
+
+# Switch the engine based on the IWAD selected or default if no ENGINE key provided
+if [ "$ENGINE_BASE" = "crispydoom" ]; then
+    case "$IWAD_BASE" in
+        "heretic.wad") ENGINE="crispy/crispyheretic" ;;
+        "hexen.wad") ENGINE="crispy/crispyhexen" ;;
+        "strife1.wad") ENGINE="crispy/crispystrife" ;;
+        *) ENGINE="crispy/crispydoom" ;;
     esac
+elif [ "$ENGINE" = "gzdoom" ]; then
+    ENGINE="gzdoom_4.14.2/$ENGINE"
 fi
 
 # Switch INI if it's empty
-if [ -z "$INI" ] && [ "$ENGINE" = "gzdoom" ]; then
-    INI="configs/gzdoom/$ENGINE.ini"
+if [ -z "$INI" ] && [ "$ENGINE_BASE" = "gzdoom" ]; then
+    INI="configs/gzdoom/$ENGINE_BASE.ini"
 fi
 
 # Add supplemental arguments for gzdoom
-if [ "$ENGINE" = "gzdoom" ]; then
+if [ "$ENGINE_BASE" = "gzdoom" ]; then
     ARGS="$ARGS -config $INI +gl_es 1 +vid_preferbackend 3 +cl_capfps 0 +vid_fps 0"
 fi
 
 # Determine analog sticks available and start gptokeyb
-$GPTOKEYB "$ENGINE" -c "configs/$ANALOG_STICKS.gptk" & 
+$GPTOKEYB "$ENGINE_BASE" -c "configs/$ANALOG_STICKS.gptk" & 
 
 # Disable gamepad
 export LD_PRELOAD="$GAMEDIR/libs/hacksdl.so"
