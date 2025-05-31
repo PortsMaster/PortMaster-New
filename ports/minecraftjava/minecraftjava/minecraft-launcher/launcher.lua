@@ -12,7 +12,6 @@ function Launcher:loadVersions()
     self.versions = {
         { name = "1.7.10", loader = "Vanilla", script = "1.7.10.start" },
         { name = "1.7.10", loader = "Forge", script = "1.7.10-Forge.start" },
-        { name = "1.7.10 Performance", loader = "Forge", script = "1.7.10-Forge-Performance.start" },
         { name = "1.13", loader = "Vanilla", script = "1.13.start" },
         { name = "1.16.5", loader = "Fabric", script = "1.16.5-Fabric.start" },
     }
