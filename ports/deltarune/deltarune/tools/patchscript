@@ -5,12 +5,14 @@ LOGFILE="$GAMEDIR/patchlog.txt"
 LOGERR="$GAMEDIR/patch_error.txt"
 
 # Redirect output and error to the log file
-rm -rf "$LOGFILE" "$LOGERR"
+rm -rf "$LOGFILE"
+rm -rf "$LOGERR"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
-export DATADIR="$GAMEDIR/assets/install"
+export INSTALLDIR="$GAMEDIR/assets/install"
+export ASSETDIR="$GAMEDIR/assets"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
@@ -23,22 +25,37 @@ chmod 755 "$TOOLDIR/gmKtool.py" "$TOOLDIR/oggenc" "$TOOLDIR/oggdec"
 
 cd "$GAMEDIR"
 
+# SANITIZE THE INSTALL DIRECTORIES
 sanitize() {
-    # Check if base.port exists in $DATADIR
-    if [ ! -e "$DATADIR/base.port" ]; then
-        echo "Error: base.port not found in $DATADIR!"
+    echo "Sanitizing $ASSETDIR"
+    
+    # Check if data.win exists in ASSETDIR or its subfolders
+    if [ -f "$ASSETDIR/data.win" ] || [ -n "$(find "$ASSETDIR" -maxdepth 2 -type f -name "data.win" -print)" ]; then
+        # Move files to $INSTALLDIR, excluding install and archives
+        move_files
+    elif [ -f "$INSTALLDIR/data.win" ] || [ -n "$(find "$INSTALLDIR" -maxdepth 2 -type f -name "data.win" -print)" ]; then
+        echo "Found game assets, continuing."
+    else
+        echo "Unable to find game data! Cannot patch!"
+        mv "$LOGFILE" "$LOGERR"
         echo "Patching process failed."
         exit 1
     fi
     
-    # Delete everything in $DATADIR except base.port
-    find "$DATADIR" -mindepth 1 ! -name 'base.port' -exec rm -rf {} \;
-    
-    # Case check: Move files to $DATADIR, excluding install and archives
-    echo "Moving files from $GAMEDIR/assets/ to $DATADIR"
+    # Check if base.port exists in $INSTALLDIR
+    if [ ! -e "$INSTALLDIR/base.port" ]; then
+        echo "Error: base.port not found in $INSTALLDIR!"
+        echo "Patching process failed."
+        exit 1
+    fi
+}
+
+# MOVE GAME DATA FROM ASSETS TO INSTALL
+move_files() {
+    echo "Moving files from $ASSETDIR to $INSTALLDIR"
 
     # Loop through all files and directories in $GAMEDIR/assets/
-    for item in "$GAMEDIR/assets"/*; do
+    for item in "$ASSETDIR"/*; do
         # Skip if it's the install folder
         if [ "$(basename "$item")" = "install" ]; then
             continue
@@ -46,7 +63,7 @@ sanitize() {
 
         # If it's a directory, move it
         if [ -d "$item" ]; then
-            mv "$item" "$DATADIR/"
+            mv "$item" "$INSTALLDIR/"
             continue
         fi
 
@@ -56,20 +73,40 @@ sanitize() {
         fi
 
         # Move non-archive files
-        mv "$item" "$DATADIR/"
+        mv "$item" "$INSTALLDIR/"
     done
 }
 
+# MOVE SHARED FILES TO SAVEDIR
 move_shared_files() {
     # Files shared among all the chapters must be moved to the saves folder
     mkdir -p "$GAMEDIR/saves"
-    if [ -d "$DATADIR/mus" ]; then
+    if [ -d "$INSTALLDIR/mus" ]; then
         rm -rf "$GAMEDIR/saves/mus"
-        mv "$DATADIR/mus" "$GAMEDIR/saves/"
+        mv "$INSTALLDIR/mus" "$GAMEDIR/saves/"
         echo "Moved shared files to $GAMEDIR/saves/"
     fi
 }
 
+# PROCESS GAME LAUNCHER
+process_launcher() {
+    GAMEFILE="deltarune"
+    echo "============================="
+    echo "Preparing top-level $GAMEFILE"
+    echo "============================="
+
+    # Create assets folder and move top-level files (except subfolders and base.port)
+    mkdir -p "$INSTALLDIR/assets"
+    find "$INSTALLDIR" -maxdepth 1 -type f -not -name "base.port" -exec mv {} "$INSTALLDIR/assets/" \;
+        
+    # Move shared files (mus folder) to $GAMEDIR/saves
+    move_shared_files
+
+    # Process the assets folder
+    process_assets
+}
+
+# PROCESS GAME ASSETS
 process_assets() {
     echo "Processing assets for $GAMEFILE"
 
@@ -77,11 +114,11 @@ process_assets() {
     clean_assets
 
     # Process data.win if it exists
-    if [ -f "$DATADIR/assets/data.win" ]; then
-        echo "Applying xdelta patch for $GAMEFILE"
+    if [ -f "$INSTALLDIR/assets/data.win" ]; then
         # DISABLE APPLYING XDELTA UNTIL NECESSARY
+        #echo "Applying xdelta patch for $GAMEFILE"
         #apply_xdelta || { echo "Patching process failed."; exit 1; }
-        mv "$DATADIR/assets/data.win" "$DATADIR/assets/game.droid"
+        mv "$INSTALLDIR/assets/data.win" "$INSTALLDIR/assets/game.droid"
         
         # Compress audio
         echo "Compressing audio for $GAMEFILE..."
@@ -90,29 +127,31 @@ process_assets() {
         # Zip and finalize
         echo "Finishing up for $GAMEFILE..."
         zip_archive || { echo "Patching process failed."; exit 1; }
-        rm -rf "$DATADIR/assets"  # Clean up temporary assets folder
+        rm -rf "$INSTALLDIR/assets"  # Clean up temporary assets folder
         echo "Finished processing $GAMEFILE!"
     else
-        echo "ERROR: No data.win file in $DATADIR/$GAMEFILE"
-        rm -rf "$DATADIR/assets"
+        echo "ERROR: No data.win file in $INSTALLDIR/$GAMEFILE"
+        rm -rf "$INSTALLDIR/assets"
         mv "$LOGFILE" "$LOGERR"
         echo "Patching process failed."
         exit 1
     fi
 }
 
+# CLEAN GAME ASSETS
 clean_assets() {
-    find "$DATADIR/assets" -type f \( -name "*.exe" -o -name "*.dll" \) -exec rm -f {} \; 2>>"$LOGERR"
-    echo "Removed unnecessary files from $DATADIR/assets"
+    find "$INSTALLDIR/assets" -type f \( -name "*.exe" -o -name "*.dll" \) -exec rm -f {} \; 2>>"$LOGERR"
+    echo "Removed unnecessary files from $INSTALLDIR/$GAMEFILE"
 }
 
+# APPLY XDELTA PATCHES
 apply_xdelta() {
-    if [ -f "$DATADIR/assets/data.win" ]; then
-        output=$($controlfolder/xdelta3 -d -s "$DATADIR/assets/data.win" -f "$TOOLDIR/patches/$GAMEFILE.xdelta" "$DATADIR/assets/game.droid" 2>&1)
+    if [ -f "$INSTALLDIR/assets/data.win" ]; then
+        output=$($controlfolder/xdelta3 -d -s "$INSTALLDIR/assets/data.win" -f "$TOOLDIR/patches/$GAMEFILE.xdelta" "$INSTALLDIR/assets/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully for $GAMEFILE"
             echo "$output"
-            rm "$DATADIR/assets/data.win"
+            rm "$INSTALLDIR/assets/data.win"
         else
             echo "Failed to apply patch for $GAMEFILE"
             echo "$output"
@@ -127,16 +166,17 @@ apply_xdelta() {
     fi
 }
 
+# COMPRESS GAME AUDIO
 compress_audio() {
     mkdir -p "$TMPDIR"
 
     PYTHON=$(which python3)
     echo "Running GMTools on data and audiogroups for $GAMEFILE."
     
-    if $PYTHON "$TOOLDIR/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/assets/game.droid"; then
+    if $PYTHON "$TOOLDIR/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$INSTALLDIR/assets/game.droid"; then
         echo "Compression completed successfully for $GAMEFILE."
-        mv "$TMPDIR/"* "$DATADIR/assets/"
-        echo "Moved compressed files to $DATADIR/assets/."
+        mv "$TMPDIR/"* "$INSTALLDIR/assets/"
+        echo "Moved compressed files to $INSTALLDIR/assets/."
         rm -rf "$TMPDIR"
         echo "Temporary directory $TMPDIR removed."
         echo "Audio compression applied successfully for $GAMEFILE."
@@ -151,40 +191,31 @@ compress_audio() {
     fi
 }
 
+# FINALIZE PORT ARCHIVE
 zip_archive() {
     # Copy base.port and zip assets into it
-    cp "$DATADIR/base.port" "$DATADIR/$GAMEFILE.zip"
-    cd "$DATADIR" && zip -u -r -0 "$GAMEFILE.zip" assets/
+    cp "$INSTALLDIR/base.port" "$INSTALLDIR/$GAMEFILE.zip"
+    cd "$INSTALLDIR" && zip -u -r -0 "$GAMEFILE.zip" assets/
     cd "$GAMEDIR"
-    mkdir -p "$GAMEDIR/saves"
-    mv "$DATADIR/$GAMEFILE.zip" "$GAMEDIR/assets/$GAMEFILE"
+    # Move it to $GAMEDIR/assets
+    mv "$INSTALLDIR/$GAMEFILE.zip" "$GAMEDIR/assets/$GAMEFILE"
 }
 
+# MAIN LOOP
 process_game() {
-    # The only things in $GAMEDIR/assets should be zip archives, anything else must be moved to the install folder for processing.
-    echo "Sanitizing $GAMEDIR/assets"
+    # Start by sanitizing asset dir
     sanitize
     
-    # If there's a $GAMEDIR/assets/install/data.win then it must be the launcher. Process that.
-    GAMEFILE="deltarune"
-    if [ -f "$DATADIR/data.win" ]; then
-        echo "============================="
-        echo "Preparing top-level $GAMEFILE"
-        echo "============================="
-
-        # Create assets folder and move top-level files (except subfolders and base.port)
-        mkdir -p "$DATADIR/assets"
-        find "$DATADIR" -maxdepth 1 -type f -not -name "base.port" -exec mv {} "$DATADIR/assets/" \;
-        
-        # Move shared files (mus folder) to $GAMEDIR/saves
-        move_shared_files
-
-        # Process the assets folder
-        process_assets
+    # If there's a $INSTALLDIR/data.win then it must be the launcher. Process that.
+    if [ -f "$INSTALLDIR/data.win" ]; then
+        process_launcher
+    elif [ ! -f "$ASSETDIR/deltarune" ]; then
+        echo "Warning! No launcher found! Will be unable to start game!"
+        sleep 2
     fi
 
     # Process chapter subfolders in assets/install
-    subfolders=$(find "$DATADIR" -maxdepth 1 -type d -not -path "$DATADIR" | sort)
+    subfolders=$(find "$INSTALLDIR" -maxdepth 1 -type d -not -path "$INSTALLDIR" | sort)
     if [ -n "$subfolders" ]; then
         for subfolder in $subfolders; do
             if [ ! -f "$subfolder/data.win" ]; then
@@ -197,8 +228,8 @@ process_game() {
                 echo "====================================="
 
                 # Rename subfolder to assets -- echo it so log is easier to follow
-                if mv "$subfolder" "$DATADIR/assets"; then
-                    echo "Renamed $subfolder to $DATADIR/assets"
+                if mv "$subfolder" "$INSTALLDIR/assets"; then
+                    echo "Renamed $subfolder to $INSTALLDIR/assets"
                 fi
 
                 # Process the assets folder
