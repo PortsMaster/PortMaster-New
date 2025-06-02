@@ -1,12 +1,13 @@
 #!/bin/bash
+
 # Set GAMEDIR and logfile
 GAMEDIR="$PWD"
 LOGFILE="$GAMEDIR/patchlog.txt"
 LOGERR="$GAMEDIR/patch_error.txt"
 
 # Redirect output and error to the log file
-rm -rf "$LOGFILE"
-rm -rf "$LOGERR"
+rm -f "$LOGFILE"
+rm -f "$LOGERR"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
@@ -37,16 +38,13 @@ sanitize() {
         echo "Found game assets, continuing."
     else
         echo "Unable to find game data! Cannot patch!"
-        mv "$LOGFILE" "$LOGERR"
-        echo "Patching process failed."
-        exit 1
+        patch_failure
     fi
     
     # Check if base.port exists in $INSTALLDIR
     if [ ! -e "$INSTALLDIR/base.port" ]; then
         echo "Error: base.port not found in $INSTALLDIR!"
-        echo "Patching process failed."
-        exit 1
+        patch_failure
     fi
 }
 
@@ -132,9 +130,7 @@ process_assets() {
     else
         echo "ERROR: No data.win file in $INSTALLDIR/$GAMEFILE"
         rm -rf "$INSTALLDIR/assets"
-        mv "$LOGFILE" "$LOGERR"
-        echo "Patching process failed."
-        exit 1
+        patch_failure
     fi
 }
 
@@ -151,18 +147,15 @@ apply_xdelta() {
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully for $GAMEFILE"
             echo "$output"
-            rm "$INSTALLDIR/assets/data.win"
+            rm -f "$INSTALLDIR/assets/data.win"
         else
             echo "Failed to apply patch for $GAMEFILE"
             echo "$output"
-            mv "$LOGFILE" "$LOGERR"
-            echo "Patching process failed."
-            exit 1
+            patch_failure
         fi
     else
         echo "No data.win file found to patch for $GAMEFILE!"
-        echo "Patching process failed."
-        exit 1
+        patch_failure
     fi
 }
 
@@ -170,24 +163,16 @@ apply_xdelta() {
 compress_audio() {
     mkdir -p "$TMPDIR"
 
-    PYTHON=$(which python3)
     echo "Running GMTools on data and audiogroups for $GAMEFILE."
     
     if $PYTHON "$TOOLDIR/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$INSTALLDIR/assets/game.droid"; then
-        echo "Compression completed successfully for $GAMEFILE."
-        mv "$TMPDIR/"* "$INSTALLDIR/assets/"
-        echo "Moved compressed files to $INSTALLDIR/assets/."
-        rm -rf "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
+        mv "$TMPDIR/"* "$INSTALLDIR/assets/" && rm -rf "$TMPDIR"
         echo "Audio compression applied successfully for $GAMEFILE."
     else
         # Failure
         echo "Audio compression failed for $GAMEFILE."
-        echo "Cleaning up temporary directory $TMPDIR."
         rm -rf "$TMPDIR"
-        mv "$LOGFILE" "$LOGERR"
-        echo "Patching process failed."
-        exit 1
+        patch_failure
     fi
 }
 
@@ -195,14 +180,22 @@ compress_audio() {
 zip_archive() {
     # Copy base.port and zip assets into it
     cp "$INSTALLDIR/base.port" "$INSTALLDIR/$GAMEFILE.zip"
-    cd "$INSTALLDIR" && zip -u -r -0 "$GAMEFILE.zip" assets/
+    cd "$INSTALLDIR" && "$ZIP" -u -r -0 "$GAMEFILE.zip" assets/
     cd "$GAMEDIR"
     # Move it to $GAMEDIR/assets
     mv "$INSTALLDIR/$GAMEFILE.zip" "$GAMEDIR/assets/$GAMEFILE"
 }
 
+# PATCHING FAILED
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    echo "Patching process failed."
+    exit 1
+}
+
 # MAIN LOOP
 process_game() {
+
     # Start by sanitizing asset dir
     sanitize
     
@@ -210,6 +203,7 @@ process_game() {
     if [ -f "$INSTALLDIR/data.win" ]; then
         process_launcher
     elif [ ! -f "$ASSETDIR/deltarune" ]; then
+        # Push a warning if we don't have the launcher, but continue processing subfolders
         echo "Warning! No launcher found! Will be unable to start game!"
         sleep 2
     fi
@@ -217,7 +211,7 @@ process_game() {
     # Process chapter subfolders in assets/install
     subfolders=$(find "$INSTALLDIR" -maxdepth 1 -type d -not -path "$INSTALLDIR" | sort)
     if [ -n "$subfolders" ]; then
-        for subfolder in $subfolders; do
+        for subfolder in "$subfolders"; do
             if [ ! -f "$subfolder/data.win" ]; then
                 echo "Warning: Skipping $subfolder, no data.win found"
                 continue
@@ -227,17 +221,25 @@ process_game() {
                 echo "Preparing subfolder: $GAMEFILE"
                 echo "====================================="
 
-                # Rename subfolder to assets -- echo it so log is easier to follow
-                if mv "$subfolder" "$INSTALLDIR/assets"; then
-                    echo "Renamed $subfolder to $INSTALLDIR/assets"
-                fi
-
-                # Process the assets folder
+                # Rename subfolder to assets and process it
+                mv "$subfolder" "$INSTALLDIR/assets"
                 process_assets
             fi
         done
     fi
 }
 
-# Call the function
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
 process_game
