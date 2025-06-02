@@ -45,20 +45,6 @@ fi
 mkdir -p "$GAMEDIR/savedata"
 bind_directories ~/.local/share/ags/Shards\ of\ God "$GAMEDIR/savedata"
 
-# Install game files
-if [ -f ./gamedata/Shards_of_God_Windows_v1.2.zip ]; then
-    # Unzip game files
-    unzip -j ./gamedata/Shards_of_God_Windows_v1.2.zip "*.vox" "*.tra" "*.ags" -d ./gamedata 
-    # Delete the zip file
-    rm -rf ./gamedata/Shards_of_God_Windows_v1.2.zip
-fi
-
-# Copy acsetup.cfg from config to gamedata
-if [ ! -f "$GAMEDIR/.initial_config_done" ]; then
-  cp config/acsetup.cfg gamedata/
-  touch "$GAMEDIR/.initial_config_done"
-fi
-
 # Exports
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
