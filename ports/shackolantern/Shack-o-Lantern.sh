@@ -40,8 +40,7 @@ fi
 # Patch data.win file
 if [ -f "./assets/data.win" ]; then
   $controlfolder/xdelta3 -d -s "./assets/data.win" "./assets/patch.xdelta3" "./assets/game.droid"
-  [ $? -eq 0 ] && rm "./assets/data.win" || pm_message "Patching of data.win has failed"
-  pm_message "Patching complete"
+  [ $? -eq 0 ] && rm "./assets/data.win" && pm_message "Patching complete" || pm_message "Patching of data.win has failed"
   # Delete unneeded files
   rm -f assets/*.{dll,exe}
 fi
