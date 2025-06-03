@@ -24,7 +24,6 @@ GAMEDIR="/$directory/ports/$GAME_NAME"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
 
 if [ -f ./assets/data.win ]; then # Checking if the data.win exists in assets
     mv assets/data.win assets/game.droid # renaming it to game.droid
