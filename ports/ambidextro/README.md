@@ -37,6 +37,11 @@ So, if you want to enjoy this port, the first thing you need to do is get the ga
     This mod features its own save system, so achievements unlocked on the PC version will not carry over unless this same mod is enabled.  
     You can review the available achievements [on the Steam achievement page](https://steamcommunity.com/stats/3445580/achievements).
 
+### More Mods for Ambidextro
+
+If you're looking for additional mods to enhance your Ambidextro experience, check out the [Ambidextro Mods repository](https://github.com/lowlevel-1989/ambidextro-mods).
+There you'll find various mods including achievements and gameplay improvements.
+
 ## Hardware Requirements
 
 - **CPU:** AArch64  
