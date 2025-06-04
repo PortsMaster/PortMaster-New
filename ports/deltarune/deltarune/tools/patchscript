@@ -24,17 +24,17 @@ export PATH="$GAMEDIR/tools:$PATH"
 chmod 666 /dev/uinput
 chmod 755 "$TOOLDIR/gmKtool.py" "$TOOLDIR/oggenc" "$TOOLDIR/oggdec"
 
-cd "$GAMEDIR"
+cd "$GAMEDIR" || exit
 
 # SANITIZE THE INSTALL DIRECTORIES
 sanitize() {
     echo "Sanitizing $ASSETDIR"
     
     # Check if data.win exists in ASSETDIR or its subfolders
-    if [ -f "$ASSETDIR/data.win" ] || [ -n "$(find "$ASSETDIR" -maxdepth 2 -type f -name "data.win" -print)" ]; then
+    if [ -f "$ASSETDIR/data.win" ] || [ -n "$(find "$ASSETDIR" -maxdepth 2 -type f -name "data.win" -print 2>/dev/null)" ]; then
         # Move files to $INSTALLDIR, excluding install and archives
         move_files
-    elif [ -f "$INSTALLDIR/data.win" ] || [ -n "$(find "$INSTALLDIR" -maxdepth 2 -type f -name "data.win" -print)" ]; then
+    elif [ -f "$INSTALLDIR/data.win" ] || [ -n "$(find "$INSTALLDIR" -maxdepth 2 -type f -name "data.win" -print 2>/dev/null)" ]; then
         echo "Found game assets, continuing."
     else
         echo "Unable to find game data! Cannot patch!"
@@ -71,7 +71,9 @@ move_files() {
         fi
 
         # Move non-archive files
-        mv "$item" "$INSTALLDIR/"
+        if ! mv "$item" "$INSTALLDIR/"; then
+            echo "Failed to move $item to $INSTALLDIR!" >&2
+        fi
     done
 }
 
@@ -143,7 +145,7 @@ clean_assets() {
 # APPLY XDELTA PATCHES
 apply_xdelta() {
     if [ -f "$INSTALLDIR/assets/data.win" ]; then
-        output=$($controlfolder/xdelta3 -d -s "$INSTALLDIR/assets/data.win" -f "$TOOLDIR/patches/$GAMEFILE.xdelta" "$INSTALLDIR/assets/game.droid" 2>&1)
+        output=$("$controlfolder"/xdelta3 -d -s "$INSTALLDIR/assets/data.win" -f "$TOOLDIR/patches/$GAMEFILE.xdelta" "$INSTALLDIR/assets/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully for $GAMEFILE"
             echo "$output"
@@ -181,7 +183,7 @@ zip_archive() {
     # Copy base.port and zip assets into it
     cp "$INSTALLDIR/base.port" "$INSTALLDIR/$GAMEFILE.zip"
     cd "$INSTALLDIR" && "$ZIP" -u -r -0 "$GAMEFILE.zip" assets/
-    cd "$GAMEDIR"
+    cd "$GAMEDIR" || exit
     # Move it to $GAMEDIR/assets
     mv "$INSTALLDIR/$GAMEFILE.zip" "$GAMEDIR/assets/$GAMEFILE"
 }
@@ -211,7 +213,7 @@ process_game() {
     # Process chapter subfolders in assets/install
     subfolders=$(find "$INSTALLDIR" -maxdepth 1 -type d -not -path "$INSTALLDIR" | sort)
     if [ -n "$subfolders" ]; then
-        for subfolder in "$subfolders"; do
+        for subfolder in $subfolders; do
             if [ ! -f "$subfolder/data.win" ]; then
                 echo "Warning: Skipping $subfolder, no data.win found"
                 continue
