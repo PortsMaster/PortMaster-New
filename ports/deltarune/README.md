@@ -1,8 +1,11 @@
 ## Installation
-Download the Deltarune LTS Demo on Steam (switch to the LTS beta branch) or Itch.io and add all files to `ports/deltarune/assets/install`.
+This port works with the following data:
 
-## Updating
-A clean install is recommended when the full game releases. If adding additional chapters, just put the subfolder for the chapter (like `chapter3_windows`) in `ports/deltarune/assets/install`.
+- [LTS DELTARUNE Chapter 1&2 PC Version](https://tobyfox.itch.io/deltarune) on Itch.io/deltarune
+- [Deltarune Demo)[https://store.steampowered.com/app/1671210/DELTARUNE/] on Steam by switching to the LTS beta branch
+- [Deltarune](https://store.steampowered.com/app/1671210/DELTARUNE/) on Steam by purchasing the game
+
+Add all files to `ports/deltarune/assets/install`.
 
 ## Thanks
 TobyFox -- The absolutely amazing game  
