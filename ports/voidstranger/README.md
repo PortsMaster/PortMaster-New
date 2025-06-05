@@ -1,16 +1,14 @@
 # README
 
-GitHub for this port- https://github.com/EzDzzIt/vsaarch64
+[GitHub repo](https://github.com/EzDzzIt/vsaarch64) for this port.
  
-This port currently supports **v1.1.1** of the Steam version of the game, or v1.1.1 of the itch.io version (itch version is patched to be equivalent to the Steam version).
+This port currently supports **v1.1.3** of the Steam or Itch.io version of the game.
 
-## Instructions for Running
+## Instructions
 
 - Purchase game via https://store.steampowered.com/app/2121980/Void_Stranger/ 
-- In Steam, right-click the game and select "Properties..."
-- In the "Betas" tab, choose `old_version_1.1.1`. Let Steam download this version.
 - Place all game .png, .dat, .csv, and .win files in the "/gamedata/" folder. 
-- On first run, the game will take a 2-4 minutes to load. The port is running through patching the data.win file via xdelta, zipping audio files and other files into the .apk, and parsing the .csv game data file. Subsequent starts should go faster. 
+- On first run, the game will take 20-30 minutes to load. The port is patching the data.win file, compressing audio files, and parsing the .csv game data file. Subsequent launches take 10-20 seconds.
 
 ## Controls
 
@@ -35,14 +33,14 @@ The "X" and "L1" buttons will enter multiple actions if held down, mainly for sk
 
 ## Credits
 
--Void Stranger by System Erasure.  
+-Void Stranger by [System Erasure](http://se-made.com/).
 
--Testing by Discord User @gooeyPhantasm. 
+-Testing and update maintenance by [@gPhantasm](https://github.com/gPhantasm). 
 
 -gmloader by JohnnyOnFlame. 
 
 -Thanks to the Portmaster Discord for their support.  
--Thanks to the System Erasure Discord group of modding enthusiasts (@gooeyPhantasm for testing, @skirlez & @Malkav0 for gml palette implementation, @skirlez, @AbbyV and @Fayti1703 for coding fixes). 
+-Thanks to the [System Erasure Discord](https://discord.gg/HCkd3NkgV8) (@gooeyPhantasm for testing, @skirlez & @Malkav0 for gml palette implementation, @skirlez, @AbbyV and @Fayti1703 for coding fixes). 
 
 -Custom palettes that are included from the System Erasure Discord: 
     "ZERORANGER (FAMILIORANGE)" by gooeyPhantasm  
@@ -57,10 +55,8 @@ The "X" and "L1" buttons will enter multiple actions if held down, mainly for sk
     "ICEEY" by Rafl 
     "MAMMON" by Rafl 
 
--Custom loading splash screen by gooeyPhantasm. Font is Alkhemikal by Jeti. 
-
-## *Built With*
+## Licenses
 
 [gmloader-next](https://github.com/JohnnyonFlame/gmloader-next/blob/master/LICENSE.md)
 
-[UTMT-CE](https://github.com/XDOneDude/UndertaleModToolCE/blob/master/LICENSE.txt) 
+[UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool/blob/master/LICENSE.txt) 
