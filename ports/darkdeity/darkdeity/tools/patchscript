@@ -9,73 +9,170 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
+export TOOLKIT="$controlfolder/utils/gmtoolkit"
+export PATH="$TOOLKIT/gmtools:$TOOLKIT/utmt-cli.${DEVICE_ARCH}:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="dark_deity.port"
-export PATCHZIP="darkdeity-steam.zip"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
+chmod 755 "$TOOLKIT/gmtools/gmKtool.py" "$TOOLKIT/gmtools/oggenc.${DEVICE_ARCH}" "$TOOLKIT/gmtools/oggdec.${DEVICE_ARCH}"
 
-cd "$GAMEDIR"
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
 
-compress_audio() {
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
 
-    mkdir -p "$TMPDIR"
-    if [ -f "$DATADIR/data.win" ]; then
-        mv "$DATADIR/data.win" "$DATADIR/game.droid"
-    else
-        echo "Missing data.win file!!!"
-        mv "$LOGFILE" "$LOGERR"
-        exit 1        
-    fi
+# Bail if the dotnet runtime is missing or wasn't mounted
+if ! command -v dotnet >/dev/null 2>&1; then
+    echo "Dotnet is required but not installed. Please install the runtime."
+    echo "Patching process failed."
+    exit 1
+fi
+
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+# PATCHING FAILED
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    echo "Patching process failed."
+    exit 1
+}
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+
+    # Move required directories to save location
+    [ -d "$DATADIR/Bonds" ] && mv "$DATADIR/Bonds" "$SAVEDIR/Bonds"
+    [ -d "$DATADIR/Scenes" ] && mv "$DATADIR/Scenes" "$SAVEDIR/Scenes"
+    [ -d "$DATADIR/Stories" ] && mv "$DATADIR/Stories" "$SAVEDIR/Stories"
     
-    # Run the compression tool
-    PYTHON=$(which python3)
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON $TOOLDIR/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \; 2>>"$LOGERR"
 
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        rmdir "$TMPDIR"
+    # Move splash file if it exists
+    if [ -f "$DATADIR/splash.png" ]; then
+        mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
+    fi
+}
+
+# Apply a patch to enforce stretching to fill the display
+apply_xdelta() {
+    GOG_MD5="1c3ac1d5c2bb7d3c49f601d21b2e584d"
+    STEAM_MD5="2a491f42eea91f76b838c7196430afe9"
+
+    if [ -f "$DATADIR/data.win" ]; then
+        checksum=$(md5sum "$DATADIR/data.win" | awk '{print $1}')
+        case "$checksum" in
+            "$GOG_MD5")
+                PATCH="darkdeity_gog.xdelta"
+                ;;
+            "$STEAM_MD5")
+                PATCH="darkdeity_steam.xdelta"
+                ;;
+            *)
+                echo "Unknown data.win checksum: $checksum"
+                echo "Cannot determine appropriate patch"
+                patch_failure
+                return
+                ;;
+        esac
+
+        if [ -f "$GAMEDIR/tools/$PATCH" ]; then
+            output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "$GAMEDIR/tools/$PATCH" "$DATADIR/data2.win" 2>&1)
+            if [ $? -eq 0 ]; then
+                echo "Patch applied successfully"
+                echo "$output"
+                rm "$DATADIR/data.win" && mv "$DATADIR/data2.win" "$DATADIR/data.win"
+                sleep 1
+            else
+                echo "Failed to apply patch"
+                echo "$output"
+                patch_failure
+            fi
+        else
+            echo "Patch file not found: $GAMEDIR/tools/$PATCH"
+            patch_failure
+        fi
+    else
+        echo "data.win not found in $DATADIR"
+        patch_failure
+    fi
+}
+
+# Externalize game textures with compression
+dump_textures() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Begin texture operations
+    dotnet "$TOOLKIT/utmt-cli.${DEVICE_ARCH}/UndertaleModCli.dll" \
+        dump "$DATADIR/data.win" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
+
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Texture dumping failed to apply."
+        patch_failure
+    else
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/textures" "$SAVEDIR/textures"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
+
+compress_audio() {  
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
         echo "Audio compression applied successfully."
     else
-        echo "Audio compression failed."
-        rm -rf "$TMPDIR"
-        echo "Patching process failed!"
-        mv "$LOGFILE" "$LOGERR"
-        exit 1
+        # Failure
+        echo "Audio compression failed for $GAMEFILE."
+        rmdir "$TMPDIR"
+        patch_failure
     fi
 }
 
 zip_archive() {
-
-        mv $DATADIR/splash.png .
-        zip -r -0 $DATAFILE ./assets/
+        mv "$DATADIR/splash.png" .
+        zip -r -0 "$DATAFILE" ./assets/
         echo "Zipped contents to $DATAFILE"
-        rm -rf ./assets
+        rm -rf "$GAMEDIR/assets/"*
 }
 
 process_game() { 
-
-    mkdir -p saves
-    # Text data must be moved to saves directory or game will crash
-    [ -d "$DATADIR/Bonds" ] && mv "$DATADIR/Bonds" ./saves/Bonds
-    [ -d "$DATADIR/Scenes" ] && mv "$DATADIR/Scenes" ./saves/Scenes
-    [ -d "$DATADIR/Stories" ] && mv "$DATADIR/Stories" ./saves/Stories
-
+    echo "Preparing game..."
+    prepare_files || patch_failure 
+    echo "Applying xdelta patch..."
+    apply_xdelta || patch_failure
+    echo "Externalizing textures..."
+    dump_textures || patch_failure
     echo "Compressing audio..."
-    compress_audio
+    compress_audio || patch_failure
     sleep 1
     echo "Finishing up..."
-    zip_archive
+    zip_archive || patch_failure
     sleep 1
 	
     # Final completion message
