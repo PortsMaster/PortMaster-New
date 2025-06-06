@@ -31,9 +31,9 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
-cd $GAMEDIR
+mv "$GAMEDIR/falsesky-demover.rpg" "$GAMEDIR/falsesky.rpg"
 
-mv "$GAMEDIR/falsesky-demover.rpg" "$GAMEDIR/falsesky.rpg" 
+cd $GAMEDIR
 
 bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
