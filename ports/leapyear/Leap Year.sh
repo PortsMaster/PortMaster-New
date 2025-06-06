@@ -33,10 +33,7 @@ if [ -f "./assets/data.win" ]; then
   if [ "$(md5sum "./assets/data.win" | awk '{print $1}')" == "9ceb853d5bd622c94c5bbe10945bfe4d" ]; then
     # itch
     $controlfolder/xdelta3 -d -s "./assets/data.win" "./patch/itch_patch.xdelta" "./assets/game.droid"
-  elif [ "$(md5sum "./assets/data.win" | awk '{print $1}')" == "0d19cb03cf680cd2e8c0965f9d295630" ]; then
-    # Steam
-    $controlfolder/xdelta3 -d -s "./assets/data.win" "./patch/steam_patch.xdelta" "./assets/game.droid"
-  fi      
+  fi
   [ $? -eq 0 ] && rm "./assets/data.win" || pm_message "Failed to apply patch"
   # Delete redundant files
   rm -f assets/*.{dll,exe}
