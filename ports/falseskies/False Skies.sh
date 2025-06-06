@@ -33,6 +33,8 @@ export XDG_DATA_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
+mv "$GAMEDIR/falsesky-demover.rpg" "$GAMEDIR/falsesky.rpg" 
+
 bind_directories "$HOME/.ohrrpgce" "$CONFDIR"
 
 $GPTOKEYB "ohrrpgce-game" -c "falseskies.gptk" &
