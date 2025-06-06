@@ -12,7 +12,7 @@ You can also play the demo version using this port.
 | D-PAD  | Walk around / control menus  |
 | A      | Use / talk to NPCs / confirm |
 | B      | Open and close the menu      |
-| START  | Menu                         |
+| START  | Game menu                    |
 
 
 ## Compile OHRRPGCE 
