@@ -7,6 +7,9 @@ This port works with the following data:
 
 Add all files to `ports/deltarune/assets/install`.
 
+## Console Borders
+If you are using a widescreen device you may be interested in the [console borders mod](https://gamejolt.com/games/nxrune/629072) which enables the console borders present in the Switch and PS4/PS5 versions of the game. Apply the xdelta patches as the mod's readme states and then copy your data to the assets folder.
+
 ## Thanks
 TobyFox -- The absolutely amazing game  
 JohnnyOnFlame -- GMLoader and TextureRepacker via UTMT  

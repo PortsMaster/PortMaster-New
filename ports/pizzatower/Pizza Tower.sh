@@ -35,6 +35,8 @@ cd "$GAMEDIR"
 # Setup other misc environment variables
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export controlfolder
+export DEVICE_ARCH
 
 # Ensure executable permissions
 $ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"

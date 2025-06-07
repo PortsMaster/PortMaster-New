@@ -10,12 +10,14 @@ exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
+export TOOLKIT="$controlfolder/utils/gmtoolkit"
+export PATH="$TOOLKIT/gmtools:$TOOLKIT/utmt-cli.${DEVICE_ARCH}:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export LICENSEDIR="$GAMEDIR/licenses/pizzatower"
 export DATAFILE="$GAMEDIR/pizzatower.port"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 cd "$GAMEDIR"
 
@@ -41,15 +43,15 @@ prepare_assets() {
     rm -rf "$DATADIR"/*.exe "$DATADIR"/*.dll "$DATADIR"/.gitkeep
     
     # Create the savedir
-    mkdir -p $SAVEDIR
+    mkdir -p "$SAVEDIR"
     
     # Temporarily move sounds to the savedir
-    mv $DATADIR/sound $SAVEDIR/sound
+    mv "$DATADIR/sound" "$SAVEDIR/sound"
     
     # Move game licenses to our license folder
     mkdir -p $LICENSEDIR
     [ -d "$DATADIR/licenses" ] && mv "$DATADIR/licenses/"* "$LICENSEDIR"
-    rm -rf $DATADIR/licenses
+    rmdir "$DATADIR/licenses"
 }
 
 # Clean out $DATAFILE except for the library we need
@@ -88,7 +90,7 @@ dump_textures() {
     rm -rf "$TMPDIR/"*
     
     # Begin texture operations
-    dotnet "$TOOLDIR/utmt-cli/UndertaleModCli.dll" \
+    dotnet "$TOOLKIT/utmt-cli.${DEVICE_ARCH}/UndertaleModCli.dll" \
         dump "$DATADIR/data.win" \
         -e "$DATADIR/textures" "$DATADIR/game.droid"
 
@@ -105,8 +107,8 @@ dump_textures() {
 # Add assets to $DATAFILE
 zip_archive() {
         echo "Finishing up..."
-        zip -r -0 $DATAFILE ./assets/
-        rm -rf $DATADIR/*
+        zip -r -0 "$DATAFILE" ./assets/
+        rm -rf "$DATADIR"/*
         mv "$SAVEDIR/sound" "$DATADIR/sound"
         mv "$SAVEDIR/textures" "$DATADIR/textures"
         sleep 1
