@@ -4,6 +4,8 @@ Thanks to [tissue inu](https://www.tissueinu.com) for creating this great game, 
 
 Special thanks go to BinaryCounter for the mouse cursor solution.
 
+**NOTE** Performance will slow during dense enemy waves in later levels. More powerful devices will experience less slowdown. Best to avoid this port for RK3326 handhelds.
+
 
 ## Controls
 
