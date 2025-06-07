@@ -19,26 +19,22 @@ get_controls
 GAMEDIR=/$directory/ports/hernamewasfire
 CONFDIR="$GAMEDIR/conf/"
 
-# Ensure the conf directory exists
+# ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
-# Set the XDG environment variables for config & savefiles
+# set xdg environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
-# Patch file
-if [ -f "./gamedata/HNWF.pck" ]; then
-  pm_message "Patching HNWF.pck"
-  $controlfolder/xdelta3 -d -s "./gamedata/HNWF.pck" "./gamedata/patch.xdelta3" "./gamedata/HNWF_patched.pck"
-  [ $? -eq 0 ] && rm "./gamedata/HNWF.pck" || pm_message "HNWF.pck has failed"
-fi
+# log execution of the script; script overwrites itself on each launch
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Load runtime
+# load runtime
 runtime="frt_3.5.2"
 if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
-  # Check for runtime if not downloaded via PM
+  # check for runtime if not downloaded via p.m
   if [ ! -f "$controlfolder/harbourmaster" ]; then
     pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
@@ -47,7 +43,7 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
-# Setup Godot
+# setup godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"
 $ESUDO mkdir -p "$godot_dir"
@@ -56,10 +52,15 @@ $ESUDO mount "$godot_file" "$godot_dir"
 PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
+export CRUSTY_SHOW_CURSOR=1                   # enable cursor
+export CRUSTY_CURSOR_FILE=$GAMEDIR/cursor.bmp # path to cursor file
+export CRUSTY_CURSOR_OFFSET_X=0.5             # offset between pointer and sprite. 0 = top left; 1 = bottom right; 0.5 = middle
+export CRUSTY_CURSOR_OFFSET_Y=0.5             # offset between pointer and sprite
+export CRUSTY_CURSOR_SIZE=1.0                 # cursor size modifier. 1 = 100%, 2 = 200%, etc; do not use 0
 
 $GPTOKEYB "$runtime" -c "./hernamewasfire.gptk" &
-pm_platform_helper "$runtime" 
-"$runtime" $GODOT_OPTS --main-pack "gamedata/HNWF_patched.pck"
+pm_platform_helper "$runtime"
+LD_PRELOAD="$GAMEDIR/lib/libcrusty.so" "$runtime" $GODOT_OPTS --main-pack "gamedata/HNWF.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish
