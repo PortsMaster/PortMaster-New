@@ -68,13 +68,21 @@ echo RELEASE
 cat $GAMEDIR/RELEASE
 
 # Setup godot mod loader
+file_loader="ambidextro_loader.zip"
+file_loader_hash="03b266af84ac3aac36c8892d684b88ce"
+current_hash=$(md5sum "$file_loader" | awk '{ print $1 }')
 if [ ! -d "godot" ]; then
     cp $godot_dir/$godot_executable $game_launcher_setup
     rm -rf addons/ mods/ override.cfg
-    unzip -o ambidextro_loader.zip
+    unzip -o $file_loader
     ./$game_launcher_setup --headless --script addons/mod_loader/mod_loader_setup.gd --setup-create-override-cfg --only-setup --mods-path="mods"
     rm $game_launcher_setup
+elif [[ "$current_hash" != "$file_loader_hash" ]]; then
+    echo "Hash is different. Unzipping..."
+    unzip -o $file_loader
 fi
+
+
 
 md5sum $GAMEDIR/$pck_filename
 
