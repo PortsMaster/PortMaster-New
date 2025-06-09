@@ -151,7 +151,7 @@ case $selection in
         ;;
 esac
 
-__pids=$(ps aux | grep '[g]ptokeyb2' | grep '\-Z launch_menu' | awk '{print $2}')
+__pids=$(ps aux | grep '[g]ptokeyb2' | grep 'launch_menu' | awk '{print $2}')
 
 if [ -n "$__pids" ]; then
   echo "KILL: $__pids"
