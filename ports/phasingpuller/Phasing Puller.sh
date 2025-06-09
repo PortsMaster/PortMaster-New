@@ -38,11 +38,6 @@ export GAMEDIR
 export AARCH
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
-
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.$ARCH" -c "phasingpuller.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.$ARCH"
