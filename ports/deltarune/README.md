@@ -14,4 +14,5 @@ If you are using a widescreen device you may be interested in the [console borde
 TobyFox -- The absolutely amazing game  
 JohnnyOnFlame -- GMLoader and TextureRepacker via UTMT  
 Cyril aka kotzebuedog -- GMTools audio patcher  
+BinaryCounter -- Video playback for gmloadernext  
 Testers & Devs from the PortMaster Discord
