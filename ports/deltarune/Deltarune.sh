@@ -24,8 +24,6 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Permissions
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Exports
