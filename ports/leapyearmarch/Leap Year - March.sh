@@ -19,10 +19,11 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/leapyearmarch"
 
+# CD and set log
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Setup permissions
+# Permissions
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
@@ -65,7 +66,7 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
     $ESUDO ./tools/splash "splash.png" 2000 &
 fi
 
-# Run the game
+# Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "./leapyearmarch.gptk" & 
 pm_platform_helper "gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
