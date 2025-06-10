@@ -23,13 +23,19 @@ GAMEDIR="/$directory/ports/deltarune"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Permissions
+$ESUDO chmod 666 /dev/tty1
+$ESUDO chmod 666 /dev/uinput
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="a while"
 
 export controlfolder
+export DEVICE_ARCH
+
+# Pretend we're on SteamDeck, some game code needs this
+export SteamDeck=1
 
 check_patch() {
     # Check for items in install folder (excluding base.port), data.win, or other subfolders
@@ -40,10 +46,26 @@ check_patch() {
     # If patchlog.txt is missing, or we have installable items, data.win, or other subdirs
     if [ ! -f "$GAMEDIR/patchlog.txt" ] || [ -n "$install_items" ] || [ "$has_data_win" = true ] || [ -n "$has_other_subdir" ]; then
         if [ -f "$controlfolder/utils/patcher.txt" ]; then
+            set -o pipefail
+            
+            # Setup mono environment variables
+            DOTNETDIR="$HOME/mono"
+            DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+            $ESUDO mkdir -p "$DOTNETDIR"
+            $ESUDO umount "$DOTNETFILE" || true
+            $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+            export PATH="$DOTNETDIR":"$PATH"
+            
+            # Setup and execute the Portmaster Patcher utility with our patch file
+            export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+            export PATCHER_GAME="$(basename "${0%.*}")"
+            export PATCHER_TIME="a while"
             source "$controlfolder/utils/patcher.txt"
-            $ESUDO kill -9 $(pidof gptokeyb)
+            $ESUDO umount "$DOTNETDIR"
         else
             pm_message "This port requires the latest version of PortMaster."
+            pm_finish
+            exit 1
         fi
     fi
 }
@@ -52,7 +74,7 @@ check_patch() {
 check_patch
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" -c "deltarune.gptk" &
+$GPTOKEYB "gmloadernext.aarch64" xbox360 &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
 
