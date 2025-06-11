@@ -10,5 +10,6 @@ Thanks to [Golden Forest Games](https://goldenforestgames.itch.io) for developin
 |L1 / R1|Alternative paddle controls|
 |A / Start|Confirm|
 |B / Select|Cancel|
+|START + DPAD DOWN|Text input for highscore|
 
 

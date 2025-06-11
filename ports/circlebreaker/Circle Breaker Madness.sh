@@ -28,12 +28,11 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
-$ESUDO chmod +x $GAMEDIR/tools/7zzs
 
 # Installation process
 if [ -f "$GAMEDIR/assets/Circle Breaker Madness 1.0.1.exe" ]; then
 	# Use 7zip to extract the Circle Breaker Madness 1.0.1.exe to the destination directory
-	"$GAMEDIR/tools/7zzs" -aoa e "$GAMEDIR/assets/Circle Breaker Madness 1.0.1.exe" -x!*.exe -o"$GAMEDIR/assets"
+	$controlfolder/7zzs.aarch64 -aoa e "$GAMEDIR/assets/Circle Breaker Madness 1.0.1.exe" -x!*.exe -o"$GAMEDIR/assets"
 	# Patch the game for better font readability
 	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
 	# Remove redundant files
@@ -44,7 +43,7 @@ if [ -f "$GAMEDIR/assets/Circle Breaker Madness 1.0.1.exe" ]; then
 fi
 
 # Assign configs and load the game
-$GPTOKEYB "gmloadernext.aarch64" -c "circlebreaker.gptk" &
+$GPTOKEYB "gmloadernext.aarch64" -c "circlebreaker.gptk" textinput &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
