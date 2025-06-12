@@ -24,7 +24,6 @@ cd $GAMEDIR
 
 # Setup permissions
 $ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 $ESUDO chmod +x $GAMEDIR/tools/splash
 
