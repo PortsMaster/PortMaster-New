@@ -23,7 +23,6 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Setup permissions
-$ESUDO chmod 666 /dev/tty1
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 $ESUDO chmod +x $GAMEDIR/tools/splash
 
