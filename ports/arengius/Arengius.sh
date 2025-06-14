@@ -13,35 +13,52 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
+# Variables
+GAMEDIR="/$directory/ports/arengius"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-GAMEDIR=/$directory/ports/arengius
-
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-cd $GAMEDIR
+# Installation process
+if [ -f "$GAMEDIR/assets/Arengius_Full_v1_0.zip" ]; then
+	# Unzip the Arengius_Full_v1_0.zip to the destination directory
+	unzip -j -o assets/Arengius_Full_v1_0.zip -d assets
+	# Update to bytecode 16
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchfull.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Remove redundant files
+	rm -f assets/*.{dll,win,exe,txt,zip}
+	# Zip all game files into the arengius.port and remove now needless assets folder
+	zip -r -0 ./arengius.port ./assets/
+	rm -Rf ./assets/
+	
+  elif  [ -f "$GAMEDIR/assets/Arengius_Lite_v1_0.zip" ]; then
+	# Unzip the Arengius_Lite_v1_0.zip to the destination directory
+	unzip -j -o assets/Arengius_Lite_v1_0.zip -d assets
+	# Update to bytecode 16
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchlite.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Remove redundant files
+	rm -f assets/*.{dll,win,exe,txt,zip}
+	# Zip all game files into the arengius.port and remove now needless assets folder
+	zip -r -0 ./arengius.port ./assets/
+	rm -Rf ./assets/
+else    
+    echo "No correct zip file is present, skipping the installation process."
+fi
 
-# Rename data.win file
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "arengius.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c "arengius.gptk" &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader" 
-
-./gmloader game.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
