@@ -40,8 +40,8 @@ function main()
     })
 
     -- Set key configuration.
-    inputConfiguration:setKey("jump", jvgslua.KEY_SPACE)
-    inputConfiguration:setKey("action", jvgslua.KEY_LCTRL)
+    inputConfiguration:setKey("jump", jvgslua.KEY_a)
+    inputConfiguration:setKey("action", jvgslua.KEY_b)
     inputConfiguration:setKey("left", jvgslua.KEY_LEFT)
     inputConfiguration:setKey("right", jvgslua.KEY_RIGHT)
     inputConfiguration:setKey("up", jvgslua.KEY_UP)
