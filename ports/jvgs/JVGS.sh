@@ -29,20 +29,13 @@ cd $GAMEDIR
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-
-# Configure GL4ES for OpenGL to GLES translation
-#export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libGL.so.1"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
-
-#if [ "$LIBGL_FB" != "" ]; then
-#export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
-#export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
-#fi
 
 $GPTOKEYB2 jvgs -c ./jvgs.gptk.ini &>/dev/null &
 ./bin/jvgs
