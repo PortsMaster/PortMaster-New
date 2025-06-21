@@ -5,10 +5,10 @@ Special thanks to Wishes Ultd., Greg Lobanov, Alexis Dean-Jones, Lena Raine, Mad
 Source: https://chicorygame.com/
 
 Thanks to:
-JohnnyOnFlame: GMLoader-Next, FMOD compatibility, and UTMT-CLI fork.
-Jeod: GMLoader-Next improvements and game.port wrapper.
-Cyril "kotzebuedog" Deletre: For GMTools for audio compression.
-UnderminersTeam: For the original UTMT-CLI utility.
+JohnnyOnFlame: GMLoader-Next, FMOD compatibility, and UTMT-CLI fork.  
+Jeod: GMLoader-Next improvements and game.port wrapper.  
+Cyril "kotzebuedog" Deletre: For GMTools for audio compression.  
+UnderminersTeam: For the original UTMT-CLI utility.  
 
 #### Steam Instructions
 * [Open Steam console](steam://open/console)
