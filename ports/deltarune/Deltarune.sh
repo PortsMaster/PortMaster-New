@@ -72,7 +72,7 @@ check_patch() {
 check_patch
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" xbox360 &
+$GPTOKEYB "gmloadernext.aarch64" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c gmloader.json
 
