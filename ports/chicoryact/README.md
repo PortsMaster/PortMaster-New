@@ -4,7 +4,7 @@ Special thanks to Wishes Ultd., Greg Lobanov, Alexis Dean-Jones, Lena Raine, Mad
 
 Source: https://chicorygame.com/
 
-Thanks to:
+Thanks to:  
 JohnnyOnFlame: GMLoader-Next, FMOD compatibility, and UTMT-CLI fork.  
 Jeod: GMLoader-Next improvements and game.port wrapper.  
 Cyril "kotzebuedog" Deletre: For GMTools for audio compression.  
