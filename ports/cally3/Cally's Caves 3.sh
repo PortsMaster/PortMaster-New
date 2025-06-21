@@ -13,40 +13,34 @@ else
 fi
 
 source $controlfolder/control.txt
+export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
-
+  
 GAMEDIR="/$directory/ports/cally3"
-GMLOADER_JSON="$GAMEDIR/gmloader.json"
+
+export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export GMLOADER_DEPTH_DISABLE=1
+export GMLOADER_SAVEDIR="$GAMEDIR/saves/"
+export GMLOADER_PLATFORM="os_linux"
 
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+[ -e "./assets/data.win" ] && mv ./assets/data.win ./assets/game.droid
 
-if [ -f "assets/data.win" ]; then
-    checksum=$(md5sum "assets/data.win" | awk '{print $1}')
-    if [ "$checksum" = "e9ec4fabcef5807f69afce7b8383976b" ]; then
-        echo "Applying xdelta3 patch to data.win..."
-        $ESUDO "$controlfolder/xdelta3" -d -s "assets/data.win" "./patch/patch.xdelta3" "assets/game.droid" &&         rm "assets/data.win"
-    fi
+if [ -f ./assets/game.droid ]; then
+    mkdir -p "$GAMEDIR/assets"
+    mv "$GAMEDIR/assets/game.droid" "$GAMEDIR/assets/"
+    sleep 1
+    cd $GAMEDIR
+    zip -r -0 $GAMEDIR/cally3.port assets
+    rm -rf "$GAMEDIR/assets"
 fi
 
-[ -f "assets/data.win" ] && mv "assets/data.win" "assets/game.droid"
-
-find . -maxdepth 1 -type f -name "*.ogg" -exec mv {} assets/ \;
-
-if [ -f "assets/game.droid" ]; then
-    echo "Zipping assets into cally3.port..."
-    rm -f assets/*.{dll,exe,txt}
-    zip -r -0 "./cally3.port" "./assets/"
-    rm -rf "./assets/"
-fi
-
-$GPTOKEYB "gmloadernext.aarch64" - &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c "$GMLOADER_JSON"
+$GPTOKEYB "gmloader" &
+pm_platform_helper "$GAMEDIR/gmloader"
+./gmloader cally3.port
 
 pm_finish

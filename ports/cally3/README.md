@@ -1,22 +1,18 @@
 ## Notes
 
-Great big thanks to [VDO Games](https://store.steampowered.com/app/418120/Callys_Caves_3/) for creating this fun game series! 
-Special thanks to all who tested this port and to Ganimoth for assisting with the aarch64 build of this port! Thank You All!!!🎩
+Big thanks to [VDO Games]( https://store.steampowered.com/app/418120/Callys_Caves_3/) for creating this 3rd game in the Cally's Caves series! A big thanks to Ganimoth for assistance on this port. And a special thanks to the whole PortMaster community! 🎩
 
-## Performance
-    
-The in-game screen ratio settings on this game do not work proper and this issue remains one to be worked out. 
-That stated, this game is still fully enjoyable on multiple handhelds. Scales and looks great on TSP, X55, RGB20pro screens, as well as others.
+While ratio changing does not currently work in this port, I will be working towards fixing this issue in an update to this port at a later point. Until then, I still find it enjoyable and playable as is, especially on the x55 and rgb20 pro as those two devices are proper looking with the working screen ratio.
 
 ## Controls
 
 | Button | Action |
 |--|--| 
-|D-pad|maneuver character/menus|
-|B-button|jump|
-|Y-button|shoot gun|
-|X-button|slash sword|
-|A-button|weapon check|
-|Start-button|In-game Menu/Pause|
+|dpad|move|
+|A|jump|
+|B|item|
+|Y|sword|
+|X|shoot|
+|start|menu|
 
 
