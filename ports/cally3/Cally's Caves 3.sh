@@ -19,14 +19,14 @@ get_controls
   
 GAMEDIR="/$directory/ports/cally3"
 
+cd "$GAMEDIR"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export GMLOADER_DEPTH_DISABLE=1
 export GMLOADER_SAVEDIR="$GAMEDIR/saves/"
 export GMLOADER_PLATFORM="os_linux"
-
-cd "$GAMEDIR"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 [ -e "./assets/data.win" ] && mv ./assets/data.win ./assets/game.droid
 
