@@ -33,7 +33,7 @@ fi
 
 rm -f ./assets/D3DX9_43.dll
 rm -f ./assets/options.ini
-rm -rf ./assets/Mega Man Witter Domination.exe
+rm -rf ./assets/Mega\ Man\ Witter\ Domination.exe
 
 [ -e "./assets/data.win" ] && mv ./assets/data.win ./assets/game.droid
 
