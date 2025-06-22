@@ -19,13 +19,13 @@ get_controls
 GAMEDIR="/$directory/ports/megawitter"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TOOLDIR="$GAMEDIR/tools"
 export PATH="$TOOLDIR:$PATH"
-
-cd $GAMEDIR
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ -f "./assets/Mega Man Witter Domination.zip" ]; then
     ./tools/7zzs x "./assets/Mega Man Witter Domination.zip" -o"./assets/"
