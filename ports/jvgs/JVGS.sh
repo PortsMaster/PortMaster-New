@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: jvgs.zip, JVGS.sh
 
 set -x
 
