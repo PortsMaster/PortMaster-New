@@ -34,6 +34,7 @@ if [ -f "$ZIPFILE" ]; then
     unzip "$ZIPFILE" -d "$TARGET_DIR"
 elif [ -f "$GAMEDIR/koreader/luajit" ]; then
     echo "ZIP IS ALREADY EXTRACTED"
+    rm $ZIPFILE
 else
     echo "File $ZIPFILE does not exist 😢"
 fi
