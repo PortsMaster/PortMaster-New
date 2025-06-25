@@ -36,6 +36,9 @@ else
 fi
 
 $GPTOKEYB2 jvgs -c ./jvgs.gptk.ini &>/dev/null &
+
+pm_platform_helper "${GAMEDIR}/bin/jvgs"
+
 ./bin/jvgs
 
 pm_finish
