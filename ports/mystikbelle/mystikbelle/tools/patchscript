@@ -7,40 +7,62 @@ LOGFILE="$GAMEDIR/patchlog.txt"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+# Patch failure function
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    $ESUDO umount "$TOOLKIT"
+    echo "Patching process failed."
+    exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$TOOLKIT" || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
 # Exports
+export PATH="$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="mystikbelle.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
-apply_xdelta() {
-    # Check if the data.win file exists and apply xdelta
-    if [ -f "$DATADIR/data.win" ]; then
-        # Xdelta created with Steam game version
-        output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/mystikbelle.xdelta" "$DATADIR/game.droid" 2>&1)
-        if [ $? -eq 0 ]; then
-            echo "Patch applied successfully"
-            echo "$output"
-            rm "$DATADIR/data.win"
-        else
-            echo "Failed to apply patch"
-            echo "$output"
-            exit 1
-        fi
-    else
-        echo "No data.win file found to patch!"
-    fi
-}
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
 
 compress_audio() {
     mkdir -p "$TMPDIR"
@@ -72,19 +94,17 @@ zip_archive() {
 process_game() {
     # Delete unnecessary files
     rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
+    mv "$DATADIR/game.unx" "$DATADIR/game.droid"
+    mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
     echo "Removed unnecessary files"
-    
-    #echo "Applying xdelta patch"
-    #apply_xdelta
-    mv $DATADIR/game.unx $DATADIR/game.droid
-    mv $DATADIR/splash.png ./splash.png
-    #sleep 1
-    #echo "Compressing audio..."
-    #compress_audio
     sleep 1
+    echo "Compressing audio..."
+    compress_audio || patch_failure
     echo "Finishing up..."
-    zip_archive
-    sleep 1
+    zip_archive || patch_failure
+    
+    # Unmount runtimes
+    $ESUDO umount "$TOOLKIT"
 	
     # Final completion message
     echo "Patching process complete!"
