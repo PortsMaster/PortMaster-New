@@ -5,6 +5,19 @@ Thanks to:
 
 Please read the instructions provided in the portfolder! This port requires a more extensive install.
 
+## Details
+| **Detail**           | **Value**                          |
+|------------------------|------------------------------------|
+| Ready to Run           | No                                 |
+| Engine/Framework       | GameMaker Studio                   |
+| Architectures          | 64 Bit                             |
+| Aspect Ratio           | 16:9 + fullscreen art borders      |
+| Rumble Support         | Yes                                |
+| Tested Versions        | Epic Games (Android!!)             |
+| Controls               | Native                             |
+| Joysticks Required     | Dual                               |
+
+
 ## Controls
 
 | Button | Action |
