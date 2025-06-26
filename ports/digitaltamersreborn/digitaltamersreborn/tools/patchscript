@@ -1,18 +1,19 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
 
 # Redirect output and error to the log file
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Patch failure function
 patch_failure() {
-    mv "$LOGFILE" "$LOGERR"
-    $ESUDO umount "$TOOLKIT"
-    echo "Patching process failed."
-    exit 1
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
 }
 
 # Mount the GMToolkit runtime
@@ -20,7 +21,7 @@ TOOLKIT="$HOME/gmtoolkit"
 RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
 if [ -f "$RUNTIME" ]; then
     $ESUDO mkdir -p "$TOOLKIT"
-    $ESUDO umount "$TOOLKIT" || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
     $ESUDO mount "$RUNTIME" "$TOOLKIT"
 else
     echo "This port requires the GMToolkit runtime. Please download it."
@@ -137,21 +138,25 @@ zip_archive() {
 
 process_game() {
     echo "Preparing game..."
-    prepare_files || patch_failure 
-    unzip_patch || patch_failure
+    prepare_files || { patch_failure; return 1; }
+    unzip_patch || { patch_failure; return 1; }
     echo "Applying xdelta patch..."
-    apply_xdelta || patch_failure
+    apply_xdelta || { patch_failure; return 1; }
     echo "Compressing audio..."
-    compress_audio || patch_failure
+    compress_audio || { patch_failure; return 1; }
     sleep 1
     echo "Finishing up..."
-    zip_archive || patch_failure
-
-    # Unmount runtimes
-    $ESUDO umount "$TOOLKIT
-	
-    # Final completion message
-    echo "Patching process complete!"
+    zip_archive || { patch_failure; return 1; }
 }
 
-process_game
+# Call the function
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Unmount runtimes
+$ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+$ESUDO umount "$TOOLKIT" 2>/dev/null || true
