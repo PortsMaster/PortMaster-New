@@ -1,17 +1,19 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
 
 # Redirect output and error to the log file
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Patch failure function
 patch_failure() {
-    mv "$LOGFILE" "$LOGERR"
-    echo "Patching process failed."
-    exit 1
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
 }
 
 # Mount the GMToolkit runtime
@@ -19,7 +21,7 @@ TOOLKIT="$HOME/gmtoolkit"
 RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
 if [ -f "$RUNTIME" ]; then
     $ESUDO mkdir -p "$TOOLKIT"
-    $ESUDO umount "$TOOLKIT" || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
     $ESUDO mount "$RUNTIME" "$TOOLKIT"
 else
     echo "This port requires the GMToolkit runtime. Please download it."
@@ -32,7 +34,7 @@ DOTNETDIR="$HOME/mono"
 DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
 if [ -f "$DOTNETFILE" ]; then
     $ESUDO mkdir -p "$DOTNETDIR"
-    $ESUDO umount "$DOTNETFILE" || true
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
     $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
 else
     echo "This port requires the Dotnet runtime. Please download it."
@@ -96,7 +98,21 @@ dump_textures() {
     # Purge cache before operations
     rm -rf "$TMPDIR/"*
     
-    # Begin texture operations
+    # Export sprites we don't want to compress
+    export UMT_SPRITES_FOLDER="$GAMEDIR/tmp/Sprites"
+    export UMT_PADDED="true"
+    export UMT_SPRITE_NAMES="spr_final_palette"
+    export UMT_SPRITE_PREFIX="spr_pl_"
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        load "$DATADIR/data.win" \
+        -s "$GAMEDIR/tools/ExportSprites.csx"      
+    
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Failed to export sprites"
+        patch_failure
+    fi
+    
+    # Begin astc texture compression
     dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
         dump "$DATADIR/data.win" \
         -e "$DATADIR/textures" "$DATADIR/game.droid"
@@ -106,7 +122,20 @@ dump_textures() {
         patch_failure
     else
         rm -f "$DATADIR/data.win"
+        rm -rf "$SAVEDIR/textures" # Remove previous texture directory if it exists
         mv "$DATADIR/textures" "$SAVEDIR/textures"
+    fi
+    
+    # Import the sprites we preserved
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        load "$DATADIR/game.droid" \
+        -s "$GAMEDIR/tools/ImportSprites.csx" \
+        -o "$DATADIR/game.droid"
+    
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Failed to reimport sprites"
+        patch_failure
+    else
         [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
 }
@@ -126,28 +155,29 @@ compress_audio() {
 zip_archive() {
         zip -r -0 "$DATAFILE" ./assets/
         echo "Zipped contents to $DATAFILE"
-        rm -rf "$DATADIR"*
+        rm -rf "$DATADIR/"*
 }
 
 process_game() { 
     echo "Preparing game..."
-    prepare_files || patch_failure 
+    prepare_files || { patch_failure; return 1; }
     echo "Externalizing textures..."
-    dump_textures || patch_failure
+    dump_textures || { patch_failure; return 1; }
     echo "Compressing audio..."
-    compress_audio || patch_failure
+    compress_audio || { patch_failure; return 1; }
     sleep 1
     echo "Finishing up..."
-    zip_archive || patch_failure
-    sleep 1
-    
-    # Unmount runtimes
-    $ESUDO umount "$DOTNETDIR"
-    $ESUDO umount "$TOOLKIT"
-	
-    # Final completion message
-    echo "Patching process complete!"
+    zip_archive || { patch_failure; return 1; }
 }
 
 # Call the function
-process_game
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Unmount runtimes
+$ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+$ESUDO umount "$TOOLKIT" 2>/dev/null || true
