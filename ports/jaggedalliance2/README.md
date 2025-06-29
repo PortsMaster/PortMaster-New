@@ -4,7 +4,7 @@ Thanks to [Jagged Alliance 2 Stracciatella Team](https://ja2-stracciatella.githu
 
 Also thanks to the PortMaster team for all of the work they do.
 
-Special thanks to C.G.B. Spender, Cebion, NotYourAveragePaladin, klops, and laforge for their guidance and help with testing the port in various devices, architectures and resolutions.
+Special thanks to @hugalafutro, @cebion, @not.your.average.paladin, @kloptops, and @laforge0780 for their guidance and help with testing the port in various devices, architectures and resolutions.
 
 ## Detailed Instructions
 
