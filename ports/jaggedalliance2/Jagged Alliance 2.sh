@@ -39,11 +39,11 @@ if [ ! -f "$RUNDIR/ja2.exe" ] || [ ! -f "$BINDIR/$BINARY" ]; then
     source "$controlfolder/utils/patcher.txt"
     $ESUDO kill -9 $(pidof gptokeyb)
   else
-    echo "This port requires the latest version of PortMaster."
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
   fi
 
   if [ ! -f "$RUNDIR/ja2.exe" ] || [ ! -f "$BINDIR/$BINARY" ]; then
-    echo "Installation failed, please check the logs and the README for details."
+    pm_message "Installation failed, please check the logs and the README for details."
   fi
 else
   echo "Extraction process already completed. Skipping."
@@ -59,7 +59,7 @@ bind_directories ~/.ja2 "$CONFDIR"
 # Check if display meets the minimum resolution requirements
 echo "Display resolution is $DISPLAY_WIDTH x $DISPLAY_HEIGHT"
 if [ $DISPLAY_WIDTH -lt 640 ] || [ $DISPLAY_HEIGHT -lt 480 ]; then
-  echo "This game requires a minimum resolution of 640x480, exiting"
+  pm_message "This game requires a minimum resolution of 640x480, exiting"
   exit 1
 fi
 
