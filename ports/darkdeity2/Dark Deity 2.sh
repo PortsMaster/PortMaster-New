@@ -21,9 +21,12 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/darkdeity2"
 
-# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Setup permissions
+$ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +xr "$GAMEDIR/tools/splash"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
