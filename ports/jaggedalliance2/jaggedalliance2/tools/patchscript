@@ -1,0 +1,67 @@
+#!/bin/bash
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+
+source $controlfolder/control.txt
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+get_controls
+
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+TOOLDIR="$GAMEDIR"/tools
+BINDIR="$GAMEDIR"/bin
+RUNDIR="$GAMEDIR"/game
+BINARY="AppRun"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+
+# Exports
+export LD_LIBRARY_PATH="$TOOLDIR/libs:$LD_LIBRARY_PATH"
+
+echo "GAMEDIR is set to: $GAMEDIR"
+echo "Library path is set to: $LD_LIBRARY_PATH"
+echo "Device architecture is $DEVICE_ARCH"
+
+# Permissions
+chmod 666 /dev/uinput
+chmod 777 "$TOOLDIR/innoextract"
+
+if [ ! -f "$RUNDIR/ja2.exe" ]; then
+  mkdir -p "$RUNDIR"
+  cd "$RUNDIR"
+  EXE=$(find "$GAMEDIR" -maxdepth 1 -name "setup*.exe")
+  echo "Extracting game files from $EXE"
+  "$TOOLDIR"/innoextract -e -d "$RUNDIR" $EXE
+  rm "$GAMEDIR"/*.exe
+else
+  echo "Game files found."
+fi
+
+if [ ! -f "$BINDIR/$BINARY" ]; then
+  cd "$GAMEDIR"
+  URL=$(curl -s https://api.github.com/repos/ja2-stracciatella/ja2-stracciatella/releases/latest | sed -n 's/"browser_download_url": "\(.*\)"$/\1/p' | sed -n "/${DEVICE_ARCH}/p")
+  echo "Downloading Jagged Alliance 2 Stracciatella engine from $URL"
+  APPIMAGE="./ja2.AppImage"
+  wget -O $APPIMAGE $URL
+  chmod 777 $APPIMAGE
+  $APPIMAGE --appimage-extract
+  mv squashfs-root $BINDIR
+  chmod 777 $BINDIR/$BINARY
+  rm $APPIMAGE
+else
+  echo "Jagged Alliance 2 Stracciatella engine found."
+fi
