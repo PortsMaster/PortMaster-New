@@ -22,37 +22,32 @@ GAMEDIR="/$directory/ports/lunarlux"
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+$ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +xr "$GAMEDIR/tools/splash"
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="10 to 15 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export PATH="$TOOLDIR:$PATH"
-
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+        export PATCHER_TIME="10 to 15 minutes"
+        export controlfolder
+        export ESUDO
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1 
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 2000 &
 fi
 
 swapabxy() {

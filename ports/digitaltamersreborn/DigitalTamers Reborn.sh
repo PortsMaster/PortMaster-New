@@ -12,8 +12,6 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-export controlfolder
-
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -31,21 +29,21 @@ cd $GAMEDIR
 $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="2 to 5 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+        export PATCHER_TIME="2 to 5 minutes"
+        export controlfolder
+        export ESUDO
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         echo "This port requires the latest version of PortMaster."
     fi
-else
-    echo "Patching process already completed. Skipping."
 fi
 
 # Post patcher setup

@@ -1,6 +1,7 @@
 ## Notes
 
 Thanks to Last Dimension Team for creating this game.
+
 https://store.steampowered.com/app/332610/Mystik_Belle/
 
 ## Default Controls

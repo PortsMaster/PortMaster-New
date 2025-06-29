@@ -12,6 +12,8 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+export controlfolder
+
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -25,26 +27,26 @@ cd $GAMEDIR
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="10 to 15 minutes"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+        export PATCHER_TIME="10 to 15 minutes"
+        export controlfolder
+        export ESUDO
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    echo "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 5000 &
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1 
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 5000 &
 fi
 
 # Run the game

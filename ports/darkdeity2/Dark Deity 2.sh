@@ -21,9 +21,12 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/darkdeity2"
 
-# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Setup permissions
+$ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +xr "$GAMEDIR/tools/splash"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -35,6 +38,8 @@ if [ ! -f patchlog.txt ] || [ -f $GAMEDIR/assets/data.win ]; then
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="$(basename "${0%.*}")"
         export PATCHER_TIME="2 to 5 minutes"
+        export controlfolder
+        export ESUDO
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else

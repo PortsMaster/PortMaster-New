@@ -1,4 +1,4 @@
-#!/bin/bash
+e##!/bin/bash
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -29,14 +29,16 @@ chmod 777 "$GAMEDIR/gmloadernext.aarch64"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-export PATCHER_TIME="5 to 10 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Check if we need to patch the game
 if [ ! -f patchlog.txt ] || [ -f $GAMEDIR/assets/data.win ] || [ -f $GAMEDIR/assets/game.unx ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+        export PATCHER_TIME="5 to 10 minutes"
+        export controlfolder
+        export ESUDO
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
@@ -46,8 +48,8 @@ fi
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO $GAMEDIR/tools/splash "$GAMEDIR/splash.png" 1
-    $ESUDO $GAMEDIR/tools/splash "$GAMEDIR/splash.png" 5000 & 
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 5000 & 
 fi
 
 # Assign gptokeyb and load the game
