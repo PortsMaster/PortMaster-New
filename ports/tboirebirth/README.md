@@ -16,8 +16,8 @@ Thanks to all the people on the PM Discord for very thoroughly testing this port
 | R2                  | Activated items (spacebar)  |
 | Start               | Enter (accept)              |
 | Select              | Escape (pause/back)         |
-| Tab Guide           | Toggle minimap size         |
-| Hold Guild          | Expand Minimap              |
+| Tap Guide           | Toggle minimap size         |
+| Hold Guide          | Expand Minimap              |
 
 ## Hacks and Mods
 
