@@ -1,5 +1,5 @@
 # Thanks
-Thanks to [Edmund McMillen](https://x.com/edmundmcmillen)[Nicalis](https://www.nicalis.com/) for creating this game.
+Thanks to [Edmund McMillen](https://x.com/edmundmcmillen) and [Nicalis](https://www.nicalis.com/) for creating this game.
 
 Thanks to ptitSeb for creating [box64](https://github.com/ptitSeb/box64) and [gl4es](https://github.com/ptitSeb/gl4es), without which this port would've not been possible.
 Thanks to all the people on the PM Discord for very thoroughly testing this port and pushing me to get it to much better state than it was initially in.
