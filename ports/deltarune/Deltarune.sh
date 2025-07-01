@@ -55,7 +55,7 @@ check_patch() {
             export PATH="$DOTNETDIR":"$PATH"
             
             # Setup and execute the Portmaster Patcher utility with our patch file
-			export ESUDO
+            export ESUDO
             export PATCHER_FILE="$GAMEDIR/tools/patchscript"
             export PATCHER_GAME="$(basename "${0%.*}")"
             export PATCHER_TIME="a while"
