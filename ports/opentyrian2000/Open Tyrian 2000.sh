@@ -38,6 +38,6 @@ cd $GAMEDIR
 
 $GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
 pm_platform_helper "$GAMEDIR/$BINARY"
-./$BINARY -t $GAMEDATADIRNAME -j
+./$BINARY.${DEVICE_ARCH} -t $GAMEDATADIRNAME -j
 
 pm_finish
