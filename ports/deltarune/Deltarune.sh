@@ -26,6 +26,19 @@ cd $GAMEDIR
 # Permissions
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$RUNTIME" || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
