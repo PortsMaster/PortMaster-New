@@ -33,7 +33,6 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 if [ -f "assets/data.win" ]; then
     # get data.win checksum
     checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
-    
     # Check for Itch.io version
     if [ "$checksum" == "a9aea0bd3f88fb2e8be8f845ce9e192b" ]; then
         # Apply Itch.io patch
@@ -44,7 +43,6 @@ if [ -f "assets/data.win" ]; then
         zip -r -0 ./habroxia2.port ./assets/
         rm -Rf ./assets/
         echo "Data.win from itch.io has been patched"
-    
     # Check for Steam version
     elif [ "$checksum" == "f413de6a972353a955c06b0c111cc27f" ]; then
         # Apply Steam patch
@@ -55,12 +53,10 @@ if [ -f "assets/data.win" ]; then
         zip -r -0 ./habroxia2.port ./assets/
         rm -Rf ./assets/
         echo "Data.win from Steam has been patched"
-    
     else
         echo "checksum does not match; wrong build/version of game"
     fi
-    
-else    
+ else    
     echo "Missing file in assets folder or game has been patched."
 fi
 
