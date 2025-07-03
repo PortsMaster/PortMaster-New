@@ -20,7 +20,7 @@ export PORT_32BIT="N"
 
 get_controls
 
-GAMEDIR="/$directory/ports/devilution"
+GAMEDIR="/$directory/ports/devilutionx"
 cd $GAMEDIR
 
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
@@ -29,6 +29,7 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "devil.${DEVICE_ARCH}" &
 ./devil.${DEVICE_ARCH} --config-dir $GAMEDIR --data-dir $GAMEDIR --save-dir $GAMEDIR 2>&1 | tee $GAMEDIR/log.txt
