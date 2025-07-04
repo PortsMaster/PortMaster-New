@@ -36,8 +36,8 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-$GPTOKEYB  "openxcom" $HOTKEY textinput -c "./openxcom.$ANALOG_STICKS.gptk" &
-./openxcom -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config"
+$GPTOKEYB  "openxcom.${DEVICE_ARCH}" $HOTKEY textinput -c "./openxcom.$ANALOG_STICKS.gptk" &
+./openxcom.${DEVICE_ARCH} -data "$PWD/data"  -user "$PWD/user" -config "$PWD/config"
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
