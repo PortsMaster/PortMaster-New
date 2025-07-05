@@ -53,7 +53,9 @@ $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
 # Create config dir
-bind_directories "$HOME/.rlvm/KEY_CLANNAD_ENHD" "$GAMEDIR/saves"
+mkdir -p "$GAMEDIR/saves/KEY_CLANNAD_ENHD"
+
+bind_directories "$HOME/.rlvm/KEY_CLANNAD_ENHD" "$GAMEDIR/saves/KEY_CLANNAD_ENHD"
 
 # Export libs
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
