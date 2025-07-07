@@ -35,6 +35,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "jazz2.${DEVICE_ARCH}" &
+pm_platform_helper "$GAMEDIR/jazz2.${DEVICE_ARCH}"
 ./jazz2.${DEVICE_ARCH} 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
