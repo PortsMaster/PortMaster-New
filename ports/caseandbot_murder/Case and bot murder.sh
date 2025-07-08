@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: caseandbot_murder.zip, Case and bot murder.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -12,40 +13,64 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt
+source "$controlfolder/control.txt"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/caseandbot_murder"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
+VERSION_FILE="$GAMEDIR/version.txt"
 
-# CD and set permissions
-cd $GAMEDIR
+cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-# Prepare game files
-if [ -f ./assets/data.win ]; then
-	# Rename data.win
-	mv assets/data.win assets/game.droid
-	# Consolidate files into one assets folder
-	mv assets/assets/* assets
-	# Delete all redundant files
-	rm -f assets/*.{dll,exe,txt,pdf}
-	# Zip all game files into the game.port
-	zip -r -0 ./game.port ./assets/
-	rm -Rf ./assets/
+# Check if version.txt exists and is not empty
+if [ -s "$VERSION_FILE" ]; then
+  EXECUTABLE=$(cat "$VERSION_FILE")
+else
+  # version.txt missing or empty — detect executable version
+  if [ -f "assets/Case&Bot.exe" ]; then
+    # steam version
+    EXECUTABLE="gmloadernext.armhf"
+  elif [ -f "assets/CaseAndBot.exe" ]; then
+    # itch.io version
+    EXECUTABLE="gmloadernext.aarch64"
+  else
+    echo "Error: Could not detect version of case and bot."
+    exit 1
+  fi
+
+  # Write detected executable name to version.txt
+  echo "$EXECUTABLE" > "$VERSION_FILE"
 fi
 
-# Assign configs and load the game
-$GPTOKEYB "gmloadernext.aarch64" &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c "$GMLOADER_JSON"
+# Detect or load game version
+if [ "$(cat "$VERSION_FILE")" = "gmloadernext.armhf" ]; then
+  export PORT_32BIT="Y"
+  export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+elif [ "$(cat "$VERSION_FILE")" = "gmloadernext.aarch64" ]; then
+  export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib64:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+fi
 
-# Cleanup
+
+$ESUDO chmod +x "$GAMEDIR/$EXECUTABLE"
+
+
+# Prepare game files (only on first run)
+if [ -f ./assets/data.win ]; then
+  mv assets/data.win assets/game.droid
+  mv assets/assets/* assets
+  rm -f assets/*.{dll,exe,txt,pdf}
+  zip -r -0 ./game.port ./assets/
+  rm -Rf ./assets/
+fi
+
+$GPTOKEYB "$EXECUTABLE" &
+pm_platform_helper "$GAMEDIR/$EXECUTABLE"
+./"$EXECUTABLE" -c "$GMLOADER_JSON"
+
 pm_finish
