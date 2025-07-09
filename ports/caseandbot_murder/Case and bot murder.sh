@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: caseandbot_murder.zip, Case and bot murder.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
