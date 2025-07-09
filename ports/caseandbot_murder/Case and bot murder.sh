@@ -21,7 +21,7 @@ GAMEDIR="/$directory/ports/caseandbot_murder"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
 VERSION_FILE="$GAMEDIR/version.txt"
 
-cd "$GAMEDIR"
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
