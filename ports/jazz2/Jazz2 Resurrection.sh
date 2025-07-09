@@ -31,10 +31,12 @@ cd $GAMEDIR
 cp "$SDL_GAMECONTROLLERCONFIG_FILE" "$GAMEDIR/Content/gamecontrollerdb.txt"
 export XDG_CONFIG_HOME="/$directory/ports"
 export XDG_DATA_HOME="/$directory/ports"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "jazz2" &
-./jazz2 2>&1 | tee -a ./log.txt
+$GPTOKEYB "jazz2.${DEVICE_ARCH}" &
+pm_platform_helper "$GAMEDIR/jazz2.${DEVICE_ARCH}"
+./jazz2.${DEVICE_ARCH} 2>&1 | tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH
