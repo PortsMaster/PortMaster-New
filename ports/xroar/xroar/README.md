@@ -9,7 +9,8 @@ An open source Snake game is included
 
 Note: if screen looks like screenshot you must add the appropriate system bios files.
 
-Thanks to 
+Thanks to:
+
 Slayer366 for building an entire front end to allow game and machine selection for the roms
 
 Fabrizio Caruso (fabrizio_caruso@hotmail.com) for Snake 
