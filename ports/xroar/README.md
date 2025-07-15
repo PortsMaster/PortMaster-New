@@ -8,7 +8,7 @@ Place color computer game files in the appropriate ports/xroar/roms subfolder.
 An open source Snake game is included
 
 Note: if screen looks green with text ending in ok, or green @ symbols with orange you must add the appropriate system bios files.
-https://www.6809.org.uk/xroar/doc/trouble-no-basic.png
+![missing bios](https://www.6809.org.uk/xroar/doc/trouble-no-basic.png)
 
 ## Compile
 Download xroar-1.8.2.tar.gz from https://www.6809.org.uk/xroar/ and extract the contents
