@@ -4,6 +4,7 @@ Thanks to [Poor Locke](https://poorlocke.com/) for developing this game. Buy it 
 
 ## Steam depot downloads for Mac users
 Demo version: `download_depot 1891730 1891731 8219030975637317337`
+
 Full version: `download_depot 1803760 1803761 4279553970119551253`
 
 ## Note on performance
