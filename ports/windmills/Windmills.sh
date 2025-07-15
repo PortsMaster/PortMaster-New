@@ -35,7 +35,7 @@ export DEVICE_RAM
 # Check if we need to patch the game
 if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
-		export ESUDO
+        export ESUDO
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="$(basename "${0%.*}")"
         export PATCHER_TIME="2 to 5 minutes"
