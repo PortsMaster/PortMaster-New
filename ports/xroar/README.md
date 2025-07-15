@@ -20,7 +20,7 @@ make
 sudo make instalcd xroar-1.8.2
 ```
 ## Thanks to 
-[Ciaran Anscomb](https://www.6809.org.uk/xroar/) for XRoar the open-source color computer emulator which makes this possible. 
-Slayer366 for building an entire front end to allow game and machine selection for the roms 
+[Ciaran Anscomb](https://www.6809.org.uk/xroar/) for XRoar the open-source color computer emulator which makes this possible.  
+Slayer366 for building an entire front end to allow game and machine selection for the roms  
 [Fabrizio Caruso](https://github.com/Fabrizio-Caruso/CROSS-LIB/blob/master/docs/GAMES.md#snake) for Snake 
 <br/>
