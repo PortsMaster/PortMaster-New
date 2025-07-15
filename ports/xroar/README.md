@@ -17,10 +17,10 @@ gzip -dc xroar-1.8.2.tar.gz | tar xvf -
 cd xroar-1.8.2
 ./configure --enable-dragon --enable-coco3 --enable-mc10 --without-gtk2 --without-gtk3       --without-gtkgl --without-cocoa --without-oss --without-pulse        --without-coreaudio --without-x
 make
-sudo make instalcd xroar-1.8.2
+sudo make install
 ```
 ## Thanks to 
-[Ciaran Anscomb](https://www.6809.org.uk/xroar/) for XRoar the open-source color computer emulator which makes this possible.  
-Slayer366 for building an entire front end to allow game and machine selection for the roms  
+[Ciaran Anscomb](https://www.6809.org.uk/xroar/) for XRoar the open-source color computer emulator which makes this possible. 
+Slayer366 for building an entire front end to allow game and machine selection for the roms
 [Fabrizio Caruso](https://github.com/Fabrizio-Caruso/CROSS-LIB/blob/master/docs/GAMES.md#snake) for Snake 
 <br/>
