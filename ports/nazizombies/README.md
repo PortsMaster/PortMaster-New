@@ -111,4 +111,4 @@ Date:   Sat Apr 19 19:29:22 2025 +0100
    make makelibs FTE_TARGET=SDL2 && make m-rel FTE_TARGET=SDL2 FTE_CONFIG=nzportable -j4
    ```
 
-6. copy the binary from /usr/games/nzp/engine/release/nzportable-sdl2 to your device, into ports/nazizombies/game/nzl-sdl (overwrite if it already exists), and make sure it's executable
+6. copy the binary from /usr/games/nzp/engine/release/nzportable-sdl2 to your device, into ports/nazizombies/game/nzp-sdl (overwrite if it already exists), and make sure it's executable
