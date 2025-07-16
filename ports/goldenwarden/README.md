@@ -14,7 +14,7 @@ A special thank you to [xpii](https://store.steampowered.com/app/2851110/Golden_
 
 A big thanks to JohnnyOnFlame for making [gmloader-next](https://github.com/JohnnyonFlame/gmloader-next) compatibility layer.
 
-Thanks to Fraxinus88 for making a [killer tutorial](https://github.com/Fraxinus88/GMloader-ports?tab=readme-ov-file) for porting Game Maker games;
+Thanks to Fraxinus88 for making a [killer tutorial](https://github.com/Fraxinus88/GMloader-ports?tab=readme-ov-file) for porting GameMaker games;
 
 Thanks to Jeod for making [EmulationStation ImageMaker](https://github.com/JeodC/EmulationStation-ImageMaker) tool;
 
