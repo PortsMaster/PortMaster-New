@@ -52,11 +52,11 @@ $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
 # Create the config folders
-SAVEDIR="KEY\智代アフター KEY_智代アフター_EN_ALL"
-for DIR in $SAVEDIRS; do
-    rm -rf "$HOME/.rlvm/$DIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
-done
+mkdir -p "$GAMEDIR/saves/KEY\智代アフター"
+mkdir -p "$GAMEDIR/saves/KEY_智代アフター_EN_ALL"
+
+bind_directories "$HOME/.rlvm/KEY\智代アフター" "$GAMEDIR/saves/KEY\智代アフター"
+bind_directories "$HOME/.rlvm/KEY_智代アフター_EN_ALL" "$GAMEDIR/saves/KEY_智代アフター_EN_ALL"
 
 # Check and modify Gameexe.ini
 INI="$GAMEDIR/gamedata/Gameexe.ini"
@@ -74,17 +74,14 @@ if [ "$LIBGL_FB" != "" ]; then
 fi
   
 # Setup controls
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
 # Disable touchscreen
 modprobe -r edt_ft5x06
 
 # Run the game
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-pm_platform_helper "$runtime"
+pm_message "Loading, please wait... (might take a while!)"
+pm_platform_helper "$rlvm_dir/$runtime"
 $runtime $font "$GAMEDIR/gamedata"
 
 # Cleanup
