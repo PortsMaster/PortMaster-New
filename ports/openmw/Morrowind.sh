@@ -27,6 +27,11 @@ export OSG_NOTIFY_LEVEL=ERROR
 export OPENMW_DEBUG_LEVEL=ERROR
 export OPENMW_RECAST_MAX_LOG_LEVEL=ERROR
 
+if echo "$CFW_NAME" | grep -q "ArkOS"; then
+    # THERE IS ONLY ONE!
+    export CFW_NAME="ArkOS"
+fi
+
 # Logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -94,7 +99,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 
 # More settings.
-PRELOAD="libcrusty.so"
+PRELOAD="$GAMEDIR/libcrusty.so"
 
 if [ "$DEVICE_ARCH" = "x86_64" ]; then
     # Steamdeck and Friends.
@@ -102,7 +107,10 @@ if [ "$DEVICE_ARCH" = "x86_64" ]; then
 
 elif [ "$CFW_NAME" = "ROCKNIX" ]; then
     # God damned lochness monster!
-    PRELOAD=""
+    # PRELOAD="$GAMEDIR/libcrustiest_final_final_final2_for_real.so"
+
+    # Shows a cursor at least, enjoy the flickering. owo
+    SDL_VIDEODRIVER=x11
 
     if ! glxinfo | grep "OpenGL version string"; then
         pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
@@ -111,7 +119,7 @@ elif [ "$CFW_NAME" = "ROCKNIX" ]; then
     fi
 
     # disable cursor auto-hide if on rocknix
-    swaymsg 'seat * hide_cursor 0'
+    swaymsg 'seat * hide_cursor 1'
 elif [ "$CFW_NAME" = "knulli" ]; then
     # POTATO MODE ACTIVATED
     export LIBGL_RECOMPTEX=1
@@ -120,6 +128,16 @@ elif [ "$CFW_NAME" = "knulli" ]; then
 elif [ "$CFW_NAME" = "AmberELEC" ]; then
     # Doesn't appear to work on AmberELEC, but also isn't needed.
     PRELOAD=""
+
+elif [ "$CFW_NAME" = "ArkOS" ] && [ "$DEVICE_CPU" = "Cortex-A35" ]; then
+    # Doesn't appear to work on AmberELEC, but also isn't needed.
+    PRELOAD=""
+fi
+
+if [ "$DEVICE_RAM" -gt "1" ]; then
+    # Disable on more than 1gb ram.
+    export LIBGL_RECOMPTEX=0
+    export LIBGL_SHRINK=0
 fi
 
 # Setup texture potato-ification
@@ -150,10 +168,8 @@ python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution y" "${DISPLA
 
 # Scaling
 if [ "$DISPLAY_HEIGHT" -gt "720" ]; then
-    export CRUSTY_CURSOR_SIZE=1.25
     python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.5"
 elif [ "$DISPLAY_HEIGHT" -gt "640" ]; then
-    export CRUSTY_CURSOR_SIZE=1.0
     python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.25"
 else
     python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "0.75"
@@ -186,5 +202,11 @@ $GPTOKEYB2 "$GAME_EXECUTABLE" -c "$GAMEDIR/$GPTK_FILENAME" > /dev/null &
 pm_platform_helper "$GAMEDIR/$GAME_EXECUTABLE"
 LD_PRELOAD="$PRELOAD" $GAMEDIR/$GAME_EXECUTABLE
 
-
 pm_finish
+
+if [ "$CFW_NAME" = "muOS" ]; then
+    # THANKS FOR NOTHING
+    killall -9 hotkey.sh muhotkey
+    sleep 1
+    /opt/muos/script/mux/hotkey.sh &
+fi
