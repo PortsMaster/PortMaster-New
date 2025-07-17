@@ -44,7 +44,7 @@ if [ ! -f "$RUNDIR/$BINARY" ]; then
     pm_message "Installation failed, please check the logs and the README for details."
   fi
 else
-  echo "Game files found. Skipping."
+  pm_message "Game files found. Skipping."
 fi
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
