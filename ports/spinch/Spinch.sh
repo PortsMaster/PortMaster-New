@@ -33,6 +33,7 @@ $ESUDO chmod +x "$GAMEDIR/tools/splash"
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export ESUDO
+export controlfolder 
 
 # Check if we need to patch the game
 if [ ! -f install_completed ]; then
