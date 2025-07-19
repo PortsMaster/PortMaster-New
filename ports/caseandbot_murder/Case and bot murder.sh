@@ -29,17 +29,29 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
+
 # Prepare game files
-if [ -f ./assets/data.win ]; then
+if [ -f "./assets/CaseAndBot.exe" ]; then
 	# Rename data.win
 	mv assets/data.win assets/game.droid
-	# Consolidate files into one assets folder
-	mv assets/assets/* assets
 	# Delete all redundant files
-	rm -f assets/*.{dll,exe,txt,pdf}
-	# Zip all game files into the game.port
-	zip -r -0 ./game.port ./assets/
+	rm -f assets/*.{dll,exe,txt}
+	# Zip all game files into the casebotitch.port
+	zip -r -0 ./casebotitch.port ./assets/
 	rm -Rf ./assets/
+	# Set gmloader.json to Itch version. 
+	sed -i 's|"apk_path" : "game.port"|"apk_path" : "casebotitch.port"|' "$GMLOADER_JSON"
+
+elif [ -f "./assets/Case&Bot.exe" ]; then
+	# Rename data.win
+	mv assets/data.win assets/game.droid
+	# Delete all redundant files
+	rm -f assets/*.{dll,exe,txt}
+	# Zip all game files into the casebotsteam.port
+	zip -r -0 ./casebotsteam.port ./assets/
+	rm -Rf ./assets/
+	# Set gmloader.json to Steam version. 
+	sed -i 's|"apk_path" : "game.port"|"apk_path" : "casebotsteam.port"|' "$GMLOADER_JSON"
 fi
 
 # Assign configs and load the game
