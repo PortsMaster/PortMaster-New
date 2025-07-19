@@ -12,45 +12,52 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
-
+# Variables
 GAMEDIR="/$directory/ports/spinch"
 
-cd "$GAMEDIR"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# CD and set log
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
+
+# Check if we need to patch the game
+if [ ! -f install_completed ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="Spinch"
+        export PATCHER_TIME="30 to 50 minutes"
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        echo "This port requires the latest version of PortMaster."
+    fi
 fi
 
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/spinch/libs:$LD_LIBRARY_PATH"
+# Display loading splash
+if [ -f install_completed ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "spinch.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" textinput &
-echo "Loading, please wait... " > /dev/tty0
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader spinch.apk
-
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish
