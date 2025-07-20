@@ -5,23 +5,111 @@ GAMEDIR="$PWD"
 LOGFILE="$GAMEDIR/patchlog.txt"
 LOGERR="$GAMEDIR/patch_error.txt"
 
+SEVEN_ZIP="$controlfolder/7zzs.${DEVICE_ARCH}"
+INNOEXTRACT="$controlfolder/innoextract.${DEVICE_ARCH}"
+MODS_DIR="$GAMEDIR/mods"
+UNUSED_MODS_DIR="$GAMEDIR/mods_unused"
+DATA_DIR="$GAMEDIR/data"
+CONFIG_FILE="$GAMEDIR/openmw/openmw.cfg"
+TMP_DIR="$GAMEDIR/tmp_install"
+DATADIR="$GAMEDIR/data"
+LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 # Redirect output and error to the log file
-rm -rf $LOGFILE $LOGERR
+rm -rf $LOGERR
+echo "" > $LOGFILE
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
-# Exports
-export DATADIR="$GAMEDIR/data"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TMPDIR="$GAMEDIR/tmp"
+# Functions
+
+log() {
+    echo "[INFO] $1"
+}
+
+# Ensures the temporary directory is cleaned up on script exit (success or failure)
+cleanup() {
+    log "Cleaning up temporary files..."
+    rm -rf "$TMP_DIR"
+}
+
+# find_mod <pattern>: Searches for a file matching the pattern and returns its full path.
+find_mod_debug() {
+    pattern="$1"
+
+    log "find_mod_debug: $pattern"
+    # Use a loop to safely handle globbing and spaces in filenames
+    for file in "$(find "$MODS_DIR" -iname "$pattern")"; do
+        log "- $file"
+        if [ -f "$file" ]; then
+            return 0
+        fi
+    done
+}
+
+find_mod() {
+    pattern="$1"
+
+    # Use a loop to safely handle globbing and spaces in filenames
+    for file in "$(find "$MODS_DIR" -iname "$pattern")"; do
+        if [ -f "$file" ]; then
+            echo "$file"
+            return 0
+        fi
+    done
+}
+
+# extract_mod <archive_path>: Extracts a given archive to the temporary directory.
+extract_mod() {
+    archive_path="$1"
+    log "Extracting '$archive_path'..."
+    # Ensure temp dir is clean before use
+    rm -rf "$TMP_DIR"
+    mkdir -p "$TMP_DIR"
+    # -o: specify output dir (no space after -o)
+    # -y: assume Yes to all prompts (e.g., overwrite)
+    "$SEVEN_ZIP" x "$archive_path" -o"$TMP_DIR" -y && rm -f "$1"
+}
+
+# move_contents <source> <destination>: Copies contents from the temp dir to the data dir.
+# Using 'cp -rf source/.' is a classic trick to copy the *contents* of a directory.
+move_contents() {
+    source_in_tmp="$1"
+    destination_dir="$2"
+    
+    # Check if the source exists in the temp directory
+    if [ ! -e "$TMP_DIR/$source_in_tmp" ]; then
+        log "Warning: Source '$source_in_tmp' not found in archive, skipping."
+        return
+    fi
+    
+    echo "  -> Copying '$source_in_tmp' to '$destination_dir'"
+    mkdir -p "$destination_dir"
+    # The `/.` is crucial for copying contents, not the directory itself
+    cp -rf "$TMP_DIR/$source_in_tmp/." "$destination_dir/"
+}
+
+# append_to_cfg <content_line>: Adds a content line to openmw.cfg if it doesn't exist.
+append_to_cfg() {
+    line="content=$1"
+    # -q: quiet, -F: fixed string (don't interpret special chars)
+    # --: treats the line as an argument, not an option
+    if ! grep -qF -- "$line" "$CONFIG_FILE"; then
+        echo "Activating content: $1"
+        echo "$line" >> "$CONFIG_FILE"
+    else
+        echo "Content '$1' is already active."
+    fi
+}
+
+# Handle cleanup
+trap cleanup EXIT
 
 # Permissions
 chmod 666 /dev/uinput
 
-cd "$GAMEDIR"
-
-process_game() {
+install_game() {
     export INSTALLER_EXE_GLOB="setup_the_elder_scrolls_iii_morrowind_*.exe"
     export INSTALLER_FILE_GLOB="setup_the_elder_scrolls_iii_morrowind_*"
 
@@ -32,26 +120,188 @@ process_game() {
         fi
     done
 
+    if [ ! -f "$GAMEDIR"/$INSTALLER_EXE_GLOB ]; then
+        return 0
+    fi
+
     # Delete data directory.
-    echo "Delete old data/ directory."
+    log "Delete old data/ directory."
     rm -fRv "$DATADIR"
 
     # Extract files
-    echo "Create temp directory."
-    mkdir "$TMPDIR"
-    cd $TMPDIR
+    log "Create temp directory."
+    mkdir -p "$TMP_DIR"
+    cd $TMP_DIR
 
-    $GAMEDIR/innoextract.${DEVICE_ARCH} -I "Data Files" "$GAMEDIR"/$INSTALLER_EXE_GLOB
+    "$INNOEXTRACT" -I "Data Files" "$GAMEDIR"/$INSTALLER_EXE_GLOB
 
-    echo "Move extracted files."
+    log "Move extracted files."
     mv -fv "Data Files" "$DATADIR"
     cd ..
 
-    echo "Delete temp directory."
-    rm -fRv "$TMPDIR"
+    log "Delete temp directory."
+    cleanup
 
     echo "Delete installer files."
     rm -fR "$GAMEDIR"/$INSTALLER_FILE_GLOB
+}
+
+install_mods() {
+    log "Installing mods"
+
+    ###### BEGIN MOD STUFF
+
+    # 1. Pre-detection: Find mods we need for conditional checks later.
+    GH_ARCHIVE=$(find_mod 'Graphic Herbalism MWSE - OpenMW-*.7z')
+    BBOD_ARCHIVE=$(find_mod 'Better Bodies (Manual)-*.7z')
+
+    # A flag for powerful devices, can be set externally.
+    THIS_IS_POWERFUL_DEVICE="${THIS_IS_POWERFUL_DEVICE:-n}"
+
+    # Install "Patch for Purists"
+    find_mod_debug 'Patch for Purists-*.7z'
+    PFP_ARCHIVE=$(find_mod 'Patch for Purists-*.7z')
+    echo "Mod: $PFP_ARCHIVE"
+    if [ -n "$PFP_ARCHIVE" ]; then
+        log "--- Installing Patch for Purists ---"
+        extract_mod "$PFP_ARCHIVE"
+
+        # The archive extracts directly into BookArt, Icons, etc.
+        # We copy these top-level folders into the data directory.
+        move_contents "BookArt" "$DATA_DIR/BookArt"
+        move_contents "Icons" "$DATA_DIR/Icons"
+        move_contents "Meshes" "$DATA_DIR/Meshes"
+        move_contents "Textures" "$DATA_DIR/Textures"
+
+        # Copy loose files as well
+        cp -f "$TMP_DIR"/*.ESP "$DATA_DIR/"
+        cp -f "$TMP_DIR"/*.esm "$DATA_DIR/"
+        
+        append_to_cfg "Patch for Purists.esm"
+    fi
+
+    if [ -n "$BBOD_ARCHIVE" ]; then
+        log "--- Installing Better Bodies ---"
+        extract_mod "$BBOD_ARCHIVE"
+
+        VERSION="Underwear"
+        #VERSION="Nude"
+
+        move_contents "$VERSION/Data Files" "$DATA_DIR"
+    fi
+
+    BHEAD_ARCHIVE=$(find_mod 'Better Heads-*.rar')
+    echo "Mod: $BHEAD_ARCHIVE"
+    if [ -n "$BHEAD_ARCHIVE" ]; then
+        log "--- Installing Better Heads ---"
+        extract_mod "$BHEAD_ARCHIVE"
+
+        move_contents "." "$DATA_DIR"
+
+        append_to_cfg "Better Heads.esm"
+        append_to_cfg "Better Heads Tribunal addon.esm"
+        append_to_cfg "Better Heads Bloodmoon addon.esm"
+    fi
+
+    # Install "Morrowind Optimization Patch"
+    MOP_ARCHIVE=$(find_mod 'Morrowind Optimization Patch-*.7z')
+    echo "Mod: $MOP_ARCHIVE"
+    if [ -n "$MOP_ARCHIVE" ]; then
+        log "--- Installing Morrowind Optimization Patch ---"
+        extract_mod "$MOP_ARCHIVE"
+
+        move_contents "00 Core" "$DATA_DIR"
+        move_contents "01 Lake Fjalding Anti-Suck" "$DATA_DIR"
+        move_contents "02 Weapon Sheathing Patch" "$DATA_DIR"
+
+        # Conditional Install: Better Bodies compatibility
+        if [ -n "$BETTER_BODIES_ARCHIVE" ]; then
+            log "Better Bodies detected, installing compatibility patch."
+            move_contents "03 Chuzei Fix" "$DATA_DIR"
+        fi
+
+        move_contents "04 Better Vanilla Textures" "$DATA_DIR"
+
+        # Conditional Install: Graphic Herbalism compatibility
+        if [ -n "$GH_ARCHIVE" ]; then
+            log "Graphic Herbalism detected, installing compatibility patch."
+            move_contents "05 Graphic Herbalism Patch" "$DATA_DIR"
+        fi
+    fi
+
+    # Install "Project Atlas"
+    PA_ARCHIVE=$(find_mod 'Project Atlas-*.7z')
+    if [ -n "$PA_ARCHIVE" ]; then
+        log "--- Installing Project Atlas ---"
+        extract_mod "$PA_ARCHIVE"
+
+        move_contents "00 Core" "$DATA_DIR"
+        move_contents "01 Textures - Vanilla" "$DATA_DIR" # Specific choice
+        move_contents "02 Urns - Smoothed" "$DATA_DIR"
+        move_contents "03 Redware - Smoothed" "$DATA_DIR"
+        move_contents "04 Emperor Parasols - Smoothed" "$DATA_DIR"
+
+        # Conditional Install: Performance-based
+        if [ "$THIS_IS_POWERFUL_DEVICE" = "y" ]; then
+            log "Powerful device detected, installing Hi-Res Wood Poles."
+            move_contents "05 Wood Poles - Hi-Res Texture" "$DATA_DIR"
+        fi
+        
+        #move_contents "06 Glow in the Dahrk Patch" "$DATA_DIR" # Example if needed
+
+        # Conditional Install: Graphic Herbalism compatibility
+        if [ -n "$GH_ARCHIVE" ]; then
+            log "Graphic Herbalism detected, installing compatibility patch."
+            move_contents "07 Graphic Herbalism Patch" "$DATA_DIR"
+        fi
+
+        move_contents "09 BC Mushrooms - Smoothed" "$DATA_DIR"
+    fi
+
+    # Install "Graphical Herbalism"
+    if [ -n "$GH_ARCHIVE" ]; then
+        log "--- Installing Graphical Herbalism ---"
+        extract_mod "$GH_ARCHIVE"
+
+        # Move and replace only particular directories
+        move_contents "00 Core + Vanilla Meshes/meshes" "$DATA_DIR/meshes"
+        move_contents "00 Core + Vanilla Meshes/textures" "$DATA_DIR/textures"
+
+        # Optional
+        # move_contents "01 Optional - Smoothed Meshes" "$DATA_DIR"
+    fi
+
+    ## LOL, I suck so hard.
+    AA_ARCHIVE=$(find_mod "Accurate Attack -*.rar")
+    if [ -n "$PA_ARCHIVE" ]; then
+        log "--- Installing Accurate Attack ---"
+        extract_mod "$AA_ARCHIVE"
+
+        cp -f "$TMP_DIR/Accurate Attack.esp" "$DATA_DIR/"
+    fi
+
+    UNUSED_MODS_COUNT="$(ls -1 "$MODS_DIR" | wc -l)"
+    if [ "$UNUSED_MODS_COUNT" -gt 0 ]; then
+        log "Found ${UNUSED_MODS_COUNT} unused mods, moved to mods_unused directory."
+
+        mkdir -p "$UNUSED_MODS_DIR"
+        mv -fv "$MODS_DIR/*" "$UNUSED_MODS_DIR"
+
+        sleep 5
+    fi
+
+    log "Mod installation script finished."
+
+    cleanup
+    ###### END MOD STUFF
+}
+
+process_game() {
+    install_game
+
+    sleep 1
+
+    install_mods
 
     sleep 1
 
@@ -59,4 +309,9 @@ process_game() {
     echo "Patching process complete!"
 }
 
+
+cd "$GAMEDIR"
+
 process_game
+
+

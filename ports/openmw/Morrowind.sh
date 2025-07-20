@@ -17,10 +17,12 @@ source $controlfolder/control.txt
 
 get_controls
 
-export DEVICE_ARCH
-
 # Variables
 GAMEDIR=/$directory/ports/openmw
+
+export controlfolder
+export DEVICE_ARCH
+export GAMEDIR
 
 # Okay its working, lets make the logs a bit less verbose. uwu
 export OSG_NOTIFY_LEVEL=ERROR
@@ -36,6 +38,84 @@ fi
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
+
+# Extract a pre-computed navmesh.db if it exists, and we can.
+if [ -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
+    NAVMESH_DB_XZ="openmw/navmesh.db.xz"
+
+    # Make sure its in the right place.
+    for file in "navmesh.db.xz" "data/navmesh.db.xz"; do
+        if [ -f "$file" ]; then
+            mv -f "$file" "$NAVMESH_DB_XZ"
+            break
+        fi
+    done
+
+    if [ -f "$NAVMESH_DB_XZ" ]; then
+        pm_message "Extracting navmesh.db.xz, this will take a moment."
+        "$controlfolder/7zzs.${DEVICE_ARCH}" x "$NAVMESH_DB_XZ" -oopenmw/ -aoa
+        rm -f "$NAVMESH_DB_XZ"
+    fi
+fi
+
+# Applying settings on first run.
+if [ -f "$GAMEDIR/first-run" ]; then
+    DATE_BACKUP="$(date +'%Y.%m.%d-%H%M')"
+    if [ -f "openmw/settings.cfg" ]; then
+        ## Backup settings.cfg
+        mv "openmw/settings.cfg" "openmw/settings.${DATE_BACKUP}.cfg"
+
+        ## Copy the base one.
+        cp "openmw/settings.base.cfg" "openmw/settings.cfg"
+    fi
+
+    if [ -f "openmw/openmw.cfg" ]; then
+        ## Backup openmw.cfg
+        mv "openmw/openmw.cfg" "openmw/openmw.${DATE_BACKUP}.cfg"
+
+        ## Copy the base one and set the data directory.
+        awk -v d="$GAMEDIR/data/" '{gsub("{{DATADIR}}",d);print}' "openmw/openmw.base.cfg" > "openmw/openmw.cfg"
+    fi
+
+    # Apply Resolution
+    python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution x" "${DISPLAY_WIDTH}"
+    python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution y" "${DISPLAY_HEIGHT}"
+
+    # Scaling
+    if [ "$DISPLAY_HEIGHT" -gt "720" ]; then
+        python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.5"
+
+    elif [ "${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}" = "720x720" ]; then
+        python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.0"
+
+    elif [ "$DISPLAY_HEIGHT" -gt "640" ]; then
+        python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.25"
+
+    else
+
+        python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "0.75"
+    fi
+
+    if [ "$CFW_NAME" = "ROCKNIX" ] || [ "$CFW_NAME" = "RetroDECK" ]; then
+        # Extract the OpenGL compatible resources.
+        tar -xjf resources.OpenGL.tar.bz2
+    fi
+
+    # Apply device specific settings.
+    if [ -f "openmw/settings.${CFW_NAME}.${DEVICE_CPU}.cfg" ]; then
+        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${CFW_NAME}.${DEVICE_CPU}.cfg"
+    fi
+
+    if [ -f "openmw/settings.${DEVICE_CPU}.cfg" ]; then
+        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${DEVICE_CPU}.cfg"
+    fi
+
+    if [ -f "openmw/settings.${CFW_NAME}.cfg" ]; then
+        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${CFW_NAME}.cfg"
+    fi
+
+    rm -f "$GAMEDIR/first-run"
+fi
 
 # Extract game files if found.
 INSTALLER_EXE_GLOB="setup_the_elder_scrolls_iii_morrowind_*.exe"
@@ -54,10 +134,17 @@ for directory in "$GAMEDIR/data" "$GAMEDIR"; do
     done
 done
 
-if [ ! -z "$INSTALLER_FILE" ]; then
+MOD_COUNT="$(ls -1 "$GAMEDIR/mods" | wc -l)"
+
+if [ -n "$INSTALLER_FILE" ] || [ "$MOD_COUNT" -gt "0" ]; then
     export PATCHER_FILE="$GAMEDIR/patchscript"
     export PATCHER_GAME="$(basename "${0%.*}")"
-    export PATCHER_TIME="about 6 minutes" # Lol, who knows. :D
+    if [ -n "$INSTALLER_FILE" ]; then
+        export PATCHER_TIME="about 6 minutes"
+    else
+        # Who knows with mods.
+        export PATCHER_TIME="an amount of time"
+    fi
 
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
@@ -68,6 +155,7 @@ if [ ! -z "$INSTALLER_FILE" ]; then
         exit 1
     fi
 fi
+
 
 GAME_EXECUTABLE="openmw.${DEVICE_ARCH}"
 GPTK_FILENAME="openmw.ini"
@@ -97,7 +185,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 [ -e "$GAMEDIR/libs.${CFW_NAME}.${DEVICE_ARCH}" ] && LD_LIBRARY_PATH="$GAMEDIR/libs.${CFW_NAME}.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 [ -e "$GAMEDIR/libs.${CFW_NAME}" ] && LD_LIBRARY_PATH="$GAMEDIR/libs.${CFW_NAME}:$LD_LIBRARY_PATH"
 
-
 # More settings.
 PRELOAD="$GAMEDIR/libcrusty.so"
 
@@ -109,7 +196,7 @@ elif [ "$CFW_NAME" = "ROCKNIX" ]; then
     # God damned lochness monster!
     # PRELOAD="$GAMEDIR/libcrustiest_final_final_final2_for_real.so"
 
-    # Shows a cursor at least, enjoy the flickering. owo
+    # ~~Shows a cursor at least, enjoy the flickering. owo~~ FIXED THAANKS BINARY <3
     SDL_VIDEODRIVER=x11
 
     if ! glxinfo | grep "OpenGL version string"; then
@@ -118,7 +205,7 @@ elif [ "$CFW_NAME" = "ROCKNIX" ]; then
         exit 1
     fi
 
-    # disable cursor auto-hide if on rocknix
+    # Cursor auto-hide if on rocknix
     swaymsg 'seat * hide_cursor 1'
 elif [ "$CFW_NAME" = "knulli" ]; then
     # POTATO MODE ACTIVATED
@@ -155,47 +242,11 @@ if [ "$LIBGL_SHRINK" -gt 0 ]; then
     echo "===================================="
 fi
 
+# Setup gl4es
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
     source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
     source "${controlfolder}/libgl_default.txt"
-fi
-
-
-# Apply Resolution
-python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution x" "${DISPLAY_WIDTH}"
-python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution y" "${DISPLAY_HEIGHT}"
-
-# Scaling
-if [ "$DISPLAY_HEIGHT" -gt "720" ]; then
-    python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.5"
-elif [ "$DISPLAY_HEIGHT" -gt "640" ]; then
-    python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "1.25"
-else
-    python3 "settings_cfg.py" "openmw/settings.cfg" "GUI" "scaling factor" "0.75"
-fi
-
-# Applying settings on first run.
-if [ -f "$GAMEDIR/first-run" ]; then
-    if [ "$CFW_NAME" = "ROCKNIX" ] || [ "$CFW_NAME" = "RetroDECK" ]; then
-        # Extract the OpenGL compatible resources.
-        tar -xjf resources.OpenGL.tar.bz2
-    fi
-
-    # Device specific
-    if [ -f "openmw/settings.${CFW_NAME}.${DEVICE_CPU}.cfg" ]; then
-        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${CFW_NAME}.${DEVICE_CPU}.cfg"
-    fi
-
-    if [ -f "openmw/settings.${DEVICE_CPU}.cfg" ]; then
-        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${DEVICE_CPU}.cfg"
-    fi
-
-    if [ -f "openmw/settings.${CFW_NAME}.cfg" ]; then
-        python3 "settings_cfg.py" -merge "openmw/settings.cfg" "openmw/settings.${CFW_NAME}.cfg"
-    fi
-
-    rm -f "$GAMEDIR/first-run"
 fi
 
 $GPTOKEYB2 "$GAME_EXECUTABLE" -c "$GAMEDIR/$GPTK_FILENAME" > /dev/null &
