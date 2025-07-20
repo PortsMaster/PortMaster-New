@@ -13,10 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 GAMEDIR=/$directory/ports/curseofthearrow
@@ -29,13 +26,16 @@ cd $GAMEDIR
 
 # Set the XDG environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB "love" &
-./love gamedata
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK"  &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN gamedata
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish
