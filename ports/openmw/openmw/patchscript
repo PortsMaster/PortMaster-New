@@ -113,16 +113,28 @@ install_game() {
     export INSTALLER_EXE_GLOB="setup_the_elder_scrolls_iii_morrowind_*.exe"
     export INSTALLER_FILE_GLOB="setup_the_elder_scrolls_iii_morrowind_*"
 
-    # Move installer to a safe place if it is in the $DATADIR
     for file in "$DATADIR"/$INSTALLER_FILE_GLOB; do
         if [ -f "$file" ]; then
+            echo "Moving installer file: $file"
             mv -fv "$file" "$GAMEDIR"
         fi
     done
 
-    if [ ! -f "$GAMEDIR"/$INSTALLER_EXE_GLOB ]; then
+    found_installer="no"
+    for file in "$GAMEDIR"/$INSTALLER_EXE_GLOB; do
+        if [ -f "$file" ]; then
+            found_installer="yes"
+            break
+        fi
+    done
+
+    # If after checking all potential matches, we haven't found one...
+    if [ "$found_installer" = "no" ]; then
+        echo "No Morrowind installer found. Skipping installation."
         return 0
     fi
+
+    echo "Found Morrowind installer. Proceeding..."
 
     # Delete data directory.
     log "Delete old data/ directory."
@@ -178,16 +190,6 @@ install_mods() {
         append_to_cfg "Patch for Purists.esm"
     fi
 
-    if [ -n "$BBOD_ARCHIVE" ]; then
-        log "--- Installing Better Bodies ---"
-        extract_mod "$BBOD_ARCHIVE"
-
-        VERSION="Underwear"
-        #VERSION="Nude"
-
-        move_contents "$VERSION/Data Files" "$DATA_DIR"
-    fi
-
     BHEAD_ARCHIVE=$(find_mod 'Better Heads-*.rar')
     if [ -n "$BHEAD_ARCHIVE" ]; then
         log "--- Installing Better Heads ---"
@@ -198,6 +200,16 @@ install_mods() {
         append_to_cfg "Better Heads.esm"
         append_to_cfg "Better Heads Tribunal addon.esm"
         append_to_cfg "Better Heads Bloodmoon addon.esm"
+    fi
+
+    if [ -n "$BBOD_ARCHIVE" ]; then
+        log "--- Installing Better Bodies ---"
+        extract_mod "$BBOD_ARCHIVE"
+
+        VERSION="Underwear"
+        #VERSION="Nude"
+
+        move_contents "$VERSION/Data Files" "$DATA_DIR"
     fi
 
     # Install "Morrowind Optimization Patch"
@@ -211,7 +223,7 @@ install_mods() {
         move_contents "02 Weapon Sheathing Patch" "$DATA_DIR"
 
         # Conditional Install: Better Bodies compatibility
-        if [ -n "$BETTER_BODIES_ARCHIVE" ]; then
+        if [ -n "$BBOD_ARCHIVE" ]; then
             log "Better Bodies detected, installing compatibility patch."
             move_contents "03 Chuzei Fix" "$DATA_DIR"
         fi
@@ -269,7 +281,7 @@ install_mods() {
 
     ## LOL, I suck so hard.
     AA_ARCHIVE=$(find_mod "Accurate Attack -*.rar")
-    if [ -n "$PA_ARCHIVE" ]; then
+    if [ -n "$AA_ARCHIVE" ]; then
         log "--- Installing Accurate Attack ---"
         extract_mod "$AA_ARCHIVE"
 
@@ -281,7 +293,7 @@ install_mods() {
         log "Found ${UNUSED_MODS_COUNT} unused mods, moved to mods_unused directory."
 
         mkdir -p "$UNUSED_MODS_DIR"
-        mv -fv "$MODS_DIR/*" "$UNUSED_MODS_DIR"
+        mv -fv "$MODS_DIR"/* "$UNUSED_MODS_DIR"
 
         sleep 5
     fi

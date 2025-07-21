@@ -178,6 +178,13 @@ export LIBGL_RECOMPTEX=0 # 0 for none, 1 for ETC2, 2 for segfault (ASTC isn't wo
 export LIBGL_NOMIPMAPS=0 # if you want to disable mipmaps completely. Saves a bit of RAM, looks crunchy :P
 export LIBGL_SHRINK=0 # Looks potato, but not too bad. The actual SHRINK settings do not matter, for now if it's >0, it's gonna do "if width or height > 128, resolution /2"
 
+# Setup gl4es
+if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
+    source "${controlfolder}/libgl_${CFW_NAME}.txt"
+else
+    source "${controlfolder}/libgl_default.txt"
+fi
+
 # Arch library paths.
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
@@ -207,6 +214,10 @@ elif [ "$CFW_NAME" = "ROCKNIX" ]; then
 
     # Cursor auto-hide if on rocknix
     swaymsg 'seat * hide_cursor 1'
+
+    # Fixes weird sound on ROCKNIX - thanks bmdhacks!
+    ROCKNIX_QUANTUM_SAVE="$(pw-metadata -n settings | grep 'clock.force-quantum' | cut -d"'" -f 4)"
+    pw-metadata -n settings 0 clock.force-quantum 960
 elif [ "$CFW_NAME" = "knulli" ]; then
     # POTATO MODE ACTIVATED
     export LIBGL_RECOMPTEX=1
@@ -242,13 +253,6 @@ if [ "$LIBGL_SHRINK" -gt 0 ]; then
     echo "===================================="
 fi
 
-# Setup gl4es
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
-    source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-    source "${controlfolder}/libgl_default.txt"
-fi
-
 $GPTOKEYB2 "$GAME_EXECUTABLE" -c "$GAMEDIR/$GPTK_FILENAME" > /dev/null &
 pm_platform_helper "$GAMEDIR/$GAME_EXECUTABLE"
 LD_PRELOAD="$PRELOAD" $GAMEDIR/$GAME_EXECUTABLE
@@ -260,4 +264,7 @@ if [ "$CFW_NAME" = "muOS" ]; then
     killall -9 hotkey.sh muhotkey
     sleep 1
     /opt/muos/script/mux/hotkey.sh &
+elif [ "$CFW_NAME" = "ROCKNIX" ]; then
+    # Restore this.
+    pw-metadata -n settings 0 clock.force-quantum "$ROCKNIX_QUANTUM_SAVE"
 fi
