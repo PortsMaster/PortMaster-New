@@ -64,18 +64,16 @@ if [ -f "$GAMEDIR/first-run" ]; then
     if [ -f "openmw/settings.cfg" ]; then
         ## Backup settings.cfg
         mv "openmw/settings.cfg" "openmw/settings.${DATE_BACKUP}.cfg"
-
-        ## Copy the base one.
-        cp "openmw/settings.base.cfg" "openmw/settings.cfg"
     fi
+    ## Copy the base one.
+    cp "openmw/settings.base.cfg" "openmw/settings.cfg"
 
     if [ -f "openmw/openmw.cfg" ]; then
         ## Backup openmw.cfg
         mv "openmw/openmw.cfg" "openmw/openmw.${DATE_BACKUP}.cfg"
-
-        ## Copy the base one and set the data directory.
-        awk -v d="$GAMEDIR/data/" '{gsub("{{DATADIR}}",d);print}' "openmw/openmw.base.cfg" > "openmw/openmw.cfg"
     fi
+    ## Copy the base one and set the data directory.
+    awk -v d="$GAMEDIR/data/" '{gsub("{{DATADIR}}",d);print}' "openmw/openmw.base.cfg" > "openmw/openmw.cfg"
 
     # Apply Resolution
     python3 "settings_cfg.py" "openmw/settings.cfg" "Video" "resolution x" "${DISPLAY_WIDTH}"
