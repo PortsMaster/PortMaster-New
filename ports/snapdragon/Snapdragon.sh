@@ -33,7 +33,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 if [ -f ./assets/data.win ]; then
 	# Rename data.win file
 	mv assets/data.win assets/game.droid
-	# Delete all redundant files
 	zip -r -0 ./snapdragon.port ./assets/
 	rm -Rf ./assets/
 fi
