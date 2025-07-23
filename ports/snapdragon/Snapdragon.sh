@@ -34,7 +34,6 @@ if [ -f ./assets/data.win ]; then
 	# Rename data.win file
 	mv assets/data.win assets/game.droid
 	# Delete all redundant files
-	rm -f assets/*.{exe}
 	# Zip all game files into the snapdragon.port
 	zip -r -0 ./snapdragon.port ./assets/
 	rm -Rf ./assets/
