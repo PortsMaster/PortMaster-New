@@ -13,8 +13,6 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -37,7 +35,6 @@ to_upper_case() {
     done
 }
 
-#GAMEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/catacomb89"
 GAMEDIR="/$directory/ports/catacomb89"
 
 cd "$GAMEDIR"
@@ -49,18 +46,13 @@ to_upper_case "$GAMEDIR"
 $ESUDO cp -f -v $GAMEDIR/CTLPANEL.BAK $GAMEDIR/CTLPANEL.CA2
 $ESUDO cp -f -v $GAMEDIR/CTLPANEL.BAK $GAMEDIR/CTLPANEL.CAT
 
+export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 777 -R $GAMEDIR/*
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
+$GPTOKEYB "catacomb89.${DEVICE_ARCH}" -c "$GAMEDIR/catacomb89.gptk" &
+./catacomb89.${DEVICE_ARCH}
 
-$GPTOKEYB "catacomb89" -c "$GAMEDIR/catacomb89.gptk" &
-./catacomb89
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
+pm_finish
