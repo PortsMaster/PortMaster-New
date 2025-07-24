@@ -26,6 +26,7 @@ cd $GAMEDIR
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "tdrb.${DEVICE_ARCH}" -c "./tdrb.gptk" &
+pm_platform_helper "$GAMEDIR/tdrb.${DEVICE_ARCH}"
 ./tdrb.${DEVICE_ARCH}
 
 # Cleanup any running gptokeyb instances, and any platform specific stuff.
