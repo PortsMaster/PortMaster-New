@@ -36,3 +36,12 @@ Game files needed:
 |Left|Move Left|
 |Right|Move Right|
 |Left Analog|Move (same as D-Pad)|
+
+## Compile
+catacomb89sdl-sauce.7z contains the modified CatacombSDL-hh source code to run the 1989 release
+Extract the contents of the provided catacomb89sdl-sauce.7z archive
+```shell
+cd catacomb89sdl-sauce (or whichever folder you chose to extract to)
+cmake . -DCMAKE_BUILD_TYPE=Release
+make -j4
+```

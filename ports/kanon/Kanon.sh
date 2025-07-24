@@ -52,11 +52,11 @@ $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
 # Create config folders
-SAVEDIRS="KEY_KANON_SE KEY_KANON_ME_ALL"
-for DIR in $SAVEDIRS; do
-    rm -rf "$HOME/.rlvm/$DIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$DIR"
-done
+mkdir -p "$GAMEDIR/saves/KEY_KANON_SE"
+mkdir -p "$GAMEDIR/saves/KEY_KANON_ME_ALL"
+
+bind_directories "$HOME/.rlvm/KEY_KANON_SE" "$GAMEDIR/saves/KEY_KANON_SE"
+bind_directories "$HOME/.rlvm/KEY_KANON_ME_ALL" "$GAMEDIR/saves/KEY_KANON_ME_ALL"
 
 # Export libs
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
@@ -66,17 +66,14 @@ if [ "$LIBGL_FB" != "" ]; then
 fi
 
 # Setup controls
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
 # Disable touchscreen
 modprobe -r edt_ft5x06
 
 # Run the game
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-pm_platform_helper "$runtime"
+pm_message "Loading, please wait... (might take a while!)"
+pm_platform_helper "$rlvm_dir/$runtime"
 $runtime $font "$GAMEDIR/gamedata"
 
 # Cleanup

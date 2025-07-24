@@ -60,23 +60,21 @@ if [ "$LIBGL_FB" != "" ]; then
 fi
 
 # Create the config folders
-for SAVEDIR in "${SAVEDIR[@]}"; do
-    rm -rf "$HOME/.rlvm/$SAVEDIR"
-    ln -s "$GAMEDIR/saves" "$HOME/.rlvm/$SAVEDIR"
-done
+mkdir -p "$GAMEDIR/saves/KEY_AIR_SE"
+mkdir -p "$GAMEDIR/saves/KEY_AIR_ME_ALL"
+
+bind_directories "$HOME/.rlvm/KEY_AIR_SE" "$GAMEDIR/saves/KEY_AIR_SE"
+bind_directories "$HOME/.rlvm/KEY_AIR_ME_ALL" "$GAMEDIR/saves/KEY_AIR_ME_ALL"
 
 # Setup controls
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
 # Disable touchscreen
 modprobe -r edt_ft5x06
 
 # Run the game
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-pm_platform_helper "$runtime"
+pm_message "Loading, please wait... (might take a while!)"
+pm_platform_helper "$rlvm_dir/$runtime"
 $runtime $font "$GAMEDIR/gamedata"
 
 # Cleanup

@@ -13,10 +13,10 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="N"
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+#export PORT_32BIT="N"
+get_controls
+
 
 $ESUDO chmod 666 /dev/tty0
 
@@ -25,17 +25,21 @@ cd $GAMEDIR
 
 export XDG_DATA_HOME="$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$GAMEDIR/conf"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 mkdir -p "$XDG_DATA_HOME"
 
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# Enable logging
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "love" -c "./labyrinthoflegendaryloot.gptk" &
-./love "./gamedata/LabyrinthOfLegendaryLoot-1.12.love"
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "./labyrinthoflegendaryloot.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN  "./gamedata/LabyrinthOfLegendaryLoot-1.12.love"
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish
