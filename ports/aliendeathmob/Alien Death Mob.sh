@@ -43,7 +43,7 @@ if [ ! -f install_completed ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster."
+        pm_message "This port requires the latest version of PortMaster."
     fi
 fi
 
