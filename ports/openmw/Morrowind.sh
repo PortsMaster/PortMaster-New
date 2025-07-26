@@ -193,6 +193,9 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 # More settings.
 PRELOAD="$GAMEDIR/libcrusty.so"
 
+# Copy arch dependent defaults
+[ -f "defaults.${DEVICE_ARCH}.bin" ] && cp -f "defaults.${DEVICE_ARCH}.bin" defaults.bin
+
 if [ "$DEVICE_ARCH" = "x86_64" ]; then
     # Steamdeck and Friends.
     PRELOAD=""
