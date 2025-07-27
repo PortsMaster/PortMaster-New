@@ -29,9 +29,16 @@ export OSG_NOTIFY_LEVEL=ERROR
 export OPENMW_DEBUG_LEVEL=ERROR
 export OPENMW_RECAST_MAX_LOG_LEVEL=ERROR
 
+# Fix some shit.
 if echo "$CFW_NAME" | grep -q "ArkOS"; then
-    # THERE IS ONLY ONE!
     export CFW_NAME="ArkOS"
+fi
+
+if [ "$CFW_NAME" = " AeUX" ]; then
+    export CFW_NAME="ArkOS"
+    if [ "$DEVICE_CPU" = "Cortex-A35" ]; then
+        export DEVICE_CPU="RK3326"
+    fi
 fi
 
 # Logging
