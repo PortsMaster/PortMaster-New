@@ -34,9 +34,9 @@ if echo "$CFW_NAME" | grep -q "ArkOS"; then
     export CFW_NAME="ArkOS"
 fi
 
-if [ "$CFW_NAME" = " AeUX" ]; then
+if [[ "$CFW_NAME" == *"AeUX"* ]]; then
     export CFW_NAME="ArkOS"
-    if [ "$DEVICE_CPU" = "Cortex-A35" ]; then
+    if [[ "$DEVICE_CPU" == "Cortex-A35" ]]; then
         export DEVICE_CPU="RK3326"
     fi
 fi
@@ -232,12 +232,12 @@ elif [ "$CFW_NAME" = "knulli" ]; then
     export LIBGL_SHRINK=3
 
 elif [ "$CFW_NAME" = "AmberELEC" ]; then
-    # Doesn't appear to work on AmberELEC, but also isn't needed.
-    PRELOAD=""
+    # THIS IS SO FUCKING DUMB
+    CRUSTY_CURSOR_FILE=$GAMEDIR/blank_cursor.bmp
 
-elif [ "$CFW_NAME" = "ArkOS" ] && [ "$DEVICE_CPU" = "Cortex-A35" ]; then
-    # Doesn't appear to work on AmberELEC, but also isn't needed.
-    PRELOAD=""
+elif [ "$CFW_NAME" = "ArkOS" ] && [ "$DEVICE_CPU" = "Cortex-A35" ] || [ "$DEVICE_CPU" = "RK3326" ]; then
+    # THIS IS SO FUCKING DUMB
+    CRUSTY_CURSOR_FILE=$GAMEDIR/blank_cursor.bmp
 fi
 
 if [ "$DEVICE_RAM" -gt "1" ]; then
