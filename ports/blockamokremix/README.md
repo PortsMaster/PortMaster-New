@@ -28,7 +28,11 @@ This version adds many improvements including:
 
 ```shell
 git clone https://github.com/Mode8fx/blockamok.git
+cd blockamok
 mkdir build_linux && cd build_linux
-cmake ../
+export LDFLAGS=" -lm "
+cmake ../ -DLINUX=ON -DFORCE_DRAW_OVERLAY=ON -DLOW_SPEC_BG=ON
+    or
+cmake ../ -DLINUX=ON -DFORCE_DRAW_OVERLAY=ON -DFORCE_DRAW_BG=ON 
 make
 ```
