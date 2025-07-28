@@ -35,9 +35,9 @@ On a selected cell press X or Y 8x or press B then X/Y 4x
 ## Compile
 
 ```shell
-git clone https://github.com/christopher-roelofs/SuDokuL.git
-cd SuDokuLVS2019
+git clone https://github.com/Mode8fx/SuDokuL.git
+cd SuDokuL/SuDokuLVS2019
 mkdir build_linux && cd build_linux
 cmake ../
-make -j8
+make 
 ```
