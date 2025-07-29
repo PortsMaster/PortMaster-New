@@ -3,6 +3,7 @@
 This port has extensive controls due to the complexity of Morrowind as a game. As a note, for full playability this port requires a device with dual analog sticks.
 
 ### Basic Controls:
+
 | Button      | Action                 |
 | :---------- | :--------------------- |
 | D-pad       | Movement (set speed)   |
