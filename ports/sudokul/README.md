@@ -26,8 +26,8 @@ On a selected cell press X or Y 8x or press B then X/Y 4x
 |A|Enter/Confirm|
 |B|Back|
 |X/Y|Toggle mini-grid|
-|L1/L2|Previous song|
-|R1/R2|Next song|
+|L1|Previous song|
+|R1|Next song|
 |Start|Pause|
 |Select|Exit to menu while paused|
 
