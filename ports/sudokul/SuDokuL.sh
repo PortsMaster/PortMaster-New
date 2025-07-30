@@ -25,7 +25,7 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB "sdkl.${DEVICE_ARCH}" -c "./sudokul.gptk" &
+$GPTOKEYB "sdkl.${DEVICE_ARCH}" &
 pm_platform_helper "$GAMEDIR/sdkl.${DEVICE_ARCH}"
 ./sdkl.${DEVICE_ARCH}
 
