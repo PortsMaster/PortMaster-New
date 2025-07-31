@@ -20,6 +20,8 @@ This version adds many improvements including:
 
 ## Controls
 
+|Button|Action|
+|--|--|
 |Enter/Start|Fly|
 |Back/Select|Options|
 |Dpad/Joysticks|Move|
