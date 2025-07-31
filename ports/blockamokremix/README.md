@@ -8,7 +8,7 @@ Blockamok Remix is a significant update to Blockamok, a game originally made by 
 
 This version adds many improvements including:
 
-*Customizable gameplay settings
+* Customizable gameplay settings
 *Controller support + a new control scheme
 *New visual settings
 *Music and sound effects
