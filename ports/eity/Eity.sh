@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/eity
@@ -21,15 +21,18 @@ GAMEDIR=/$directory/ports/eity
 
 cd $GAMEDIR
 
-export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$PWD/libs:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "love" -c "./eity.gptk" &
-./love Eity
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "./eity.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN Eity
 
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish
 

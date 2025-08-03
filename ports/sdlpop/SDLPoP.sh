@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 $ESUDO chmod 666 /dev/tty1
@@ -23,8 +23,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 GAMEDIR="/$directory/ports/sdlpop"
 cd $GAMEDIR
-$GPTOKEYB "prince" -c "$GAMEDIR/prince.gptk" &
-./prince 2>&1 | tee $GAMEDIR/log.txt
+$GPTOKEYB "prince.${DEVICE_ARCH}" -c "$GAMEDIR/prince.gptk" &
+./prince.${DEVICE_ARCH} 2>&1 | tee $GAMEDIR/log.txt
 unset SDL_GAMECONTROLLERCONFIG
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &

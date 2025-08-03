@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks goes to Cebion for the compiling tip for ARM!
+Thanks to Cebion for the compiling tip for ARM (use -fsigned-char argument for building)!
 Thanks to Slayer366 for porting this game to PortMaster!
 
 - [Xye](https://xye.sourceforge.net/)
@@ -21,3 +21,11 @@ Thanks to Slayer366 for porting this game to PortMaster!
 |R2|Select Theme @Main Menu|
 |L3|Fast-Forward|
 |Right Stick + R3|Mouse (not required)|
+
+## Compile
+Extract the contents of the provided xye-0.12.2-src.7z archive
+```shell
+sudo apt install -y libsdl1.2-dev libsdl-image1.2-dev libsdl-ttf2.0-dev libpng-dev libpng16-16
+cd xye-0.12.2-src (or whichever folder you chose to extract to)
+make -j4
+```

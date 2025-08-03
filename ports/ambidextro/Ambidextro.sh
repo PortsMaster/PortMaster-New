@@ -68,16 +68,22 @@ echo RELEASE
 cat $GAMEDIR/RELEASE
 
 # Setup godot mod loader
+mods_loader=(
+  mods/lowlevel1989-AmbidextroAchievements.zip
+  mods/lowlevel1989-AmbidextroShaderLow.zip
+  mods/lowlevel1989-AmbidextroVirtualGamepad.zip
+)
+
 file_loader="ambidextro_loader.zip"
-file_loader_hash="03b266af84ac3aac36c8892d684b88ce"
-current_hash=$(md5sum "$file_loader" | awk '{ print $1 }')
+mods_loader_hash="82e12b9ba5fa0d4fabb8c403bb24b364"
+current_hash=$(cat "${mods_loader[@]}" | md5sum | awk '{ print $1 }')
 if [ ! -d "godot" ]; then
     cp $godot_dir/$godot_executable $game_launcher_setup
     rm -rf addons/ mods/ override.cfg
     unzip -o $file_loader
     ./$game_launcher_setup --headless --script addons/mod_loader/mod_loader_setup.gd --setup-create-override-cfg --only-setup --mods-path="mods"
     rm $game_launcher_setup
-elif [[ "$current_hash" != "$file_loader_hash" ]]; then
+elif [[ "$current_hash" != "$mods_loader_hash" ]]; then
     echo "Hash is different. Unzipping..."
     unzip -o $file_loader
 fi
@@ -101,7 +107,7 @@ echo $SDL_GAMECONTROLLERCONFIG
 
 # MENU
 $GPTOKEYB2 "launch_menu" -c "./menu/controls.ini" &
-$GAMEDIR/menu/launch_menu.$DEVICE_ARCH $GAMEDIR/menu/menu.items $GAMEDIR/menu/FiraCode-Regular.ttf
+$GAMEDIR/menu/launch_menu.$DEVICE_ARCH $GAMEDIR/menu/menu.items $GAMEDIR/menu/FiraCode-Regular.ttf --godot
 
 # Capture the exit code
 selection=$?
@@ -146,8 +152,9 @@ case $selection in
         ;;
     *)
         echo "[MENU] Unknown option: $selection"
-        pm_finish
-        exit 3
+        env_vars="$env_vars CRUSTY_BLOCK_INPUT=1"
+        env_vars="$env_vars SHADER_PASSTHROUGH="
+        control_subfix="virtual"
         ;;
 esac
 
@@ -164,7 +171,7 @@ echo ESUDO=$ESUDO
 echo env_vars=$env_vars
 
 if [[ -n "$control_subfix" ]]; then
-    $GPTOKEYB2 "$godot_executable" -c "./controls.$control_subfix.ini" &
+  SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" $GPTOKEYB2 "$godot_executable" -c "./controls.$control_subfix.ini" &
 fi
 
 # Start Westonpack and Godot
