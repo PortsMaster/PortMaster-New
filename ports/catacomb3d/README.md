@@ -9,24 +9,26 @@ When using the on-screen quick-controls the buttons are swapped.  A is B, B is A
 | Button | Action |
 |--|--| 
 |D-Pad|Move|
-|Left Analog|Move|
+|Left Analog|Move/Strafe|
 |A|Use Health Potion|
 |B|Strafe|
 |X|Fire Missile/Bolt|
 |Y|Fire Nuke|
-|L1|Turn faster|
+|L1|Turn faster/Run|
 |R1|Fire Primary|
-|L2+R2|Quick Menus|
-|L3|OSK|
+|L2|OSK|
 
 
 ## Compile
 
-Extract the contents of reflectionhle-sauce.7z
+Extract the contents of reflectionhle-sauce.7z or use the github repo
 
 ```shell
+git clone https://github.com/slayer366/reflectionhle-pm
+cd reflectionhle-pm
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j3
+cmake ..
+make -j4
+strip reflectionhle
 ```
