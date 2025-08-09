@@ -24,6 +24,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
+$ESUDO chmod +x "$GAMEDIR/digger.${DEVICE_ARCH}"
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $GPTOKEYB "digger.${DEVICE_ARCH}" -c "$GAMEDIR/digger.gptk" &
