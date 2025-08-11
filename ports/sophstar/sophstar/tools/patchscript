@@ -89,10 +89,29 @@ prepare_files() {
 }
 
 apply_patch() {
-	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/data-patched.win" 2>&1
 	rm -f "$DATADIR/data.win"
 }
 
+# Externalize game textures with compression
+dump_textures() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Begin texture operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data-patched.win" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
+
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Texture dumping failed to apply."
+        patch_failure
+    else
+        rm -f "$DATADIR/data-patched.win"
+        mv "$DATADIR/textures" "$SAVEDIR/textures"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
 
 compress_audio() {  
     if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
@@ -117,6 +136,8 @@ process_game() {
     prepare_files || patch_failure 
 	echo "Applying the patch..."
     apply_patch || patch_failure 
+    echo "Externalizing textures..."
+    dump_textures || patch_failure
     echo "Compressing audio..."
     compress_audio || patch_failure
     sleep 1
