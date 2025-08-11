@@ -18,7 +18,6 @@ get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/downwell"
-DATADIR="/$directory/ports/downwell/assets"
 
 # CD and set log
 cd $GAMEDIR
@@ -34,16 +33,6 @@ export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export ESUDO
 export controlfolder 
-
-#code blob by beniamino (but blame me if it doesn't work)
-EXE=$(find "$DATADIR" -maxdepth 1 -name "setup*.exe")
-"$controlfolder/innoextract.$DEVICE_ARCH" -e -d "$DATADIR" $EXE
-mv "$DATADIR"/app/* "$DATADIR/"
-rm -rf "$DATADIR/tmp"
-
-# Delete unneeded files from DATADIR
-rm -r $DATADIR/__redist $DATADIR/*.exe $DATADIR/*.dll
-rm -r $DATADIR/*.tmp $DATADIR/*.bat $DATADIR/goggame* $DATADIR/*.ico
 
 # Check if we need to patch the game
 if [ ! -f install_completed ]; then
