@@ -33,7 +33,7 @@ if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-        export PATCHER_TIME="about 5 minutes"
+        export PATCHER_TIME="about 10 minutes"
         export controlfolder
         export ESUDO
         export DEVICE_CPU
