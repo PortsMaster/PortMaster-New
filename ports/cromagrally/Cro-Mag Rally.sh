@@ -40,7 +40,7 @@ fi
 
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "CroMagRally.${DEVICE_ARCH}" &
-pm_platform_helper"$GAMEDIR/CroMagRally.${DEVICE_ARCH}"
+pm_platform_helper "$GAMEDIR/CroMagRally.${DEVICE_ARCH}"
 ./CroMagRally.${DEVICE_ARCH}
 
 # Cleanup any running gptokeyb instances, and any platform specific stuff.
