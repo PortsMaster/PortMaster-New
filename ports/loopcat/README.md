@@ -9,7 +9,8 @@ Consider supporting their work at https://ko-fi.com/nabogames
 | Button | Action |
 |--|--| 
 |A|Start Game|
-|D-pad|Left/Right|
-|L/R Triggers|Left/Right|
+|D-pad / L-stick|Left/Right|
+|L1 / R1|Left / Right|
+|Start + Select|Quit|
 
 
