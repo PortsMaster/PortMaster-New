@@ -37,7 +37,7 @@ if [ -f ./assets/data.win ]; then
 	# Apply a patch
 	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" "$TOOLDIR/nidhogg.xdelta" "$GAMEDIR/assets/game.droid"
 	# Delete all redundant files
-	rm -f assets/*.{exe,dll,dylib}
+	rm -f assets/*.{exe,dll,dylib,win}
 	[ -d "./assets/Nidhogg_OST" ] && rm -rf "./assets/Nidhogg_OST"
 	# Zip all game files into the game.port
 	zip -r -0 ./game.port ./assets/
