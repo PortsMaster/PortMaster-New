@@ -43,7 +43,7 @@ if [ -f "assets/data.win" ]; then
 		# Zip all game files into the talumos.port
 		zip -r -0 ./talumos.port ./assets/
 		rm -Rf ./assets/
-	pm_message "Data.win from Itch.io has been patched"
+		pm_message "Data.win from Itch.io has been patched"
     
     # Check for Steam version
     elif [ "$checksum" == "b04c898585fced8025c0c463a26c9cfb" ]; then
