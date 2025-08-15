@@ -36,32 +36,36 @@ if [ -f "assets/data.win" ]; then
     
     # Check for Itch.io version
     if [ "$checksum" == "52c0ec0bc6ee065d7c43d0f367aea728" ]; then
-        # Apply Itch.io patch
-        $controlfolder/xdelta3 -d -s "assets/data.win" "tools/patchitch.xdelta" "assets/game.droid" && rm "assets/data.win"
-        # Remove redundant files
-        rm -f assets/*.{dll,exe}
-        # Zip all game files into the talumos.port
-        zip -r -0 ./talumos.port ./assets/
-        rm -Rf ./assets/
-        echo "Data.win from Itch.io has been patched"
+		# Apply Itch.io patch
+		$controlfolder/xdelta3 -d -s "assets/data.win" "tools/patchitch.xdelta" "assets/game.droid" && rm "assets/data.win"
+		# Remove redundant files
+		rm -f assets/*.{dll,exe}
+		# Zip all game files into the talumos.port
+		zip -r -0 ./talumos.port ./assets/
+		rm -Rf ./assets/
+	pm_message "Data.win from Itch.io has been patched"
     
     # Check for Steam version
     elif [ "$checksum" == "b04c898585fced8025c0c463a26c9cfb" ]; then
-        # Apply Steam patch
-        $controlfolder/xdelta3 -d -s "assets/data.win" "tools/patchsteam.xdelta" "assets/game.droid" && rm "assets/data.win"
-        # Remove redundant files
-        rm -f assets/*.{dll,exe}
-        # Zip all game files into the talumos.port
-        zip -r -0 ./talumos.port ./assets/
-        rm -Rf ./assets/
-        echo "Data.win from Steam has been patched"
+		# Apply Steam patch
+		$controlfolder/xdelta3 -d -s "assets/data.win" "tools/patchsteam.xdelta" "assets/game.droid" && rm "assets/data.win"
+		# Remove redundant files
+		rm -f assets/*.{dll,exe}
+		# Zip all game files into the talumos.port
+		zip -r -0 ./talumos.port ./assets/
+		rm -Rf ./assets/
+		pm_message "Data.win from Steam has been patched"
     
     else
-        echo "checksum does not match; wrong build/version of game"
+		pm_message "checksum does not match; wrong build/version of game"
+		sleep 5
+		exit 1
     fi
     
-else    
-    echo "Missing file in assets folder or game has been patched."
+else
+    pm_message "Missing file in assets folder or game has been patched."
+    sleep 5
+    exit 1
 fi
 
 # Assign configs and load the game
