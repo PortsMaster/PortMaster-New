@@ -39,7 +39,7 @@ if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="The Void Rains Upon Her Heart"
-        export PATCHER_TIME="a few minutes"
+        export PATCHER_TIME="5 to 10 minutes"
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
