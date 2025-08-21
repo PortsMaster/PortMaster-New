@@ -11,7 +11,7 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-export controlfolder
+
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -19,44 +19,42 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/jetlancer"
 
-# CD and set permissions
+# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
-$ESUDO chmod +x -R $GAMEDIR/tools/splash
-$ESUDO chmod +x -R $GAMEDIR/tools/gmKtool.py
-$ESUDO chmod +x -R $GAMEDIR/tools/patchscript
+
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="Jet Lancer"
-export PATCHER_TIME="15 to 20 minutes"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
 
-# Check if install_completed to skip patching
+# Check if we need to patch the game
 if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="Jet Lancer"
+        export PATCHER_TIME="15 to 20 minutes"
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         pm_message "This port requires the latest version of PortMaster."
-	exit 1  # Exit to prevent further execution
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
-if [ -f "$GAMEDIR/install_completed" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
+if [ -f install_completed ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c "gmloader.json"
+$GPTOKEYB "gmloadernext.aarch64" -c "jetlancer.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish

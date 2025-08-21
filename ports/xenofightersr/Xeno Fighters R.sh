@@ -12,6 +12,8 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+export controlfolder
+
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -20,19 +22,17 @@ get_controls
 GAMEDIR="/$directory/ports/xenofightersr"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-# CD and set permissions
+# CD and set up logging
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x $GAMEDIR/gmloadernext.${DEVICE_ARCH}
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-# Assign configs and load the game
+# Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "xenofightersr.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-# Cleanup
+# Kill processes
 pm_finish
