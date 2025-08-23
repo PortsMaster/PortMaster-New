@@ -1,6 +1,17 @@
 #!/bin/bash
 # PORTMASTER:chromium_bsu.zip, Chromium BSU.sh
-EXE_NAME=chromium-bsu
+
+################################
+## Pre-setup global variables ##
+################################
+
+EXE_BASE_NAME=chromium-bsu
+EXPECTED_CONF_FILE=$HOME/.$EXE_BASE_NAME
+
+#############################
+## PortMaster helper setup ##
+#############################
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -18,31 +29,52 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+##########################
+## Post-setup variables ##
+##########################
+
 GAMEDIR=/$directory/ports/chromium_bsu
-CONFDIR="$GAMEDIR/conf/"
-mkdir -p "$CONFDIR"
+EXE_NAME=$EXE_BASE_NAME.$DEVICE_ARCH
+SAVED_CONF_FILE=$GAMEDIR/$EXE_BASE_NAME.conf
+
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+####################################################
+## Prepare game directory, logs, libs, and config ##
+####################################################
 
 cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH:/usr/lib/gl4es"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x "$GAMEDIR/bin/$EXE_NAME"
 
-$ESUDO chmod +x "$GAMEDIR/bin/$EXE_NAME.$DEVICE_ARCH"
-
-# If a port uses GL4ES (libgl.so.1) a folder named gl4es.aarch64 etc. needs to be created with the libgl.so.1 file in it. This makes sure that each cfw and device get the correct GL4ES export.
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-$GPTOKEYB "$EXE_NAME.${DEVICE_ARCH}" -c "$GAMEDIR/chromium-bsu.gptk" &
-#$GPTOKEYB "$EXE_NAME.${DEVICE_ARCH}" xbox360 &
+# Copy the config from the port directory to the user's home directory
+cp $SAVED_CONF_FILE $EXPECTED_CONF_FILE
+
+#####################################
+## Start gptokeyb and run the game ##
+#####################################
+
+$GPTOKEYB "$EXE_NAME" -c "$GAMEDIR/$EXE_BASE_NAME.gptk" &
 pm_platform_helper "$GAMEDIR/bin/$EXE_NAME"
 cd $GAMEDIR/bin
-./$EXE_NAME.$DEVICE_ARCH
+./$EXE_NAME
+
+######################
+## Post-run cleanup ##
+######################
+
 cd $GAMEDIR
+
+# Copy the config back to the port folder so any changes get picked up
+cp $EXPECTED_CONF_FILE $SAVED_CONF_FILE
 
 pm_finish
