@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [the Chromium B.S.U. team](https://sourceforge.net/projects/chromium-bsu/) for making this game and making it open source!
+Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/projects/chromium-bsu/) for making this game and making it open source!
 
 ## Controls
 
@@ -11,5 +11,5 @@ Thanks to [the Chromium B.S.U. team](https://sourceforge.net/projects/chromium-b
 |Start|Enter|
 |Select|ESC / Pause|
 |A|Fire|
-|Y|Self-destruct|
+|Y|Self-destruct (press twice)|
 
