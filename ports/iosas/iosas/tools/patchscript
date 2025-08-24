@@ -129,14 +129,52 @@ cpu_check() {
     esac
 }
 
-# Replace game code entries from external GML files
-replace_code() {
+# Dump game code entries from data.win
+dump_code() {
     # Purge cache before operations
     rm -rf "$TMPDIR/"*
 
-    # Build --code args from all .gml files in $DATADIR/gml
+    # Specify which code entries to extract
+    CODE_ENTRIES=(
+        "gml_Object_code_game_init_Create_0"
+        "gml_Object_obj_god_gem_slot_controller_Draw_0"
+        "gml_GlobalScript_localization_functions"
+    )
+
     CODEARGS=""
-    for file in "$GAMEDIR/tools/gml/"*.gml; do
+    for entry in "${CODE_ENTRIES[@]}"; do
+        CODEARGS="$CODEARGS --code $entry"
+    done
+
+    echo "Dumping GML scripts: ${CODE_ENTRIES[*]}"
+
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data.win" \
+        -o "$TMPDIR" \
+        $CODEARGS
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to dump GML scripts."
+        return 1
+    fi
+
+    echo "GML scripts dumped to $TMPDIR"
+}
+
+modify_code() {
+    # Modify the extracted gml
+    $PYTHON "$GAMEDIR/tools/mod.py" "$TMPDIR/CodeEntries"
+    if [ $? -ne 0 ]; then
+        echo "Failed to modify GML scripts."
+        return 1
+    fi
+}
+
+# Replace game code entries for data.win
+replace_code() {
+    # Build --code args from all gml files
+    CODEARGS=""
+    for file in "$TMPDIR/CodeEntries/"*.gml; do
         [ -f "$file" ] || continue
         entry=$(basename "$file" .gml)
         echo "Will replace gml script: $file"
@@ -210,7 +248,10 @@ process_game() {
     echo "Removed unnecessary files"
 
     cpu_check
-    echo "Substituting gml scripts..."
+    dump_code || { patch_failure; return 1; }
+    echo "Modifying gml scripts..."
+    modify_code || { patch_failure; return 1; }
+    echo "Repacking gml scripts..."
     replace_code || { patch_failure; return 1; }
     echo "Externalizing textures..."
     dump_textures || { patch_failure; return 1; }
