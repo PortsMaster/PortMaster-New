@@ -18,15 +18,16 @@ Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/pro
 ```shell
 # From stock ubuntu 24.04 aarch64 image
 # Install prereqs
-apt-get update && apt-get install git autoconf automake gettext pkg-config autoconf-archive binutils libglc-dev libgl1-mesa-dev libsdl1.2-dev libsdl-image1.2-dev libglu1-mesa-dev autopoint build-essential libglc0 zlib1g libpng-dev libsdl2-image-dev libsdl2-mixer-dev
+sudo apt-get update && sudo apt-get install git autoconf automake gettext pkg-config autoconf-archive binutils libglc-dev libgl1-mesa-dev libsdl1.2-dev libsdl-image1.2-dev libglu1-mesa-dev autopoint build-essential libglc0 zlib1g libpng-dev libsdl2-image-dev libsdl2-mixer-dev
 
 # Build GLU from source
 git clone https://github.com/ptitSeb/GLU.git && cd GLU
-./configure && make && cd ..
+./configure && make && sudo make install && cd ..
 
 # Build game
 git clone https://git.code.sf.net/p/chromium-bsu/code chromium-bsu && cd chromium-bsu
-./autogen.sh && ./configure && make && cd ..
+## Add this to configure.ac: AC_DEFINE(WITH_JOYSTICK, 1, [define to enable joystick])
+./autogen.sh && ./configure --disable-openal --disable-sdlmixer && make && cd ..
 
 # In my case I had to build gl4es and package libGL.so.1 with the game.
 # That might not be necessary if the device has a reliable gl4es binary already.
