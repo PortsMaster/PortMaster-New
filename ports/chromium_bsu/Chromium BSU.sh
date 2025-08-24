@@ -36,6 +36,8 @@ get_controls
 GAMEDIR=/$directory/ports/chromium_bsu
 EXE_NAME=$EXE_BASE_NAME.$DEVICE_ARCH
 SAVED_CONF_FILE=$GAMEDIR/$EXE_BASE_NAME.conf
+export CHROMIUM_BSU_DATA=$GAMEDIR/data
+export CHROMIUM_BSU_SCORE=$GAMEDIR/chromium-bsu-score
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -65,14 +67,11 @@ cp $SAVED_CONF_FILE $EXPECTED_CONF_FILE
 
 $GPTOKEYB "$EXE_NAME" -c "$GAMEDIR/$EXE_BASE_NAME.gptk" &
 pm_platform_helper "$GAMEDIR/bin/$EXE_NAME"
-cd $GAMEDIR/bin
-./$EXE_NAME
+bin/$EXE_NAME
 
 ######################
 ## Post-run cleanup ##
 ######################
-
-cd $GAMEDIR
 
 # Copy the config back to the port folder so any changes get picked up
 cp $EXPECTED_CONF_FILE $SAVED_CONF_FILE
