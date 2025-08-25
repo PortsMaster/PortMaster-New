@@ -31,6 +31,15 @@ echo "Device architecture is $DEVICE_ARCH"
 echo "Glibc version is $CFW_GLIBC"
 echo "Screen resolution $DISPLAY_WIDTH x $DISPLAY_HEIGHT"
 
+# Libmali does not work on Rocknix
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+  if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+  fi
+fi
+
 # Check if the game is already configured
 if [ ! -f "$RUNDIR/$BINARY" ]; then
   echo "First time run"
@@ -62,6 +71,17 @@ if [ ! -f "$RUNDIR/$BINARY" ]; then
   sed -i -E "s/bind.*GP_LTRIGGER.*/bindlevel GP_LTRIGGER 30 \"impulse 33\"/" $CONFIGFILE
   sed -i -E "s/bind.*GP_RTRIGGER.*/bindlevel GP_RTRIGGER 30 \"+button3\"/" $CONFIGFILE
   sed -i -E "s/name \"Unknown Soldier\"/name \"PortMaster Soldier\"/" $CONFIGFILE
+
+  if [ $ANALOG_STICKS -lt 2 ]; then
+    sed -i -E "/bindlevel.*GP_DPAD.*/d" $CONFIGFILE
+    sed -i -E "s/bind.*GP_Y.*/bind GP_Y \"+left\"/" $CONFIGFILE
+    sed -i -E "s/bindlevel.*GP_A.*/bindlevel GP_A 30 \"+right\"/" $CONFIGFILE
+    sed -i -E "s/bindlevel.*GP_B.*/bindlevel GP_B 30 \"+lookdown\"/" $CONFIGFILE
+    sed -i -E "s/bindlevel.*GP_X.*/bindlevel GP_X 30 \"+lookup\"/" $CONFIGFILE
+    sed -i -E "s/bind.*GP_VIEW.*/bind GP_VIEW \"+button7\"/" $CONFIGFILE
+    sed -i -E "s/bind.*GP_LTRIGGER.*/bindlevel GP_LTRIGGER 30 \"+button5\"/" $CONFIGFILE
+    sed -i -E "s/bind.*GP_RTRIGGER.*/bindlevel GP_RTRIGGER 30 \"impulse 23\"/" $CONFIGFILE
+  fi
 else
   # Update screen resolution settings
   if [ -f "$RUNDIR/nzp/user_settings.cfg" ]; then
