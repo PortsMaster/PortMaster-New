@@ -11,28 +11,40 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-# Pm
+
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/thestarlitescape
+# Variables
+GAMEDIR="/$directory/ports/thestarlitescape"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
+
+# CD and set permissions
 cd $GAMEDIR
-
-# Permissions for manual installs
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-# Log the execution of the script, the script overwrites itself on each launch
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Run Gmloader
-$GPTOKEYB "gmloader" -c ./thestarlitescape.gptk &
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader thestarlitescape.apk
+# Ensure executable permissions
+$ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x -R $GAMEDIR/tools/splash
+
+# Make saves dir if not present
+if [ ! -d "saves" ]; then
+    mkdir -p saves 
+fi
+
+# Display loading splash
+$ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000
+
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "thestarlitescape.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
+
+# Cleanup
 pm_finish
