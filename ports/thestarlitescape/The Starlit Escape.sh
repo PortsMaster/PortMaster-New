@@ -39,7 +39,7 @@ if [ ! -d "saves" ]; then
 fi
 
 # Display loading splash
-$ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+$ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000
 
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "thestarlitescape.gptk" &
