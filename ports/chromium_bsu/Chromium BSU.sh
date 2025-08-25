@@ -33,6 +33,8 @@ get_controls
 ## Post-setup variables and settings ##
 #######################################
 
+DEVICE_ARCH=${DEVICE_ARCH:-aarch64}
+
 GAMEDIR=/$directory/ports/chromium_bsu
 EXE_NAME=$EXE_BASE_NAME.$DEVICE_ARCH
 SAVED_CONF_FILE=$GAMEDIR/$EXE_BASE_NAME.conf
