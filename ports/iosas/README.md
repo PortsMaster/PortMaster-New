@@ -31,7 +31,7 @@ Add your game data from your Steam or Itch.io installation to `ports/iosas/asset
 |R1|Reset room|
 
 ## Config
-The xdelta patch enables `saves/pm-config.ini`, which has some performance options that affect certain rooms in the game. Testing found that `FrameSkip=40` works pretty well for the H700 chip. For no stuttering at all, you can set `IdolSFX=0` to turn off the special effect that bogs down the cpu.
+The xdelta patch enables `saves/config.ini`, which has some performance options that affect certain rooms in the game. Testing found that `FrameSkip=40` works pretty well for the H700 chip. For no stuttering at all, you can set `IdolSFX=0` to turn off the special effect that bogs down the cpu.
 
 ## Importing / Exporting Save Data
 Steam saves are located at `\AppData\Local\IslesOfSeaAndSky` on Windows. Copy `save_v1_000.dat` or similar to `ports/iosas/saves` to use it. To export save data to your Steam or Itch.io install, do the reverse.
