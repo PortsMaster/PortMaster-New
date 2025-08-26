@@ -44,20 +44,6 @@ export CHROMIUM_BSU_SCORE=$GAMEDIR/chromium-bsu-score
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-A_BUTTON_INDEX="$(echo $SDL_GAMECONTROLLERCONFIG | awk -F',a:b' '{print $2}' | awk -F, '{print $1}')"
-Y_BUTTON_INDEX="$(echo $SDL_GAMECONTROLLERCONFIG | awk -F',y:b' '{print $2}' | awk -F, '{print $1}')"
-
-FIRE_BUTTON_SETTING="$(cat $SAVED_CONF_FILE | grep -e fireButton)"
-USE_ITEM_BUTTON_SETTING="$(cat $SAVED_CONF_FILE | grep -e useItemButton)"
-
-if [[ "$FIRE_BUTTON_SETTING" == "" ]] && [[ "$A_BUTTON_INDEX" =~ ^[0-9]+$ ]]; then
-  echo "fireButton $A_BUTTON_INDEX" >> $SAVED_CONF_FILE
-fi
-
-if [[ "$USE_ITEM_BUTTON_SETTING" == "" ]] && [[ "$Y_BUTTON_INDEX" =~ ^[0-9]+$ ]]; then
-  echo "useItemButton $Y_BUTTON_INDEX" >> $SAVED_CONF_FILE
-fi
-
 ####################################################
 ## Prepare game directory, logs, libs, and config ##
 ####################################################
@@ -81,7 +67,7 @@ cp $SAVED_CONF_FILE $EXPECTED_CONF_FILE
 ## Start gptokeyb and run the game ##
 #####################################
 
-$GPTOKEYB "$EXE_NAME" -c "$GAMEDIR/$EXE_BASE_NAME.gptk" &
+$GPTOKEYB "$EXE_NAME" &
 pm_platform_helper "$GAMEDIR/bin/$EXE_NAME"
 bin/$EXE_NAME
 
