@@ -8,12 +8,10 @@ Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/pro
 |--|--| 
 |D-pad|Movement / Menu navigation|
 |Left analog stick|Movement|
-|Start|Enter|
-|Select|ESC / Pause|
-|A|Fire|
+|Start|Pause|
+|A|Fire / Menu OK|
 |Y|Self-destruct (press twice)|
-
-The fire button and self-destruct button can be changed in `chromium-bsu.conf` if desired. The settings are `fireButton` and `useItemButton` respectively.
+|R1|Fire|
 
 ## Compile
 

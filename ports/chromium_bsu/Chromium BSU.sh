@@ -61,12 +61,14 @@ else
 fi
 
 # Copy the config from the port directory to the user's home directory
+# bind_directory won't work because this is a file
 cp $SAVED_CONF_FILE $EXPECTED_CONF_FILE
 
 #####################################
 ## Start gptokeyb and run the game ##
 #####################################
 
+# Only need gptokeyb for stopping the port; SDL input is used in-game
 $GPTOKEYB "$EXE_NAME" &
 pm_platform_helper "$GAMEDIR/bin/$EXE_NAME"
 bin/$EXE_NAME
