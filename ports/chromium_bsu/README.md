@@ -26,7 +26,7 @@ git clone https://github.com/ptitSeb/GLU.git && cd GLU
 
 # Build game
 git clone https://github.com/BenJuan26/chromium-bsu.git && cd chromium-bsu
-./autogen.sh && ./configure --disable-openal --disable-sdlmixer && make && cd ..
+./autogen.sh && ./configure --disable-openal --disable-sdlmixer --enable-gamepad && make && cd ..
 
 # In my case I had to build gl4es and package libGL.so.1 with the game.
 # That might not be necessary if the device has a reliable gl4es binary already.
