@@ -20,7 +20,7 @@ get_controls
 
 GAMEDIR=/$directory/ports/alicecliche
 CONFDIR="$GAMEDIR/conf/"
-BINARY=AliceInClicheland
+BINARY=AliceInClicheland.$DEVICE_ARCH
 
 mkdir -p "$GAMEDIR/conf"
 
