@@ -49,7 +49,7 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
-$GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
+$GPTOKEYB "$BINARY" -c ./AliceInClicheland.gptk &
 pm_platform_helper "$GAMEDIR/$BINARY"
 
 # Start Westonpack
