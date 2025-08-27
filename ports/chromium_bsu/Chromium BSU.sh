@@ -37,16 +37,17 @@ DEVICE_ARCH=${DEVICE_ARCH:-aarch64}
 
 GAMEDIR=/$directory/ports/chromium_bsu
 EXE_NAME=$EXE_BASE_NAME.$DEVICE_ARCH
-SAVED_CONF_FILE=$GAMEDIR/$EXE_BASE_NAME.conf
+
 export CHROMIUM_BSU_DATA=$GAMEDIR/data
 export CHROMIUM_BSU_SCORE=$GAMEDIR/chromium-bsu-score
+export CHROMIUM_BSU_CONFIG=$GAMEDIR/chromium-bsu.conf
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-####################################################
-## Prepare game directory, logs, libs, and config ##
-####################################################
+############################################
+## Prepare game directory, logs, and libs ##
+############################################
 
 cd $GAMEDIR
 
@@ -60,10 +61,6 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-# Copy the config from the port directory to the user's home directory
-# bind_directory won't work because this is a file
-cp $SAVED_CONF_FILE $EXPECTED_CONF_FILE
-
 #####################################
 ## Start gptokeyb and run the game ##
 #####################################
@@ -76,8 +73,5 @@ bin/$EXE_NAME
 ######################
 ## Post-run cleanup ##
 ######################
-
-# Copy the config back to the port folder so any changes get picked up
-cp $EXPECTED_CONF_FILE $SAVED_CONF_FILE
 
 pm_finish
