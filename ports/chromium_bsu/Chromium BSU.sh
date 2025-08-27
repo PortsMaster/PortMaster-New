@@ -61,6 +61,15 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
+# Only write these values if they aren't set
+# That way, they won't get overwritten if customized
+if [[ -z $(grep screenWidth $CHROMIUM_BSU_CONFIG) ]]; then
+    echo "screenWidth $DISPLAY_WIDTH" >> $CHROMIUM_BSU_CONFIG
+fi
+if [[ -z $(grep screenHeight $CHROMIUM_BSU_CONFIG) ]]; then
+    echo "screenHeight $DISPLAY_HEIGHT" >> $CHROMIUM_BSU_CONFIG
+fi
+
 #####################################
 ## Start gptokeyb and run the game ##
 #####################################
