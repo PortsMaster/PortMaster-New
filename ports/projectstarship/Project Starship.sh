@@ -51,10 +51,8 @@ fi
 
 find ./assets -type f -name "project Starship.exe" -delete
 
-[ -e "./assets/data.win" ] && mv ./assets/data.win ./assets/game.droid
-
-if [ -f ./assets/game.droid ]; then
-    mv ./assets/game.droid ./assets/game.droid
+if [ -f ./assets/data.win ]; then
+    mv ./assets/data.win ./assets/game.droid
     sleep 1
     zip -r -0 "$GAMEDIR/prostar.port" assets
     rm -rf "$GAMEDIR/assets"
