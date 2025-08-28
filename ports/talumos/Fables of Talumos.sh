@@ -64,8 +64,6 @@ if [ -f "assets/data.win" ]; then
     
 else
     pm_message "Missing file in assets folder or game has been patched."
-    sleep 5
-    exit 1
 fi
 
 # Assign configs and load the game
