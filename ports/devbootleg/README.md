@@ -5,6 +5,8 @@ Another big thanks to all who tested this port.
 
 ## Controls
 
+Note: The game defaults to swap abxy button functionality, if that's not your jam just delete the file named swapabxy.txt in `ports/devbootleg/`
+
 | Button | Action |
 |--|--| 
 |D-pad|movement|
