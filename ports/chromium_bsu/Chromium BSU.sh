@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER:chromium_bsu.zip, Chromium BSU.sh
 
 ################################
 ## Pre-setup global variables ##
