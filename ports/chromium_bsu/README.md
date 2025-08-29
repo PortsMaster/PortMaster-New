@@ -1,6 +1,18 @@
 ## Notes
 
+**Chromium B.S.U.** is a fast-paced, top-down, arcade-style action shooter game. You progress through the game by destroying everything that you see on screen. There are a variety of 'power-ups' to assist you on the way. There is a big boss to destroy at the end of each level and there are various ships to destroy before you reach each boss.
+
+You will lose a life for every ship that gets past you. You can gain extra lives by letting the Super Shield pass through the bottom of the screen.
+
+With the exception of the (very weak) standard weapon, all other weapons lose ammo, so it's best to fire only when necessary.
+
+If you self-destruct, you eject your weapons to be picked up by your next ship, and the ship's detonation kills every enemy on-screen.
+
+## Acknowledgements
+
 Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/projects/chromium-bsu/) for making this game and making it open source!
+
+Big thanks to the testers in the PortMaster discord for working through the kinks and making sure it's playable on supported devices, CFWs, and resolutions.
 
 ## Controls
 
@@ -8,10 +20,11 @@ Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/pro
 |--|--| 
 |D-pad|Movement / Menu navigation|
 |Left analog stick|Movement|
-|Start|Pause|
 |A|Fire / Menu OK|
 |Y|Self-destruct (press twice)|
 |R1|Fire|
+|Start|Pause / Unpause|
+|Start + Select|Exit game|
 
 ## Compile
 
