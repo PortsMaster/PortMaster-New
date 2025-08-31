@@ -19,6 +19,7 @@ Thanks to Ithiro Sumi, Lucas Perdomo, Lucas Bressan for developing this game. Bu
 |R1|Attack|
 |L2|Run|
 |R2|Spell Cast|
+|L3|Map|
 |Start|Pause|
 |Select|Lamp|
 
