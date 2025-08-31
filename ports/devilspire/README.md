@@ -9,7 +9,7 @@ Thanks to Ithiro Sumi, Lucas Perdomo, Lucas Bressan for developing this game. Bu
 |Left stick|Movement|
 |Right stick|Aim|
 |DPAD Left/Right|Item selection|
-|DPAD Down|Change to selected item slot|
+|DPAD Down|Use selected item slot|
 |DPAD Up|Spell Scroll selection|
 |A|Dodge|
 |B|Interact|
