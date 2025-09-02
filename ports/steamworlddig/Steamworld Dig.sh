@@ -15,21 +15,13 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+export PORT_32BIT="Y"
 
 GAMEDIR="/$directory/ports/steamworlddig/"
 SAVEDIR="$GAMEDIR/savedata/"
 CONFDIR="$GAMEDIR/savedata/"
 mkdir -p "$GAMEDIR/savedata/"
 cd "$GAMEDIR/"
-
-# Warn about Panfrost incompatability on ROCKNIX
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port only supports the libMali graphics driver. Switch to from Panfrost to libMali to continue."
-    sleep 5
-    exit 1
-    fi
-fi
 
 # Unpack GOG Files
 $ESUDO chmod 777 "$GAMEDIR/unzip"
@@ -76,11 +68,26 @@ $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 $GPTOKEYB2 "SteamWorldDig" -c ./Dig.gptk &
 pm_platform_helper "$GAMEDIR/box86.${DEVICE_ARCH}"
 
-$ESUDO env WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
-BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
-LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
-XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/SteamWorldDig"
 
+#Sort out Panfrost/Adreno on Rocknix from libmali on anything else and launch accordingly
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+    if glxinfo | grep "OpenGL version string"; then
+      $ESUDO env WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+      BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+      LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+      XDG_DATA_HOME=$CONFDIR SDL_VIDEODRIVER=x11 "$GAMEDIR/box86/box86" "$GAMEDIR/SteamWorldDig"
+    else 
+      $ESUDO env WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+      BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+      LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+      XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/SteamWorldDig"
+    fi
+else
+   $ESUDO env WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/":"$GAMEDIR/box86/native":"/usr/lib":"/usr/lib32" $weston_dir/westonwrap32.sh headless noop kiosk crusty_glx_gl4es \
+   BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32/:./:lib/:lib32/:x86/" \
+   LIBGL_NOBANNER=1 BOX86_DYNAREC=1 BOX86_DLSYM_ERROR=1 BOX86_SHOWSEGV=1 BOX86_SHOWBT=1 \
+   XDG_DATA_HOME=$CONFDIR "$GAMEDIR/box86/box86" "$GAMEDIR/SteamWorldDig"
+fi
 
 #Clean up after ourselves
 $ESUDO $weston_dir/westonwrap32.sh cleanup
