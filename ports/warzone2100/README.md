@@ -1,10 +1,10 @@
 ## Notes
 
-Thanks to [Warzone2100](https://wz2100.net/) for the game.
-
-Also thanks to the PortMaster team for all of the work they do.
+Thanks to [Warzone 2100 Team](https://wz2100.net/) for the game.
 
 A big thanks to @BinaryCounter for making [Westonpack](https://github-wiki-see.page/m/binarycounter/Westonpack/wiki).
+
+Also thanks to the PortMaster team for all of the work they do.
 
 ## Detailed Instructions
 
