@@ -71,12 +71,14 @@ $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   export rocknix_mode=1
 fi
-
-if [ ${DISPLAY_WIDTH} -lt 1920 ]; then
+if [[ "$DEVICE_ARCH" = "x86_64" ]]; then
+  cp ./canabalt.$DEVICE_ARCH ./canabalt
+elif [ ${DISPLAY_WIDTH} -lt 1920 ]; then
   cp ./canabalt-lores ./canabalt
 else
   cp ./canabalt-hires ./canabalt
 fi
+cp ./lime.ndll.$DEVICE_ARCH ./lime.ndll
 
 $GPTOKEYB "$BINARY" -c "$GAMEDIR/$BINARY.gptk" &
 

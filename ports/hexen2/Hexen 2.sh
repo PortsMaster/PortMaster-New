@@ -13,12 +13,10 @@ else
 fi
 
 source $controlfolder/control.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-GAMEDIR=/$directory/ports/hexen2
+GAMEDIR="/$directory/ports/hexen2"
 
 cd $GAMEDIR
 
@@ -27,6 +25,11 @@ if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
 else
   source "${controlfolder}/libgl_default.txt"
 fi
+
+if [ "$LIBGL_FB" != "" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
+fi 
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -37,9 +40,9 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO chmod 777 -R $GAMEDIR/*
+$ESUDO chmod +x "$GAMEDIR/glhexen2.${DEVICE_ARCH}"
 
-if [[ "${DEVICE_NAME^^}" == 'X55' ]] || [[ "${DEVICE_NAME^^}" == 'RG353P' ]] || [[ "${DEVICE_NAME^^}" == 'RG40XX' ]]; then
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/hexen2.gptk"

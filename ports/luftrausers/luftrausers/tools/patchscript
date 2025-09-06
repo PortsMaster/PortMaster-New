@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="patchlog.txt"
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/gamedata" 
+export TMPDIR=$GAMEDIR/tmp
+export LD_LIBRARY_PATH="$GAMEDIR/tools/libs.aarch64":$LD_LIBRARY_PATH
+
+chmod 666 /dev/uinput
+chmod a+x "$GAMEDIR/tools/unzip"
+chmod a+x "$GAMEDIR/patch/patch"
+
+# Find a GOG or Humble installer
+pushd $DATADIR
+if ls "$DATADIR"/gog_luftrausers*.sh >/dev/null 2>&1 || \
+   ls "$DATADIR"/LUFTRAUSER_LINUX*.zip >/dev/null 2>&1; then
+
+    echo "Found installer"
+
+    # Normalize .sh to .zip
+    zipfile="$DATADIR/luftrausers.zip"
+    mv "$DATADIR"/gog_luftrausers*.sh "$zipfile" ||  mv "$DATADIR"/LUFTRAUSER_LINUX*.zip "$zipfile"
+    
+    mkdir -p "$TMPDIR"
+    "$GAMEDIR/tools/unzip" -o "$zipfile" -d "$TMPDIR"
+
+    # Move extracted game files
+    if [ -d "$TMPDIR/data/noarch/game" ]; then
+        mv "$TMPDIR/data/noarch/game/"* "$DATADIR/"
+    else
+        mv "$TMPDIR/luftrausers-nodrm/"* "$DATADIR/"
+    fi
+
+    # Cleanup
+    rm -rf "$TMPDIR" "$zipfile"
+else
+    echo "No installer found, skipping extraction."
+fi
+popd
+
+# Tidy up gamedata
+find "$DATADIR" -name "*.sh" | xargs rm
+rm -rf $DATADIR/i686/
+
+# Patch shader files, fix controls for rocknix
+if [[ "$CFW_NAME" != "ROCKNIX" ]]; then
+    pushd $DATADIR/data/gfx/shaders/
+    $GAMEDIR/patch/patch -p1 < $GAMEDIR/patch/shaders.patch
+    popd
+else
+    sed -i \
+        -e 's/^b = x$/b = "/' \
+        -e 's/^left_analog_up = up$/left_analog_up = "/' \
+        -e 's/^left_analog_down = down$/left_analog_down = "/' \
+        -e 's/^left_analog_left = left$/left_analog_left = "/' \
+        -e 's/^left_analog_right = right$/left_analog_right = "/' \
+        luftrausers.gptk
+
+fi
+
