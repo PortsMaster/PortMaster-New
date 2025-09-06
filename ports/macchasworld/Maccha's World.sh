@@ -23,13 +23,9 @@ GAMEDIR="/$directory/ports/macchasworld"
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# permissions
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
-
 # exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # prepare game files
 if [ -f ./assets/data.win ]; then
@@ -40,10 +36,10 @@ if [ -f ./assets/data.win ]; then
 fi
 
 # assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" -c "./macchasworld.gptk" & 
-pm_platform_helper "gmloadernext.aarch64" >/dev/null
+$GPTOKEYB "gmloadernext.aarch64" -c "./macchasworld.gptk" &
+pm_platform_helper "gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c gmloader.json
 
-# kill processes
+# cleanup
 pm_finish
 
