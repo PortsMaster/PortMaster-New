@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: warzone2100.zip, Warzone 2100.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
