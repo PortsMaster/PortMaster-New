@@ -1,18 +1,14 @@
+## Notes
+
+Thanks to Pawfull for her help making the game's art asset's and the other listed roles filled out by them in game!!
+
+https://bsky.app/profile/pawfulltrust.bsky.social
+
 ## Controls
 
 | Button | Action |
 |--|--| 
-|A| Special Weapon|
-|B| Main Weapon|
-|X| Swap Weapon|
-|Y| Swap Special Weapon |
-|R1| Key "1" |
- 
+|A|Confirm|
+|Left/Right/Up/Down|Movement|
 
-## Compile
 
-\`\`\`shell
-wget http://www.schwardtnet.de/alienblaster/archives/alienblaster-1.1.0.tgz
-cd alienblaster-1.1.0
-make
-\`\`\`
