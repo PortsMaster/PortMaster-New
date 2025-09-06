@@ -1,0 +1,53 @@
+diff --git a/engine/client/in_generic.c b/engine/client/in_generic.c
+index 4d71c213f..37f24d20f 100644
+--- a/engine/client/in_generic.c
++++ b/engine/client/in_generic.c
+@@ -1057,7 +1057,8 @@ void IN_MoveJoystick(struct joy_s *joy, float *movements, int pnum, float framet
+ 		return;
+ 
+ 	//angle changes
+-	cl.playerview[pnum].viewanglechange[PITCH] += joy_anglesens[0].value * jlook[0] * in_sensitivityscale;
++    int sign = m_pitch.value > 0 ? 1 : -1;
++	cl.playerview[pnum].viewanglechange[PITCH] += joy_anglesens[0].value * jlook[0] * in_sensitivityscale * sign;
+ 	cl.playerview[pnum].viewanglechange[YAW] -= joy_anglesens[1].value * jlook[1] * in_sensitivityscale;
+ 	cl.playerview[pnum].viewanglechange[ROLL] += joy_anglesens[2].value * jlook[2] * in_sensitivityscale;
+ 
+diff --git a/engine/gl/gl_vidsdl.c b/engine/gl/gl_vidsdl.c
+index 6fa37dad9..258132140 100644
+--- a/engine/gl/gl_vidsdl.c
++++ b/engine/gl/gl_vidsdl.c
+@@ -386,12 +386,12 @@ static qboolean SDLVID_Init (rendererstate_t *info, unsigned char *palette, r_qr
+ 				(vid_gl_context_forwardcompatible.ival?SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG:0) |
+ 				0);
+ 
+-		if (vid_gl_context_es.ival)
+-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+-		else if (vid_gl_context_compatibility.ival)
+-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+-		else
+-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
++		//if (vid_gl_context_es.ival)
++		//	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
++		//else if (vid_gl_context_compatibility.ival)
++		//	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
++		//else
++		//	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+ 	#endif
+ 		if (info->multisample)
+ 		{
+diff --git a/engine/qclib/initlib.c b/engine/qclib/initlib.c
+index 70c36a9af..a837cd67b 100644
+--- a/engine/qclib/initlib.c
++++ b/engine/qclib/initlib.c
+@@ -552,8 +552,9 @@ static void PDECL PR_Configure (pubprogfuncs_t *ppf, size_t addressable_size, in
+ 		addressable_size = 32*1024*1024;
+ #endif
+ 	}
+-	if (addressable_size > 0x80000000)
+-		addressable_size = 0x80000000;
++        #define MAX_ADDRESSABLE_SIZE (100 * 1024 * 1024)  // 100MB
++        if (addressable_size > MAX_ADDRESSABLE_SIZE)
++                addressable_size = MAX_ADDRESSABLE_SIZE;
+ 	PRAddressableFlush(progfuncs, addressable_size);	
+ 	progfuncs->funcs.stringtable = prinst.addressablehunk;
+ 

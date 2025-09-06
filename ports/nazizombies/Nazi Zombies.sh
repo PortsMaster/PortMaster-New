@@ -44,13 +44,7 @@ fi
 if [ ! -f "$RUNDIR/$BINARY" ]; then
   echo "First time run"
   cd "$RUNDIR"
-
-  if [ "$CFW_GLIBC" -lt 231 ]; then
-    cp "nzp-glibc230-sdl" $BINARY
-  else
-    cp "nzp-$DEVICE_ARCH-sdl" $BINARY
-  fi
-
+  cp "nzp-$DEVICE_ARCH-sdl" $BINARY
   chmod 777 $BINARY
 
   # patch config
