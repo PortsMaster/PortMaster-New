@@ -27,9 +27,10 @@ cd "$GAMEDIR"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+echo "Device name is $QUIRK_DEVICE"
 echo "Device architecture is $DEVICE_ARCH"
-echo "Glibc version is $CFW_GLIBC"
 echo "Screen resolution $DISPLAY_WIDTH x $DISPLAY_HEIGHT"
+echo "Number of analog sticks is $ANALOG_STICKS"
 
 # Libmali does not work on Rocknix
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
@@ -66,7 +67,7 @@ if [ ! -f "$RUNDIR/$BINARY" ]; then
   sed -i -E "s/bind.*GP_RTRIGGER.*/bindlevel GP_RTRIGGER 30 \"+button3\"/" $CONFIGFILE
   sed -i -E "s/name \"Unknown Soldier\"/name \"PortMaster Soldier\"/" $CONFIGFILE
 
-  if [ $ANALOG_STICKS -lt 2 ]; then
+  if [[ $ANALOG_STICKS -lt 2 || "${QUIRK_DEVICE}" == "GameKiddy GKD Pixel2" ]]; then
     sed -i -E "/bindlevel.*GP_DPAD.*/d" $CONFIGFILE
     sed -i -E "s/bind.*GP_Y.*/bind GP_Y \"+left\"/" $CONFIGFILE
     sed -i -E "s/bindlevel.*GP_A.*/bindlevel GP_A 30 \"+right\"/" $CONFIGFILE
