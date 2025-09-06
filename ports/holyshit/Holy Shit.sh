@@ -16,11 +16,11 @@ source $controlfolder/control.txt
 get_controls
 
 # adjust these to your paths and desired godot version
-GAMEDIR=/$directory/ports/hollyshit
+GAMEDIR=/$directory/ports/holyshit
 godot_runtime="godot_4.4.1"
 godot_executable="godot441.$DEVICE_ARCH"
 pck_filename="HollyShit.pck"
-gptk_filename="hollyshit.gptk"
+gptk_filename="holyshit.gptk"
 
 # logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
