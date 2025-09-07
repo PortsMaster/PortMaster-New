@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Otto Ojala](https://ottoojala.itch.io/) for creating this great game, which you can download free at [itch.io](https://ottoojala.itch.io/wrestle-jump-2)
+Thanks to [Otto Ojala](https://ottoojala.itch.io) for creating this great game, which you can download free at [itch.io](https://ottoojala.itch.io/wrestle-jump-2)
 
 
 ## Controls
