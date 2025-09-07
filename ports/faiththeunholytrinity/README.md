@@ -2,7 +2,8 @@
 This is a wrapper and xdelta modification for vanilla FAITH: The Unholy Trinity that makes the game more manageable on retro handheld systems running linux arm64.
 
 ## Installation
-Purchase the game on Steam or GOG and copy all the data to `ports/faiththeunholytrinity/assets`, important files are data.win, audiogroup1.dat through audiogroup18.dat, and UTconfigs.cvs files. On first run the game will be patched.
+Purchase the game on Steam and open the steam console and enter the command
+"download_depot 1179080 1179081 1465214420894317377" and copy these files to `ports/faiththeunholytrinity/assets`, important files are data.win, audiogroup1.dat through audiogroup18.dat, and UTconfigs.cvs files. On first run the game will be patched.
 
 ## Controls
 | Button | Action |
