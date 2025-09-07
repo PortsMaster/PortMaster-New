@@ -64,13 +64,7 @@ $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
 
-# patch file
-if [ -f "./wrestlejump2.exe" ]; then
-  $controlfolder/xdelta3 -d -s "./wrestlejump2.exe" "./patch.xdelta3" "./wrestlejump2.pck"
-  [ $? -eq 0 ] && rm "./wrestlejump2.exe" || echo "Patching of wrestlejump2.exe has failed"
-fi
-
-$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
+$GPTOKEYB "$godot_executable" -c "$gptk_filename" &
 
 # start westonpack and godot
 # put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
@@ -78,7 +72,7 @@ $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 $ESUDO env CRUSTY_SHOW_CURSOR=1 $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
 LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
 --resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f \
---rendering-driver opengl3_es --audio-driver ALSA --main-pack $GAMEDIR/$pck_filename
+--rendering-driver opengl3_es --audio-driver ALSA --main-pack $pck_filename
 
 # clean up after ourselves
 $ESUDO $weston_dir/westonwrap.sh cleanup
