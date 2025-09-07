@@ -12,4 +12,4 @@ Screenshots (L1) are saved to the port folder, inside `carpet gallery`.
 | D-PAD   | Movement         |
 | A       | Interact/confirm |
 | B       | Map/cancel       |
-| L1      | Screesnhot       |
+| L1      | Screenshot       |
