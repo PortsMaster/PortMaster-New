@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Otto Ojala](https://ottoojala.itch.io) for creating this great game, which you can download free at [https://ottoojala.com](https://ottoojala.com)
+Thanks to [Otto Ojala](https://ottoojala.com) for creating this great game, which you can download free at [ottoojala.com](https://ottoojala.com)
 
 If enjoy Otto's games and would like to support him in making more games, you can visit his [Ko-Fi](https://ko-fi.com/ottoojala) page.
 
