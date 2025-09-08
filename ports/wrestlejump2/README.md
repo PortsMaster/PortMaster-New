@@ -4,6 +4,10 @@ Thanks to [Otto Ojala](https://ottoojala.com) for creating this great game, whic
 
 If enjoy Otto's games and would like to support him in making more games, you can visit his [Ko-Fi](https://ko-fi.com/ottoojala) page.
 
+**For devices without analog sticks:**
+- Press L1 for a 1-player game or L2 for a 2-player game.
+- After the game ends, press SELECT to return to the main menu.
+
 
 ## Controls
 
@@ -15,3 +19,4 @@ If enjoy Otto's games and would like to support him in making more games, you ca
 | B       | Mouse click         |
 | UP      | Blue player         |
 | X       | Red player          |
+| SELECT  | Back to menu screen |
