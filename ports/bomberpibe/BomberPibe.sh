@@ -19,7 +19,7 @@ get_controls
 GAMEDIR=/$directory/ports/bomberpibe
 godot_runtime="godot_4.2.2"
 godot_executable="godot422.$DEVICE_ARCH"
-pck_filename="BomberPibe.x86_64"
+pck_filename="BomberPibe.pck"
 gptk_filename="bomberpibe.gptk"
 
 # Logging
