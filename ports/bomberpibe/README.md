@@ -10,3 +10,5 @@ Thanks to [Club De Programación, 2023](https://clubdeprogramacion.itch.io/bombe
 | D-PAD   | Movement |
 | A       | Bomb     |
 | B       | Jump     |
+| START   | Proceed  |
+| SELECT  | Back     |
