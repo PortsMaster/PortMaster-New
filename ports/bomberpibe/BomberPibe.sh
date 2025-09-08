@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# PortMaster preamble
+# portmaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -15,21 +15,21 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-# Adjust these to your paths and desired godot version
+# adjust these to your paths and desired godot version
 GAMEDIR=/$directory/ports/bomberpibe
-godot_runtime="godot_4.2.2"
-godot_executable="godot422.$DEVICE_ARCH"
+godot_runtime="godot_4.3"
+godot_executable="godot43.$DEVICE_ARCH"
 pck_filename="BomberPibe.pck"
 gptk_filename="bomberpibe.gptk"
 
-# Logging
+# logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Create directory for save files
 CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
-# Mount Weston runtime
+# mount weston runtime
 weston_dir=/tmp/weston
 $ESUDO mkdir -p "${weston_dir}"
 weston_runtime="weston_pkg_0.2"
@@ -46,7 +46,7 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
-# Mount Godot runtime
+# mount godot runtime
 godot_dir=/tmp/godot
 $ESUDO mkdir -p "${godot_dir}"
 if [ ! -f "$controlfolder/libs/${godot_runtime}.squashfs" ]; then
@@ -58,7 +58,7 @@ if [ ! -f "$controlfolder/libs/${godot_runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${godot_runtime}.squashfs"
 fi
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
-    $ESUDO umount "${godot_dir}"
+  $ESUDO umount "${godot_dir}"
 fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
@@ -66,18 +66,18 @@ $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 cd $GAMEDIR
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
-# Start Westonpack and Godot
-# Put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
-# LD_PRELOAD is put here because Godot runtime links against libEGL.so, and crusty is interfering with that on some systems.
+# sStart westonpack and Godot
+# put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
+# ld_preload is put here because Godot runtime links against libegl.so, and crusty is interfering with that on some systems
 $ESUDO env $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
 LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
 --resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f \
 --rendering-driver opengl3_es --audio-driver ALSA --main-pack $GAMEDIR/$pck_filename
 
-#Clean up after ourselves
+# clean up after ourselves
 $ESUDO $weston_dir/westonwrap.sh cleanup
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
-    $ESUDO umount "${weston_dir}"
-    $ESUDO umount "${godot_dir}"
+  $ESUDO umount "${weston_dir}"
+  $ESUDO umount "${godot_dir}"
 fi
 pm_finish
