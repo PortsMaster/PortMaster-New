@@ -8,7 +8,7 @@ If enjoy Otto's games and would like to support him in making more games, you ca
 - Press L1 for a 1-player game or L2 for a 2-player game.
 - After the game ends, press SELECT to return to the main menu.
 
-**AmberELEC users:**
+**AmberELEC prerelease users:**
 - You may experience some graphical glitches.
 
 
