@@ -13,8 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 if [[ $CFW_NAME == "TheRA" ]]; then
@@ -30,8 +29,10 @@ elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
   if [ -f /run/muos/storage/info/config/retroarch.cfg ]; then
     raconf="--config /run/muos/storage/info/config/retroarch.cfg"
-  else
+  elif [ -f /mnt/mmc/MUOS/retroarch/retroarch.cfg ]; then
     raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+  else
+    raconf=""
   fi
 elif [[ $CFW_NAME == "Miyoo" ]]; then
   raloc="/mnt/sdcard/RetroArch"
@@ -43,5 +44,6 @@ fi
 
 GAMEDIR="/$directory/ports/cavestory"
 
+$GPTOKEYB "retroarch" &
 $raloc/retroarch $raconf -L $GAMEDIR/nxengine_libretro.so $GAMEDIR/Doukutsu.exe
-
+pm_finish
