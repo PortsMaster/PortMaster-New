@@ -19,7 +19,7 @@ get_controls
 GAMEDIR=/$directory/ports/holyshit
 godot_runtime="godot_4.4.1"
 godot_executable="godot441.$DEVICE_ARCH"
-pck_filename="HollyShit.pck"
+pck_filename="HollyShit_patched.pck"
 gptk_filename="holyshit.gptk"
 
 # logging
@@ -63,6 +63,15 @@ fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
+
+# patch file
+if [ -f "./HollyShit.pck" ]; then
+  $controlfolder/xdelta3 -d -s "./HollyShit.pck" "./patch.xdelta3" "./HollyShit_patched.pck"
+  [ $? -eq 0 ] && rm "./HollyShit.pck" || echo "Patching of HollyShit.pck has failed"
+  # delete unecessary files
+  rm -f gamedata/*.{dll,exe}
+fi
+
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # start westonpack and godot

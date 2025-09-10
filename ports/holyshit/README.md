@@ -7,9 +7,11 @@ To restart a level, click the leftmost icon at the top-right corner of the scree
 
 ## Controls
 
-| Button  | Action      |
-| ------- | ----------- |
-| D-PAD   | Movement    |
-| B       | Jump        |
-| L-STICK | Mouse move  |
-| X       | Mouse click |
+| Button  | Action        |
+| ------- | ------------- |
+| D-PAD   | Movement      |
+| B       | Jump          |
+| R       | Restart level |
+| START   | Start game    |
+| L-STICK | Mouse move    |
+| X       | Mouse click   |
