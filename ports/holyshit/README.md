@@ -13,5 +13,4 @@ To restart a level, click the leftmost icon at the top-right corner of the scree
 | B       | Jump                 |
 | R       | Restart level        |
 | A/START | Start game / proceed |
-| L-STICK | Mouse move           |
-| X       | Mouse click          |
+| ESC     | Quit                 |
