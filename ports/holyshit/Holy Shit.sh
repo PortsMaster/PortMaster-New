@@ -72,6 +72,15 @@ if [ -f "./HollyShit.pck" ]; then
   rm -f gamedata/*.{dll,exe}
 fi
 
+# check for rocknix running libmali driver
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+  if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+  fi
+fi
+
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # start westonpack and godot
