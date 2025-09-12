@@ -11,6 +11,6 @@ ROCKNIX users must use Panfrost (not libMali) graphics driver.
 | ------- | -------------------- |
 | D-PAD   | Movement             |
 | B       | Jump                 |
-| R       | Restart level        |
+| R1      | Restart level        |
 | A/START | Start game / proceed |
 | ESC     | Quit                 |
