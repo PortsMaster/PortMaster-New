@@ -63,7 +63,6 @@ fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
-$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # check for rocknix running libmali driver
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
@@ -73,6 +72,8 @@ if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
     exit 1
   fi
 fi
+
+$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # start westonpack and Godot
 # put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
