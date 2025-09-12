@@ -48,7 +48,7 @@ if [ -f ./assets/data.win ]; then
 fi
 
 # assign configs and load the game
-$GPTOKEYB "gmloadernext.aarch64" -c "vampiregarden.gptk" &
+$GPTOKEYB "gmloadernext.aarch64" -c "foreignfrugglers.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 

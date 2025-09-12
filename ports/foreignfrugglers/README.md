@@ -5,8 +5,9 @@ Thanks to [UltimoGames](https://ultimogames.itch.io/) for creating this great ga
 
 ## Controls
 
-| Button        | Action   |
-| ------------- | -------- |
-| D-PAD/L-STICK | Movement |
-| A             | Jump     |
-| B             | Shoot    |
+| Button        | Action        |
+| ------------- | ------------- |
+| D-PAD/L-STICK | Movement      |
+| A             | Jump          |
+| B             | Shoot         |
+| START         | Start / pause |
