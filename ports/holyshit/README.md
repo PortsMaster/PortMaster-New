@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Be1ugabot](https://be1ugabot.itch.io) for creating this great game, which you can download free at [itch.io](https://be1ugabot.itch.io/holy-shit)
+Thanks to [Be1ugabot](https://be1ugabot.itch.io) for creating this great game, and for permitting PortMaster to include the game files.
 
 ROCKNIX users must use Panfrost (not libMali) graphics driver.
 
