@@ -62,11 +62,19 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
-
 cd $GAMEDIR
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
-# sStart westonpack and Godot
+# check for rocknix running libmali driver
+if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
+  if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+  fi
+fi
+
+# start westonpack and Godot
 # put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
 # ld_preload is put here because Godot runtime links against libegl.so, and crusty is interfering with that on some systems
 $ESUDO env $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
