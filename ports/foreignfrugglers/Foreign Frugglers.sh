@@ -32,7 +32,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 # extract file
 if [ -f "./assets/Foreign Frugglers.exe" ]; then
   # extract its contents in place using 7z
-  pm_message "extracting Foreign Frugglers.exe ..."
+  pm_message "Extracting Foreign Frugglers.exe ..."
   ./7z x "./assets/Foreign Frugglers.exe" -o"./assets/" -y
   pm_message "Extraction complete"
 fi
@@ -41,8 +41,10 @@ fi
 if [ -f ./assets/data.win ]; then
   mv ./assets/data.win ./assets/game.droid 
   rm -f assets/*.{dll,exe}
+  pm_message "Packing assets into foreignfrugglers.port ..."
   zip -r -0 ./foreignfrugglers.port ./assets/
   rm -Rf ./assets/
+  pm_message "Packing complete"
 fi
 
 # assign configs and load the game
