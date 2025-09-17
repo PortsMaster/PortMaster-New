@@ -1,7 +1,4 @@
 # Wolfenstein 3D -- A PortMaster implementation of LZWolf and ECWolf to play Wolfenstein 3D and friends
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/7c94dfb7-b86a-421a-bd26-142900204663" alt="lzwolf-menu" width="480" height="320"/>
-</div>
 
 ## Installation
 This port comes with the shareware and demo for Wolfenstein 3D and Spear of Destiny. LZWolf and ECWolf can run the following games:
@@ -13,54 +10,39 @@ This port comes with the shareware and demo for Wolfenstein 3D and Spear of Dest
 To use them, place your game data (`.WL6`, `.SOD`, `.SD2`, `.SD3`, `.N3D`, etc) in `ports/wolf3d/data`.
 
 ## Play
-To use addon mods, place `.pk3` files in `ports/wolf3d` and list the `.pk3` files to load in `.load.txt` for the relevant game. Use the Left Shoulder and Right Shoulder buttons in the launcher to select which engine to use.
+To use addon mods, place `.pk3` files in `ports/wolf3d/mods` and list the `.pk3` files to load in `wolffiles/*.wolf` for the relevant game. The launcher will search `wolffiles` and list its subfolders as well as any `.wolf` files. Selecting a folder within the launcher will move into that subfolder, and pressing B will move backwards in the hierarchy.
+
+Use the Left Shoulder and Right Shoulder buttons in the launcher to select which engine to use.
 
 ## Config
 The launchscript is set up to use one of two `.cfg` files based on the presence of joysticks. You can freely modify button assignments ingame by going to `Options -> Control Setup -> Customize controls` and selecting the `JOY` column.
 
 ## Mod
-The launcher lists folders as games and looks for `.load.txt` files inside them. It uses their information to construct arguments passed to lzwolf or ecwolf, and will not display menu options for any games that are missing data. To create a `.load.txt` file, open a text editor and add the following:
+The launcher lists `*.wolf` files in `wolf3d/wolffiles` and uses their information to construct arguments passed to the engines. It performs file validation and will not display menu options for any games that are missing data. To create a `*.wolf` file, open a text editor and add the following:
 
-- `PATH` - This is always `./data`
-- `DATA` - File extension of the data files
-- `PK3_#` - Any `.pk3` files to load after the data, can use up to four
+- `ENGINE` - The engine to use (crispydoom or gzdoom). This line can be used to enforce a specific engine regardless of the engine selected in the launcher.
+- `DATA` - File extension to use (`WL6`, `SOD`, `SD2`, `SD3`, `N3D`, etc).
+- `MOD` - Any `.pk3` files to load after the data. You can load any number of files this way.
 
-Follow this example `Wolfenstein 3D/.load.txt` which launches vanilla Wolfenstein 3D:
+Follow this example `Wolfenstein 3D.wolf` which launches vanilla Wolfenstein 3D:
 
 ```
-PATH=./data
 DATA=WL6
-PK3_1=breathing_fix.pk3
+MOD=mods/breathing_fix.pk3
 -- end --
 ```
 
-This example `Operation Wasserstein II/.load.txt` launches the mod Operation Wasserstein II:
+This example `Operation Wasserstein II.wolf` launches the mod Operation Wasserstein II:
 
 ```
-PATH=./data
 DATA=WL6
-PK3_1=breathing_fix.pk3
-PK3_2=Wasserstein2.pk3
+MOD=mods/breathing_fix.pk3
+MOD=mods/Wasserstein2.pk3
 -- end --
 ```
-
-To load WL6 mods:
-Create a folder with the name of the mod in the wolf3d directory (/ports/wolf3d/NameOfMod)
-Create a `.load.txt` file in the newly created /ports/wolf3d/NameOfMod folder, open a text editor and add:
-PATH=./data
-DATA=WL6
-PK3_1=breathing_fix.pk3 (optional and depending on mod)
-Copy your WL6 files with the mod's WL6 files applied (originals overwritten with the mod) into the /ports/wolf3d/NameOfMod folder.
-
-Since we gave the mod its own subfolder and `.load.txt` file, it appears in the launcher as its own option despite using shared data files.
 
 ## Building
-git clone https://github.com/JeodC/pm-lzwolf
-cd pm-lzwolf
-mkdir build && cd build
-cmake ..
-make
-strip lzwolf
+See [PM-LZWolf](https://github.com/JeodC/pm-lzwolf) GitHub fork for compile instructions and change information.
 
 ## Thanks
 id Software -- Original game  

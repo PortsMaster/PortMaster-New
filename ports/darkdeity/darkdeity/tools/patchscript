@@ -8,194 +8,192 @@ LOGERR="$GAMEDIR/patchlog_error.txt"
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+# Patch failure function
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    echo "Patching process failed."
+    exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$RUNTIME" || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+# Mount the dotnet runtime
+DOTNETDIR="$HOME/mono"
+DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+if [ -f "$DOTNETFILE" ]; then
+    $ESUDO mkdir -p "$DOTNETDIR"
+    $ESUDO umount "$DOTNETFILE" || true
+    $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+else
+    echo "This port requires the Dotnet runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
 # Exports
+export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="dark_deity.port"
-export PATCHZIP="darkdeity-steam.zip"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
 
-cd "$GAMEDIR"
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
 
-download_patch() {
-    PATCH_FILE="$1"
-    MD5_FILE="$2"
-    URL="$3"
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+
+    # Move required directories to save location
+    [ -d "$DATADIR/Bonds" ] && mv "$DATADIR/Bonds" "$SAVEDIR/Bonds"
+    [ -d "$DATADIR/Scenes" ] && mv "$DATADIR/Scenes" "$SAVEDIR/Scenes"
+    [ -d "$DATADIR/Stories" ] && mv "$DATADIR/Stories" "$SAVEDIR/Stories"
     
-    # Download patch and its MD5 checksum
-    wget --progress=bar:force -O "$PATCH_FILE" "$URL"
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to download $PATCH_FILE. Check your internet connection and verify the file exists at $URL."
-        mv $LOGFILE $LOGERR
-        echo "Patching process failed!"
-        exit 1
-    fi
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
 
-    wget --progress=bar:force -O "$MD5_FILE" "${URL}.md5"
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to download MD5 checksum for $PATCH_FILE."
-        mv $LOGFILE $LOGERR
-        echo "Patching process failed!"
-        exit 1
-    fi
-
-    # Verify MD5 checksum
-    expected_md5=$(cat "$MD5_FILE" | tr '[:upper:]' '[:lower:]')  # Convert expected MD5 to lowercase
-    downloaded_md5=$(md5sum "$PATCH_FILE" | awk '{ print $1 }' | tr '[:upper:]' '[:lower:]')  # Convert downloaded MD5 to lowercase
-
-    if [ "$expected_md5" != "$downloaded_md5" ]; then
-        echo "Error: MD5 checksum mismatch for $PATCH_FILE. Expected: $expected_md5, Found: $downloaded_md5"
-        mv $LOGFILE $LOGERR
-        echo "Patching process failed!"
-        exit 1
+    # Move splash file if it exists
+    if [ -f "$DATADIR/splash.png" ]; then
+        mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
     fi
 }
 
-check_data() {
-    # Make sure the patchdir is clean
-    rm -rf $TOOLDIR/patches/*
-    echo "Checking game data..."
-
-    if ls "$DATADIR"/steam* >/dev/null 2>&1; then
-        # Steam
-        echo "Downloading Steam patch..."
-        sleep 2
-        for i in {001..011}; do
-            PATCH_FILE="$TOOLDIR/patches/darkdeity-steam.zip.$i"
-            MD5_FILE="$TOOLDIR/patchesdarkdeity-steam.zip.$i.md5"
-            PATCH_URL="https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/steam/darkdeity-steam.zip.$i"
-            download_patch "$PATCH_FILE" "$MD5_FILE" "$PATCH_URL"
-        done
-        export PATCHZIP="darkdeity-steam.zip"
-        export PATCH="darkdeity-steam.xdelta"
-        rm -rf $DATADIR/*.dll $DATADIR/.gitkeep $DATADIR/*.exe
-    elif [ -f "$DATADIR/gog.ico" ]; then
-        # GOG
-        echo "Downloading GOG patch..."
-        sleep 2
-        for i in {001..009}; do
-            PATCH_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i"
-            MD5_FILE="$TOOLDIR/patches/darkdeity-gog.zip.$i.md5"
-            PATCH_URL="https://raw.githubusercontent.com/JeodC/PortMaster-DarkDeity/main/darkdeity/tools/patches/gog/darkdeity-gog.zip.$i"
-            download_patch "$PATCH_FILE" "$MD5_FILE" "$PATCH_URL"
-        done
-        export PATCHZIP="darkdeity-gog.zip"
-        export PATCH="darkdeity-gog.xdelta"
-        rm -rf $DATADIR/*.ico $DATADIR/goggame* $DATADIR/*.lnk \
-               $DATADIR/unins* $DATADIR/webcache.zip $DATADIR/*.dll \
-               $DATADIR/.gitkeep $DATADIR/*.exe
-    else
-        echo "Unable to determine assets origin!"
-        mv $LOGFILE $LOGERR
-        echo "Patching process failed!"
-        exit 1
-    fi
-}
-
-unzip_patch() {
-    if [ -f "$TOOLDIR/patches/$PATCHZIP.001" ]; then
-        echo "Unzipping the patch file..."
-        $TOOLDIR/7za x $TOOLDIR/patches/$PATCHZIP.001 -o$TOOLDIR/patches
-        if [ $? -eq 0 ]; then
-            echo "Patch file successfully extracted."
-            rm -rf $TOOLDIR/patches/$PATCHZIP.*
-            rm -rf $TOOLDIR/patches/*.md5
-        else
-            echo "Failed to extract multi-part archive."
-            mv $LOGFILE $LOGERR
-            echo "Patching process failed!"
-            exit 1
-        fi
-    elif [ ! -f "$TOOLDIR/patches/darkdeity.xdelta" ]; then
-        echo "Patch archive not found!"
-        exit 1
-    fi
-}
+# Apply a patch to enforce stretching to fill the display
 apply_xdelta() {
-    # Check if both data.win and darkdeity.xdelta files exist before applying the patch
+    GOG_MD5="1c3ac1d5c2bb7d3c49f601d21b2e584d"
+    STEAM_MD5="2a491f42eea91f76b838c7196430afe9"
+
     if [ -f "$DATADIR/data.win" ]; then
-        if [ -f "$TOOLDIR/patches/$PATCH" ]; then
-            output=$(xdelta3 -d -s "$DATADIR/data.win" -f "$TOOLDIR/patches/$PATCH" "$DATADIR/game.droid" 2>&1)
+        checksum=$(md5sum "$DATADIR/data.win" | awk '{print $1}')
+        case "$checksum" in
+            "$GOG_MD5")
+                PATCH="darkdeity_gog.xdelta"
+                ;;
+            "$STEAM_MD5")
+                PATCH="darkdeity_steam.xdelta"
+                ;;
+            *)
+                echo "Unknown data.win checksum: $checksum"
+                echo "Cannot determine appropriate patch"
+                patch_failure
+                return
+                ;;
+        esac
+
+        if [ -f "$GAMEDIR/tools/$PATCH" ]; then
+            output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "$GAMEDIR/tools/$PATCH" "$DATADIR/data2.win" 2>&1)
             if [ $? -eq 0 ]; then
                 echo "Patch applied successfully"
                 echo "$output"
-                rm -rf "$DATADIR/data.win" "$TOOLDIR/patches"/*
+                rm "$DATADIR/data.win" && mv "$DATADIR/data2.win" "$DATADIR/data.win"
+                sleep 1
             else
                 echo "Failed to apply patch"
                 echo "$output"
-                mv $LOGFILE $LOGERR
-                echo "Patching process failed!"
-                exit 1
+                patch_failure
             fi
         else
-            echo "No .xdelta file found; skipping patching."
+            echo "Patch file not found: $GAMEDIR/tools/$PATCH"
+            patch_failure
         fi
     else
-        echo "No data.win file found to patch!"
-        echo "Patching process failed!"
-        exit 1
+        echo "data.win not found in $DATADIR"
+        patch_failure
     fi
 }
 
-compress_audio() {
-    mkdir -p "$TMPDIR"
+# Externalize game textures with compression
+dump_textures() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Begin texture operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data.win" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
 
-    # Run the compression tool
-    PYTHON=$(which python3)
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON $TOOLDIR/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Texture dumping failed to apply."
+        patch_failure
+    else
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/textures" "$SAVEDIR/textures"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
 
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        rmdir "$TMPDIR"
+compress_audio() {  
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
         echo "Audio compression applied successfully."
     else
-        echo "Audio compression failed."
-        rm -rf "$TMPDIR"
-        echo "Patching process failed!"
-        exit 1
+        # Failure
+        echo "Audio compression failed for $GAMEFILE."
+        rmdir "$TMPDIR"
+        patch_failure
     fi
 }
 
 zip_archive() {
-        mv $DATADIR/splash.png .
-        zip -r -0 $DATAFILE ./assets/
+        zip -r -0 "$DATAFILE" ./assets/
         echo "Zipped contents to $DATAFILE"
-        rm -rf ./assets
+        rm -rf "$GAMEDIR/assets/"*
 }
 
 process_game() { 
-    mkdir -p saves
-    check_data
-    sleep 1
-    
-    # Text data must be moved to saves directory or game will crash
-    [ -d "$DATADIR/Bonds" ] && mv "$DATADIR/Bonds" ./saves/Bonds
-    [ -d "$DATADIR/Scenes" ] && mv "$DATADIR/Scenes" ./saves/Scenes
-    [ -d "$DATADIR/Stories" ] && mv "$DATADIR/Stories" ./saves/Stories
-    
-    sleep 1
-    echo "Unpacking xdelta patch..."
-    unzip_patch
-    sleep 1
+    echo "Preparing game..."
+    prepare_files || patch_failure 
     echo "Applying xdelta patch..."
-    apply_xdelta
-    sleep 1
+    apply_xdelta || patch_failure
+    echo "Externalizing textures..."
+    dump_textures || patch_failure
     echo "Compressing audio..."
-    compress_audio
+    compress_audio || patch_failure
     sleep 1
     echo "Finishing up..."
-    zip_archive
+    zip_archive || patch_failure
     sleep 1
+    
+    # Unmount runtimes
+    $ESUDO umount "$DOTNETDIR"
+    $ESUDO umount "$TOOLKIT"
 	
     # Final completion message
     echo "Patching process complete!"

@@ -1,4 +1,4 @@
-# Notes
+## Notes
 
 Thanks to [Cosmic Void](https://cosmicvoid.itch.io) for creating this fantastic game, which you can download free at [itch.io](https://cosmicvoid.itch.io/elsewhere-in-the-night)
 
@@ -7,7 +7,7 @@ Thanks to [Cosmic Void](https://cosmicvoid.itch.io) for creating this fantastic 
 The average playthrough playtime is 1 hour. If you enjoy the game, please consider tipping! Your support may allow Cosmic Void create more games :)
 
 
-# Controls
+## Controls
 
 | Button  | Action       |
 | ------  | ------------ |

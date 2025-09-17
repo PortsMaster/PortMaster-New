@@ -1,9 +1,9 @@
-# Notes
+## Notes
 
 Thanks to [Dylan Brown](https://dylanbrowngames.itch.io) for creating this fantastic game, and permitting PortMaster to include the game files.
 
 
-# Controls
+## Controls
 
 | Button        | Action   |
 | ------------- | -------- |

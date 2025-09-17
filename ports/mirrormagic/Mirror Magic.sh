@@ -13,34 +13,18 @@ else
 fi
 
 source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,
-CUR_TTY=/dev/tty0
-
-PORTDIR="/$directory/ports"
-GAMEDIR="$PORTDIR/mirrormagic"
+GAMEDIR="/$directory/ports/mirrormagic"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 $CUR_TTY
-export TERM=linux
-printf "\033c" > $CUR_TTY
+$ESUDO chmod 666 /dev/uinput
 
-printf "\033c" > $CUR_TTY
-## RUN SCRIPT HERE
+$GPTOKEYB "mirrormagic.$DEVICE_ARCH" -c mirrormagic.gptk &
+./mirrormagic.$DEVICE_ARCH
 
-echo "Starting game." > $CUR_TTY
-
-export PORTMASTER_HOME="$GAMEDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
-$GPTOKEYB "mirrormagic" -c mirrormagic.gptk &
-./mirrormagic
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-
-# Disable console
-printf "\033c" > $CUR_TTY
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

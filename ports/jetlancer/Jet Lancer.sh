@@ -13,53 +13,48 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/jetlancer"
 
-# Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=0
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
-export TOOLDIR="$GAMEDIR/tools"
-export PATH=$PATH:$TOOLDIR
-export PATCHER_FILE="$GAMEDIR/patch/patchscript"
-export PATCHER_GAME="Jet Lancer"
-export PATCHER_TIME="10 to 15 minutes"
-export PATCHDIR=$GAMEDIR
-
-# We log the execution of the script into log.txt
+# CD and set log
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Permissions
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-$ESUDO chmod +x "$TOOLDIR/splash"
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 
-cd "$GAMEDIR"
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
 
-# Run install if needed
-if [ ! -f "$GAMEDIR/gamedata/game.droid" ]; then
+# Check if we need to patch the game
+if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="Jet Lancer"
+        export PATCHER_TIME="15 to 20 minutes"
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster." > $CUR_TTY
+        pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    echo "Patching process already completed. Skipping."
 fi
 
-if [ ! -f "$GAMEDIR/gamedata/config.ini" ]; then
-  mv "$GAMEDIR/config.ini.default" "$GAMEDIR/gamedata/config.ini"
+# Display loading splash
+if [ -f install_completed ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 fi
 
-$GPTOKEYB "gmloader" &
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "jetlancer.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader jetlancer.apk
-
+# Cleanup
 pm_finish

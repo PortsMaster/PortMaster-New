@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks Yal for creating this game! https://yaru.itch.io/arengius
+Thanks to Yal for creating this game! Lite version offers all stages, but Full version offers more ships and difficulty options for extra replayability. Download it from [Itch.io](https://yaru.itch.io/arengius)
 
 ## Controls
 

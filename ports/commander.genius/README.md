@@ -19,12 +19,12 @@ Note: Default controls are shown, however, port supports remapping of the contro
 
 Includes all of the officially released free content for the Commander Keen series. This includes:
 
-- the shareware versions:
+- The shareware episodes:
   - [Episode 1: Marooned on Mars](https://keenwiki.shikadi.net/wiki/Keen_1:_Marooned_on_Mars)
   - [Episode 4: Secret of the Oracle](https://keenwiki.shikadi.net/wiki/Keen_4:_Secret_of_the_Oracle)
-- the demo version:
+- The demo episode:
   - [Episode 6: Aliens Ate My Baby Sitter.](https://keenwiki.shikadi.net/wiki/Keen_6:_Aliens_Ate_My_Baby_Sitter!)
-- the lost episode:
+- The lost episode:
   - [Keen Dreams](https://keenwiki.shikadi.net/wiki/Keen_Dreams)
 
 ## Additional Content
@@ -42,5 +42,5 @@ This port supports the addition of official or community-created episodes/mods a
 git clone https://gitlab.com/Dringgstein/Commander-Genius.git
 mkdir CGeniusBuild && cd CGeniusBuild
 cmake ../Commander-Genius/
-make
+make -j$(nproc)
 ```

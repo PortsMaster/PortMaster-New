@@ -32,17 +32,29 @@ $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 777 $GAMEDIR/sonicmania
 
 # Set Pix Values
-HMED=240 # 4:3
-HHIGH=344 # 16:9
-WMED=320  # 4:3
-WHIGH=424 # 16:9
+HMED=240   # 4:3
+H3_2=288   # 3:2
+HHIGH=344  # 16:9
+
+WMED=320   # 4:3
+W3_2=360   # 3:2
+WHIGH=424  # 16:9
 
 # Calculate aspect ratio
 ASPECT=$(awk "BEGIN {print $DISPLAY_WIDTH / $DISPLAY_HEIGHT}")
 
 # Choose Width and Height based on aspect ratio
-WIDTH=$(awk "BEGIN {print ($ASPECT > 1.5 ? $WHIGH : $WMED)}")
-HEIGHT=$(awk "BEGIN {print ($ASPECT > 1.5 ? $HHIGH : $HMED)}")
+WIDTH=$(awk "BEGIN {
+  if ($ASPECT <= 1.4) print $WMED;
+  else if ($ASPECT <= 1.6) print $W3_2;
+  else print $WHIGH;
+}")
+
+HEIGHT=$(awk "BEGIN {
+  if ($ASPECT <= 1.4) print $HMED;
+  else if ($ASPECT <= 1.6) print $H3_2;
+  else print $HHIGH;
+}")
 
 # Ensure pixWidth and pixHeight keys exist or are updated
 if grep -q "^pixWidth=" "$GAMEDIR/Settings.ini"; then
@@ -72,9 +84,8 @@ fi
 
 
 # Run the game
-pm_message "Loading, please wait!"
-pm_platform_helper "$GAMEDIR/sonicmania"
 $GPTOKEYB "sonicmania" &
+pm_platform_helper "$GAMEDIR/sonicmania" > /dev/null
 ./sonicmania
 
 pm_finish

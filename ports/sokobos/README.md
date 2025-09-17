@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Daisy Games for developing this game. Purchase it on [Steam](https://store.steampowered.com/app/1655890/Sokobos/). DLC is not supported.
+Thanks to Daisy Games for developing this game. Purchase it on [Steam](https://store.steampowered.com/app/1655890/Sokobos/).
 
 ## Controls
 

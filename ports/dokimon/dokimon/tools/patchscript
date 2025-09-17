@@ -18,11 +18,6 @@ export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
 export PATH="$GAMEDIR/tools:$PATH"
 
-# Permissions
-chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
-
 cd "$GAMEDIR"
 
 remove_files() {
@@ -36,33 +31,6 @@ remove_files() {
     sleep 1
 }
 
-compress_audio() {
-    echo "Compressing audio..."
-    # Clear out the temporary directory
-    mkdir -p "$TMPDIR"
-    rm -rf $TMPDIR/*
-
-    # Run the compression tool
-    PYTHON=$(which python3)
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
-
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        echo "Moved compressed files to $DATADIR."
-        rm -rf "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
-        echo "Audio compression applied successfully."
-        sleep 1
-    else
-        echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
-        rm -rf "$TMPDIR"
-        sleep 1
-    fi
-}
-
 zip_archive() {
         echo "Finishing up..."
         touch $DATADIR/config.ini
@@ -72,10 +40,16 @@ zip_archive() {
         sleep 1
 }
 
+remove_demo() {
+    # Change gmloader.json to new .port file
+    sed -i "s/\"apk_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"apk_path\": \"$DATAFILE\"/" gmloader.json
+    rm -rf "$GAMEDIR/dokimondemo.port"
+}
+
 process_game() {
     remove_files
-    #compress_audio
     zip_archive
+    remove_demo
 	
     # Final completion message
     echo "Patching process complete!"

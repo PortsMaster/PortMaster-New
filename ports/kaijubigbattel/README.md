@@ -1,10 +1,10 @@
-# Notes
+## Notes
 
 Thanks to [Super Walrus Games](https://super-walrus-games.itch.io/) for creating this game, which you can purchase on [itch.io](https://super-walrus-games.itch.io/kaiju-big-battel-fighto-fantasy)
 
 Tested using the Windows version (Linux should work fine, and probably the Steam versions too).
 
-# Controls
+## Controls
 
 | Button | Action                      |
 | -------| --------------------------- |

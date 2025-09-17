@@ -13,87 +13,43 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-GAMEDIR="/$directory/ports/voidstranger"
-export LD_LIBRARY_PATH="/usr/lib:/$GAMEDIR/lib:$LD_LIBRARY_PATH"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-# permissions
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod +x "$GAMEDIR/lib/splash"
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-$ESUDO chmod +x "$GAMEDIR/game_patching.txt"
-$ESUDO chmod 666 /dev/uinput
+# Variables
+GAMEDIR="/$directory/ports/voidstranger"
 
+# CD and set permissions
 cd $GAMEDIR
-
-# log the execution of the script into log.txt
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# check for "installed" file; this assumes game.droid has already been patched/moved
-if [ -f "installed" ]; then
-  final_chksm=$(md5sum "game.droid" | awk '{print $1}')
-  echo "Found patched game.droid file. md5: ""$final_chksm"
-  # SPLASH
-  if [ -f "gamedata/splash.png" ]; then
-    $ESUDO ./lib/splash gamedata/"splash.png" 1 
-    $ESUDO ./lib/splash gamedata/"splash.png" 8000 &
-    echo "Normal splash."
-  else
-    echo "No splash image found. Add splash.png to the /gamedata/ folder."
-  fi
-else
-  # first time installation process
-  # SPLASH 0 
-  $ESUDO ./lib/splash "loadingsplash.png" 1 
-  $ESUDO ./lib/splash "loadingsplash.png" 12000 &
-  echo "First splash."
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+export PATCHER_TIME="25 to 30 minutes"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-  # game patching cases located in the game_patching script
-  . ./game_patching.txt
-  if [ $? != 0 ]; then
-    exit 0
-  fi
-
-  # zip audio into the .apk
-  echo "Attempting to zip game files into game.apk..."
-  if [[ -f "gamedata/audiogroup1.dat" ]] && [[ -f "gamedata/audiogroup2.dat" ]]; then
-    $ESUDO mkdir -p ./assets/
-    $ESUDO mv gamedata/"audiogroup1.dat" ./assets/
-    $ESUDO mv gamedata/"audiogroup2.dat" ./assets/
-    $ESUDO zip -r -0 $GAMEDIR/game.apk ./assets/
-    $ESUDO rm -r ./assets/
-  else
-    echo "WARNING: Some audiogroup data not found. Please add all assets to the /gamedata/ folder and try again."
-    exit 0
-  fi
-
-  # move patched file to main directory if found
-  [ -f "./gamedata/vs-patched.win" ] && mv gamedata/vs-patched.win $GAMEDIR/game.droid
-
-  # create 'installed' file
-  touch installed
+# Check if we need to patch the game
+if [ ! -f patchlog.txt ] || [ -f $GAMEDIR/assets/data.win ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        echo "This port requires the latest version of PortMaster."
+    fi
 fi
 
-# move csv data file to main dir and clean if the ini has been generated already
-if [ ! -f csvstring.ini ]; then
-  if [ ! -f voidstranger_data.csv ]; then
-    $ESUDO cp gamedata/"voidstranger_data.csv" ./
-    echo "CSV data file copied to main directory."
-  fi
-else
-  if [ -f voidstranger_data.csv ]; then
-    echo "Cleaning up CSV file."
-    $ESUDO rm "voidstranger_data.csv"
-  fi
+# Display loading splash
+if [ -f "$GAMEDIR/patchlog.txt" ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/assets/splash.png" 1
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/assets/splash.png" 8000 &
 fi
 
-$GPTOKEYB "gmloadernext" -c ./voidstranger.gptk &
-  
-./gmloadernext game.apk
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "voidstranger.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish

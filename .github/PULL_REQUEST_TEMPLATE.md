@@ -1,23 +1,24 @@
-# New Port for { Game Title }
-
 ## Game Information
-- **Title**: { Game Title }
+- **New Port for**: { Game Title }
 - **URL**: { Link to project page or source control page }
 
 ## Submission Requirements
 
 ### CFW Tests
 Ensure your game has been tested on all major CFWs:
-- [ ] AmberELEC
 - [ ] ArkOS
+- [ ] AmberELEC
 - [ ] ROCKNIX
 - [ ] muOS
+- [ ] Knulli (Optional)
+- [ ] Crossmix (Optional)
+- [ ] Other (add here)
 
 ### Resolution Tests
 Test all major resolutions:
-- [ ] 480x320
+- [ ] 480x320 (Optional)
 - [ ] 640x480
-- [ ] 720x720 (RGB30)
+- [ ] 720x720 (RGB30) (Optional)
 - [ ] Higher resolutions (e.g., 1280x720)
 
 ## File Structure
@@ -25,8 +26,8 @@ Test all major resolutions:
   - portname/
     - port.json
     - README.md
-    - screenshot.jpg
-    - cover.jpg
+    - screenshot.png
+    - cover.png
     - gameinfo.xml
     - Port Name.sh
     - portname/

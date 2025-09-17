@@ -4,7 +4,7 @@
 
 ## Acknowledgments
 
-**Huge thanks to [DTRGames](https://dtrgames.itch.io/) for developing this lovely game!**
+**Huge thanks to [DTRGames](https://dtrgames.itch.io/) for developing this lovely game and allowing us to destribute it! Get the game [here](https://dtrgames.itch.io/fire-boy)!**
 
 Thanks to BinaryCounter for Westonpack & Godot runtimes
 

@@ -13,7 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -35,10 +35,31 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" 
 export TEXTINPUTINTERACTIVE="Y"
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "f1spirit" -c "f1spirit.gptk" &
- ./f1spirit
+# Adjust screen size to maximum 4:3 dimensions that will fit
+echo Screen size = ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}
+if [ $((${DISPLAY_WIDTH} > ${DISPLAY_HEIGHT}*4/3)) != 0 ]; then
+  echo Screen is wider than 4:3, so reducing width
+  DISPLAY_WIDTH=$((${DISPLAY_HEIGHT}*4/3))
+elif [ $((${DISPLAY_WIDTH} < ${DISPLAY_HEIGHT}*4/3)) != 0 ]; then
+  echo Screen is taller than 4:3, so reducing height
+  DISPLAY_HEIGHT=$((${DISPLAY_WIDTH}*3/4))
+fi
+echo Adjusted screen size = ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+export DISPLAY_WIDTH
+export DISPLAY_HEIGHT
+export FULLSCREEN=false
+
+# Uncomment these lines to set custom display parameters
+#export DISPLAY_WIDTH=720
+#export DISPLAY_HEIGHT=720
+#export FULLSCREEN=true
+
+$GPTOKEYB "f1spirit" -c "f1spirit.gptk" &
+
+pm_platform_helper "$GAMEDIR/f1spirit"
+
+./f1spirit
+
+pm_finish
+

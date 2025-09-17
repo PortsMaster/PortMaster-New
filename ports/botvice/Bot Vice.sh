@@ -11,66 +11,52 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
-
+export controlfolder
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/botvice"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-# Patch game
-cd "$GAMEDIR"
-# If "gamedata/game.unx" exists and its size is 4,660,180 bytes, apply the xdelta3 patch
-if [ -f "./gamedata/game.unx" ]; then
-    file_size=$(ls -l "./gamedata/game.unx" | awk '{print $5}')
-    if [ "$file_size" -eq 4660180 ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/botvice.xdelta gamedata/game.unx
-    fi
-fi
-
-# If "gamedata/audiogroup1.dat" exists and its size is 12,241,788 bytes, apply the xdelta3 patch
-if [ -f "./gamedata/audiogroup1.dat" ]; then
-    file_size=$(ls -l "./gamedata/audiogroup1.dat" | awk '{print $5}')
-    if [ "$file_size" -eq 12241788 ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/audiogroup1.dat -f ./patch/audio1.xdelta gamedata/audiogroup1.dat
-    fi
-fi
-
-# If "gamedata/audiogroup2.dat" exists and its size is 27,416,556 bytes, apply the xdelta3 patch
-if [ -f "./gamedata/audiogroup2.dat" ]; then
-    file_size=$(ls -l "./gamedata/audiogroup2.dat" | awk '{print $5}')
-    if [ "$file_size" -eq 27416556 ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/audiogroup2.dat -f ./patch/audio2.xdelta gamedata/audiogroup2.dat
-    fi
-fi
-
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x -R $GAMEDIR/tools/splash
+$ESUDO chmod +x -R $GAMEDIR/tools/gmKtool.py
+$ESUDO chmod +x -R $GAMEDIR/tools/patchscript
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+export PATCHER_GAME="Bot Vice"
+export PATCHER_TIME="3 to 5 minutes"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Check if install_completed to skip patching
+if [ ! -f install_completed ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        pm_message "This port requires the latest version of PortMaster."
+	exit 1  # Exit to prevent further execution
+    fi
+else
+    pm_message "Patching process already completed. Skipping."
+fi
 
-$GPTOKEYB "gmloader" -c ./botvice.gptk &
+# Display loading splash
+if [ -f "$GAMEDIR/install_completed" ]; then
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
+    $ESUDO ./tools/splash "splash.png" 2000 &
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "./botvice.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
-./gmloader botvice.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish

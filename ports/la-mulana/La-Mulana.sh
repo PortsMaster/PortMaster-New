@@ -69,6 +69,17 @@ export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es/libGL.so.1"
 export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es/libEGL.so.1"
 fi 
 
+# Turn off dynarec for one memory address.
+# Without this, game doesn't start on rocknix panfrost/adreno
+if [[ "$CFW_NAME" = "ROCKNIX" ]] && \
+    [[ ! -z `glxinfo | grep "OpenGL version string"` ]]; then
+  # for gog binary, md5sum 59c6bdc7817370d42d71219c099e9049
+  export BOX86_NODYNAREC=0x083aa402-0x083aa403
+  
+  # for steam binary, md5sum 36afb5392d2ae8b42f14949a835e977a
+  # export BOX86_NODYNAREC=0x08367801-0x08367802
+fi
+
 $GPTOKEYB "$BINARY" &
 pm_platform_helper "$GAMEDIR/box86/box86"
 $GAMEDIR/box86/box86 game/$BINARY

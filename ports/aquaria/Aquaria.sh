@@ -37,7 +37,9 @@ rsync -av $GAMEDIR/files/* $GAMEDIR/
 bind_directories ~/.Aquaria $CONFDIR
 
 # choose particle settings (for better speed on low powered devices)
-if [[ "$DEVICE_CPU" == RK3566 ]] || [[ "$DEVICE_CPU" == A55 ]]; then
+if [[ "$DEVICE_CPU" == SD865 ]]; then
+  N_PARTICLES=2048
+elif [[ "$DEVICE_CPU" == RK3566 ]] || [[ "$DEVICE_CPU" == A55 ]]; then
   N_PARTICLES=512
 else
   # default / RK3326 / h700
@@ -65,7 +67,7 @@ export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
 export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 fi
 
-$GPTOKEYB "$BINARY" &
+$GPTOKEYB "$BINARY" -c "$GAMEDIR/$BINARY.gptk" &
 
 pm_platform_helper "$GAMEDIR/$BINARY"
 
