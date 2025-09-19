@@ -19,7 +19,6 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/cybarian"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
-TOOLDIR="$GAMEDIR/tools"
 
 # CD and set permissions
 cd $GAMEDIR
