@@ -22,6 +22,9 @@ GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
 # CD and set permissions
 cd $GAMEDIR
+
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
