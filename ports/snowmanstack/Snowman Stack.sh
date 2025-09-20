@@ -43,7 +43,6 @@ fi
 $ESUDO chmod 666 /dev/uinput
 
 # run the love runtime
-$GPTOKEYB "$LOVE_GPTK" -c "./snowmanstack.gptk" &
 pm_platform_helper ./love
 ./love "snowmanstack.love"
 

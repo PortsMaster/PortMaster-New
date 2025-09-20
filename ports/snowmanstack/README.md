@@ -8,6 +8,7 @@ Thanks to [Alesan99](https://alesan99.itch.io) for creating this great game, and
 | Button | Action        |
 | ------ | ------------- |
 | D-PAD  | Move          |
-| A/B    | Select/switch |
-| X/Y    | Fast-forward  |
-| SELECT | Exit to OS    |
+| A      | Select/switch |
+| B      | Fast-forward  |
+| START  | Enter/select  |
+| BACK   | Exit to OS    |
