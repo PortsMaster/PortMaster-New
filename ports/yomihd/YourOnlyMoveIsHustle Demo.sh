@@ -17,7 +17,7 @@ source "$controlfolder/control.txt"
 
 get_controls
 
-GAMEDIR=/$directory/ports/youronlymoveishustledemoitchio/
+GAMEDIR=/$directory/ports/yomihd/
 CONFDIR="$GAMEDIR/conf/"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
