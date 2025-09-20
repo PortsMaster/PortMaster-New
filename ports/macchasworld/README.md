@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [DIGITALGODTOWER](https://digitalgodtower.itch.io) for creating this great game, which you can download free at [itch.io](https://digitalgodtower.itch.io/macchas-world)
+Thanks to [DIGITALGODTOWER](https://digitalgodtower.itch.io) for creating this great game, and for permitting PortMaster to distribute the game files.
 
 
 ## Controls
