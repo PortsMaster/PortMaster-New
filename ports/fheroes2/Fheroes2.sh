@@ -13,25 +13,21 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/fheroes2
 
+cd $GAMEDIR/
 
-$ESUDO rm -rf ~/.config/fheroes2
-ln -sfv ${GAMEDIR}/conf/fheroes2/ ~/.config/
-$ESUDO rm -rf ~/.local/share/fheroes2
-ln -sfv ${GAMEDIR}/save/fheroes2/ ~/.local/share/
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+bind_directories ~/.config/fheroes2 $GAMEDIR/conf/fheroes2
+bind_directories ~/.local/share/fheroes2 $GAMEDIR/save/fheroes2
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO chmod 666 /dev/uinput
-cd $GAMEDIR/
-
 $GPTOKEYB "fheroes2" -c "./fheroes2.gptk" &
-./fheroes2 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty0
+./fheroes2
+
+pm_finish
