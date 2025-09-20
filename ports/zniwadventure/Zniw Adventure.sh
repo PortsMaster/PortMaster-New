@@ -15,7 +15,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Adjust these to your paths
-GAMEDIR=/$directory/ports/zniw_adventure
+GAMEDIR=/$directory/ports/zniwadventure
 game_executable="ags.$DEVICE_ARCH"
 demo_rom="zniw.demo"
 ags_fullgame_dir="data"
