@@ -267,16 +267,31 @@ function love_draw()
 	end
 end
 
+-- track currently held keys
+local _down = {}
+local _combo_fired = false
+
 function love.keypressed(key)
+	_down[key] = true
 	if _G[gamestate].keypressed then
 		_G[gamestate].keypressed(key)
 	end
-	if key == "escape" then
+
+	-- Select + Start combo:
+	-- using Space (" ") + Escape here; change "escape" to "return" if your Start is Return
+	if _down[" "] and _down["escape"] and not _combo_fired then
+		_combo_fired = true
 		love.event.quit()
+	end
+
+	if key == "escape" then 
+		setgamestate("menu")
 	end
 end
 
 function love.keyreleased(key)
+	_down[key] = nil
+	_combo_fired = false
 	if _G[gamestate].keyreleased then
 		_G[gamestate].keyreleased(key)
 	end
