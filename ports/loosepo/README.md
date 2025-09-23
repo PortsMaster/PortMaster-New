@@ -1,6 +1,6 @@
 ## Notes
 
-Thank You to MewsTurbo for making these great games that we can Port! Check out their other work here! 
+Thank You to MewsTurbo for making these great games that we can Port! Check out the games Steam page, here! 
 https://store.steampowered.com/app/1581660/LOOSEPO/
 
 
