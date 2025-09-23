@@ -1,7 +1,7 @@
 ## Notes
 
 Thank You to MewsTurbo for making these great games that we can Port! Check out their other work here! 
-https://store.steampowered.com/developer/TurboCat
+https://store.steampowered.com/app/1581660/LOOSEPO/
 
 
 ## Controls
