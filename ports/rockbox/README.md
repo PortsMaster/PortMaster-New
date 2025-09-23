@@ -74,6 +74,31 @@ Controls more or less follow the RG Nano port of Rockbox, see [the manual from t
 
 <br>
 
+## Compile
+---
+#### Environment
+See [this guide](https://github.com/christianhaitian/arkos/wiki/Building#to-create-debian-based-chroots-in-a-linux-environment) on creating a chroot.
+
+#### Grab Source and Configure
+```
+git clone https://github.com/IncognitoMan/rockbox.git
+cd rockbox
+mkdir build
+cd build
+../tools/configure
+```
+
+Configure with the following options:
+* Target platform: `210`
+* Build Type: `N`
+  - Alternatively, `A` and then `D` to enabled debugging.
+
+#### Build and ZIP
+```
+make
+make rhall-zip
+```
+
 ## Useful Links:
 ---
 [Themes (Ipod Classic).](https://themes.rockbox.org/index.php?target=ipod6g)  
