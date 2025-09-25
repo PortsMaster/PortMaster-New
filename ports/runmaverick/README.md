@@ -15,5 +15,3 @@ Other ports found at: https://seefern.itch.io/run-maverick-run
 |A|Jump|
 |B|Smash|
 *an in-game effect exists in which controls are inverted for a short period.
-
-
