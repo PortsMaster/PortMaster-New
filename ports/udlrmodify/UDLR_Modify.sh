@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 export PORT_32BIT="N"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/udlrmodify/

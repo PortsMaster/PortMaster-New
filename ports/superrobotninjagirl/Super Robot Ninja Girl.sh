@@ -22,6 +22,7 @@ export PORT_32BIT="Y"
 
 
 # We pull the controller configs from the get_controls function from the control.txt file here
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
