@@ -1,0 +1,22 @@
+-- Don't change this file!
+-- It is automatically generated of button.h $Revision$
+rb.buttons = {
+	BUTTON_Y = 8,
+	BUTTON_L2 = 4096,
+	BUTTON_R2 = 8192,
+	BUTTON_UP = 16,
+	BUTTON_SELECT = 512,
+	BUTTON_L = 1024,
+	BUTTON_R = 2048,
+	BUTTON_X = 4,
+	BUTTON_DOWN = 32,
+	BUTTON_LEFT = 64,
+	BUTTON_RIGHT = 128,
+	BUTTON_MAIN = 8191,
+	BUTTON_START = 256,
+	BUTTON_A = 1,
+	BUTTON_B = 2,
+	BUTTON_REL = 33554432,
+	BUTTON_REPEAT = 67108864,
+	BUTTON_TOUCHSCREEN = 134217728,
+}
