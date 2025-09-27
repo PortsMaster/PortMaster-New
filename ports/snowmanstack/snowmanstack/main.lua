@@ -267,31 +267,17 @@ function love_draw()
 	end
 end
 
--- track currently held keys
-local _down = {}
-local _combo_fired = false
-
 function love.keypressed(key)
-	_down[key] = true
 	if _G[gamestate].keypressed then
 		_G[gamestate].keypressed(key)
-	end
-
-	-- Select + Start combo:
-	-- using Space (" ") + Escape here; change "escape" to "return" if your Start is Return
-	if _down[" "] and _down["escape"] and not _combo_fired then
-		_combo_fired = true
+	
+	if key == "escape" then
 		love.event.quit()
 	end
-
-	if key == "escape" then 
-		setgamestate("menu")
-	end
+end
 end
 
 function love.keyreleased(key)
-	_down[key] = nil
-	_combo_fired = false
 	if _G[gamestate].keyreleased then
 		_G[gamestate].keyreleased(key)
 	end
@@ -325,81 +311,6 @@ function defaultsettings()
 	setscale(2)
 
 	defaultcontrols()
-end
-
--- Joystick → fake keyboard mapping
-function love.joystickpressed(js, button)
-	if button == 7 then
-		love.keypressed(" ")           -- Start / Select (Space)
-	elseif button == 8 then
-		love.keypressed("escape")      -- Back
-	elseif button == 1 then
-		love.keypressed(" ")           -- A -> Select (Space)
-	elseif button == 2 then
-		love.keypressed("lshift")      -- B -> Fast forward
-	elseif button == 3 then
-		love.keypressed("z")           -- X button (optional)
-	elseif button == 4 then
-		love.keypressed("x")           -- Y button (optional)
-	end
-end
-
-function love.joystickreleased(js, button)
-	if button == 7 then
-		love.keyreleased(" ")
-	elseif button == 8 then
-		love.keyreleased("escape")
-	elseif button == 1 then
-		love.keyreleased(" ")
-	elseif button == 2 then
-		love.keyreleased("lshift")
-	elseif button == 3 then
-		love.keyreleased("z")
-	elseif button == 4 then
-		love.keyreleased("x")
-	end
-end
-
--- D-pad as hat → arrow keys
-function love.joystickhat(js, hat, dir)
-	love.keyreleased("up"); love.keyreleased("down")
-	love.keyreleased("left"); love.keyreleased("right")
-
-	if dir:find("u", 1, true) then love.keypressed("up") end
-	if dir:find("d", 1, true) then love.keypressed("down") end
-	if dir:find("l", 1, true) then love.keypressed("left") end
-	if dir:find("r", 1, true) then love.keypressed("right") end
-end
-
--- Left stick axes (invert both X & Y)
-local axisState = {}  -- per-joystick edge detection
-
-function love.joystickaxis(js, axis, value)
-	local id = js:getID()
-	axisState[id] = axisState[id] or { x="none", y="none" }
-	local dead = 0.5
-
-	if axis == 1 then
-		-- Inverted: negative -> RIGHT, positive -> LEFT
-		local new = (value < -dead) and "right" or (value > dead) and "left" or "none"
-		if new ~= axisState[id].x then
-			if axisState[id].x == "left"  then love.keyreleased("left")  end
-			if axisState[id].x == "right" then love.keyreleased("right") end
-			if new == "left"  then love.keypressed("left")  end
-			if new == "right" then love.keypressed("right") end
-			axisState[id].x = new
-		end
-	elseif axis == 2 then
-		-- Inverted: negative -> DOWN, positive -> UP
-		local new = (value < -dead) and "down" or (value > dead) and "up" or "none"
-		if new ~= axisState[id].y then
-			if axisState[id].y == "up"   then love.keyreleased("up")   end
-			if axisState[id].y == "down" then love.keyreleased("down") end
-			if new == "up"   then love.keypressed("up")   end
-			if new == "down" then love.keypressed("down") end
-			axisState[id].y = new
-		end
-	end
 end
 
 function defaultcontrols()
