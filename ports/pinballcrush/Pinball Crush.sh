@@ -63,7 +63,6 @@ fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
-$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # extract .apk
 if [ -f "assets/PinballCrushV2.apk" ]; then
@@ -80,6 +79,7 @@ else
   echo "file not found: assets/PinballCrushV2.apk"
 fi
 
+$GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 # start westonpack and godot
 # put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
 # ld_preload is put here because godot runtime links against libegl.so, and crusty is interfering with that on some systems.
