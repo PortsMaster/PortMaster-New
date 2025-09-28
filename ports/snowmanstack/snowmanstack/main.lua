@@ -267,21 +267,30 @@ function love_draw()
 	end
 end
 
+local _down = {}
+local _combo_fired = false
+
 function love.keypressed(key)
+	_down[key] = true
 	if _G[gamestate].keypressed then
 		_G[gamestate].keypressed(key)
-	
-	if key == "escape" then
-		love.event.quit()
 	end
-end
+
+	if _down["x"] and _down["escape"] and not _combo_fired then
+		_combo_fired = true
+		love.event.quit()
+	elseif key == "escape" then
+		setgamestate("menu")
+	end
 end
 
 function love.keyreleased(key)
+	_down[key] = false
 	if _G[gamestate].keyreleased then
 		_G[gamestate].keyreleased(key)
 	end
 end
+
 
 function love.mousepressed(x, y, button)
 	local x, y = love.mouse.getX(), love.mouse.getY()
