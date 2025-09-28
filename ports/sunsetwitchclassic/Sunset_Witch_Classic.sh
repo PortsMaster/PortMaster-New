@@ -15,7 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/device_info.txt
 export PORT_32BIT="Y" # game is gameloader, armhf, but 7za used is 64bit for 
-[ -f "${controlfolder}/mod${CFWNAME}.txt" ] && source "${controlfolder}/mod${CFWNAME}.txt"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 $ESUDO chmod 666 /dev/tty0
