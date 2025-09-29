@@ -20,6 +20,7 @@ GAMEDIR=/$directory/ports/slashjump
 godot_runtime="godot_4.2.2"
 godot_executable="godot422.$DEVICE_ARCH"
 pck_filename="SlashJump_patched.pck"
+gptk_filename="slashjump.gptk"
 
 # logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -69,13 +70,6 @@ if [ ! -f "./$pck_filename" ] && [ -f "./SlashJump.pck" ]; then
   if [ $? -ne 0 ]; then
     echo "Patching of SlashJump.pck has failed"
   fi
-fi
-
-# select appropriate .gptk
-if [[ "$CFW_NAME" = "muOS" ]]; then
-  gptk_filename="slashjump_muos.gptk"
-else
-  gptk_filename="slashjump.gptk"
 fi
 
 # check for rocknix ...
