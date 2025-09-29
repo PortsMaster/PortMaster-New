@@ -1,6 +1,6 @@
 ## Notes
 
-Download version 4.0.21 from https://d.apkpure.com/b/APK/com.butakov.psebay?versionCode=4000021, rename to psebay.apk, place in /ports/psebay
+Thanks to Eugeny for developing this game. Purchase and download the game from [Steam](https://store.steampowered.com/app/608660/Psebay/) and copy all game files into the `assets` folder.
 
 ## Controls
 
