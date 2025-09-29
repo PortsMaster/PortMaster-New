@@ -6,13 +6,14 @@ https://brynkilius.itch.io/slashjump
 
 ## Controls
 
-| Button | Action |
-|--|--| 
-|DPad|Menu Navigation|
-|L Analog|Sword Rotation|
-|Select|Pause Menu/Restart Level|
-|R1|Restart Level (MuOS)|
-|A|Large Sword Swing|
-|B|Small Sword Swing|
+| Button  | Action            |
+| ------- | ----------------- |
+| D-PAD   | Menu Navigation   |
+| START/Y | Click menu items  |
+| L-STICK | Sword rotation    |
+| A       | Large Sword Swing |
+| B       | Small Sword Swing |
+| X       | Restart level     |
+| SELECT  | Pause Menu
 
 
