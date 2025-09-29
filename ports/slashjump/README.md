@@ -11,8 +11,9 @@ BUT MORE SO, Thank You 100x over to tabreturn from the discord for all the work 
 | Button | Action |
 |--|--| 
 |DPad|Menu Navigation|
-|Start|Menu Selection|
-|Select|Pause Menu|
+|L Analog|Sword Rotation|
+|Select|Pause Menu/Restart Level|
+|R1|Restart Level (MuOS)|
 |A|Large Sword Swing|
 |B|Small Sword Swing|
 
