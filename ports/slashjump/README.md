@@ -14,6 +14,6 @@ https://brynkilius.itch.io/slashjump
 | A       | Large Sword Swing |
 | B       | Small Sword Swing |
 | X       | Restart level     |
-| SELECT  | Pause Menu
+| SELECT  | Pause Menu        |
 
 
