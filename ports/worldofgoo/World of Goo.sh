@@ -68,6 +68,7 @@ export TEXTINPUTINTERACTIVE="Y"
 WOG_FILE=$(ls *.sh 2> /dev/null | head -n 1)
 
 if [ -f "$WOG_FILE" ]; then
+    pm_message "Extracting Game files, please wait. This could take a while"
     unzip -o "$WOG_FILE"
     # Handle game directory movement based on structure
     if [ -d "data/noarch/game/game" ]; then
