@@ -68,7 +68,7 @@ export TEXTINPUTINTERACTIVE="Y"
 WOG_FILE=$(ls *.sh 2> /dev/null | head -n 1)
 
 if [ -f "$WOG_FILE" ]; then
-    unzip -o "$WOG_FILE" > "$CUR_TTY"
+    unzip -o "$WOG_FILE"
     # Handle game directory movement based on structure
     if [ -d "data/noarch/game/game" ]; then
         $ESUDO mv -f data/noarch/game/game "$GAMEDIR/gamedata/"
