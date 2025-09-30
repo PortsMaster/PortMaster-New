@@ -58,8 +58,8 @@ fi
 pm_message  "=== FIN DEL DIAGNÓSTICO ==="
 
 if [ "${ANALOG_STICKS}" -lt 2 ]; then
-    rm -f youronlymoveishustledemoitchio.gptk
-    cp yomih_one_stick.gptk youronlymoveishustledemoitchio.gptk
+    rm -f yomihd.gptk
+    cp yomih_one_stick.gptk yomihd.gptk
 fi
 
 runtime="frt_3.5.2"
@@ -86,9 +86,9 @@ PATH="$godot_dir:$PATH"
 
 export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS 
 
-$GPTOKEYB "$runtime" -c "./youronlymoveishustledemoitchio.gptk" &
+$GPTOKEYB "$runtime" -c "./yomihd.gptk" &
 pm_platform_helper "$godot_dir/$runtime"
-"$runtime" $GODOT_OPTS --main-pack "gamedata/youronlymoveishustledemoitchio.pck"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/yomihd.pck"
 
 [[ "$PM_CAN_MOUNT" != "N" ]] && $ESUDO umount "$godot_dir"
 pm_finish

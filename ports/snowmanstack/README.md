@@ -7,11 +7,10 @@ Technically speaking, 2-Player Game works if you plug-in a keyboard.
 
 ## Controls
 
-| Button     | Action       |
-| ---------- | ------------ |
-| D-PAD      | Move         |
-| A          | Switch       |
-| B          | Fast-forward |
-| START      | Select       |
-| BACK       | Exit to Menu |
-| BACK+START | Exit to OS   |
+| Button       | Action       |
+| ------------ | ------------ |
+| D-PAD        | Move         |
+| A            | Switch       |
+| B            | Fast-forward |
+| SELECT       | Exit to menu |
+| SELECT+START | Exit to OS   |
