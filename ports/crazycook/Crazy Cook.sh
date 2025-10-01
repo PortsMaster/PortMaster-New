@@ -45,7 +45,7 @@ if [ -f "./Crazy Cook.pck" ]; then
   if [ $? -ne 0 ]; then
     pm_message "Patching of Crazy Cook.pck has failed"
   else
-    mv "./Crazy Cook - patched.pck" "./Crazy Cook.pck"
+    rm "./Crazy Cook.pck"
     pm_message "Patching of Crazy Cook.pck succeeded"
   fi
 fi
