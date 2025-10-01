@@ -23,7 +23,6 @@ local fileMappings = {
     ["Forge v1.7.10"] = "1.7.10-Forge.start",
     ["Vanilla v1.12.2"] = "1.12.2.start",
     ["Forge v1.12.2"] = "1.12.2-Forge.start",
-    ["Fabric v1.16.5"] = "1.16.5-Fabric.start",
 }
 
 -- Function to populate menu items based on file validation
@@ -41,9 +40,6 @@ function populateMenu()
     end
     if love.filesystem.getInfo("forge-1.12.2-key") then
         table.insert(menu, "Forge v1.12.2")
-    end
-    if love.filesystem.getInfo("fabric-1.16.5-key") then
-        table.insert(menu, "Fabric v1.16.5")
     end
 
     table.insert(menu, "Exit")  -- Always add Exit last
