@@ -39,6 +39,17 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
+# only patch if Crazy Cook.pck doesn't exist
+if [ -f "./Crazy Cook.pck" ]; then
+  $controlfolder/xdelta3 -d -s "./Crazy Cook.pck" "./patch.xdelta3" "./Crazy Cook - patched.pck"
+  if [ $? -ne 0 ]; then
+    pm_message "Patching of Crazy Cook.pck has failed"
+  else
+    mv "./Crazy Cook - patched.pck" "./Crazy Cook.pck"
+    pm_message "Patching of Crazy Cook.pck succeeded"
+  fi
+fi
+
 # check for rocknix running libmali driver
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   if ! glxinfo | grep "OpenGL version string"; then
@@ -60,7 +71,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "./crazycook.gptk" &
 pm_platform_helper "$godot_dir/$runtime" 
-"$runtime" $GODOT_OPTS --main-pack "./Crazy Cook.pck"
+"$runtime" $GODOT_OPTS --main-pack "./Crazy Cook - patched.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish
