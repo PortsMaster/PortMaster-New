@@ -116,7 +116,7 @@ source $controlfolder/runtimes/"love_11.5"/love.txt
 $GPTOKEYB "$LOVE_GPTK" &
 pm_platform_helper "$LOVE_BINARY"
 $LOVE_RUN $GAMEDIR
-pm_finish
+pm_gptokeyb_finish
 
 GAMEMOD="$(cat selected_game)"
 rm -rf "selected_game"
