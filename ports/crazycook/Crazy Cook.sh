@@ -39,7 +39,7 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
-# only patch if Crazy Cook.pck doesn't exist
+# only patch if Crazy Cook.pck exists
 if [ -f "./Crazy Cook.pck" ]; then
   $controlfolder/xdelta3 -d -s "./Crazy Cook.pck" "./patch.xdelta3" "./Crazy Cook - patched.pck"
   if [ $? -ne 0 ]; then
