@@ -43,7 +43,7 @@ fi
 
 sed -i "s/SCREENMULT value='[0-9]'/SCREENMULT value='$NEW_MULT'/" "$GAMEDIR/config.xml"
 
-if [ "$CFW_NAME" = "ArkOS" ]; then
+if [[ $CFW_NAME == "ArkOS"* ]]; then
 	sed -E -i "s/FULLSCREEN value='(YES|NO)'/FULLSCREEN value='NO'/" "$GAMEDIR/config.xml"
 else
 	sed -E -i "s/FULLSCREEN value='(YES|NO)'/FULLSCREEN value='YES'/" "$GAMEDIR/config.xml"
