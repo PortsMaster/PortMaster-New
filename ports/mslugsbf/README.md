@@ -20,4 +20,5 @@ Information about the game can be found [here](https://metal-slug-fanon.fandom.c
 ## Thanks
 SuperBlinky -- For the game  
 Jareth247 and moneymaster0 -- Original port idea  
+Jeod - For initial porting
 Testers & Devs from the PortMaster Discord  
