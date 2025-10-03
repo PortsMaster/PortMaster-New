@@ -36,6 +36,15 @@ $ESUDO mount "$monofile" "$monodir"
 # Setup savedir
 bind_directories ~/.local/share/Chasm "$gamedir/savedata"
 
+# unpack the installer if it exists
+chasm_gog_installer=$(ls chasm_*.sh 2>/dev/null | head -n 1)
+if [ -n "$chasm_gog_installer" ]; then
+    unzip "$chasm_gog_installer"
+    cp -r data/noarch/game/* .
+    # clean up only the extracted script and installer files
+    rm -rf "$chasm_gog_installer" data meta scripts
+fi
+
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
 rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
