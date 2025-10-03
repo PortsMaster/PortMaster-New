@@ -29,7 +29,7 @@ mkdir -p "$GAMEDIR/conf"
 if [ "$CFW_NAME" = "TrimUI" ]; then
     export LD_LIBRARY_PATH="$GAMEDIR/libs.compat:$LD_LIBRARY_PATH"
     export BINARY=nsfb.compat
-elif [[ $CFW_NAME == "ArkOS"* ]]; then
+elif [[ $CFW_NAME == *"ArkOS"* ]]; then
     export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 	export BINARY=nsfb.compat
 elif [ "$CFW_NAME" = "ROCKNIX" ]; then
