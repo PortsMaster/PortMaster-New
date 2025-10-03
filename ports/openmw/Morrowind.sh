@@ -31,14 +31,10 @@ export OPENMW_RECAST_MAX_LOG_LEVEL=ERROR
 
 # Fix some shit.
 if echo "$CFW_NAME" | grep -q "ArkOS"; then
-    export CFW_NAME="ArkOS"
-fi
-
-if [[ "$CFW_NAME" == *"AeUX"* ]]; then
-    export CFW_NAME="ArkOS"
-    if [[ "$DEVICE_CPU" == "Cortex-A35" ]]; then
+    if [[ $CFW_NAME == *"AeUX"* ]] && [[ $DEVICE_CPU == "Cortex-A35" ]]; then
         export DEVICE_CPU="RK3326"
     fi
+    export CFW_NAME="ArkOS"
 fi
 
 # Logging
