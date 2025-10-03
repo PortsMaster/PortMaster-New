@@ -18,11 +18,10 @@ source $controlfolder/control.txt
 
 get_controls
 
-# Set directories and premissions
+# Set directories
 GAMEDIR=/$directory/ports/luftrausers
 DATADIR=$GAMEDIR/gamedata
 BINARY="luftrausers"
-$ESUDO chmod a+x "$DATADIR/x86-64/$BINARY"
 
 cd "$GAMEDIR"
 
@@ -42,12 +41,13 @@ if [ ! -f patchlog.txt ]; then
   fi
 fi
 
-# Create XDG dirs
+# Create XDG dirs and set premissions
 CONFDIR="$GAMEDIR/conf/config"
 $ESUDO mkdir -p "${CONFDIR}"
 LOCALDIR="$GAMEDIR/conf/local"
 $ESUDO mkdir -p "${LOCALDIR}"
 bind_directories ~/.LUFTRAUSERS "$CONFDIR"
+$ESUDO chmod a+x "$DATADIR/x86-64/$BINARY"
 
 # Mount Weston runtime
 weston_dir=/tmp/weston
@@ -70,6 +70,11 @@ $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 # rocknix mode on rocknix panfrost/freedreno; libmali not supported
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   export rocknix_mode=1
+  if ! glxinfo | grep "OpenGL version string"; then
+    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
+    sleep 5
+    exit 1
+  fi
 fi
 
 # the default pulseaudio backend doesn't always work well
