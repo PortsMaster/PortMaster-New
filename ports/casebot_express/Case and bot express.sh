@@ -37,7 +37,7 @@ if [ -f "./assets/data.win" ]; then
 		rm "./assets/data.win"
 	else
 		echo "Failed to apply patch"
-		echo "$output"
+		pm_message "$output"
 		exit 1
 	fi
 else
