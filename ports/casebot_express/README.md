@@ -14,7 +14,7 @@ Also thanks to BARATA Software for the packaging for PortMaster
  
 ### About Nerd Monkeys:
 
-Founded in April 2013, [Nerd Monkeys](https://www.linkedin.com/company/nerd-monkeys) is a Portuguese game development and publishing studio passionate about captivating storytelling, unique visuals, and meaningful gameplay.
+Founded in April 2013, [Nerd Monkeys](https://nerdmonkeys.itch.io) is a Portuguese game development and publishing studio passionate about captivating storytelling, unique visuals, and meaningful gameplay.
 
 ## Controls
 
