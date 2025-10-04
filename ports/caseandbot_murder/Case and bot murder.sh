@@ -64,7 +64,7 @@ elif [ -f "./assets/Case&Bot.exe" ]; then
             pm_message "$output"
             rm "./assets/data.win"
         else
-            echo "Failed to apply patch"
+            pm_message "Failed to apply patch"
             echo "$output"
             exit 1
         fi
