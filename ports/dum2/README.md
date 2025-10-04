@@ -11,7 +11,7 @@ This port is playable in gamepad & mouse/keyb mode but is best if played using g
 |left analog|movement |
 |right analog |navigate menu/aim cursor|
 |x button|shoot|
-|y button|roll
+|y button|roll|
 |l1|roll|
 |r1|roll|
 |l2|reload|
