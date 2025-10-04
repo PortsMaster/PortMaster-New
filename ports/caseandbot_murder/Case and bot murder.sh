@@ -32,28 +32,58 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Prepare game files
 if [ -f "./assets/CaseAndBot.exe" ]; then
-	# Rename data.win
-	mv assets/data.win assets/game.droid
+	
+	 if [ -f "./assets/data.win" ]; then
+        output=$("$controlfolder/xdelta3" -d -s "./assets/data.win" -f "./patches/caseandbotmurder_itch.xdelta" "./assets/game.droid" 2>&1)
+        if [ $? -eq 0 ]; then
+            pm_message "Patch applied successfully"
+            pm_message "$output"
+            rm "./assets/data.win"
+        else
+            pm_message "Failed to apply patch"
+            pm_message "$output"
+            exit 1
+        fi
+    else
+        pm_message "No data.win file found to patch!"
+    fi
 	# Delete all redundant files
 	rm -f assets/*.{dll,exe,txt}
 	# Zip all game files into the casebotitch.port
 	zip -r -0 ./casebotitch.port ./assets/
 	rm -Rf ./assets/
+	rm -Rf ./patches
 	# Set gmloader.json to Itch version. 
 	sed -i 's|"apk_path" : "game.port"|"apk_path" : "casebotitch.port"|' "$GMLOADER_JSON"
 
 elif [ -f "./assets/Case&Bot.exe" ]; then
-	# Rename data.win
-	mv assets/data.win assets/game.droid
+  if [ -f "./assets/data.win" ]; then
+        output=$("$controlfolder/xdelta3" -d -s "./assets/data.win" -f "./patches/caseandbotmurder_steam.xdelta" "./assets/game.droid" 2>&1)
+        if [ $? -eq 0 ]; then
+            pm_message "Patch applied successfully"
+            pm_message "$output"
+            rm "./assets/data.win"
+        else
+            pm_message "Failed to apply patch"
+            pm_message "$output"
+            exit 1
+        fi
+    else
+        pm_message "No data.win file found to patch!"
+    fi
+
 	# Delete all redundant files
 	rm -f assets/*.{dll,exe,txt}
 	# Zip all game files into the casebotsteam.port
 	zip -r -0 ./casebotsteam.port ./assets/
 	rm -Rf ./assets/
+	rm -Rf ./patches
 	# Set gmloader.json to Steam version. 
 	sed -i 's|"apk_path" : "game.port"|"apk_path" : "casebotsteam.port"|' "$GMLOADER_JSON"
-fi
 
+else
+    pm_message "No executable found to determine version!"
+fi
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
