@@ -32,7 +32,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 if [ -f "./assets/data.win" ]; then
 	output=$("$controlfolder/xdelta3" -d -s "./assets/data.win" -f "./patch/caseandbot_express.xdelta" "./assets/game.droid" 2>&1)
 	if [ $? -eq 0 ]; then
-		echo "Patch applied successfully"
+		pm_message "Patch applied successfully"
 		echo "$output"
 		rm "./assets/data.win"
 	else
