@@ -82,7 +82,7 @@ elif [ -f "./assets/Case&Bot.exe" ]; then
 	sed -i 's|"apk_path" : "game.port"|"apk_path" : "casebotsteam.port"|' "$GMLOADER_JSON"
 
 else
-    echo "No executable found to determine version!"
+    pm_message "No executable found to determine version!"
 fi
 # Assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
