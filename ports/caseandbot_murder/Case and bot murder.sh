@@ -69,7 +69,7 @@ elif [ -f "./assets/Case&Bot.exe" ]; then
             exit 1
         fi
     else
-        echo "No data.win file found to patch!"
+        pm_message "No data.win file found to patch!"
     fi
 
 	# Delete all redundant files
