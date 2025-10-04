@@ -4,17 +4,17 @@ Thanks to [Nerd Monkeys](https://nerdmonkeys.itch.io/detective-case-and-clown-bo
 
 Also thanks to BARATA Software for the packaging for PortMaster
 
-## Game Details
+### Game Details:
 
-- Genre: Comedy / Detective / Point-and-Click Adventure
-- Languages: Portuguese & English
-- Platforms: PC and Consoles
-- Developer: Nerd Monkeys
-- Inspired by classic adventure games, this title combines witty dialogue, intriguing puzzles, and a distinctive visual style to deliver a unique storytelling experience.
+* Genre: Comedy / Detective / Point-and-Click Adventure
+* Languages: Portuguese & English
+* Platforms: PC and Consoles
+* Developer: Nerd Monkeys
+* Inspired by classic adventure games, this title combines witty dialogue, intriguing puzzles, and a distinctive visual style to deliver a unique storytelling experience.
+ 
+### About Nerd Monkeys:
 
-## About Nerd Monkeys:
-
-Founded in April 2013, Nerd Monkeys is a Portuguese game development and publishing studio passionate about captivating storytelling, unique visuals, and meaningful gameplay.
+Founded in April 2013, [Nerd Monkeys](https://www.linkedin.com/company/nerd-monkeys) is a Portuguese game development and publishing studio passionate about captivating storytelling, unique visuals, and meaningful gameplay.
 
 ## Controls
 
