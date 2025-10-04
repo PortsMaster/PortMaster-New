@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Nerd Monkeys for creating this game.
+Thanks to [Nerd Monkeys](http://nerdmonkeys.pt) for creating this game.
 
 Also thanks to BARATA Software for the packaging for PortMaster
 
