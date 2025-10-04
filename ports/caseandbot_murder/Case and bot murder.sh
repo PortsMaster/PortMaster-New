@@ -37,7 +37,7 @@ if [ -f "./assets/CaseAndBot.exe" ]; then
         output=$("$controlfolder/xdelta3" -d -s "./assets/data.win" -f "./patches/caseandbotmurder_itch.xdelta" "./assets/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully"
-            echo "$output"
+            pm_message "$output"
             rm "./assets/data.win"
         else
             echo "Failed to apply patch"
