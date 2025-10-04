@@ -61,7 +61,7 @@ elif [ -f "./assets/Case&Bot.exe" ]; then
         output=$("$controlfolder/xdelta3" -d -s "./assets/data.win" -f "./patches/caseandbotmurder_steam.xdelta" "./assets/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             pm_message "Patch applied successfully"
-            echo "$output"
+            pm_message "$output"
             rm "./assets/data.win"
         else
             echo "Failed to apply patch"
