@@ -16,37 +16,34 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-# Variables
+# variables
 GAMEDIR="/$directory/ports/watchduckslegacy"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-# CD and set permissions
+# cd and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x $GAMEDIR/7z.aarch64
 
-# Exports
+# exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-# Extract file
+# extract and game files
 if [ -f "./assets/Watch Ducks Legacy.exe" ]; then
-  # Extract its contents in place using 7z
-  pm_message "Extracting Watch Ducks Legacy.exe ..."
-  ./7z x "./assets/Watch Ducks Legacy.exe" -o"./assets/" -y
-  rm -r "./assets/Watch Ducks Legacy.exe"
+  mv "./assets/Watch Ducks Legacy.exe" "./assets/Watch Ducks Legacy.7z"
+  pm_message "Extracting Watch Ducks Legacy ..."
+  ./7z.aarch64 x "./assets/Watch Ducks Legacy.7z" -o"./assets/" -y
+  rm -r "./assets/Watch Ducks Legacy.7z"
+  mv ./assets/data.win ./assets/game.droid
   pm_message "Extraction complete"
 fi
 
-# Prepare game files
-if [ -f ./assets/data.win ]; then
-  mv ./assets/data.win ./assets/game.droid
-fi
-
-# Assign configs and load the game
+# assign configs and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "watchduckslegacy.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-# Cleanup
+# cleanup
 pm_finish
