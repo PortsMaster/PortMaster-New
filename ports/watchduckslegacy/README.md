@@ -14,8 +14,8 @@ The latest entry in the long-running WATCH DUCKS series, WATCH DUCKS LEGACY keep
 
 ## Controls
 
-| Button | Action   |
-| ------ | -------- |
-| D-PAD  | Movement |
-| START  | Begin    |
-| SELECT | Exit     |
+| Button  | Action    |
+| ------- | --------- |
+| UP/DOWN | Sit/stand |
+| START   | Begin     |
+| SELECT  | Exit      |
