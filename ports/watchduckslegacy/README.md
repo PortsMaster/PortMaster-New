@@ -16,6 +16,6 @@ The latest entry in the long-running WATCH DUCKS series, WATCH DUCKS LEGACY keep
 
 | Button  | Action    |
 | ------- | --------- |
-| UP/DOWN | Stand/sit |
+| DOWN/UP | Sit/stand |
 | START   | Begin     |
 | SELECT  | Exit      |
