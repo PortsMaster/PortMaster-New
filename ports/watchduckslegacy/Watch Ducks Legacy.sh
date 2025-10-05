@@ -35,7 +35,8 @@ if [ -f "./assets/Watch Ducks Legacy.exe" ]; then
   mv "./assets/Watch Ducks Legacy.exe" "./assets/Watch Ducks Legacy.7z"
   pm_message "Extracting Watch Ducks Legacy ..."
   ./7z.aarch64 x "./assets/Watch Ducks Legacy.7z" -o"./assets/" -y
-  rm -r "./assets/Watch Ducks Legacy.7z"
+  rm "./assets/Watch Ducks Legacy.7z"
+  rm ./assets/*.{exe,dll}
   mv ./assets/data.win ./assets/game.droid
   pm_message "Extraction complete"
 fi
