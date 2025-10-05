@@ -34,6 +34,7 @@ if [ -f "./assets/Watch Ducks Legacy.exe" ]; then
   # Extract its contents in place using 7z
   pm_message "Extracting Watch Ducks Legacy.exe ..."
   ./7z x "./assets/Watch Ducks Legacy.exe" -o"./assets/" -y
+  rm -r ./assets
   pm_message "Extraction complete"
 fi
 
