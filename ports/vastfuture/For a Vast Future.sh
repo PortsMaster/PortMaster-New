@@ -60,7 +60,7 @@ check_patch() {
 }
 
 # Check if we need to start the external patcher as it is not needed on devices with enough RAM
-if [[ "$DEVICE_RAM" -gt 2 ]] && [ -f "$GAMEDIR/assets/data.win" ]; then 
+if [[ "$DEVICE_RAM" -ge 2 ]] && [ -f "$GAMEDIR/assets/data.win" ]; then 
 	# Rename data.win file
 	mv assets/data.win assets/game.droid
 	# Delete all redundant files
