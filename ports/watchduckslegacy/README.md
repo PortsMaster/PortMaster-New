@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks [John D. Moore](http://whatnot.bombdotcom.net/) for creating this little game, and for granting PortMaster permission to distribute the game files.
+Thanks [John D. Moore](http://whatnot.bombdotcom.net) for creating this little game, and for granting PortMaster permission to distribute the game files.
 
 The latest entry in the long-running WATCH DUCKS series, WATCH DUCKS LEGACY keeps your points and allows you to keep them on for eternity. New bonuses and secrets abound!
 
@@ -16,6 +16,6 @@ The latest entry in the long-running WATCH DUCKS series, WATCH DUCKS LEGACY keep
 
 | Button  | Action    |
 | ------- | --------- |
-| DOWN/UP | Sit/stand |
+| UP/DOWN | Stand/sit |
 | A/B     | Begin     |
 | X/Y     | Exit      |
