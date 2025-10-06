@@ -37,8 +37,15 @@ if [ -f "./assets/Watch Ducks Legacy.exe" ]; then
   ./7z.aarch64 x "./assets/Watch Ducks Legacy.7z" -o"./assets/" -y
   rm "./assets/Watch Ducks Legacy.7z"
   rm ./assets/*.{exe,dll}
-  mv ./assets/data.win ./assets/game.droid
   pm_message "Extraction complete"
+fi
+
+# patch file
+if [ -f "./assets/data.win" ]; then
+  pm_message "Patching game ..."
+  $controlfolder/xdelta3 -d -s "./assets/data.win" "./assets/patch.xdelta3" "./assets/game.droid"
+  [ $? -eq 0 ] && rm "./assets/data.win" || echo "Patching has failed"
+  pm_message "Patching complete"
 fi
 
 # assign configs and load the game
