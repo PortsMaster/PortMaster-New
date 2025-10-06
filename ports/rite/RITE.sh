@@ -39,14 +39,12 @@ if [ -f ./assets/data.win ]; then
         checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
     if [ "$checksum" = "b74c9aac95bd6e0a202651550e1c200c" ]; then # itch.io version
         $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/patch-itch.xdelta assets/game.droid && \
-        rm gamedata/data.win
-        rm -f assets/*.{exe,dll}
+        rm -f assets/*.{exe,dll,win}
         zip -r -0 ./game.port ./assets/
         rm -Rf ./assets/
     elif [ "$checksum" = "e49fe35d97a2b2655b672883b4ecd8a1" ]; then # steam version
         $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/patch-steam.xdelta assets/game.droid && \
-        rm gamedata/data.win
-        rm -f assets/*.{exe,dll}
+        rm -f assets/*.{exe,dll,win}
         zip -r -0 ./game.port ./assets/
         rm -Rf ./assets/
     else
