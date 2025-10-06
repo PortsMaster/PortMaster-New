@@ -43,8 +43,8 @@ if [ -f ./assets/data.win ] || [ -f ./assets/game.unx ]; then
         mv ./assets/game.unx ./assets/game.droid
     fi
     
-	# Create the savedir
-	mkdir -p saves
+    # Create the savedir
+    mkdir -p saves
 	
     # Delete all redundant files
     rm -f ./assets/*.{exe,dll}
