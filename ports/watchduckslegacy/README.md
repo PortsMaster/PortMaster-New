@@ -17,5 +17,5 @@ The latest entry in the long-running WATCH DUCKS series, WATCH DUCKS LEGACY keep
 | Button  | Action    |
 | ------- | --------- |
 | DOWN/UP | Sit/stand |
-| START   | Begin     |
-| SELECT  | Exit      |
+| A/B     | Begin     |
+| X/Y     | Exit      |
