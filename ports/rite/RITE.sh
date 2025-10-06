@@ -13,69 +13,58 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
-export PORT_32BIT="Y" 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/rite"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# check if we have new enough version of PortMaster that contains xdelta3
-if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
-  sleep 5
-  exit 1
-fi
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
-# Patch game
-cd "$GAMEDIR"
-# If "gamedata/data.win" exists and its MD5 checksum matches the specified value, apply the xdelta3 patch
-if [ -f "./gamedata/data.win" ]; then
-    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+    # Apply a patch
+        checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
     if [ "$checksum" = "b74c9aac95bd6e0a202651550e1c200c" ]; then # itch.io version
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/patch-itch.xdelta gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/patch-itch.xdelta assets/game.droid && \
         rm gamedata/data.win
+        rm -f assets/*.{exe,dll}
+        zip -r -0 ./game.port ./assets/
+        rm -Rf ./assets/
     elif [ "$checksum" = "e49fe35d97a2b2655b672883b4ecd8a1" ]; then # steam version
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./patch/patch-steam.xdelta gamedata/game.droid && \
+        $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/patch-steam.xdelta assets/game.droid && \
         rm gamedata/data.win
+        rm -f assets/*.{exe,dll}
+        zip -r -0 ./game.port ./assets/
+        rm -Rf ./assets/
     else
         echo "Error: MD5 checksum of data.win does not match one of the expected checksums."    
     fi
 else
-    echo "Error: Missing files in gamedata folder OR game has been patched"
+    echo "Error: Missing files in assets folder OR game has been patched"
 fi
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Swap buttons
+"$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
+export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
+export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
-$GPTOKEYB "gmloader" &
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "rite.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader rite.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish
