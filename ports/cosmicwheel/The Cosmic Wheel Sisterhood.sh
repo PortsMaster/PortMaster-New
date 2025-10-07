@@ -35,14 +35,6 @@ check_patch() {
 		if [ -f "$controlfolder/utils/patcher.txt" ]; then
 			set -o pipefail
 			
-			# Setup mono environment variables
-			DOTNETDIR="$HOME/mono"
-			DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
-			$ESUDO mkdir -p "$DOTNETDIR"
-			$ESUDO umount "$DOTNETFILE" || true
-			$ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
-			export PATH="$DOTNETDIR":"$PATH"
-			
 			# Setup and execute the Portmaster Patcher utility with our patch file
 			export ESUDO
 			export DEVICE_RAM
