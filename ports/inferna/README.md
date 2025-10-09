@@ -1,6 +1,6 @@
 ## Notes
 
-Special thanks to Milkbar Lads for making this wonderful game!
+Special thanks to Milkbar Lads for making this wonderful game and allowing PortMaster to distribute the game!
 
 Source: https://milkbar-lads.itch.io/inferna
 
@@ -10,5 +10,5 @@ Source: https://milkbar-lads.itch.io/inferna
 |--|--| 
 |D-pad / L-stick|Movement|
 |A / L1 / R1|Dash|
-
+|Start + Select|Exit Game|
 

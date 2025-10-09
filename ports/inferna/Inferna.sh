@@ -31,26 +31,9 @@ $ESUDO chmod +x "$GAMEDIR/tools/splash"
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export ESUDO
-export controlfolder 
-
-# Check if we need to patch the game
-if [ ! -f install_completed ]; then
-    if [ -f "$controlfolder/utils/patcher.txt" ]; then
-        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-        export PATCHER_GAME="Inferna"
-        export PATCHER_TIME="a few minutes"
-        source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb)
-    else
-        pm_message "This port requires the latest version of PortMaster."
-    fi
-fi
 
 # Display loading splash
-if [ -f install_completed ]; then
-    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
-fi
+$ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "inferna.gptk" &
