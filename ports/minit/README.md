@@ -9,6 +9,6 @@ Another big thanks to all who tested this port!
 
 |Button| Action |
 |--|--|
-| dpad/l-stick = movement |
-| a| use/ok |
-| b| kill self/retry |
+| Dpad / L-stick | movement |
+| A | use/ok |
+| B | kill self/retry |
