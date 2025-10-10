@@ -29,11 +29,9 @@ export PATH="$TOOLDIR:$PATH"
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
-if [ -f ./assets/data.win ]; then
-	[ -f "./assets/data.win" ] && mv assets/data.win assets/game.droid
+[ -f "./assets/data.win" ] && mv assets/data.win assets/game.droid
 	zip -r -0 ./eve.port ./assets/
 	rm -Rf ./assets/
-fi
 
 swapabxy() {
   if [ "$CFW_NAME" == "knulli" ] && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ]; then
