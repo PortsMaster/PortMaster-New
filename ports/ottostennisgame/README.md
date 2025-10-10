@@ -2,7 +2,7 @@
 
 Thanks to [Otto Ojala](https://ottoojala.com) for creating this great game, and for permitting PortMaster to include the game files.
 
-If enjoy Otto's games and would like to support him in making more games, you can visit his [Ko-Fi](https://ko-fi.com/ottoojala) page.
+If you enjoy Otto's games and would like to support him in making more games, you can visit his [Ko-Fi](https://ko-fi.com/ottoojala) page.
 
 
 ## Controls
@@ -14,3 +14,4 @@ If enjoy Otto's games and would like to support him in making more games, you ca
 | D-PAD   | Navigate menus       |
 | A/START | Activate menu item   |
 | SELECT  | Pause / in-game menu |
+
