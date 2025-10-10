@@ -27,11 +27,9 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
-if [ -f ./assets/data.win ]; then
-	[ -f "./assets/data.win" ] && mv assets/data.win assets/game.droid
+[ -f "./assets/data.win" ] && mv assets/data.win assets/game.droid
 	zip -r -0 ./skull.port ./assets/
 	rm -Rf ./assets/
-fi
 
 $GPTOKEYB "gmloadernext.aarch64" -c "./game.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"

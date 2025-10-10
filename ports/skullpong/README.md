@@ -1,6 +1,6 @@
 ## Notes
 
-Great BIG THANKS to [D.EROS](https://d-eros.itch.io/skull-pong) for creating this cool Halloween themed Pong clone! Thank you to all who tested and offered controls/gptk input. Another special thanks to the PortMaster community! You're the best!🎩
+Great BIG THANKS to [D.EROS](https://d-eros.itch.io) for creating this cool Halloween-themed Pong clone! Thank you to all who tested and offered controls/gptk input. Another special thanks to the PortMaster community! You're the best!🎩
 
  This can be played in 2 player mode, using the right analog stick or a usb keyboard. 
 
