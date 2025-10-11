@@ -2,7 +2,6 @@
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-# Below we assign the source of the control folder (which is the PortMaster folder) based on the distro:
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -13,66 +12,50 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-# We source the control.txt file contents here
-# The $ESUDO, $directory, $param_device and necessary 
-# Sdl configuration controller configurations will be sourced from the control.txt
-
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-# We pull the controller configs from the get_controls function from the control.txt file here
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
+# Variables
+GAMEDIR="/$directory/ports/minit"
 
-# We check on emuelec based CFWs the OS_NAME 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
-
-GAMEDIR=/$directory/ports/minit
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-# Port specific additional libraries should be included within the port's directory in a separate subfolder named libs.
-# Prioritize the armhf libs to avoid conflicts with aarch64
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
+# CD and set logging
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Setup permissions
+$ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +xr "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 
-# Check if there are .ogg files in ./gamedata
-if [ -n "$(ls ./gamedata/mus* 2>/dev/null)" ]; then
-    # Move all bgm files from ./gamedata to ./assets
-    mv ./gamedata/mus* ./assets/
-    echo "Moved bgm files from ./gamedata to ./assets/"
 
-    # Zip the contents of ./minit.apk including the new .ogg files
-    zip -r ./minit.apk ./minit.apk ./assets/
-    echo "Zipped contents to ./minit.apk"
+# Exports
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Check if we need to patch the game
+if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")"
+        export PATCHER_TIME="1 minit"
+        export controlfolder
+        export ESUDO
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        pm_message "This port requires the latest version of PortMaster."
+    fi
 fi
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Display loading splash
+if [ -f "$GAMEDIR/patchlog.txt" ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-$GPTOKEYB "gmloader" textinput &
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -k &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader minit.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish
