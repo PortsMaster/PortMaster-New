@@ -6,7 +6,7 @@ Another big thanks to all who tested this port!
 ## Controls
 <picture>
   <source srcset="applerabbledazzle/controls.png" type="image/png">
-  <img>
+  <img src="applerabbledazzle/controls.png" alt="Controls image">
 </picture>
 
 | Button | Action |
