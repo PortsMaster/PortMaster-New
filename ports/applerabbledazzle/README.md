@@ -4,7 +4,7 @@ Huge thanks to [BolHut](https://bolhut.itch.io/) for creating this awesome [gem 
 Another big thanks to all who tested this port!
 
 ## Controls
-<img src="https://raw.githubusercontent.com/PortMaster/PortMaster-New/main/ports/applerabbledazzle/applerabbledazzle/controls.png" type="image/png" style="max-width: 65%">
+<img src="https://raw.githubusercontent.com/PortMaster/PortMaster-New/main/ports/applerabbledazzle/applerabbledazzle/controls.png" type="image/png" style="max-width: 65%" alt="Controls image">
 
 | Button | Action |
 |--|--| 
