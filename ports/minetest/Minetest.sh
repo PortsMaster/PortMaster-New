@@ -36,6 +36,11 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 [ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
+
+if [[ $CFW_NAME == *"ArkOS"* || $CFW_NAME == *"AeUX"* ]]; then
+    export LD_LIBRARY_PATH="$GAMEDIR/libs.ArkOS:$LD_LIBRARY_PATH"
+fi
+
 CUR_TTY=/dev/tty0
 
 # Define the archive file name
