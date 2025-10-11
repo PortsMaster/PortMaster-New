@@ -26,6 +26,7 @@ cd $GAMEDIR
 # Setup permissions
 $ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
 $ESUDO chmod +xr "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
