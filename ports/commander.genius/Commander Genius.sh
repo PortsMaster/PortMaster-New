@@ -20,8 +20,8 @@ get_controls
 
 GAMEDIRNAME=cgenius
 GAMEDIR="/$directory/ports/$GAMEDIRNAME"
-CONFDIRNAME=".CommanderGenius"
 CONFDIR="$GAMEDIR/conf/"
+CONFDIRNAME=CommanderGenius
 BINARY=CGeniusExe
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -31,13 +31,13 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export XDG_DATA_HOME="$CONFDIR"
 export TEXTINPUTINTERACTIVE="Y" 
 
-mkdir -p "$GAMEDIR/conf/$CONFDIRNAME"
-bind_directories ~/$CONFDIRNAME "$CONFDIR$CONFDIRNAME"
+mkdir -p "$CONFDIR.$CONFDIRNAME"
+bind_directories ~/.$CONFDIRNAME "$CONFDIR.$CONFDIRNAME"
 
 cd $GAMEDIR
 
-$GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
-pm_platform_helper "$GAMEDIR/$BINARY"
-./$BINARY -t "$CONFDIR$CONFDIRNAME" -j
+$GPTOKEYB $BINARY -c "./$BINARY.gptk.$ANALOG_STICKS" &
+pm_platform_helper "$GAMEDIR/$BINARY.${DEVICE_ARCH}"
+./$BINARY."${DEVICE_ARCH}" -t "$CONFDIR.$CONFDIRNAME" -j
 
 pm_finish

@@ -1,0 +1,188 @@
+diff --git a/OpenRA.Game/Game.cs b/OpenRA.Game/Game.cs
+index ee9d56ce30..b1eb7b97d2 100644
+--- a/OpenRA.Game/Game.cs
++++ b/OpenRA.Game/Game.cs
+@@ -341,6 +341,9 @@ public static RunStatus InitializeAndRun(string[] args)
+ 
+ 		static void Initialize(Arguments args)
+ 		{
++			var compatibilityMode = args.GetValue("Game.CompatibilityMode", null);
++			Platform.SetCompatibilityMode(compatibilityMode);
++
+ 			var engineDirArg = args.GetValue("Engine.EngineDir", null);
+ 			if (!string.IsNullOrEmpty(engineDirArg))
+ 				Platform.OverrideEngineDir(engineDirArg);
+diff --git a/OpenRA.Game/Map/MapCache.cs b/OpenRA.Game/Map/MapCache.cs
+index 05905642ed..cca96d2692 100644
+--- a/OpenRA.Game/Map/MapCache.cs
++++ b/OpenRA.Game/Map/MapCache.cs
+@@ -119,7 +119,12 @@ public void LoadMaps()
+ 				}
+ 
+ 				mapLocations.Add(package, classification);
+-				mapDirectoryTrackers.Add(new MapDirectoryTracker(package, classification));
++				if (!Platform.CompatibilityMode.StartsWith("muOS", StringComparison.Ordinal) &&
++				    !Platform.CompatibilityMode.StartsWith("knulli", StringComparison.Ordinal))
++				{
++					// crashes in muOS and knulli
++					mapDirectoryTrackers.Add(new MapDirectoryTracker(package, classification));
++				}
+ 			}
+ 
+ 			// PERF: Load the mod YAML once outside the loop, and reuse it when resolving each maps custom YAML.
+diff --git a/OpenRA.Game/Platform.cs b/OpenRA.Game/Platform.cs
+index cfaf474522..300854840d 100644
+--- a/OpenRA.Game/Platform.cs
++++ b/OpenRA.Game/Platform.cs
+@@ -30,6 +30,7 @@ public static class Platform
+ 
+ 		static bool engineDirAccessed;
+ 		static string engineDir;
++		static string compatibilityMode;
+ 
+ 		static bool supportDirInitialized;
+ 		static string systemSupportPath;
+@@ -243,6 +244,14 @@ public static string EngineDir
+ 			}
+ 		}
+ 
++		public static string CompatibilityMode
++		{
++			get
++			{
++				return compatibilityMode;
++			}
++		}
++
+ 		/// <summary>
+ 		/// Specify a custom engine directory that already exists on the filesystem.
+ 		/// Cannot be called after Platform.EngineDir has been accessed.
+@@ -306,5 +315,11 @@ public static string ResolvePath(string path)
+ 
+ 			return path;
+ 		}
++
++		public static void SetCompatibilityMode(string mode)
++		{
++			Console.WriteLine($"Setting compatibility mode to {mode}");
++			compatibilityMode = mode;
++		}
+ 	}
+ }
+diff --git a/OpenRA.Mods.Common/Widgets/Logic/GameSaveBrowserLogic.cs b/OpenRA.Mods.Common/Widgets/Logic/GameSaveBrowserLogic.cs
+index b886e3fee6..6b483780cf 100644
+--- a/OpenRA.Mods.Common/Widgets/Logic/GameSaveBrowserLogic.cs
++++ b/OpenRA.Mods.Common/Widgets/Logic/GameSaveBrowserLogic.cs
+@@ -104,7 +104,8 @@ public GameSaveBrowserLogic(Widget widget, ModData modData, Action onExit, Actio
+ 			{
+ 				panel.Get("SAVE_TITLE").IsVisible = () => true;
+ 
+-				defaultSaveFilename = world.Map.Title;
++				// remove special characters in filename otherwise it may cause a crash
++				defaultSaveFilename = new string(world.Map.Title.Where(x=>char.IsWhiteSpace(x) || char.IsLetterOrDigit(x)).ToArray());
+ 				var filenameAttempt = 0;
+ 				while (File.Exists(Path.Combine(baseSavePath, defaultSaveFilename + ".orasav")))
+ 					defaultSaveFilename = world.Map.Title + $" ({++filenameAttempt})";
+diff --git a/OpenRA.Platforms.Default/OpenGL.cs b/OpenRA.Platforms.Default/OpenGL.cs
+index d431c2934a..89e3a746cf 100644
+--- a/OpenRA.Platforms.Default/OpenGL.cs
++++ b/OpenRA.Platforms.Default/OpenGL.cs
+@@ -763,7 +763,9 @@ static void DebugMessageHandler(int source, int type, uint id, int severity, int
+ 				case GL_DEBUG_SEVERITY_HIGH:
+ 					error = BuildErrorText(source, type, severity, message);
+ 					WriteGraphicsLog(error);
+-					throw new InvalidOperationException("OpenGL Error: See graphics.log for details.");
++					// disabling throw, some issue with glCopyTexImage2D but it still works if we ignore it
++					// throw new InvalidOperationException("OpenGL Error: See graphics.log for details.");
++					break;
+ 
+ 				case GL_DEBUG_SEVERITY_MEDIUM:
+ 					error = BuildErrorText(source, type, severity, message);
+diff --git a/OpenRA.Platforms.Default/Sdl2HardwareCursor.cs b/OpenRA.Platforms.Default/Sdl2HardwareCursor.cs
+index 921d62f5a9..f8545b51e6 100644
+--- a/OpenRA.Platforms.Default/Sdl2HardwareCursor.cs
++++ b/OpenRA.Platforms.Default/Sdl2HardwareCursor.cs
+@@ -26,16 +26,25 @@ public Sdl2HardwareCursor(Size size, byte[] data, int2 hotspot)
+ 		{
+ 			try
+ 			{
+-				surface = SDL.SDL_CreateRGBSurface(0, size.Width, size.Height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+-				if (surface == IntPtr.Zero)
+-					throw new InvalidDataException($"Failed to create surface: {SDL.SDL_GetError()}");
++				if (Platform.CompatibilityMode.StartsWith("ArkOS", StringComparison.Ordinal) ||
++				    Platform.CompatibilityMode.StartsWith("knulli", StringComparison.Ordinal))
++				{
++					// ArkOS with touchscreen and knulli is only able to render cursor this way
++					Cursor = SDL.SDL_CreateSystemCursor(0);
++				}
++				else
++				{
++					surface = SDL.SDL_CreateRGBSurface(0, size.Width, size.Height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
++					if (surface == IntPtr.Zero)
++						throw new InvalidDataException($"Failed to create surface: {SDL.SDL_GetError()}");
+ 
+-				var sur = Marshal.PtrToStructure<SDL.SDL_Surface>(surface);
+-				Marshal.Copy(data, 0, sur.pixels, data.Length);
++					var sur = Marshal.PtrToStructure<SDL.SDL_Surface>(surface);
++					Marshal.Copy(data, 0, sur.pixels, data.Length);
+ 
+-				// This call very occasionally fails on Windows, but often works when retried.
+-				for (var retries = 0; retries < 3 && Cursor == IntPtr.Zero; retries++)
+-					Cursor = SDL.SDL_CreateColorCursor(surface, hotspot.X, hotspot.Y);
++					// This call very occasionally fails on Windows, but often works when retried.
++					for (var retries = 0; retries < 3 && Cursor == IntPtr.Zero; retries++)
++						Cursor = SDL.SDL_CreateColorCursor(surface, hotspot.X, hotspot.Y);
++				}
+ 			}
+ 			catch
+ 			{
+diff --git a/OpenRA.Platforms.Default/Sdl2PlatformWindow.cs b/OpenRA.Platforms.Default/Sdl2PlatformWindow.cs
+index c775a53b2e..d4b5ce3059 100644
+--- a/OpenRA.Platforms.Default/Sdl2PlatformWindow.cs
++++ b/OpenRA.Platforms.Default/Sdl2PlatformWindow.cs
+@@ -522,6 +522,12 @@ static void SetSDLAttributes(GLProfile profile)
+ 			SDL.SDL_GL_SetAttribute(SDL.SDL_GLattr.SDL_GL_BLUE_SIZE, 8);
+ 			SDL.SDL_GL_SetAttribute(SDL.SDL_GLattr.SDL_GL_ALPHA_SIZE, 0);
+ 
++			if (Platform.CompatibilityMode.StartsWith("ArkOS", StringComparison.Ordinal))
++			{
++				Console.WriteLine($"Skip setting profile mask");
++				return;
++			}
++
+ 			var useAngle = profile == GLProfile.ANGLE ? "1" : "0";
+ 			SDL.SDL_SetHint("SDL_OPENGL_ES_DRIVER", useAngle);
+ 
+@@ -543,6 +549,16 @@ static void SetSDLAttributes(GLProfile profile)
+ 
+ 		static bool CanCreateGLWindow(GLProfile profile, List<string> errorLog)
+ 		{
++			if (Platform.CompatibilityMode.StartsWith("ArkOS", StringComparison.Ordinal) ||
++			    Platform.CompatibilityMode.StartsWith("AmberELEC", StringComparison.Ordinal))
++			{
++				if (profile == GLProfile.Embedded)
++				{
++					return true;
++				}
++				return false;
++			}
++
+ 			// Implementation inspired by TestIndividualGLVersion from Veldrid
+ 
+ 			// Need to create and destroy its own SDL contexts as a workaround for specific buggy drivers
+@@ -556,7 +572,7 @@ static bool CanCreateGLWindow(GLProfile profile, List<string> errorLog)
+ 			SetSDLAttributes(profile);
+ 
+ 			const SDL.SDL_WindowFlags Flags = SDL.SDL_WindowFlags.SDL_WINDOW_HIDDEN | SDL.SDL_WindowFlags.SDL_WINDOW_OPENGL;
+-			var window = SDL.SDL_CreateWindow("", 0, 0, 1, 1, Flags);
++			var window = SDL.SDL_CreateWindow("test", SDL.SDL_WINDOWPOS_CENTERED_DISPLAY(0), SDL.SDL_WINDOWPOS_CENTERED_DISPLAY(0), 640, 480, Flags);
+ 			if (window == IntPtr.Zero || !string.IsNullOrEmpty(SDL.SDL_GetError()))
+ 			{
+ 				errorLog.Add($"{profile}: SDL window creation failed: {SDL.SDL_GetError()}");
+diff --git a/VERSION b/VERSION
+index 5c0d013319..a71bb65df3 100644
+--- a/VERSION
++++ b/VERSION
+@@ -1,1 +1,1 @@
+-{DEV_VERSION}
++PortMaster

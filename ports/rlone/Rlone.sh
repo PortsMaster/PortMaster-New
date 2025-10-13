@@ -13,14 +13,13 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/rlone/
-CONFDIR="$GAMEDIR/conf/"
+GAMEDIR="/$directory/ports/rlone"
+CONFDIR="$GAMEDIR/conf"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
@@ -31,9 +30,10 @@ mkdir -p "$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+$ESUDO chmod +x "$GAMEDIR/rlone.${DEVICE_ARCH}"
 
 CUR_TTY=/dev/tty0
 
@@ -47,17 +47,16 @@ elif [ $DISPLAY_WIDTH == '640' ] || [ $DISPLAY_WIDTH == '720' ]; then
       sed -i 's/font_scale[[:space:]]*=[[:space:]]*[^[:space:]]*/font_scale = 1.8/' "$GAMEDIR/res/cfg/autorun.ini"
 elif [ $DISPLAY_WIDTH == '960' ] || [ $DISPLAY_WIDTH == '1280' ]; then
       sed -i 's/font_scale[[:space:]]*=[[:space:]]*[^[:space:]]*/font_scale = 2.2/' "$GAMEDIR/res/cfg/autorun.ini"
+elif [ $DISPLAY_WIDTH == '1400' ] || [ $DISPLAY_WIDTH == '1680' ]; then
+      sed -i 's/font_scale[[:space:]]*=[[:space:]]*[^[:space:]]*/font_scale = 2.4/' "$GAMEDIR/res/cfg/autorun.ini"
 elif [[ $DISPLAY_WIDTH == '1920' ]]; then
       sed -i 's/font_scale[[:space:]]*=[[:space:]]*[^[:space:]]*/font_scale = 2.5/' "$GAMEDIR/res/cfg/autorun.ini"
 else
       sed -i 's/font_scale[[:space:]]*=[[:space:]]*[^[:space:]]*/font_scale = 2.0/' "$GAMEDIR/res/cfg/autorun.ini"
 fi
 
-$GPTOKEYB "rlone" -c "./rlone.gptk" &
-./rlone
+$GPTOKEYB "rlone.${DEVICE_ARCH}" -c "./rlone.gptk" &
+pm_platform_helper "$GAMEDIR/rlone.${DEVICE_ARCH}"
+./rlone.${DEVICE_ARCH}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
-
+pm_finish

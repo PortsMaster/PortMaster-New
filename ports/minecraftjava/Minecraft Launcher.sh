@@ -71,8 +71,15 @@ mv $controlfolder/libs/weston_pkg_0.2.aarch64.squashfs $controlfolder/libs/westo
 
 ls $controlfolder/libs > "$GAMEDIR/minecraft-launcher/runtimes.txt" 2>&1
 
+if [[ -s server.txt ]]; then
+    export SERVER="--server $(< server.txt)"
+fi
 
 tree $GAMEDIR/versions
+
+if [ "$CFW_NAME" = "ROCKNIX" ]; then
+	swaymsg seat seat0 hide_cursor 0
+fi
 
 # Run launcher
 source $controlfolder/runtimes/love_11.5/love.txt

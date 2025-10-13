@@ -63,7 +63,7 @@ elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
     [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 fi
 
-if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]]; then
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32triggers.gptk"  
 else
     GPTOKEYB_CONFIG="$GAMEDIR/eduke32.gptk"

@@ -19,42 +19,43 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/tvruhh"
 
-# CD and set permissions
+# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
 
-# Check for .ogg files and move to APK
-	if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    mkdir -p ./assets
-    mv ./gamedata/*.ogg ./assets/
-    echo "Moved .ogg files to ./assets/"
-
-    zip -r -0 ./game.apk ./assets/
-    echo "Zipped contents to ./game.apk"
-
-    rm -rf ./assets
-    echo "Deleted assets directory"
-else
-    echo "No .ogg files found"
+# Check if we need to patch the game
+if [ ! -f install_completed ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="The Void Rains Upon Her Heart"
+        export PATCHER_TIME="5 to 10 minutes"
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        pm_message "This port requires the latest version of PortMaster."
+    fi
 fi
 
 # Display loading splash
-if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-    $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 5000
+if [ -f install_completed ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 fi
 
-# Run the game
-$GPTOKEYB "gmloadernext" &
-pm_platform_helper "$GAMEDIR/gmloadernext"
-./gmloadernext
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "tvruhh.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-# Kill processes
+# Cleanup
 pm_finish

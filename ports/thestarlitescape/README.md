@@ -10,15 +10,9 @@ Source: https://xjackfox.itch.io/the-starlit-escape
 
 | Button | Action |
 |--|--| 
-|D-pad/L-stick|Movement |
-|A/Y |Jump|
+|D-pad/L-stick|Movement|
+|A/Y|Jump|
 |B/X|Shoot|
-|L1/R1|Map|
+|L1/R1|Switch Ghost|
+|L2/R2|Map|
 |Start/Select |Menu|
-
-
-## Compile
-
-```shell
-Download game (windows ver) from https://xjackfox.itch.io/the-starlit-escape,  copy all files except the .exe to /ports/thestarlitescape/gamedata
-```
