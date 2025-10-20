@@ -21,7 +21,6 @@ get_controls
 GAMEDIR=/$directory/ports/hexa
 CONFDIR="$GAMEDIR/conf/"
 
-mkdir -p "$GAMEDIR/conf"
 cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
