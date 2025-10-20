@@ -31,7 +31,6 @@ export XDG_DATA_HOME="$CONFDIR"
 #  If XDG Path does not work
 # Use bind_directories to reroute that to a location within the ports folder.
 bind_directories ~/hexa $GAMEDIR/conf/love/hexa
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
