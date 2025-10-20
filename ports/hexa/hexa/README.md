@@ -1,4 +1,4 @@
-\# HEXA
+## HEXA
 
 This is a port of HEXA to linux handhelds.
 Rae's first ever game for personal computers — an enhanced port of the [Playdate original](https://play.date/games/hexa)!
