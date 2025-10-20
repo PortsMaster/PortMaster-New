@@ -14,7 +14,7 @@ A full list of credits and dependencies can be found here-> https://rae.wtf/blog
 
 ## How To Install  
 
-Buy HEXA on itch -> https://raewtf.itch.io/hexa
+Buy HEXA on itch -> https://raewtf.itch.io/hexa  
 Download the Universal zip file, unzip it and place 'HEXA.love' in ports/hexa
 
 Enjoy!
