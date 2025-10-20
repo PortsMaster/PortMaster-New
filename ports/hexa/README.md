@@ -1,8 +1,8 @@
 ## HEXA
 
-This is a port of HEXA to linux handhelds.
-Rae's first ever game for personal computers — an enhanced port of the Playdate original!
-A full list of credits and dependencies can be found here-> https://rae.wtf/blog/hexa-manual#credits
+This is a port of HEXA to linux handhelds.  
+Rae's first ever game for personal computers — an enhanced port of the Playdate original!  
+A full list of credits and dependencies can be found here-> https://rae.wtf/blog/hexa-manual#credits  
 
 ## Controls
 
