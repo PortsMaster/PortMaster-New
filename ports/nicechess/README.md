@@ -7,8 +7,6 @@ Thanks to [BencsikRoland](https://github.com/BencsikRoland/nicechess) and the or
 
 NOTE: While the difficulty level can be changed, it's recommended to stick with levels less than 6 because while lvl 6 can take the CPU up to two minutes to make a move, anything higher will either have you waiting for a very long time or the game thinks so hard that it freezes.
 
-NOTE #2: On some RK3566 devices, the dark squares seem to want to pick a random color every time at launch.  Perhaps this can be fixed at some point.
-
 ## Controls
 
 </br>
