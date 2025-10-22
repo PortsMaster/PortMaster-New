@@ -4,7 +4,7 @@ Special thanks to [Mewsturbo](https://space.bilibili.com/32978058) for making th
 
 Source: https://store.steampowered.com/app/2598080/Drift_Survivor/
 
-Thanks to JohnnyOnFlame for GMLoader-Next and TextureRepacker via UTMT, Cyril "kotzebuedog" Delétré for GMTools Audio Compressor, JanTrueno for the Patching Interface and Jeod for the 2023.11 wrapper.
+Thanks to JohnnyOnFlame for GMLoader-Next and TextureRepacker via UTMT, Cyril "kotzebuedog" Delétré for GMTools Audio Compressor, JanTrueno for the Patching Interface and Jeod for replace_code() function for patching!
 
 ## Controls
 
@@ -15,5 +15,6 @@ Thanks to JohnnyOnFlame for GMLoader-Next and TextureRepacker via UTMT, Cyril "k
 |X|Dash|
 |L1 / L2|Brake / Reverse|
 |R1 / R2|Accelerate|
+|Start|Pause / Menu|
 
 
