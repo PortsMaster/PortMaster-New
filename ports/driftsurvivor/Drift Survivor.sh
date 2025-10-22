@@ -36,7 +36,7 @@ if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="Drift Survivor"
-        export PATCHER_TIME="10 to 15 minutes"
+        export PATCHER_TIME="3 to 5 minutes"
         export controlfolder
         export ESUDO
         export DEVICE_ARCH
