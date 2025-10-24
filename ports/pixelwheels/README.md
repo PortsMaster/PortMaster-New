@@ -1,13 +1,5 @@
 ## Notes
 
-This port requires the 1.3 Steam release of the game. You can purchase it at https://store.steampowered.com/app/239070/Hammerwatch/.
-
-The port is compatible with all supported OS' and devices, except for Rocknix in libmali mode (switch to Panfrost), and TrimUI devices on Knulli. Compatibility will increase, so stay tuned.
-
-*Warning: This port takes 30-40 seconds to load on entry level devices. Switch your CPU governor to `performance` for the best experience.*
-
----
-
 Special thanks to **Aurélien Gâteau** for creating this awesome game, making it open source and allowing us to publish it as "Ready to Run".
 
 Check it out on various platforms:
