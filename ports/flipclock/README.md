@@ -6,6 +6,16 @@ A flip clock screensaver supported by SDL2.
 
 [Project Website](https://flipclock.alynx.one)
 
+Press Esc or q to exit.
+Press s to toggle second.
+Press f to toggle fullscreen.
+Press t to toggle 12/24-hour clock format.
+## Configuration Controls
+| Button | Action |
+|--|--|
+|Select|Exit|
+|B|Toggle Second|
+|A|Toggle 12/24-hour format|
 
 ## Build From Source
 
