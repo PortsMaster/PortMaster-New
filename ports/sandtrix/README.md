@@ -21,16 +21,18 @@ This port uses the new Westonpack runtime and libcrusty to provide X11 compatibi
 
 ---
 
-## Controls
-
 # Controls:
 
-### In menu:
-DPad / Left Stick - Move mouse cursor
-Any button - Click
+### In menus:
+|Button|Action|
+|---|---|
+|DPad / Left Stick|Move mouse cursor|
+|Any button|Click|
 
 ### In game:
-DPad / Left Stick - Move Tetromino
-Any button - Spin piece
-Start / Home - Pause
+|Button|Action|
+|---|---|
+|DPad / Left Stick|Move Tetromino|
+|Any button|Spin piece|
+|Start / Home|Pause|
 
