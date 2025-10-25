@@ -29,7 +29,7 @@ cd $GAMEDIR
 
 $ESUDO chmod +x $GAMEDIR/flipclock.${DEVICE_ARCH}
 
-$GPTOKEYB flipclock.${DEVICE_ARCH} &
+$GPTOKEYB flipclock.${DEVICE_ARCH} -c flipclock.gptk &
 pm_platform_helper "flipclock.${DEVICE_ARCH}"
 ./flipclock.${DEVICE_ARCH} -f ./dists/flipclock.ttf
 
