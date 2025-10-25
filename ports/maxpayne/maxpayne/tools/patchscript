@@ -7,6 +7,63 @@ exec > >(tee -a "$LOGFILE") 2>&1
 
 set -e
 
+# MSF files gamedata/MaxPayneSoundsFrenchv2.msf    gamedata/MaxPayneSoundsGermanv2.msf    gamedata/MaxPayneSoundsItalianv2.msf   gamedata/MaxPayneSoundsJapanesev3.msf  gamedata/MaxPayneSoundsRussianv2.msf   gamedata/MaxPayneSoundsSpanishv2.msf   gamedata/MaxPayneSoundsv2.msf
+# RAS files gamedata/x_data.ras gamedata/x_english.ras gamedata/x_french.ras gamedata/x_german.ras gamedata/x_italian.ras gamedata/x_japanese.ras  gamedata/x_level1.ras    gamedata/x_level2.ras    gamedata/x_level3.ras    gamedata/x_russian.ras   gamedata/x_spanish.ras
+
+# Script args include a list of languages to install, e.g. "English French German"
+LANGUAGES=("$@")
+
+# Always add "English" even if its not specified
+if [[ ! " ${LANGUAGES[@]} " =~ " English " ]]; then
+    LANGUAGES+=("English")
+fi
+
+echo "Selected languages for installation: ${LANGUAGES[*]}"
+
+LANGUAGE_FILES=(
+    "MaxPayneSoundsFrenchv2.msf"
+    "MaxPayneSoundsGermanv2.msf"
+    "MaxPayneSoundsItalianv2.msf"
+    "MaxPayneSoundsJapanesev3.msf"
+    "MaxPayneSoundsRussianv2.msf"
+    "MaxPayneSoundsSpanishv2.msf"
+    "MaxPayneSoundsv2.msf"
+    "x_french.ras"
+    "x_german.ras"
+    "x_italian.ras"
+    "x_japanese.ras"
+    "x_russian.ras"
+    "x_spanish.ras"
+)
+
+# Create list of files to exclude based on selected languages
+EXCLUDE_FILES=()
+for file in "${LANGUAGE_FILES[@]}"; do
+    exclude=true
+    for lang in "${LANGUAGES[@]}"; do
+        case $lang in
+            "French"|"french")
+                [[ "${file,,}" == *"french"* ]] && exclude=false ;;
+            "German"|"german")
+                [[ "${file,,}" == *"german"* ]] && exclude=false ;;
+            "Italian"|"italian")
+                [[ "${file,,}" == *"italian"* ]] && exclude=false ;;
+            "Japanese"|"japanese")
+                [[ "${file,,}" == *"japanese"* ]] && exclude=false ;;
+            "Russian"|"russian")
+                [[ "${file,,}" == *"russian"* ]] && exclude=false ;;
+            "Spanish"|"spanish")
+                [[ "${file,,}" == *"spanish"* ]] && exclude=false ;;
+            "English"|"english")
+                [[ "${file,,}" == *"maxpaynesoundsv2.msf"* || "${file,,}" == *"x_english.ras"* ]] && exclude=false ;;
+        esac
+    done
+    if [ "$exclude" = true ]; then
+        EXCLUDE_FILES+=("$file")
+    fi
+done
+
+
 unpack_apk() {
     mkdir -p "$GAMEDIR/.apktemp" &&
     unzip -o "$GAMEDIR/*.apk" -d "$GAMEDIR/.apktemp"
@@ -22,7 +79,7 @@ unpack_apk() {
 
 unpack_obb() {
     mkdir -p "$GAMEDIR/gamedata"
-    unzip -o "$GAMEDIR/*.obb" -d "$GAMEDIR/.obbtemp"
+    unzip -o "$GAMEDIR/*.obb" -d "$GAMEDIR/.obbtemp" -x "${EXCLUDE_FILES[@]}"
     rsync -a "$GAMEDIR/.obbtemp/" "$GAMEDIR/gamedata/" && rm "$GAMEDIR/"*.obb && rm -rf "$GAMEDIR/.obbtemp"
 }
 
@@ -35,3 +92,6 @@ obb_count=$(ls -1 "$GAMEDIR/"*.obb 2>/dev/null | wc -l)
 if [ "$obb_count" -gt 0 ]; then
     unpack_obb
 fi
+
+rsync -a "$GAMEDIR/patch/" "$GAMEDIR/gamedata/"
+echo "$current_version" > "$GAMEDIR/LAST_PATCH_VERSION.txt"
