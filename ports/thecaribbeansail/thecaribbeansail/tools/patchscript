@@ -1,0 +1,62 @@
+#!/bin/bash
+
+#
+#   The Carabbean Sail patch script
+#   Author: kotzebuedog
+#   Version: 1.0
+#
+
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+
+source $controlfolder/control.txt
+
+# Set GAMEDIR to the current directory and set logfile
+export GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Export lib and binary path
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$GAMEDIR/tools/libs.${DEVICE_ARCH}"
+export PATH="$PATH:$GAMEDIR/tools:$controlfolder"
+
+# -------------------- BEGIN FUNCTIONS --------------------
+
+patch_file()
+{
+    echo "Patching data.win"
+
+    [[ -f "$GAMEDIR/gamedata/data.win" ]] \
+    && xdelta3 -vv -d -s "$GAMEDIR/gamedata/data.win" "$GAMEDIR/tools/patch.xdelta3" "$GAMEDIR/gamedata/game.droid" \
+    && rm "$GAMEDIR/gamedata/data.win" \
+    && rm -f $GAMEDIR/gamedata/*.{dll,exe,win}
+}
+
+compress_audio()
+{
+    echo "Compressing audio"
+
+    gmKtool.py -vv -m 0 -b 64 "$GAMEDIR/gamedata/game.droid" -d tmp \
+    && mv "$GAMEDIR/tmp/game.droid" "$GAMEDIR/gamedata/game.droid" \
+    && rm -rf tmp
+}
+
+# --------------------- END FUNCTIONS ---------------------
+
+patch_file && compress_audio
+
+[[ ! $? -eq 0 ]] && echo "Patching process failed!" && exit 1
+
+echo "Patching process done!"
