@@ -64,11 +64,21 @@ $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
 
-# only patch if sadgod_patched.pck doesn't exist
+# only patch if _patched.pck doesn't exist
 if [ ! -f "./$pck_filename" ] && [ -f "./sadgod.exe" ]; then
-  $controlfolder/xdelta3 -d -s "./sadgod.exe" "./patch.xdelta3" "./$pck_filename"
+  # extract exe contents in place using 7zzs
+  ./7zzs.aarch64 x "./sadgod.exe" -y
+  # apply patch
+  "$controlfolder/xdelta3" -d -s "pck" "./patch.xdelta3" "./$pck_filename"
   if [ $? -ne 0 ]; then
-    echo "Patching of sadgod.exe has failed"
+    pm_message "Patching of sadgod.exe has failed"
+  else
+    pm_message "Patch succeeded -- cleaning up ..."
+    rm -rf .rsrc
+    rm -f .??*
+    rm -f *.exe
+    rm -f pck
+    rm -f "[0]"
   fi
 fi
 
