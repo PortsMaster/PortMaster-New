@@ -18,22 +18,46 @@ get_controls
 
 # variables
 GAMEDIR="/$directory/ports/overbowed"
-GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
 # cd and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-# rename data.win and delete unnecessary files
-[ -f "./assets/data.win" ] && mv ./assets/data.win ./assets/game.droid
-[ -f "./assets/Overbowed.exe" ] && rm ./assets/Overbowed.exe
+# prepare game files
+if [ -f "./assets/data.win" ]; then
+  # determine version
+  checksum=$(md5sum "assets/data.win" | awk '{print $1}')
+  if [ "$checksum" = "fd40bc9db283169b69f53f65b61c617c" ]; then
+    touch ver_itch
+  else
+    touch ver_steam
+  fi
+  # prepare files
+  mv "./assets/data.win" "./assets/game.droid"
+  rm -f ./assets/*.exe ./assets/*.dll
+  # pick output name based on marker file
+  if [ -f "ver_itch" ]; then
+    out="./overbowed_itch.port"
+  elif [ -f "ver_steam" ]; then
+    out="./overbowed_steam.port"
+  fi
+  # archive port
+  pm_message "Zipping .port file ..."
+  zip -r -0 "$out" "./assets/"
+  rm -rf "./assets/"
+fi
 
 # exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # assign configs and load the game
+if [ -f "ver_itch" ]; then
+  GMLOADER_JSON="$GAMEDIR/gmloader_itch.json"
+elif [ -f "ver_steam" ]; then
+  GMLOADER_JSON="$GAMEDIR/gmloader_steam.json"
+fi
 $GPTOKEYB "gmloadernext.aarch64" & #-c "overbowed.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
