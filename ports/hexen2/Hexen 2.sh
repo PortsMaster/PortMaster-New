@@ -26,18 +26,16 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [ "$LIBGL_FB" != "" ]; then
-  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.aarch64/libGL.so.1"
-  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
-fi 
+if [ "$LIBGL_FB" != "" ] && [ "${CFW_NAME^^}" != "KNULLI" ]; then
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
+fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 bind_directories ~/.hexen2 $GAMEDIR/conf/.hexen2
 $ESUDO cp -f "$GAMEDIR/conf/.hexen2/data1/config.cfg" "$GAMEDIR/data1/autoexec.cfg"
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod +x "$GAMEDIR/glhexen2.${DEVICE_ARCH}"
@@ -54,6 +52,7 @@ ADDLPARAMS="-conwidth 340 -lm_2 +viewsize 120 +gl_glows 1 +gl_extra_dynamic_ligh
 #RUNMOD="+map hexn1"
 
 $GPTOKEYB "glhexen2.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+pm_platform_helper "$GAMEDIR/glhexen2.${DEVICE_ARCH}"
 ./glhexen2.${DEVICE_ARCH} -width $DISPLAY_WIDTH -height $DISPLAY_HEIGHT $ADDLPARAMS -basedir ./ $RUNMOD
 
 pm_finish

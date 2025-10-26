@@ -13,69 +13,78 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/thysword"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
-
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Permissions
-$ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
-$ESUDO chmod +x $GAMEDIR/gmloader
-
-# check if we have new enough version of PortMaster that contains xdelta3
+# Check if we have new enough version of PortMaster that contains xdelta3
 if [ ! -f "$controlfolder/xdelta3" ]; then
   pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
   sleep 5
   exit 1
 fi
 
-# Change Drive and Patch Game
-cd "$GAMEDIR"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# If "gamedata/data.win" exists and matches the checksum of the itch or steam versions
-if [ -f "./gamedata/data.win" ]; then
-    checksum=$(md5sum "./gamedata/data.win" | awk '{print $1}')
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+
+# Prepare game files and patch game
+# If "./assets/data.win" exists and matches the checksum of the itch or steam versions
+if [ -f "./assets/data.win" ]; then
+    checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
     
     # Checksum for the Steam version
     if [ "$checksum" = "aefda0536e3f55e0deac7d8e150ceb27" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./tools/thyswordsteam.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
-	rm -f "gamedata/place data.win here"
-	pm_message "Steam version of the game has been patched"
+        $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/thyswordsteam.xdelta assets/game.droid && \
+        rm ./assets/data.win
+	    rm -f "./assets/place data.win here"
+	    pm_message "Steam version of the game has been patched"
     # Checksum for the Itch version
     elif [ "$checksum" = "05e81de7e15b109379f91886230f8d05" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/data.win -f ./tools/thysworditch.xdelta gamedata/game.droid && \
-        rm gamedata/data.win
-        rm -f "gamedata/place data.win here"
-	pm_message "Itch.io version of the game has been patched"
+        $ESUDO $controlfolder/xdelta3 -d -s assets/data.win -f ./tools/thysworditch.xdelta assets/game.droid && \
+        rm ./assets/data.win
+        rm -f "./assets/place data.win here"
+	    pm_message "Itch.io version of the game has been patched"
     else
         pm_message "Error: MD5 checksum of data.win does not match any expected version."
         exit 1
     fi
 fi
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+# Zip assets into game.port
+if [ -f ./assets/game.droid ]; then
+	# Zip all game files into the game.port
+	zip -r -0 ./game.port ./assets/
+	rm -rf ./assets/
+fi
 
 # Swap buttons
 "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
 export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
 export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
-$GPTOKEYB "gmloader" &
+# Display loading splash
+if [ ! -d ./assets ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "thysword.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
+# Cleanup
 pm_finish

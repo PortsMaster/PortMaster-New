@@ -13,25 +13,18 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/manicminer
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "manicminer.${DEVICE_ARCH}" -c "./manicminer.gptk" &
 
 SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" ./manicminer.${DEVICE_ARCH}
 
-
-$ESUDO kill -9 $(pidof gptokeyb)
-if [ $DEVICE_ARCH != "x86_64" ]; then
-  $ESUDO systemctl restart oga_events &
-  printf "\033c" > /dev/tty0
-fi
+pm_finish

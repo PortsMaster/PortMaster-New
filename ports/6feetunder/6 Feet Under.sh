@@ -26,6 +26,7 @@ cd $GAMEDIR
 # Setup permissions
 $ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
 $ESUDO chmod +xr "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -43,7 +44,7 @@ if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster."
+        pm_message "This port requires the latest version of PortMaster."
     fi
 fi
 

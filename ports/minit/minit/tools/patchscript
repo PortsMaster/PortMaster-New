@@ -1,0 +1,96 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
+
+# Redirect output and error to the log file
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Patch failure function
+patch_failure() {
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
+}
+
+# Exports
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="game.port"
+
+# Permissions
+chmod 666 /dev/uinput
+
+cd "$GAMEDIR"
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for zip and unzip
+ZIP=$(command -v zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+UNZIP=$(command -v unzip)
+if [ -z "$UNZIP" ]; then
+    echo "Missing unzip!"
+    echo "Auto update will not work! If you are trying to update an old install, reinstall the port and proceed as normal."
+    # no patch fail here, as a new install does not need it
+fi
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+
+    if [ -f "$GAMEDIR/minit.apk" ]; then
+        $UNZIP -o "$GAMEDIR/minit.apk" "assets/*" -d "$GAMEDIR"
+    fi
+
+    if [ -d "$GAMEDIR/gamedata" ]; then
+        # Move saves
+        mv -f "$GAMEDIR"/gamedata/*/ "$SAVEDIR"/
+
+        # Move gamefiles 
+        mv -f "$GAMEDIR"/gamedata/* "$DATADIR"/
+    fi
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
+
+    # Move splash file if it exists
+    if [ -f "$DATADIR/splash.png" ]; then
+        mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
+    fi
+}
+
+zip_archive() {
+    $ZIP -r -0 "$DATAFILE" ./assets/
+    echo "Zipped contents to $DATAFILE"
+    rm -rf "$DATADIR/"*
+}
+
+process_game() {
+    echo "Preparing game..."
+    prepare_files || { patch_failure; return 1; }
+
+    sleep 1
+    echo "Finishing up..."
+    zip_archive || { patch_failure; return 1; }
+}
+
+# Call the function
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
