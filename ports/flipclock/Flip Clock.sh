@@ -23,6 +23,8 @@ GAMEDIR="/$directory/ports/flipclock"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+CONFDIR="$GAMEDIR/conf/"
+export XDG_CONFIG_HOME="$CONFDIR"
 
 cd $GAMEDIR
 
