@@ -49,8 +49,13 @@ if [ ! -f install_completed ]; then
 fi
 
 # select gmloader for steam if required
-if [ -f steam_ver ]; then
+if [ -f "$GAMEDIR/ver_itch" ]; then
+  GMLOADER_JSON="$GAMEDIR/gmloader_itch.json"
+elif [ -f "$GAMEDIR/ver_steam" ]; then
   GMLOADER_JSON="$GAMEDIR/gmloader_steam.json"
+else
+  echo "No version marker found in $GAMEDIR (expected ver_itch or ver_steam)" >&2
+  exit 1
 fi
 
 # assign gptokeyb and load the game
