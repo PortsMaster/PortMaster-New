@@ -26,6 +26,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # prepare game files
 if [ -f "./assets/data.win" ]; then
+  pm_message "Preparing game files ..."
   # determine version
   checksum=$(md5sum "assets/data.win" | awk '{print $1}')
   if [ "$checksum" = "fd40bc9db283169b69f53f65b61c617c" ]; then
