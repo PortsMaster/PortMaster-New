@@ -64,11 +64,16 @@ $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
 
-# Setup permissions
+# setup permissions
 $ESUDO chmod +x "$GAMEDIR/tools/7zzs.aarch64"
+
+# extract split archive
+pm_message "Extracting game ..."
+[ -f "./X-YZE_WIN.7z.001" ] && ./7zzs.aarch64 x "./X-YZE_WIN.7z.001" -y
 
 # only patch if _patched.pck doesn't exist
 if [ ! -f "./$pck_filename" ] && [ -f "./X-YZE_WIN.exe" ]; then
+  pm_message "Patching game ..."
   # extract exe contents in place using 7zzs
   ./7zzs.aarch64 x "./X-YZE_WIN.exe" -y
   # apply patch
@@ -79,8 +84,8 @@ if [ ! -f "./$pck_filename" ] && [ -f "./X-YZE_WIN.exe" ]; then
     pm_message "Patch succeeded -- cleaning up ..."
     rm -rf .rsrc
     rm -f .??*
-    rm -f *.exe
     rm -f pck
+    rm -f X-YZE_WIN.*
     rm -f "[0]"
   fi
 fi
