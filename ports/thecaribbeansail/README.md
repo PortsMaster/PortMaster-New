@@ -2,7 +2,7 @@
 
 Thanks to [Victorian Clambake](https://victorian-clambake.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://victorian-clambake.itch.io/the-caribbean-sail)
 
-It's probably easiest to skip renaming the crew, but if you must, see the text entry details below undrer **Controls** (below).
+It's probably easiest to skip renaming the crew, but if you must, see the text entry details below under **Controls** (below).
 
 Working with version: `The Caribbean Sail - V1.7.1.6.zip`, *Jan 01, 2024*
 
