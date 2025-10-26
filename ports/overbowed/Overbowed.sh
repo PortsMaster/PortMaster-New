@@ -42,8 +42,8 @@ if [ -f "./assets/data.win" ]; then
   elif [ -f "ver_steam" ]; then
     out="./overbowed_steam.port"
   fi
-  # archive port
-  pm_message "Zipping .port file ..."
+  # archive .port
+  pm_message "Finalizing .port file ..."
   zip -r -0 "$out" "./assets/"
   rm -rf "./assets/"
 fi
