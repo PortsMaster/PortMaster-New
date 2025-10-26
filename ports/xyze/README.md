@@ -2,9 +2,9 @@
 
 Thanks [Chris](https://chrislsound.itch.io) for creating this little gem, which you can purchase at [itch.io](https://chrislsound.itch.io/x-yze)
 
-NOTE: that this is for v1.02 (Oct 09, 2025). Please let us know on the PortMaster Discord if there has been an update.
+**The game is free, but you can get some goodies (bonus and SFX packs) if you pay certain amounts -- checkout the game page to support this creator!**
 
-The game is free, but you can get some goodies (bonus and SFX packs) if you pay certain amounts -- checkout the game page to support this creator!
+ROCKNIX users must use the Panfrost (not libMali) graphics driver.
 
 
 ## Controls
