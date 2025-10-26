@@ -48,6 +48,11 @@ if [ ! -f install_completed ]; then
   fi
 fi
 
+# select gmloader for steam if required
+if [ ! -f steam_ver ]; then
+  GMLOADER_JSON="$GAMEDIR/gmloader_steam.json"
+fi
+
 # assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "thecaribbeansail.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
