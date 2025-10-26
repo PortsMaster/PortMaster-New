@@ -66,6 +66,7 @@ cd $GAMEDIR
 
 # only patch if _patched.pck doesn't exist
 if [ ! -f "./$pck_filename" ] && [ -f "./sadgod.exe" ]; then
+  pm_message "Preparing game files for patching ..."
   # extract exe contents in place using 7zzs
   ./7zzs.aarch64 x "./sadgod.exe" -y
   # apply patch
