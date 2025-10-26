@@ -1,6 +1,6 @@
 # Notes
 
-Thanks to [Victorian Clambake](https://victorian-clambake.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://victorian-clambake.itch.io/the-caribbean-sail)
+Thanks to [Victorian Clambake](https://victorian-clambake.itch.io) for creating this fantastic game, which you can purchase at [itch.io](https://victorian-clambake.itch.io/the-caribbean-sail). The Steam version works, too.
 
 It's probably easiest to skip renaming the crew, but if you must, see the text entry details below under **Controls** (below).
 
