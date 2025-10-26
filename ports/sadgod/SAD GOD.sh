@@ -62,6 +62,9 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
+# setup permissions
+$ESUDO chmod +x "$GAMEDIR/7zzs.aarch64"
+
 cd $GAMEDIR
 
 # only patch if _patched.pck doesn't exist
