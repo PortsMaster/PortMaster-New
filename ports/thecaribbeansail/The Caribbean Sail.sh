@@ -49,7 +49,7 @@ if [ ! -f install_completed ]; then
 fi
 
 # select gmloader for steam if required
-if [ ! -f steam_ver ]; then
+if [ -f steam_ver ]; then
   GMLOADER_JSON="$GAMEDIR/gmloader_steam.json"
 fi
 
