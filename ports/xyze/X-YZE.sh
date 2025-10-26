@@ -65,7 +65,7 @@ $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 cd $GAMEDIR
 
 # setup permissions
-$ESUDO chmod +x "$GAMEDIR/tools/7zzs.aarch64"
+$ESUDO chmod +x "$GAMEDIR/7zzs.aarch64"
 
 # extract split archive
 pm_message "Extracting game ..."
