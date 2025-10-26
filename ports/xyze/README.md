@@ -4,6 +4,8 @@ Thanks [Chris](https://chrislsound.itch.io) for creating this little gem, which 
 
 NOTE: that this is for v1.02 (Oct 09, 2025). Please let us know on the PortMaster Discord if there has been an update.
 
+The game is free, but you can get some goodies if you pay certain amounts -- checkout the game page to support this creator!
+
 
 ## Controls
 
