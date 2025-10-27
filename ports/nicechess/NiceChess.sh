@@ -31,6 +31,9 @@ if [ "$LIBGL_FB" != "" ] && [ "${CFW_NAME^^}" != "KNULLI" ]; then
   export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
 fi
 
+[ "$DEVICE_CPU" == "RK3326" ] && export LIBGL_ES=1
+[ "${DEVICE_CPU^^}" == "H700" ] && [ "${CFW_NAME^^}" == "MUOS" ] && export LIBGL_ES=1
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
