@@ -40,7 +40,7 @@ if [ ! -f install_completed ]; then
   if [ -f "$controlfolder/utils/patcher.txt" ]; then
     export PATCHER_FILE="$GAMEDIR/tools/patchscript"
     export PATCHER_GAME="The Caribbean Sail"
-    export PATCHER_TIME="2 to 5 minutes"
+    export PATCHER_TIME="around 5 minutes"
     source "$controlfolder/utils/patcher.txt"
     $ESUDO kill -9 $(pidof gptokeyb)
   else
