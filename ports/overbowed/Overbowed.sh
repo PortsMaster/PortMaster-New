@@ -37,15 +37,15 @@ if [ -f "./assets/data.win" ]; then
   # prepare files
   mv "./assets/data.win" "./assets/game.droid"
   rm -f ./assets/*.exe ./assets/*.dll
-  # pick output name based on marker file
+  # pick wrapper based on marker file
   if [ -f "ver_itch" ]; then
-    out="./overbowed_itch.port"
+    wrapper="./overbowed_itch.port"
   elif [ -f "ver_steam" ]; then
-    out="./overbowed_steam.port"
+    wrapper="./overbowed_steam.port"
   fi
   # archive .port
   pm_message "Finalizing .port file ..."
-  zip -r -0 "$out" "./assets/"
+  zip -r -0 "$wrapper" "./assets/"
   rm -rf "./assets/"
 fi
 
