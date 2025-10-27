@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks [Klardonics](https://klardonics.itch.io) for creating this little game, which you can find on [itch.io](https://klardonics.itch.io/overbowed) and [Steam](https://store.steampowered.com/app/1776840/Overbowed).
+Thanks [Klardonics](https://klardonics.itch.io) for creating this little gem, which you can find on [itch.io](https://klardonics.itch.io/overbowed) and [Steam](https://store.steampowered.com/app/1776840/Overbowed)
 
 
 ## Controls
