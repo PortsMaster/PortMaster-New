@@ -77,7 +77,7 @@ if [ ! -f "./$pck_filename" ] && [ -f "./sadgod.exe" ]; then
   if [ $? -ne 0 ]; then
     pm_message "Patching of sadgod.exe has failed"
   else
-    pm_message "Patch succeeded -- cleaning up ..."
+    pm_message "Patch succeeded. Cleaning up ..."
     rm -rf .rsrc
     rm -f .??*
     rm -f *.exe
