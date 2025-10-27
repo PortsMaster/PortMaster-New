@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# PortMaster preamble
+# portmaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -67,7 +67,7 @@ cd $GAMEDIR
 # setup permissions
 $ESUDO chmod +x "$GAMEDIR/7zzs.aarch64"
 
-# extract split archive
+# extract the 7z split archive
 pm_message "Extracting game ..."
 [ -f "./X-YZE_WIN.7z.001" ] && ./7zzs.aarch64 x "./X-YZE_WIN.7z.001" -y
 
@@ -81,7 +81,7 @@ if [ ! -f "./$pck_filename" ] && [ -f "./X-YZE_WIN.exe" ]; then
   if [ $? -ne 0 ]; then
     pm_message "Patching of X-YZE_WIN.exe has failed"
   else
-    pm_message "Patch succeeded -- cleaning up ..."
+    pm_message "Patch succeeded. Cleaning up ..."
     rm -rf .rsrc
     rm -f .??*
     rm -f pck
