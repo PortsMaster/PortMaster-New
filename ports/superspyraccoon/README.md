@@ -11,4 +11,3 @@ Thanks to [Slain Mascot](https://store.steampowered.com/curator/45074192-Slain-M
 | A/B           | Jump/select |
 | START/R1      | Enter       |
 | SELECT/L1     | Pause       |
-
