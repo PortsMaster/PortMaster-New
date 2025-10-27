@@ -39,6 +39,7 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 if [ ! -f install_completed ]; then
   # move jpg file(s)
   mv assets/*.jpg ./
+  # run patcher
   if [ -f "$controlfolder/utils/patcher.txt" ]; then
     export PATCHER_FILE="$GAMEDIR/tools/patchscript"
     export PATCHER_GAME="The Caribbean Sail"
@@ -50,7 +51,7 @@ if [ ! -f install_completed ]; then
   fi
 fi
 
-# select gmloader for steam if required
+# select gmloader for itch/steam as required
 if [ -f "$GAMEDIR/ver_itch" ]; then
   GMLOADER_JSON="$GAMEDIR/gmloader_itch.json"
 elif [ -f "$GAMEDIR/ver_steam" ]; then
