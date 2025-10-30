@@ -14,13 +14,6 @@ A global settings menu can be reached by navigating to the first audiobook and p
 Each audiobook folder is supposed to contain all the files of that audiobook. The scanner currently looks for file extensions mp3, mp4, m4a, aac, m4b, awb, amr and ogg. The files are sorted alpha numerically by the character that the OS returns. This works for ASCII but most likely will not for specific UTF-8 codings.  
 The audiobook folders and files can contain UTF-8 characters. The default font might not be able to display them though.  
   
-### Special key combos
-If you are in the audiobook selection screen and press and hold BACK for longer than 5s the application will quit and shutdown the device.  
-  
-If you wish to keep using the device press START+SELECT to return to the devices main UI (e.g. emulationstation).  
-  
-The sleep timer can also be started faster by pressing SELECT while the player is playing. The last set up sleep time is used to right away enable the timer.  
-  
 ### Audiobook folder options
 The application scans orderly in the following positions relative to the ports application directory and uses the first directory found as base:  
 - ../../audiobooks (usually the games or roms folder of ROCKNIX, Knulli, AmberELEC, ArkOS)
@@ -69,7 +62,11 @@ License is available in the license folder as file LICENSE.LibriVox.txt.
 |D-PAD LEFT|minus/backwards/down a little|
 |D-PAD UP|plus/forward/up more|
 |D-PAD DOWN|minus/backwards/down more|
+|**Special key combos**||
 |START+SELECT|quit application|
+|B long press|if in audio book selection screen: shutdown the player|
+|SELECT|if player is playing: activate/deactivate sleep timer|
+|START+A|if player is playing: activate/deactivate key lock|
   
 ## Compile
 Compilation needs docker installed.  
@@ -88,6 +85,10 @@ Everything of the following is build inside ./build directory:
 ```make portmaster``` (to create a distributable portmaster .zip)
 
 ## Version history
+v00.00.06  
+
+ - key lock: when the device plays an audio book a key lock can be enabled and disabled by pressing and holding START and then press A
+
 v00.00.05  
 
  - application detects/handles changes within the audiobook folder (e.g. during MTP file transfers)
