@@ -36,6 +36,9 @@ to_lower_case() {
 
 GAMEDIR="/$directory/ports/quake2"
 
+$ESUDO chmod +x "$GAMEDIR/7zzs.${DEVICE_ARCH}"
+"$GAMEDIR/7zzs.${DEVICE_ARCH}" -y x "$GAMEDIR/yamagiq2_${DEVICE_ARCH}.7z" -o"$GAMEDIR/"
+
 $ESUDO chmod 777 -R $GAMEDIR/*
 
 cd $GAMEDIR
@@ -61,7 +64,7 @@ else
 fi
 
 # Check device type
-if [ "$DEVICE_NAME" = "x55" ] || [ "$DEVICE_NAME" = "RG353P" ] || [ "$DEVICE_NAME" = "RG40XX-H" ]; then
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
     if [ ! -f "$GAMEDIR/conf/.yq2/console_history.txt" ]; then
         mkdir -p "$GAMEDIR/conf/.yq2"
         cp -rf "$GAMEDIR/conf/yq2_triggers/"* "$GAMEDIR/conf/.yq2/."
