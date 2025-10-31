@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [...](...) for this game, which you download at [itch.io](...)
+Thanks to [jfrisby](https://jfrisby.itch.io) for this game, which you download at [itch.io](https://jfrisby.itch.io/the-sphinx-of-time)
 
 **Note for ROCKNIX:** libMali and Panfrost work, but the cursor resets its position after a few seconds of inactivity using libMali.
 
