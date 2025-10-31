@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # variables
-GAMEDIR=/$directory/ports/qt
+GAMEDIR=/$directory/ports/ot
 CONFDIR="$GAMEDIR/conf/"
 cd $GAMEDIR
 
@@ -32,9 +32,9 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
 # run the love runtime
-$GPTOKEYB "$LOVE_GPTK" -c "./qt.gptk"  &
+$GPTOKEYB "$LOVE_GPTK" -c "./ot.gptk"  &
 pm_platform_helper "$LOVE_BINARY"
-$LOVE_RUN "$GAMEDIR/qt.love"
+$LOVE_RUN "$GAMEDIR/ot.love"
 
 # cleanup
 pm_finish
