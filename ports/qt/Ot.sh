@@ -29,11 +29,16 @@ export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # unzip files
-if [ -f Ot_Linux.zip ]; then
+if [ -f ./ot.love/Ot_Linux.zip ]; then
+  pm_message "Preparing files ..."
+  cd $GAMEDIR/ot.love
   unzip -n Ot_Linux.zip
   unzip -n Ot_Linux/Ot.love
+  rm Ot_Linux.zip
   rm -rf Ot_Linux
   rm -rf release
+  cd $GAMEDIR
+  pm_message "Launching game ..."
 fi
 
 # source love2d runtime
