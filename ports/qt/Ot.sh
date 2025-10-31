@@ -28,6 +28,14 @@ cd $GAMEDIR
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+# unzip files
+if [ -f Ot_Linux.zip ]; then
+  unzip -n Ot_Linux.zip
+  unzip -n Ot_Linux/Ot.love
+  rm -rf Ot_Linux
+  rm -rf release
+fi
+
 # source love2d runtime
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
