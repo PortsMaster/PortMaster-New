@@ -33,7 +33,7 @@ if [ -f ./assets/data.win ]; then
 	# Rename data.win file
 	mv assets/data.win assets/game.droid
 	# Delete all redundant files
-	rm -f assets/*.{exe,dll,ini}
+	rm -f assets/*.{exe,dll}
 	# Zip all game files into the aestheta.port
 	zip -r -0 ./aestheta.port ./assets/
 	rm -Rf ./assets/
