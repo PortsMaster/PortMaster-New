@@ -55,6 +55,9 @@ if [ ! -f "$GAMEDIR/.initial_config_done" ]; then
   touch "$GAMEDIR/.initial_config_done"
 fi
 
+# permissions
+$ESUDO chmod +x "$GAMEDIR/ags.aarch64"
+
 # exports
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
