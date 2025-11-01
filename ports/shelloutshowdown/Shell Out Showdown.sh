@@ -27,6 +27,7 @@ cd $GAMEDIR
 # set xdg environment variables for config & savefiles
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 # patch file
 if [ -f ShellOutShowdown.exe ]; then
@@ -35,6 +36,13 @@ if [ -f ShellOutShowdown.exe ]; then
   cp conf.lua ShellOutShowdown.love
   rm ShellOutShowdown.exe 
   pm_message "Launching game ..."
+fi
+
+# swap buttons on arkos and rocknix
+if { [ "$CFW_NAME" = "ArkOS" ] || [ "$CFW_NAME" = "ROCKNIX" ]; } && [ -f "$SDL_GAMECONTROLLERCONFIG_FILE" ]; then
+  "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
+  export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
+  export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 fi
 
 # source love2d runtime
