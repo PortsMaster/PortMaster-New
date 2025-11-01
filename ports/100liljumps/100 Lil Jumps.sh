@@ -32,7 +32,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
 # run the love runtime
-$GPTOKEYB "$LOVE_GPTK" -c "./100liljumps.gptk"  &
+$GPTOKEYB "$LOVE_GPTK" -c "./100liljumps.gptk" &
 pm_platform_helper "$LOVE_BINARY"
 $LOVE_RUN "$GAMEDIR/100liljumps.love"
 
