@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Koliao](https://koliao.itch.io) for creating this game, which you cna downoad at [itch.io](https://koliao.itch.io/ot)
+Thanks to [Koliao](https://koliao.itch.io) for creating this little gem, and for granting permission for ProtMaster to distribute the game files.
 
 
 ## Controls
