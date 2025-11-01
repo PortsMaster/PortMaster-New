@@ -28,13 +28,22 @@ cd $GAMEDIR
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+# patch file
+if [ -f ShellOutShowdown.exe ]; then
+  pm_message "Prepare game files ..."
+  unzip ShellOutShowdown.exe -d ShellOutShowdown.love
+  cp conf.lua ShellOutShowdown.love
+  rm ShellOutShowdown.exe 
+  pm_message "Launching game ..."
+fi
+
 # source love2d runtime
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
 # run the love runtime
 $GPTOKEYB "$LOVE_GPTK" -c "./shelloutshowdown.gptk"  &
 pm_platform_helper "$LOVE_BINARY"
-$LOVE_RUN "$GAMEDIR/ShellOutShowdown.exe"
+$LOVE_RUN "$GAMEDIR/ShellOutShowdown.love"
 
 # cleanup
 pm_finish
