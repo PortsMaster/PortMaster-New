@@ -7,10 +7,10 @@ Thanks to [Babar & jfrisby ](https://jfrisby.itch.io) for this game, which you d
 
 ## Controls
 
-| Button        | Action            |
-| ------------- | ----------------- |
-| D-PAD/L-STICK | Mouse move        |
-| A             | Left click        |
-| B             | Right click       |
-| X/Y           | Mouse slow        |
-| SELECT        | Exit menu         |
+| Button        | Action      |
+| ------------- | ----------- |
+| D-PAD/L-STICK | Mouse move  |
+| A             | Left click  |
+| B             | Right click |
+| X/Y           | Mouse slow  |
+| SELECT        | Exit menu   |
