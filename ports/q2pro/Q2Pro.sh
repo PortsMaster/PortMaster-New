@@ -22,7 +22,7 @@ cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export ANALOGSTICKS="${ANALOGSTICKS:-2}"
 export ANALOG_STICKS="${ANALOG_STICKS:-2}"
@@ -49,12 +49,23 @@ if [ ! -f "firsttime" ]; then
 fi
 
 if [[ "${CFW_NAME^^}" == 'ROCKNIX' ]] || [[ "${CFW_NAME^^}" == 'JELOS' ]]; then
+    # aarch64
     BINARY=q2pro_legacy
+elif [[ "${DEVICE_ARCH}" == 'x86_64' ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
+    # x86_64
+    BINARY=q2pro_x86_64
 else
+    # aarch64
     BINARY=q2pro_glsl
 fi
 
-$GPTOKEYB "$BINARY" -c "$GAMEDIR/q2pro.gptk" &
+if [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/q2protriggers.gptk"  
+else
+    GPTOKEYB_CONFIG="$GAMEDIR/q2pro.gptk"
+fi
+
+$GPTOKEYB "$BINARY" -c "$GPTOKEYB_CONFIG" &
 pm_platform_helper "$GAMEDIR/$BINARY"
 ./$BINARY
 
