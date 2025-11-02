@@ -25,9 +25,12 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+$ESUDO chmod +x "$GAMEDIR/openttd.${DEVICE_ARCH}"
+$ESUDO chmod +x "$GAMEDIR/7zzs.${DEVICE_ARCH}"
+
 # Extract game files on 1st run
 if [ ! -d "$GAMEDIR/gm" ]; then
-    "$GAMEDIR/7zzs" x "$GAMEDIR/gamedata.7z" -o"$GAMEDIR/"
+    "$GAMEDIR/7zzs.${DEVICE_ARCH}" x "$GAMEDIR/gamedata.7z" -o"$GAMEDIR/"
     sleep 1
     rm -f "$GAMEDIR/gamedata.7z"
 fi
@@ -72,6 +75,8 @@ if [[ "${CFW_NAME^^}" == 'ROCKNIX' ]] || [[ "${CFW_NAME^^}" == 'JELOS' ]]; then
     sleep 1
 fi
 
+[ "${CFW_NAME^^}" == "RETRODECK" ] && ADDLPARAMS=" -r ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
+
 # Set mouse speed based on screen resolution
 if [[ "$DISPLAY_WIDTH" == '480' ]] || [[ "$DISPLAY_WIDTH" == '640' ]] || [[ "$DISPLAY_WIDTH" == '720' ]]; then
     sed -i 's/^mouse_scale =.*/mouse_scale = 5800/' "$GAMEDIR/openttd.gptk.$ANALOGSTICKS"
@@ -87,6 +92,6 @@ bind_directories ~/.config/openttd $GAMEDIR/conf/openttd
 
 $GPTOKEYB "openttd.${DEVICE_ARCH}" -c "$GAMEDIR/openttd.gptk.$ANALOGSTICKS" &
 pm_platform_helper "$GAMEDIR/openttd.${DEVICE_ARCH}"
-./openttd.${DEVICE_ARCH} -m fluidsynth:driver=pulseaudio,soundfont=$GAMEDIR/gm/TimGM6mb.sf2
+./openttd.${DEVICE_ARCH} -m fluidsynth:driver=pulseaudio,soundfont=$GAMEDIR/gm/TimGM6mb.sf2 $ADDLPARAMS
 
 pm_finish
