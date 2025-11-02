@@ -105,7 +105,7 @@ function classic_draw()
 	CONSOLE:draw()
 end
 
-------------------------------------------------EXPERIMENTAL
+------------------------------------------------OVERHAULED SCALING CODE
 
 function custom_draw()
 	-- 1) draw game to internal canvas
