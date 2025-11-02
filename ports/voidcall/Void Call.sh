@@ -35,6 +35,7 @@ if [ -f VoidCall_exe.zip ]; then
   pm_message "Extracting embedded .love file ..."
   unzip -o "voidcall.love/VoidCall_exe/voidcall.exe" -d voidcall.love
   pm_message "Cleaning up ..."
+  rm VoidCall_exe.zip
   rm -rf "voidcall.love/VoidCall_exe"
   rm -rf "voidcall.love/.git"
   rm -rf "voidcall.love/.vscode"
