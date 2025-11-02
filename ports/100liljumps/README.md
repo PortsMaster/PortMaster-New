@@ -7,8 +7,9 @@ Thanks to [Koliao](https://koliao.itch.io) for creating this gem and granting Po
 
 ## Controls
 
-| Button | Action           |
-| ------ | ---------------- |
-| D-PAD  | Move             |
-| A      | Jump             |
-| Y      | Hold to restart  |
+| Button | Action          |
+| ------ | --------------- |
+| D-PAD  | Move            |
+| A/B    | Jump            |
+| X      | Croak           |
+| Y      | Hold to restart |
