@@ -48,7 +48,7 @@ fi
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
 # run the love runtime
-$GPTOKEYB "$LOVE_GPTK" -c "./voidcall.gptk" &
+$GPTOKEYB2 "$LOVE_GPTK" -c "./voidcall.ini" &
 pm_platform_helper "$LOVE_BINARY"
 $LOVE_RUN "$GAMEDIR/voidcall.love"
 
