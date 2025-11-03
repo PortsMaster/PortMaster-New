@@ -8,6 +8,13 @@ require "kUI"
 require "audio"
 require "pausa"
 
+love.joystickpressed = function() end
+love.joystickreleased = function() end
+love.gamepadaxis = function() end
+love.gamepadpressed = function() end
+love.gamepadreleased = function() end
+love.mouse.setVisible(false)
+
 if arg[#arg] == "-debug" then
     require("mobdebug").start()
 end --(ZeroBrane IDE)
