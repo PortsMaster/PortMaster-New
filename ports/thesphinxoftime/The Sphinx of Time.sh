@@ -11,6 +11,7 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
+
 export controlfolder
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
@@ -19,7 +20,7 @@ get_controls
 # device (info resolution, cpu, cfw etc.)
 source $controlfolder/device_info.txt
 
-# custom mod files from the portmaster folder example mod_jelos.txt which containts pipewire fixes
+# custom mod files from the portmaster folder
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 # variables
@@ -32,16 +33,16 @@ cd $GAMEDIR
 # adjust dpad_mouse_step and deadzone_scale based on resolution width
 echo "DISPLAY_WIDTH: $DISPLAY_WIDTH"
 if [ "$DISPLAY_WIDTH" -lt 640 ]; then
-  echo "Setting dpad_mouse_step and deadzone_scale to 4"
+  pm_message "Setting dpad_mouse_step and deadzone_scale to 4"
   sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 4/g' thesphinxoftime.gptk
 elif [ "$DISPLAY_WIDTH" -lt 1280 ]; then
-  echo "Setting dpad_mouse_step and deadzone_scale to 5"
+  pm_message "Setting dpad_mouse_step and deadzone_scale to 5"
   sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 5/g' thesphinxoftime.gptk
 elif [ "$DISPLAY_WIDTH" -lt 1920 ]; then
-  echo "Setting dpad_mouse_step and deadzone_scale to 6"
+  pm_message "Setting dpad_mouse_step and deadzone_scale to 6"
   sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 6/g' thesphinxoftime.gptk
 else
-  echo "Setting dpad_mouse_step and deadzone_scale to 7"
+  pm_message "Setting dpad_mouse_step and deadzone_scale to 7"
   sed -i -E 's/(dpad_mouse_step|deadzone_scale) = [0-9]/\1 = 7/g' thesphinxoftime.gptk
 fi
 
