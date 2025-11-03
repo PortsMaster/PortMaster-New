@@ -1,8 +1,8 @@
 ## Notes
 
-Thanks to [manadream](https://manadream.games/) for creating this great game, which you cna purchase on [itch.io](https://manadream.itch.io/shell-out-showdown)
+Thanks to [manadream](https://manadream.games) for creating this great game, which you can purchase on [itch.io](https://manadream.itch.io/shell-out-showdown)
 
-Altenatively, you can use the free demo files.
+Alternatively, you can use the free demo files.
 
 
 ## Controls
