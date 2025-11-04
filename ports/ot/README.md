@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Koliao](https://koliao.itch.io) for creating this gem and granting PortMaster permission to distribute the game.
+Thanks to [Koliao](https://koliao.itch.io) for creating this little gem, and for granting PortMaster permission to distribute the game files.
 
 
 ## Controls
