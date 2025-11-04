@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [SRALBERTOOO](https://www.sralbertooo.com) for creating this gem, which you can purchase at [itch.io](https://sralbertooo.itch.io/super-helmknight)
+Thanks to [sralbertooo](https://www.sralbertooo.com) for creating this gem, which you can purchase at [itch.io](https://sralbertooo.itch.io/super-helmknight)
 
 
 ## Controls
