@@ -8,16 +8,12 @@ require "kUI"
 require "audio"
 require "pausa"
 
------------------------------------------ ADDED START
-
 love.joystickpressed = function() end
 love.joystickreleased = function() end
 love.gamepadaxis = function() end
 love.gamepadpressed = function() end
 love.gamepadreleased = function() end
 love.mouse.setVisible(false)
-
------------------------------------------ ADDED END
 
 if arg[#arg] == "-debug" then
     require("mobdebug").start()
@@ -85,10 +81,15 @@ function love.load()
     end
 
     local test = "1234"
+
     zoom = 4
+
     global_count = 0
+
     fps_timer = 1
+
     draw_frame = true
+
     OS = love.system.getOS()
 
     assets = {
@@ -99,8 +100,11 @@ function love.load()
     --name, x, y, rotation, scale, alpha---
 
     loaded_drawables = {}
+
     tile_size = 2 * 32
+
     n = 4
+
     border_width = tile_size / n
 
     --width = 1366;
@@ -400,7 +404,6 @@ function love.load()
     dbug = false
 
     ----------------------------------------- ADDED START
-    
     love.window.setMode(
         640,
         480,
@@ -414,7 +417,6 @@ function love.load()
     )
     width = love.graphics.getWidth()
     height = love.graphics.getHeight()
-    
     ----------------------------------------- ADDED END
 
     --    if(dbug) then
@@ -470,11 +472,10 @@ function love.load()
     y_offset = (height - (#map / 2) * tile_size * zoom) / 2
 
     recalcZoomToFit() ----------------------------------------- ADDED
-    rebuildScreenStuff() -------------------------------------- ADDED
+    rebuildScreenStuff() ----------------------------------------- ADDED
 end
 
 ----------------------------------------- ADDED START
-
 function love.resize(w, h)
     width, height = w, h
     recalcZoomToFit()
@@ -487,7 +488,6 @@ function love.resize(w, h)
     facing = undo[1][3]
     undo = {undo[1]}
 end
-
 ----------------------------------------- ADDED END
 
 function love.update(dt)
@@ -635,26 +635,22 @@ function love.draw(dt)
     love.graphics.draw(general_canvas, canvas_x, canvas_y, 0, zoom / 2)
 
     if (map_file == "mid0.csv") then
-
-    ----------------------------------------- COMMENTED START
-
-    --    love.graphics.setColor(0, 0, 0, 0.8);
-    --    love.graphics.draw(tut_img[1], width/2-96 - 200, 6*height/8, 0, 2);
-    --    love.graphics.setFont(credits_fuente);
-    --    love.graphics.printf("Move", width/2-96 - 200, 6*height/8 + 128, 194, "center");
-    --    
-    --    love.graphics.setColor(0, 0, 0, 0.8);
-    --    love.graphics.draw(tut_img[2], width/2-16, 6*height/8 + 64, 0, 2);
-    --    love.graphics.setFont(credits_fuente);
-    --    love.graphics.printf("Undo", width/2 -26, 6*height/8 + 128, 86, "center");
+    ----------------------------------------- ADDED START
+    --        love.graphics.setColor(0, 0, 0, 0.8);
+    --        love.graphics.draw(tut_img[1], width/2-96 - 200, 6*height/8, 0, 2);
+    --        love.graphics.setFont(credits_fuente);
+    --        love.graphics.printf("Move", width/2-96 - 200, 6*height/8 + 128, 194, "center");
     --
-    --    love.graphics.setColor(0, 0, 0, 0.8);
-    --    love.graphics.draw(tut_img[3], width/2-16 + 200, 6*height/8 + 64, 0, 2);
-    --    love.graphics.setFont(credits_fuente);
-    --    love.graphics.printf("Restart", width/2-16 + 150, 6*height/8 + 128, 180, "center");
-
-    ----------------------------------------- COMMENTED END
-
+    --        love.graphics.setColor(0, 0, 0, 0.8);
+    --        love.graphics.draw(tut_img[2], width/2-16, 6*height/8 + 64, 0, 2);
+    --        love.graphics.setFont(credits_fuente);
+    --        love.graphics.printf("Undo", width/2 -26, 6*height/8 + 128, 86, "center");
+    --
+    --        love.graphics.setColor(0, 0, 0, 0.8);
+    --        love.graphics.draw(tut_img[3], width/2-16 + 200, 6*height/8 + 64, 0, 2);
+    --        love.graphics.setFont(credits_fuente);
+    --        love.graphics.printf("Restart", width/2-16 + 150, 6*height/8 + 128, 180, "center");
+    ----------------------------------------- ADDED END
     end
 
     if (in_transition) then
