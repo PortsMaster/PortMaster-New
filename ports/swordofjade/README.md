@@ -1,6 +1,6 @@
 ## Notes
 
-All files included and ready to run. Thanks to [FyreWulff Software](https://fyrewulff.itch.io/) for releasing this fantastic game and giving Portmaster permission to distribute the original version.
+All files included and ready to run. Thanks to [FyreWulff Software](https://fyrewulff.itch.io/) for releasing this fantastic game and giving Portmaster permission to distribute the original version, If you want to support the creator's work, please consider purchasing the remake on Steam [https://store.steampowered.com/app/1885860/Sword_of_Jade_Parallel_Dreams/]
 
 ## Controls
 
