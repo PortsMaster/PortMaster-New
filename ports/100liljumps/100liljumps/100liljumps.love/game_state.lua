@@ -332,7 +332,7 @@ function GameState:change_level_at_transition()
 
     if self.player then
         if target_door.visible then
-            self.player:set_transition_fade_in(v2_add(target_door.world_pos, V2(TILE_SIZE/2, TILE_SIZE/2)))
+            self.player:set_transition_none()--self.player:set_transition_fade_in(v2_add(target_door.world_pos, V2(TILE_SIZE/2, TILE_SIZE/2)))
         else
             self.player:set_transition_none()
         end
