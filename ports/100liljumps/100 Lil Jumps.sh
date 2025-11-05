@@ -31,7 +31,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # rocknix must use libmali driver
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
   if glxinfo | grep -q "OpenGL version string"; then
-    pm_message "This port does not support the Panfrost graphics driver. Switch to libMail to continue."
+    pm_message "This port does not support the Panfrost graphics driver. Switch to libMali to play."
     sleep 5
     exit 1
   fi
