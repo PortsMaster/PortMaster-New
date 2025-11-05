@@ -1,8 +1,7 @@
-STEAM_BUILD = false
--- Steam
-if STEAM_BUILD then
-    Steam = require("luasteam") -- Luasteam v3.1.0
-end
+-- Disable all gamepad input
+love.joystick.loadGamepadMappings = function() end
+love.joystick.getJoysticks = function() return {} end
+love.joystick.getJoystickCount = function() return 0 end
 
 require("./globals")
 require("./math")
@@ -126,12 +125,6 @@ function love.update(dt)
     local _profileDraw = nil
     if profile_enabled then
         _profileDraw = appleCake.profileFunc()
-    end
-
-    -- steam
-    if Steam then
-        Steam.runCallbacks()
-        unlock_queued_achievements()
     end
 
     -- camera edit mode
