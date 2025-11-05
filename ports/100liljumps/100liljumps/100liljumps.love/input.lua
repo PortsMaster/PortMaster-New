@@ -366,9 +366,9 @@ InputIcons = {
     gamepad_x = love.graphics.newImage("input_icons/xbox_button_color_x.png"),
     gamepad_y = love.graphics.newImage("input_icons/xbox_button_color_y.png"),
 
-    keyboard_r = love.graphics.newImage("input_icons/keyboard_r.png"),
-    keyboard_x = love.graphics.newImage("input_icons/keyboard_x.png"),
-    keyboard_c = love.graphics.newImage("input_icons/keyboard_c.png"),
+    keyboard_r = love.graphics.newImage("input_icons/xbox_button_color_y.png"),
+    keyboard_x = love.graphics.newImage("input_icons/xbox_button_color_x.png"),
+    keyboard_c = love.graphics.newImage("input_icons/xbox_button_color_a.png"),
 }
 love.graphics.setDefaultFilter("nearest")
 
