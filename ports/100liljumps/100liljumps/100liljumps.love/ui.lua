@@ -53,27 +53,27 @@ UI.get_scaled_font = function(font_key)
 end
 
 UI.fonts2 = {
-    jumps_counter_2       = create_font("fonts/MavenPro-Medium.ttf", 40),
-    info_box              = create_font("fonts/MavenPro-Medium.ttf", 20),
-    dialog                = create_font("fonts/MavenPro-Medium.ttf", 30),
-    pause_option          = create_font("fonts/MavenPro-Medium.ttf", 40),
-    pause_option_selected = create_font("fonts/MavenPro-Medium.ttf", 45),
-    image_description     = create_font("fonts/MavenPro-Medium.ttf", 28),
-    game_over_title       = create_font("fonts/MavenPro-Medium.ttf", 50),
-    start_screen_title    = create_font("fonts/MavenPro-Medium.ttf", 120),
-    start_subtitle        = create_font("fonts/MavenPro-Medium.ttf", 60),
+    jumps_counter_2       = create_font("fonts/MavenPro-Medium.ttf", 40+10),
+    info_box              = create_font("fonts/MavenPro-Medium.ttf", 20+10),
+    dialog                = create_font("fonts/MavenPro-Medium.ttf", 30+10),
+    pause_option          = create_font("fonts/MavenPro-Medium.ttf", 40+10),
+    pause_option_selected = create_font("fonts/MavenPro-Medium.ttf", 45+10),
+    image_description     = create_font("fonts/MavenPro-Medium.ttf", 28+10),
+    game_over_title       = create_font("fonts/MavenPro-Medium.ttf", 50+10),
+    start_screen_title    = create_font("fonts/MavenPro-Medium.ttf", 120+10),
+    start_subtitle        = create_font("fonts/MavenPro-Medium.ttf", 60+10),
 }
 
 UI.fonts = {
-    --jumps_counter = create_font("fonts/MavenPro-Medium.ttf", 40),
-    jumps_counter = love.graphics.newFont("fonts/monogram.ttf", 50),
-    jumps_counter_2 = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 40),
-    info_box = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 20),
-    dialog = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 30),
-    credits_text = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 30),
+    --jumps_counter = create_font("fonts/MavenPro-Medium.ttf", 40+10),
+    jumps_counter = love.graphics.newFont("fonts/monogram.ttf", 50+10),
+    jumps_counter_2 = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 40+10),
+    info_box = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 20+10),
+    dialog = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 30+10),
+    credits_text = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 30+10),
 
-    pause_option          = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 40),
-    pause_option_selected = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 45),
+    pause_option          = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 40+10),
+    pause_option_selected = love.graphics.newFont("fonts/MavenPro-Medium.ttf", 45+10),
 }
 
 UI.info_box_text = ""
