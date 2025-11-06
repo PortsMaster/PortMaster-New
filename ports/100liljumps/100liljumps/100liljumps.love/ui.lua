@@ -26,6 +26,24 @@ end
 
 UI = {}
 
+-- Fires once per full press→release cycle.
+local function make_release_latch()
+    return {
+        locked = false,
+        fire = function(self, button) -- button must have .is_down
+            if button.is_down then
+                if not self.locked then
+                    self.locked = true
+                    return true  -- first frame of the press
+                end
+            else
+                self.locked = false -- unlock when released
+            end
+            return false
+        end
+    }
+end
+
 UI.checkbox_unchecked_sprite = love.graphics.newImage("checkbox-unchecked.png")
 UI.checkbox_checked_sprite   = love.graphics.newImage("checkbox-checked.png")
 UI.widgets_left_margin = 300
@@ -348,7 +366,7 @@ if is_mobile_os() then
     }
 else
     options_options = {
-        pause_option("options_fullscreen", "Fullscreen"),
+        --pause_option("options_fullscreen", "Fullscreen"),
         pause_option("options_music", "Music"),
         pause_option("options_sounds", "Sounds"),
         pause_option("options_speedrun_timer", "Speedrun timer"),
@@ -369,6 +387,13 @@ local pause_state = {
     selected_menu = options_main,
     selected_option = 1,
 }
+
+local latch_up      = make_release_latch()
+local latch_down    = make_release_latch()
+local latch_left    = make_release_latch()
+local latch_right   = make_release_latch()
+local latch_confirm = make_release_latch()
+local latch_pause   = make_release_latch()
 
 UI.draw_pause_menu = function()
     local screen_width, screen_height = love.graphics.getDimensions()
@@ -504,132 +529,102 @@ local function restart_pause_state(pause_state)
 end
 
 UI.handle_pause_input = function(game_state)
-    if(input.move_down.is_pressed) then
+    if latch_down:fire(input.move_down) then
         increment_pause_option(pause_state)
         Audio.play_sound("ui_change_value", 0.6, 0.6)
     end
-    if(input.move_up.is_pressed) then
+    if latch_up:fire(input.move_up) then
         decrement_pause_option(pause_state)
         Audio.play_sound("ui_change_value", 0.5, 0.5)
     end
 
     local option_key = pause_state.selected_menu[pause_state.selected_option].key
 
-    if(option_key == "options_music") then
-        if(input.move_right.is_pressed) then
+    if option_key == "options_music" then
+        if latch_right:fire(input.move_right) then
             Audio.increase_music_volume_pressed()
             Audio.play_sound("ui_change_value", 0.9, 0.9, Audio.music_volume)
         end
-        if(input.move_left.is_pressed) then
+        if latch_left:fire(input.move_left) then
             Audio.decrease_music_volume_pressed()
             Audio.play_sound("ui_change_value", 0.7, 0.7, Audio.music_volume)
         end
     end
 
-    if(option_key == "options_sounds") then
-        if(input.move_right.is_pressed) then
+    if option_key == "options_sounds" then
+        if latch_right:fire(input.move_right) then
             Audio.increase_sounds_volume_pressed()
             Audio.play_sound("ui_change_value", 0.9, 0.9, Audio.sounds_volume)
         end
-        if(input.move_left.is_pressed) then
+        if latch_left:fire(input.move_left) then
             Audio.decrease_sounds_volume_pressed()
             Audio.play_sound("ui_change_value", 0.7, 0.7, Audio.sounds_volume)
         end
     end
 
-    if(input.confirm.is_pressed) then
-        if(option_key == "main_continue") then
+    if latch_confirm:fire(input.confirm) then
+        if option_key == "main_continue" then
             game_state:pause_continue_pressed()
             save_game_data(game_state)
             restart_pause_state(pause_state)
-        end
 
-        if(option_key == "main_restart") then
+        elseif option_key == "main_restart" then
             game_state:pause_restart_pressed()
             save_game_data(game_state)
             restart_pause_state(pause_state)
-        end
 
-        if(option_key == "main_new_game") then
+        elseif option_key == "main_new_game" then
             restart_pause_state(pause_state)
             pause_state.selected_menu = options_delete_save
 
-            -- game_state:pause_new_game_pressed()
-            -- save_game_data(game_state)
-            -- restart_pause_state(pause_state)
-        end
-
-        if(option_key == "main_exit") then
+        elseif option_key == "main_exit" then
             save_game_data(game_state)
             game_state:pause_exit_pressed()
-        end
 
-        if(option_key == "main_options") then
+        elseif option_key == "main_options" then
             restart_pause_state(pause_state)
             pause_state.selected_menu = options_options
-        end
 
-        if(option_key == "options_fullscreen") then
+        elseif option_key == "options_fullscreen" then
             game_state:pause_fullscreen_pressed()
+            UI.play_toggle_sound_for(love.window.getFullscreen())
 
-            local toggled_on = love.window.getFullscreen()
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_speedrun_timer") then
+        elseif option_key == "options_speedrun_timer" then
             game_state:toggle_speedrun_timer_pressed()
+            UI.play_toggle_sound_for(game_state.config_show_speedrun_timer)
 
-            local toggled_on = game_state.config_show_speedrun_timer
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_vibration") then
+        elseif option_key == "options_vibration" then
             game_state:toggle_vibration_pressed()
+            UI.play_toggle_sound_for(game_state.config_vibration_disabled)
 
-            local toggled_on = game_state.config_vibration_disabled
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_particles") then
+        elseif option_key == "options_particles" then
             game_state:toggle_particles_pressed()
+            UI.play_toggle_sound_for(game_state.config_particles_disabled)
 
-            local toggled_on = game_state.config_particles_disabled
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_screenshake") then
+        elseif option_key == "options_screenshake" then
             game_state:toggle_screenshake_pressed()
+            UI.play_toggle_sound_for(game_state.config_screenshake_disabled)
 
-            local toggled_on = game_state.config_screenshake_disabled
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_effects") then
+        elseif option_key == "options_effects" then
             game_state:toggle_effects_pressed()
+            UI.play_toggle_sound_for(game_state.config_effects_disabled)
 
-            local toggled_on = game_state.config_effects_disabled
-            UI.play_toggle_sound_for(toggled_on)
-        end
-
-        if(option_key == "options_back") then
+        elseif option_key == "options_back" then
             restart_pause_state(pause_state)
-        end
 
-        if(option_key == "delete_save_yes") then
+        elseif option_key == "delete_save_yes" then
             pause_state.selected_menu = options_main
-
             game_state:pause_new_game_pressed()
             save_game_data(game_state)
             restart_pause_state(pause_state)
-        end
 
-        if(option_key == "delete_save_no") then
+        elseif option_key == "delete_save_no" then
             restart_pause_state(pause_state)
             pause_state.selected_menu = options_main
         end
     end
 
-    if(input.pause.is_pressed) then
+    if latch_pause:fire(input.pause) then
         game_state:pause_continue_pressed()
         restart_pause_state(pause_state)
     end
