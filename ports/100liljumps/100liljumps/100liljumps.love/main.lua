@@ -1,3 +1,7 @@
+love.joystick.loadGamepadMappings = function() end
+love.joystick.getJoysticks = function() return {} end
+love.joystick.getJoystickCount = function() return 0 end
+
 STEAM_BUILD = false
 -- Steam
 if STEAM_BUILD then
