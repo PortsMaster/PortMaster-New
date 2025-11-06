@@ -24,21 +24,6 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-# Check if we need to patch the game
-if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
-  if [ -f "$controlfolder/utils/patcher.txt" ]; then
-    export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-    export PATCHER_GAME="$(basename "${0%.*}")"
-    export PATCHER_TIME="a few minutes"
-    export controlfolder
-    export ESUDO
-    source "$controlfolder/utils/patcher.txt"
-    $ESUDO kill -9 $(pidof gptokeyb)
-  else
-    pm_message "This port requires the latest version of PortMaster."
-  fi
-fi
-
 # exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
