@@ -23,6 +23,7 @@ GAMEDIR="/$directory/ports/$GAME_NAME"
 # cd and set permissions
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
 # exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
