@@ -43,6 +43,7 @@ if [ -f ./assets/data.win ]; then
     mv -f "./assets/data_patched.win" "./assets/data.win"
   fi
   # package files
+  pm_message "Zipping .port file ..."
   mv assets/data.win assets/game.droid
   rm -f assets/*.{exe,dll}
   zip -r -0 "./$GAME_NAME.port" ./assets/
