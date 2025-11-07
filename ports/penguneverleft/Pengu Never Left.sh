@@ -31,13 +31,29 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # source love2d runtime
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
-# remove spaces in .exe file name
-mv -- *.exe PenguNeverLeft.exe
+# rename game file
+mv -- ./gamedata/*.love ./gamedata/PenguNeverLeft.exe
+mv -- ./gamedata/*.exe ./gamedata/PenguNeverLeft.exe
+
+# prepare files
+if [ -f ./gamedata/PenguNeverLeft.exe ]; then
+  pm_message "Prepare game files ..."
+  mv ./gamedata/*.exe ./gamedata/PenguNeverLeft.exe
+  rm -rf ./tmp_extract
+  mkdir -p ./tmp_extract
+  unzip -q ./gamedata/PenguNeverLeft.exe -d ./tmp_extract
+  cp ./main.lua ./tmp_extract/
+  rm -f ./tmp_extract/*.exe ./tmp_extract/*.dll
+  (cd ./tmp_extract && zip -0 -r ../PenguNeverLeft.love .)
+  rm -rf ./tmp_extract ./gamedata/* ./gamedata/.git*
+  touch "./gamedata/place Pengu Never Left.exe here"
+  pm_message "Launching game ..."
+fi
 
 # run the love runtime
 $GPTOKEYB2 "$LOVE_GPTK" -c "./penguneverleft.ini" &
 pm_platform_helper "$LOVE_BINARY"
-$LOVE_RUN "$GAMEDIR/PenguNeverLeft.exe"
+$LOVE_RUN "$GAMEDIR/PenguNeverLeft.love"
 
 # cleanup
 pm_finish
