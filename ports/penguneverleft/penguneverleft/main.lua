@@ -107,6 +107,7 @@ end
 ----------------------------------------------------------------
 
 function love.load()
+  love.mouse.setVisible(false)
   particlesBatch = love.graphics.newSpriteBatch(Tex)
   raindropsBatch = love.graphics.newSpriteBatch(Tex)
 
