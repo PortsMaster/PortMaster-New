@@ -32,33 +32,27 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # prepare game files
 if [ -f ./assets/data.win ]; then
   pm_message "Preparing game files ..."
-  # check if demo version
-  rm demo_version
-  checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
-  if [ "$checksum" = "1a508aff40277892f85802fa9fdbe8f3" ]; then
-    touch demo_version
-    pm_message "Demo version detected ..."
-    sleep 1
-  fi
-  # package files
-  mv ./assets/data.win ./assets/game.droid
-  rm -f ./assets/*.{exe,dll}
+
+  # patch
+  #"$controlfolder/xdelta3" -d -s "./assets/data.win" "./patch.xdelta3" "./assets/game.droid"
+  #if [ $? -ne 0 ]; then
+  #  pm_message "Patching has failed"
+  #else
+  #  rm "./assets/data.win"
+  #  pm_message "Patch succeeded. Packaging .port files ..."
+  #fi
+
+  mv assets/data.win assets/game.droid
+  rm -f assets/*.{exe,dll}
   zip -r -0 "./$GAME_NAME.port" ./assets/
-  rm -rf ./assets/
+  rm -Rf ./assets/
   pm_message "Launching game ..."
 fi
 
-# assign configs and load the game (demo doesn't support gamepad)
-if [ -f demo_version ]; then
-  "$GPTOKEYB" ./gmloadernext.aarch64 -c "$GAME_NAME.gptk" &
-  pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-  ./gmloadernext.aarch64 -c "gmloader_demo_version.json"
-else
-  "$GPTOKEYB" ./gmloadernext.aarch64 &
-  pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-  ./gmloadernext.aarch64 -c "gmloader.json"
-fi
+# assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "$GAME_NAME.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "gmloader.json"
 
 # cleanup
 pm_finish
-
