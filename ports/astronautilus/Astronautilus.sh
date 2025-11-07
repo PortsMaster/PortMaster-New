@@ -31,10 +31,12 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # prepare game files
 if [ -f ./assets/data.win ]; then
+  pm_message "Preparing game files ..."
   mv assets/data.win assets/game.droid
   rm -f assets/*.{exe,dll}
   zip -r -0 "./$GAME_NAME.port" ./assets/
   rm -Rf ./assets/
+  pm_message "Launching game ..."
 fi
 
 # assign configs and load the game
