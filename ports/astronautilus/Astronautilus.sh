@@ -50,11 +50,11 @@ fi
 
 # assign configs and load the game (demo doesn't support gamepad)
 if [ -f demo_version ]; then
-  "$GPTOKEYB" ./gmloadernext.aarch64 -c "$GAME_NAME.gptk" &
+  "$GPTOKEYB" ./gmloadernext.aarch64 -c "${GAME_NAME}_demo_version.gptk" &
   pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
   ./gmloadernext.aarch64 -c "gmloader_demo_version.json"
 else
-  "$GPTOKEYB" ./gmloadernext.aarch64 &
+  "$GPTOKEYB" ./gmloadernext.aarch64 -c "$GAME_NAME.gptk" &
   pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
   ./gmloadernext.aarch64 -c "gmloader.json"
 fi
