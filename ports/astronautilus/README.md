@@ -5,9 +5,9 @@ Thanks [neozoid.games](https://neozoid-games.itch.io) for creating this little g
 
 ## Controls
 
-**For the demo version:** there's no bomb up/down; avoid using L-Stick to navigate menus (use 'mouse' instead).
+**For the demo version:** avoid using L-Stick to navigate menus, and use 'mouse' (R-Stick) instead.
 
-One can remap controls in the options menu.
+One can remap controls in the Options menu.
 
 | Button  | Action             |
 | ------- | ------------------ |
