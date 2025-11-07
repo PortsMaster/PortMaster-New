@@ -37,10 +37,10 @@ if [ -f ./assets/data.win ]; then
   checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
   if [ "$checksum" = "1a508aff40277892f85802fa9fdbe8f3" ]; then
     pm_message "Demo version detected ... patching file ..."
+    sleep 1
     touch demo_version
     $ESUDO $controlfolder/xdelta3 -d -s "./assets/data.win" ./demo_version_patch.xdelta3 "./assets/data_patched.win" &&
     mv -f "./assets/data_patched.win" "./assets/data.win"
-    sleep 1
   fi
   # package files
   mv assets/data.win assets/game.droid
