@@ -36,8 +36,10 @@ if [ -f ./assets/data.win ]; then
   rm demo_version
   checksum=$(md5sum "./assets/data.win" | awk '{print $1}')
   if [ "$checksum" = "1a508aff40277892f85802fa9fdbe8f3" ]; then
+    pm_message "Demo version detected ... patching file ..."
     touch demo_version
-    pm_message "Demo version detected ..."
+    $ESUDO $controlfolder/xdelta3 -d -s "./assets/data.win" ./demo_version_patch.xdelta3 "./assets/data_patched.win" &&
+    mv -f "./assets/data_patched.win" "./assets/data.win"
     sleep 1
   fi
   # package files
@@ -51,9 +53,9 @@ fi
 if [ -f demo_version ]; then
   pm_message "Launching demo version ..."
   sleep 1
-  $GPTOKEYB "gmloadernext.aarch64" -c "${GAME_NAME}_demo_version.gptk" &
+  $GPTOKEYB "gmloadernext.aarch64" -c "demo_version_${GAME_NAME}.gptk" &
   pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-  ./gmloadernext.aarch64 -c "gmloader_demo_version.json"
+  ./gmloadernext.aarch64 -c "demo_version_gmloader.json"
 else
   pm_message "Launching full version ..."
   sleep 1
