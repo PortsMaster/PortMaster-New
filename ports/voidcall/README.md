@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [LouieChapm and Lokistriker](https://louiechapm.itch.io/void-call) for creating this gem, which you can download from [itch.io](https://louiechapm.itch.io/void-call)
+Thanks to [LouieChapm and Lokistriker](https://louiechapm.itch.io/void-call) for creating this game, which you can download from [itch.io](https://louiechapm.itch.io/void-call)
 
 
 ## Controls
