@@ -32,6 +32,16 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 # prepare game files
 if [ -f ./assets/data.win ]; then
   pm_message "Preparing game files ..."
+
+  # patch
+  #"$controlfolder/xdelta3" -d -s "./assets/data.win" "./patch.xdelta3" "./assets/game.droid"
+  #if [ $? -ne 0 ]; then
+  #  pm_message "Patching has failed"
+  #else
+  #  rm "./assets/data.win"
+  #  pm_message "Patch succeeded. Packaging .port files ..."
+  #fi
+
   mv assets/data.win assets/game.droid
   rm -f assets/*.{exe,dll}
   zip -r -0 "./$GAME_NAME.port" ./assets/
