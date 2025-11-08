@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # variables
-GAMEDIR="/$directory/ports/theswordwitchsapprentice"
+GAMEDIR="/$directory/ports/swordwitchsapprentice"
 
 # cd and set permissions
 cd $GAMEDIR
