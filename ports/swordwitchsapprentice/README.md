@@ -13,6 +13,8 @@ Counterattack with the correct element after blocking.
 - When the enemy is Dark, use Light attack \[ Y / ← \]
 - When the enemy is Blood, use Blood attack \[ X / ↑ \]
 
+Estimated playtime: 10 minutes
+
 
 ## Controls
 
