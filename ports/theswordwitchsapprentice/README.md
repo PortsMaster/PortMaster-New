@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks [はちのす/tiny cactus studio](https://tinycactus.itch.io) for creating this game, which you can download free at [itch.io](https://tinycactus.itch.io/swordwitchsapprentice)
+Thanks [はちのす / tiny cactus studio](https://tinycactus.itch.io) for creating this game, which you can download free at [itch.io](https://tinycactus.itch.io/swordwitchsapprentice)
 
 
 ## How to Play
