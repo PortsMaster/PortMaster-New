@@ -33,7 +33,7 @@ if [ -f "./assets/data.win" ]; then
   sleep 1
   pm_message "Packaging game files ..."
   rm -f ./assets/*.exe ./assets/*.dll
-  zip -r -0 "theswordwitchsapprentice.port" "./assets/"
+  zip -r -0 "tswa.port" "./assets/"
   rm -rf "./assets/"
   pm_message "Launching game ..."
 fi
@@ -44,7 +44,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # assign configs and load the game
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
-$GPTOKEYB "gmloadernext.aarch64" -c "theswordwitchsapprentice.gptk" &
+$GPTOKEYB "gmloadernext.aarch64" -c "tswa.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 ./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
