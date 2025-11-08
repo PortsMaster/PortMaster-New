@@ -9,14 +9,14 @@ Block incoming attacks by pressing the key that matches the enemy's attack direc
 
 Counterattack with the correct element after blocking.
 
-- When the enemy is Light, use Dark attack (A / →)
-- When the enemy is Dark, use Light attack (Y / ←)
-- When the enemy is Blood, use Blood attack (X / ↑)
+- When the enemy is Light, use Dark attack \[ A / → \]
+- When the enemy is Dark, use Light attack \[ Y / ← \]
+- When the enemy is Blood, use Blood attack \[ X / ↑ \]
 
 
 ## Controls
 
-| Button |                    |
+| Button | Action             |
 | ------ | ------------------ |
 | D-PAD  | Blocks and attacks |
 | X/Y/A  | Blocks and attacks |
