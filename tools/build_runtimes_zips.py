@@ -187,7 +187,8 @@ def calculate_manifest(zip_info):
         file_name, file_hash = zip_info['runtimes'][runtime_name]
         manifest_data.append(':'.join((file_name.replace('/', '.'), file_hash)))
     manifest_data.sort()
-    print('\n'.join(manifest_data))
+
+    # print('\n'.join(manifest_data))
 
     return hashlib.md5('\n'.join(manifest_data).encode('utf-8')).hexdigest()
 
@@ -238,7 +239,7 @@ def main(argv):
     PORTS_STATUS      = (RELEASE_DIR / "ports_status.json")
     PORTS_STATUS_DATA = None
 
-    MANIFEST          = (RELEASE_DIR / "ports_status.json")
+    MANIFEST          = (RELEASE_DIR / "manifest.json")
     MANIFEST_DATA     = None
 
     PORT_STATS        = (RELEASE_DIR / "port_stats.json")
@@ -383,10 +384,15 @@ def main(argv):
 
         zip_file = RELEASE_DIR / zip_name
 
+        print(f"- {zip_name}: {zip_info['manifest']} == {MANIFEST_DATA.get(zip_name, None)}: ", end="")
+
         if zip_name in PORTS_STATUS_DATA and zip_info['manifest'] == MANIFEST_DATA.get(zip_name, None):
+            print(f" NO CHANGES")
             # Already up to date.
             add_runtime_info(zip_file, zip_info['nice_name'], zip_info['included_files'], runtimes_info, PORTS_STATUS_DATA)
             continue
+
+        print(f" MODIFIED")
 
         with zipfile.ZipFile(zip_file, 'w', compression=zipfile.ZIP_STORED) as zf:
             # Squashfs files are already compressed, so lets not bother trying. :D
@@ -395,6 +401,8 @@ def main(argv):
             for runtime_name in sorted(zip_info['runtimes'], key=lambda runtime_name: runtime_name.casefold()):
                 file_name = zip_info['runtimes'][runtime_name][0]
                 zf.write(file_name, file_name.rsplit('/', 1)[-1])
+
+        MANIFEST_DATA[zip_name] = zip_info['manifest']
 
         add_runtime_info(zip_file, zip_info['nice_name'], zip_info['included_files'], runtimes_info, PORTS_STATUS_DATA)
 
