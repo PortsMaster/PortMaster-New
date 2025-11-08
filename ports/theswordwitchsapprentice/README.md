@@ -20,5 +20,6 @@ Counterattack with the correct element after blocking.
 | ------ | ------------------ |
 | D-PAD  | Blocks and attacks |
 | X/Y/A  | Blocks and attacks |
+| L1/R1  | 'Up' alternative   |
 | SELECT | Pause              |
 
