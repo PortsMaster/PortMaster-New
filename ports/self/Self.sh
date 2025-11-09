@@ -24,17 +24,6 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-# prepare game files
-if [ -f "./assets/data.win" ]; then
-  pm_message "Preparing files ..."
-  rm -f ./assets/*.exe ./assets/*.dll
-  pm_message "Patching game ..."
-  $controlfolder/xdelta3 -d -s "./assets/data.win" "./assets/patch.xdelta3" "./assets/game.droid"
-  [ $? -eq 0 ] && rm "./assets/data.win" || echo "Patching has failed!"
-  pm_message "Patching complete"
-  pm_message "Launching game ..."
-fi
-
 # exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
