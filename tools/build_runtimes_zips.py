@@ -400,7 +400,7 @@ def main(argv):
             zf.comment = zip_info['arch'].encode('utf-8') # This should hopefully help.
             for runtime_name in sorted(zip_info['runtimes'], key=lambda runtime_name: runtime_name.casefold()):
                 file_name = zip_info['runtimes'][runtime_name][0]
-                zf.write(file_name, file_name.rsplit('/', 1)[-1])
+                zf.write(file_name, runtime_name)
 
         MANIFEST_DATA[zip_name] = zip_info['manifest']
 
