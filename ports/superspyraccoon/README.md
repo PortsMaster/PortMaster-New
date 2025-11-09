@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to [Slain Mascot](https://store.steampowered.com/curator/45074192-Slain-Mascot) for creating this great game, which you can purchase on [Steam](store.steampowered.com/app/2553530/Super_Spy_Raccoon)
+Thanks to [Slain Mascot](https://store.steampowered.com/curator/45074192-Slain-Mascot) for creating this great game, which you can purchase on [Steam](https://store.steampowered.com/app/2553530/Super_Spy_Raccoon)
 
 
 ## Controls

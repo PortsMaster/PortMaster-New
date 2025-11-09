@@ -40,3 +40,56 @@ To use the legacy (GLES 1) renderer instead of GLSL:
 meson configure -Dopengl-es1=true builddir
 ```
 
+To build the binary for the NightDive re-release:
+```shell
+https://github.com/Paril/quake2-rerelease-dll
+cd quake2-rerelease-dll
+meson setup builddir
+meson configure -Dsdl2=enabled builddir
+meson compile -C builddir
+```
+
+To build the binary for Capture the Flag:
+```shell
+https://github.com/yquake2/ctf
+cd ctf
+make -j$(nproc)
+# game.so in release/ will need to be renamed for q2pro
+# i.e. gamearm64.so / gamex86_64.so (match architecture)
+```
+
+To build the binary for Ground Zero (Rogue):
+```shell
+https://github.com/yquake2/rogue
+cd rogue
+make -j$(nproc)
+# game.so in release/ will need to be renamed for q2pro
+# i.e. gamearm64.so / gamex86_64.so (match architecture)
+```
+
+To build the binary for The Reckoning (Xatrix):
+```shell
+https://github.com/yquake2/xatrix
+cd xatrix
+make -j$(nproc)
+# game.so in release/ will need to be renamed for q2pro
+# i.e. gamearm64.so / gamex86_64.so (match architecture)
+```
+
+To build the binary for Zaero:
+```shell
+https://github.com/yquake2/zaero
+cd zaero
+make -j$(nproc)
+# game.so in release/ will need to be renamed for q2pro
+# i.e. gamearm64.so / gamex86_64.so (match architecture)
+```
+
+To build the binary for Slight Mechanical Destruction:
+```shell
+https://github.com/yquake2/slightmechanicaldestruction
+cd slightmechanicaldestruction
+make -j$(nproc)
+# game.so in release/ will need to be renamed for q2pro
+# i.e. gamearm64.so / gamex86_64.so (match architecture)
+```
