@@ -19,7 +19,7 @@ get_controls
 GAMEDIR=/$directory/ports/vacuoussugarquest
 godot_runtime="godot_4.4.1"
 godot_executable="godot441.$DEVICE_ARCH"
-pck_filename="VacuousSugarQuest.pck"
+pck_filename="VacuousSugarQuest.zip"
 gptk_filename="vacuoussugarquest.gptk"
 
 # logging
@@ -63,12 +63,6 @@ fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
 cd $GAMEDIR
-
-# patch file
-#if [ -f "./carpetgallery.pck" ]; then
-#  $controlfolder/xdelta3 -d -s "./carpetgallery.pck" "./patch.xdelta3" "./carpetgallery_patched.pck"
-#  [ $? -eq 0 ] && rm "./carpetgallery.pck" || echo "Patching of carpetgallery.pck has failed"
-#fi
 
 # check for rocknix running libmali driver
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then

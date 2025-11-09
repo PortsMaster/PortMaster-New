@@ -13,4 +13,6 @@ You can remap controls in the Settings menu.
 | ------ | -------- |
 | D-PAD  | Movement |
 | A      | Jump     |
-| BACK   | Reset    |
+| R1     | Reset    |
+| SELECT | Pause    |
+| B      | Cancel   |
