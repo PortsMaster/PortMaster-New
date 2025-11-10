@@ -73,9 +73,13 @@ if [ ! -f "./$pck_filename" ] && [ -f "./sadgod.exe" ]; then
   # extract exe contents in place using 7zzs
   ./7zzs.aarch64 x "./sadgod.exe" -y
   # apply patch
-  "$controlfolder/xdelta3" -d -s "pck" "./patch.xdelta3" "./$pck_filename"
+  "$controlfolder/xdelta3" -d -s "pck" "./patch43.xdelta3" "./$pck_filename"
   if [ $? -ne 0 ]; then
     pm_message "Patching of sadgod.exe has failed"
+    rm -rf .rsrc
+    rm -f .??*
+    rm -f pck
+    rm -f "[0]"
   else
     pm_message "Patch succeeded. Cleaning up ..."
     rm -rf .rsrc
