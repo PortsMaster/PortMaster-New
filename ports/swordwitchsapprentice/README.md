@@ -9,9 +9,9 @@ Block incoming attacks by pressing the key that matches the enemy's attack direc
 
 Counterattack with the correct element after blocking.
 
-- When the enemy is Light, use Dark attack \[ A / → \]
-- When the enemy is Dark, use Light attack \[ Y / ← \]
-- When the enemy is Blood, use Blood attack \[ X / ↑ \]
+- When the enemy is Light, use Dark attack `[ A / → ]`
+- When the enemy is Dark, use Light attack `[ Y / ← ]`
+- When the enemy is Red, use Blood attack `[ X / ↑ ]`
 
 Estimated playtime: 10 minutes
 
@@ -24,4 +24,5 @@ Estimated playtime: 10 minutes
 | X/Y/A  | Blocks and attacks |
 | L1/R1  | 'Up' alternative   |
 | SELECT | Pause              |
+
 
