@@ -55,7 +55,7 @@ fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "utry.gptk" &
-pm_platform_helper "gmloadernext.aarch64"
+pm_platform_helper "gmloadernext.aarch64" >/dev/null
 ./gmloadernext.aarch64 -c "gmloader.json"
 
 # Cleanup
