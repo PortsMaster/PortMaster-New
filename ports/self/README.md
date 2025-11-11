@@ -1,9 +1,9 @@
 ## Notes
 
-Thanks to following for creating this little gem:
+Thanks to the following for creating this ready-to-run gem:
 
 - [mmatt_ugh](https://twitter.com/mmatt_ugh) design, art
-- [dev_dwarf](https://twitter.com/dev_dwarf)  programming
+- [dev_dwarf](https://twitter.com/dev_dwarf) programming
 - [connor grail](https://twitter.com/ConnorGrail) sound, music
 
 If you like their work, please consider making a donation at [itch.io](https://dev-dwarf.itch.io/self)
