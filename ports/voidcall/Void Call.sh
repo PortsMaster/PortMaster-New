@@ -39,7 +39,7 @@ if [ -f VoidCall_exe.zip ]; then
   rm -rf "voidcall.love/VoidCall_exe"
   rm -rf "voidcall.love/.git"
   rm -rf "voidcall.love/.vscode"
-  pm_message "Copying main.lua ..."
+  pm_message "Patching main.lua ..."
   cp main.lua voidcall.love
   pm_message "Done!"
 fi
