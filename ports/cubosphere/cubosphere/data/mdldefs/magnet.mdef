@@ -1,0 +1,108 @@
+INCLUDEABSOLUTE("/blockdefs/include/colors.inc");
+
+model=-1;
+
+texture_array={};
+
+normalmap=-1;
+shader=-1;
+effecttex=-1;
+texture_inside=-1;
+
+function Precache()
+  model=MODEL_LoadOBJ("magnet");
+  
+  if GLOBAL_GetVar("ShadersActive")>0 then
+     texture_array[0]=TEXTURE_Load("magnet");
+     texture_array[1]=TEXTURE_Load("magnet_type2");
+     texture_array[2]=TEXTURE_Load("magnet_type3");
+     normalmap=TEXTURE_Load("magnet_nm");
+     shader=SHADER_Load("distsimplebumpmdl");
+  else
+     texture_array[0]=TEXTURE_Load("magnet_ns");
+     texture_array[1]=TEXTURE_Load("magnet_ns_t2");
+     texture_array[2]=TEXTURE_Load("magnet_ns_t3");
+  end
+  effecttex=TEXTURE_Load("magnet_eff");
+ texture_inside=TEXTURE_Load("magnetinner");
+end; 
+
+
+
+function Render(defindex)
+  current_type=GLOBAL_GetVar("MagnetType");
+  MODEL_Render(defindex,model); 
+end;
+
+-- Called when the group with index group is rendered
+-- Use MODEL_GetGroupName(model,group) to obtain the name
+
+function SetInnerColor(alpha_factor)
+   local colind=GLOBAL_GetVar("RenderColor");
+  
+  
+    local add=GLOBAL_GetVar("RenderColorAdder");
+
+  ActivateCuboColorAlpha(colind,add,2.0,0.5,0.25,alpha_factor);
+end;
+
+function RenderGroup(group)
+  if group~=0 then
+    return;
+  end;
+   
+  if GLOBAL_GetVar("MagnetEffectRender")==0 then
+
+    if GLOBAL_GetVar("ShadersActive")>0 then
+      MATERIAL_SetAmbient(COLOR_New(0.25,0.25,0.25,1));
+      MATERIAL_SetDiffuse(COLOR_New(0.4,0.4,0.4,1));
+      MATERIAL_SetSpecular(COLOR_New(0.4,0.4,0.4,1));
+      SHADER_Activate(shader);
+      TEXTURE_Activate(texture_array[current_type],0);
+      TEXTURE_Activate(normalmap,1);
+      SHADER_SetInt("base",0);
+      SHADER_SetInt("normalMap",1);
+      SHADER_SetFloat("mindist",GLOBAL_GetScale()*3.0);
+      SHADER_SetFloat("factor",1.75);
+       MODEL_DrawGroupWithTangent(model,0,"tangent");
+      TEXTURE_Activate(-1,1);
+      SHADER_Deactivate();
+    else
+      TEXTURE_Activate(texture_array[current_type],0);
+      MATERIAL_SetAmbient(COLOR_New(0.25,0.25,0.25,1));
+      MATERIAL_SetDiffuse(COLOR_New(0.4,0.4,0.4,1));
+      MATERIAL_SetSpecular(COLOR_New(0.4,0.4,0.4,1));
+      MODEL_DrawGroup(model,0);
+    end;
+
+
+    SetInnerColor(1);
+ TEXTURE_Activate(texture_inside,0);
+    MODEL_DrawGroup(model,2);
+    
+    return;
+  end;
+
+
+    SetInnerColor(0.5);
+    TEXTURE_Activate(effecttex,0);
+
+    BLEND_Function(770,1);
+    TEXTURE_MatrixMode(1);
+    MATRIX_Push();
+    local s=GLOBAL_GetVar("MagnetEffectRender");
+    local speed=2*s*GLOBAL_GetTime();
+    MATRIX_Translate(VECTOR_New(speed+(s-1)*speed,speed,0))
+    MATRIX_ScaleUniform(2/s);
+   
+
+    MODEL_DrawGroup(model,1);
+
+    MATRIX_Pop();
+    TEXTURE_MatrixMode(0);
+   
+
+
+end;
+
+

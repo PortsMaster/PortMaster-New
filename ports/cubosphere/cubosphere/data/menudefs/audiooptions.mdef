@@ -1,0 +1,129 @@
+menuname="audiooptions";
+
+INCLUDE("/include/std.inc");
+
+if GLOBAL_GetVar("InGame")==1 then
+ logoactive=0;
+end;
+
+useleftright=1;
+
+lastVols={Sound=GLOBAL_GetVar("SoundVolume"),Music=GLOBAL_GetVar("MusicVolume")};
+
+function VolumeString(pref)
+if GLOBAL_GetVar("SoundInitialized")~=1 then
+ return TRANS_Str("base:n/a");
+end;
+local a=GLOBAL_GetVar(pref.."Volume");
+if a==0 then
+  return TRANS_Str("audiooptions:mute");
+end;
+return a.." %";
+end;
+
+function ToggleVolume(pref,increment)
+ local a=GLOBAL_GetVar(pref.."Volume");
+ local na;
+ if increment~=0 then
+   na=a+increment;
+ else 
+   if a==0 then
+     na=lastVols[pref];
+     if na==0 then
+         na=100;
+     end;
+   else
+     na=0;
+     if a==0 then
+       lastVols[pref]=100;
+     else
+       lastVols[pref]=a;
+     end;
+   end;
+ end;
+ if na>100 then
+   na=100;
+ elseif na<0 then
+   na=0;
+ end; 
+
+ if increment~=0 then
+    lastVols[pref]=na;
+ end;
+ 
+ if pref=="Music" then
+   SOUND_SetMusicVolume(na);
+ else 
+   SOUND_SetVolume(na);
+ end;
+ GLOBAL_SetVar(pref.."Volume",na);
+end;
+
+
+function BuildEntries()
+Entries={TRANS_Str("audiooptions:soundvolume")..": "..VolumeString("Sound"),TRANS_Str("audiooptions:musicvolume")..": "..VolumeString("Music"),"",TRANS_Str("base:ok")};
+end;
+
+local darkbg=-1;
+
+function Precache()
+ if GLOBAL_GetVar("InGame")==1 then
+ darkbg=TEXDEF_Load("darkbg");
+end;
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ Hints={TRANS_Str("audiooptions:hint:soundvolume"),TRANS_Str("audiooptions:hint:musicvolume"),"",TRANS_Str("audiooptions:hint:ok")};
+end;
+
+function Render()
+if GLOBAL_GetVar("InGame")==1 then
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+end;
+ StartMenu();
+ Headline(TRANS_Str("audiooptions:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+function HandleSelection(sel)
+ if (sel==3) or (sel==-1) then
+     ResetStoredSelection();
+     MENU_Load("options");
+   
+ elseif sel==0 then
+   ToggleVolume("Sound",0);
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+ elseif sel==1 then
+   ToggleVolume("Music",0);
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+ end;
+end;
+
+
+function HandleLeftRight(dir,sel)
+ local inc;
+ if dir=="left" then
+   inc=-5;
+ else
+   inc=5;
+ end;
+ if sel==0 then
+  ToggleVolume("Sound",inc);
+  BuildEntries();
+  INCLUDE("/include/writecfg.inc");
+  SOUND_Play(snd_nav,-1);
+ elseif sel==1 then
+  ToggleVolume("Music",inc);
+  BuildEntries();
+  INCLUDE("/include/writecfg.inc");
+  SOUND_Play(snd_nav,-1);
+ end;
+end;
