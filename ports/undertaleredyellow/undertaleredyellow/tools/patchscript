@@ -1,33 +1,86 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
-LOGERR="$GAMEDIR/patch_error.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
 
 # Redirect output and error to the log file
-rm -rf "$LOGFILE" "$LOGERR"
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+# Patch failure function
+patch_failure() {
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$TOOLKIT" || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+# Mount the dotnet runtime
+DOTNETDIR="$HOME/mono"
+DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+if [ -f "$DOTNETFILE" ]; then
+    $ESUDO mkdir -p "$DOTNETDIR"
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+else
+    echo "This port requires the Dotnet runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
 # Exports
+export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="undertalery.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
-
-PYTHON=$(which python3)
+export TOOLDIR="$GAMEDIR/tools"
 
 # Permissions
 chmod 666 /dev/uinput
 
-cd "$GAMEDIR" || return
+cd "$GAMEDIR"
+
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
 
 # First we need to verify the user placed everything correctly.
 prepare_assets() {
-
     # Identify ut-red-yellow.zip
     echo "Looking for Undertale Red & Yellow zip file..."
     sleep 1
@@ -47,11 +100,10 @@ prepare_assets() {
         fi
     else
         echo "Found ${MOD_ZIP}!"
+        mkdir -p "$DATADIR/utry"
+        unzip "$MOD_ZIP" -d "$DATADIR/utry" || { echo "Failed to unzip $MOD_ZIP"; exit 1; }
+        rm -rf "$MOD_ZIP"
     fi
-
-    mkdir -p "$DATADIR/utry"
-    unzip "$MOD_ZIP" -d "$DATADIR/utry" || { echo "Failed to unzip $MOD_ZIP"; exit 1; }
-    rm -rf "$MOD_ZIP"
 
     # Move .ogg files if any exist
     ogg=false
@@ -71,31 +123,14 @@ prepare_assets() {
     fi
 
     mkdir -p "$TOOLDIR/patches"
-    FOUND=0
 
-    for f in "$DATADIR/utry/"*.xdelta; do
-        case "$f" in
-            *Undertalev1.0.8*)
-                dest="$TOOLDIR/patches/utry_steam.xdelta"
-                ;;
-            *v1.08_Windows_C*)
-                dest="$TOOLDIR/patches/utry_gog.xdelta"
-                ;;
-            *)
-                continue
-                ;;
-        esac
-
-        mv "$f" "$dest" || {
-            echo "Failed to move patch file: $f"
-            exit 1
-        }
-        FOUND=1
-    done
-
-    if [ $FOUND -eq 0 ]; then
-        echo "Could not find any base patch files!"
-        exit 1
+    # Pull the vanilla-to-utry patch
+    BASEPATCH=$(find "$DATADIR/utry" -maxdepth 1 -type f -name "Undertale v1.08 to UTRY v*.xdelta" | head -n 1)
+    if [ ! -f "$BASEPATCH" ]; then
+        echo "Did not find base patch file! Please notify the port creator."
+        return 1
+    else
+        mv "$BASEPATCH" "$TOOLDIR/patches/utry_steam.xdelta"
     fi
 
     # Clean up
@@ -107,74 +142,120 @@ prepare_assets() {
 # Hopefully the stage is set. Now ensure they copied their Undertale game data and apply the patch.
 apply_xdelta() {
     # Check if the data.win file exists
-    if [ -f "$DATADIR/data.win" ]; then
-        # Compute md5sum
-        FILESUM=`md5sum "$DATADIR/data.win" | awk '{ print $1 }'`
-        STEAMSUM="5903fc5cb042a728d4ad8ee9e949c6eb"
+    if [ ! -f "$DATADIR/data.win" ]; then
+        echo "No data.win file found! Did you copy your Undertale Steam or GOG data to the assets folder?"
+        return 1
+    fi
 
-        if [ "$FILESUM" != "$STEAMSUM" ]; then
-            echo "MD5 doesn't match Steam! Trying to apply the GOG patch..."
-            sleep 1
-            output=`"$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/utry_gog.xdelta" "$DATADIR/data2.win" 2>&1`
-            if [ $? -eq 0 ]; then
-                echo "Patch applied successfully"
-                echo "$output"
-                rm "$DATADIR/data.win" && mv "$DATADIR/data2.win" "$DATADIR/data.win"
-            else
-                echo "Failed to apply gog patch! Probably not GOG v1.08 Windows."
-                echo "$output"
-                mv "$LOGFILE" "$LOGERR"
-                exit 1
-            fi
-        fi    
+    # Compute md5sum
+    FILESUM=$(md5sum "$DATADIR/data.win" | awk '{print $1}')
+    STEAMSUM="5903fc5cb042a728d4ad8ee9e949c6eb"
+    GOGSUM="ff4f10d0434b332f46e1f35a900ec862"
 
-        # Apply the Steam patch
-        echo "Applying xdelta patch..."
-        output=`"$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/utry_steam.xdelta" "$DATADIR/game.droid" 2>&1`
-        if [ $? -eq 0 ]; then
-            echo "Patch applied successfully"
-            echo "$output"
-            rm "$DATADIR/data.win"
-            output=`"$controlfolder/xdelta3" -d -s "$DATADIR/game.droid" -f "./tools/patches/pm-fix.xdelta" "$DATADIR/game2.droid" 2>&1`
-            if [ $? -eq 0 ]; then
-                echo "Second patch applied successfully"
-                echo "$output"
-                rm "$DATADIR/game.droid" && mv "$DATADIR/game2.droid" "$DATADIR/game.droid"
-            else
-                echo "Failed to apply secondary patch"
-                echo "$output"
-                mv "$LOGFILE" "$LOGERR"
-                exit 1
-            fi
+    # Game version doesn't match GOG or Steam v1.08
+    if [ "$FILESUM" != "$STEAMSUM" ] && [ "$FILESUM" != "$GOGSUM" ]; then
+        echo "MD5 doesn't match Steam or GOG! UTRY is not compatible with this version!"
+        return 1
+    fi
+
+    # If GOG, first patch to Steam
+    if [ "$FILESUM" = "$GOGSUM" ]; then
+        echo "GOG data found, patching to Steam version..."
+        if "$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/rhh-gog-to-steam.xdelta" "$DATADIR/data2.win"; then
+            echo "GOG to Steam patch applied successfully."
+            mv -f "$DATADIR/data2.win" "$DATADIR/data.win"
         else
-            echo "Failed to apply patch"
-            echo "$output"
-            mv "$LOGFILE" "$LOGERR"
-            exit 1
+            echo "Failed to apply GOG to Steam patch!"
+            return 1
         fi
+    fi
+
+    # Apply the Steam patch
+    echo "Applying Undertale Red & Yellow patch..."
+    if "$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "./tools/patches/utry_steam.xdelta" "$DATADIR/data2.win"; then
+        echo "Undertale Red & Yellow patch applied successfully"
+        # Remove original after success
+        rm -f "$DATADIR/data.win"
     else
-        echo "No data.win file found to patch! Did you copy your Undertale Steam data to the assets folder?"
+        echo "Failed to apply Undertale Red & Yellow patch!"
+        return 1
     fi
 }
 
-compress_audio() {
-    mkdir -p "$TMPDIR"
+dump_code() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
 
-    # Run the compression tool
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    # Specify which code entries to extract
+    CODE_ENTRIES=(
+        "gml_Object_obj_torhandhold1_Create_0"
+    )
 
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        echo "Moved compressed files to $DATADIR."
-        rm -rf "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
+    CODEARGS=""
+    for entry in "${CODE_ENTRIES[@]}"; do
+        CODEARGS="$CODEARGS --code $entry"
+    done
+
+    echo "Dumping GML scripts: ${CODE_ENTRIES[*]}"
+
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data2.win" \
+        -o "$TMPDIR" \
+        $CODEARGS
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to dump GML scripts."
+        return 1
+    fi
+
+    echo "GML scripts dumped to $TMPDIR"
+}
+
+modify_code() {
+    # Modify the extracted gml
+    $PYTHON "$GAMEDIR/tools/torielfix.py" "$TMPDIR/CodeEntries"
+    if [ $? -ne 0 ]; then
+        echo "Failed to modify GML scripts."
+        return 1
+    fi
+}
+
+# Replace game code entries for data.win
+replace_code() {
+    # Build --code args from all gml files
+    CODEARGS=""
+    for file in "$TMPDIR/CodeEntries/"*.gml; do
+        [ -f "$file" ] || continue
+        entry=$(basename "$file" .gml)
+        echo "Will replace gml script: $file"
+        CODEARGS="$CODEARGS --code $entry=$file"
+    done
+
+    # Begin replace operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        replace "$DATADIR/data2.win" \
+        -o "$DATADIR/game.droid" \
+        $CODEARGS
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to replace gml scripts."
+        return 1
+    else
+        echo "Successfully replaced gml scripts."
+        rm -f "$DATADIR/data2.win"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
+
+compress_audio() {  
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
         echo "Audio compression applied successfully."
     else
-        echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
-        rm -rf "$TMPDIR"
+        # Failure
+        echo "Audio compression failed for $GAMEFILE."
+        rmdir "$TMPDIR"
+        patch_failure
     fi
 }
 
@@ -185,14 +266,23 @@ zip_archive() {
 }
 
 process_game() {
-    prepare_assets || { echo "Patching process failed."; exit 1; }
-    sleep 2
-    apply_xdelta || { echo "Patching process failed."; exit 1; }
-    sleep 2
-    compress_audio || { echo "Patching process failed."; exit 1; }
-    sleep 2
-    zip_archive || { echo "Patching process failed."; exit 1; }
+    prepare_assets || { patch_failure; return 1; }
+    apply_xdelta || { patch_failure; return 1; }
+	dump_code || { patch_failure; return 1; }
+	modify_code || { patch_failure; return 1; }
+	replace_code || { patch_failure; return 1; }
+    compress_audio || { patch_failure; return 1; }
+    zip_archive || { patch_failure; return 1; }
 }
 
 # Call the function
-process_game
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Unmount runtimes
+$ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+$ESUDO umount "$TOOLKIT" 2>/dev/null || true
