@@ -25,7 +25,7 @@ cd $GAMEDIR
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "gmloadernext.aarch64" -c "self.gptk" &
