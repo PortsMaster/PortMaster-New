@@ -2,7 +2,6 @@
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-# Below we assign the source of the control folder (which is the PortMaster folder) based on the distro:
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -13,15 +12,26 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+# pm
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-get_controls # We pull the controller configs from the get_controls function from the control.txt file here
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-# We switch to the port's directory location below
+# variables
 if [ -z "$directory" ]; then
-  cd $(dirname "$0")/asteroludi
+  GAMEDIR=$(dirname "$0")/asteroludi
+  DEVICE_ARCH=`uname -m`
 else
-  cd /$directory/ports/asteroludi
+  GAMEDIR=/$directory/ports/asteroludi
 fi
 
-./arcajs.`uname -m` -f asteroludi.ajs >out.log 2>&1
+# enable logging
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+cd $GAMEDIR
+
+# run the game
+pm_platform_helper "./arcajs.${DEVICE_ARCH}"
+"./arcajs.${DEVICE_ARCH}" -f asteroludi.ajs
+
+# cleanup
+pm_finish
