@@ -1,0 +1,223 @@
+menuname="exploremode";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.025;
+
+startexture=-1;
+
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ startexture=TEXDEF_Load("episodestar");
+ BuildEntries();
+ if Selected>NumEntries then
+  Selected=0;
+ end;
+ OnNavigate(0);
+ 
+end;
+
+
+Stars={}
+TotalScores={}
+Previews={}
+
+
+
+MenuXOffs=0.2;
+MenuYOffs=0.05;
+PreviewXSize=0.4;
+PreviewYSize=0.4;
+PreviewXPos=-MenuXOffs;
+PreviewYPos=-0.125;
+nopreviewtxt=TEXDEF_Load("nopreview");
+previewtxt=TEXDEF_Load("preview");
+haspreview=0;
+
+
+
+NumEpi=0;
+Folders={}
+TransNames={};
+
+function AddSingleLevel(ln) end;
+function AddEpisodePart(foldername,transname)
+ NumEpi=NumEpi+1;
+ Folders[NumEpi]=foldername;
+ TransNames[NumEpi]=transname;
+end;
+
+
+INCLUDEABSOLUTE("/levels/"..GLOBAL_GetVar("CurrentEpisode")..".epi");
+
+
+
+function BuildEntries()
+ NumEntries=NumEpi;
+ for i=1,NumEpi,1 do 
+     Entries[i]=TRANS_StrD("theme:"..TransNames[i],TransNames[i]);
+     local istr=string.format(TRANS_Str("explore:hint:episode"),i);
+     Hints[i]=istr..Entries[i];
+
+     local numulvl=FILESYS_StartListDirectory("/levels/"..Folders[i].."/",true,false,false,false,".*\\.ldef"); 
+     local CompletedLevels=0;
+     local TotalLevels=0;
+     local TotalScore=0;
+     local firstlevel="";
+     local firstskipped="";
+     local firstunfinished="";
+ 
+     for index = 0, numulvl-1, 1 do
+        local f=FILESYS_GetListDirectoryEntry(index);
+          f=string.sub(f,1,string.len(f)-5);
+        local fn=Folders[i].."/"..f;
+        if index==0 then firstlevel=fn; end;
+        if SCORE_VarDefined(fn)==1 then
+           local sc=SCORE_GetVar(fn);
+         if sc>=0 then
+           CompletedLevels=CompletedLevels+1;
+           TotalScore=TotalScore+sc;
+         elseif sc==-2 then
+           if firstskipped=="" then firstskipped=fn; end;
+         end;
+       else
+           if firstunfinished=="" then firstunfinished=fn; end;
+       end;
+       TotalLevels=TotalLevels+1;
+       lastlevel=fn;
+     end;
+
+        if firstunfinished=="" then
+            if firstskipped=="" then
+              Previews[i]=firstlevel;
+            else 
+              Previews[i]=firstskipped;
+            end;
+        else   
+            Previews[i]=firstunfinished;
+           end;
+
+    Stars[i]=CompletedLevels-TotalLevels+3;
+    TotalScores[i]=TotalScore;
+
+   if Stars[i]<=0 then
+       if GLOBAL_VarDefined("MENUSELECTION_"..menuname)==0 then Selected=i-1; end;
+       break;
+     end;
+ end;
+
+
+end;
+
+
+function RenderPreview()
+  MATRIX_Push();
+  MATRIX_Translate(VECTOR_New(PreviewXPos,PreviewYPos,0));
+  MATRIX_Scale(VECTOR_New(PreviewXSize,PreviewYSize,1));
+ MATERIAL_SetColor(COLOR_New(1,1,1,1));
+if haspreview==1 then
+  TEXDEF_Render(previewtxt,0);
+else
+  TEXDEF_Render(nopreviewtxt,0);
+end;
+  MATRIX_Pop();
+
+if haspreview==0 then
+  FONT_SetSize(0.03);
+  MATERIAL_SetColor(COLOR_New(1,1,1,1));
+  FONT_SetAlign("center","center");
+  FONT_Goto(PreviewXPos,PreviewYPos);
+  FONT_TextOut(TRANS_Str("levelpreview:nopreview"));
+end;
+
+end;
+
+
+
+
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("explore:episode:title"));
+ RenderMenu();
+ RenderPreview();
+
+
+ local stars=Stars[Selected+1];
+ local totalscore=TotalScores[Selected+1];
+
+ local msg;
+ msg=string.format(TRANS_Str("explore:hint:episode"),Selected+1)..Entries[Selected+1];
+ msg=msg.."\n";
+
+ if stars>0 then
+   msg=msg..string.format(TRANS_Str("explore:episode:totalscore"),totalscore);
+ else
+   msg=msg..TRANS_Str("explore:episode:notyet");
+ end;
+
+ FONT_Begin();
+ FONT_SetSize(0.025);
+ MATERIAL_SetColor(COLOR_New(1,1,1,1));
+ FONT_SetAlign("left","top");
+ FONT_Goto(PreviewXPos-PreviewXSize*0.5,PreviewYPos-PreviewYSize*0.5-0.01);
+ FONT_TextOut(msg);
+
+ if stars>0 then
+
+ for istar=0,2,1 do
+   MATRIX_Push();
+   MATRIX_Translate(VECTOR_New(PreviewXPos+(istar-1)*0.1,PreviewYPos-PreviewYSize*0.35,1));
+   MATRIX_Scale(VECTOR_New(0.1,0.1,1));
+   if stars>istar then GLOBAL_SetVar("RenderColor",0); else GLOBAL_SetVar("RenderColor",1); end; 
+   TEXDEF_Render(startexture,0);
+   MATRIX_Pop();
+ end;
+
+ end;
+
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) or (NumEntries==0) then
+  if GLOBAL_GetVar("TwoPlayerEpisode")==GLOBAL_GetVar("CurrentEpisode") then
+    MENU_Load("twoplayermode");
+  else
+    MENU_Load("gameselect");
+  end;
+ else
+   if GLOBAL_VarDefined("ExploreEpisode")==1   then
+     if GLOBAL_GetVar("ExploreEpisode")~=sel+1 then
+       GLOBAL_SetVar("MENUSELECTION_exploreepisode",-1)
+     end;
+   else
+    GLOBAL_VarDefined("MENUSELECTION_exploreepisode",-1);
+   end;
+
+   GLOBAL_SetVar("ExploreEpisode",sel+1);
+   MENU_Load("exploreepisode");
+ end;
+end;
+ 
+
+function OnNavigate(dir)
+ if NumEntries==0 then
+   return;
+ end;
+ 
+  local svname="/levels/"..Previews[Selected+1]..".png";
+  if FILESYS_FileExists(svname)==1 then
+    tinxed=TEXTURE_LoadTempTexture("_levelpreview",svname); 
+    haspreview=1;
+  else
+   haspreview=0;
+  end;
+end;
+
+

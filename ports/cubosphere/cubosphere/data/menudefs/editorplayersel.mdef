@@ -1,0 +1,84 @@
+menuname="editorplayersel";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+logoactive=0;
+darkbg=-1;
+numitemdefs=-1;
+
+
+function SortEntries()
+ for i=1,NumEntries-1,1 do
+   for j=i+1,NumEntries,1 do
+    if Entries[i]>Entries[j] then
+      Entries[i],Entries[j]=Entries[j],Entries[i];
+      oEntries[i],oEntries[j]=oEntries[j],oEntries[i];
+      Hints[i],Hints[j]=Hints[j],Hints[i];
+    end;
+   end;
+ end;
+end;
+
+
+function BuildEntries()
+  
+ Entries={};
+ oEntries={};
+ Hints={};
+ local numitemdefs=FILESYS_StartListDirectory("/actordefs/",true,false,false,false,".*\\.lua"); 
+ for index = 0, numitemdefs-1, 1 do
+   oEntries[index+1]=FILESYS_GetListDirectoryEntry(index):match('^(.+)%..-$')
+   Entries[index+1]=TRANS_StrD("ball:"..oEntries[index+1],oEntries[index+1]);
+   Hints[index+1]=TRANS_Str("editor:ball:hint")..Entries[index+1];
+ end;
+NumEntries=numitemdefs;
+SortEntries();
+ Entries[numitemdefs+1]=TRANS_Str("editor:ball:none"); Hints[numitemdefs+1]=TRANS_Str("editor:ball:hint:none");
+ 
+NumEntries=numitemdefs+1;
+
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ darkbg=TEXDEF_Load("darkbg");
+ end;
+
+function Render()
+ StartMenu();
+  FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+ Headline(TRANS_Str("editor:ball:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+   MENU_Deactivate();
+   GLOBAL_SetVar("EditorNewItemType","");
+   GLOBAL_SetVar("EditorToolCommand","Return");
+   GLOBAL_SetVar("EditorTool","Editing");
+ else
+   MENU_Deactivate();
+   if sel+1==table.getn(Entries) then
+    GLOBAL_SetVar("EditorNewEnemyType","");
+   else
+     GLOBAL_SetVar("EditorNewEnemyType",oEntries[sel+1]);
+   end;
+   GLOBAL_SetVar("EditorToolCommand","ChangePlayerType");
+   GLOBAL_SetVar("EditorTool","Editing");
+ end;
+end;
+ 
