@@ -26,6 +26,7 @@ GAMEDIR="/$directory/ports/rott"
 cd $GAMEDIR
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
     pm_message "Preparing Swap File, please wait..."
@@ -50,17 +51,20 @@ fi
 bind_directories ~/.rott $GAMEDIR/conf/.rott
 
 if [[ "$ANALOG_STICKS" == '1' ]]; then
-    GPTOKEYB_CONFIG="$GAMEDIR/rott1joy.gptk"  
-elif [[ "$DEVICE_NAME" == "x55" ]] || [[ "$DEVICE_NAME" == "RG353P" ]] || [[ "$DEVICE_NAME" == "RG40XX-H" ]]; then
+    GPTOKEYB_CONFIG="$GAMEDIR/rott1joy.gptk"
+elif [[ "${DEVICE_NAME^^}" == "X55" ]] || [[ "${DEVICE_NAME^^}" == "RG353P" ]] || [[ "${DEVICE_NAME^^}" == "RG40XX-H" ]] || [[ "${CFW_NAME^^}" == "RETRODECK" ]]; then
     GPTOKEYB_CONFIG="$GAMEDIR/rott_triggers.gptk"
 else
     GPTOKEYB_CONFIG="$GAMEDIR/rott.gptk"
 fi
 
-[ ! -f "$GAMEDIR/DARKWAR.WAD" ] && ./text_viewer -f 25 -w -t "Missing gamedata" -m "Please place your DARKWAR.WAD, DARKWAR.RTC, and DARKWAR.RTL files into the /ports/rott/ directory! \n\nPress 'Select' to exit this Text Viewer"
+$ESUDO chmod +x "$GAMEDIR/rott_dw.${DEVICE_ARCH}"
+$ESUDO chmod +x "$GAMEDIR/text_viewer.${DEVICE_ARCH}"
 
-$GPTOKEYB "rott_dw" -c "$GPTOKEYB_CONFIG" &
-pm_platform_helper "$GAMEDIR/rott_dw"
-./rott_dw
+[ ! -f "$GAMEDIR/DARKWAR.WAD" ] && ./text_viewer.${DEVICE_ARCH} -f 25 -w -t "Missing gamedata" -m "Please place your DARKWAR.WAD, DARKWAR.RTC, and DARKWAR.RTL files into the /ports/rott/ directory! \n\nPress 'Select' to exit this Text Viewer"
+
+$GPTOKEYB "rott_dw.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
+pm_platform_helper "$GAMEDIR/rott_dw.${DEVICE_ARCH}"
+./rott_dw.${DEVICE_ARCH}
 
 pm_finish
