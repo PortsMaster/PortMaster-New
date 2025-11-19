@@ -24,8 +24,6 @@ BINARY=azimuth
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-mkdir -p "$GAMEDIR/conf"
-
 cd $GAMEDIR
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"

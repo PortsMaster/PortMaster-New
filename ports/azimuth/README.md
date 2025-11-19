@@ -1,4 +1,4 @@
-# Thanks
+## Thanks
 Thanks to [Matthew D. Steele](https://github.com/mdsteele/azimuth) for creating this game and making it available for free.
 
 ## Controls
