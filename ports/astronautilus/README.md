@@ -1,11 +1,9 @@
 ## Notes
 
-Thanks [neozoid.games](https://neozoid-games.itch.io) for creating this little gem, which you can purchase at [itch.io](https://neozoid-games.itch.io/astronautilus)
+Thanks [neozoid.games](https://x.com/neozoidgames) for creating this little gem, which you can purchase at [Steam](https://store.steampowered.com/app/1724120/ASTRONAUTILUS/)
 
 
 ## Controls
-
-**For the demo version:** avoid using L-Stick to navigate menus, and use 'mouse' (R-Stick) instead.
 
 One can remap controls in the Options menu.
 
