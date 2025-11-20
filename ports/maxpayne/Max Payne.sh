@@ -67,7 +67,7 @@ function start_maxpayne {
   $GPTOKEYB "maxpayne_arm64" & 
   pm_platform_helper "$GAMEDIR/maxpayne_arm64"
 
-  pm_message "Starting Max Payne"
+  #pm_message "Starting Max Payne" # Disabled for now as its causing issues with the new PM pm_message display
   ./maxpayne_arm64 
 }
 
