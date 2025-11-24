@@ -8,82 +8,63 @@ LOGERR="patcherr.txt"
 > "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
-# Patch failure function
-patch_failure() {
-    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
-    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
-    # Exit script, or return if sourced
-    return 1 2>/dev/null || exit 1
-}
-
-# Mount the GMToolkit runtime
-TOOLKIT="$HOME/gmtoolkit"
-RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
-if [ -f "$RUNTIME" ]; then
-    $ESUDO mkdir -p "$TOOLKIT"
-    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
-    $ESUDO mount "$RUNTIME" "$TOOLKIT"
-else
-    echo "This port requires the GMToolkit runtime. Please download it."
-    sleep 2
-    patch_failure
-fi
-
-# Mount the dotnet runtime
-DOTNETDIR="$HOME/mono"
-DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
-if [ -f "$DOTNETFILE" ]; then
-    $ESUDO mkdir -p "$DOTNETDIR"
-    $ESUDO umount "$DOTNETFILE" || true
-    $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
-else
-    echo "This port requires the Dotnet runtime. Please download it."
-    sleep 2
-    patch_failure
-fi
-
 # Exports
-export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
-export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="utyellow.port"
 export TMPDIR="$GAMEDIR/tmp"
 
-# Permissions
-chmod 666 /dev/uinput
+prepare_system() {
+    # Test for commands: python, zip
+    PYTHON=$(command -v python3)
+    if [ -z "$PYTHON" ]; then
+        echo "Missing Python!"
+        return 1
+    fi
+    
+    # Mount the GMToolkit runtime
+    TOOLKIT="$HOME/gmtoolkit"
+    RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+    if [ -f "$RUNTIME" ]; then
+        $ESUDO mkdir -p "$TOOLKIT"
+        $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+        $ESUDO mount "$RUNTIME" "$TOOLKIT"
+    else
+        echo "This port requires the GMToolkit runtime. Please download it."
+        return 1
+    fi
 
-cd "$GAMEDIR"
-
-# Set up trap for cleaning TMPDIR on exit
-trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
-
-# Attempt to get SAVEDIR from gmloader.json using jq
-if command -v jq >/dev/null 2>&1; then
-    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
-else
-    SAVEDIR="$GAMEDIR/saves"
-fi
-
-# Test for commands: python, zip
-PYTHON=$(which python3)
-if [ -z "$PYTHON" ]; then
-    echo "Missing Python!"
-    patch_failure
-fi
-
-ZIP=$(which zip)
-if [ -z "$ZIP" ]; then
-    echo "Missing zip!"
-    patch_failure
-fi
+    # Mount the dotnet runtime
+    DOTNETDIR="$HOME/mono"
+    DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+    if [ -f "$DOTNETFILE" ]; then
+        $ESUDO mkdir -p "$DOTNETDIR"
+        $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+        $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+    else
+        echo "This port requires the Dotnet runtime. Please download it."
+        return 1
+    fi
+    
+    # Attempt to get SAVEDIR from gmloader.json using jq
+    if command -v jq >/dev/null 2>&1; then
+        SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+    else
+        SAVEDIR="$GAMEDIR/saves"
+    fi
+    
+    # Exports
+    export PYTHON
+    export SAVEDIR
+    export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+    export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+}
 
 prepare_files() {
     mkdir -p "$SAVEDIR"
     
     # Delete excess files
     find "$DATADIR" -type f \( \
-        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.gitkeep" -o -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
         -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
     \) -exec rm -f {} \;
 
@@ -93,79 +74,145 @@ prepare_files() {
     fi
 }
 
-apply_xdelta() {
-    local good_md5="add857d39df6135f9b9166cdf6995483"
-
-    # Ensure the source file exists
-    [[ -f "$DATADIR/data.win" ]] || { echo "No data.win found in $DATADIR"; return 1; }
-
-    # Verify checksum
-    local md5
-    md5="$(md5sum "$DATADIR/data.win" | awk '{print $1}')"
-    [[ "$md5" == "$good_md5" ]] || { echo "Checksum mismatch for data.win"; return 1; }
-
-    # Apply patch
-    if output="$("$controlfolder"/xdelta3 -d -s "$DATADIR/data.win" -f "$GAMEDIR/tools/patches/utyellow-en.xdelta" "$DATADIR/data2.win" 2>&1)"; then
-        echo "Patch applied successfully"
-        echo "$output"
-        rm -f "$DATADIR/data.win"
-    else
-        echo "Failed to apply patch"
-        echo "$output"
-        return 1
-    fi
-}
-
 # Externalize game textures with compression
 dump_textures() {
     # Purge cache before operations
+    rm -rf "$SAVEDIR/textures"
     rm -rf "$TMPDIR/"*
     
     # Begin texture operations
     dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
-        dump "$DATADIR/data2.win" \
-        -e "$DATADIR/textures" "$DATADIR/game.droid"
+        dump "$DATADIR/data.win" \
+        -e "$DATADIR/textures" "$DATADIR/data2.win"
 
     if [ $? -ne 0 ]; then
         echo "[DOTNET]: Texture dumping failed to apply."
-        patch_failure
+        return 1
     else
-        rm -f "$DATADIR/data2.win"
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/data2.win" "$DATADIR/data.win"
         mv "$DATADIR/textures" "$SAVEDIR/textures"
         [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
 }
 
-compress_audio() {  
+# Dump game code entries from data.win
+dump_code() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+
+    # Specify which code entries to extract
+    CODE_ENTRIES=(
+        "gml_GlobalScript_scr_load_palette_shader"
+        "gml_GlobalScript_scr_draw_palette_shader"
+    )
+
+    CODEARGS=""
+    for entry in "${CODE_ENTRIES[@]}"; do
+        CODEARGS="$CODEARGS --code $entry"
+    done
+
+    echo "Dumping GML scripts: ${CODE_ENTRIES[*]}"
+
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data.win" \
+        -o "$TMPDIR" \
+        $CODEARGS
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to dump GML scripts."
+        return 1
+    fi
+
+    echo "GML scripts dumped to $TMPDIR"
+}
+
+modify_code() {
+    # Modify the extracted gml
+    $PYTHON "$GAMEDIR/tools/mod.py" "$TMPDIR/CodeEntries"
+    if [ $? -ne 0 ]; then
+        echo "Failed to modify GML scripts."
+        return 1
+    fi
+}
+
+# Replace game code entries for data.win
+replace_code() {
+    # Build --code args from all gml files
+    CODEARGS=""
+    for file in "$TMPDIR/CodeEntries/"*.gml; do
+        [ -f "$file" ] || continue
+        entry=$(basename "$file" .gml)
+        echo "Will replace gml script: $file"
+        CODEARGS="$CODEARGS --code $entry=$file"
+    done
+
+    # Begin replace operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        replace "$DATADIR/data.win" \
+        -o "$DATADIR/data2.win" \
+        $CODEARGS
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to replace gml scripts."
+        return 1
+    else
+        echo "Successfully replaced gml scripts."
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/data2.win" "$DATADIR/data.win"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
+
+compress_audio() {
+    # Test for data.win
+    if [ -f "$DATADIR/data.win" ]; then
+        mv "$DATADIR/data.win" "$DATADIR/game.droid"
+    fi
+    
+    # Do audio compression
     if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -v -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
         mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
         echo "Audio compression applied successfully."
     else
         # Failure
-        echo "Audio compression failed for $GAMEFILE."
-        rmdir "$TMPDIR"
+        echo "Audio compression failed."
         return 1
     fi
 }
 
+# Zip it all into the .port file
 zip_archive() {
-        zip -r -0 "$DATAFILE" ./assets/
-        echo "Zipped contents to $DATAFILE"
-        rm -rf "$DATADIR/"*
+    if "$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR"; then
+        rm -rf "$DATADIR"/*
+    else
+        echo "Failed to create $DATAFILE."
+        return 1
+    fi
 }
 
-process_game() { 
+# Cleanup function
+cleanup() {
+    rm -rf "$TMPDIR"
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+}
+
+process_game() {
+    echo "Preparing system..."
+    prepare_system || { cleanup; return 1; }
     echo "Preparing game..."
-    prepare_files || { patch_failure; return 1; }
-    echo "Applying xdelta patch..."
-    apply_xdelta || { patch_failure; return 1; }
+    prepare_files || { cleanup; return 1; }
+    echo "Performing code changes..."
+    dump_code || { cleanup; return 1; }
+    modify_code || { cleanup; return 1; }
+    replace_code || { cleanup; return 1; }
     echo "Externalizing textures..."
-    dump_textures || { patch_failure; return 1; }
+    dump_textures || { cleanup; return 1; }
     echo "Compressing audio..."
-    compress_audio || { patch_failure; return 1; }
-    sleep 1
+    compress_audio || { cleanup; return 1; }
     echo "Finishing up..."
-    zip_archive || { patch_failure; return 1; }
+    zip_archive || { cleanup; return 1; }
 }
 
 # Call the function
@@ -176,6 +223,5 @@ else
     echo "Patching process complete!"
 fi
 
-# Unmount runtimes
-$ESUDO umount "$DOTNETDIR" 2>/dev/null || true
-$ESUDO umount "$TOOLKIT" 2>/dev/null || true
+# Always run cleanup at the end
+cleanup
