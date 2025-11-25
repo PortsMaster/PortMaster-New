@@ -13,3 +13,11 @@ and thank you to jab-lao (https://jab-lao.itch.io/) for Developing this game
 | X      | C |
 
 
+
+
+
+
+| ------ | ---------------------------------------- |
+Easter egg Unlock everything by pressing y on the title screen
+
+
