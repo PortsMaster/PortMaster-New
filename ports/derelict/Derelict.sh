@@ -13,54 +13,39 @@ else
 fi
 
 source $controlfolder/control.txt
-# device_info.txt will be included by default
-
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/derelict"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Log the execution of the script into log.txt
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-cd $GAMEDIR
-
-#Extract game files game files 
-if [ -f "$GAMEDIR/gamedata/Derelict.zip" ]; then
-	
-	# Unzip the GBJam5 version into the gamedata directory. Before someone asks why I dont exclude the txt file as well, the unzip would extract it regardless for whatever reason. 
-	unzip -j -o gamedata/Derelict.zip "Derelict (Original GBJam5 Entry)/*" -x *.exe *.ini *.dll -d gamedata
-	
-	# Rename data.win
-	mv gamedata/data.win gamedata/game.droid
-	
-	# Delete redundant files
-	rm gamedata/Derelict.zip
-	rm gamedata/Changelog.txt
-else
-	echo "Derelict.zip is missing, skipping the extraction step"
+# Prepare game files
+if [ -f "$GAMEDIR/assets/Derelict.zip" ]; then
+	# Unzip the GBJam5 version into the gamedata directory
+	unzip -j -o assets/Derelict.zip "Derelict (Original GBJam5 Entry)/*" -x *.exe *.ini *.dll -d assets
+	# Apply the patch
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Delete all redundant files
+	rm -f assets/*.{exe,dll,win,zip}
+	# Zip all game files into the derelict.port
+	zip -r -0 ./derelict.port ./assets/
+	rm -Rf ./assets/
 fi
 
-# Pack the .ogg files into game.apk ./gamedata
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.ogg ./assets/ || exit 1
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "derelict.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-    # Zip the contents of ./game.apk including the .ogg files
-    zip -r -0 ./game.apk ./assets/ || exit 1
-    rm -Rf "$GAMEDIR/assets/" || exit 1
-fi
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-$GPTOKEYB "gmloader" -c "derelict.gptk" &
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
-
+# Cleanup
 pm_finish
