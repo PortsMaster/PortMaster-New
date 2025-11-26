@@ -36,7 +36,7 @@ if [ -f "$GAMEDIR/assets/Derelict.zip" ]; then
 	# Apply the patch
 	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
 	# Delete all redundant files
-	rm -f assets/*.{exe,dll,win,zip}
+	rm -f assets/*.{win,zip}
 	# Zip all game files into the derelict.port
 	zip -r -0 ./derelict.port ./assets/
 	rm -Rf ./assets/
