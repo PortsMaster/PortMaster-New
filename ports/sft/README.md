@@ -11,12 +11,6 @@ and thank you to jab-lao (https://jab-lao.itch.io/) for Developing this game
 | A      |  Z |
 | B      | X |
 | X      | C |
-
-
-
-
-
-
 | Easter Egg   |
 | ------------- |
 | press Y on title to unlock everything      |
