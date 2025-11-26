@@ -17,7 +17,6 @@ and thank you to jab-lao (https://jab-lao.itch.io/) for Developing this game
 
 
 
-| ------ | ---------------------------------------- |
-|Easter egg| Unlock everything by pressing y on the title screen|
-
-
+| Easter Egg   |
+| ------------- |
+| press Y on title to unlock everything      |
