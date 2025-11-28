@@ -3,6 +3,7 @@
 MiceAmaze is a free video game that features a maze with mice and snakes.  Place your arrows to guide mice to your house, but watch out for snakes and sick mice.  The Eagle can be obtained with a Gold Mouse which will protect your house from those pesky snakes.
 
 Source: [Slayer366](https://github.com/Slayer366/miceamaze)
+
 Forked from: [River Champeimont](https://github.com/rchampeimont/miceamaze)
 
 Transitioned Micamaze to SDL2/SDL2_mixer/SDL2_ttf/stb_image (from SDL1/SDL_mixer/GLC/SOIL (SOIL called libX11)).
@@ -47,6 +48,5 @@ Re-worked the code and Makefile for building on Linux and font rendering to be G
 ```shell
 git clone https://github.com/Slayer366/miceamaze
 cd miceamaze
-mkdir build
 make -j$(nproc)
 ```
