@@ -31,7 +31,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Ensure executable permissions
 $ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
-$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 # Prepare game files
 if [ -f ./assets/data.win ]; then
