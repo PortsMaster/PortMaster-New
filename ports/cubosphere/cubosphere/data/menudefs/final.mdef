@@ -1,0 +1,147 @@
+menuname="final"
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.03;
+SelectedSize=0.04;
+
+--logoactive=0;
+
+numblockdefs=-1;
+
+scorestring=TRANS_Str("loadgame:empty");
+
+function BuildEntries()
+ Entries={TRANS_Str("final:startgame"),"",TRANS_Str("final:loadgame"),"",TRANS_Str("base:cancel")};
+ Hints={TRANS_Str("final:hint:startgame"),"",TRANS_Str("final:hint:loadgame"),"",TRANS_Str("game:hint:returntomain")};
+ local cind=1;
+ local numulvl=FILESYS_StartListDirectory("/user/saves/"..GLOBAL_GetVar("CurrentEpisode").."/",true,false,false,false,".*\\.lua"); 
+
+
+
+ for index = 0, numulvl-1, 1 do
+   local fname=FILESYS_GetListDirectoryEntry(index):match('^(.+)%..-$')
+   --print("Checking "..fname);
+   if fname=="f" then
+     SAVE_VERSION=0;
+     SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/"..fname);
+     if SAVE_VERSION>=GLOBAL_GetVar("CuboVersion") then
+       scorestring=TRANS_Str("final:hint:level")..": "..(LEVEL_NUM).." - "..TRANS_Str("loadgame:hint:score")..LOAD_SCORE;
+      end;
+   end;
+ end;
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+end;
+
+
+
+local startlevel=""
+
+function AddSingleLevel(ln) if startlevel=="" then startlevel=ln;  end; end;
+
+function AddEpisodePart(foldername,transname)
+ if startlevel~=""  then return; end;
+ local numulvl=FILESYS_StartListDirectory("/levels/"..foldername.."/",true,false,false,false,".*\\.ldef"); 
+ if numulvl==0 then return; end;
+ local f=FILESYS_GetListDirectoryEntry(0);
+ f=string.sub(f,1,string.len(f)-5);
+ startlevel=foldername.."/"..f;
+end;
+
+START_SCORE=nil;
+
+INCLUDEABSOLUTE("/levels/"..GLOBAL_GetVar("CurrentEpisode")..".epi");
+
+if START_SCORE==nil then
+ START_SCORE=0;
+end;
+
+
+function RenderMenu()
+ 
+
+ local pos=0.0;
+ NumEntries=0;
+ for i,v in pairs(Entries) do
+            if Selected==i-1 then
+              FONT_SetSize(SelectedSize);
+              MATERIAL_SetColor(COLOR_New(0.95,0.95,0.0,1));
+            else 
+              FONT_SetSize(EntrySize);
+              MATERIAL_SetColor(COLOR_New(0.5,0.5,0.5,1));
+              
+            end;
+
+            FONT_Goto(0,pos);
+            FONT_TextOut(Entries[i]);
+           if i==3 then
+            pos=pos-SelectedSize*1.2;
+            if Selected==i-1 then
+              FONT_SetSize(0.025);
+            else
+              FONT_SetSize(0.02);
+            end;
+            MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+            FONT_Goto(0,pos);
+            FONT_TextOut(scorestring);
+           end;
+            pos=pos-SelectedSize*5.0/4.0;
+            
+            NumEntries=NumEntries+1;
+        end
+
+ if NumEntries==0 then
+  return;
+ end;
+  FONT_SetSize(0.02);
+ MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+ FONT_SetAlign("center","bottom");
+ FONT_Goto(0,-0.5);
+ FONT_TextOut(Hints[Selected+1]);
+end;
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("game:final"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) or (sel==4) then
+    MENU_Load("gameselect");
+ elseif sel==2 then
+   if scorestring~=TRANS_Str("loadgame:empty") then
+    SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/".."f");
+    GLOBAL_SetVar("StartUserLevel",""); -- Means no user level
+    GLOBAL_SetVar("EditorMode",0); 
+    GLOBAL_SetVar("TotalScore",LOAD_SCORE); 
+    GLOBAL_SetVar("SaveGameProtectScore",1);
+    GLOBAL_SetVar("CurrentLevelNum",LEVEL_NUM);
+    GLOBAL_SetVar("StartLevel",LOAD_LEVEL);
+    TRANS_Load(GLOBAL_GetVar("Language"));
+    GLOBAL_SetVar("InsideFinal",1);
+    MENU_Load("startgame");
+  end;
+ else
+    GLOBAL_SetVar("InsideTutorial",1);
+    GLOBAL_SetVar("InsideFinal",1);
+    GLOBAL_SetVar("StartUserLevel",""); -- Means no user level
+    GLOBAL_SetVar("EditorMode",0); 
+    GLOBAL_SetVar("TotalScore",START_SCORE); 
+    GLOBAL_SetVar("SaveGameProtectScore",1); 
+    GLOBAL_SetVar("CurrentLevelNum",1);
+    GLOBAL_SetVar("StartLevel",startlevel);
+    TRANS_Load(GLOBAL_GetVar("Language"));
+    GLOBAL_SetVar("InsideFinal",1);
+    MENU_Load("startgame");
+ end;
+end;
+ 

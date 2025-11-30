@@ -1,0 +1,168 @@
+menuname="loadgame";
+
+INCLUDE("/include/std.inc");
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.03;
+
+--logoactive=0;
+
+numblockdefs=-1;
+
+
+
+EpisodeLevelCount=0;
+
+Levelnames={};
+
+function AddSingleLevel(ln)
+        EpisodeLevelCount=EpisodeLevelCount+1;
+        Levelnames[EpisodeLevelCount]=ln;
+end;
+
+function AddEpisodePart(fold,tn)
+   local numulvl=FILESYS_StartListDirectory("/levels/"..fold.."/",true,false,false,false,".*\\.ldef"); 
+    for index = 0, numulvl-1, 1 do
+        local f=FILESYS_GetListDirectoryEntry(index);
+        f=string.sub(f,1,string.len(f)-5);
+        AddSingleLevel(fold.."/"..f);
+   end;
+end;
+
+
+
+
+LastEpisode="";
+LOAD_EPISODE=GLOBAL_GetVar("CurrentEpisode");
+
+function GetNumLevels(epi)
+ if epi==LastEpisode then 
+   return NumLevels;
+ end;
+Levelnames={}
+ EpisodeLevelCount=0;
+ INCLUDEABSOLUTE("/levels/"..epi..".epi");
+ LastEpisode=epi;
+ return EpisodeLevelCount;
+end;
+
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ local cind=1;
+ local numsvs=FILESYS_StartListDirectory("/user/saves/"..GLOBAL_GetVar("CurrentEpisode").."/",true,false,false,false,".*\\.lua"); 
+ local fnames={};
+  for index = 0, numsvs-1, 1 do
+    --fnames[index]=string.sub(FILESYS_GetListDirectoryEntry(index),1,string.len(FILESYS_GetListDirectoryEntry(index))-4);
+	  fnames[index] = FILESYS_GetListDirectoryEntry(index):match('^(.+)%..-$')
+  end;
+
+ for index = 1, 4, 1 do
+   Entries[index]=TRANS_Str("loadgame:slot")..(index);
+   Hints[index]=TRANS_Str("loadgame:empty");
+     
+ end;
+
+ for index = 0, numsvs-1, 1 do
+   local fname=fnames[index];
+   if fname=="0" or fname=="1" or fname=="2" or fname=="3" then
+     SAVE_VERSION=0;
+     SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/"..fname);
+     NumLevels=GetNumLevels(LOAD_EPISODE);
+     if SAVE_VERSION>=GLOBAL_GetVar("CuboVersion") then
+       Hints[(1+fname)]=math.floor((LEVEL_NUM)/(NumLevels-1)*100)..TRANS_Str("loadgame:hint:completed").." - "..TRANS_Str("loadgame:hint:score")..LOAD_SCORE;
+     end;
+   end;
+ end;
+ --Entries[numblockdefs+1]=""; Hints[numblockdefs+1]="";
+ --Entries[numblockdefs+2]="Cancel"; Hints[numblockdefs+2]="Returns without changing the current block";
+ --NumEntries=numulvl+2;
+NumEntries=numulvl;
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ --Entries={"Start Game","Level-Editor","Options","Credits","Quit"};
+ --Hints={"Starts a new game","Tool for the creation of user levels","Configure controls and graphics","View the credits","Leave Cubosphere"};
+end;
+
+
+function RenderMenu()
+ 
+
+ local pos=0.0;
+ NumEntries=0;
+ for i,v in pairs(Entries) do
+            if Selected==i-1 then
+              FONT_SetSize(SelectedSize);
+              MATERIAL_SetColor(COLOR_New(0.95,0.95,0.0,1));
+            else 
+              FONT_SetSize(EntrySize);
+              MATERIAL_SetColor(COLOR_New(0.5,0.5,0.5,1));
+              
+            end;
+
+            FONT_Goto(0,pos);
+            FONT_TextOut(Entries[i]);
+            pos=pos-SelectedSize*1.2;
+            if Selected==i-1 then
+              FONT_SetSize(0.025);
+            else
+              FONT_SetSize(0.02);
+            end;
+            MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+            FONT_Goto(0,pos);
+            
+            FONT_TextOut(Hints[i]);
+            pos=pos-SelectedSize*2;
+            
+            NumEntries=NumEntries+1;
+        end
+
+ if NumEntries==0 then
+  return;
+ end;
+ FONT_SetSize(0.02);
+ MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+ FONT_SetAlign("center","bottom");
+ FONT_Goto(0,-0.5);
+ FONT_TextOut(TRANS_Str("loadgame:hint"));
+end;
+
+
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("loadgame:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+  MENU_Load(GLOBAL_GetVar("LoadESCMenu"));
+ else
+   if Hints[sel+1]~=TRANS_Str("loadgame:empty") then
+    SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/"..sel);
+    GLOBAL_SetVar("StartUserLevel",""); -- Means no user level
+    GLOBAL_SetVar("EditorMode",0); 
+    GLOBAL_SetVar("TotalScore",LOAD_SCORE); 
+    GLOBAL_SetVar("SaveGameProtectScore",1);
+    GLOBAL_SetVar("CurrentEpisode",LOAD_EPISODE);
+    GLOBAL_SetVar("CurrentLevelNum",LEVEL_NUM);  
+    GetNumLevels(LOAD_EPISODE);
+    GLOBAL_SetVar("LastLevelIndexInEpisode",LEVEL_NUM);
+ --   print("Loading: Current Level num set to "..GLOBAL_GetVar("CurrentLevelNum"));
+    GLOBAL_SetVar("StartLevel",LOAD_LEVEL);
+    TRANS_Load(GLOBAL_GetVar("Language"));
+    GLOBAL_SetVar("InsideFinal",0);
+    GLOBAL_SetVar("InsideTutorial",0);
+    MENU_Load("startgame");
+  end;
+ end;
+end;
+ 

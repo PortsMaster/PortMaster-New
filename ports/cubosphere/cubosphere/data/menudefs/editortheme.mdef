@@ -1,0 +1,105 @@
+menuname="editortheme";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.025;
+
+
+--if GLOBAL_GetVar("EditorMode")==1 then
+ logoactive=0;
+--end;
+
+numthemes=-1;
+darkbg=-1;
+
+oEntries={};
+
+
+function SortEntries()
+ for i=1,NumEntries-1,1 do
+   for j=i+1,NumEntries,1 do
+   -- print("Sorting "..i.."  "..j);
+    if Entries[i]>Entries[j] then
+     --print("  Swap : "..Entries[i].." and "..Entries[j]);
+      Entries[i],Entries[j]=Entries[j],Entries[i];
+      oEntries[i],oEntries[j]=oEntries[j],oEntries[i];
+      Hints[i],Hints[j]=Hints[j],Hints[i];
+    end;
+   end;
+ end;
+end;
+
+
+function BuildEntries()
+ Entries={};
+ oEntries={};
+ Hints={};
+ local numthemes=FILESYS_StartListDirectory("/themedefs/",true,false,false,false,".*\\.lua"); 
+ for index = 0, numthemes-1, 1 do
+   oEntries[index+1]=FILESYS_GetListDirectoryEntry(index):match('^(.+)%..-$')
+   Entries[index+1]=TRANS_StrD("theme:"..oEntries[index+1],oEntries[index+1]);
+   Hints[index+1]=TRANS_Str("editor:theme:hint")..Entries[index+1];
+ end;
+
+SortEntries();
+
+NumEntries=numthemes;
+SortEntries();
+
+for index=0,numthemes-1,1 do
+  if oEntries[index+1]==THEME_GetName() then
+    Selected=index;
+   end;
+end;
+
+ end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ --Entries={"Start Game","Level-Editor","Options","Credits","Quit"};
+ --Hints={"Starts a new game","Tool for the creation of user levels","Configure controls and graphics","View the credits","Leave Cubosphere"};
+ darkbg=TEXDEF_Load("darkbg");
+end;
+
+function Render()
+ StartMenu();
+  FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ Headline(TRANS_Str("editor:theme:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+  MENU_Load("editorsettings");
+ else
+   if oEntries[sel+1]==THEME_GetName() then
+      MENU_Load("editorsettings"); 
+      return;
+   end;
+   --Saving is done here:
+   GLOBAL_SetVar("ThemeOverride",oEntries[sel+1]);
+   GLOBAL_SetVar("EditorMode",2); -- 2 Means testing
+   --GLOBAL_SetVar("EditorToolCommand","changed"); 
+   GLOBAL_SetVar("StartUserLevel","_selection");
+   GLOBAL_SetVar("Editor_LoadLevel","_selection");
+   GLOBAL_SetVar("Editor_Changed",1);
+   MENU_Load("editorstart");
+   
+ end;
+end;
+ 

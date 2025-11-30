@@ -1,0 +1,140 @@
+menuname="controlsjoy";
+INCLUDE("/include/std.inc");
+
+local GUIDToName = {}
+local joystick = require "Joystick"
+
+EntrySize=0.02;
+SelectedSize=0.03;
+
+if GLOBAL_GetVar("InGame")==1 then
+ logoactive=0;
+end;
+
+local secondplayer="";
+if GLOBAL_GetVar("ControlsForPlayer")==2 then
+ secondplayer="_p2";
+end;
+
+function GetAssignedJoyButton(forwhat)
+	local jstr=GLOBAL_GetVar("Joy_"..forwhat..secondplayer);
+	if jstr==-1 then
+		return TRANS_Str("key:undefined");
+	end;
+	--Seperate it into different numbers: stick, typ, index
+	local guid,dir,button = jstr:match("^(.-),(.-),(.-)$")
+	dir,button = tonumber(dir), tonumber(button)
+	if not (guid and dir and button) then return jstr end
+	local name = GUIDToName[guid] or TRANS_Str("controloptions:joy:notconnected")
+	local js=TRANS_Str("controloptions:joy:joystring");
+	local postfix="";
+	if dir==0 then
+		tystr=TRANS_Str("controloptions:joy:joybutton");
+	elseif dir==1 then
+		tystr=TRANS_Str("controloptions:joy:joyaxis");
+		postfix=TRANS_Str("controloptions:joy:joyaxis:plus");
+	else
+		tystr=TRANS_Str("controloptions:joy:joyaxis");
+		postfix=TRANS_Str("controloptions:joy:joyaxis:minus");
+	end;
+	return js..name..tystr..button..postfix;
+end;
+
+
+function BuildStrings()
+	for _,id in ipairs(joystick.List()) do
+		local joy = joystick.Get(id)
+		GUIDToName[joy:GetGUID()] = joy:GetName()
+	end
+ Entries={TRANS_Str("controloptions:joy:forward")..": "..GetAssignedJoyButton("Forward"),
+          TRANS_Str("controloptions:joy:backward")..": "..GetAssignedJoyButton("Backward"),
+          TRANS_Str("controloptions:joy:left")..": "..GetAssignedJoyButton("Left"),
+          TRANS_Str("controloptions:joy:right")..": "..GetAssignedJoyButton("Right"),
+          TRANS_Str("controloptions:joy:jump")..": "..GetAssignedJoyButton("Jump"),
+          TRANS_Str("controloptions:joy:cancel")..": "..GetAssignedJoyButton("Cancel"),
+          TRANS_Str("controloptions:joy:special")..": "..GetAssignedJoyButton("Special"),
+          TRANS_Str("controloptions:lookup")..": "..GetAssignedJoyButton("LookUp"),
+          TRANS_Str("controloptions:lookdown")..": "..GetAssignedJoyButton("LookDown"),
+          "",
+          TRANS_Str("base:ok"),
+          TRANS_Str("base:cancel")}
+ Hints={TRANS_Str("controloptions:hint:joy:forward"),
+        TRANS_Str("controloptions:hint:joy:backward"),
+        TRANS_Str("controloptions:hint:joy:left"),
+        TRANS_Str("controloptions:hint:joy:right"),
+        TRANS_Str("controloptions:hint:joy:jump"),
+        TRANS_Str("controloptions:hint:joy:cancel"),
+        TRANS_Str("controloptions:hint:joy:special"),
+        TRANS_Str("controloptions:hint:lookup"),
+        TRANS_Str("controloptions:hint:lookdown"),
+        "",
+        TRANS_Str("controloptions:hint:ok"),
+        TRANS_Str("controloptions:hint:cancel")};
+end;
+
+function  SpecialKeyHandler(key,down,toggle)
+ if down==1 and toggle==1 then
+   local kn=KEYB_GetKeyName(key);
+   if kn=="Delete" or kn=="Backspace" then
+     if Selected<=8 then
+        local Defs={"Forward","Backward","Left","Right","Jump","Cancel","Special","LookUp","LookDown"};
+        local n=Defs[Selected+1];
+         GLOBAL_SetVar("Joy_"..n..secondplayer,-1);
+         BuildStrings();
+     end;
+   end;
+ end;
+end;
+
+
+function StoreBindButton()
+ local Defs={"Forward","Backward","Left","Right","Jump","Cancel","Special","LookUp","LookDown"};
+ local Desc={"Forward","Backward","Left","Right","Jump","Cancel","Special","Look Up","Look Down"};
+ GLOBAL_SetVar("KeyToBindDesc",Desc[Selected+1]);
+ GLOBAL_SetVar("KeyToBindDef",Defs[Selected+1]);
+end;
+
+local darkbg=-1;
+
+function Precache()
+ if GLOBAL_GetVar("InGame")==1 then
+ darkbg=TEXDEF_Load("darkbg");
+end;
+ FONT_Load(TRANS_Str("font"));
+ BuildStrings();
+end;
+
+function Render()
+if GLOBAL_GetVar("InGame")==1 then
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+end;
+ StartMenu();
+ Headline(TRANS_Str("controloptions:joystick:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if (sel==11) or (sel==-1) then
+ 
+  
+  cfg=CONFIG_Load("/user/config.cdef");
+
+   MENU_Load("controls");
+ elseif sel==10 then
+   INCLUDE("/include/writecfg.inc");
+      
+   MENU_Load("controls");
+  else
+   --Call the binding menu
+   StoreBindButton();
+   MENU_Load("bindjoybutton");
+ end;
+end;

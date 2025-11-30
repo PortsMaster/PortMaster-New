@@ -29,17 +29,18 @@ fi
 
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
+[ ! -e "./lpeg.so" ] && cp $GAMEDIR/libs.${DEVICE_ARCH}/lpeg.so .
+[ ! -e "./lfs.so" ] && cp $GAMEDIR/libs.${DEVICE_ARCH}/lfs.so .
+
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "corsix-th" $HOTKEY textinput -c "$GPTOKEYB_CONFIG" &
-./corsix-th --interpreter="$GAMEDIR/CorsixTH.lua"
+$GPTOKEYB "corsix-th.${DEVICE_ARCH}" $HOTKEY textinput -c "$GPTOKEYB_CONFIG" &
+./corsix-th.${DEVICE_ARCH} --interpreter="$GAMEDIR/CorsixTH.lua"
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+pm_finish

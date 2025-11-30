@@ -1,0 +1,144 @@
+INCLUDEABSOLUTE("/blockdefs/include/colors.inc");
+
+
+menuname="editorenemyattribs";
+
+INCLUDE("/include/std.inc");
+EntrySize=0.02;
+SelectedSize=0.025;
+
+
+hasattribs=0;
+logoactive=0;
+
+darkbg=-1;
+
+numattribs=0;
+enemy=-1;
+numblockdefs=-1;
+
+types={};
+names={};
+tnames={};
+
+local t_boolstr=TRANS_Str("base:no")..","..TRANS_Str("base:yes");
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ enemy=GLOBAL_GetVar("EditorCurrentEnemy");
+ numattribs=ACTOR_GetEditorInfo(enemy, "NumVars",0);
+ 
+ hasattribs=0;
+ for index = 1, numattribs, 1 do
+   local svar=ACTOR_GetEditorInfo(enemy,"Var"..index,"error");
+   local tvar=TRANS_StrD("enemyvar:variable:"..svar,svar);
+   local type=ACTOR_GetEditorInfo(enemy,"VarType"..index,"error");
+   local vs;
+    vs=ACTOR_GetVar(enemy,svar);
+   
+
+   if type=="bool" then
+    if vs==0 then 
+      vs=TRANS_Str("base:no");
+    else
+      vs=TRANS_Str("base:yes");
+    end;
+   elseif type=="basecolor" then
+     vs=t_colorset[vs+1];
+   end;
+ 
+   Entries[index]=tvar.." ["..type.."] : "..vs;
+   Hints[index]=TRANS_Str("enemyvar:hint")..tvar;
+   types[index]=type;
+   names[index]=svar;
+   tnames[index]=tvar;
+   hasattribs=1;
+ end;
+ if hasattribs==0 then
+  Entries[1]=TRANS_Str("enemyvar:novars");
+  Hints[1]=TRANS_Str("enemyvar:hint:novars");
+  NumEntries=1;
+  numattribs=0;
+  return;
+ end;
+ NumEntries=numattribs;
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ darkbg=TEXDEF_Load("darkbg");
+end;
+
+function Render()
+ StartMenu();
+
+  FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ Headline(TRANS_Str("enemyvar:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function GetChangeVar(actor,name)
+   return ACTOR_GetVar(actor,name);
+end;
+
+function HandleSelection(sel)
+ if numattribs==0 or sel==-1 then
+   if GLOBAL_GetVar("EditorToolCommand")~="changed" then
+     GLOBAL_SetVar("EditorToolCommand","Return");
+   end;
+   GLOBAL_SetVar("EditorTool","Editing");
+   MENU_Deactivate();
+   ResetStoredSelection();
+   return; --Simply leave
+ end;
+
+  local set="";
+ --Here we have to insert the code for setting a var
+  text="";
+ -- print(names[sel+1]);
+  if types[sel+1]=="float" then
+   text=string.format("%g",GetChangeVar(enemy,names[sel+1]));
+  elseif types[sel+1]=="filename" then
+   text=GetChangeVar(enemy,names[sel+1]);
+  elseif types[sel+1]=="string" then
+   text=GetChangeVar(enemy,names[sel+1]);
+  elseif types[sel+1]=="int" then
+   text=GetChangeVar(enemy,names[sel+1]);
+  elseif types[sel+1]=="bool" then
+   text=GetChangeVar(enemy,names[sel+1]);  
+   --Call the boolean Selector
+    set=t_boolstr;
+  elseif types[sel+1]=="basecolor" then
+   text=GetChangeVar(enemy,names[sel+1]);  
+   set=t_colorstr;
+
+  end;
+
+     GLOBAL_SetVar("TextInput_Set",set);
+     GLOBAL_SetVar("TextInput_Text",text);
+     GLOBAL_SetVar("Editor_AttributeToChange",names[sel+1]);
+     GLOBAL_SetVar("TextInput_Caption",TRANS_Str("enemyvar:change").."\n"..tnames[sel+1]);
+     GLOBAL_SetVar("TextInput_OkMenu","editorchangeenemyattribs");
+       GLOBAL_SetVar("TextInput_CancelMenu","editorenemyattribs");
+       GLOBAL_SetVar("TextInput_Type",types[sel+1]);
+     
+     if set=="" then
+       MENU_Load("textinput");
+     else
+       MENU_Load("setinput");
+     end;
+end;
+ 
