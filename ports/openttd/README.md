@@ -6,10 +6,10 @@ If the mouse speed needs adjusting, edit OpenTTD.sh and adjust it in the "# Set 
 
 Thanks to [OpenTTD](https://github.com/OpenTTD/OpenTTD) for this open source version that decently mimics Transport Tycoon Deluxe!
 
-Originally ported by Cebion and Romadu.  OpenTTD had/has a bug that broke the port with newer versions of SDL2.
+Originally ported by Cebion and Romadu.  OpenTTD has a bug that broke the port with newer versions of SDL2.
 Ported again from scratch with v13.4 by Slayer366.  Commented out a line in the code that caused SDL2 breakage.
 
-NOTE: v14.0 and v14.1 won't work (even on a Raspberry Pi) as the code has undergone several changes which cause the game to crash at launch or even generate a display at all.  It is unknown if newer versions of OpenTTD will address this issue.
+NOTE: v14.0 and v14.1 won't work (even on a Raspberry Pi) as the code has undergone several changes which cause the game to crash at launch or fails to even generate a display at all.  It is unknown if newer versions of OpenTTD will address this issue.
 
 </br>
 
