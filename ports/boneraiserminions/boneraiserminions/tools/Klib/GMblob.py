@@ -345,19 +345,22 @@ class GMIFFDdata(IFFdata):
             self.fileout.write(pack('<I', audo_size))   # write audo size
             self.fileout.seek(audo_size, 1)             # jump at the end of audo chunk
 
-    def _get_oggenc_options(self):
+    def _get_oggenc_options(self): 
         options = []
-        if self.audiosettings["bitrate"] != 0:
+        if self.audiosettings.get("quality") is not None:
+            options.append("-q")
+            options.append(str(self.audiosettings["quality"]))
+        elif self.audiosettings["bitrate"] != 0:
             options.append("-b")
-            options.append(f"{self.audiosettings['bitrate']}")
+            options.append(str(self.audiosettings["bitrate"]))
 
         if self.audiosettings["downmix"]:
             options.append("--downmix")
-        
+
         if self.audiosettings["resample"] != 0:
             options.append("--resample")
-            options.append(f"{self.audiosettings['resample']}")
-        
+            options.append(str(self.audiosettings["resample"]))
+
         return options
 
     def _write_to_file_txtp_ogg(self, audo_entry):
