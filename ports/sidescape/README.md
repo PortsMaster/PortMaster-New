@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to MathanGames for developing this game.
+Thanks to MathanGames for developing this game. Buy it from [Steam](https://store.steampowered.com/app/2280510/Side_Scape/).
 
 ## Controls
 
