@@ -1,4 +1,4 @@
-﻿# Rise of the Penguins GB - License
+# Rise of the Penguins GB - License
 
 ## Permission for PortMaster Distribution
 
