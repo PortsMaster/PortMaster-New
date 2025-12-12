@@ -5,11 +5,11 @@ A retro penguin platformer designed for Gameboy. Perfect for fans of penguins an
 
 Game Information:
 -----------------
-Developer: Bill Woo
-Publisher: Pwoo
-Genre: Retro / Platformer
-Players: 1
-Runtime: Godot 4.5
+- Developer: Bill Woo
+- Publisher: Pwoo
+- Genre: Retro / Platformer
+- Players: 1
+- Runtime: Godot 4.5
 
 This port comes ready to play - no additional files needed!
 
@@ -23,11 +23,13 @@ Get the game:
 
 Controls:
 ---------
-D-Pad/Left Stick: Move
-A Button: Action A (Game Boy A)
-B Button: Action B (Game Boy B)
-Start: Start/Pause
-Select: Select/Menu
+| Button | Action |
+| ------ | ------ |
+| D-PAD / Left Stick | Move |
+| A Button | Action A (Game Boy A) |
+| B Button | Action B (Game Boy B) |
+| Start | Start / Pause |
+| Select | Select / Menu |
 
 Features:
 ---------
