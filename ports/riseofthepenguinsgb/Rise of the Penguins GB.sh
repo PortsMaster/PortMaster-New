@@ -17,24 +17,10 @@ get_controls
 
 # Adjust these to your paths and desired godot version
 GAMEDIR=/$directory/ports/riseofthepenguinsgb
+godot_runtime="godot_4.5"
+godot_executable="godot45.$DEVICE_ARCH"
 pck_filename="riseofthepenguinsgb.pck"
 gptk_filename="riseofthepenguinsgb.gptk"
-
-# Godot runtime selection with fallback (prefer 4.5, fallback to 4.4, then 4.3)
-if [ -f "$controlfolder/libs/godot_4.5.squashfs" ]; then
-    godot_runtime="godot_4.5"
-    godot_executable="godot45.$DEVICE_ARCH"
-elif [ -f "$controlfolder/libs/godot44.squashfs" ]; then
-    godot_runtime="godot44"
-    godot_executable="godot44.$DEVICE_ARCH"
-elif [ -f "$controlfolder/libs/godot43.squashfs" ]; then
-    godot_runtime="godot43"
-    godot_executable="godot43.$DEVICE_ARCH"
-else
-    # Default to godot_4.5 and let harbourmaster try to download it
-    godot_runtime="godot_4.5"
-    godot_executable="godot45.$DEVICE_ARCH"
-fi
 
 # Logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -84,9 +70,10 @@ $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 
 # Start Westonpack and Godot
 # Put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
+# CRUSTY_BLOCK_INPUT=1 prevents double inputs from both crusty and the controller
 # WRAPPED_LIBRARY_PATH is used instead of LD_LIBRARY_PATH to pass libraries only to the app
 # LD_PRELOAD is put here because Godot runtime links against libEGL.so, and crusty is interfering with that on some systems.
-$ESUDO env WRAPPED_LIBRARY_PATH="$GAMEDIR/gamedata/addons/godot_boy:$GAMEDIR/gamedata/addons/godotsteam/linux64:$GAMEDIR/lib" \
+$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_LIBRARY_PATH="$GAMEDIR/gamedata/addons/godot_boy:$GAMEDIR/gamedata/addons/godotsteam/linux64:$GAMEDIR/lib" \
 $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
 LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
 --resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f \
@@ -95,8 +82,7 @@ LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
 #Clean up after ourselves
 $ESUDO $weston_dir/westonwrap.sh cleanup
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
-    $ESUDO umount "${weston_dir}"
-    $ESUDO umount "${godot_dir}"
+$ESUDO umount "${weston_dir}"	$ESUDO umount "${godot_dir}"
 fi
 
 pm_finish
