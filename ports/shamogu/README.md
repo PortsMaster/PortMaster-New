@@ -1,7 +1,7 @@
 ## Notes
-Thanks to ??? for creating this game.
+Thanks to [anaseto](https://codeberg.org/anaseto) for creating this game.
 
-[URL](URL)
+[https://codeberg.org/anaseto/shamogu]](https://codeberg.org/anaseto/shamogu)
 
 
 ## Controls
@@ -14,7 +14,7 @@ Thanks to ??? for creating this game.
 | A | Start/wait |
 | B | Inventory |
 | X | Examine |
-| Y |  Interact(Equip/Activate) |
+| Y | Interact(Equip/Activate) |
 | L1 | Settings/Help |
 | L2 | Message |
 | R1 | Quit |
@@ -22,4 +22,4 @@ Thanks to ??? for creating this game.
 
 ## Compiling
 
-Guthub Actions automatic [build](https://github.com/monkeyx-net/shamogu)
+go build --tags sdl
