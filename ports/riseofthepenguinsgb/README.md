@@ -28,7 +28,7 @@ Get the game:
 | Start | Start / Pause |
 | Select | Select / Menu |
 
-Features:
+## Features
 ---------
 - 6 levels with a variety of enemies + 2 extra levels
 - Boss Rush Mode (unlocked after beating all 6 levels)
