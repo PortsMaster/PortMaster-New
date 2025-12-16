@@ -19,7 +19,7 @@ Get the game:
 - [Newgrounds](https://www.newgrounds.com/portal/view/978420)
 - [Game Jolt](https://gamejolt.com/games/riseofthepenguinsgb/990375)
 
-Controls:
+## Controls
 ---------
 | Button | Action |
 | ------ | ------ |
