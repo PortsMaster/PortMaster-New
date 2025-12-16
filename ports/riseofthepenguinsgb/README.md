@@ -1,5 +1,4 @@
 ## Notes
-==========================================
 
 A retro penguin platformer designed for Gameboy. Perfect for fans of penguins and anyone looking for a moderate challenge in a cold setting!
 
