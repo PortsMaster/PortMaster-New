@@ -20,7 +20,6 @@ Get the game:
 - [Game Jolt](https://gamejolt.com/games/riseofthepenguinsgb/990375)
 
 ## Controls
----------
 | Button | Action |
 | ------ | ------ |
 | D-PAD / Left Stick | Move |
