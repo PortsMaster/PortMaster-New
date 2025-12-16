@@ -29,7 +29,6 @@ Get the game:
 | Select | Select / Menu |
 
 ## Features
----------
 - 6 levels with a variety of enemies + 2 extra levels
 - Boss Rush Mode (unlocked after beating all 6 levels)
 - 6 mini bosses, 8 bosses, and a final boss
