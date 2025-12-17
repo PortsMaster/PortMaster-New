@@ -5,7 +5,8 @@ Thanks [ondydev](https://ondydev.itch.io) for creating this little gem, which yo
 
 ## Controls
 
-| Button | Action     |
-| ------ | ---------- |
-| D-PAD  | Direction  |
-| A      | Jump/moves |
+| Button  | Action        |
+| ------- | ------------- |
+| D-PAD   | Direction     |
+| START/A | Proceed/pause |
+| B       | Jump/moves    |
