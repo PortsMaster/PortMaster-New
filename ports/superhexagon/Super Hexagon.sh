@@ -112,7 +112,7 @@ $GPTOKEYB "$gamefile" -c "$GAMEDIR/superhexagon.gptk" &
 unset SDL_GAMECONTROLLERCONFIG
 pm_platform_helper "$GAMEDIR/box64.${DEVICE_ARCH}"
 if [ "$rocknix_mode" -eq 0 ]; then 
-	$ESUDO env WRAPPED_PRELOAD="$GAMEDIR/libs.${DEVICE_ARCH}/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/:$LD_LIBRARY_PATH" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es XDG_DATA_HOME=$CONFDIR HACKSDL_NO_GAMECONTROLLER=1 BOX64_LD_PRELOAD="$GAMEDIR/libs.x64/hacksdl.x86_64.so" BOX64_LD_LIBRARY_PATH="$GAMEDIR/libs.x64:$gamelibs" "$GAMEDIR/box64" "$gamelocation/$gamefile"
+	$ESUDO env CRUSTY_BLOCK_INPUT=1 WRAPPED_PRELOAD="$GAMEDIR/libs.${DEVICE_ARCH}/libSDL2-2.0.so.0" WRAPPED_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}/:$LD_LIBRARY_PATH" $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es XDG_DATA_HOME=$CONFDIR HACKSDL_NO_GAMECONTROLLER=1 BOX64_LD_PRELOAD="$GAMEDIR/libs.x64/hacksdl.x86_64.so" BOX64_LD_LIBRARY_PATH="$GAMEDIR/libs.x64:$gamelibs" "$GAMEDIR/box64" "$gamelocation/$gamefile"
 	$ESUDO $weston_dir/westonwrap.sh cleanup
 else
 	$ESUDO env XDG_DATA_HOME=$CONFDIR HACKSDL_NO_GAMECONTROLLER=1 BOX64_LD_PRELOAD="$GAMEDIR/libs.x64/hacksdl.x86_64.so" BOX64_LD_LIBRARY_PATH="$GAMEDIR/libs.x64:$gamelibs" "$GAMEDIR/box64" "$gamelocation/$gamefile"
