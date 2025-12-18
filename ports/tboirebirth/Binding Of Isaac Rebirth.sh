@@ -45,7 +45,7 @@ CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
 # Copy over default options.ini
-if [ ! -f "$CONFDIR/the binding of isaac rebirth/options.ini" ]; then
+if [ ! -f "$CONFDIR/binding of isaac rebirth/options.ini" ]; then
     mkdir -p "$CONFDIR/binding of isaac rebirth"
     cp $GAMEDIR/patch/options.ini "$CONFDIR/binding of isaac rebirth/options.ini"
     # patch the device resolution into it
