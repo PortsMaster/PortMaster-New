@@ -28,6 +28,7 @@ BINARY="sgs"
 WARTOOL="wartool.${DEVICE_ARCH}"
 INNOEXTRACT="$controlfolder/innoextract.$DEVICE_ARCH"
 DATADIR="$GAMEDIR/data"
+UTILDIR="$GAMEDIR/utils"
 INSTALLER_EXE_GLOB="setup_warcraft_ii*.exe"
 INSTALLER_FILE_GLOB="setup_warcraft_ii*.*"
 
@@ -122,6 +123,7 @@ install() {
     pm_message "Extracting Warcraft II data..."
     pm_message "Extraction may take up to 10-60min"
     # Produces data/scripts/wc2-config.lua and data/extracted if successful
+    export PATH="$UTILDIR":"$PATH"
     "$GAMEDIR/$WARTOOL" -v -r "$WAR_SRC" "$DATADIR"
 
     if [ ! -f "$NEEDED" ]; then

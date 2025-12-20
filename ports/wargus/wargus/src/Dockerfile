@@ -11,6 +11,17 @@ FROM ubuntu:20.04
 # when it starts up in another shell run docker cp to copy the file out of the container 
 # docker cp wargusbuild:/wargus-portmaster.zip wargus-portmaster.zip
 
+# To do a release
+# in PortMaster-New dir
+# if sparse check out make sure these sparse locations added
+#git sparse-checkout add ports/wargus
+#git sparse-checkout add releases
+#git sparse-checkout add runtimes
+#git sparse-checkout add tools
+# docker run -it -v ${PWD}:/opt ubuntu:20.04 /bin/bash
+# apt update && apt install -y python3 wget && tools/prepare_repo.sh && python3 tools/build_data.py && python3 tools/build_release.py --do-check && python3 tools/build_release.py
+# wargus.zip will be in the releases directory
+
 ARG DEVICE_ARCH=aarch64
 ENV DEBIAN_FRONTEND=noninteractive
 
