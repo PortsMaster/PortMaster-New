@@ -1,11 +1,13 @@
 ## Notes
 Thanks to the [Wargus Team](https://stratagus.com/index.html) for creating this game and making it available for free!
+
 Thanks to Blizzard the original developers of WarCraft II. 
 
-Thanks to my wife for giving me the time to work on this.
+Thanks to my wife for giving me the time to work on this and her grandfather.
 
-Also thanks to the PortMaster team for all of the work they do.
+Thanks to Ganimoth, Dia, ImCoKeMaN and kloristech for contributing fixes, advice and testing.
 
+Also thanks to the PortMaster team for the work they do - porting is a lot of work!
 
 ## Compile
 In src/ use this command 
