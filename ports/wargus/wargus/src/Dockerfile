@@ -19,7 +19,7 @@ FROM ubuntu:20.04
 #git sparse-checkout add runtimes
 #git sparse-checkout add tools
 # docker run -it -v ${PWD}:/opt ubuntu:20.04 /bin/bash
-# apt update && apt install -y python3 wget && tools/prepare_repo.sh && python3 tools/build_data.py && python3 tools/build_release.py --do-check && python3 tools/build_release.py
+# apt update && apt install -y python3 wget && cd /opt && tools/prepare_repo.sh && python3 tools/build_data.py && python3 tools/build_release.py --do-check && python3 tools/build_release.py
 # wargus.zip will be in the releases directory
 
 ARG DEVICE_ARCH=aarch64
