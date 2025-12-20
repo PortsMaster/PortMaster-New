@@ -1,7 +1,8 @@
 ## Notes
 Thanks to the [Wargus Team](https://stratagus.com/index.html) for creating this game and making it available for free!
-Also thanks to Blizzard the original developers of WarCraft II. 
+Thanks to Blizzard the original developers of WarCraft II. 
 
+Thanks to my wife for giving me the time to work on this.
 
 Also thanks to the PortMaster team for all of the work they do.
 
