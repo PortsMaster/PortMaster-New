@@ -58,9 +58,6 @@ if [[ $CFW_NAME == *"ArkOS"* ]]; then
   export LD_LIBRARY_PATH="$GAMEDIR/libs.arkos.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 fi
 
-# Optional controller mapper
-$GPTOKEYB2 "$BINARY" -c "$GAMEDIR/wargus.gptk" &
-
 install() {
   # -------------------------------------------------
   # Sanity checks
@@ -150,6 +147,9 @@ install
 # -------------------------------------------------
 # Launch game
 # -------------------------------------------------
+# Optional controller mapper
+$GPTOKEYB2 "$BINARY" -c "$GAMEDIR/wargus.gptk" &
+pm_platform_helper "$GAMEDIR/$BINARY"
 "./$BINARY" -d data
 
 pm_finish
