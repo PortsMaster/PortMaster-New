@@ -154,7 +154,7 @@ if [ -f "$GAMEDIR/data/FluidR3_GM.sf2" ]; then
 fi
 
 # Optional controller mapper
-$GPTOKEYB2 "$BINARY" -c "$GAMEDIR/wargus.gptk" &
+$GPTOKEYB2 "$BINARY" -c "$GAMEDIR/wargus.gptk" >/dev/null &
 pm_platform_helper "$GAMEDIR/$BINARY"
 "./$BINARY" -d data
 
