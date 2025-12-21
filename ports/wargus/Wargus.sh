@@ -145,6 +145,14 @@ install
 # -------------------------------------------------
 # Launch game
 # -------------------------------------------------
+
+# This is for the Floppy DOS version of Warcraft II
+# Which uses midi files configured in data/scripts/wc2-config.lua wargus.music_extension = ".mid"
+# The soundfont file is available from: https://member.keymusician.com/Member/FluidR3_GM/
+if [ -f "$GAMEDIR/data/FluidR3_GM.sf2" ]; then
+  export SDL_SOUNDFONTS="$GAMEDIR/data/FluidR3_GM.sf2"
+fi
+
 # Optional controller mapper
 $GPTOKEYB2 "$BINARY" -c "$GAMEDIR/wargus.gptk" &
 pm_platform_helper "$GAMEDIR/$BINARY"
