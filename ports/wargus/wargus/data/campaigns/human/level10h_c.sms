@@ -1,0 +1,176 @@
+--	Stratagus Map - Single player campaign
+
+Load("campaigns/human/level10h_c2.sms")
+
+Briefing(
+  title,
+  objectives,
+  "../campaigns/human/interface/introscreen3.png",
+  "campaigns/human/level10h.txt",
+  {"campaigns/human/level10h-intro1.wav"}
+)
+
+Triggers = [[
+AddTrigger(
+  function() return IfRescuedNearUnit("this", ">=", 4, "unit-attack-peasant", "unit-circle-of-power") end,
+  function() return ActionVictory() end)
+
+-- If we one of the attack peasants we should rescue dies, we're done
+AddTrigger(
+  function() return (GetPlayerData(4, "UnitTypesCount", "unit-attack-peasant") +
+  GetPlayerData(GetThisPlayer(), "UnitTypesCount", "unit-attack-peasant")) <= 3 end,
+  function() return ActionDefeat() end)
+
+AddTrigger(
+  function() return GetPlayerData(GetThisPlayer(), "TotalNumUnits") == 0 end,
+  function() return ActionDefeat() end)
+]]
+
+assert(loadstring(Triggers))()
+
+--Units
+local allowedHumanUnits = {"unit-farm",
+	"unit-town-hall", "unit-keep", "unit-castle", "unit-peasant",
+	"unit-human-barracks", "unit-footman", "unit-archer", "unit-ranger", "unit-ballista",
+	"unit-elven-lumber-mill", "upgrade-arrow1", "upgrade-arrow2",
+	"upgrade-ranger", "upgrade-longbow", "upgrade-ranger-scouting", "upgrade-ranger-marksmanship",
+	"unit-human-blacksmith", "upgrade-sword1", "upgrade-human-shield1", "upgrade-ballista1",
+	"upgrade-sword2", "upgrade-human-shield2", "upgrade-ballista2",
+	"unit-human-watch-tower", "unit-human-guard-tower", "unit-human-cannon-tower",
+	"unit-human-shipyard", "unit-human-oil-tanker", "unit-human-destroyer", "unit-human-transport",
+	"unit-battleship",
+	"unit-human-oil-platform", "unit-human-refinery",
+	"unit-human-foundry", "upgrade-human-ship-cannon1", "upgrade-human-ship-armor1",
+	"upgrade-human-ship-cannon2", "upgrade-human-ship-armor2",
+	"unit-inventor", "unit-balloon",
+	"unit-stables", "unit-knight", "unit-paladin",
+	"unit-church", "upgrade-paladin", "upgrade-holy-vision", "upgrade-healing", "upgrade-exorcism"
+}
+local allowedOrcUnits = {"unit-pig-farm",
+	"unit-great-hall", "unit-stronghold", "unit-fortress", "unit-peon",
+	"unit-orc-barracks", "unit-grunt", "unit-axethrower", "unit-berserker", "unit-catapult",
+	"unit-troll-lumber-mill", "upgrade-throwing-axe1", "upgrade-throwing-axe2",
+	"upgrade-berserker", "upgrade-light-axes", "upgrade-berserker-scouting", "upgrade-berserker-regeneration",
+	"unit-orc-blacksmith", "upgrade-battle-axe1", "upgrade-orc-shield1", "upgrade-catapult1",
+	"upgrade-battle-axe2", "upgrade-orc-shield2", "upgrade-catapult2",
+	"unit-orc-watch-tower", "unit-orc-guard-tower", "unit-orc-cannon-tower",
+	"unit-orc-shipyard", "unit-orc-oil-tanker", "unit-orc-destroyer", "unit-orc-transport",
+	"unit-ogre-juggernaught",
+	"unit-orc-oil-platform", "unit-orc-refinery",
+	"unit-orc-foundry", "upgrade-orc-ship-cannon1", "upgrade-orc-ship-armor1",
+	"upgrade-orc-ship-cannon2", "upgrade-orc-ship-armor2",
+	"unit-alchemist", "unit-zeppelin",
+	"unit-ogre-mound", "unit-ogre", "unit-ogre-mage", "unit-death-knight",
+	"unit-altar-of-storms", "upgrade-ogre-mage", "upgrade-eye-of-kilrogg", "upgrade-bloodlust", "upgrade-runes"
+}
+local function DefineAllowTable(table, flags)
+	for i, unitName in ipairs(table) do
+		DefineAllow(unitName, flags)
+	end
+end
+
+DefineAllowNormalHumanUnits("FFFFFFFFFFFFFFFF")
+DefineAllowExtraHumanUnits("FFFFFFFFFFFFFFFF")
+DefineAllowNormalOrcUnits("FFFFFFFFFFFFFFFF")
+DefineAllowExtraOrcUnits("FFFFFFFFFFFFFFFF")
+DefineAllowSpecialUnits("FFFFFFFFFFFFFFFF")
+DefineAllowHumanAlways()
+DefineAllowOrcAlways()
+DefineAllowTable(allowedHumanUnits, "AAAAAAAAAAAAAAAA")
+DefineAllowTable(allowedOrcUnits, "AAAAAAAAAAAAAAAA")
+
+-- AI
+
+--=============================================================================
+--	This AI script builds only worker and tanker.
+--		Upgrades very much.
+--		Attacks with land units and water units.
+--
+
+local hum_10_loop_funcs = {
+	function() DebugPrint("Looping !\n") return false end,
+	function() return AiSleep(5000) end,
+	function() return AiForce(1, {AiTransporter(), 1, AiSoldier(), 3, AiEliteShooter(), 3}) end,
+	function() return AiForce(3, {AiTransporter(), 1, AiEliteShooter(), 1, AiCavalry(), 4, AiCatapult(), 1}) end,
+	function() return AiWaitForce(1) end,
+	function() return AiWaitForce(3) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(1) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(3) end,
+	function() return AiSet(AiTransporter(), 1) end,
+	function() return AiSleep(6000) end,
+	function() return AiForce(2, {AiDestroyer(), 3, AiBattleship(), 1}) end,
+	function() return AiWaitForce(2) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(2) end,
+	function() return AiSleep(5000) end,
+	function() stratagus.gameData.AIState.loop_index[1 + AiPlayer()] = 0; return false end,
+}
+
+local hum_10_funcs = {
+	function() AiForceRole(0, "defend"); AiForceRole(1, "attack"); return false; end,
+	function() return AiSet(AiWorker(), 7) end,
+	function() return AiSet(AiTanker(), 3) end,
+	function() return AiWait(AiWorker()) end,
+	function() return AiNeed(AiBlacksmith()) end,
+	
+	function() return AiSet(AiTransporter(), 1) end,
+	function() return AiForce(2, {AiDestroyer(), 2}) end,
+	function() return AiWaitForce(2) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(2) end,
+	function() return AiSleep(6000) end,
+	function() return AiForce(0, {AiSoldier(), 4, AiShooter(), 4, AiDestroyer(), 2}) end,
+
+	function() return AiResearch(AiUpgradeCavalryMage()) end,
+	function() return AiResearch(AiCavalryMageSpell1()) end,
+	function() return AiResearch(AiMageSpell1()) end,
+	function() return AiResearch(AiMageSpell2()) end,
+	function() return AiResearch(AiUpgradeMissile1()) end,
+
+	function() return AiForce(1, {AiTransporter(), 2, AiSoldier(), 4, AiShooter(), 4}) end,
+	function() return AiForce(2, {AiDestroyer(), 2}) end,
+	function() return AiWaitForce(1) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(1) end,
+	function() return AiResearch(AiUpgradeWeapon1()) end,
+	function() return AiUpgradeTo(AiBetterCityCenter()) end,
+	function() return AiSleep(4000) end,
+	function() return AiResearch(AiUpgradeArmor1()) end,
+
+	function() return AiSleep(5000) end,
+	function() return AiForce(2, {AiDestroyer(), 3, AiBattleship(), 1}) end,
+	function() return AiWaitForce(2) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(2) end,
+	function() return AiResearch(AiUpgradeMissile2()) end,
+	function() return AiResearch(AiUpgradeWeapon2()) end,
+
+	function() return AiResearch(AiUpgradeShipCannon1()) end,
+	function() return AiResearch(AiUpgradeEliteShooter()) end,
+	function() return AiSleep(3000) end,
+	function() return AiNeed(AiStables()) end,
+	function() return AiResearch(AiUpgradeArmor2()) end,
+	function() return AiResearch(AiUpgradeShipArmor1()) end,
+
+	function() return AiResearch(AiUpgradeCatapult1()) end,
+	function() return AiResearch(AiUpgradeShipCannon2()) end,
+	function() return AiResearch(AiUpgradeShipArmor2()) end,
+	function() return AiResearch(AiUpgradeEliteShooter1()) end,
+	function() return AiForce(1, {AiTransporter(), 1, AiSoldier(), 1, AiEliteShooter(), 2, AiMage(), 1}) end,
+	function() return AiWaitForce(1) end,
+	function() DebugMessage("Attacking..."); return AiAttackWithForce(1) end,
+	function() return AiResearch(AiUpgradeEliteShooter2()) end,
+	function() return AiResearch(AiUpgradeEliteShooter3()) end,
+	function() return AiSleep(5000) end,
+	function() return AiLoop(hum_10_loop_funcs, stratagus.gameData.AIState.loop_index) end,
+}
+
+function AiHuman10() return AiLoop(hum_10_funcs, stratagus.gameData.AIState.index) end
+DefineAi("hum-10", "*", "hum-10", AiHuman10)
+
+-- Map
+
+Load("campaigns/human/level10h.sms")
+
+-- Make the player 4 units attack peasants
+for i,unit in ipairs(GetUnits(4)) do
+   if GetUnitVariable(unit, "Ident") == "unit-peasant" then
+       TransformUnit(unit, "unit-attack-peasant")
+   end
+end
