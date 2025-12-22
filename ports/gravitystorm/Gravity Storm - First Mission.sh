@@ -20,6 +20,7 @@ get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/gravitystorm"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
 # CD and set up logging
 cd $GAMEDIR
@@ -28,44 +29,45 @@ cd $GAMEDIR
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-check_patch() {
-    # Check if the patching needs to be applied
-    if [ ! -f "$GAMEDIR/patchlog.txt" ] && [ -f "$GAMEDIR/assets/data.win" ]; then
-        if [ -f "$controlfolder/utils/patcher.txt" ]; then
-            set -o pipefail
-            
-            # Setup and execute the Portmaster Patcher utility with our patch file
-            export ESUDO
-			export DEVICE_CPU
-            export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-            export PATCHER_GAME="$(basename "${0%.*}")"
-            export PATCHER_TIME="few minutes at most"
-            source "$controlfolder/utils/patcher.txt"
-        else
-            pm_message "This port requires the latest version of PortMaster."
-            pm_finish
-            exit 1
-        fi
-    fi
-}
-
-# We only need patcher for RK3326 devices
-if [[ "$DEVICE_CPU" != "Cortex-A35" ]] && [ -f "$GAMEDIR/assets/data.win" ]; then
-	# Rename data.win file
-	mv assets/data.win assets/game.droid
-	# Delete all redundant files
-	rm -f assets/*.{exe,dll}
-	# Zip all game files into the gravitystorm.port
-	zip -r -0 ./gravitystorm.port ./assets/
-	rm -Rf ./assets/
-else
-	check_patch
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+	# get data.win checksum
+	checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
+	
+	# Check for Itch.io full version
+	if [ "$checksum" == "b2e089b8d3c0aeb85b2ca05cb5a65eba" ]; then
+		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchitch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+		pm_message "Patch for the Itch.io version has been applied"
+		rm -f assets/*.{exe,dll,win}
+		# Zip all game files into the gravitystorm.port
+		zip -r -0 ./gravitystorm.port ./assets/
+		rm -Rf ./assets/
+	
+	# Check for Steam full version
+	elif [ "$checksum" == "82e890761cf0faff59aafcb92e330a49" ]; then
+		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchsteam.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+		pm_message "Patch for the Steam version has been applied"
+		rm -f assets/*.{exe,dll,win}
+		# Zip all game files into the gravitystorm.port
+		zip -r -0 ./gravitystorm.port ./assets/
+		rm -Rf ./assets/
+	
+	# Check for Steam demo version
+	elif [ "$checksum" == "015b735453bee276b4c6a3cd03f07b17" ]; then
+		sed -i 's|"apk_path" : "gravitystorm.port"|"apk_path" : "gravitystormdemo.port"|' $GMLOADER_JSON
+		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchdemo.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+		pm_message "Patch for the demo version has been applied"
+		rm -f assets/*.{exe,dll,win}
+		# Zip all game files into the gravitystormdemo.port
+		zip -r -0 ./gravitystormdemo.port ./assets/
+		rm -Rf ./assets/
+	fi
 fi
 
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c gmloader.json
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
 # Kill processes
 pm_finish
