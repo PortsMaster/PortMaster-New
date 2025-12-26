@@ -52,7 +52,7 @@ bind_directories "$HOME/.stratagus" "$CONFDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-if [[ $CFW_NAME == *"ArkOS"* ]]; then
+if [[ $CFW_NAME == *"ArkOS"* ]] && [[ $CFW_NAME != *"dArkOS"* ]]; then
   export LD_LIBRARY_PATH="$GAMEDIR/libs.arkos.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 fi
 
