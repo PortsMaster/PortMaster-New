@@ -71,9 +71,8 @@ pm_platform_helper "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY"
 $GPTOKEYB "$GAMEDIR/renpy/lib/py3-linux-aarch64/startRENPY" -c "badend.gptk"  &
 "$PORTEXEC"
 
-pm_finish
-
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
     $ESUDO umount "$renpydir/game"
     $ESUDO umount "$renpydir"
 fi
+pm_finish
