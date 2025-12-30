@@ -1,21 +1,23 @@
 ## Notes
 
-A huge thank you to [MetroidQuest](https://metroidquest.angelfire.com/Main.html) for allowing us to distribute this fan remake.  Also, thanks to all who tested this port.
+A HUGE THANK YOU to [MetroidQuest](https://metroidquest.angelfire.com/Main.html) for allowing us to distribute this brilliant fan remake of an absolute classic!!! Another thanks to all who tested this port!
+
 
 ## Controls
 
 | Button | Action |
 |--|--| 
-|start |start|
-|r1 |menu|
-|dpad|movement|
-|left analog|movement|
-|menu button|exit menu/map|
+|start|start|
+|select|exit/quit|
+|d-pad|movement|
+|left-analog|movement|
 |B|whip|
-|Y|whip|
+|Y|whip/sub weapon|
 |A|jump|
 |X|jump|
-|r1|menu|
-|r2|map|
+|R2|inventory|
+|L2|map|
+|L1|choose sub item|
+|R1|swap|
 
 
