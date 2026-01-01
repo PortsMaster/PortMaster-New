@@ -129,6 +129,28 @@ cpu_check() {
     esac
 }
 
+compress_audio() {
+    
+    # Do audio compression
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/data.win"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
+        echo "Audio compression applied successfully."
+    else
+        # Failure
+        echo "Audio compression failed for $GAMEFILE."
+        rmdir "$TMPDIR"
+        return 1
+    fi
+}
+
+# Fix chunk aligment after the audio compression
+fix_alignment() {
+ dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        load "$DATADIR/data.win" \
+        -s "$GAMEDIR/tools/fix_alignment.csx" \
+        -o "$DATADIR/data2.win"
+}
+
 # Dump game code entries from data.win
 dump_code() {
     # Purge cache before operations
@@ -149,7 +171,7 @@ dump_code() {
     echo "Dumping GML scripts: ${CODE_ENTRIES[*]}"
 
     dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
-        dump "$DATADIR/data.win" \
+        dump "$DATADIR/data2.win" \
         -o "$TMPDIR" \
         $CODEARGS
 
@@ -183,8 +205,8 @@ replace_code() {
 
     # Begin replace operations
     dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
-        replace "$DATADIR/data.win" \
-        -o "$DATADIR/data2.win" \
+        replace "$DATADIR/data2.win" \
+        -o "$DATADIR/data3.win" \
         $CODEARGS
 
     if [ $? -ne 0 ]; then
@@ -192,8 +214,8 @@ replace_code() {
         return 1
     else
         echo "Successfully replaced gml scripts."
-        rm -f "$DATADIR/data.win"
-        mv "$DATADIR/data2.win" "$DATADIR/data.win"
+       rm -f "$DATADIR/data.win"
+	   rm -f "$DATADIR/data2.win"
         [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
 }
@@ -205,36 +227,20 @@ dump_textures() {
     
     # Begin texture operations
     dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
-        dump "$DATADIR/data.win" \
+        dump "$DATADIR/data3.win" \
         -e "$DATADIR/textures" "$DATADIR/game.droid"
 
     if [ $? -ne 0 ]; then
         echo "[DOTNET]: Texture dumping failed to apply."
         return 1
     else
-        rm -f "$DATADIR/data.win"
+        rm -f "$DATADIR/data3.win"
         mv "$DATADIR/textures" "$SAVEDIR/textures"
         [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
 }
 
-compress_audio() {
-    # Test for data.win
-    if [ -f "$DATADIR/data.win" ]; then
-        mv "$DATADIR/data.win" "$DATADIR/game.droid"
-    fi
-    
-    # Do audio compression
-    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
-        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
-        echo "Audio compression applied successfully."
-    else
-        # Failure
-        echo "Audio compression failed for $GAMEFILE."
-        rmdir "$TMPDIR"
-        return 1
-    fi
-}
+
 
 zip_archive() {
         zip -r -0 $DATAFILE ./assets/
@@ -284,6 +290,12 @@ process_game() {
     rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
     echo "Removed unnecessary files"
     cpu_check
+    echo "Compressing audio..."
+    compress_audio || { patch_failure; return 1; }
+    sleep 1
+    echo "Fixing chunk alignment..."
+    fix_alignment || { patch_failure; return 1; }
+    sleep 1
     dump_code || { patch_failure; return 1; }
     echo "Modifying gml scripts..."
     modify_code || { patch_failure; return 1; }
@@ -291,9 +303,6 @@ process_game() {
     replace_code || { patch_failure; return 1; }
     echo "Externalizing textures..."
     dump_textures || { patch_failure; return 1; }
-    sleep 1
-    echo "Compressing audio..."
-    compress_audio || { patch_failure; return 1; }
     sleep 1
     echo "Finishing up..."
     zip_archive || { patch_failure; return 1; }
