@@ -1,6 +1,5 @@
 # Dragon Dragon Fire Fire
 
-Play as a dragon and spit fire in this classic arcade platformer, creatively titled "Dragon Dragon Fire Fire"! Relive the charm of late-80s arcade games as you blast through destructible stages, incinerate your enemies, and chase the high score.
 
 ## Did you know?
 
