@@ -1,4 +1,3 @@
-# Dragon Dragon Fire Fire
 
 
 ## Did you know?
