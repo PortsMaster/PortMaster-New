@@ -29,6 +29,9 @@ cd $GAMEDIR
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+
 # Prepare game files
 if [ -f ./assets/data.win ]; then
 	# get data.win checksum
