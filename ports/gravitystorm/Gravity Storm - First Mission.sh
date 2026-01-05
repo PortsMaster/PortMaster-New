@@ -35,7 +35,7 @@ if [ -f ./assets/data.win ]; then
 	checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 	
 	# Check for Itch.io full version
-	if [ "$checksum" == "b2e089b8d3c0aeb85b2ca05cb5a65eba" ]; then
+	if [ "$checksum" == "e2fb948c818e9a74b8fbfa4833a4110a" ]; then
 		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchitch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
 		pm_message "Patch for the Itch.io version has been applied"
 		rm -f assets/*.{exe,dll,win}
@@ -44,7 +44,7 @@ if [ -f ./assets/data.win ]; then
 		rm -Rf ./assets/
 	
 	# Check for Steam full version
-	elif [ "$checksum" == "82e890761cf0faff59aafcb92e330a49" ]; then
+	elif [ "$checksum" == "f325eb9057b9662fc028208f63bef01a" ]; then
 		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchsteam.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
 		pm_message "Patch for the Steam version has been applied"
 		rm -f assets/*.{exe,dll,win}
