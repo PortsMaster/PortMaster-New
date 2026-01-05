@@ -45,6 +45,10 @@ if [ -f "$GAME_FILE" ]; then
   sed -i "s/steamApiEnabled = true/steamApiEnabled = false/" "$CONFLUA_FILE"
   sed -i "s/scaleX = math\.floor/scaleX = /" "$WINDOWLUA_FILE"
   sed -i "s/scaleY = math\.floor/scaleY = /" "$WINDOWLUA_FILE"
+  sed -i "s/^windowWidth = .*/windowWidth = ${DISPLAY_WIDTH}/" "$CONFLUA_FILE"
+  sed -i "s/^windowHeight = .*/windowHeight = ${DISPLAY_HEIGHT}/" "$CONFLUA_FILE"
+  sed -i "s/^minWindowWidth = .*/minWindowWidth = ${DISPLAY_WIDTH}/" "$CONFLUA_FILE"
+  sed -i "s/^minWindowHeight = .*/minWindowHeight = ${DISPLAY_HEIGHT}/" "$CONFLUA_FILE"
   ./bin/7za u -mx0 -aoa "$GAME_FILE" "$CONFLUA_FILE"
   rm "$CONFLUA_FILE"
   
