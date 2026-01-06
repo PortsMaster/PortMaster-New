@@ -35,32 +35,25 @@ if [ -f ./assets/data.win ]; then
 	# get data.win checksum
 	checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 	
-	# Check for Itch.io full version
-	if [ "$checksum" == "e2fb948c818e9a74b8fbfa4833a4110a" ]; then
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchitch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the Itch.io version has been applied"
-		rm -f assets/*.{exe,dll,win}
-		# Zip all game files into the gravitystorm.port
-		zip -r -0 ./gravitystorm.port ./assets/
-		rm -Rf ./assets/
-	
-	# Check for Steam full version
-	elif [ "$checksum" == "f325eb9057b9662fc028208f63bef01a" ]; then
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchsteam.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the Steam version has been applied"
-		rm -f assets/*.{exe,dll,win}
-		# Zip all game files into the gravitystorm.port
-		zip -r -0 ./gravitystorm.port ./assets/
-		rm -Rf ./assets/
-	
 	# Check for Steam demo version
-	elif [ "$checksum" == "015b735453bee276b4c6a3cd03f07b17" ]; then
+	if [ "$checksum" == "015b735453bee276b4c6a3cd03f07b17" ]; then
 		sed -i 's|"apk_path" : "gravitystorm.port"|"apk_path" : "gravitystormdemo.port"|' $GMLOADER_JSON
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchdemo.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the demo version has been applied"
-		rm -f assets/*.{exe,dll,win}
+		# Rename data.win file
+		mv assets/data.win assets/game.droid
+		# Delete all redundant files
+		rm -f assets/*.{exe,dll}
 		# Zip all game files into the gravitystormdemo.port
 		zip -r -0 ./gravitystormdemo.port ./assets/
+		rm -Rf ./assets/
+	
+	# Assume full version
+	else 
+		# Rename data.win file
+		mv assets/data.win assets/game.droid
+		# Delete all redundant files
+		rm -f assets/*.{exe,dll}
+		# Zip all game files into the gravitystorm.port
+		zip -r -0 ./gravitystorm.port ./assets/
 		rm -Rf ./assets/
 	fi
 fi
