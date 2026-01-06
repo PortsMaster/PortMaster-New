@@ -1,7 +1,7 @@
 ## Notes
 Thanks to [anaseto](https://codeberg.org/anaseto) for creating this game.
 
-[https://codeberg.org/anaseto/harmonist]](https://codeberg.org/anaseto/harmonist)
+[https://codeberg.org/anaseto/harmonist](https://codeberg.org/anaseto/harmonist)
 
 
 ## Controls
@@ -14,7 +14,7 @@ Thanks to [anaseto](https://codeberg.org/anaseto) for creating this game.
 | A | Start/wait |
 | B | Inventory |
 | X | Examine |
-| Y | Interact(Equip/Activate) |
+| Y | Interact (Equip/Activate) |
 | L1 | Settings/Help |
 | L2 | Message |
 | R1 | Quit |
