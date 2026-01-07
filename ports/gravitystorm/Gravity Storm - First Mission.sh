@@ -25,6 +25,7 @@ GMLOADER_JSON="$GAMEDIR/gmloader.json"
 # CD and set up logging
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
@@ -34,32 +35,25 @@ if [ -f ./assets/data.win ]; then
 	# get data.win checksum
 	checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 	
-	# Check for Itch.io full version
-	if [ "$checksum" == "b2e089b8d3c0aeb85b2ca05cb5a65eba" ]; then
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchitch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the Itch.io version has been applied"
-		rm -f assets/*.{exe,dll,win}
-		# Zip all game files into the gravitystorm.port
-		zip -r -0 ./gravitystorm.port ./assets/
-		rm -Rf ./assets/
-	
-	# Check for Steam full version
-	elif [ "$checksum" == "82e890761cf0faff59aafcb92e330a49" ]; then
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchsteam.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the Steam version has been applied"
-		rm -f assets/*.{exe,dll,win}
-		# Zip all game files into the gravitystorm.port
-		zip -r -0 ./gravitystorm.port ./assets/
-		rm -Rf ./assets/
-	
 	# Check for Steam demo version
-	elif [ "$checksum" == "015b735453bee276b4c6a3cd03f07b17" ]; then
+	if [ "$checksum" == "015b735453bee276b4c6a3cd03f07b17" ]; then
 		sed -i 's|"apk_path" : "gravitystorm.port"|"apk_path" : "gravitystormdemo.port"|' $GMLOADER_JSON
-		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchdemo.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
-		pm_message "Patch for the demo version has been applied"
-		rm -f assets/*.{exe,dll,win}
+		# Rename data.win file
+		mv assets/data.win assets/game.droid
+		# Delete all redundant files
+		rm -f assets/*.{exe,dll}
 		# Zip all game files into the gravitystormdemo.port
 		zip -r -0 ./gravitystormdemo.port ./assets/
+		rm -Rf ./assets/
+	
+	# Assume full version
+	else 
+		# Rename data.win file
+		mv assets/data.win assets/game.droid
+		# Delete all redundant files
+		rm -f assets/*.{exe,dll}
+		# Zip all game files into the gravitystorm.port
+		zip -r -0 ./gravitystorm.port ./assets/
 		rm -Rf ./assets/
 	fi
 fi
