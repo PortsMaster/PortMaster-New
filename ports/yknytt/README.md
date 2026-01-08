@@ -1,3 +1,9 @@
+## Acknowledgements
+
+YKnytt by YoukaiCountry, up-left: https://youkaicountry.itch.io/yknytt or https://github.com/youkaicountry/yknytt/
+Original Knytt Stories by Nifflas: https://nifflas.itch.io/
+Knytt Stories Plus by egomassive: http://egomassive.com/ks/
+Levels by Knytt Stories community: https://nifflas.lp1.nl/
 
 ## Controls
 
