@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/asm
+GAMEDIR=/$directory/ports/asolitairemystery
 CONFDIR="$GAMEDIR/conf/"
 
 mkdir -p "$GAMEDIR/conf"
