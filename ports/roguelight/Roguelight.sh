@@ -63,7 +63,7 @@ if [ -f "$GAMEDIR/patchlog.txt" ]; then
 fi
 
 $GPTOKEYB "gmloadernext.armhf" -c ./roguelight.gptk &
-pm_plateform_helper "$GAMEDIR/gmloadernext.armhf"
+pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
 
 #gmloadernext will use config.json
 ./gmloadernext.armhf -c "$GAMEDIR/gmloader.json"
