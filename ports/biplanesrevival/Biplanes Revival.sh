@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: amoebax.zip, Amoebax.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -19,8 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/biplanes-revival
-CONFDIR="$GAMEDIR/conf"
+GAMEDIR=/$directory/ports/biplanesrevival
 BINARY=BiplanesRevival
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
