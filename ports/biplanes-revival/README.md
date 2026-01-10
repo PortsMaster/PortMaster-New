@@ -1,4 +1,4 @@
-# Thanks
+## Thanks
 Thanks to the [regular-dev, xxxxxion and others](https://github.com/regular-dev/biplanes-revival) for recreating this game and making it available for free.
 
 ## Controls
