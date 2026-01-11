@@ -8,17 +8,17 @@ Original port repo: [Malvineous](https://github.com/Malvineous/xargon)
 Updated Xargon source port: [Slayer366](https://github.com/Slayer366/xargon)
 
 Slayer366 source port information:
-Initial patches and improvements were adapted from ptitseb's Pandora diff and Shin-Nil's fork for the GCW.
-Ptitseb's diff fixes a major refresh issue in the game's world map.
-Ptitseb's diff enables music playback using DOSBox' Sound Blaster OPL emulation.
-Shin-Nil's fork allows both 'Enter' and 'Y' keys to be used to quit the game from the main menu.
-Improved performance by caching and reducing SDL_Flip and SDL_SetPalette calls.
-Improved performance with scrolls and journal entries very slow to scroll and fix graphic artifacting.
-Fix flickering menu arrow cursor - make static while preserving animation.
-Eliminate menu delay by only rendering borders and fill after the render loop is complete.
-Enters default hi-score name and save-game name if nothing is entered to be 'controller friendly'.
-Make bottom flashy screen messages flash.
-Cleaned up compiler warnings and performed other various small fixes.
+- Initial patches and improvements were adapted from ptitseb's Pandora diff and Shin-Nil's fork for the GCW.
+- Ptitseb's diff fixes a major refresh issue in the game's world map.
+- Ptitseb's diff enables music playback using DOSBox' Sound Blaster OPL emulation.
+- Shin-Nil's fork allows both 'Enter' and 'Y' keys to be used to quit the game from the main menu.
+- Improved performance by caching and reducing SDL_Flip and SDL_SetPalette calls.
+- Improved performance with scrolls and journal entries very slow to scroll and fix graphic artifacting.
+- Fix flickering menu arrow cursor - make static while preserving animation.
+- Eliminate menu delay by only rendering borders and fill after the render loop is complete.
+- Enters default hi-score name and save-game name if nothing is entered to be 'controller friendly'.
+- Make bottom flashy screen messages flash.
+- Cleaned up compiler warnings and performed other various small fixes.
 
 
 </br>
