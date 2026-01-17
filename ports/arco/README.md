@@ -3,7 +3,7 @@
 #### Acknowledgements
 Special thanks to [Franek Nowotniak](https://linktr.ee/franekk), [José Ramón “Bibiki” García](https://linktr.ee/bibikigarcia), [Antonio “Fayer” Uribe](https://fayer.dev/), and [Max Cahill](https://www.1bardesign.com/) for making this wonderful game!
 
-Thanks to Doronimmo for the zram script and Jeod for the cover and screenshot and the testers from Discord!
+Thanks to Doronimmo for the zram script, Jeod for the cover and screenshot, and the testers from Discord!
 
 Source: https://store.steampowered.com/app/2366970/Arco/
 
