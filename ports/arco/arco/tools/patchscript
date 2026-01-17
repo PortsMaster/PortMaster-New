@@ -1,0 +1,124 @@
+#!/bin/bash
+# High-speed xdelta-based LÖVE/exe patcher
+# ==============================================================================
+
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+REPACK_LOVE="$GAMEDIR/arco.love"
+PATCH_FILE="$GAMEDIR/tools/patch/arco.xdelta"
+TARGET_SIZE_KB=38912 # Final size of arco.love in KB
+START_TIME=$(date +%s)
+
+# 101: Setup logging
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
+echo "=== START $(date) ==="
+
+# 201: Locate Source EXE
+DATAFILE_ACTUAL=""
+for f in "$GAMEDIR"/*; do
+    filename=$(basename "$f")
+    # Case-insensitive check for Arco.exe 
+    if [ "$(echo "$filename" | tr '[:upper:]' '[:lower:]')" = "arco.exe" ]; then
+        DATAFILE_ACTUAL="$filename"
+        break
+    fi
+done
+
+if [ -z "$DATAFILE_ACTUAL" ]; then
+    echo "Error: Arco.exe not found in $GAMEDIR" [cite: 10]
+    exit 1
+fi
+
+# 301: Xdelta Application with Progress Tracking
+apply_xdelta() {
+    local src_file="$GAMEDIR/$DATAFILE_ACTUAL"
+    local out_file="$REPACK_LOVE"
+    
+    echo "Applying xdelta patch to create $REPACK_LOVE..."
+    xdeltastart_time=$(date '+%H:%M:%S')
+    echo "[${xdeltastart_time}] Starting xdelta patch process..."
+
+    # Start xdelta in background using $controlfolder path
+    "$controlfolder/xdelta3" -d -s "$src_file" -f "$PATCH_FILE" "$out_file" 2>&1 &
+    xdelta_pid=$!
+    
+    # Monitor progress while xdelta is running
+    while kill -0 $xdelta_pid 2>/dev/null; do
+        sleep 2
+        
+        if [ -f "$out_file" ]; then
+            # Get current size of the growing .love file
+            current_size=$(du -k "$out_file" 2>/dev/null | cut -f1)
+            if [ -n "$current_size" ] && [ "$current_size" -gt 0 ]; then
+                # Calculate percentage with 1 decimal place
+                percentage=$(awk "BEGIN {printf \"%.1f\", ($current_size / $TARGET_SIZE_KB) * 100}")
+                current_time=$(date '+%H:%M:%S')
+                echo "[${current_time}] Progress: ${current_size}KB / ${TARGET_SIZE_KB}KB (${percentage}%)"
+            fi
+        fi
+    done
+    
+    # Wait for completion and check exit status
+    wait $xdelta_pid
+    exit_status=$?
+    
+    if [ $exit_status -eq 0 ]; then
+        completion_time=$(date '+%H:%M:%S')
+        echo "[${completion_time}] Progress: 100.0% - Patch applied successfully."
+    else
+        echo "Error: xdelta3 failed with exit code $exit_status"
+        exit 1
+    fi
+}
+
+# 302: Modify conf.lua with display resolution
+modify_conf_lua() {
+    local love_file="$REPACK_LOVE"
+    local tools_dir="$GAMEDIR/tools"
+    local temp_dir="$GAMEDIR/temp_extract"
+    
+    echo "Modifying conf.lua with display resolution..."
+    
+    # Create temp directory
+    mkdir -p "$temp_dir"
+    
+    # Extract conf.lua from arco.love
+    "$tools_dir/7za" e "$love_file" -o"$temp_dir" conf.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/conf.lua" ]; then
+        echo "Error: conf.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Apply sed replacements
+    sed -i "s/t\.window\.width = 960/t.window.width = ${DISPLAY_WIDTH}/" "$temp_dir/conf.lua"
+    sed -i "s/t\.window\.height = 540/t.window.height = ${DISPLAY_HEIGHT}/" "$temp_dir/conf.lua"
+    
+    echo "Updated resolution to ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
+    
+    # Update the archive with modified conf.lua
+    "$tools_dir/7za" u "$love_file" "$temp_dir/conf.lua" -y > /dev/null
+    
+    # Cleanup temp directory
+    rm -rf "$temp_dir"
+    
+    echo "conf.lua updated successfully in arco.love"
+}
+
+# 401 Execute Patch
+apply_xdelta
+modify_conf_lua
+
+# 501: Cleanup
+echo "Cleaning up source files..."
+rm "$GAMEDIR/$DATAFILE_ACTUAL"
+[ -f "$GAMEDIR/Place arco.exe here.txt" ] && rm "$GAMEDIR/Place arco.exe here.txt"
+
+# 601: Execution Summary
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+echo "-----------------------------------"
+echo "Process Complete in $DURATION seconds"
+echo "Final File: $REPACK_LOVE"
+echo "=== END $(date) ==="
