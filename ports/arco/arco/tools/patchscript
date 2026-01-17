@@ -106,9 +106,78 @@ modify_conf_lua() {
     echo "conf.lua updated successfully in arco.love"
 }
 
+# 303: Modify display.lua with display resolution
+modify_display_lua() {
+    local love_file="$REPACK_LOVE"
+    local tools_dir="$GAMEDIR/tools"
+    local temp_dir="$GAMEDIR/temp_extract"
+    
+    echo "Modifying display.lua with custom resolution..."
+    
+    mkdir -p "$temp_dir"
+    
+    # Extract display.lua from arco.love
+    "$tools_dir/7za" e "$love_file" -o"$temp_dir" src/display.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/display.lua" ]; then
+        echo "Error: display.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Calculate height for 9/16 aspect ratio
+    CALCULATED_HEIGHT=$(awk "BEGIN {printf \"%.0f\", $DISPLAY_WIDTH * 9 / 16}")
+    
+    # Insert new resolution entry right before the closing brace of target_resolutions
+    awk -v width="$DISPLAY_WIDTH" -v height="$CALCULATED_HEIGHT" '
+    /^}$/ {
+        # Check if next line is the display.target_resolution line
+        if (getline nextline > 0) {
+            if (nextline ~ /^display\.target_resolution/) {
+                # Insert new entry, then closing brace, then the target_resolution line
+                print "\t{"
+                print "\t\tsize = vec2(" width ", " height "),"
+                print "\t\tscale = {"
+                print "\t\t\tjourney = 2,"
+                print "\t\t\tcombat = 2,"
+                print "\t\t},"
+                print "\t},"
+                print "}"
+                print nextline
+                next
+            } else {
+                # Not the right place, print both lines normally
+                print "}"
+                print nextline
+                next
+            }
+        } else {
+            # No next line, just print the closing brace
+            print "}"
+        }
+    }
+    { print }
+    ' "$temp_dir/display.lua" > "$temp_dir/display.lua.tmp" && mv "$temp_dir/display.lua.tmp" "$temp_dir/display.lua"
+    
+    echo "Added custom resolution ${DISPLAY_WIDTH}x${CALCULATED_HEIGHT} to display.lua"
+    
+    # Need to recreate the directory structure for 7za to update correctly
+    mkdir -p "$temp_dir/src"
+    mv "$temp_dir/display.lua" "$temp_dir/src/display.lua"
+    
+    # Update the archive with correct path structure
+    cd "$temp_dir"
+    "$tools_dir/7za" u "$love_file" src/display.lua -y > /dev/null
+    cd "$GAMEDIR"
+    
+    rm -rf "$temp_dir"
+    echo "display.lua updated successfully"
+}
+
 # 401 Execute Patch
 apply_xdelta
 modify_conf_lua
+modify_display_lua
 
 # 501: Cleanup
 echo "Cleaning up source files..."
