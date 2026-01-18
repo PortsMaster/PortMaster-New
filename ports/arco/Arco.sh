@@ -31,6 +31,14 @@ export LD_LIBRARY_PATH="$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
 export controlfolder
 export DISPLAY_WIDTH
 export DISPLAY_HEIGHT
+export DEVICE_ARCH
+
+# Check if 7zzs present
+if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
+    echo "this port requires the latest portmaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit 1
+fi
 
 # Check if we need to patch the game
 if [ ! -f arco.love ]; then

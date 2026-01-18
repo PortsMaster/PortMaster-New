@@ -74,7 +74,6 @@ apply_xdelta() {
 # 302: Modify conf.lua with display resolution
 modify_conf_lua() {
     local love_file="$REPACK_LOVE"
-    local tools_dir="$GAMEDIR/tools"
     local temp_dir="$GAMEDIR/temp_extract"
     
     echo "Modifying conf.lua with display resolution..."
@@ -83,7 +82,7 @@ modify_conf_lua() {
     mkdir -p "$temp_dir"
     
     # Extract conf.lua from arco.love
-    "$tools_dir/7za" e "$love_file" -o"$temp_dir" conf.lua -y > /dev/null
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" conf.lua -y > /dev/null
     
     if [ ! -f "$temp_dir/conf.lua" ]; then
         echo "Error: conf.lua not found in arco.love"
@@ -98,18 +97,17 @@ modify_conf_lua() {
     echo "Updated resolution to ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
     
     # Update the archive with modified conf.lua
-    "$tools_dir/7za" u "$love_file" "$temp_dir/conf.lua" -y > /dev/null
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" "$temp_dir/conf.lua" -y > /dev/null
     
     # Cleanup temp directory
     rm -rf "$temp_dir"
     
-    echo "conf.lua updated successfully in arco.love"
+    echo "conf.lua updated successfully..."
 }
 
 # 303: Modify display.lua with display resolution
 modify_display_lua() {
     local love_file="$REPACK_LOVE"
-    local tools_dir="$GAMEDIR/tools"
     local temp_dir="$GAMEDIR/temp_extract"
     
     echo "Modifying display.lua with custom resolution..."
@@ -117,7 +115,7 @@ modify_display_lua() {
     mkdir -p "$temp_dir"
     
     # Extract display.lua from arco.love
-    "$tools_dir/7za" e "$love_file" -o"$temp_dir" src/display.lua -y > /dev/null
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" src/display.lua -y > /dev/null
     
     if [ ! -f "$temp_dir/display.lua" ]; then
         echo "Error: display.lua not found in arco.love"
@@ -128,46 +126,54 @@ modify_display_lua() {
     # Calculate height for 9/16 aspect ratio
     CALCULATED_HEIGHT=$(awk "BEGIN {printf \"%.0f\", $DISPLAY_WIDTH * 9 / 16}")
     
-    # Insert new resolution entry right before the closing brace of target_resolutions
-    awk -v width="$DISPLAY_WIDTH" -v height="$CALCULATED_HEIGHT" '
-    /^}$/ {
-        # Check if next line is the display.target_resolution line
-        if (getline nextline > 0) {
-            if (nextline ~ /^display\.target_resolution/) {
-                # Insert new entry, then closing brace, then the target_resolution line
-                print "\t{"
-                print "\t\tsize = vec2(" width ", " height "),"
-                print "\t\tscale = {"
-                print "\t\t\tjourney = 2,"
-                print "\t\t\tcombat = 2,"
-                print "\t\t},"
-                print "\t},"
-                print "}"
-                print nextline
-                next
-            } else {
-                # Not the right place, print both lines normally
-                print "}"
-                print nextline
-                next
-            }
-        } else {
-            # No next line, just print the closing brace
-            print "}"
-        }
-    }
-    { print }
-    ' "$temp_dir/display.lua" > "$temp_dir/display.lua.tmp" && mv "$temp_dir/display.lua.tmp" "$temp_dir/display.lua"
+    # Find line number of "display.target_resolution = table.back"
+    LINE_NUM=$(grep -n "^display\.target_resolution = table\.back" "$temp_dir/display.lua" | cut -d: -f1)
+    
+    if [ -z "$LINE_NUM" ]; then
+        echo "Error: Could not find display.target_resolution line"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Get everything up to 2 lines before display.target_resolution
+    head -n $((LINE_NUM - 2)) "$temp_dir/display.lua" > "$temp_dir/part1.txt"
+    
+    # Remove the last line (which is the closing })
+    head -n -1 "$temp_dir/part1.txt" > "$temp_dir/part1_trimmed.txt"
+    
+    # Add the new resolution entry and closing brace
+    cat >> "$temp_dir/part1_trimmed.txt" << 'EOF'
+	{
+		size = vec2($DISPLAY_WIDTH, $CALCULATED_HEIGHT),
+		scale = {
+			journey = 2,
+			combat = 2,
+		},
+	},
+}
+EOF
+    
+    # Replace variables
+    sed -i "s/\$DISPLAY_WIDTH/$DISPLAY_WIDTH/g" "$temp_dir/part1_trimmed.txt"
+    sed -i "s/\$CALCULATED_HEIGHT/$CALCULATED_HEIGHT/g" "$temp_dir/part1_trimmed.txt"
+    
+    # Add blank line then the rest of the file
+    echo "" >> "$temp_dir/part1_trimmed.txt"
+    tail -n +$LINE_NUM "$temp_dir/display.lua" >> "$temp_dir/part1_trimmed.txt"
+    
+    # Replace original
+    mv "$temp_dir/part1_trimmed.txt" "$temp_dir/display.lua"
+    rm -f "$temp_dir/part1.txt"
     
     echo "Added custom resolution ${DISPLAY_WIDTH}x${CALCULATED_HEIGHT} to display.lua"
     
-    # Need to recreate the directory structure for 7za to update correctly
+    # Need to recreate the directory structure for 7zzs to update correctly
     mkdir -p "$temp_dir/src"
     mv "$temp_dir/display.lua" "$temp_dir/src/display.lua"
     
     # Update the archive with correct path structure
     cd "$temp_dir"
-    "$tools_dir/7za" u "$love_file" src/display.lua -y > /dev/null
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" src/display.lua -y > /dev/null
     cd "$GAMEDIR"
     
     rm -rf "$temp_dir"
