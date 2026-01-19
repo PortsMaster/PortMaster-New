@@ -1,25 +1,33 @@
 ## Notes
-Thanks to ??? for creating this game.
+Thanks to [ptitSeb](https://github.com/ptitSeb/stuntcarremake/tree/master) for creating this game.
 
-[URL](URL)
+[https://github.com/ptitSeb/stuntcarremake/tree/master](https://github.com/ptitSeb/stuntcarremake/tree/master)
 
 
 ## Controls
 
 | Button | Action |
 |--|--|
-| Dpad | Move |
-| Left Analog | Move|
-| Right Analog | Run |
-| A | Interact(Equip/Acivate) |
-| B | Inventory |
-| X | Examine |
-| Y | Answer Y |
-| L1 | View Messages |
-| L2 | Settings |
-| R1 | Goto |
-| R2 | Wizard Mode|
+| Dpad | UP Accelerate Down Brake Left and Right |
+| Left Analog | UP Accelerate Down Brake Left and Right |
+| Back | Pause |
+| Start | Return to track menu |
+| A | Start Race |
+| B | Boost |
+| X | Toggle Super League Mode |
+| Y | Reverses/flips the car 180 degrees |
+| L1 | Speed up (decrease frame gap) |
+| L3 | Unpause game |
+| R1 | Slow down (increase frame gap) |
+| a_hk | Track 1 |
+| b_hk | Track 2 |
+| x_hk | Track 3 |
+| y_hk | Track 4 |
+| l1_hk | Track 5 |
+| r1_hk | Track 6 |
+| l2_hk | Track 7 |
+| r2_hk | Track 8 |
 
 ## Compiling
 
-Guthub Actions automatic [build](https://github.com/monkeyx-net/shamogu)
+makeLINUX=1 SDL=2
