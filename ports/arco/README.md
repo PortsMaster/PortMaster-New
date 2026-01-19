@@ -23,5 +23,6 @@ Source: https://store.steampowered.com/app/2366970/Arco/
 |Y|Switch Characters|
 |L / R|Menu / Skills Select|
 |R2|Combat Preview|
+|L2|D-pad/L-stick swap for D-pad only devices|
 
 

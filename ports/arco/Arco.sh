@@ -32,6 +32,7 @@ export controlfolder
 export DISPLAY_WIDTH
 export DISPLAY_HEIGHT
 export DEVICE_ARCH
+export ANALOG_STICKS
 
 # Check if 7zzs present
 if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then

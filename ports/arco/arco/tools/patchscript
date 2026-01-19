@@ -191,10 +191,69 @@ EOF
     echo "display.lua updated successfully"
 }
 
+# 304: Modify gamepad.lua for D-pad emulation
+modify_gamepad_lua() {
+    # Only proceed if analog sticks are disabled
+    if [ "$ANALOG_STICKS" -eq 0 ]; then
+        echo "Analog sticks not detected, applying D-pad emulation..."
+    else
+        echo "Analog stick(s) detected: $ANALOG_STICKS, skipping gamepad.lua modification"
+        return 0
+    fi
+    
+    local love_file="$REPACK_LOVE"
+    local temp_dir="$GAMEDIR/temp_extract"
+    local gamepad_patch="$GAMEDIR/tools/patch/gamepad.xdelta"
+    
+    echo "Applying D-pad emulation patch to gamepad.lua..."
+    
+    # Check if patch file exists
+    if [ ! -f "$gamepad_patch" ]; then
+        echo "Error: gamepad.xdelta not found at $gamepad_patch"
+        exit 1
+    fi
+    
+    mkdir -p "$temp_dir"
+    
+    # Extract gamepad.lua from arco.love (preserves directory structure)
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" lib/ferris/input/gamepad.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/gamepad.lua" ]; then
+        echo "Error: gamepad.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Apply xdelta patch to gamepad.lua
+    "$controlfolder/xdelta3" -d -s "$temp_dir/gamepad.lua" "$gamepad_patch" "$temp_dir/gamepad_patched.lua"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to apply gamepad.xdelta patch"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Recreate directory structure and move patched file
+    mkdir -p "$temp_dir/lib/ferris/input"
+    mv "$temp_dir/gamepad_patched.lua" "$temp_dir/lib/ferris/input/gamepad.lua"
+    rm -f "$temp_dir/gamepad.lua"
+    
+    echo "D-pad to L-stick emulation patch applied successfully"
+    
+    # Update the archive with the patched file
+    cd "$temp_dir"
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" lib/ferris/input/gamepad.lua -y > /dev/null
+    cd "$GAMEDIR"
+    
+    rm -rf "$temp_dir"
+    echo "gamepad.lua updated successfully"
+}
+
 # 401 Execute Patch
 apply_xdelta
 modify_conf_lua
 modify_display_lua
+modify_gamepad_lua
 
 # 501: Cleanup
 echo "Cleaning up source files..."
