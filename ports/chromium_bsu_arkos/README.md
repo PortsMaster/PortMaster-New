@@ -10,6 +10,8 @@ If you self-destruct, you eject your weapons to be picked up by your next ship, 
 
 ## Acknowledgements
 
+Thanks to BenJuan26 for the initial port.  All I did was recompile on Ubuntu 19.10 to make it compatible with arkOS lib files.
+
 Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/projects/chromium-bsu/) for making this game and making it open source!
 
 Big thanks to the testers in the PortMaster discord for working through the kinks and making sure it's playable on supported devices, CFWs, and resolutions.
