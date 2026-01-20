@@ -10,6 +10,8 @@ If you self-destruct, you eject your weapons to be picked up by your next ship, 
 
 ## Acknowledgements
 
+Special thanks to BenJuan26 for the original portmaster port.  This update brings compatibility to systems running older Linux like arkOS.
+
 Thanks to [Mark B. Allan and community contributors](https://sourceforge.net/projects/chromium-bsu/) for making this game and making it open source!
 
 Big thanks to the testers in the PortMaster discord for working through the kinks and making sure it's playable on supported devices, CFWs, and resolutions.
