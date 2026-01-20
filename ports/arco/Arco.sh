@@ -32,7 +32,6 @@ export controlfolder
 export DISPLAY_WIDTH
 export DISPLAY_HEIGHT
 export DEVICE_ARCH
-export ANALOG_STICKS
 
 # Check if 7zzs present
 if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
@@ -45,6 +44,7 @@ fi
 if [ ! -f arco.love ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+	export PATCHER_QUESTIONS="$GAMEDIR/tools/questions.lua"
         export PATCHER_GAME="$(basename "${0%.*}")"
         export PATCHER_TIME="about a minute"
         export controlfolder

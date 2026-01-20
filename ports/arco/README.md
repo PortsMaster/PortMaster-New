@@ -3,9 +3,9 @@
 #### Acknowledgements
 Special thanks to [Franek Nowotniak](https://linktr.ee/franekk), [José Ramón “Bibiki” García](https://linktr.ee/bibikigarcia), [Antonio “Fayer” Uribe](https://fayer.dev/), and [Max Cahill](https://www.1bardesign.com/) for making this wonderful game!
 
-Thanks to Doronimmo for the zram script, Jeod for the cover and screenshot, and the testers from Discord!
+Thanks to: JanTrueno for the patcher interface and astc conversion, Doronimmo for the zram script and option selector for patching, Jeod for the cover/screenshot, and the testers from Discord!
 
-Source: https://store.steampowered.com/app/2366970/Arco/
+Source: [Steam Store Page](https://store.steampowered.com/app/2366970/Arco/)
 
 #### Steam Instructions
 * [Open Steam console](steam://open/console)
@@ -21,8 +21,10 @@ Source: https://store.steampowered.com/app/2366970/Arco/
 |B|Back / Cancel|
 |X|Management Menu / Purchase|
 |Y|Switch Characters|
-|L / R|Menu / Skills Select|
+|L1 / R1|Menu / Skills Select|
+|L2|D-pad/L-stick toggle (if patch applied)|
 |R2|Combat Preview|
-|L2|D-pad/L-stick swap for D-pad only devices|
+
+> **Note:** If the L2 toggle patch is applied, use **L1/R1** to select combat actions.
 
 
