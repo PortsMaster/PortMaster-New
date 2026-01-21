@@ -64,17 +64,17 @@ if [ ! -f 'bin32/Chowdren' ]; then
     # No game found, check for installers...
     for installer in iconoclasts_*.sh; do break; done;
     if [[ -z "$installer" ]] || [[ "$installer" == "iconoclasts_*.sh" ]]; then
-        pm_message "No data, no installer... nothing to do :("
+        echo "No data, no installer... nothing to do :("
         exit -1
     fi
 
-    pm_message "Installing from $installer..."
+    echo "Installing from $installer..."
 
     # extract the installer, but make sure we got the Chowdren binary present!
     python3 ../extract.py "$installer" "data/noarch/game/bin32/Chowdren"
     if [ $? != 0 ]; then
 		rm -f bin32/Chowdren
-        pm_message "Install failed..."
+        echo "Install failed..."
         sleep 5
         exit -1
     fi
@@ -91,7 +91,7 @@ if [ ! -f 'data/music/62SYS_title_B.dat' ]; then
 	echo " >> YOU ARE MISSING MUSIC DATA!!! <<"
 	echo " >> MUSIC PLAYBACK WILL NOT WORK! <<"
 	echo "Install the game and copy 'data/music' to 'gamedata/data/music'"
-    pm_message "Music data missing! See log for details."
+    echo "Music data missing! See log for details."
 fi
 
 # Set executable permissions for sdcards using ext2 or similar.
@@ -99,7 +99,7 @@ chmod +x "$GAMEDIR/box86/box86"
 chmod +x "$GAMEDIR/gamedata/bin32/Chowdren"
 
 $GPTOKEYB "Chowdren" -c "$GAMEDIR/iconoclasts.gptk" &
-pm_message "Loading, please wait... (might take a while!)"
+echo "Loading, please wait... (might take a while!)"
 $GAMEDIR/box86/box86 bin32/Chowdren
 
 pm_finish
