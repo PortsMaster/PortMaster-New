@@ -17,25 +17,25 @@
 
 ## Installation
 
-1. Copy this port to:
-   ```
-   /roms/ports/counter-strike/
-   ```
+1. Install this port via the autoinstall tool 
+( Copy the zip above to ports/autoinstall and then open PortMaster)
 
-2. Copy your **`valve`** folder into:
+2. Buy the game on steam https://store.steampowered.com/app/10/CounterStrike/
+
+3. Copy your **`valve`** folder into:
    ```
    /roms/ports/counter-strike/valve
    ```
 
-3. Copy your **`cstrike`** folder into:
+4. Copy your **`cstrike`** folder into:
    ```
    /roms/ports/counter-strike/cstrike
    ```
 
-4. **Do not overwrite existing port files** when copying game data.
+5. **Do not overwrite existing port files** when copying game data.
    If prompted, choose **Skip / Keep existing files**.
 
-5. Launch **Counter-Strike** from PortMaster.
+6. Launch **Counter-Strike** from PortMaster.
 
 > **Quick check:** After installation, both `valve` and `cstrike` folders
 > should be populated with game data (not empty).
