@@ -1,7 +1,7 @@
 ## Notes
 
 Thank you to the Devs at Konami for making the Yugioh 
-and thank you to jab-lao (https://jab-lao.itch.io/) for Developing this game
+, and thank you to jab-lao (https://jab-lao.itch.io) for developing this game.
 
 ## Controls
 
