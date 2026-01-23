@@ -99,6 +99,19 @@ Common options:
 - Many devices require a USB Wi-Fi adapter
 - “Play online” is **disabled by default**
 
+### Online / Network Play Disclaimer
+
+Online multiplayer has not been fully tested and is provided **as-is**.
+
+This client does not implement modern anti-cheat systems and is **not guaranteed to be compatible with public or official Counter-Strike 1.6 servers**.
+
+This port is recommended for:
+- Offline play with bots
+- LAN play
+- Private servers
+
+Users attempting to connect to public servers do so at their own risk.
+
 <details>
 <summary><b>Enable “Play online”</b></summary>
 
