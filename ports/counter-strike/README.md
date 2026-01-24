@@ -1,4 +1,5 @@
-# Counter-Strike 1.6
+## Notes
+
 
 > **No game assets are included.** 
 
