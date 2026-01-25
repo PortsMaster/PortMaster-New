@@ -135,12 +135,12 @@ cleanup() {
   echo "[Cleanup] Running cleanup..."
   if [ "$VALVE_MOUNTED" -eq 1 ]; then
     echo "[Cleanup] Unmounting valve..."
-    $ESUDO umount "$MY_VALVE" 2>/dev/null || $ESUDO umount -l "$MY_VALVE"
+    $ESUDO umount "$MY_VALVE" 2>/dev/null || $ESUDO umount -l "$MY_VALVE" 2>/dev/null || true
   fi
-  $ESUDO kill -9 "$(pidof gptokeyb)" 2>/dev/null
-  unset LD_LIBRARY_PATH
-  unset SDL_GAMECONTROLLERCONFIG
+
   unset XASH3D_BASEDIR
+  pm_finish || true
+
   echo "[Cleanup] Done."
 }
 
