@@ -22,6 +22,12 @@ godot_executable="godot45.$DEVICE_ARCH"
 pck_filename="MageRecall.pck"
 gptk_filename="magerecall.gptk"
 
+# Check if 7zzs present
+if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
+    echo "this port requires the latest portmaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit 1
+fi
 # Check for ROCKNIX running with libMali driver.
 if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
     if ! glxinfo | grep "OpenGL version string"; then
