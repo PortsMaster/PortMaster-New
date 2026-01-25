@@ -38,6 +38,11 @@ fi
 CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
+if [ ! -d "$GAMEDIR/gm" ]; then
+    "$GAMEDIR/7zzs" x "$GAMEDIR/Magerecall.7z.001" -o"$GAMEDIR/"
+    "$GAMEDIR/7zzs" x "$GAMEDIR/Magerecall.7z.002" -o"$GAMEDIR/"
+    sleep 1
+    rm -f "$GAMEDIR/Magerecall.7z"
 # Mount Weston runtime
 weston_dir=/tmp/weston
 $ESUDO mkdir -p "${weston_dir}"
