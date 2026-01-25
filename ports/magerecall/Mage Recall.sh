@@ -45,7 +45,7 @@ CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
 if [ ! -d "$GAMEDIR/gm" ]; then
-    "$GAMEDIR/7zzs" x "$GAMEDIR/Magerecall.7z.001" -o"$GAMEDIR/"
+    "$controlfolder/7zzs.${DEVICE_ARCH}" x "$GAMEDIR/Magerecall.7z.001" -o"$GAMEDIR/"
     sleep 1
     rm -f "$GAMEDIR/Magerecall.7z.001"
     rm -f "$GAMEDIR/Magerecall.7z.002"
