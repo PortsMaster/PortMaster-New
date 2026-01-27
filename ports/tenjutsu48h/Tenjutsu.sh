@@ -33,7 +33,7 @@ export TENJUTSU_CRT_DISABLED=1
 
 # Run it
 $GPTOKEYB "tenjutsu" & 
-pm_platform_helper "tenjutsu" > /dev/null
+pm_platform_helper "${GAMEDIR}/tenjutsu" > /dev/null
 
 # swap this out to toggle between AOT and hashlink jit
 #${HASHLINK} ${GAMEDIR}/client.hl
