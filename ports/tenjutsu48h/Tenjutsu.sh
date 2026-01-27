@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: tenjutsu48h.zip, Tenjutsu.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
