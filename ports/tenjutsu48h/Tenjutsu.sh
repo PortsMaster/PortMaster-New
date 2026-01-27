@@ -18,7 +18,6 @@ get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/tenjutsu48h"
-BOX64="$GAMEDIR/box64/box64"
 HASHLINK="$GAMEDIR/hashlink/hl"
 
 # CD and set log
@@ -26,15 +25,19 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/box64/x64:$GAMEDIR/hashlink:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/hashlink:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export BOX64_LD_LIBRARY_PATH="$GAMEDIR/hashlink:$GAMEDIR/hashlink/lib:$LD_LIBRARY_PATH"
-export SDL_VIDEODRIVER="x11"
+
+# remove this line if you want the crt filter
+export TENJUTSU_CRT_DISABLED=1
 
 # Run it
-$GPTOKEYB "$HASHLINK" xbox360 & 
-pm_platform_helper "$HASHLINK" > /dev/null
-"$BOX64" "$HASHLINK" client.hl
+$GPTOKEYB "tenjutsu" & 
+pm_platform_helper "${GAMEDIR}/tenjutsu" > /dev/null
+
+# swap this out to toggle between AOT and hashlink jit
+#${HASHLINK} ${GAMEDIR}/client.hl
+${GAMEDIR}/tenjutsu
 
 # Cleanup
 pm_finish
