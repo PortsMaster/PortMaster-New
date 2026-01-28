@@ -73,17 +73,12 @@ cleanup() {
 
   unset XASH3D_BASEDIR
 
-  if [ "${PM_STARTED:-0}" -eq 1 ]; then
-    pm_finish || true
-  fi
+  pm_finish || true
 
   echo "[Cleanup] Done."
 }
 
 trap cleanup EXIT
-
-pm_start
-PM_STARTED=1
 
 # ---- Helper for clean failures ----
 fail() {
