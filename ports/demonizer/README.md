@@ -1,6 +1,6 @@
 ## Notes of Demonizer
 
-Thanks to [IoriBranford](https://ioribranford.itch.io/) for this great Shump !
+Thanks to [IoriBranford](https://ioribranford.itch.io/) for this great shmup!
 
 A thanks also goes out to Kompaan for your Love2d package (v11.5).
 
