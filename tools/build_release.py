@@ -827,11 +827,11 @@ def build_markdown_zip(old_manifest, new_manifest):
         print(f" - {mode} {name}")
 
     zip_files = [
-        (Path(file), f"{file.split('/', 1)[0]}.md")
+        ((PORTS_DIR / file), f"{file.split('/', 1)[0]}.md")
         for file, digest in new_manifest.items()
         if file.count('/') == 1 and file_type(Path(file)) == README_FILE]
 
-    with zipfile.ZipFile('markdown.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(RELEASE_DIR / 'markdown.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_pair in zip_files:
             zf.write(file_pair[0], file_pair[1])
 
@@ -1041,6 +1041,7 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
 
     utils.append(RELEASE_DIR / 'gameinfo.zip')
     utils.append(RELEASE_DIR / 'images.zip')
+    utils.append(RELEASE_DIR / 'markdown.zip')
 
     if REPO_CONFIG.get('SPLIT_IMAGES', "N") == "Y":
         for img_id in range(1000):
@@ -1258,6 +1259,8 @@ def main(argv):
         build_images_zip(old_manifest, new_manifest)
 
         build_gameinfo_zip(old_manifest, new_manifest)
+
+        build_markdown_zip(old_manifest, new_manifest)
 
         generate_ports_json(all_ports, port_status, old_manifest, new_manifest)
 
