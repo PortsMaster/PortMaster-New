@@ -3,8 +3,8 @@ local push = require('push')
 local timer = require('timer')
 local osk = require('osk')
 
-local gameWidth, gameHeight = 720, 480
-local windowWidth, windowHeight = 720, 480
+local gameWidth, gameHeight = 640, 480
+local windowWidth, windowHeight = 640, 480
 
 -- Load platforms dynamically from fetcher.py
 local platforms = {}
