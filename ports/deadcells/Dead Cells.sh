@@ -67,6 +67,22 @@ elif ls "$GAMEDIR"/gamedata/dead_cells_[a-z]*.sh > /dev/null 2>&1; then
 fi
 
 if [ -n "${PATCHER_TIME:-}" ]; then
+    # Check available disk space before patching.
+    # Peak usage is ~10GB: final install (~6GB) plus intermediates
+    # (res_extracted ~2GB, res_combined, guides, res.pak.tmp).
+    # Subtracting current folder size accounts for partial progress.
+    PEAK_KB=$((10 * 1024 * 1024))
+    CURRENT_KB=$(du -sk "$GAMEDIR" | cut -f1)
+    FREE_KB=$(df -k "$GAMEDIR" | tail -1 | awk '{print $4}')
+    NEEDED_KB=$((PEAK_KB - CURRENT_KB))
+    if [ "$NEEDED_KB" -gt 0 ] && [ "$FREE_KB" -lt "$NEEDED_KB" ]; then
+        FREE_GB=$(awk "BEGIN {printf \"%.1f\", $FREE_KB / 1048576}")
+        NEEDED_GB=$(awk "BEGIN {printf \"%.1f\", $NEEDED_KB / 1048576}")
+        pm_message "Not enough disk space to patch Dead Cells. Need ${NEEDED_GB}GB free but only ${FREE_GB}GB available. Free up space and try again."
+        sleep 15
+        exit 1
+    fi
+
     # Patcher needs 7zzs for guide extraction — only available in recent PortMaster
     if [ ! -x "${controlfolder}/7zzs.${DEVICE_ARCH}" ]; then
         pm_message "Dead Cells requires the latest version of PortMaster. Please update PortMaster and try again: https://portmaster.games/"
