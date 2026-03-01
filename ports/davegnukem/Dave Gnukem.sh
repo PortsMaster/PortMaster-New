@@ -25,17 +25,10 @@ cd $GAMEDIR
 export PORTMASTER_HOME="$GAMEDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-if [[ "$DEVICE_ARCH" == "x86_64" ]]; then
-    $ESUDO cp "$GAMEDIR/davegnukem.${DEVICE_ARCH}" "$GAMEDIR/davegnukem"
-    $ESUDO chmod +x "$GAMEDIR/davegnukem"
-    $GPTOKEYB "davegnukem" textinput -c "$GAMEDIR/davegnukem.gptk" &
-    pm_platform_helper "$GAMEDIR/davegnukem"
-    ./davegnukem
-else
-    $ESUDO chmod +x "$GAMEDIR/davegnukem.${DEVICE_ARCH}"
-    $GPTOKEYB "davegnukem.${DEVICE_ARCH}" textinput -c "$GAMEDIR/davegnukem.gptk" &
-    pm_platform_helper "$GAMEDIR/davegnukem.${DEVICE_ARCH}"
-    ./davegnukem.${DEVICE_ARCH}
-fi
+$ESUDO chmod +x "$GAMEDIR/davegnukem.${DEVICE_ARCH}"
+
+$GPTOKEYB "davegnukem.${DEVICE_ARCH}" textinput -c "$GAMEDIR/davegnukem.gptk" &
+pm_platform_helper "$GAMEDIR/davegnukem.${DEVICE_ARCH}"
+./davegnukem.${DEVICE_ARCH}
 
 pm_finish
