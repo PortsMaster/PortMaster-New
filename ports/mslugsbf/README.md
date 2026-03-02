@@ -1,5 +1,5 @@
 ## Installation
-Download the game from  [GameJolt](https://gamejolt.com/games/MslugSBFan/478697) and put all the files from the `Files` folder (the one with all the audiogroups) into the `ports/mslugsbf/assets` folder.
+Download the game from  [GameJolt](https://gamejolt.com/games/MslugSBFan/478697) and put all the files from the `GAME` folder (the one with all the audiogroups) into the `ports/mslugsbf/assets` folder.
 
 ## Default Controls
 | Button | Action |
