@@ -95,7 +95,7 @@ local error_msg = ""
 -- === OSU! MANIA PARSER ===
 function parse_osu_file(filepath)
     local notes = {}
-    local audio_file = "audio.ogg" -- Domyślny fallback
+    local audio_file = "audio.ogg" 
     local is_4k = false
     local parse_mode = ""
 
@@ -196,38 +196,43 @@ end
 
 function love.load()
     load_data()
+    
+    V_WIDTH = 640
+    V_HEIGHT = 480
+    WIDTH = 640
+    HEIGHT = 480
+    
+    CX = V_WIDTH / 2
+    CY = V_HEIGHT / 2
+    LANE_WIDTH = V_WIDTH / 4
+    HIT_Y = 400
+
     love.graphics.setDefaultFilter("nearest", "nearest")
-    love.window.setMode(WIDTH, HEIGHT)
+    
+    love.window.setMode(V_WIDTH, V_HEIGHT, {fullscreen = false, resizable = true})
+    
+    game_canvas = love.graphics.newCanvas(V_WIDTH, V_HEIGHT)
+    
     love.window.setTitle("Jam Anywhere - Rhythm Game")
-    love.keyboard.setKeyRepeat(true) 
+    love.keyboard.setKeyRepeat(true)
     love.graphics.setNewFont(16)
 
-
     splash = Splash({fill = "light"})
-
     splash.onDone = function()
         game_state = "menu"
     end
     
-    load_data()
-
     local info = love.filesystem.getInfo("songs")
     if info and info.type == "directory" then
         for i, folder in ipairs(love.filesystem.getDirectoryItems("songs")) do
             if love.filesystem.getInfo("songs/" .. folder).type == "directory" then
                 local diffs = {}
                 local has_json = false
-                
                 for _, file in ipairs(love.filesystem.getDirectoryItems("songs/" .. folder)) do
-                    if file:match("%.osu$") then
-                        table.insert(diffs, file)
-                    elseif file == "map.json" then
-                        has_json = true
-                    end
+                    if file:match("%.osu$") then table.insert(diffs, file)
+                    elseif file == "map.json" then has_json = true end
                 end
-                
                 if has_json then table.insert(diffs, "map.json") end
-
                 if #diffs > 0 then
                     table.sort(diffs)
                     table.insert(song_list, { name = folder, diffs = diffs })
@@ -351,7 +356,7 @@ function try_hit(lane)
         feedback_text, feedback_color, feedback_timer = "BAD!", {1, 0.2, 0.2}, 1.0
         feedback_scale = 1.3
         
-        -- SPRAWDZANIE LIMITU PUDŁA
+        
         if limit_bads > 0 and bad_hits >= limit_bads then
             failed = true
             if music then music:stop() end
@@ -441,42 +446,35 @@ function menu_action(action)
 
     elseif game_state == "settings" then
         if action == "up" then menu_cursor = math.max(1, menu_cursor - 1)
-        elseif action == "down" then menu_cursor = math.min(9, menu_cursor + 1) -- Zwiększone do 9 pozycji
+        elseif action == "down" then menu_cursor = math.min(8, menu_cursor + 1)
         elseif action == "left" then
             if menu_cursor == 1 then scroll_speed = math.max(200, scroll_speed - 50)
-            elseif menu_cursor == 2 then -- NOWOŚĆ: Wybór rozdzielczości
-                res_index = math.max(1, res_index - 1)
-                WIDTH, HEIGHT = res_options[res_index].w, res_options[res_index].h
-                love.window.setMode(WIDTH, HEIGHT) -- Natychmiastowa zmiana okna
-            elseif menu_cursor == 3 then note_height = math.max(10, note_height - 5)
-            elseif menu_cursor == 4 then play_style = (play_style == "vertical") and "center" or "vertical"
-            elseif menu_cursor == 5 then limit_misses = math.max(0, limit_misses - 1)
-            elseif menu_cursor == 6 then limit_bads = math.max(0, limit_bads - 1) end
+            elseif menu_cursor == 2 then note_height = math.max(10, note_height - 5)
+            elseif menu_cursor == 3 then play_style = (play_style == "vertical") and "center" or "vertical"
+            elseif menu_cursor == 4 then limit_misses = math.max(0, limit_misses - 1)
+            elseif menu_cursor == 5 then limit_bads = math.max(0, limit_bads - 1) end
         elseif action == "right" then
             if menu_cursor == 1 then scroll_speed = math.min(1200, scroll_speed + 50)
-            elseif menu_cursor == 2 then -- NOWOŚĆ: Wybór rozdzielczości
-                res_index = math.min(#res_options, res_index + 1)
-                WIDTH, HEIGHT = res_options[res_index].w, res_options[res_index].h
-                love.window.setMode(WIDTH, HEIGHT) -- Natychmiastowa zmiana okna
-            elseif menu_cursor == 3 then note_height = math.min(150, note_height + 5)
-            elseif menu_cursor == 4 then play_style = (play_style == "vertical") and "center" or "vertical"
-            elseif menu_cursor == 5 then limit_misses = math.min(100, limit_misses + 1)
-            elseif menu_cursor == 6 then limit_bads = math.min(100, limit_bads + 1) end
+            elseif menu_cursor == 2 then note_height = math.min(150, note_height + 5)
+            elseif menu_cursor == 3 then play_style = (play_style == "vertical") and "center" or "vertical"
+            elseif menu_cursor == 4 then limit_misses = math.min(100, limit_misses + 1)
+            elseif menu_cursor == 5 then limit_bads = math.min(100, limit_bads + 1) end
         elseif action == "confirm" then
-            -- Przesunięte indeksy dla przycisków akcji
-            if menu_cursor == 7 then game_state, menu_cursor = "controls_kb", 1
-            elseif menu_cursor == 8 then game_state, menu_cursor = "controls_gp", 1
-            elseif menu_cursor == 9 then save_data(); game_state = "menu" end
-        elseif action == "quit" then save_data(); game_state = "menu" end
+            if menu_cursor == 6 then game_state, menu_cursor = "controls_kb", 1
+            elseif menu_cursor == 7 then game_state, menu_cursor = "controls_gp", 1
+            elseif menu_cursor == 8 then save_data(); game_state = "menu" end
+        elseif action == "quit" then 
+            save_data()
+            game_state = "menu" 
+        end
 
     elseif game_state == "controls_kb" or game_state == "controls_gp" then
         if action == "up" then menu_cursor = math.max(1, menu_cursor - 1)
-        elseif action == "down" then menu_cursor = math.min(6, menu_cursor + 1) -- Zwiększono limit do 6
+        elseif action == "down" then menu_cursor = math.min(6, menu_cursor + 1) 
         elseif action == "confirm" then
             if menu_cursor <= 4 then
                 bind_type, bind_lane, game_state = (game_state == "controls_kb") and "kb" or "gp", menu_cursor, "binding"
             elseif menu_cursor == 5 then
-                -- LOGIKA RESETOWANIA DO USTAWIEŃ DOMYŚLNYCH
                 if game_state == "controls_kb" then
                     kb_binds_vert = {"d", "f", "j", "k"}
                     kb_binds_cent = {"left", "up", "down", "right"}
@@ -484,13 +482,14 @@ function menu_action(action)
                     gp_binds_vert = {"dpleft", "dpup", "x", "a"}
                     gp_binds_cent = {"dpleft", "dpup", "dpdown", "dpright"}
                 end
-                save_data() -- Zapisz od razu po zresetowaniu!
+                save_data() 
             elseif menu_cursor == 6 then 
-                -- Poprawiony powrót do właściwego indeksu w menu Settings
-                game_state, menu_cursor = "settings", (game_state == "controls_kb" and 7 or 8) 
+                -- POPRAWKA TUTAJ: (kb wraca na 6, gp wraca na 7)
+                game_state, menu_cursor = "settings", (game_state == "controls_kb" and 6 or 7) 
             end
         elseif action == "quit" then 
-            game_state, menu_cursor = "settings", (game_state == "controls_kb" and 7 or 8) 
+            -- POPRAWKA TUTAJ: (kb wraca na 6, gp wraca na 7)
+            game_state, menu_cursor = "settings", (game_state == "controls_kb" and 6 or 7) 
         end
 
     elseif game_state == "pause" then
@@ -518,15 +517,7 @@ function menu_action(action)
 end
 -- KEYBOARD
 
-local function toggle_resolution()
-    res_index = res_index + 1
-    if res_index > #res_options then res_index = 1 end
-    
-    WIDTH = res_options[res_index].w
-    HEIGHT = res_options[res_index].h
-    love.window.setMode(WIDTH, HEIGHT)
-    save_data()
-end
+
 
 function love.keypressed(key)
     if game_state == "binding" then
@@ -570,14 +561,13 @@ function love.keypressed(key)
     elseif key == "return" or key == "space" or key == "x" then menu_action("confirm")
     elseif key == "escape" or key == "z" then menu_action("quit")
     elseif key == "tab" then menu_action("settings") 
-    elseif key == "i" then menu_action("info")
-    elseif key == "r" then toggle_resolution() end
+    elseif key == "i" then menu_action("info") end
+    
 end
 
 -- GAMEPAD
 function love.gamepadpressed(joystick, button)
     if game_state == "binding" then
-        -- Blokada "Ducha PortMastera"
         if love.timer.getTime() - (last_menu_action_time or 0) < 0.2 then return end
 
         if button == "b" or button == "back" then game_state = "controls_" .. bind_type return end
@@ -617,8 +607,7 @@ function love.gamepadpressed(joystick, button)
     elseif button == "a" or button == "start" then menu_action("confirm")
     elseif button == "b" or button == "back" then menu_action("quit")
     elseif button == "select" or button == "y" then menu_action("settings")
-    elseif button == "x" then menu_action("info")
-    elseif button == "rightshoulder" then toggle_resolution() end
+    elseif button == "x" then menu_action("info") end
 end
 
 function love.update(dt)
@@ -699,24 +688,15 @@ function love.update(dt)
 end
 
 function love.draw()
-    scale_factor = math.min(WIDTH / V_WIDTH, HEIGHT / V_HEIGHT)
-    
-    offset_x = (WIDTH - V_WIDTH * scale_factor) / 2
-    offset_y = (HEIGHT - V_HEIGHT * scale_factor) / 2
-
-    love.graphics.push()
-    
-    love.graphics.translate(offset_x, offset_y)
-    love.graphics.scale(scale_factor, scale_factor)
+    love.graphics.setCanvas(game_canvas)
+    love.graphics.clear(0, 0, 0)
 
     if game_state == "splash" then splash:draw()
     elseif game_state == "menu" or game_state == "diff_select" then draw_menu()
     elseif game_state == "settings" then draw_settings()
-    
     elseif game_state == "controls_kb" then draw_controls(true)
     elseif game_state == "controls_gp" then draw_controls(false)
     elseif game_state == "binding" then draw_binding()
-    
     elseif game_state == "play" or game_state == "pause" then 
         if play_style == "vertical" then draw_play_vertical() else draw_play_center() end
         if game_state == "pause" then draw_pause_menu() end
@@ -724,16 +704,18 @@ function love.draw()
     elseif game_state == "info" then draw_info()
     end
 
-    love.graphics.pop()
-    draw_letterbox()
-end
+    love.graphics.setCanvas() 
 
-function draw_letterbox()
-    love.graphics.setColor(0, 0, 0)
-    love.graphics.rectangle("fill", 0, 0, offset_x, HEIGHT)
-    love.graphics.rectangle("fill", WIDTH - offset_x, 0, offset_x, HEIGHT)
-    love.graphics.rectangle("fill", 0, 0, WIDTH, offset_y)
-    love.graphics.rectangle("fill", 0, HEIGHT - offset_y, WIDTH, offset_y)
+    local screen_w, screen_h = love.graphics.getPixelDimensions()
+
+    local scale = math.min(screen_w / V_WIDTH, screen_h / V_HEIGHT)
+    local offset_x = (screen_w - (V_WIDTH * scale)) / 2
+    local offset_y = (screen_h - (V_HEIGHT * scale)) / 2
+
+    love.graphics.clear(0, 0, 0) 
+    love.graphics.setColor(1, 1, 1, 1)
+    
+    love.graphics.draw(game_canvas, offset_x, offset_y, 0, scale, scale)
 end
 
 function draw_menu()
@@ -865,22 +847,24 @@ end
 
 function draw_settings()
     love.graphics.setBackgroundColor(0.1, 0.1, 0.15)
+    
+    love.graphics.setColor(0.2, 0.2, 0.3, 0.8)
+    love.graphics.rectangle("fill", 0, 0, WIDTH, 50)
+    
     love.graphics.setColor(1, 1, 1)
-    love.graphics.print("=== SETTINGS ===", 20, 20)
+    love.graphics.print("=== SETTINGS ===", 20, 15)
     
     local style_display = play_style == "vertical" and "Vertical (Lanes)" or "4-Way (Center)"
-    local res_text = WIDTH .. "x" .. HEIGHT -- Wyświetlamy realne wymiary okna
     
     local options = {
-        "Scroll Speed: < " .. scroll_speed .. " >",
-        "Resolution: < " .. res_text .. " >", -- Index 2
-        "Note Size: < " .. note_height .. " >", -- Index 3
-        "Play Style: < " .. style_display .. " >",
-        "Miss Limit: < " .. (limit_misses == 0 and "Off" or limit_misses) .. " >",
-        "Bad Hit Limit: < " .. (limit_bads == 0 and "Off" or limit_bads) .. " >",
-        "Controls: Keyboard Mapping",
-        "Controls: Gamepad Mapping",
-        "Back to Menu"
+        "Scroll Speed: < " .. scroll_speed .. " >", -- 1
+        "Note Size: < " .. note_height .. " >",     -- 2
+        "Play Style: < " .. style_display .. " >",  -- 3
+        "Miss Limit: < " .. (limit_misses == 0 and "Off" or limit_misses) .. " >", -- 4
+        "Bad Hit Limit: < " .. (limit_bads == 0 and "Off" or limit_bads) .. " >",   -- 5
+        "Controls: Keyboard Mapping",               -- 6
+        "Controls: Gamepad Mapping",                -- 7
+        "Back to Menu"                               -- 8
     }
     
     for i, text in ipairs(options) do
@@ -888,6 +872,7 @@ function draw_settings()
         love.graphics.print((i == menu_cursor and "-> " or "   ") .. text, 50, 60 + (i * 35))
     end
 end
+
 function draw_controls(is_kb)
     love.graphics.clear(0.1, 0.1, 0.15)
     love.graphics.setColor(1, 1, 1)
@@ -940,7 +925,7 @@ function draw_binding()
     
     love.graphics.setColor(1, 1, 0)
     local dev_name = (bind_type == "kb") and "KEY" or "BUTTON"
-    -- Używamy V_HEIGHT do centrowania!
+  
     love.graphics.printf("PRESS NEW " .. dev_name .. " FOR LANE " .. bind_lane, 0, V_HEIGHT / 2 - 20, V_WIDTH, "center")
     
     love.graphics.setColor(0.7, 0.7, 0.7)
@@ -1136,7 +1121,7 @@ function draw_info()
     love.graphics.setColor(1, 1, 0)
     love.graphics.print("=== HOW TO ADD NEW SONGS ===", 180, 60)
 
-    -- Najpierw DEFINIUJEMY tekst
+    
     local instrukcja = "1. WEB STUDIO GENERATOR\n" ..
                 "Go to: mrozkar.github.io/JamAnywhere/\n" ..
                 "Upload an .ogg file to generate a map, then download the ZIP.\n\n" ..

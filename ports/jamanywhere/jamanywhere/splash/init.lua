@@ -280,7 +280,7 @@ function splashlib:draw()
   love.graphics.setFont(love.graphics.newFont(current_folder .. "/handy-andy.otf", font_size))
 
   local text1 = self.text.obj  -- Assuming self.text.obj is the first text object
-  local text2 = "This port is brought to you by Jeod"
+  local text2 = "This port is brought to you by mrozkar"
 
   local text1Y = logoY - text1:getHeight() / 2 - (64 * scale_factor)
   local text2Y = logoY - text1:getHeight() / 2 + (64 * scale_factor)
