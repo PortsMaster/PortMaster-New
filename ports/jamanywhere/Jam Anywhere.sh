@@ -23,22 +23,16 @@ GAMEDIR="/$directory/ports/jamanywhere"
 
 cd $GAMEDIR
 
-# SKORO MASZ FOLDER libs, MUSIMY GO PODPI¥Æ!
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y" 
 
-if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
 
-$GPTOKEYB "love" &
-pm_platform_helper "love"
+source "$controlfolder/runtimes/love_11.5/love.txt"
 
-# NADANIE UPRAWNIEÑ I ODPALENIE LOKALNEGO PLIKU "love" (z kropk¹ i ukoœnikiem!)
-chmod +x ./love
-./love . 
+$GPTOKEYB "$LOVE_GPTK" &
+pm_platform_helper "$LOVE_BINARY"
+
+
+$LOVE_RUN .
 
 pm_finish
