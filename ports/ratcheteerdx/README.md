@@ -21,6 +21,8 @@ download_depot 3166150 3166153 332929171642174417
 To get the demo use this Steam Console command:
 download_depot 3908650 3908653 2932770551190015228
 
+For awareness it will also be for sale on itch.io, but that will not be compatible as there is no linux version available there
+
 ### Acknowledgements
 
 Thanks to [Shaun Inman](https://store.steampowered.com/search/?developer=Shaun%20Inman) for this updated version of his Playdate action adventure game.
@@ -28,4 +30,5 @@ Thanks to [Shaun Inman](https://store.steampowered.com/search/?developer=Shaun%2
 Thanks to ptitSeb for [box64](https://github.com/ptitSeb/box64) and binarycounter for [Westonpack](https://github.com/binarycounter/Westonpack/wiki), without all of which this port would not be possible.
 
 Thanks to KitFox618 for suggesting this port.
+
 
