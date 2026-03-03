@@ -49,7 +49,6 @@ fi
 # Start game 
 pushd $DATADIR/x86-64/
 
-#$GPTOKEYB "$BINARY" -c "$GAMEDIR/ratcheteerdx.gptk" &
 $GPTOKEYB "$BINARY" &
 $GAMEDIR/box64/box64 ./gamedata/$BINARY
 
