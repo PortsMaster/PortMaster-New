@@ -3,7 +3,6 @@
 A portable, lightweight 4-key (4K) rhythm game built natively with the LÖVE framework. Enjoy your favorite tracks on the go with customizable controls, multiple resolutions, and adjustable scroll speeds!
 
 ## Features
-* **Native LÖVE Engine:** Smooth, pixel-perfect performance with uniform scaling for any screen size.
 * **Custom Mapping:** Play your own generated tracks or import existing osu!mania 4K maps.
 * **Highly Customizable:** Change scroll speeds, note sizes, play styles (Vertical Lanes or 4-Way Center), and map your own gamepad/keyboard inputs.
 * **Scoring System:** Track your accuracy (Perfect, Good, Bad, Miss), max combos, and beat your local high scores.
@@ -30,6 +29,5 @@ Place your extracted song folders directly into your console's SD card directory
 ## Default Controls
 * **D-Pad / ABXY:** Hit notes (fully remappable in Settings)
 * **Start / Select:** Pause Game
-* **R1 (Right Shoulder):** Quick-toggle screen resolution
 * **Y / Select (in Menu):** Open Settings
 * **X (in Menu):** Open Setup Instructions
