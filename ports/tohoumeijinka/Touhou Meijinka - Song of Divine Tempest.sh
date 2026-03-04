@@ -17,7 +17,7 @@ source $controlfolder/control.txt
 get_controls
 
 # Variables
-GAMEDIR="/$directory/ports/touhoumeijinka"
+GAMEDIR="/$directory/ports/tohoumeijinka"
 
 # CD and set up logging
 cd $GAMEDIR
