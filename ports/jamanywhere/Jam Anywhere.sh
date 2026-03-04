@@ -1,5 +1,4 @@
-#!/bin/bash
-# PORTMASTER: Jam Anywhere
+
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
