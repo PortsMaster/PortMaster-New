@@ -80,7 +80,7 @@ GOG_MD5="83acca99d927b3fee939df98146bb152"
 STEAM_MD5="185147915f30d7ef9e6123bb0c69efbf"
 
 # Step version constants — bump when behavior/tools change to force re-run
-V_COMPILE="4"          # Step 2: hl-substitute + dc-patch-all + hl2llvm
+V_COMPILE="5"          # Step 2: hl-substitute + dc-patch-all + hl2llvm
 V_PAK_EXTRACT="1"      # Step 3a: dc-paktool unpack
 V_GUIDES="2"           # Step 3b: guide extraction (v2: mixed block sizes)
 V_OGG="1"              # Step 4: oggdec/oggenc

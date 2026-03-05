@@ -2,6 +2,17 @@
 Thank you to Motion Twin for this incredible game, as well as the Haxe
 Foundation for such a maleable platform for building games.
 
+## Important: Before You Start
+The first time you launch the game, a one-time patching process will run
+**on-device**. This process compiles, optimizes, and re-encodes the game's
+assets for your hardware. **Expect it to take 4-8 hours** depending on your
+device. Plug in your device, start the process, and walk away — it will
+pick up where it left off if interrupted.
+
+**DLC is only supported with the GOG version.** Steam copies will play the
+base (vanilla) game only — Steam does not provide a way to extract DLC content.
+If you want the full experience with all DLCs, purchase the game from GOG.
+
 ## Installation
 ### Gog Instructions
 Place the **LINUX** version installer (eg: `dead_cells_1_26_0_75679.sh`) in the port's `gamedata` folder.
