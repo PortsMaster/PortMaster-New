@@ -19,6 +19,13 @@ get_controls
 GAMEDIR="/$directory/ports/deadcells"
 mkdir -p "$GAMEDIR/gamedata"
 
+# Block unsupported operating systems
+if [ -f "/etc/trimui_device.txt" ]; then
+    pm_message "This Operating System is not supported by PortMaster.  Please install either Knulli or muOS.  Thank You."
+    sleep 15
+    exit 1
+fi
+
 # Find game files anywhere in the port folder and move to gamedata/
 for f in hlboot.dat res.pak; do
     if [ ! -f "$GAMEDIR/gamedata/$f" ]; then
