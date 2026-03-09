@@ -1,0 +1,231 @@
+`mcl_biome_dispatch' implements a layer of abstraction above the biome
+system implemented by `mcl_levelgen' and the built-in biome system;
+broadly, it translates conventions observed by the former into those
+which are expressible by the latter when appropriate.  It also
+supplies utility functions for locating nearby structures, valid spawn
+positions with reference to climatic and terrain conditions, gauging a
+position's aridity or coldness, and generating terrain.
+
+These utility functions should be exercised in place of accessing
+biome information from `core.registered_biomes' and deriving biomes
+with `core.get_biome_data' and suchlike.  They uniformly accept biome
+identifiers according to the scheme implemented in mcl_levelgen, but
+return biome names in a format which is contingent on the biome system
+in use.
+
+
+BIOME INDEXING FUNCTIONS
+
+Function: mcl_biome_dispatch.get_biome_name (POS)
+
+Return the name of the biome at POS.  If no terrain has as yet been
+generated at POS, sample terrain and climate noises to derive and
+return the biome which would be generated at that position.
+
+Value is a string in an undefined format and is only suitable for
+comparison against a predicate constructed by
+`mcl_biome_dispatch.make_biome_test' or the like.
+
+\(Note: there is no distinction between generated and ungenerated
+sections of the map in the built-in biome system, for biome data is
+not recorded persistently upon generation and is recovered from
+climate noises whenever it is requested.)
+
+Function: mcl_biome_dispatch.get_biome_name_nosample (POS)
+
+Return the name of the biome at POS.  If no terrain has as yet been
+generated at POS, return nil.
+
+Value is a string in an undefined format and is only suitable for
+comparison against a predicate constructed by
+`mcl_biome_dispatch.make_biome_test' or the like.
+
+\(Note: for reasons aforesaid, this function is identical to
+`mcl_biome_dispatch.get_biome_name' when the built-in biome system is
+active.)
+
+Function: mcl_biome_dispatch.is_position_cold (BIOME_NAME, POS)
+
+Return whether a position POS is sufficiently frigid for snowfall,
+natural snow and ice generation, and water freezing.  BIOME_NAME must
+be the name of the biome at POS, returned by
+`mcl_biome_dispatch.get_biome_name' or its non-sampling counterpart.
+
+Function: mcl_biome_dispatch.is_position_arid (BIOME_NAME)
+
+Return whether BIOME_NAME, as returned by
+`mcl_biome_dispatch.get_biome_name' or company, represents a biome
+arid enough to prevent precipitation.
+
+Function: mcl_biome_dispatch.get_temperature_in_biome (BIOME_NAME, POS)
+
+Return the Minecraft-style biome temperature of the position POS,
+which is expected to host the biome BIOME_NAME, as returned by
+`mcl_biome_dispatch.get_biome_name'.
+
+Value is a number between -2.0 and 2.0, representing a linear
+progression from frigid to scorching.
+
+Function: mcl_biome_dispatch.make_biome_test (IDS_OR_TAGS)
+
+Return a function which accepts a biome name returned by
+`mcl_biome_dispatch.get_biome_name' and returns whether it matches any
+of the biomes specified in the array IDS_OR_TAGS, which must be an
+array of strings which are either biome IDs, or tags which are
+expanded into lists of biomes.
+
+Each element in IDS_OR_TAGS which represents a biome must be the
+identifier of new-style biome; that is to say, when `mcl_levelgen' is
+enabled, it must be the name of any biome which has been registered
+with the level generator, or, in both cases, one of the following
+identifiers:
+
+  - BambooJungle
+  - BasaltDeltas
+  - Beach
+  - BirchForest
+  - CherryGrove
+  - ColdOcean
+  - CrimsonForest
+  - DarkForest
+  - DeepColdOcean
+  - DeepDark
+  - DeepFrozenOcean
+  - DeepLukewarmOcean
+  - DeepOcean
+  - Desert
+  - DripstoneCaves
+  - EndBarrens
+  - EndHighlands
+  - EndMidlands
+  - ErodedMesa
+  - FlowerForest
+  - Forest
+  - FrozenOcean
+  - FrozenPeaks
+  - FrozenRiver
+  - Grove
+  - IceSpikes
+  - JaggedPeaks
+  - Jungle
+  - LukewarmOcean
+  - LushCaves
+  - MangroveSwamp
+  - Meadow
+  - Mesa
+  - MushroomIslands
+  - NetherWastes
+  - Ocean
+  - OldGrowthBirchForest
+  - OldGrowthPineTaiga
+  - OldGrowthSpruceTaiga
+  - Plains
+  - River
+  - Savannah
+  - SavannahPlateau
+  - SmallEndIslands
+  - SnowyBeach
+  - SnowyPlains
+  - SnowySlopes
+  - SnowyTaiga
+  - SoulSandValley
+  - SparseJungle
+  - StonyPeaks
+  - StonyShore
+  - SunflowerPlains
+  - Swamp
+  - Taiga
+  - TheEnd
+  - TheVoid
+  - WarmOcean
+  - WarpedForest
+  - WindsweptForest
+  - WindsweptGravellyHills
+  - WindsweptHills
+  - WindsweptSavannah
+  - WoodedMesa
+
+Such identifiers are expanded into the old-style biomes (i.e., those
+defined for the built-in biome system) they represent if need be, by a
+process where ocean biomes yield each biome of the appropriate
+temperature defined at the layers representing their respective
+depths.
+
+Each element in IDS_OR_TAGS is assumed to represent a biome tag which
+starts with the character `#'.  The following tags are defined by
+default:
+
+  - #is_badlands
+  - #is_beach
+  - #is_deep_ocean
+  - #is_end
+  - #is_forest
+  - #is_mountain
+  - #is_nether
+  - #is_ocean
+  - #is_overworld
+  - #is_river
+  - #is_savannah
+  - #is_taiga
+
+Function: mcl_biome_dispatch.build_biome_list (IDS_OR_TAGS)
+
+Return a list holding the set of biome identifiers which may be
+returned by `mcl_biome_dispatch.get_biome_name' for a position at
+which the biome present matches any of the biome identifiers or tags
+in IDS_OR_TAGS, which is as in `mcl_biome_dispatch.make_biome_test'.
+
+
+STRUCTURE AND BIOME DISCOVERY FUNCTIONS
+
+Function: mcl_biome_dispatch.locate_biome_near (POS, TAGS, RANGE, HRES,
+	  				        VRES, CALLBACK, CB_DATA)
+
+Locate the first instance of a biome matching TAGS, which is a list of
+biome identifiers or tags as in `mcl_biome_dispatch.make_biome_test',
+near POS by searching outwards in a spiral pattern along the
+horizontal axes and sampling biomes at caller-provided intervals in
+either direction vertically.
+
+Invoke CALLBACK with the position of such a biome and CB_DATA as
+parameters upon completion, or nil and CB_DATA if no biome could be
+located.
+
+RANGE is a radius around POS to which the search operation will be
+confined.
+
+HRES is the horizontal resolution of the search operation, i.e., the
+distance along either horizontal axis between two adjacent positions
+to be evaluated.
+
+VRES is the increment at which biomes will be sampled around POS.
+along any single column.
+
+This function executes asynchronously when mcl_levelgen is enabled,
+but delegates to the synchronous `findbiome' mod when the built-in
+biome system is active.
+
+Function: mcl_biome_dispatch.locate_structure_near (POS, SID_OR_SIDS,
+	  					    RANGE_CHEBYSHEV,
+						    CALLBACK, CB_DATA,
+						    RETAIN_P)
+
+Locate the first instance of a structure identified in SID_OR_SIDS,
+which must be either a string holding an identifier provided to
+`mcl_levelgen.register_structure' or a list of the same, whose origin
+will generate within RANGE_CHEBYSHEV multiples of its structure set's
+placement function's spacing parameter of POS.
+
+Invoke CALLBACK with the position of this structure upon success and
+CB_DATA, or nil and CB_DATA otherwise.
+
+RETAIN_P is a function which, if specified, is invoked with CB_DATA to
+decide whether to continue with a queued structure search operation
+upon completion of a preceding operation.
+
+This function executes asynchronously when mcl_levelgen is enabled,
+but is synchronous and liable to block for a significant period when
+the custom level generator is not active.
+
+It is optimal to invoke this function with every structure which is
+defined in any structure sets whose members appear in SID_OR_SIDS.

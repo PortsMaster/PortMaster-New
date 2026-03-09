@@ -1,0 +1,2206 @@
+The level generator only exposes interfaces for registering features
+and structures, and does not admit of customization by mods in any
+other respect (e.g. terrain presets, surface systems, aquifers, and
+biome placement).  Moreover, it represents positions in Minecraft's
+coordinate system, which chiefly differs from Luanti's in an inverted
+Z axis.
+
+Mod authors must also be aware that structures and features are liable
+to run in any environment--whether async environments, an emerge
+environment, or the main Lua modding environment, and only exercise
+facilities available in all of them.
+
+In the same spirit, many of the facilities here (even though they may
+be available in the main Lua environment) must never be invoked at
+top-level, only within scripts provided to `register_levelgen_script'.
+
+
+SCRIPT REGISTRATION
+
+Function: mcl_levelgen.register_levelgen_script (SCRIPT, ERSATZ)
+
+Register SCRIPT to execute in every context where structure or feature
+placement is processed; registered scripts are executed in the same
+sequence as they are defined.  All facilities documented after this
+function, unless otherwise stated, are only safe to invoke from within
+such a mapgen script.
+
+If ERSATZ is non-nil, SCRIPT will also be loaded when the structure
+generator is operating in an "ersatz" configuration; that is, when the
+structure generator is operating independently of the terrain
+generator under one of Luanti's built-in map generators.  There is a
+host of restrictions incident to such an environment; refer to the
+section "ERSATZ STRUCTURE GENERATION" before enabling this option.
+
+Function: mcl_levelgen.register_portable_schematic (ID, SPECIFIER,
+	  					    NORMALIZE_YPROB)
+
+Arrange to import the schematic specified by SPECIFIER (either a file
+name or a schematic table, as with `core.read_schematic') into each
+feature placement environment as ID, a string identifier.  ID may
+subsequently be supplied to `mcl_levelgen.place_schematic'.  This
+function must be invoked at top level during mod initialization.
+
+If NORMALIZE_YPROB is true, replace each Y slice's generation
+probability with the maximum possible value.  This is significant with
+misbegotten schematics that expect such slices always to be generated.
+
+Function: mcl_levelgen.register_notification_handler (NAME, HANDLER)
+
+Register a function to be invoked whenever a placement run where it
+has been requested completes.  NAME is an identifier that may be
+provided to `mcl_levelgen.notify_generated', and HANDLER is a function
+that is invoked with two arguments, to wit, NAME and the data provided
+to `mcl_levelgen.notify_generated', or a list thereof if
+`mcl_levelgen.notify_generated' was invoked with APPEND set to true.
+
+This function must be invoked at top level during mod initialization.
+
+Function: mcl_levelgen.register_on_scripts_loaded (FN)
+
+Arrange (during the execution of one such script) that the callback FN
+should be executed after all level generator scripts registered with
+`registered_levelgen_script' have been executed.  This function is
+analogous to `core.register_on_mods_loaded'; FN is invoked with no
+arguments, and callbacks registered by these means are executed in the
+sequence in which their registration is completed.
+
+Variable: mcl_levelgen.is_levelgen_environment
+
+Value is true if this environment is one in which a registered script
+is to be or is being loaded.  Naturally, it is permissible to access
+this variable outside a level generator environment, in which case it
+is either nil or false.
+
+
+FEATURE REGISTRATION
+
+As in Minecraft, features are defined and configured in three stages.
+Plain features provide the code that places a feature by reference to
+a number of configuration parameters; these features may be combined
+with a collection of such parameters to define "configured features."
+In their turn, a sequence of functions referred to as "placement
+modifiers" are executed to derive a list of positions in which to
+place a configured feature from the northwest origin of each Minecraft
+chunk (16x384x16 volume), a combination of which with a placement
+function constitutes a "placed feature."  Features of every degree of
+completion are assigned unique identifiers and are freely composable.
+
+Features do not generate unless they appear in a biome's feature list,
+which is not accessible to mods as stringent consistency requirements
+are imposed by the feature generation system as regards the precedence
+of feature definitions across different biomes, for it is possible for
+a chunk to intersect up to sixteen unrelated biomes.  Mods are
+permitted to alter the feature lists of independent biomes through an
+interface that maintains these invariants.
+
+Function: mcl_levelgen.register_feature (ID, FEATURE)
+
+Register the plain feature FEATURE with the identifier ID.  FEATURE
+must be a table of arbitrary information and functions, of which the
+following are required:
+
+{
+	place = function (X, Y, Z, CFG, RNG) ... end,
+
+Place this feature with its origin at X, Y, Z, by means of the level
+access functions documented below.  CFG is the configured feature on
+whose behalf this feature is being placed.  RNG is the same PRNG that
+is provided to placement modifiers, in a state unmodified since the
+completion of the last placement modifier defined in the placed
+feature on whose behalf CFG is being placed.
+
+}
+
+Function: mcl_levelgen.register_configured_feature (ID, CONFIGURED_FEATURE)
+
+Associate a configuration with the feature named therein as a
+configured feature identified by ID.  CONFIGURED_FEATURE must be a
+table which is to be supplied to the feature's `place' function and
+may hold arbitrary information excepting a field `feature', which must
+be the ID of a plain feature.
+
+Function: mcl_levelgen.register_placed_feature (ID, PLACED_FEATURE)
+
+Associate a configured feature with a list of placement modifiers in
+the table PLACED_FEATURE.  PLACED_FEATURE must be a table of the
+following form:
+
+{
+	configured_feature = "<id>",
+
+Must identify a configured feature defined as illustrated above.
+
+	placement_modifiers = {...},
+
+Must contain a list of placement modifier functions, as illustrated
+in subsequent sections.
+
+}
+
+Function: mcl_levelgen.generate_feature (ID, BEFORE, BIOMES, STAGE)
+
+Generate the placed feature identified by ID before the feature BEFORE
+during the stage STAGE (an integer from 1 to 12) in the provided list
+of biomes BIOMES, and after all biomes generated in preceding stages.
+If BEFORE is not generated in one of these biomes, decline to generate
+this feature in the said biome.
+
+ID may only be registered for generation once per stage, and an error
+will be signaled if this requirement is not satisfied.
+
+
+LEVEL ACCESS FACILITIES
+
+When invoked, a feature's placement mechanisms are only granted a
+limited view of the data of the level.  This view encompasses an
+accessible region of a single chunk at the center of the level where
+features should originate, and a one chunk margin of context into
+which feature contents may extrude.  This restricts the horizontal
+dimensions of a feature to a distance of 32 nodes around its origin,
+which characteristic distinguishes features from the other type of
+decoration, the structure, whose dimensions can be much greater.
+Inasmuch as Luanti levels are incrementally generated vertically as
+well as horizontally, the number of MapBlocks that are accessible is
+also constrained (and variable): a minimum of two MapBlocks (32 nodes)
+of vertical context is provided in either direction for feature
+extrusions--which may be shorter at the vertical extremes of the
+level--surrounding one or more MapBlocks where features may originate.
+The net result is that at the minimum, a feature may extend 32x64x32
+blocks from its center, but that to guarantee the absence of
+truncation only features that originate at the center of the view, not
+within the context, may be placed.  Biome and heightmap information is
+available for all MapBlocks in this area, context or not, and the
+heightmap may be modified on either axis as blocks are created or
+removed.
+
+The functions and variables documented in this section are available
+to all placement modifiers and features.
+
+Variable: mcl_levelgen.placement_run_minp
+
+Vector containing the minimum position, in Minecraft block
+coordinates, of the section of the level in which features may
+originate.
+
+Variable: mcl_levelgen.placement_run_maxp
+
+Vector containing the maximum position (inclusive), in Minecraft block
+coordinates, of the section of the level in which features may
+originate.
+
+Any position within one MapBlock of the cuboid defined by
+placement_run_minp and placement_run_maxp horizontally and two
+MapBlocks vertically (if not truncated by the bottom of the level) is
+also accessible and may be altered.
+
+Variable: mcl_levelgen.level_min
+
+Integer value providing the bottommost vertical position of the level
+in which feature placement is proceeding.
+
+Variable: mcl_levelgen.level_height
+
+Integer value providing the height (in blocks from the bottommost
+vertical position) of the level in which feature placement is
+proceeding.
+
+Variable: mcl_levelgen.current_placed_feature
+
+The ID of the placed feature currently being placed; value is
+undefined if a placement operation is not in progress.
+
+Variable: mcl_levelgen.current_stage
+
+The feature placement stage to which the feature currently being
+placed appertains; value is undefined if a placement operation is not
+in progress.
+
+Variable: mcl_levelgen.heightmap_modifications
+
+Table indexed by a hashed horizontal block positions that enumerates
+the initial values of all heightmap entries which have been modified
+in the course of this placement run, and maps them to their initial
+values.
+
+This table should be consulted by any feature that deposits
+superstrata (such as snow layers) over the surface of the level.  If a
+position appears in this list, any superstrata should be moved from
+the original surface (supplied by this table) to the surface indicated
+by the new heightmap, or, if none exists, a new superstratum should be
+generated at the provided position, even if it should exist outside
+the chunk where this placement run originates.  This guarantees that
+the superstrata are deposited correctly over portions of features that
+extrude from their chunks of origin.
+
+Function: mcl_levelgen.unpack_heightmap_modification (KEY, VALUE)
+
+Return four values, to wit: the X and Z coordinates of the heightmap
+position represented in DATA (a key in `heightmap_modifications') and
+the heightmap values which `index_heightmap' would have returned prior
+to the execution of this placement run.
+
+Function: mcl_levelgen.index_heightmap (X, Z, GENERATION_ONLY)
+
+Return two values with the Y position of the uppermost block at X, Z
+\(which must be absolute positions within the accessible region of the
+level) that is non-solid by criteria particular to each value:
+
+For the purposes of the first value `WORLD_SURFACE', a block is
+considered solid if it is not air, so that ocean surfaces and the like
+will be represented in its values.
+
+With the second value `MOTION_BLOCKING', a block is only solid if it
+obstructs movement (i.e., `walkable' in Luanti nomenclature,
+although when initially producing heightmaps the level generator
+assumes that terrain consists of only walkable and liquid nodes, and
+proceeds accordingly.)
+
+Occasionally (after modifications to the level in the presence of
+insufficient context), the value of the heightmap at a given position
+may be uncertain and only known to be below a certain position.  If
+the vertical context now available is sufficient to compute its true
+value, compute and return the same.  If otherwise, return the position
+at the bottom of the context to this placement operation in lieu of
+the values in doubt; or if GENERATION_ONLY, return the values of the
+heightmap as they existed when the accessible region of the level was
+generated, excluding all modifications to the level by any previous
+feature placement.
+
+Signal an error if the requested position horizontally exceeds the
+accessible region of the level.
+
+Function: mcl_levelgen.index_biome (X, Y, Z)
+
+Return the (munged) biome at X, Y, Z.  You should endeavor to confine
+this position to the accessible region of the level, as biome
+generation may take place if this value exists outside the level,
+which is comparatively more expensive.
+
+Function: mcl_levelgen.get_block (X, Y, Z)
+
+Return the content ID and param2 value of the block at X, Y, Z, or nil
+if the position designated is outside the accessible region of the
+level.
+
+Function: mcl_levelgen.set_block (X, Y, Z, CID, PARAM2)
+
+Set the block at X, Y, Z, to CID and PARAM2, and adjust heightmaps
+correspondingly.  If X, Y, Z are outside the accessible region of the
+level in a form not truncated by the confines of the level potentially
+log a warning but disregard the error.
+
+You must make arrangements to correct the lighting in this area by
+means of `mcl_levelgen.fix_lighting' if any nodes should be inserted
+that could possibly affect lighting.
+
+Function: mcl_levelgen.is_position_hospitable (CID, X, Y, Z)
+
+Return whether the position X, Y, Z is hospitable to blocks of type
+CID.  X, Y, Z may be any position within the accessible region of the
+level, but as this function may examine the specified position's
+surroundings, value may be inaccurate near the edges of the said
+region.  Value is nil elsewhere.
+
+This function is currently implemented for nodes of the following
+types:
+
+  - mcl_core:snow
+  - mcl_core:snow_{2..8}
+  - mcl_core:deadbush
+  - mcl_core:reeds
+  - mcl_core:cactus
+  - group:sapling
+  - group:plant
+  - group:double_plant
+  - group:flower (excepting those where `attached_node == 4')
+  - group:floating_node (only when 3)
+  - group:bamboo
+  - mcl_mangrove:propagule
+  - mcl_mushrooms:mushroom_red
+  - mcl_mushrooms:mushroom_brown
+  - mcl_crimson:{warped,crimson}_{fungus,roots}
+  - mcl_crimson:nether_sprouts
+
+
+Modders are encouraged to extend this function by means of overloading
+to understand their own blocks' environmental requirements if those
+blocks should appear in generated features or structures.
+
+Function: mcl_levelgen.fix_lighting (X1, Y1, Z1, X2, Y2, Z2)
+
+Arrange to fix lighting (with `core.fix_light') in the cuboid defined
+by X1, Y1, Z1, and X2, Y2, Z2, all inclusive.  These coordinates will
+be converted into Luanti's native coordinate system, but no further
+validation or transformations are applied.
+
+Function: mcl_levelgen.place_schematic (X, Y, Z, SCHEMATIC, ROTATION,
+					REPLACEMENTS, FORCE_PLACEMENT,
+					FLAGS, RNG)
+
+Place the schematic identified by SCHEMATIC (which must have
+previously been imported by means of
+`mcl_levelgen.register_portable_schematic') at X, Y, Z.  Treat X, Y,
+and Z as coordinates in the Minecraft coordinate system, but convert
+them to Luanti's coordinate system and apply the schematic without
+transformations.  Derive a pseudo-random number generator from RNG and
+invoke it when evaluating randomness.
+
+If SCHEMATIC should exceed the accessible region of the level, it will
+be silently truncated.
+
+ROTATION, FORCE_PLACEMENT, and FLAGS, are as in
+`core.place_schematic'.  There is no parameter accepting a table of
+replacements, and in its place you must guarantee that your schematics
+are up to date.
+
+Each block in a schematic will be transformed by any schematic
+processors that are active.  It is recommended that you employ this
+mechanism rather than probabilities and force_place directives to
+alter a schematic to fit its surroundings.  Schematic processors are
+documented in their own section, SCHEMATIC PROCESSORS.
+
+Value is a list { X1, Y1, Z1, X2, Y2, Z2, } specifying the minimum and
+maximum extents (inclusive) of the placed schematic in Minecraft's
+coordinate system.  This bounding box is not limited to the accessible
+region of the level.
+
+Function: mcl_levelgen.random_schematic_rotation (RNG)
+
+Given a pseudo-random number generator RNG, return a random rotation
+\(one of "0", "90", "180", "270") suitable as the ROTATION argument to
+`mcl_levelgen.place_schematic'.
+
+Function: mcl_levelgen.get_schematic_size (SCHEMATIC, ROTATION)
+
+Return three values X, Y, Z representing the size of the schematic
+identified by SCHEMATIC after rotation by ROTATION, both as in
+`mcl_levelgen.place_schematic'.
+
+Function: mcl_levelgen.is_position_walkable (X, Y, Z)
+
+Return whether the block at X, Y, and Z is solid (or `walkable' in
+Luanti argot).  Value is false if the provided position is not
+within the accessible region of the level.
+
+Function: mcl_levelgen.adjoins_air (X, Y, Z)
+
+Return whether the block at X, Y, and Z, is in contact with air along
+any one of the three axes.  If the provided position is inaccessible,
+proceed to test its neighbors nodes regardless.  Adjoining positions
+that are inaccessible are not accounted air blocks and will not yield
+a `true' value.
+
+Function: mcl_levelgen.is_water_or_air (X, Y, Z)
+
+Return whether the block at X, Y, Z is a water source, flowing water,
+or air.
+
+Function: mcl_levelgen.is_air (X, Y, Z)
+
+Return whether the block at X, Y, Z is air.
+
+Function: mcl_levelgen.is_air_with_dirt_below (X, Y, Z)
+
+Return whether the block at X, Y, Z is air with a block capable of
+supporting plantlife below.
+
+Function: mcl_levelgen.is_air_with_water_source_below (X, Y, Z)
+
+Return whether the block at X, Y, Z is air with a water source block
+below.
+
+Function: mcl_levelgen.is_air_with_dirt_sand_or_terracotta_below (X, Y, Z)
+
+Return whether the block at X, Y, Z is air with a block capable of
+supporting plantlife, or sand, red sand, or terracotta below.
+
+Function: mcl_levelgen.face_sturdy_p (X, Y, Z, AXIS, DIR)
+
+Return whether the face of the collision box of the block at X, Y, Z
+contacting the edge of its block in the level along the axis AXIS
+\(either "x", "y", or "z") and in the direction DIR (either -1.0 or
+1.0) is sturdy, i.e., occupies exactly one node lengthwise and
+breadthwise without interruption.
+
+Function: mcl_levelgen.is_bottom_face_sturdy (X, Y, Z, AXIS, DIR)
+
+Return whether the face of the collision box of the block at X, Y - 1,
+Z which faces upwards is sturdy.
+
+Function: mcl_levelgen.facedir_to_wallmounted (AXIS, DIR)
+
+Return a `param2' value suitable for transforming a block whose
+`paramtype2' is `wallmounted' to rest against a sturdy face contacting
+it in the direction DIR (either -1 or 1) along the axis AXIS (one of
+"x", "y", and "z").
+
+Variable: mcl_levelgen.FACE_NORTH
+Variable: mcl_levelgen.FACE_WEST
+Variable: mcl_levelgen.FACE_SOUTH
+Variable: mcl_levelgen.FACE_EAST
+Variable: mcl_levelgen.FACE_UP
+Variable: mcl_levelgen.FACE_DOWN
+
+Bitmasks and enumerals identifying their titular cardinal directions,
+utilized by the three functions documented below.
+
+Variable: mcl_levelgen.face_opposites
+
+Table between each enumeral above and the face opposite it.
+
+Variable: mcl_levelgen.FACE_ORDINALS
+
+List of each enumeral above, in the order in which they are stated.
+
+Variable: mcl_levelgen.face_directions
+
+Table between each enumeral above and a list { X, Y, Z, } representing
+the direction which the face represented by the enumeral faces.
+
+Function: mcl_levelgen.get_sturdy_faces (X, Y, Z)
+
+Return a bitmask with each face of the block at X, Y, Z that is sturdy
+\(as in face_sturdy_p) set.
+
+Function: mcl_levelgen.ordinal_to_wallmounted (ORDINAL)
+
+Return the wallmounted `param2' value that corresponds to an
+attachment to the face represented by the enumeral ORDINAL.
+
+Function: mcl_levelgen.notify_generated (NAME, DATA, APPEND)
+
+Arrange to invoke the generation handler identified by NAME (see
+`mcl_levelgen.register_notification_handler') after this placement run
+completes.  DATA is data to be provided to this handler; if APPEND is
+false, invoke the handler once for each call to this function, with
+DATA as its sole argument.  Otherwise, aggregate DATA into one or more
+lists, and provide these lists to handler functions in its stead.
+
+Behavior is undefined if `notify_generated' is ever called with the
+same NAME but inconsistent values of APPEND.
+
+Function: mcl_levelgen.convert_level_position (X, Y, Z)
+
+Return the position X, Y, Z, converted into Luanti's coordinate
+system.
+
+Function: mcl_levelgen.request_additional_context (YABOVE, YBELOW)
+
+Request that another placement run involving the current feature be
+scheduled with, ideally, YABOVE and YBELOW blocks of additional
+vertical context.
+
+As this function triggers asynchronous MapBlock generation that is
+none the less liable to incur a performance penalty and/or delay the
+generation of MapBlocks nearer to the player, this function should not
+be invoked lightly.
+
+Placement runs triggered in response to requests for context disregard
+the generated status of existing MapBlocks or mark MapBlocks as
+finished upon completion, and in consequence features which invoke
+this function should be idempotent in both these and other runs or
+they may be duplicated, with whatever ramifications that implies.
+
+
+PLACEMENT MODIFIERS
+
+A placement modifier is a function that is invoked with a block
+position and is expected to return a list of positions individually to
+be provided to the next placement modifier defined in the same placed
+feature, till the last placement modifier is executed and the
+positions it produces are given to feature placement functions.  The
+first placement modifier is invoked with the absolute coordinates of
+the bottom northwest corner of the Minecraft chunk being processed.
+In addition to the three arguments specifying the block position to be
+processed, a pseudo-random number generator is supplied that is
+guaranteed to produce identical results for identical combination of
+Minecraft chunk and seed.  See RANDOM NUMBER GENERATOR INTERFACE.
+
+Function: <placement modifier> (X, Y, Z, RNG)
+
+See above.  X, Y, Z specify a block position and RNG provides a random
+number generator.  Value must be an array of the form { X Y Z ... },
+where every group of three elements specifies a position that will be
+provided to the next placement modifier defined.  Upon completion of
+all placement modifiers, RNG will be provided to the plain feature's
+`place' method.
+
+
+RANDOM NUMBER GENERATOR INTERFACE
+
+Pseudo-random number generators operate on 64-bit values represented
+as tables of unsigned 32-bit values represented as Lua numbers.  Most
+functions for operating on these values are two-operand operations
+that store the result in the first (destination) operand.  By
+convention, these tables are referred to as `ull' values.  (`unsigned
+long long' being generally the 64-bit unsigned integer type provided
+by C compilers, and also the suffix which indicates such values in C
+and LuaJIT.)
+
+These pseudo-random number generation facilities are available in all
+Lua environments, though it is inadvisable to transfer existing
+pseudo-random number generators across environment boundaries within
+generation notifications and suchlike, as they cannot be serialized.
+
+Function: mcl_levelgen.tostringull (ULL)
+
+Return the string representation of ULL as an unsigned, 64-bit,
+number.
+
+Function: mcl_levelgen.ull (HI, LO)
+
+Return a table of { LO, HI, }, where LO and HI are unsigned 32-bit
+values represented as Lua numbers respectively providing the 32
+low-order and high-order words of a 64-bit value.  If LO or HI do not
+satisfy these constraints, behavior is undefined.
+
+Function: mcl_levelgen.addull (DST, SRC)
+
+Add SRC to DST (both ull values) with wraparound arithmetic and return
+the result in DST.
+
+Function: mcl_levelgen.addkull (DST, K)
+
+Add K to DST and store the result in DST.  DST must be a ull value,
+and K a 32-bit unsigned value represented as a Lua number.  If K does
+not satisfy this constraint, behavior is undefined.
+
+Function: mcl_levelgen.negull (DST)
+
+Calculate the two's complement of DST and store the result in DST,
+with wraparound arithmetic for overflows (i.e., -(-0x8000000000000000)
+== -0x8000000000000000).
+
+Function: mcl_levelgen.subull (DST, SRC)
+
+Subtract SRC from DST (both ulls) and store the difference in DST.
+
+Function: mcl_levelgen.divull (DST, K)
+
+Divide DST (an unsigned ull value) by K (an unsigned integer value <=
+0x7fff) and store the quotient in DST.  If K does not satisfy this
+constraint, behavior is undefined.
+
+Function: mcl_levelgen.mulull (DST, K)
+
+Multiply DST (an unsigned ull value) by K (an unsigned 32-bit value)
+and store the low-order 64 bits of the product in DST, returning the
+remaining 32-bits as a Lua number.  If K does not satisfy the
+constraint imposed on it, behavior is undefined.
+
+Function: mcl_levelgen.ashrull (DST, K)
+
+Shift DST right K bits with sign-extension, storing the result in DST.
+K must be a number between 0 and 64; otherwise behavior is undefined.
+
+Function: mcl_levelgen.shrull (DST, K)
+
+Shift DST right K bits with zero-extension, storing the result in DST.
+K must be a number between 0 and 64; otherwise behavior is undefined.
+
+Function: mcl_levelgen.shlull (DST, K)
+
+Shift DST left K bits, storing the result in DST.  K must be a number
+between 0 and 64; otherwise behavior is undefined.
+
+Function: mcl_levelgen.rotlull (DST, K)
+
+Rotate DST left K bits, storing the result in DST.  K must be a number
+between 0 and 64; otherwise behavior is undefined.
+
+Function: mcl_levelgen.andull (DST, SRC)
+
+Compute the logical and of SRC with DST, storing the result in DST.
+
+Function: mcl_levelgen.xorull (DST, SRC)
+
+Compute the logical xor of SRC with DST, storing the result in DST.
+
+Function: mcl_levelgen.extull (INT)
+
+Sign-extend INT, a 32-bit signed value represented as a Lua number,
+into a ull value and return the latter.  If INT is not a number
+between -0x8000000 and 0x7fffffff, behavior is undefined.
+
+Function: mcl_levelgen.extkull (DST, K)
+
+Sign-extend K, a 32-bit signed value represented as a Lua number, and
+store the result in DST, a ull value.  If K is not a number between
+-0x8000000 and 0x7fffffff, behavior is undefined.
+
+Function: mcl_levelgen.dtoull (DST, K)
+
+Truncate K, a double (Lua real number), into DST, with IEEE
+round-to-zero semantics and representing values larger than LONG_MAX
+or smaller than LONG_MIN as positive or negative infinity as the case
+may be.  This is intended to be identical to `(long) (double) K' in
+Java.
+
+Function: mcl_levelgen.stringtoull (DST, STR)
+
+Parse STR, a base-10 sequence of digits, and store the result in DST.
+Value is true if the number is valid and does not overflow DST, and
+false otherwise.
+
+Function: mcl_levelgen.ltull (A, B)
+
+Return whether B is less than A (both ull values).
+
+Each pseudo-random number generator is a table providing the following
+methods:
+
+Function: rng:next_long ()
+
+Return a pseudo-random 64-bit value as a ull value.  The storage
+backing this ull value may be reused or hold state important to the
+pseudo-random number generator, and therefore it must never be
+modified.  (That is, it must always appear on the right hand side of
+any arithmetic operation, or be copied before modification.)
+
+Function: rng:next_integer ()
+
+Return a pseudo-random signed 32-bit value as a Lua number between
+-0x80000000 and 0x7fffffff.
+
+Function: rng:next_within (Y)
+
+Return a pseudo-random value between 0 and Y - 1, where Y is a Lua
+integer between 0 and 0x7fffffff.  If Y exceeds this range, behavior
+is undefined.
+
+Function: rng:next_boolean ()
+
+Return a pseudo-random boolean.
+
+Function: rng:next_float ()
+
+Return a pseudo-random single precision real value.
+
+Function: rng:next_double ()
+
+Return a pseudo-random double precision real value.
+
+Function: rng:next_gaussian ()
+
+Return a real number with Gaussian (normal) distribution.
+
+Function: rng:fork ()
+
+Return a new pseudo-random number generator seeded by this
+pseudo-random generator.  The pseudo-random number generator is
+entirely a new creation, not a continuation of RNG, and its next value
+is not the same as RNG's before `fork' was invoked.
+
+Function: rng:fork_positional ()
+
+Return a table whose `__call' metamethod may be directly invoked with
+a vector of integer coordinates to derive a new PRNG from a state
+computed at the time the method was invoked and the same position, or
+a string, to do so from a string.  The table also provides another
+method `create_reseedable' as an optimization, which is documented
+after the remaining PRNG methods.
+
+Function: rng:consume (N)
+
+Consume N values without returning anything.  This advances the RNG's
+state by an equivalent of N invocations of `next_long',
+`next_boolean', `next_float', or `next_double'.
+
+Function: rng:reseed_positional (X, Y, Z)
+
+Reset RNG to a state equivalent to that of a PRNG produced by calling
+the positional RNG table by which it was created with a vector of (X,
+Y, Z).  Behavior is undefined if RNG was not created by `next_within'.
+
+Function: rng:reseed (SEED)
+
+Reset RNG's seed to SEED in an implementation-dependent manner.  Two
+PRNGs of the same type reseeded with the same value will always
+produce identical pseudo-random numbers, but otherwise the relation
+between SEED and whatever parameters existed is not defined.
+
+Function: positional_rng:create_reseedable ()
+
+Return a PRNG primed with the state of this positional RNG table, but
+whose `reseed_positional' method may be invoked with a position to
+reset its state to be equivalent to the result of invoking the
+`__call' metamethod with the same position.  Behavior is undefined if
+a pseudo-random number is requested of such a pseudo-random number
+generator before `reseed_positional' is invoked.
+
+Two types of PRNGs are available to user programs, attended by a
+number of utilities for generating their parameters.
+
+Function: mcl_levelgen.xoroshiro (SEEDLO, SEEDHI)
+
+Return a Xoroshiro128++ pseudo-random number generator from a 128-bit
+seed defined by SEEDLO and SEEDHI, both ull values.  SEEDLO and SEEDHI
+are copied; callers may reuse their storage for other purposes.
+
+See: https://prng.di.unimi.it.
+
+Function: mcl_levelgen.jvm_random (SEED)
+
+Return a JVM-compatible pseudo-random number generator from a 64-bit
+seed SEED, a ull value.  SEED is copied; callers may reuse its storage
+for other purposes.
+
+Function: mcl_levelgen.seed_from_ull (LO, HI, SEED)
+
+Create a 128-bit seed from SEED, a ull value, and store its low 64 bits
+in LO and its high 64 bits HI, all ull values.
+
+Function: mcl_levelgen.mix64 (DST)
+
+Apply David Stafford's Mix13 bit mixer to DST, a ull value.  In some
+contexts, Minecraft transforms the output of
+`mcl_levelgen.seed_from_ull' with this bit mixer before it is employed
+to seed a Xoroshiro128++ PRNG.
+
+See: https://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html
+
+Function: mcl_levelgen.seed_from_string (LO, HI, STR)
+
+Create a 128-bit seed from the MD5 hash of STR, a string, and store
+its low 64 bits in LO and its high 64 bits HI, both ull values.
+
+Function: mcl_levelgen.seed_from_position (SEED, X, Y, Z)
+
+Create a 64-bit seed from X, Y, Z, which are integer block positions,
+and store the result in SEED, a ull value.
+
+
+SCHEMATIC PROCESSORS
+
+Schematic processors are functions that accept a block position, PRNG,
+and block content from the level and from a schematic and yield either
+the values rendered to them, a transformed value, or nil to halt
+transformation and omit placement of the block being processed.  As a
+mechanism by which to alter schematic data prior to placement, they
+are preferable to Luanti's own `force_place' or placement
+probability directives.
+
+Function: <schematic processor> (X, Y, Z, RNG, CID_CURRENT, PARAM2_CURRENT,
+	  	     		 CID, PARAM2)
+
+Return the content values (content ID and param2) that should be
+placed in lieu of CID and PARAM2 at that position in the level which
+is defined by the coordinates X, Y, Z.  RNG is the pseudo-random
+number generator provided to `mcl_levelgen.place_schematic', and
+CID_CURRENT and PARAM2_CURRENT are the content ID and param2 values of
+the content currently existing in the level at that position.
+
+Returning a value of nil will prompt placement of the block being
+processed to abort (although structure placement will proceed to
+completion).  Otherwise, the CID and PARAM2 values returned will be
+provided to the next schematic processor that was defined, and so
+forth, till no schematic processors remain and they are placed in the
+level.
+
+Whether schematic processors are executed if a schematic node's
+Luanti probability value is not 255 is undefined, but a schematic
+processor will not be executed during attempts to place blocks beyond
+the accessible region of the level.  Schematic processors are executed
+in the same sequence as they were provided to
+`push_schematic_processor' (or `push_schematic_processors').
+
+Function: mcl_levelgen.push_schematic_processor (PROCESSOR_FUNCTION)
+
+Push and activate the schematic processor function PROCESSOR_FUNCTION.
+It will be executed after all functions previously pushed and not yet
+deactivated.
+
+Value is the number of schematic processors that were installed before
+a call to this function, which may be provided to
+`pop_schematic_processors' to deactivate it and all schematic
+processors installed after it.
+
+Function: mcl_levelgen.pop_schematic_processors (CURRENT)
+
+Deactivate all schematic processors pushed and activated by and after
+the call to `push_schematic_processor' which returned CURRENT.
+Behavior is undefined if this function is invoked more than once per
+invocation of `push_schematic_processor'.
+
+Function: mcl_levelgen.push_schematic_processors (PROCESSORS)
+
+Push and activate each function in the list PROCESSORS in the manner
+of `push_schematic_processors', and return the number of processors
+that were active before the first element of the list was pushed and
+activated.  That is, the value that the first call to a notional
+equivalent sequence of calls to `push_schematic_processors' would
+return.
+
+
+STANDARD PLAIN FEATURES
+
+Placed feature: mcl_levelgen:random_selector
+
+Select a feature at random from amongst entries specified in this
+feature's configuration, which must be a table of the form:
+
+{
+	default = <ID or table>,
+
+The placed feature that will be selected by default (either an ID or a
+table such as `register_placed_feature' may accept), if no feature's
+condition was satisfied.
+
+	features = {
+		 {
+			chance = CHANCE,
+			feature = <ID or table>,
+		 },
+		 ...
+	}
+
+A list of placed features that will be attempted in consecution, each
+attempt having a probability of success of CHANCE.  If no attempt
+should succeed, the defined default value is generated instead.
+
+When executing, `mcl_levelgen.current_placed_feature' is the placed
+feature referencing the configuration specifying this feature, and is
+not influenced by the placed feature that is selected.  Placement
+modifiers such as `mcl_levelgen.build_biome' and the like proceed
+accordingly.
+
+Each placed feature's modifiers will be executed a second time for
+each position that is provided to this random selector.
+
+}
+
+Plain feature: mcl_levelgen:simple_random_selector
+
+Select a feature with uniform distribution from amongst a list of
+features specified in the configuration, which must be a table of the
+form:
+
+{
+	features = {
+		 <ID or table>, ...
+	},
+}
+
+where `features' is to hold placed features in the same format as is
+accepted by `mcl_levelgen:random_selector'.
+
+Plain feature: mcl_levelgen:ore
+
+Generate an ellipsoidal mass of ores around the provided position.
+The configuration must be a table of the form:
+
+{
+	discard_chance_on_air_exposure = DISCARD_CHANCE_ON_AIR_EXPOSURE,
+	size = SIZE,
+	substitutions = SUBSTITUTION_LIST,
+}
+
+Where DISCARD_CHANCE_ON_AIR_EXPOSURE is a number between 0.0 and 1.0
+providing a probability that an ore block contacting air will not be
+generated, SIZE is the maximum number of ore blobs that will figure in
+this blob, and SUBSTITUTION_LIST is a list of blocks and the ores by
+which they should be replaced produced by
+`mcl_levelgen.construct_ore_substitution_list'.
+
+Each mass of ores generates as an ellipsoid of variable dimensions in
+which smaller (up to SIZE) spherical blobs of ore material generate by
+replacing blocks identified in the substitution list, with floor (1 +
+SIZE / 8.0) being the maximum number of ore blocks capable of
+generating in each such blob.
+
+Function: mcl_levelgen.construct_ore_substitution_list (ITEMS)
+
+Convert ITEMS into an equivalent ore substitution list.  ITEMS should
+be a table of the form:
+
+{
+	target = TARGET,
+	replacement = REPLACEMENT,
+	param2 = PARAM2 or nil,
+}
+
+where TARGET, if prefixed by `group:', identifies a group for whose
+members, or otherwise, a node for which the node identified by
+REPLACEMENT is to be substituted during ore generation, and PARAM2 is
+either nil (which is equivalent to 0) or the param2 value that will be
+assigned to REPLACEMENT whenever it is substituted for a target.
+
+Plain feature: mcl_levelgen:random_patch
+
+Attempt repeatedly to place the placed feature specified in the
+configuration at random positions selected from a range prescribed in
+the configuration with triangular distribution.  The configuration
+must be a table of the form:
+
+{
+	placed_feature = FEATURE (<ID or table>),
+	tries = TRIES,
+	xz_spread = XZ_SPREAD,
+	y_spread = Y_SPREAD,
+	fix_lighting = FIX_LIGHTING,
+}
+
+where FEATURE is the identifier or table of a placed feature, as in
+`mcl_levelgen:random_selector', TRIES is the number of attempts that
+will be made to place the said feature, XZ_SPREAD and Y_SPREAD are the
+horizontal and vertical radii around the origin position of the random
+patch feature within which the feature to be repeated may be placed,
+and FIX_LIGHTING, a boolean, specifies whether to recompute lighting
+around the affected area of the level.
+
+Plain feature: mcl_levelgen:simple_block
+
+Place a node at the origin, provided that the latter is hospitable to
+the node as decided by `mcl_levelgen.is_position_hospitable'; special
+treatment is afforded to double plants.  The configuration must
+contain a single field CONTENT, a function accepting the origin of the
+feature and a PRNG and yielding the content ID and param2 values of a
+block to place.
+
+Plain feature: mcl_levelgen:vegetation_patch
+
+Generate a patch of substrate on the floor or ceiling of a region and
+stochastically distribute a form of vegetation over the generated
+substrate.  The configuration must be a table of the form:
+
+{
+	replaceable = <list of CIDs>,
+
+List of content IDs that may be replaced by the substrate material.
+You probably ought to generate this list with `construct_cid_list',
+which see.
+
+	surface = SURFACE,
+
+The direction of the surface to which the substrate (and therefore
+vegetation) will attach.  Either "floor" or "ceiling".
+
+	depth = DEPTH <function (RNG) ... end>,
+
+Function accepting a PRNG and yielding a random integer; see below.
+
+	extra_edge_column_chance = EXTRA_EDGE_COLUMN_CHANCE,
+	extra_bottom_block_chance = EXTRA_BOTTOM_BLOCK_CHANCE,
+	ground = function (X, Y, Z, RNG) ... end,
+
+Function accepting a position and a PRNG and yielding the CID and
+param2 values of a substrate material to be generated at the provided
+position.  For every position in a surface to which the substrate will
+attach that rests horizontally within a random radius of the origin
+position of this feature, a column of replaceable blocks DEPTH (or
+DEPTH + 1 if EXTRA_BOTTOM_BLOCK_CHANCE is satisfied) in height in the
+direction of the said surface will be replaced with content values
+supplied by this function; positions precisely at this radius from the
+origin along one of the two axes will only generate vegetation with a
+probability of EXTRA_EDGE_COLUMN_CHANCE, and positions at the corners
+of the patch will not be generated at all.
+
+	vegetation_feature = <ID or table>,
+
+Placed feature (generally an instance of `mcl_levelgen:block_column')
+to be generated beneath or above each column of substrate blocks where
+vegetation is to be generated, as the case may be.  This is defined as
+in `minecraft:random_patch'.
+
+	vegetation_chance = VEGETATION_CHANCE,
+
+The likelihood that a column of substrate blocks will develop
+vegetation.
+
+	vertical_range = VERTICAL_RANGE,
+
+The number of blocks from the Y position of the origin where feature
+placement is permitted to search for a ceiling or a floor to replace
+with substrate.
+
+	xz_radius = function (RNG) ... end,
+
+Function accepting a PRNG and yielding a number of blocks along the X
+or Z axes for which to attempt to generate substrate material and
+vegetation; the radius mentioned in the documentation for GROUND.
+
+	update_light = UPDATE_LIGHT,
+
+Whether to update lighting around generated vegetation after
+completion, assuming that generated vegetation extends over no more
+than 31 blocks from the origin position.
+
+}
+
+Function: mcl_levelgen.construct_cid_list (NAMES)
+
+Return a list of containing each content ID that is identified by one
+of the identifiers in NAMES; either `group:foo', which identifies
+every defined node assigned to the group `foo', or another string,
+which identifies the node by that name.
+
+Identifiers that do not name groups must be valid, or
+`core.get_content_id' will signal an error.
+
+Plain feature: mcl_levelgen:block_column
+
+Generate a column of blocks comprising segments of varying materials
+and length in a specified direction, truncating these columns to fit
+within any obstructions detected by a placement predicate.  The
+configuration must be a table of the form:
+
+{
+	layers = {
+	       {
+			height = HEIGHT,
+			content = CONTENT,
+	       },
+	       ...
+	},
+	direction = DIRECTION (-1 or 1),
+	allowed_placement = ALLOWED_PLACEMENT,
+	prioritize_tip = PRIORITIZE_TIP,
+}
+
+In each layer (segment), HEIGHT must be a function accepting a PRNG
+and yielding the height of the segment, and CONTENT must be a function
+accepting a position X, Y, Z and yielding the content ID and param2 of
+a value to place at that position.
+
+DIRECTION is the direction (down or up, according as it is -1 or 1) in
+which these segments will be stacked.
+
+ALLOWED_PLACEMENT is a function accepting a position X, Y, Z and
+deciding whether it is an obstruction, which will occasion truncation
+of the column, or it may be replaced by an element of a segment.
+
+PRIORITIZE_TIP decides the direction from which truncation of the
+column proceeds in cases of obstructions.  If true, segments are
+deleted, or shrunk, if sufficiently large, till the resultant column
+is small enough to fit within the space available, from the first
+segment defined forward.  Otherwise, the column is simply truncated to
+the last position before the obstruction.
+
+Plain feature: mcl_levelgen:waterlogged_vegetation_patch
+
+Place substrate material and vegetation as does
+`mcl_levelgen:vegetation', but replace each substrate block which is
+surrounded on all four cardinal directions and supported below by
+blocks of whose faces those oriented towards the substrate blocks are
+sturdy (i.e., occupy exactly one node lengthwise and breadthwise) with
+water, and generate such vegetation as would have attached to such
+substrates within the water by which they will have been replaced.
+
+Plain feature: mcl_levelgen:vines
+
+Generate and attach a single vine to an appropriate face adjoining the
+origin, if possible.  This feature accepts no configuration options.
+
+
+STANDARD PLACED FEATURES
+
+
+STANDARD CONFIGURED FEATURES
+
+
+STANDARD PLACEMENT MODIFIERS
+
+Function: mcl_levelgen.build_weighted_list (LIST)
+
+Take a weighted list of elements of the form:
+
+{
+	weight = WEIGHT,
+	data = DATA,
+}
+
+and return a function which accepts a PRNG and returns a random
+element's DATA field, weighted by specified WEIGHTs.  DATA may either
+be an integer, or a function that accepts a PRNG and yields a random
+value.  This is not a placement modifier.
+
+Feature: mcl_levelgen.build_weighted_cid_provider (LIST)
+
+Take a weighted list of elements of the form:
+
+{
+	weight = WEIGHT,
+	cid = CID,
+	param2 = PARAM2,
+}
+
+and return a function which accepts (and discards) three coordinate
+values and a PRNG and yields a random CID and param2 value, which
+function is suitable as the CONTENT parameter to a
+`mcl_levelgen:simple_block' feature.  PARAM2 may also be the string
+"grass_palette_index", which is replaced by the palette index of the
+color of the biome at the current position.  This is not a placement
+modifier.
+
+Function: mcl_levelgen.build_count (N)
+
+Return a placement modifier which duplicates the input position N
+times.  N must be a function that accepts a PRNG and yields the number
+of duplicates to produce.
+
+Function: mcl_levelgen.build_noise_threshold_count (NOISE_LEVEL,
+	 					    ABOVE_NOISE,
+						    BELOW_NOISE)
+
+Return a placement modifier which duplicates the input position a
+variable number of times contingent on the value of the biome selector
+noise at the said position.  ABOVE_NOISE is the number of duplications
+to perform when the noise exceeds NOISE_LEVEL, and BELOW_NOISE is that
+number otherwise.
+
+Function: mcl_levelgen.build_noise_based_count (NOISE_TO_COUNT_RATIO,
+						NOISE_FACTOR,
+						NOISE_OFFSET)
+
+Return a placement modifier which duplicates the input position by a
+multiple of the value of the biome selector noise at the said position.
+
+Despite their names, NOISE_FACTOR is the persistence (inverse of
+frequency) at which the noise will be sampled and NOISE_TO_COUNT_RATIO
+is the amplitude of its results.
+
+Function: mcl_levelgen.build_in_square ()
+
+Return a placement modifier which returns a position at a random
+offset of 0 to 15 blocks along the X and Z axes from the input
+position.
+
+Function: mcl_levelgen.build_in_biome ()
+
+Return a placement modifier which enforces feature lists in biome
+definitions by excluding any positions which do not fall within a
+biome that defines the feature being evaluated.
+
+Function: mcl_levelgen.build_heightmap (heightmap)
+
+Return a placement modifier which places each position supplied at the
+provided heightmap.  Four heightmaps are available for purposes of
+level generation:
+
+      "world_surface"		- The surface of the level as defined
+      				  by blocks that are not air.
+
+      "motion_blocking"		- The surface of the level as defined
+      				  by blocks that obstruct movement
+				  (i.e. are `walkable').
+      "world_surface_wg"	- The value of "world_surface" at the
+				  at the time of generation.
+      "motion_blocking_wg"	- The value of "motion_blocking" at the
+				  at the time of generation.
+
+As heightmaps (except those suffixed with "_wg") are liable to be
+modified by feature placement, a feature that has already been placed
+may be duplicated when another vertical section of the level is
+emerged or otherwise new surfaces created by this or another feature
+are exposed.  Therefore it is best for features which utilize this
+placement modifier to be idempotent--as, for example, a tree feature
+that only permits placement where saplings can grow but not on
+canopies.
+
+Function: mcl_levelgen.build_surface_water_depth_filter (N)
+
+Return a placement modifier that excludes any position (by returning
+nil) where the world surface is more than N blocks above the surface
+of the level as defined by the difference between the `world_surface'
+and `motion_blocking' heightmaps, upon the (marginal) assumption that
+water is the only block capable of separating the two heightmaps.
+XXX: this is subject to change if a dedicated `ocean_surface'
+heightmap is introduced for parity with Minecraft.
+
+Function: mcl_levelgen.build_surface_water_depth_filter (HEIGHTMAP,
+	  						 MIN_INCLUSIVE,
+							 MAX_INCLUSIVE)
+
+Return a placement modifier that excludes any position (by
+substituting a position guaranteed to sit outside the accessible
+region of the level) which does not vertically rest between a range of
+MIN_INCLUSIVE to MAX_INCLUSIVE around the surface defined by the
+heightmap HEIGHTMAP.
+
+Function: mcl_levelgen.build_environment_scan (PARMS)
+
+Return a placement modifier that scans for a block matching a
+predicate and in a direction specified in PARAMS, or, failing that,
+returns a position outside the accessible region of the level in the
+direction of the search.
+
+PARAMS must be a table of the form:
+
+{
+
+	direction = -1 or 1,
+
+Direction in which to scan for an eligible block.
+
+	max_steps = -1 or 1,
+
+The number of iterations of the search to execute.
+
+	allowed_search_condition = function (X, Y, Z) ... end or nil,
+
+Optional predicate which if defined is invoked with the coordinates of
+the position being evaluated upon each iteration of the search to
+decide whether the next iteration of a search should be permitted to
+commence.  If false is returned, an inaccessible position will be
+returned without further processing before the first iteration of the
+search, or, during or after this iteration, the search will conclude
+as if `target_condition' returned true on the next iteration, except
+that if it does not actually return true an inaccessible position will
+be returned instead.
+
+	target_condition = function (X, Y, Z) ... end,
+
+Predicate evaluated upon each iteration of the search; a value of true
+will result in the provided position being returned.
+
+}
+
+Function: mcl_levelgen.build_rarity_filter (N)
+
+Return a placement modifier that returns its input coordinates only
+1/N of the time.
+
+Function: mcl_levelgen.build_height_range (N)
+
+Return a placement modifier that returns each input coordinate with
+its Y component replaced by the value yielded by applying N to the
+provided PRNG.
+
+Function: mcl_levelgen.build_constant_height_offset (N)
+
+Return a placement modifier that returns each input coordinate with
+its Y component displaced by N.
+
+Function: mcl_levelgen.build_random_offset (XZ_SCALE, Y_SCALE)
+
+Return a placement modifier that returns each input coordinate with
+its X and Z components displaced by values yielded by applying
+XZ_SCALE to the provided PRNG, and its Y component displaced by
+Y_SCALE in like manner.
+
+Function: mcl_levelgen.build_constant_height_offset (COUNT)
+
+Return a placement modifier that returns a number of coordinates
+yielded by COUNT horizontally distributed at offsets of 0 to 15 from
+the input position on every air-separated vertical stratum of solid
+(non-air) blocks in the level.  COUNT must be a function that accepts
+a PRNG and yields the number of coordinates to produce on each layer.
+
+
+STRUCTURES
+
+A structure is a system which alters the composition of terrain in
+that which may be a broad area around its (Minecraft) chunk of origin
+deterministically and as terrain is generated, before any features are
+placed.  Structures are assigned to "structure sets", which are
+collections of structures connected to a "structure placement", which
+defines rules and criteria that govern the selection of such chunks of
+origin.  Internally, a structure, when generated at a chunk of origin,
+is expected to produce a "structure start" composed of a list of
+"structure pieces", which are assigned bounding boxes that may extend
+up to eight Minecraft chunks from this origin, and a function which is
+invoked in the emerge environment whenever a (Minecraft) chunk
+intersecting with its bounding box is generated; such a structure
+piece may also define "terrain adaptations", which enables it to exert
+influence on the density values of terrain sampled from the vicinity
+of its bounding box, which is a subtler manner of terraforming.
+
+Most of the level access facilities which are available to features
+\(`index_heightmap', `index_biome', &c.) are also available to
+structure piece functions; other of these functions accept calling
+conventions which carry additional information not present in their
+equivalents in the feature generation environment.  By contrast, no
+terrain or heightmap information is available during the generation of
+structure starts, but the programmer is provided with access to the
+terrain generator itself and facilities to derive terrain height
+values and contents directly from noise, so that structure pieces may
+be correctly placed in a manner which is informed by the shape of the
+terrain.
+
+
+STRUCTURE REGISTRATION FUNCTIONS
+
+Function: mcl_levelgen.register_structure (KEYWORD, DEF)
+
+Register a structure identified by the keyword KEYWORD; by convention,
+such a keyword is to be prefixed by a namespace identifying the mod
+defining the structure, e.g. `mod_name:structure'.  DEF must be a
+table of the form:
+
+{
+	create_start = function (SELF, LEVEL, TERRAIN, RNG, CX, CZ) ... end,
+
+Function invoked to create a structure start when this structure is
+selected from a structure pool of which CX, CZ is a chunk of origin.
+LEVEL is a structure level object, which includes diverse metadata and
+the preset of the level which is being generated (see STRUCTURE LEVEL
+INTERFACE).  TERRAIN is a reference to the terrain generator (see
+TERRAIN GENERATOR INTERFACE).  CX and CZ are chunk coordinates; that
+is to say, multiplied by 16, they yield the position of the
+northwesternmost column of this chunk.  RNG is a pseudo-random number
+generator that is unique to this structure start, pool, and chunk.
+
+Value must be a nil (indicating generation failure) or a structure
+start, created by `mcl_levelgen.create_structure_start', which see.
+
+	step = <structure generation step>,
+
+The priority with which structure pieces produced from this structure
+will execute.  Pieces created for structures in an earlier step will
+be placed ahead of structures in subsequent steps; may be one of the
+following values:
+
+    - mcl_levelgen.RAW_GENERATION = 1
+    - mcl_levelgen.LAKES = 2
+    - mcl_levelgen.LOCAL_MODIFICATIONS = 3
+    - mcl_levelgen.UNDERGROUND_STRUCTURES = 4
+    - mcl_levelgen.SURFACE_STRUCTURES = 5
+    - mcl_levelgen.STRONGHOLDS = 6
+    - mcl_levelgen.UNDERGROUND_ORES = 7
+    - mcl_levelgen.UNDERGROUND_DECORATION = 8
+    - mcl_levelgen.FLUID_SPRINGS = 9
+    - mcl_levelgen.VEGETAL_DECORATION = 10
+    - mcl_levelgen.TOP_LAYER_MODIFICATION = 11
+
+	terrain_adaptation = <terrain adaptation type>,
+
+A string defining what manner of influence, if any, to exert upon
+terrain adjacent to structure pieces produced from this structure
+start by default; structure pieces may exempt themselves from terrain
+adaptation by defining `no_terrain_adaptation = true'.  These values
+are supported:
+
+    - "none": Do not exert any influence on adjacent terrain.
+
+    - "beard_thin": Slightly increase the density of the terrain
+      beneath the base of a structure piece's bounding box and reduce
+      the density within and above the same, in a twelve block radius
+      around the bounding box.
+
+    - "beard_box": Slightly increase the density of the terrain
+      beneath a structure piece's bounding box and reduce the density
+      within and above the same, in a twelve block radius around the
+      bounding box.
+
+    - "bury": Significantly raise the density of all terrain within a
+      12-block radius around the base of a structure piece's bounding
+      box.
+
+    - "encapsulate": Significantly raise the density of all terrain
+      within a 12-block radius around a structure piece's bounding
+      box.
+
+	biomes = <list of biomes>,
+
+A list of biomes in which this structure may generate.  It is not
+relevant till `mcl_levelgen.structure_biome_test' is invoked.
+
+}
+
+This function is completely inert within the main Lua environment.
+Therefore, invoking this function within the main Lua environment is
+pointless and harmless in equal measure.
+
+Function: mcl_levelgen.register_structure_set (KEYWORD, TBL)
+
+Register a structure set identified by KEYWORD, which is as in
+`register_structure'.  TBL must be a table of the form:
+
+{
+	structures = {
+		"my_mod:my_structure",
+		{
+			structure = "my_mod:my_structure",
+			weight = 1,
+		},
+		...
+	},
+
+An optionally weighted array of structures which will be selected from
+whenever this structure set is detected to have its chunk of origin
+somewhere during the process of level generation.  Each value may be a
+string, a structure ID, which is implied to have been assigned a
+weight of 1.  Alternatively, it may be a table where the structure ID
+and the weight are separately specified, as above.  If a structure
+which is selected from this array fails to generate, it is eliminated
+from consideration and another is selected, till none remain or one
+successfully generates.
+
+    	placement = <structure placement>,
+
+A structure placement defining criteria for whether a chunk is a chunk
+of origin to this structure set.
+
+}
+
+Function: mcl_levelgen.build_random_spread_placement (FREQUENCY, REDUCTION,
+	  					      SPACING, SEPARATION,
+						      SALT, SPREAD_TYPE,
+						      LOCATE_OFFSET,
+						      EXCLUSION_ZONE)
+
+Create a "random spread" structure placement, which arranges to place
+a structure set at randomized offsets from points in a grid of chunks
+SPACING chunks apart.
+
+FREQUENCY is a value between 1.0 and 0.0 defining the probability of
+a structure set's originating from any particular point in the said
+grid.
+
+REDUCTION is a string representing the specific algorithm that is
+utilized to enforce FREQUENCY.  It should be set to "default" unless
+your object is consistency with Minecraft structures which define
+other values.
+
+SPACING is the size, in chunks, of one element in the grid, and
+therefore the distance between two adjacent points in the grid.
+
+SEPARATION is a value between 0 and (SPACING - 1) which excludes
+chunks of origin from an equivalent region near the outer edges of
+squares in the grid; this serves to enforce a minimum margin between
+structures in the same set.
+
+SALT is a number between 0 and 4294967295 which affects the
+randomization of the structure generation process.  Each structure
+pool should ideally be defined with a unique salt.
+
+SPREAD_TYPE is a string, either "linear" or "triangular", representing
+the random distribution of offsets from points in the grid.
+
+LOCATE_OFFSET is an unused value that should be an array of three
+numbers { X, Y, Z, } which is present only in the interests of
+consistency with Minecraft.
+
+EXCLUSION_ZONE is nil or an array of { STRUCTURE_SET, DISTANCE, },
+which will prevent chunks of origin from being selected if another
+structure of type STRUCTURE_SET is present within DISTANCE chunks.  It
+is the bounden duty of the programmer to avoid cycles between
+different structure sets' EXCLUSION_ZONES.
+
+
+STRUCTURE START AND PIECE GENERATION
+
+Function: mcl_levelgen.structure_biome_test (LEVEL, STRUCTURE_DEF, X, Y, Z)
+
+Return whether or not the position at X, Y, Z is within a biome in
+which the structure whose definition table is provided as
+STRUCTURE_DEF (i.e., the SELF parameter to a structure definition's
+`generate_start' method) is defined to generate.  LEVEL must be the
+structure level object which was provided to STRUCTURE_DEF's
+`generate_start' method.
+
+Conventionally, a `generate_start' method will select a suitable
+position with regard to data obtained from the terrain generator and
+biome system around which the generated structure should be considered
+to revolve, test that position by means of this function, and punt
+without producing any structure pieces if it should return false.
+
+Function: mcl_levelgen.create_structure_start (STRUCTURE_DEF, PIECES)
+
+Create a structure start for the structure whose definition table is
+provided as STRUCTURE_DEF from an array of structure pieces PIECES.
+Each structure piece must be a table with the following fields, of
+which `place' and `bbox' are mandatory.
+
+{
+	place = function (SELF, LEVEL, TERRAIN, RNG, X1, Z1, X2, Z2) ... end,
+
+Execute alterations to terrain within the extents of the Minecraft
+chunk between (X1, Z1) and (X2, Z2) (inclusive).  LEVEL is the
+structure level object pertaining to this structure piece, TERRAIN is
+the terrain generator which is being exercised, and RNG is a
+random-number generator that is unique to the combination of the
+structure to which structure piece belongs and the chunk in which it
+is generating; an implication which must be emphasized is that the
+sequence in which structure pieces appear in structure starts is
+significant and must be maintained across different game sessions and
+emerge environments.
+
+All terrain within the provided chunk and level is accessible and
+writable by means of the level access functions defined in the section
+"LEVEL ACCESS FUNCTIONS" or below.  In the interests of maintaining
+determinism across configurations of varying chunksizes, no terrain
+beyond this limit is available.  Furthermore, PRNG-informed decisions
+whose consequences extend beyond a single chunk ought to be decided at
+the time structure starts are generated, not when structure pieces are
+actually placed.
+
+	bbox = { X1, Y1, Z1, X2, Y2, Z2, },
+
+A bounding box whose horizontal extents must encompass all terrain
+this structure piece is interested in modifying, whose extents, as a
+whole, will be recorded as the extents of this structure piece for
+purposes of advancements and spawning, and which will provide the
+extents of this structure piece as regarded by the terrain generator
+when it applies terrain adaptations.  Behavior is undefined if `place'
+should attempt to alter terrain beyond this limit; neither is it
+defined whether `place' will be called with Minecraft chunk
+coordinates which do not intersect this bounding box.
+
+	ground_offset = <ground offset>,
+
+An offset from `bbox''s Y1 which will be regarded as the elevation of
+this bounding box's base for purposes of terrain adaptation, or nil.
+
+	reduced_terrain_adaptation = { CX, CY, CZ, AMPLITUDE, },
+
+If non-nil, an array of a position CX, CY, CZ, and an amplitude
+AMPLITUDE, which define a single point that will be considered this
+structure piece's base position by a reduced manner of terrain
+adaptation which is enabled if this field is non-nil.  AMPLITUDE
+supplies the intensity of this variety of terrain adaptation.
+
+	no_terrain_adaptation = false,
+
+If non-nil, the terrain generator will disregard this structure piece
+in applying terrain adjustments, whatever may have been the value of
+its structure's `terrain_adaptation' option.
+
+}
+
+
+TERRAIN GENERATOR INTERFACE
+
+A terrain generator is a table with much internal metadata and state
+exporting several methods to structure generator routines, which are
+documented in this section.  `get_one_height' and `get_one_column', as
+they sample noise on each call, are not fast, and require anywhere
+from 1.5 to 10 milliseconds to execute, subject to hardware
+performance.  They should be the exclusive province of `create_start'
+methods, which are called infrequently enough and are subject to
+sufficient caching of their results that any overhead these methods
+incur may be dismissed.
+
+Function: terrain_generator:get_one_height (X, Z, IS_SOLID)
+
+Return a number one greater than that which would be the first solid
+node at the column at X, Z, with solidity decided by the predicate
+IS_SOLID, a function accepting two values CID and PARAM2 and yielding
+a boolean.
+
+If IS_SOLID is nil, define solidity by terrain density at each
+position evaluated; for reasons of performance, such a call will not
+account for the presence of solid nodes produced by barriers between
+aquifer systems of disparate types at disparate elevations.
+
+Behavior is undefined if this function is invoked within a structure
+piece's `place' method.
+
+Function: terrain_generator:get_one_column (X, Z, COLUMN_DATA)
+
+Generate the terrain of one column at X, Z, without applying terrain
+adjustments or surface systems, and store the result as integer values
+in COLUMN_DATA, at indices computed by adding one to the vertical
+distance between each block and the minimum Y level of the level.
+Each element of the array may be unpacked into a content ID and param2
+value by means of `mcl_levelgen.decode_node'.
+
+Behavior is undefined if this function is invoked within a structure
+piece's `place' method.
+
+Function: mcl_levelgen.decode_node (NODE)
+
+Extract two values CID and PARAM2 from an integer NODE in a terrain
+generator's internal encoding, which, inter alia, appears in the
+COLUMN_DATA supplied to `terrain_generator:get_one_column'.
+
+Function: terrain_generator:area_min_height (X1, Z1, X2, Z2, IS_SOLID)
+
+Compute the minimum elevation of the area between X1, Z1, X2, Z2.
+IS_SOLID is as in `terrain_generator:get_one_height'.  This function
+tends to complete in 10 to 20 milliseconds, subject to hardware
+performance and a number of other considerations.  Value is -math.huge
+if the area is completely vacant.
+
+Behavior is undefined if this function is invoked within a structure
+piece's `place' method.
+
+Function: terrain_generator:area_average_height (X1, Z1, X2, Z2, IS_SOLID)
+
+Compute the mean elevation of the area between X1, Z1, X2, Z2.
+IS_SOLID is as in `terrain_generator:get_one_height'.  This function
+tends to complete in 10 to 20 milliseconds, subject to hardware
+performance and a number of other considerations.  Value is -math.huge
+if the area is completely vacant.
+
+Behavior is undefined if this function is invoked within a structure
+piece's `place' method.
+
+
+STRUCTURE LEVEL INTERFACE
+
+A structure level object (provided to many methods and functions as
+LEVEL) is a table of mostly internal significance.  One field,
+`preset', is more generally useful, as it provides the preset of the
+level in which a structure pool, start, or piece is generating, as the
+case may be.
+
+Access to a structure preset notably enables a programmer to sample
+biome data irrespective of the availability of generated biome data or
+terrain.
+
+Function: preset:index_biomes_block (X, Y, Z)
+
+Return a string identifying the biome which would generate at the
+position X, Y, Z.  Be advised that this is not always the same biome
+which mcl_levelgen.index_biome would return for the provided position;
+to obtain the latter biome value, the provided coordinates must first
+be munged, but this is not yet available to mods and is not
+significant during structure start generation.  By the same token,
+this biome may differ markedly from the biome actually at X, Y, Z, if
+that position has already been generated under a different biome
+configuration (such as one defined by a previous or newer version of
+the level generator).
+
+
+STRUCTURE LEVEL ACCESS FACILITIES
+
+Virtually all of the level access facilities which are available in
+the feature generator environment (see "LEVEL ACCESS FACILITIES") are
+available to the `place' methods of structure pieces.  Facilities
+absent include those which relate to heightmap modifications, and most
+variables within the `mcl_levelgen' table itself, which do not exist
+because they are redundant when the entire vertical expanse of the
+chunk being generated is always available to structure piece placement
+functions, and `fix_lighting', which is redundant because lighting
+information is not computed till terrain and therefore structures have
+been generated.  The calling convention of
+`mcl_levelgen.notify_generated' differs between the two environments.
+
+Function: mcl_levelgen.notify_generated (NAME, X, Y, Z, DATA, APPEND)
+
+Report a generation notification as in the feature generation
+environment, unless the position at X, Y, Z, would not actually be
+produced.  This proviso is meant to prevent notification handlers from
+being executed when a structure reports a notification for a generated
+block or other adornment at a position which is accessible, but which
+does not exist within the MapChunk actually being generated by Luanti.
+
+
+SCHEMATIC STRUCTURE PIECES
+
+The standard interface for placing schematics in a level,
+`mcl_levelgen.place_schematic', is likewise available when placing
+structure pieces.  The tedious and repetitious routine of generating
+structures defined solely by schematics and perhaps a list of
+processors is obviated by schematic structure pieces, which may be
+created by the following function:
+
+Function: mcl_levelgen.make_schematic_piece (SCHEMATIC_ID, X, Y, Z,
+					     ROTATION, RNG, CENTER,
+					     FORCE_PLACE, PROCESSORS,
+					     PLACEMENT_SENTINEL,
+					     GROUND_OFFSET)
+
+Create and return a structure piece (an element of an array to be
+supplied to `create_structure_start') which places the portable
+schematic identified by SCHEMATIC_ID at X, Y, Z, with the rotation
+ROTATION, and certain other parameters, CENTER and FORCE_PLACE, which
+are no otherwise than in `mcl_levelgen.place_schematic'.  RNG is a
+pseudo-random number generator which must be provided if ROTATION is
+"random", and is otherwise unused.  PROCESSORS is a list of schematic
+processor functions which are installed when the schematic is placed.
+PLACEMENT_SENTINEL is nil, or a function to be invoked with a
+pseudo-random number generator and four values X1, Z1, X2, Z2 defining
+the extents of a Minecraft chunk after this schematic is placed there.
+
+
+STRUCTURE TEMPLATES
+
+The structure generation subsystem also implements and supports a more
+sophisticated type of schematic called the structure template, which
+is capable of recording node metadata, and certain types of function
+blocks controlling connections between discrete pieces of larger
+structures composed of multiple templates (jigsaw blocks) or
+representing actions to be taken upon generation of the positions
+where they stand (structure data blocks).  Not unnaturally, they also
+support a system of template processor functions which is somewhat
+extended (if compatible with) as against the structure processor
+systems introduced in the preceding sections.
+
+Creating structure templates is as in Minecraft; refer to:
+https://minecraft.wiki/w/Structure_Block.
+
+Function: mcl_levelgen.read_structure_template (NAME)
+
+Load and return a structure template from the file by the name NAME,
+or return nil and an error message if the file could not be read or
+the template is invalid or corrupt.
+
+Function: mcl_levelgen.place_template (TEMPLATE, X, Y, Z, PX, PZ,
+	  			       OPTIONS, MIRRORING, ROTATION, RNG)
+
+Place the template TEMPLATE at X, Y, Z, rotated by ROTATION (as in
+`place_schematic', with the exception of the value "random" not being
+accepted) around the pivot point PX, PZ (which is relative to the
+northwest corner of the unrotated template), and with its unrotated
+contents mirrored along the Z axis prior to rotation if MIRRORING is
+the string "left_right" or along the X axis if MIRRORING is the string
+"front_back", executing all data block handlers in response to data
+blocks which intersect the chunk now being placed.
+
+Function: mcl_levelgen.make_template_piece_with_pivot (TEMPLATE, X, Y, Z, PX, PZ,
+						       MIRRORING, ROTATION, RNG,
+						       OPTIONS, PROCESSORS,
+						       GROUND_OFFSET)
+
+Create and return a structure piece which will place the template
+TEMPLATE at X, Y, Z, rotated by ROTATION around the pivot point PX, PZ
+\(as in `place_template'), and mirrored and rotated as directed by
+MIRRORING and ROTATION.  All template processors in the array
+PROCESSORS will be installed when TEMPLATE is placed.  GROUND_OFFSET
+is as in all other structure pieces.
+
+RNG is significant if PROCESSORS contains any template processor
+augmented with a `structure_preprocess' method.
+
+Function: mcl_levelgen.make_template_piece (TEMPLATE, X, Y, Z,
+					    MIRRORING, ROTATION, RNG,
+					    OPTIONS, PROCESSORS,
+					    GROUND_OFFSET, BBOX)
+
+Create and return a structure piece just as with
+`make_template_piece_with_pivot', but with a pivot point always fixed
+to 0, 0.
+
+Function: mcl_levelgen.template_transform (TEMPLATE, X, Y, Z, PX, PZ,
+	  				   MIRRORING, ROTATION)
+
+Transform the position X, Y, Z, relative to the northwest corner of a
+template (the TEMPLATE parameter is as yet unused), and return the
+position, relative to the position provided to `place_template', where
+a block at the first position would be situated after being
+transformed by MIRRORING and ROTATION around the pivot point PX and
+PZ.
+
+Function: mcl_levelgen.get_template_bounding_box (TEMPLATE, X, Y, Z, PX, PZ,
+	  				   	  MIRRORING, ROTATION)
+
+Return the bounding box (as an array of six integers { X1, Y1, Z1, X2,
+Y2, Z2, }) of a template TEMPLATE placed at X, Y, Z and transformed by
+ROTATION and MIRRORING around the pivot point PX, PZ.
+
+
+TEMPLATE PROCESSORS
+
+The structure template piece extends the traditional structure
+processor system by accepting tables whose `__call' metamethods are
+defined to a more standard structure processor in their place.  These
+tables may provide one field, `structure_preprocess', which is invoked
+before a structure template piece is placed, to decide information
+which must be uniform across multiple placement attempts.  There also
+exist some functions which afford template processors control over
+metadata copying or node constructor execution performed by the
+template system.
+
+Function: <structure preprocessor function> (RNG, TEMPLATE)
+
+Return a key and a value to be recorded into a store which will be
+consistent across all invocations of template processors when placing
+the template piece for which this function is being invoked, or nil,
+to record no data at all.  RNG is a pseudo-random number generator
+unique to this structure piece, and TEMPLATE is the structure template
+this piece is to place.
+
+Function: mcl_levelgen.get_preprocessor_metadata (KEY)
+
+When invoked within a template processor being placed by a template
+structure piece, return any metadata recorded by a template processor
+identified by key KEY, or nil if none should exist.
+
+Function: mcl_levelgen.suppress_constructors (X, Y, Z)
+
+Arrange not to invoke any node constructors for any node that might be
+generated by the template currently being placed at the position X, Y,
+Z.  Mostly of assistance in manipulating chests from within template
+processors, as their constructors erase existing inventories, and will
+be executed after any generation notifications issued by template
+processors themselves.
+
+
+TEMPLATE POOLS AND JIGSAW STRUCTURES
+
+Jigsaw blocks are utility blocks which may appear in structure
+templates to define the orientations and relative positions in which
+they are to attach to their neighbors, and, in turn, what templates
+are eligible to generate after them, when generating as components of
+a broader jigsaw structure.  A jigsaw block holds references to
+template pools; these are weighted lists of structure templates
+defined with the function `mcl_levelgen.register_template_pool' in
+connection with certain metadata affecting their generation and
+placement.
+
+Each jigsaw block, when used by a player with the `maphack' privilege,
+will display an interface with the following options.  Jigsaw and
+structure blocks should _only_ be configured through their in-game
+formspecs, and these options will be saved in structure templates
+produced by recording regions of the world where they appear with
+structure blocks.  Jigsaw blocks will not produce any effect when
+placed manually with `set_block', or in a level by any means other
+than appearance in a template selected from a template pool in the
+process of generating a jigsaw structure.
+
+Jigsaw Block option: Target Pool
+
+ID of a template pool from which to select a template to generate and
+attach to this jigsaw block after its containing template generates,
+or `mcl_levelgen:empty'.  When generating, the template so selected
+will be oriented and positioned so that the jigsaw block within the
+said template identified by this jigsaw block's "Target Name" will
+contact and face this jigsaw block (and if a template should contain
+multiple jigsaw blocks with identical identifiers, they will be
+selected randomly from the template, subject to selection priority,
+and each will be tested against the criteria stated in the remainder
+of this paragraph); a template may be rotated vertically, and if this
+jigsaw block is facing upwards or downwards, the rotation of the
+target template will either be selected randomly or so as to align the
+rotation of the target jigsaw block with this jigsaw block's,
+contingent on this jigsaw block's "Joint Type" option.  If, upon
+generation, the position of the target jigsaw block would exist within
+the confines of this jigsaw block's containing template, the generated
+target template, and all templates which subsequently generate from
+jigsaw blocks defined within the same template, must be completely
+enclosed by this jigsaw block's containing template.  Otherwise, the
+target template must satisfy all spatial restrictions imposed by its
+predecessors, and not intersect with any templates already generated,
+excepting any templates which subsequently generate within itself.  If
+these constraints are not met by any combination of possible rotation
+and eligible jigsaw block, it will not be generated, and another
+eligible target jigsaw block will be selected from the template pool
+till a satisfactory candidate is located or the pool is exhausted.
+
+Jigsaw Block option: Name
+
+ID identifying this jigsaw block to other jigsaw blocks' "Target Name"
+options, or `mcl_levelgen:empty' (which if true behavior is undefined
+if any other jigsaw block should generate a template while specifying
+a target name of `mcl_levelgen:empty').  If a template should contain
+multiple jigsaw blocks with identical identifiers, they will be
+selected randomly from the template, subject to selection priority,
+and each will be tested against the criteria described above.
+
+Jigsaw Block option: Target Name
+
+ID of a jigsaw block to attempt to locate and to which to attach
+within the designated target pool.  Only templates host to a jigsaw
+block matching this identifier will generate from this structure; if
+it is `mcl_levelgen:empty' but the target pool is not in fact empty
+behavior is undefined.
+
+Jigsaw Block option: Turns Into
+
+ID of a node by which this jigsaw block will be replaced in generated
+templates.
+
+Jigsaw Block option: Selection Priority
+
+Integer value between 0 and 20 establishing a selection priority in
+ascending order; that is, jigsaw blocks within a template with a
+greater selection priority will be tested for eligibility before those
+of lesser priority during template selection.
+
+Jigsaw Block option: Placement Priority
+
+Integer value between 0 and 20 establishing the priority with which
+the children of templates generated from this jigsaw block will be
+generated; this largely decides which templates' children will be
+permitted to occupy any given position when in conflict.  Template
+children of equal priority will be generated in the same sequence in
+which their parents were generated.
+
+Jigsaw Block Option: Joint Type
+
+One of "Aligned" or "Rollable"; this option only applies to (and
+appears in) jigsaw blocks which are oriented vertically.  If
+"Rollable", the rotations of connected templates will be selected
+randomly, subject to such other criteria as are mentioned in "Target
+Pool".  If "Aligned", the rotations of connected templates will be
+such that the rotations of the target jigsaw blocks and this jigsaw
+block agree; if this combination does not satisfy any of the other
+criteria aforesaid, the target or targets will not generate.
+
+Jigsaw Block Option: Levels
+Jigsaw Block Option: Keep Jigsaws
+Jigsaw Block Option: Generate
+
+These options are not recorded in structure templates and exert no
+influence on generation of jigsaw structures.
+
+Function mcl_levelgen.register_template_pool (ID, TBL)
+
+Register a template pool identified by ID, which, by convention,
+should be prefixed by a mod namespace.  TBL should be a table of the
+form:
+
+{
+	fallback_pool = FALLBACK_POOL,
+	elements = ELEMENTS,
+}
+
+where FALLBACK_POOL is nil or the ID of a template pool whose elements
+may be selected if no member of ELEMENTS is found to be eligible (but
+whose own fallback pool, if defined, is not consulted), and ELEMENTS
+is an array of template elements of the form:
+
+{
+	template = TEMPLATE,
+	projection = "rigid",
+	processors = {},
+	ground_level_delta = GROUND_LEVEL_DELTA or 1,
+	weight = WEIGHT,
+	no_terrain_adaptation = NO_TERRAIN_ADAPTATION,
+	must_complete = MUST_COMPLETE,
+}
+
+where TEMPLATE is the _file name_ of a template that will be loaded
+when structure template pools are initialized in a Lua environment
+where they will be required, the `projection' field must be `rigid' as
+the alternative, `terrain_matching', is still to be implemented,
+PROCESSORS is a list of template processor functions (see TEMPLATE
+PROCESSORS and SCHEMATIC PROCESSORS), GROUND_LEVEL_DELTA is the ground
+offset that will be provided in any structure pieces created from this
+template pool element, WEIGHT is the weight of this element, and
+NO_TERRAIN_ADAPTATION states whether structure pieces created from
+this template piece should be exempt from terrain adaptation, if their
+structures require it.
+
+Alternatively, TEMPLATE may be nil explicitly to halt processing of
+this template pool when selected.
+
+If MUST_COMPLETE, a structure piece generated from this template
+element will be deleted if any of its children not itself labeled
+MUST_COMPLETE (or any of their descendants until the first labeled as
+such) fail to generate for any reason; specify this option to separate
+components of a jigsaw structure comprising multiple templates which
+must generate as a single unit.
+
+A jigsaw structure is defined by providing the function
+`mcl_levelgen.jigsaw_create_start' as the `create_start' function in a
+structure definition in combination with some parameters naming the
+structure pool from which to extract the first template to generate,
+the structure's maximum dimensions, and so forth.
+
+Function: mcl_levelgen.jigsaw_create_start (SELF, LEVEL, TERRAIN, RNG, CX, CZ)
+
+Create a jigsaw structure at CX and CZ, which are chunk coordinates,
+from parameters in the structure definition SELF, and return a
+suitable structure start, or nil if biome placement tests fail.  SELF
+must be a table with the following elements:
+
+{
+	start_pool = START_POOL,
+	max_distance_from_center = MAX_DISTANCE_FROM_CENTER,
+	project_start_to_heightmap = nil or "world_surface_wg" or "motion_blocking_wg",
+	size = SIZE,
+	start_height = function (rng) ... end,
+	start_jigsaw_name = START_JIGSAW_NAME or nil,
+	test_start_position = TEST_START_POSITION,
+}
+
+where START_POOL identifies a template pool from which to select the
+first template to be generated in this jigsaw structure,
+MAX_DISTANCE_FROM_CENTER is a number of blocks from the origin of the
+structure, as defined by CX, CZ, START_HEIGHT, and
+PROJECT_START_TO_HEIGHTMAP, templates extending beyond which will fail
+to generate, PROJECT_START_TO_HEIGHTMAP is nil, or one of the two
+listed heightmaps to whose estimated values (as computed by
+`terrain:get_one_height') to project starting elevations obtained from
+START_HEIGHT, SIZE is an integer defining the maximum depth of, i.e.,
+number of parents permitted to have generated before, any templates
+generated as part of this structure, START_HEIGHT is a function which
+accepts an RNG and must yield the elevation of the structure's origin,
+which will be offset by the said heightmap, if any, and
+START_JIGSAW_NAME is nil, or the identifier of a jigsaw block within
+START_POOL which will be positioned at the origin of the structure.
+
+If PROJECT_START_TO_HEIGHTMAP is defined and the first template
+element selected defines a GROUND_LEVEL_DELTA, the same will be
+subtracted from the origin of the structure.
+
+If no START_JIGSAW_NAME is defined, the origin of the structure will
+serve as the origin of the first template piece to be selected;
+otherwise, the jigsaw identified by this field will be aligned to the
+origin of the structure.  This template will be rotated by a random
+value around a pivot of 0, 0 (i.e., its untransformed northwest
+corner) irrespective of START_JIGSAW_NAME's Joint Type parameter, if
+applicable.
+
+If TEST_START_POSITION is non-nil, the starting position provided to
+`structure_biome_test' will be the origin of the chunk specified at
+CX, CZ.  Otherwise, it will be the position at the center of the
+provided structure.  This option largely useful for reproducing
+manually coded Minecraft structure placement mechanics with jigsaw
+structures.
+
+
+ERSATZ STRUCTURE GENERATION
+
+It is possible for the structure generator to execute independently of
+the biome, terrain, and feature generators, under one of Luanti's
+built-in map generators.  Such a configuration is referred to by many
+variations of the phrase "ersatz level generation" and is attended by
+a number of limitations.  In particular, presets and terrain generator
+tables are replaced by facsimiles which only export functions which
+sample terrain height and biome data.  Structure piece placement
+functions are not afforded access the whole of a level's vertical
+extents, but only the MapChunk in generation, and heightmap data
+available at that stage is abridged to what is visible within a
+section of level 2 nodes around the MapChunk in generation, which is
+generally sufficient to prevent surface-only features from appearing
+at chunk boundaries.  Feature placement is impossible.
+`terrain_generator:get_one_column' is only available in the Overworld,
+and simply reports stone where the the terrain height at the column
+specified is above the position being sampled and air elsewhere.
+Other terrain generator methods which accept IS_SOLID predicates
+restrict the applicability of such predicates to deciding whether
+liquid bodies, or more specifically water bodies, are solid.
+`preset:index_biomes_block' applies a mapping between classic Luanti
+biomes and the biome names utilized by this level generator which does
+not admit of a distinction between river and inland biomes, and may
+inaccurately identify terrain as an Ocean or Deep Ocean.  Surface
+systems are not available, and any terrain which is generated by
+beardification is instead surfaced with a one-block thin layer of the
+biome's top material where the terrain extends above the heightmap.
+
+Because Luanti's built-in carvers have a radius of effect which
+extends one MapBlock beyond the MapChunk in generation, any nodes
+placed by structures near MapChunk boundaries which are not designated
+`is_ground_content = false' (e.g. stone, deepslate, dirt, dirt with
+grass, and the like) are liable to be deleted during carver generation
+in subsequent chunks, and structure pieces which generate assuming the
+presence of certain solid nodes may later be encountered by players
+with those nodes absent.  This is a Luanti bug/misfeature and cannot
+be addressed without substantially complicating the ersatz level
+generator also redundantly to generate structure pieces intersecting
+this one-block margin whenever a chunk is generated.  Configurations
+where the level generator is enabled in earnest are not impacted by
+such issues.
+
+Ersatz structure generation may be detected by testing the field
+`is_ersatz' in supplied terrain generator tables (which is set to true
+in such cases), or the variable `mcl_levelgen.enable_ersatz'.
+
+Variable: mcl_levelgen.enable_ersatz
+
+Set to true when ersatz structure generation is enabled, and is false
+or not defined otherwise.
+
+If these handicaps are acceptable, a level generator script may be
+registered to execute in ersatz generation environments by specifying
+the ERSATZ argument to `mcl_levelgen.register_levelgen_script' (q.v.).
+
+A mapgen script loaded in such an environment must also be loaded in
+the main Lua environment (e.g. with `dofile') to be available to
+commands such as `/locate'.
+
+
+PROGRAMMING CONSIDERATIONS
+
+The level generator is engineered to run efficiently on LuaJIT
+2.1-based Lua installations, and likewise, level generator scripts you
+write should also be optimized for such configurations.  To this end,
+there are certain counterproductive Luanti and Lua programming idioms
+which are best avoided:
+
+  - Creating closures (functions) after initialization.  LuaJIT's
+    trace compiler aborts whenever it encounters a bytecode
+    instruction allocating a function, and in consequence any such
+    allocations, and most adjacent code, cannot be compiled.  The
+    compiler may be able to sidestep the closure allocation and
+    compile the surrounding code, but the optimal practice is to avoid
+    allocating functions altogether.  You may provide parameters to
+    callback functions (e.g., those accepted by table.sort) by
+    defining such functions in advance and in a scope which is visible
+    to their uses, and altering upvalues.
+
+    Some Luanti-provided standard library extensions also allocate
+    closures and are best avoided at run-time, such as `table.copy'.
+
+  - Using the built-in vector APIs.  These APIs allocate new tables,
+    which are liable to induce expensive garbage collection if created
+    frequently enough and in the all-too frequent contexts where the
+    compiler cannot sink these allocations.  Always record the
+    components of positions in separate local variables (but be alert
+    not to introduce an excessive number of local variables with
+    unduly persistent lifetimes).
+
+  - Creating numerous local variables of broad scope and hence
+    pessimistically long lifetimes in a function with complex control
+    flow.  This may prevent LuaJIT from joining traces when a branch
+    is taken sufficiently often that it is compiled as a side trace.
+    In such functions, explicitly limit the scope of local variables
+    with do ... end blocks.
+
+  - Calling Luanti APIs.  Particularly, those which are not defined in
+    Lua.  The trace compiler cannot compile calls to functions defined
+    by C/C++ modules, such as Luanti.
+
+  - Not caching functions in upvalues.  It is seldom necessary to
+    reference a function from a table or the global environment, and
+    they should be cached in upvalues wherever possible, to avoid the
+    overhead of a specialized table lookup, which is measurable in
+    some contexts.
+
+  - Applying modulo, division, or multiplication operations to integer
+    values where bitwise operations would suffice.  On x86_64, LuaJIT
+    does not attempt to detect whether a number value is likely or
+    certain to be an integer, and consequently cannot perform these
+    optimizations automatically, instead producing sub-optimal
+    floating point division, rounding, multiplication, and subtraction
+    operations.
+
+    E.g. when truncating coordinates to the nearest MapBlock/chunk,
+    rather than:
+
+      local chunk_x = x - x % 16
+
+    you are advised to write:
+
+      local chunk_x = band (x, -16)
+
+    having suitably cached `bit.band' in an upvalue beforehand:
+
+      local band = bit.band
+
+    and likewise when deriving a MapBlock/chunk coordinate from a
+    position:
+
+      local cx = arshift (x, 4) -- `bit.arshift'
+
+    The effect of such optimizations is likely to be slightly less
+    pronounced on ARM systems.
+
+    Beware that providing non-integral values to LuaJIT's bitwise
+    operators is prejudicial to performance and yields results which
+    may vary from machine to machine, and that providing +-Inf or NaN,
+    or values which cannot be represented as signed or unsigned 32-bit
+    integers, yields undefined values.  Both scenarios must be
+    avoided.
+
+Determinism in the level generator should be dilligently maintained,
+not least since completely isolated instances of the level generator
+will be invoked in diverse Lua environments in the expectation that
+they will produce identical output; typically it suffices to obtain
+pseudo-random values exclusively from PRNGs supplied by the level
+generator.  It is not advisable to use Luanti's built-in random number
+generators, and any PRNGs created by the programmer should be seeded
+from values produced by a level generator-supplied PRNG, or derived
+from a preset and position according to this idiom:
+
+  local preset = mcl_levelgen.get_dimension ("mcl_levelgen:overworld").preset
+  local base = preset.factory ("your_mod:unique_identifier")
+  local rng = base:fork_positional ():create_reseedable ()
+
+And invoking:
+
+  rng:reseed_positional (X, Y, Z)
+
+with a position (X, Y, Z) prior to retrieving any random values for
+the same position from RNG.
+
+This idiom is suitable for all Lua environments, though most other
+uses of `mcl_levelgen.get_dimension' and preset objects might not
+function correctly or be present elsewhere than in level generator
+environments, not to mention that `mcl_levelgen.get_dimension' and
+preset functions are otherwise not intended for mods in any event.
