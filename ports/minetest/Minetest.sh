@@ -1,5 +1,5 @@
 #!/bin/bash
-# PORTMASTER: luanti.zip, Luanti.sh
+# PORTMASTER: minetest.zip, Minetest.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -19,7 +19,7 @@ source $controlfolder/device_info.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR="/$directory/ports/luanti"
+GAMEDIR="/$directory/ports/minetest"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -36,15 +36,7 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-#[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
-
-if [[ $CFW_NAME == *"ArkOS"* || $CFW_NAME == *"AeUX"* ]]; then
-    export LD_LIBRARY_PATH="$GAMEDIR/libs.ArkOS:$LD_LIBRARY_PATH"
-fi
-
 CUR_TTY=/dev/tty0
-
-#[ "$CFW_NAME" = "AmberELEC" -o "$CFW_NAME" = "muOS" ] && [ -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4" ] && rm -f "$GAMEDIR/libs.$DEVICE_ARCH/libcurl.so.4"
 
 ifconfig lo up
 if [ "$CFW_NAME" = "ROCKNIX" ]; then
