@@ -1,4 +1,5 @@
 #!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -10,87 +11,106 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
+
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-export controlfolder
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/hyperlightdrifter"
 
-# CD and set permissions
+# CD and set logging
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
-$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
-$ESUDO chmod +x "$GAMEDIR/tools/splash"
-$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+# Setup permissions
+$ESUDO chmod +xwr "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +xr "$GAMEDIR/tools/splash"
+
+# Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="Hyper Light Drifter"
-export PATCHER_TIME="13 to 15 minutes"
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/patchscript"
-dos2unix "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
 
 # Check if RAM is greater than 1GB to assign correct patch
-        if [ "$DEVICE_RAM" -gt 1 ]; then
-            # Delete the 1GB patch if RAM is greater than 1GB
-            rm -f "$GAMEDIR/tools/patch/hyperlightdrifter1gb.xdelta"
-            pm_message "Device has more than 1gb ram"
-      	    echo "Removed hyperlightdrifter1gb.xdelta"
-        else
-            # Rename the 1GB patch to the standard patch if RAM is less than or equal to 1GB
-            mv -f "$GAMEDIR/tools/patch/hyperlightdrifter1gb.xdelta" "$GAMEDIR/tools/patch/hyperlightdrifter.xdelta"
-            pm_message "Device has 1gb ram or less"
-	    echo "Renamed hyperlightdrifter1gb.xdelta to hyperlightdrifter.xdelta"
-        fi
+if [ "$DEVICE_RAM" -gt 1 ]; then
+    # Delete the 1GB patch if RAM is greater than 1GB
+    rm -f "$GAMEDIR/tools/patch/hyperlightdrifter1gb.xdelta"
+    echo "Device has more than 1gb ram"
+    echo "Removed hyperlightdrifter1gb.xdelta"
+else
+    # Rename the 1GB patch to the standard patch if RAM is less than or equal to 1GB
+    mv -f "$GAMEDIR/tools/patch/hyperlightdrifter1gb.xdelta" "$GAMEDIR/tools/patch/hyperlightdrifter.xdelta"
+    echo "Device has 1gb ram or less"
+    echo "Renamed hyperlightdrifter1gb.xdelta to hyperlightdrifter.xdelta"
 
-# Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
+    # Set zram swap file for Arkos
+    ZRAM_ENABLED=false
+    if [[ $CFW_NAME == *"ArkOS"* ]]; then
+      TARGET_SIZE=$((300 * 1024 * 1024))  # bytes
+      # Helper: current zram size in bytes (0 if none)
+      get_current_size() {
+        if [ -b /dev/zram0 ]; then
+          $ESUDO zramctl --output NAME,SIZE --noheadings /dev/zram0 2>/dev/null \
+          | awk '{print $2}'
+        else
+          echo 0
+        fi
+      }
+      
+      current_size=$(get_current_size)
+      if [ "$current_size" -ge "$TARGET_SIZE" ] 2>/dev/null; then
+        echo "zram0 swap already >= 300MB ($current_size bytes), nothing to do."
+      else
+        # If it exists but too small, tear it down first
+        if [ "$current_size" -gt 0 ] 2>/dev/null; then
+          echo "zram0 swap too small ($current_size bytes), recreating..."
+          $ESUDO swapoff /dev/zram0 2>/dev/null || true
+          $ESUDO zramctl --reset /dev/zram0 2>/dev/null || true
+        fi
+        
+        echo "Creating zram0 swap at 300MB..."
+        $ESUDO zramctl --find --size "$TARGET_SIZE" || {
+          echo "Failed to create zram device"
+          exit 1
+        }
+        
+        $ESUDO mkswap /dev/zram0 >/dev/null
+        $ESUDO swapon /dev/zram0
+        ZRAM_ENABLED=true
+      fi
+    fi
+fi
+
+# Check if we need to patch the game
+if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")"
+        export PATCHER_TIME="25 to 30 minutes"
+        export controlfolder
+        export $ESUDO
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        pm_message "This port requires the latest version of PortMaster."
+        echo "This port requires the latest version of PortMaster."
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
-
-# Delete the section here between the dash lines to allow the game to run on 1gb ram device with ArkOS
-# -----------------------------------------------------------------------------------------------------------------------------
-# Check for 1gb RAM and ArkOS to display and log warning message
-if [ "$DEVICE_RAM" -le 1 ] && [ "$CFW_NAME" = "ArkOS" ]; then
-    pm_message "This game will crash often on your device!"
-    pm_message "If you wish to continue playing despite this warning..."
-    pm_message "Delete the section of the script within Hyper Light Drifter.sh"
-    echo "This game will crash often on your device!"
-    echo "If you wish to continue playing despite this warning..."
-    echo "Delete the section of the script within Hyper Light Drifter.sh"
-    exit 1
-fi
-# -----------------------------------------------------------------------------------------------------------------------------
-
-# Swap buttons
-"$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
-export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
-export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
+    [ "$CFW_NAME" == "muOS" ] && $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 1
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 8000 & 
 fi
 
-$GPTOKEYB "gmloadernext.armhf" -c ./hyperlightdrifter.gptk &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "game.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-#gmloadernext will use config.json
-./gmloadernext.armhf -c "$GAMEDIR/gmloader.json"
+# Cleanup
 
+# Cleanup: disable zram if we enabled it
+if [ "$ZRAM_ENABLED" = true ]; then
+	$ESUDO swapoff /dev/zram0 2>/dev/null || true
+fi
 pm_finish
