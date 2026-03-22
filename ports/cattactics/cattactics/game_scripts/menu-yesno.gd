@@ -1,5 +1,0 @@
-create_dynamic_menu("yesno")
-get_dynamic_menu("yesno").add_item("Yes", "yes")
-get_dynamic_menu("yesno").add_item("No", "no")
-get_dynamic_menu("yesno").set_position(46, 30)
-show_dynamic_menu("yesno")

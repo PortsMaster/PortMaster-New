@@ -1,1 +1,0 @@
-This font is made by Louis Rigaud and available at https://www.dafont.com/proliferation.font
