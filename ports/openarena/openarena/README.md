@@ -2,16 +2,14 @@
 
 **Known bugs**
 
-* Slow audio when OpenAL is enabled
+* Slow audio when OpenAL is enabled ²
 * Blank screen when joining modded servers ¹
 * Blank screen when changing graphics settings
-* Flickering on player setup in armhf ²
 * Occasional random blank screen when opening the game
 
-¹ It seems, when joining modded servers, the engine moves to a download information screen, but it can't identify the video settings, so it reverts to 640x480. Probably won't cause issues on 640x480 devices, but it does on others. Framebuffer can't resume afterwards.
+¹ It seems, when joining modded servers, the engine moves to a download information screen, but it can't identify the video settings, so it reverts to 640x480. Probably won't cause issues on 640x480 devices, but it does on others.
 
-² Something on GL4ES. Something with compiling options, or needs a patch? Quake 3 port's GL4ES doesn't seems to have the same issue, so it's being used for aarch64.
-
+² Found in R36 Ultra in EmuELEC 4.7
 
 ## Controls
 
