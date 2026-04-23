@@ -41,7 +41,7 @@ chasm_gog_installer=$(ls chasm_*.sh 2>/dev/null | head -n 1)
 if [ -n "$chasm_gog_installer" ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         export ESUDO
-        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_FILE="$gamedir/tools/patchscript"
         export PATCHER_GAME="$(basename "${0%.*}")"
         export PATCHER_TIME="2 to 5 minutes"
         export controlfolder
