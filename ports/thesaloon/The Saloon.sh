@@ -13,39 +13,40 @@ else
 fi
 
 source $controlfolder/control.txt
-# device_info.txt will be included by default
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-export PORT_32BIT="Y"
+# variables
 GAMEDIR="/$directory/ports/thesaloon"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_linux"
-
-# We log the execution of the script into log.txt
+# cd and set log
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd $GAMEDIR
+# ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
-# Prepare files
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-  mv ./gamedata/*.ogg ./assets/
-  echo "Moved .ogg files from ./gamedata to ./assets/"
-  zip -r -0 ./game.apk ./game.apk ./assets/
-  rm -f ./assets/*.ogg
-  echo "Zipped contents to ./game.apk"
+# exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export controlfolder
+
+# prepare game files
+if [ -f ./assets/data.win ]; then
+  # rename data.win file
+  mv assets/data.win assets/game.droid
+  # delete all redundant files
+  rm -f assets/*.{dll,exe,txt}
+  # zip all game files into the game.port
+  zip -r -0 ./game.port ./assets/
+  rm -Rf ./assets/
 fi
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/gmtk2022.exe" ] && rm -f gamedata/gmtk2022.exe
 
-$GPTOKEYB "gmloader" -c ./thesaloon.gptk &
+# assign gptokeyb and load game
+$GPTOKEYB "gmloadernext.aarch64" -c "inputs.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-pm_platform_helper $GAMEDIR/gmloader
-./gmloader game.apk
-
+# cleanup
 pm_finish
+
