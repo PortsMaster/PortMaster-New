@@ -11,8 +11,10 @@ If you like their work, please consider making a donation at [itch.io](https://m
 
 ## Controls
 
+Use the stick to MOVE; A to ROLL.  
+ROLLING rolls your gun; ROLLING reloads your gun.
+
 | Button  | Action |
 | ------- | ------ |
 | L-STICK | Move   |
 | A       | Roll   |
-
