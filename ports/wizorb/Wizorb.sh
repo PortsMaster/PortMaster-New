@@ -21,6 +21,19 @@ get_controls
 GAMEDIR="/$directory/ports/wizorb"
 cd "$GAMEDIR/gamedata"
 
+# Setup log
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Patch game if bin installer is found
+ZIPFILE=$(ls "$GAMEDIR/gamedata/wizorb"*"bin" 2>/dev/null | head -n 1)
+if [ -n "$ZIPFILE" ]; then
+    $controlfolder/7zzs.${DEVICE_ARCH} x "$ZIPFILE" "data/*" -o"$GAMEDIR/gamedata"
+    mv "$GAMEDIR/gamedata/data/"* "$GAMEDIR/gamedata/"
+    rmdir "$GAMEDIR/gamedata/data"
+    rm -f "$ZIPFILE"
+    rm -f "$GAMEDIR/gamedata/place humble linux installer here.txt"
+fi
+
 # Grab text output...
 $ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
@@ -42,7 +55,7 @@ rm -f System*.dll mscorlib.dll FNA.dll Mono.*.dll
 
 # Setup path and other environment variables
 export MONO_PATH="$GAMEDIR/dlls"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib32:/usr/lib32:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib:/usr/lib:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin:$GAMEDIR/libs:$PATH"
 #export MONO_LOG_LEVEL=debug
 
@@ -62,7 +75,7 @@ fi
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "mono" &
-$TASKSET mono Wizorb.exe 2>&1 | tee $GAMEDIR/log.txt
+$TASKSET mono Wizorb.exe
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
