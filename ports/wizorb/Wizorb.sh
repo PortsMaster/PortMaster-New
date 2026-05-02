@@ -21,18 +21,6 @@ get_controls
 GAMEDIR="/$directory/ports/wizorb"
 cd "$GAMEDIR/gamedata"
 
-"$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-# Patch game if bin installer is found
-ZIPFILE=$(ls "$GAMEDIR/gamedata/wizorb"*"bin" 2>/dev/null | head -n 1)
-if [ -n "$ZIPFILE" ]; then
-    $controlfolder/7zzs.${DEVICE_ARCH} x "$ZIPFILE" "data/*" -o"$GAMEDIR/gamedata"
-    mv "$GAMEDIR/gamedata/data/"* "$GAMEDIR/gamedata/"
-    rmdir "$GAMEDIR/gamedata/data"
-    rm -f "$ZIPFILE"
-    rm -f "$GAMEDIR/gamedata/place humble linux installer here.txt"
-fi
-
 # Grab text output...
 $ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
@@ -46,15 +34,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-
-if [ ! -L ~/.local/share/Tribute\ Games/Wizorb ]; then
-  cp ~/.local/share/Tribute\ Games/Wizorb/* "$GAMEDIR/savedata"
-  rm -rf ~/.local/share/Tribute\ Games/Wizorb
-fi
-if [ ! -d ~/.local/share/Tribute\ Games ]; then
-  mkdir ~/.local/share/Tribute\ Games
-fi
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/Tribute\ Games/Wizorb
+bind_directories ~/.local/share/Tribute\ Games/Wizorb "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included
@@ -82,7 +62,7 @@ fi
 $ESUDO chmod 666 /dev/tty1
 $ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "mono" &
-$TASKSET mono Wizorb.exe
+$TASKSET mono Wizorb.exe 2>&1 | tee $GAMEDIR/log.txt
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
