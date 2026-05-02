@@ -23,6 +23,12 @@ cd "$GAMEDIR" || exit 1
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Extract bundled level pack on first run (kept as 7z to keep the repo light).
+if [ ! -d "$GAMEDIR/lev" ] && [ -f "$GAMEDIR/lev.7z" ]; then
+    pm_message "First run: extracting levels ..."
+    "$controlfolder/7zzs.$DEVICE_ARCH" x "$GAMEDIR/lev.7z" -o"$GAMEDIR" -y && rm "$GAMEDIR/lev.7z"
+fi
+
 # Make PortMaster's gamepad mapping available to the launcher binary too,
 # so SDL_GameController recognises the device on every supported CFW.
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
