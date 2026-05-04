@@ -1,6 +1,4 @@
 #!/bin/bash
-# PORTMASTER: elastomania.zip, Elasto Mania.sh
-# Elasto Mania v1.11a - native SDL2 port (elma-miyoo, aarch64)
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -97,8 +95,6 @@ if [ ! -f "$GAMEDIR/elma.res" ] || [ ! -f "$GAMEDIR/lgr/default.lgr" ]; then
   pm_finish
   exit 1
 fi
-
-export HOME="$GAMEDIR"
 
 $ESUDO chmod 666 /dev/uinput 2>/dev/null
 

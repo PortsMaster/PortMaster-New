@@ -33,14 +33,44 @@ Each preset's mapping is shown on the layout screen. Custom is saved to `elastom
 
 In-game editor needs mouse + keyboard. Not recommended on handhelds. USB/Bluetooth mouse may work but is untested.
 
+## BUNDLED LEVELS
+
+This port already ships with **4768 community-curated fan-made levels**, organised into folders for easy navigation:
+
+- **Tutorials/** — original Elma tutorial levels
+- **Reviewed/** — Moposite-rated showcase levels (76–91 pts)
+- **Top10/** — the 10 best-rated levels of every official empack (Pack26 – Pack76)
+- **FullPacks/** — selected complete official empacks spanning 2000-2002
+
+It also ships with **17 matching community LGR graphics packs** (cemetery, style, horror, frotzy, q3arena, trinity, simpsons, carma, across, kraazeh, clown, ugly, sumo, retro, vertical, choco, nightdri) so most levels render with their intended visuals out of the box.
+
+All levels and LGRs are sourced from [moposite.com](https://moposite.com/downloads_levels.php).
+
 ## ADDITIONAL LEVELS
 
-Due to the large fan base the game had and still has, there are lot of fan made levels available online (for example: https://moposite.com/downloads_levels.php). Move these level files into the `Lev` folder.
+Even more fan-made levels are available online (for example at https://moposite.com/downloads_levels.php). Drop additional `.lev` files into the `lev/` folder (sub-folders are supported).
 
-## CREDITS
+## CREDITS & THANKS
 
-elma-miyoo by neri-rnd (SDL2 engine port)
+**Engine port (this build is based on):**
+elma-miyoo by neri-rnd — SDL2 reimplementation of the original engine, originally targeting Miyoo Mini. Without this port, Elasto Mania on PortMaster would not exist.
 https://github.com/neri-rnd/elma-miyoo
 
-elma-classic by Elasto Mania Team (original source release)
+**Original source release:**
+elma-classic by the Elasto Mania Team
 https://github.com/elastomania/elma-classic
+
+**Original game:**
+Elasto Mania (2000) by Balazs Rozsa.
+
+**Thanks:**
+- **tabreturn** — packaging cleanup, `lev.7z` first-run extract trick, AmberELEC testing
+- **NotYerAvgPorter** — RG40XX H / RG34XX SP testing, layout 2 namesake
+- **ArnoldSmith86** — KNULLI testing
+- **manster_** — ArkOS glibc compat report
+- **Dia2809** — PR review (port.json v3, gameinfo, .sh)
+- Testers & devs from the PortMaster Discord
+
+**Bundled level packs and LGR graphics:**
+Curated by the Moposite crew (Csaba, Abula, psy, dz and many others); individual levels and LGRs remain authored by their respective creators.
+https://moposite.com/
