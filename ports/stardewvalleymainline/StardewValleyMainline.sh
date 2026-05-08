@@ -13,14 +13,14 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-source $controlfolder/tasksetter
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-gamedir="/$directory/ports/stardewvalleymainline"
-cd "$gamedir/"
+GAMEDIR="/$directory/ports/stardewvalleymainline"
+gamedir="$GAMEDIR"
+
+cd "$GAMEDIR"
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
@@ -63,13 +63,9 @@ if [ "$launch_mode" = "smapi" ]; then
 fi
 
 export DOTNET_ROOT="$gamedir/dotnet"
-export LD_LIBRARY_PATH="$gamedir/libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export DOTNET_ReadyToRun="${DOTNET_ReadyToRun:-1}"
-export COMPlus_ReadyToRun="${COMPlus_ReadyToRun:-1}"
-export COMPlus_ZapDisable="${COMPlus_ZapDisable:-0}"
-
-# Delete older GL4ES installs.
-rm -f "$gamedir/libs/libGL.so.1" "$gamedir/libs/libEGL.so.1"
+port_arch="${DEVICE_ARCH:-aarch64}"
+export LD_LIBRARY_PATH="$gamedir/libs.${port_arch}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Request libGL from PortMaster.
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
@@ -79,8 +75,8 @@ else
 fi
 
 if [[ "$LIBGL_ES" != "" ]]; then
-  export SDL_VIDEO_GL_DRIVER="${gamedir}/gl4es/libGL.so.1"
-  export SDL_VIDEO_EGL_DRIVER="${gamedir}/gl4es/libEGL.so.1"
+  export SDL_VIDEO_GL_DRIVER="${gamedir}/gl4es.${port_arch}/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="${gamedir}/gl4es.${port_arch}/libEGL.so.1"
 fi
 
 if [ ! -f "$gamedir/gamedata/Stardew Valley.dll" ]; then
@@ -89,12 +85,7 @@ if [ ! -f "$gamedir/gamedata/Stardew Valley.dll" ]; then
   exit 1
 fi
 
-: > "${gamedir}/log.txt"
-
-set -o pipefail
-
-if ! "$DOTNET_ROOT/dotnet" "$gamedir/tools/MainlineGameDataPatcher/MainlineGameDataPatcher.dll" \
-  "${patcher_args[@]}" 2>&1 | tee -a "${gamedir}/log.txt"; then
+if ! "$DOTNET_ROOT/dotnet" "$gamedir/tools/MainlineGameDataPatcher/MainlineGameDataPatcher.dll" "${patcher_args[@]}"; then
   cat "${gamedir}/log.txt" > /dev/tty0
   sleep 5
   exit 1
@@ -111,12 +102,18 @@ fi
 
 cd "$gamedir/gamedata"
 
-$GPTOKEYB "dotnet" &
-$TASKSET "$DOTNET_ROOT/dotnet" "$entry_assembly" 2>&1 | tee -a "${gamedir}/log.txt"
-game_status=${PIPESTATUS[0]}
-gptokeyb_pid="$(pidof gptokeyb 2>/dev/null || true)"
-[ -n "$gptokeyb_pid" ] && $ESUDO kill -9 $gptokeyb_pid
-command -v systemctl >/dev/null 2>&1 && $ESUDO systemctl restart oga_events &
+$GPTOKEYB "$DOTNET_ROOT/dotnet" &
+command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$DOTNET_ROOT/dotnet"
+"$DOTNET_ROOT/dotnet" "$entry_assembly"
+game_status=$?
+
+if command -v pm_finish >/dev/null 2>&1; then
+  pm_finish
+else
+  gptokeyb_pid="$(pidof gptokeyb 2>/dev/null || true)"
+  [ -n "$gptokeyb_pid" ] && $ESUDO kill -9 $gptokeyb_pid
+  command -v systemctl >/dev/null 2>&1 && $ESUDO systemctl restart oga_events &
+fi
 
 printf "\033c" >> /dev/tty1
 
