@@ -1,30 +1,31 @@
 #!/bin/bash
+
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-if   [ -d "/opt/system/Tools/PortMaster/" ]; then
-    controlfolder="/opt/system/Tools/PortMaster"
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
-    controlfolder="/opt/tools/PortMaster"
-elif [ -d "/roms/ports/PortMaster/" ]; then
-    controlfolder="/roms/ports/PortMaster"
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
 else
-    controlfolder="/roms2/ports/PortMaster"
+  controlfolder="/roms/ports/PortMaster"
 fi
 
-source "$controlfolder/control.txt"
+source $controlfolder/control.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/watersort"
-cd "$GAMEDIR" || { echo "ERROR: $GAMEDIR not found" > /dev/tty1; exit 1; }
 
-# Redirect all stdout/stderr to log
-exec > "$GAMEDIR/log.txt" 2>&1
-
-# Audio driver: ALSA on RK3326, default elsewhere
-# (get_controls may already export DEVICE; fall back gracefully)
-case "${DEVICE}" in
-    rk3326) export SDL_AUDIODRIVER=alsa ;;
-esac
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod +x "$GAMEDIR/watersort"
-$ESUDO "$GAMEDIR/watersort"
+
+cd "$GAMEDIR"
+
+$GPTOKEYB "$GAMEDIR/watersort" -c "$GAMEDIR/watersort.gptk" &
+pm_platform_helper "$GAMEDIR/watersort"
+"$GAMEDIR/watersort"
+
+pm_finish
