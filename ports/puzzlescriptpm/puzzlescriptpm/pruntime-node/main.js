@@ -69,6 +69,8 @@ if (process.env.SDL2FB === '1') {
     process.stderr.write('Error: cannot open /dev/fb0\n');
     process.exit(1);
   }
+  // Reset framebuffer pan to page 0 (fixes blank screen on double-buffered fb)
+  try { fs.writeFileSync('/sys/class/graphics/fb0/pan', '0,0'); } catch(e) {}
 }
 
 // open input devices

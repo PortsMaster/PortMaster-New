@@ -24,15 +24,15 @@ CONFDIR="$GAMEDIR/conf/"
 # cd & permissions
 cd "$GAMEDIR"
 
-# extract node binary on first run (a quick task, so no need for pm_message)
+# extract node binary on first run
 if [ ! -f "$GAMEDIR/node" ]; then
-  echo "Extracting node binary ..."
+  pm_message "Extracting node binary ..."
   if "$controlfolder/7zzs.$DEVICE_ARCH" x "$GAMEDIR/node.7z" -o"$GAMEDIR" -y; then
-    echo "Extraction successful."
+    pm_message "Extraction successful."
     chmod +x "$GAMEDIR/node"
     rm -f "$GAMEDIR/node.7z"
   else
-    echo "Extraction failed!"
+    pm_message "Extraction failed!"
     pm_finish
     exit 1
   fi
