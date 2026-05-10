@@ -9,7 +9,7 @@ Thanks to [OpenTTD](https://github.com/OpenTTD/OpenTTD) for this open source ver
 Originally ported by Cebion and Romadu.  OpenTTD has a bug that broke the port with newer versions of SDL2.
 Ported again from scratch with v13.4 by Slayer366.  Commented out a line in the code that caused SDL2 breakage.
 
-NOTE: v14.0 and v14.1 won't work (even on a Raspberry Pi) as the code has undergone several changes which cause the game to crash at launch or fails to even generate a display at all.  It is unknown if newer versions of OpenTTD will address this issue.
+NOTE: v14.0 and v14.1 won't work (not even on a Raspberry Pi) as the code has undergone several changes which cause the game to crash at launch or fails to even generate a display at all.  With assistance from user Zwik, it turns out that v15.x and newer releases will no longer compile on Debian 11 Bullseye or Ubuntu 20.04 which is required to retain compatibilty with ArkOS.  If we were to include both an old version for ArkOS and a newer version for updated CFWs, this would wind up making the download package uncomfortably large.
 
 </br>
 
