@@ -29,16 +29,12 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-
-# Prepare game files
-if [ -f ./assets/data.win ]; then
-	# Rename data.win file
-	mv assets/data.win assets/game.droid
-	# Delete all redundant files
-	rm -f assets/*.{dll,exe,txt}
-	# Zip all game files into the game.port
-	zip -r -0 ./game.port ./assets/
-	rm -Rf ./assets/
+# Unzip the game
+if [ -f ./game.zip ]; then
+	pm_message "Preparing game files, please wait"
+	sleep 2
+	unzip ./game.zip 
+	rm -f ./game.zip
 fi
 
 # Assign configs and load the game
