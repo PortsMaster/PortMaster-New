@@ -26,6 +26,14 @@ GMLOADER_JSON="$GAMEDIR/gmloader.json"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Unzip textures
+if [ -f ./save/textures/textures.zip ]; then
+	pm_message "Preparing game files, please wait"
+	sleep 2
+	unzip ./save/textures/textures.zip 
+	rm -f ./save/textures/textures.zip
+fi
+
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
