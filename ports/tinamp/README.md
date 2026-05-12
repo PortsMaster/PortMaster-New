@@ -91,6 +91,11 @@ Everything of the following is build inside ./build directory:
 ```make portmaster``` (to create a distributable portmaster .zip)
 
 ## Version history
+v00.00.08 (May 2026)  
+
+ - add missing saves directory for bookmarks into portmaster repo
+ - made changes to font caching to make application work with Batocera on a Raspberry Pi (tested with Batocera 43 on model 3B)
+
 v00.00.07 (May 2026)  
 
  - large library (presorting) support: support for a presorted.txt file to increase sorted library loading during application start
