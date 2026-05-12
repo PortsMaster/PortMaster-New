@@ -30,8 +30,8 @@ cd $GAMEDIR
 if [ -f ./save/textures/textures.zip ]; then
 	pm_message "Preparing game files, please wait"
 	sleep 2
-	unzip ./save/textures/textures.zip 
-	rm -f ./save/textures/textures.zip -d ./save/textures/
+	unzip ./save/textures/textures.zip -d ./save/textures/
+	rm -f ./save/textures/textures.zip 
 fi
 
 # Exports
