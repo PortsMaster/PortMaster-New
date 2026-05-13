@@ -29,7 +29,7 @@ On a selected cell press X or Y 8x or press B then X/Y 4x
 |L1|Previous song|
 |R1|Next song|
 |Start|Pause|
-|Select|Exit to menu while paused|
+|Select or L3|Exit to menu while paused|
 
 
 ## Compile
@@ -37,6 +37,7 @@ On a selected cell press X or Y 8x or press B then X/Y 4x
 ```shell
 git clone https://github.com/Mode8fx/SuDokuL.git
 cd SuDokuL/SuDokuLVS2019
+# EDIT src/control.cpp to enable L3 to act as select as well:  	if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK || event.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) {
 mkdir build_linux && cd build_linux
 cmake ../
 make 
