@@ -28,10 +28,6 @@ $ESUDO chmod +x -R $GAMEDIR/*
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
 export controlfolder
-export ESUDO
-export DEVICE_ARCH
-export DISPLAY_WIDTH
-export DISPLAY_HEIGHT
 
 # Config
 mkdir -p "$GAMEDIR/save"
