@@ -13,50 +13,38 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-
+# Variables
 GAMEDIR="/$directory/ports/happyhills"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
-
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Permissions
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
-cd "$GAMEDIR"
 
-# Rename data.win file
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-
-# Check if there are any .ogg files in the ./gamedata directory
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Create the ./assets directory if it doesn't exist
-    mkdir -p ./assets
-
-    # Move all .ogg files from ./gamedata to ./assets
-    mv ./gamedata/*.ogg ./assets/ 2>/dev/null
-    echo "Moved .ogg files from ./gamedata to ./assets/"
-
-    # Zip the contents of ./game.apk including the new audio files
-    zip -r -0 ./game.apk ./assets/
-    echo "Zipped contents to ./game.apk"
-
-    # Remove the assets directory
-    rm -Rf ./assets/
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+	# Apply the patch
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Delete all redundant files
+	rm -f assets/*.{dll,exe,txt,win}
+	# Zip all game files into the happyhills.port
+	zip -r -0 ./happyhills.port ./assets/
+	rm -Rf ./assets/
 fi
 
-$GPTOKEYB "gmloader" -c "happyhills.gptk" &
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "happyhills.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
-
+# Cleanup
 pm_finish
