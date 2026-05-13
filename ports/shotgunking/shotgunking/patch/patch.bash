@@ -73,9 +73,11 @@ if [ ! -f "$VERSION_FILE" ]; then
     exit 1
 fi
 # Stick count is baked into the effective version so that moving the SD
-# card between a 1-stick and 2-stick device triggers a re-patch (which
-# adds or removes the one-stick aim mutation accordingly). Launch script
-# composes the same suffix when deciding whether to invoke the patcher.
+# card between a 0-, 1-, or 2-stick device triggers a re-patch (the
+# ONE-STICK / DPAD-AIM mutations are gated on stick count below). Launch
+# script composes the same suffix when deciding whether to invoke the
+# patcher — if these two formulas drift apart, the launcher sees stamp
+# != want every boot and loops the patcher forever.
 WANT_VERSION="$(cat "$VERSION_FILE").s${ANALOGSTICKS:-x}"
 
 if [ -f "$STAMP" ]; then
@@ -175,8 +177,8 @@ fi
 # only c:lstick:* via a lazy defbtn at the aim site, and read those.
 #
 # Only applied on single-stick devices ($ANALOGSTICKS = 1). On 2-stick
-# devices the right stick already aims natively, and on 0-stick devices
-# the gptokeyb dpad-as-mouse overlay handles aim instead.
+# devices the right stick already aims natively; on 0-stick devices the
+# DPAD-AIM Lua patch below handles aim instead.
 #
 # Idempotent — sentinel "ONE-STICK".
 # ------------------------------------------------------------------
@@ -235,6 +237,102 @@ else
         exit 1
     fi
 fi
+
+# ------------------------------------------------------------------
+# Apply the dpad-aim patch.
+#
+# On dpad-only handhelds (no analog sticks at all) neither rstick aim nor
+# the existing ONE-STICK lstick fold work. Hold L2 + dpad L/R rotates the
+# aim direction like clock hands; releasing L2 returns to normal movement.
+# Dpad U/D do nothing while L2 is held.
+#
+# The bulk of the logic lives in patch/dpad_aim.lua (clean Lua source, no
+# awk-escaping) which we inject as a new entry into the .sgr archive. We
+# then add a one-line require to code.lua and a one-line tick call to
+# code/gamepad.lua. The new file's btn() override globally suppresses
+# unsafe→wild semantics once dpad-aim has been used during the current
+# L2-hold (reset on next L2 press) — stick controllers are unaffected.
+#
+# Only applied on stickless devices ($ANALOGSTICKS = 0). On 2-stick
+# devices the rstick aims natively; on 1-stick devices ONE-STICK above
+# folds the lstick into aim. Applying DPAD-AIM on stick devices would
+# steal L2+dpad from movement and is not wanted.
+#
+# Idempotent — sentinel "DPAD-AIM" in the inserted lines and the manifest
+# entry presence check.
+# ------------------------------------------------------------------
+if [ "$ANALOGSTICKS" != "0" ]; then
+    echo "  skipping dpad-aim mutation (ANALOGSTICKS=${ANALOGSTICKS:-unset})"
+else
+DPAD_AIM_SRC="$PATCHDIR/dpad_aim.lua"
+DPAD_AIM_DST="$TMPDIR/code/dpad_aim.lua"
+MANIFEST="$TMPDIR/.sgr_manifest"
+if [ ! -f "$DPAD_AIM_SRC" ]; then
+    echo "  patch/dpad_aim.lua missing"
+    exit 1
+fi
+cp -f "$DPAD_AIM_SRC" "$DPAD_AIM_DST"
+
+# Append manifest entry if not already present.
+if ! grep -q $'^ENTRY\t0\tcode/dpad_aim.lua$' "$MANIFEST"; then
+    printf 'ENTRY\t0\tcode/dpad_aim.lua\n' >> "$MANIFEST"
+fi
+
+# Insert require line into code.lua right after the existing
+# require("code/gamepad.lua") line. Sentinel: "DPAD-AIM-REQUIRE".
+if grep -q "DPAD-AIM-REQUIRE" "$CODE"; then
+    echo "  code.lua require already present — skipping"
+else
+    tr -d '\r' < "$CODE" | awk '
+    {
+        print
+        if (!done && /^require\("code\/gamepad\.lua"\)$/) {
+            print "require(\"code/dpad_aim.lua\")  -- DPAD-AIM-REQUIRE"
+            done = 1
+        }
+    }
+    END {
+        if (!done) {
+            print "ERROR: require landmark not found in code.lua" > "/dev/stderr"
+            exit 1
+        }
+    }
+    ' > "$CODE.new"
+    mv "$CODE.new" "$CODE"
+    if ! grep -q "DPAD-AIM-REQUIRE" "$CODE"; then
+        echo "  dpad-aim require insert failed"
+        exit 1
+    fi
+fi
+
+# Insert tick call into code/gamepad.lua right after the smoothAim.y lerp.
+# Sentinel: the trailing "-- DPAD-AIM" comment on the inserted line.
+if grep -q "DPAD-AIM" "$GAMEPAD"; then
+    # ONE-STICK doesn't write "DPAD-AIM"; safe to rely on this sentinel.
+    echo "  code/gamepad.lua dpad-aim tick already present — skipping"
+else
+    tr -d '\r' < "$GAMEPAD" | awk '
+    {
+        print
+        if (!done && /^\t\t\t\tsmoothAim\.y = lerp\(smoothAim\.y, yR, 0\.5\)$/) {
+            print "\t\t\t\txL, yL = dpad_aim_tick(xL, yL)  -- DPAD-AIM"
+            done = 1
+        }
+    }
+    END {
+        if (!done) {
+            print "ERROR: smoothAim.y lerp landmark not found in code/gamepad.lua" > "/dev/stderr"
+            exit 1
+        }
+    }
+    ' > "$GAMEPAD.new"
+    mv "$GAMEPAD.new" "$GAMEPAD"
+    if ! grep -q "DPAD-AIM" "$GAMEPAD"; then
+        echo "  dpad-aim tick insert failed"
+        exit 1
+    fi
+fi
+fi  # ANALOGSTICKS == 0
 
 # Pre-seed the lang files into SDL's PrefPath. Sugar's file() stats the
 # bundle path to confirm existence but then always opens from PrefPath —

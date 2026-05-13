@@ -74,14 +74,10 @@ $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 8000 &
 # `shaderless` skips the CRT post-process shader — on Adreno (Snapdragon)
 # + Mesa the uniforms get silently eliminated and the final blit comes out
 # black even though the scene underneath draws fine. Wider-compat default.
-# On stick-equipped devices the game uses xbox360 controller passthrough.
-# On stick-less devices, load a gptk that turns the dpad into a mouse
-# while L2 is held so the player can still aim the shotgun.
-if [ "$ANALOGSTICKS" = "0" ]; then
-    $GPTOKEYB2 "machismo" -c "$GAMEDIR/shotgunking/shotgunking.gptk" &
-else
-    $GPTOKEYB "machismo" &
-fi
+# All stick configurations use xbox360 controller passthrough now. Aim on
+# stickless devices is handled by the DPAD-AIM Lua mutation in patch.bash
+# (hold L2 + dpad L/R rotates aim) — no gptokeyb2 mouse overlay needed.
+$GPTOKEYB "machismo" &
 pm_platform_helper "$GAMEDIR/bin/machismo" > /dev/null
 $ESUDO env \
     SDL_GAMEPADMAPPINGS="$sdl_controllerconfig" \
