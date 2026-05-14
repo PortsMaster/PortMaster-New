@@ -1,4 +1,4 @@
-# PORTMASTER: urguys.zip, U R 4 GUYS.sh
+#!/bin/bash
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
