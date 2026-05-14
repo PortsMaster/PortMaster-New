@@ -59,6 +59,8 @@ fi
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB "box86" xbox360 &
+GPTK_PID=$!
 $GAMEDIR/box86/box86 ./$BINARYNAME
+kill $GPTK_PID 2>/dev/null
 
 pm_finish
