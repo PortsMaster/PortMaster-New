@@ -18,19 +18,21 @@ Commander Keen 4: Secret of the Oracle is shareware and is included and ready to
 - omnispeak/data/keen5/AUDIO.CK5
 
 **--Only one version of Keen 6 (Aliens Ate My Babysitter!) is required--**
+
 **Keen 6 v1.4 EGA**:
 - omnispeak/data/keen6e14/GAMEMAPS.CK6
 - omnispeak/data/keen6e14/EGAGRAPH.CK6
 - omnispeak/data/keen6e14/AUDIO.CK6
 
 **--OR--**
+
 **Keen 6 v1.5 EGA**:
 - omnispeak/data/keen6e15/GAMEMAPS.CK6
 - omnispeak/data/keen6e15/EGAGRAPH.CK6
 - omnispeak/data/keen6e15/AUDIO.CK6
 
 **Keen 7 (The Keys of Krodacia)**:
-Commander Keen 7: The Keys of Krodacia is an unofficial mod / fan-made episode developed by a fan team led by “Ceilick” and the bundled version modded to work with omnispeak is included.
+Commander Keen 7: The Keys of Krodacia is an unofficial mod / fan-made episode developed by a fan team led by Ceilick and the bundled version modded to work with omnispeak is included.
 
 </br>
 
