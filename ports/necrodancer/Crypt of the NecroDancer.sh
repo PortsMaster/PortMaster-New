@@ -158,8 +158,8 @@ cat > "$GAMEDIR/conf/userconfig.json" <<USERCONFIG
 	"wos": {
 		"game": {
 			"graphics": {
-				"textureAtlasSize": 1024,
-				"textureLayerCount": 2
+				"textureAtlasSize": 1728,
+				"textureLayerCount": 1
 			},
 			"window": {
 				"size": [${DISPLAY_WIDTH:-640}, ${DISPLAY_HEIGHT:-480}],
