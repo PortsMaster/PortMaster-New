@@ -51,7 +51,7 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +xwr -R $GAMEDIR/*
 
-# libfreetype.so.6 version conflict fix for some devices running ArkOS and/or dArkOS
+# libfreetype version conflict fix for devices running dArkOS
 if [[ "${CFW_NAME^^}" == *"DARKOS"* ]]; then
     if [ -f "$GAMEDIR/libs/libfreetype.so.6" ]; then
         $ESUDO rm -f "$GAMEDIR/libs/libfreetype.so.6"
