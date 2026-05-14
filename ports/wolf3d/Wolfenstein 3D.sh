@@ -48,8 +48,16 @@ sed -i "s/^FullScreenWidth = [0-9]\+/FullScreenWidth = $DISPLAY_WIDTH/" "$CONFIG
 
 # CD and set permissions
 cd $GAMEDIR
-exec > "$GAMEDIR/log.txt" 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 $ESUDO chmod +xwr -R $GAMEDIR/*
+
+# libfreetype.so.6 version conflict fix for some devices running ArkOS and/or dArkOS
+if [[ "${CFW_NAME^^}" == *"DARKOS"* ]]; then
+    if [ -f "$GAMEDIR/libs/libfreetype.so.6" ]; then
+        $ESUDO rm -f "$GAMEDIR/libs/libfreetype.so.6"
+        sleep 0.5
+    fi
+fi
 
 # Exports
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
