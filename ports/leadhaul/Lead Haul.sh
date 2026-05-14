@@ -26,7 +26,6 @@ $ESUDO chmod +x -R $GAMEDIR/*
 
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export LD_LIBRARY_PATH="$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
 export controlfolder
 
 # Config
