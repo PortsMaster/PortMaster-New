@@ -15,3 +15,14 @@ Ported by kirbylife.
   ```
   Then copy the contents of the downloaded folder into `ports/theimpossiblegame/gamedata/`.
 - The main executable inside the depot is called `ImpossibleGame`. Make sure it is present at `ports/theimpossiblegame/gamedata/ImpossibleGame`.
+
+### Controls
+
+| Button | Action In-Game | Action Menu |
+| ------ | -------------- | ----------- |
+| A      | Jump           | Select      |
+| B      |                | Back        |
+| D-pad  |                | Move        |
+| RB/R1  | Add Flag       |             |
+| LB/L1  | Remove Flag    |             |
+| Start  | Pause/Resume   |             |
