@@ -1,11 +1,9 @@
-# AGENTS.md — SDL2 + ARM64 Porting Notes
+# AGENTS.md -- SDL2 + ARM64 Porting Notes
 
 This document exists specifically to remember:
 - how SDL3 functionality was ported to SDL2
 - how to build ARM64/PortMaster releases
 - packaging/runtime gotchas that break handheld builds
-
-Anything unrelated to SDL2 conversion or ARM64 builds belongs in `ARCHITECTURE.md`.
 
 ---
 
@@ -187,17 +185,6 @@ moonchildfe/
 
 ---
 
-# Presets
-
-Relevant presets:
-
-- `portmaster-debug`
-- `portmaster-release`
-- `linuxarm64-debug`
-- `linuxarm64-release`
-
----
-
 # Movie Compression
 
 Movies can be recompressed significantly for handheld builds and smaller package size.
@@ -240,20 +227,4 @@ done
 ```
 
 No recompression script is shipped in releases, so document this process in README/package notes if distributing source or build instructions.
-
----
-
-# Move To ARCHITECTURE.md
-
-Anything below should live elsewhere:
-
-- engine architecture
-- framework internals
-- heartbeat system
-- entity descriptions
-- rendering pipeline details
-- game logic overview
-- code style conventions
-- directory map
-- desktop-only workflows
 
