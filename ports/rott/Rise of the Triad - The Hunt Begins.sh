@@ -29,8 +29,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
-    pm_message "Preparing Swap File, please wait..."
-    if [[ $CFW_NAME == "dArkOS" ]]; then
+    if [[ $CFW_NAME == *"dArkOS"* ]]; then
         [ -e /dev/zram0 ] && $ESUDO swapoff -a
         [ -e /dev/zram0 ] && $ESUDO zramctl --reset /dev/zram0
         [ -e /dev/zram1 ] && $ESUDO zramctl --reset /dev/zram1
@@ -49,7 +48,6 @@ if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
     fi
     [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
-    pm_message "Preparing Swap File, please wait..."
     [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
     [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
     $ESUDO fallocate -l 384M /media/SHARE/swapfile
