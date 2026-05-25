@@ -1,6 +1,6 @@
 ## Notes
 
-Special thanks to [TERNOX](https://ternoxgames.com/) for making this wonderful game!
+Special thanks to [Ternox Games](https://ternoxgames.com/) for making this wonderful game!
 
 Source: https://ternox.itch.io/bulletbeat
 
