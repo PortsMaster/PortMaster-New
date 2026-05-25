@@ -1,6 +1,8 @@
 ## Notes
 
-Thanks [Shiromofu Factory](https://dungeon-antiqua.com/) for making this game.
+Thanks [Shiromofu Factory](https://dungeon-antiqua.com/) for making this game. You can buy the game on [Steam](https://store.steampowered.com/app/4005090/Dungeon_Antiqua_2/).
+
+Thanks to all who tested this port, and a special thanks to the whole PortMaster community!
 
 ## Language
 By default the game will be in Japanese, but you can change this in the config menu when starting the game.
