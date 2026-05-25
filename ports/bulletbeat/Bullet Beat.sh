@@ -53,7 +53,7 @@ if [ -f "$GAMEDIR/Bullet Beat.exe" ]; then
         wait $pid
         XDELTA_FILE="$TOOLDIR/itch.xdelta"
     else
-        pm_message "Error: MD5 checksum of Saving Princess.exe does not match the expected checksum."
+        pm_message "Error: MD5 checksum of Bullet Beat.exe does not match the expected checksum."
     fi
 fi
 
