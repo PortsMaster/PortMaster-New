@@ -14,7 +14,6 @@ fi
 
 source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
 GAMEDIR="/$directory/ports/openomf"
@@ -22,18 +21,16 @@ GAMEDIR="/$directory/ports/openomf"
 
 cd $GAMEDIR
 
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
-
 bind_directories ~/.local/share/openomfproject $GAMEDIR/conf/openomfproject
+
+$ESUDO chmod +x "$GAMEDIR/openomf.${DEVICE_ARCH}"
 
 export OPENOMF_RESOURCE_DIR="$GAMEDIR/gamedata"
 export OPENOMF_PLUGIN_DIR="$GAMEDIR/plugins"
-export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-$GPTOKEYB "openomf" -c "$GAMEDIR/openomf.gptk" &
-./openomf
+$GPTOKEYB "openomf.${DEVICE_ARCH}" -c "$GAMEDIR/openomf.gptk" &
+pm_platform_helper "$GAMEDIR/openomf.${DEVICE_ARCH}"
+./openomf.${DEVICE_ARCH}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+pm_finish
