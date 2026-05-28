@@ -5,7 +5,7 @@ This port comes with the demo! You can try the game and play up until you're req
 
 To use the full version, buy the game on Steam and copy all the data to `ports/dokimon/assets`. On first run the game will be patched. 
 
-Note about the DLC: The port cannot detect and enable ownership the DLC, so by defailt it will stay disabled. You can play the DLC content only if you enter the DLC area on PC first, and then transfer the save into your handheld.
+Note about the DLC: The port cannot detect and enable ownership of the DLC, so by default it will stay disabled. You can play the DLC content only if you enter the DLC area on PC first, and then transfer the save into your handheld.
 
 https://store.steampowered.com/app/2019300/Dokimon_Quest/
 
