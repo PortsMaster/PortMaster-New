@@ -20,7 +20,14 @@ GAMEDIR="/$directory/ports/pacman"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO chmod +x "$GAMEDIR/pacman.${DEVICE_ARCH}"
+BINARY="pacman.${DEVICE_ARCH}"
+if [[ $DISPLAY_WIDTH -lt "740" ]] && [[ $DISPLAY_HEIGHT == "480" ]]; then
+    if [[ "${DEVICE_CPU^^}" == "RK3326" ]] || [[ "${DEVICE_CPU^^}" == "H700" ]]; then
+      BINARY="pacman_prfhak.aarch64"
+    fi
+fi
+
+$ESUDO chmod +x "$GAMEDIR/$BINARY"
 
 cd $GAMEDIR
 
@@ -28,8 +35,8 @@ export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB "pacman.${DEVICE_ARCH}" -c "$GAMEDIR/pacman.gptk" &
-pm_platform_helper "$GAMEDIR/pacman.${DEVICE_ARCH}"
-./pacman.${DEVICE_ARCH}
+$GPTOKEYB "$BINARY" -c "$GAMEDIR/pacman.gptk" &
+pm_platform_helper "$GAMEDIR/$BINARY"
+./$BINARY
 
 pm_finish
