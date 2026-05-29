@@ -11,36 +11,39 @@ elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
 else
   controlfolder="/roms/ports/PortMaster"
 fi
+
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-export controlfolder
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/roguelight"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
 
 # CD and set permissions
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x $GAMEDIR/tools/patchscript
-$ESUDO chmod +x $GAMEDIR/tools/SDL_swap_gpbuttons.py
-$ESUDO chmod +x $GAMEDIR/tools/xdelta3
-$ESUDO chmod +x $GAMEDIR/tools/splash
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="Roguelight"
-export PATCHER_TIME="1 minute"
+export controlfolder
+export DEVICE_ARCH
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/patchscript"
-dos2unix "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+
+# Create saves directory
+mkdir -p "$GAMEDIR/saves"
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ]; then
+    export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+    export PATCHER_GAME="Roguelight"
+    export PATCHER_TIME="1 minute"
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
@@ -51,21 +54,15 @@ else
     pm_message "Patching process already completed. Skipping."
 fi
 
-# Swap buttons
-"$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
-export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
-export SDL_GAMECONTROLLERCONFIG="`echo "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
-
 # Display loading splash
 if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
+    $ESUDO ./tools/splash "splash.png" 4000 &
 fi
 
-$GPTOKEYB "gmloadernext.armhf" -c ./roguelight.gptk &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c ./roguelight.gptk &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-#gmloadernext will use config.json
-./gmloadernext.armhf -c "$GAMEDIR/gmloader.json"
-
+# Cleanup
 pm_finish
