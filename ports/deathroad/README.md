@@ -7,7 +7,7 @@ https://store.steampowered.com/app/252610/Death_Road_to_Canada/
 
 Installation:
 STEAM:
--Open the Steam Console and use 'download_depot 252610 252612 5968100789458006612'to download the correct version of the game. The Steam Console will tell you where the location to find these files is after the download.
+-Open the Steam Console and use 'download_depot 252610 252612 5968100789458006612' to download the correct version of the game. The Steam Console will tell you where the location to find these files is after the download.
 GOG:
 Using GOG, you'll need to go to your games list and find 'Manage' for this game. Turn off automatic downloads and then download the version that is from 04-02-2026 (or closest to it). Use those game files.
 -Dump them straight into /ports/deathroad/ folder
