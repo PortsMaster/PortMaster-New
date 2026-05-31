@@ -9,7 +9,7 @@ Installation:
 STEAM:
 -Open the Steam Console and use 'download_depot 252610 252612 5968100789458006612'to download the correct version of the game. The Steam Console will tell you where the location to find these files is after the download.
 GOG:
-Using GOG, you'll need to go to your games list and find 'Manage' for this game. Turn off automatic downloads and then download the version that is BEFORE 05-31-2026. Use those game files.
+Using GOG, you'll need to go to your games list and find 'Manage' for this game. Turn off automatic downloads and then download the version that is from 04-02-2026 (or closest to it). Use those game files.
 -Dump them straight into /ports/deathroad/ folder
 -Launch the game via your console
 
