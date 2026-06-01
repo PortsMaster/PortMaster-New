@@ -40,7 +40,11 @@ export BOX86_DLSYM_ERROR=1
 export BOX86_LOG=1
 export BOX86_LD_LIBRARY_PATH="$GAMEDIR/box86/lib:/usr/lib32:./:lib/:lib32/:x86/"
 export BOX86_DYNAREC=1
-export BOX86_FORCE_ES=31
+
+if ! glxinfo | grep -q "OpenGL version string"; then
+  export BOX86_FORCE_ES=31
+fi
+
 export BOX86_PATH="$GAMEDIR/box86"
 export SDL_DYNAMIC_API=libSDL2-2.0.so.0
 export LIBGL_NOBANNER=1
