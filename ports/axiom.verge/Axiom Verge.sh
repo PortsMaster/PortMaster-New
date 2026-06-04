@@ -20,6 +20,8 @@ get_controls
 GAMEDIR="/$directory/ports/axiom-verge"
 cd "$GAMEDIR/gamedata"
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Grab text output...
 $ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
@@ -47,23 +49,18 @@ export PATH="$monodir/bin:$PATH"
 export FNA3D_FORCE_DRIVER=OpenGL
 export FNA3D_OPENGL_FORCE_ES3=1
 
-isitarkos=$(grep "title=" /usr/share/plymouth/themes/text.plymouth)
-if [[ $isitarkos == *"ArkOS"* ]]; then
-  $ESUDO perfnorm
+# Sound fix for some devices running ArkOS and/or dArkOS
+if [[ "${CFW_NAME^^}" == *"ARKOS"* ]]; then
+    if [ ! -f ~/.asoundrc ] && [ -f ~/.asoundrcbak ]; then
+        $ESUDO cp ~/.asoundrcbak ~/.asoundrc
+        $ESUDO chmod ugo+rw ~/.asoundrc
+        sleep 0.5
+    fi
 fi
 
-
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "mono" &
-$TASKSET mono AxiomVerge.exe 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
+$TASKSET mono AxiomVerge.exe
+
 $ESUDO umount "$monodir"
-unset LD_LIBRARY_PATH
 
-# Disable console
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
-
-
+pm_finish
