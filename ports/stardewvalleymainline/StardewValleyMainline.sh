@@ -63,6 +63,20 @@ if [ "$launch_mode" = "smapi" ]; then
 fi
 
 export DOTNET_ROOT="$gamedir/dotnet"
+if [ -f "$gamedir/profiling.enabled" ]; then
+  mkdir -p "$gamedir/logs"
+  rm -f \
+    "$gamedir/logs/perf-latest.csv" \
+    "$gamedir/logs/content-load-latest.csv" \
+    "$gamedir/logs/slow-frame-latest.csv"
+  export SDV_PERF_LOG="$gamedir/logs/perf-latest.csv"
+  export SDV_CONTENT_PROFILE_LOG="$gamedir/logs/content-load-latest.csv"
+  export SDV_SLOW_FRAME_LOG="$gamedir/logs/slow-frame-latest.csv"
+else
+  unset SDV_PERF_LOG
+  unset SDV_CONTENT_PROFILE_LOG
+  unset SDV_SLOW_FRAME_LOG
+fi
 port_arch="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$gamedir/libs.${port_arch}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -106,6 +120,7 @@ $GPTOKEYB "$DOTNET_ROOT/dotnet" &
 command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$DOTNET_ROOT/dotnet"
 "$DOTNET_ROOT/dotnet" "$entry_assembly"
 game_status=$?
+echo "Stardew Valley exited with status ${game_status}."
 
 if command -v pm_finish >/dev/null 2>&1; then
   pm_finish
@@ -114,7 +129,3 @@ else
   [ -n "$gptokeyb_pid" ] && $ESUDO kill -9 $gptokeyb_pid
   command -v systemctl >/dev/null 2>&1 && $ESUDO systemctl restart oga_events &
 fi
-
-printf "\033c" >> /dev/tty1
-
-exit "$game_status"
