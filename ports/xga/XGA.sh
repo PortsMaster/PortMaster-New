@@ -31,8 +31,6 @@ $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Unzip the game
 if [ -f ./game.zip ]; then
-	pm_message "Preparing game files, please wait"
-	sleep 2
 	unzip ./game.zip 
 	rm -f ./game.zip
 fi
