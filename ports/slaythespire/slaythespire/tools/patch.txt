@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+LOGERR="$GAMEDIR/patchlog_error.txt"
+# Create temp directory
+
+TEMP_DIR=$GAMEDIR/tmp
+mkdir $GAMEDIR/tmp
+# trap 'rm -rf "$TEMP_DIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+
+echo "GAMEDIR is set to: $GAMEDIR"
+INPUT_ZIP="$GAMEDIR/desktop-1.0.jar"
+PATCH_FILE="tools/steam.xdelta"
+OUTPUT_ZIP="desktoppatched.jar"
+
+ASSETS_DIR="$TEMP_DIR/assets"
+CLEANED_ZIP="$TEMP_DIR/cleaned.zip"
+PATCHED_ZIP="$TEMP_DIR/patched.zip"
+
+
+echo "Working directory: $TEMP_DIR"
+mkdir -p "$ASSETS_DIR"
+
+# Step 1: Extract asset folders from original zip
+echo "Extracting asset folders..."
+unzip  "$INPUT_ZIP" "font/*" -d "$ASSETS_DIR" && echo "Extracted font folder"
+unzip  "$INPUT_ZIP" "images/*" -d "$ASSETS_DIR" && echo "Extracted images folder"
+unzip  "$INPUT_ZIP" "audio/*" -d "$ASSETS_DIR"  && echo "Extracted audio folder"
+
+PYTHON=$(which python3)
+$PYTHON ./tools/ogg.py $TEMP_DIR/assets/audio -b 12 --resample 11025 --downmix -v
+
+# Step 2: Create cleaned version by copying and removing assets
+echo "Creating cleaned JAR..."
+cp "$INPUT_ZIP" "$CLEANED_ZIP"
+zip  -d "$CLEANED_ZIP" "font/*" "images/*" "audio/*"
+# Step 3: Apply xdelta patch
+echo "Patching JAR"
+$controlfolder/xdelta3 -d -s "$CLEANED_ZIP" "$PATCH_FILE" "$PATCHED_ZIP"
+
+echo "Patch applied successfully"
+echo "Zipping and finishing everything up - This may take a while"
+
+cd "$ASSETS_DIR"
+mv $GAMEDIR/libgdx-controllers-desktop.so .
+zip  -r "$PATCHED_ZIP" font images audio libgdx-controllers-desktop.so
+cd - > /dev/null
+
+# Step 5: Move to final output
+mv "$PATCHED_ZIP" "$GAMEDIR/$OUTPUT_ZIP"
+rm $INPUT_ZIP
+
+echo "Patching done!!!"
