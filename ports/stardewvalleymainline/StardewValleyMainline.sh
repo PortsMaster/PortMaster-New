@@ -35,7 +35,7 @@ smapi_default_mods_dir="$smapi_bundle_dir/default-mods"
 smapi_helper="$gamedir/tools/smapi-common"
 
 if [ ! -f "$smapi_helper" ]; then
-  echo "Missing SMAPI helper script at $smapi_helper." > /dev/tty0
+  pm_message "Missing SMAPI helper script at $smapi_helper."
   sleep 5
   exit 1
 fi
@@ -94,7 +94,17 @@ if [[ "$LIBGL_ES" != "" ]]; then
 fi
 
 if [ ! -f "$gamedir/gamedata/Stardew Valley.dll" ]; then
-  echo "Missing Stardew Valley game files. Copy the Steam mainline install into /ports/stardewvalleymainline/gamedata." > /dev/tty0
+  if [ -f "$gamedir/gamedata/Stardew Valley.exe" ] || [ -f "$gamedir/gamedata/StardewValley.exe" ]; then
+    pm_message "Wrong Stardew Valley files. This port needs the regular Windows Steam version, not the compatibility branch. Switch Steam out of the compatibility beta and copy the game files again."
+  else
+    pm_message "Missing Stardew Valley game files. Copy the regular Windows Steam version into ports/stardewvalleymainline/gamedata."
+  fi
+  sleep 5
+  exit 1
+fi
+
+if [ ! -f "$gamedir/gamedata/Stardew Valley.deps.json" ] || [ ! -f "$gamedir/gamedata/Stardew Valley.runtimeconfig.json" ]; then
+  pm_message "Incomplete Stardew Valley files. This port needs the regular Windows Steam mainline build, not the compatibility branch."
   sleep 5
   exit 1
 fi
