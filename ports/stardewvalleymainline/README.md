@@ -6,6 +6,8 @@ Thanks to the [MonoGame](https://github.com/MonoGame/MonoGame) project for the f
 
 Thanks to JohnnyonFlame for the original Stardew Valley PortMaster port and help with this mainline port.
 
+Mainline port work by Producdevity.
+
 This port requires the Windows Steam version of Stardew Valley. Install the regular mainline Steam build, then copy all files from the Stardew Valley install folder into `ports/stardewvalleymainline/gamedata`.
 
 Make sure Stardew Valley is not opted into the legacy _compatibility_ branch. The port patches the copied game files automatically on launch.
@@ -25,9 +27,12 @@ SMAPI is bundled. Leave `ports/stardewvalleymainline/Mods` empty for vanilla pla
 | Button             | Action                 |
 | ------------------ | ---------------------- |
 | Left Stick / D-Pad | Move / menu navigation |
+| Right Stick        | Move cursor            |
 | A                  | Confirm / interact     |
 | B                  | Cancel / back          |
 | X                  | Use tool               |
 | Y                  | Open menu              |
-| L1 / R1            | Change toolbar item    |
-| Start              | Pause                  |
+| L1 / R1            | Cycle toolbar row      |
+| L2 / R2            | Cycle toolbar item     |
+| Start              | Pause / open menu      |
+| Select             | Open Journal           |
