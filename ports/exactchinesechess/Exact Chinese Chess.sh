@@ -16,7 +16,7 @@ source "$controlfolder/control.txt"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-GAMEDIR=/$directory/ports/exact_chinesechess/
+GAMEDIR=/$directory/ports/exactchinesechess/
 CONFDIR="$GAMEDIR/conf/"
 
 mkdir -p "$CONFDIR"
@@ -31,7 +31,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 BIN="$GAMEDIR/exactcc.${DEVICE_ARCH}"
 
-$GPTOKEYB "exactcc.${DEVICE_ARCH}" -c "$GAMEDIR/exact_chinesechess.gptk" &
+$GPTOKEYB "exactcc.${DEVICE_ARCH}" -c "$GAMEDIR/exactchinesechess.gptk" &
 pm_platform_helper "$BIN"
 "$BIN"
 
