@@ -74,9 +74,9 @@ if (process.env.SDL2FB === '1') {
 }
 
 // open input devices
+const sleepBuf = new Int32Array(new SharedArrayBuffer(4));
 function sleep(ms) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {}
+  Atomics.wait(sleepBuf, 0, 0, Math.max(1, ms));
 }
 
 if (!useStdout) sleep(500);
@@ -546,8 +546,22 @@ global.saveClick = function() {};
 global.runClick = function() {};
 global.rebuildClick = function() {};
 
-// audio: real pcm generation + aplay playback
-const { execFile } = require('child_process');
+// audio: real pcm generation + single persistent aplay instance
+const { spawn } = require('child_process');
+
+let aplayProc = null;
+let aplayRate = 44100;
+
+function getAplay() {
+  if (aplayProc && !aplayProc.killed) return aplayProc;
+  aplayProc = spawn('aplay', [
+    '-f', 'S16_LE', '-r', String(aplayRate), '-c', '1', '-q', '-'
+  ]);
+  aplayProc.on('error', function() { aplayProc = null; });
+  aplayProc.on('exit', function() { aplayProc = null; });
+  aplayProc.stdin.on('error', function() { aplayProc = null; });
+  return aplayProc;
+}
 
 global.AudioContext = function() {
   return {
@@ -574,12 +588,13 @@ global.AudioContext = function() {
               let s = Math.max(-1, Math.min(1, pcm[i]));
               buf.writeInt16LE(Math.round(s * 32767), i * 2);
             }
-            const proc = execFile('aplay', [
-              '-f', 'S16_LE', '-r', String(rate), '-c', '1', '-q'
-            ], function() {});
+            if (rate !== aplayRate) {
+              aplayRate = rate;
+              if (aplayProc) { aplayProc.kill(); aplayProc = null; }
+            }
+            const proc = getAplay();
             if (proc && proc.stdin) {
               proc.stdin.write(buf);
-              proc.stdin.end();
             }
           }
         }
@@ -748,4 +763,5 @@ while (true) {
 }
 
 flushSaves();
+if (aplayProc) { aplayProc.stdin.end(); aplayProc.kill(); }
 process.exit(0);
