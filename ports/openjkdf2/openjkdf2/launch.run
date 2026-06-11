@@ -1,8 +1,26 @@
-# OpenJKDF2 launch logic — sourced from PortMaster wrappers (.sh in ports/ root only).
-# Not a .sh file: EmulationStation only indexes *.sh in the Ports system.
-# Set OPENJKDF2_MOTS=1 in the wrapper to boot Mysteries of the Sith directly.
+#!/bin/bash
+# OpenJKDF2 launch logic (launch.run — hidden from EmulationStation; not *.sh).
+# OPENJKDF2_MOTS=1 in the PortMaster wrapper boots Mysteries of the Sith directly.
+# PortMaster header is required here: exec replaces the wrapper shell (separate environment).
 
-: "${GAMEDIR:?GAMEDIR must be set by the PortMaster wrapper}"
+XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
+
+if [ -d "/opt/system/Tools/PortMaster/" ]; then
+  controlfolder="/opt/system/Tools/PortMaster"
+elif [ -d "/opt/tools/PortMaster/" ]; then
+  controlfolder="/opt/tools/PortMaster"
+elif [ -d "$XDG_DATA_HOME/PortMaster/" ]; then
+  controlfolder="$XDG_DATA_HOME/PortMaster"
+else
+  controlfolder="/roms/ports/PortMaster"
+fi
+
+source "$controlfolder/control.txt"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
+get_controls
+
+GAMEDIR="/$directory/ports/openjkdf2"
 CONFDIR="$GAMEDIR/conf"
 JK1DIR="$GAMEDIR/jk1"
 MOTSDIR="$GAMEDIR/mots"
@@ -46,7 +64,7 @@ if [ -z "${OPENJKDF2_SSAA+x}" ]; then
     if [ "$openjkdf2_is_rocknix" -eq 1 ] && [ "${DISPLAY_HEIGHT:-0}" -gt 720 ] 2>/dev/null; then
         # Mangmi Air X (1080p) and similar: ease VRAM/RAM pressure on 4 GB devices.
         export OPENJKDF2_SSAA=0.5
-    elif [ "${DISPLAY_HEIGHT:-999}" -l 480 ] 2>/dev/null || [ "${DISPLAY_WIDTH:-999}" -l 480 ] 2>/dev/null; then
+    elif [ "${DISPLAY_HEIGHT:-999}" -le 480 ] 2>/dev/null || [ "${DISPLAY_WIDTH:-999}" -le 480 ] 2>/dev/null; then
         # RK3326 / 480x320 and similar: lower internal resolution for Mali 1 GB devices.
         export OPENJKDF2_SSAA=0.5
     else
@@ -67,6 +85,19 @@ fi
 mkdir -p "$CONFDIR/openjkdf2" "$CONFDIR/openjkmots" \
   "$HOME/.local/share/openjkdf2" "$HOME/.local/share/openjkmots"
 export XDG_DATA_HOME="$CONFDIR"
+
+if ! declare -F bind_directories >/dev/null 2>&1; then
+  bind_directories() {
+    local src="$1" dst="$2"
+    mkdir -p "$(dirname "$src")" "$dst"
+    if [ -e "$src" ] && [ ! -L "$src" ]; then
+      return 0
+    fi
+    rm -f "$src" 2>/dev/null
+    ln -sf "$dst" "$src" 2>/dev/null || true
+  }
+fi
+
 bind_directories "$HOME/.local/share/openjkdf2" "$CONFDIR/openjkdf2"
 bind_directories "$HOME/.local/share/openjkmots" "$CONFDIR/openjkmots"
 
@@ -588,9 +619,9 @@ openjkdf2_ignore_handheld_if_external
 
 $ESUDO chmod +x "$GAMEDIR/openjkdf2.${DEVICE_ARCH}"
 
-# gptokeyb without -c: Select+Start quit only; game controls stay native SDL
+# gptokeyb: Select+Start quit (-k). openjkdf2.gptk unmaps defaults so SDL keeps native gamepad.
 if [ -n "${GPTOKEYB:-}" ] && [ "${OPENJKDF2_GPTOKEYB:-1}" != "0" ]; then
-    $GPTOKEYB "openjkdf2.${DEVICE_ARCH}" &
+    $GPTOKEYB "openjkdf2.${DEVICE_ARCH}" -c "$GAMEDIR/openjkdf2.gptk" -k "openjkdf2.${DEVICE_ARCH}" &
 else
     echo "gptokeyb: skipped (OPENJKDF2_GPTOKEYB=${OPENJKDF2_GPTOKEYB:-0})"
 fi
@@ -616,4 +647,6 @@ if [ -f "$GAMEDIR/startup.log" ]; then
     cat "$GAMEDIR/startup.log"
 fi
 
-pm_finish
+if declare -F pm_finish >/dev/null 2>&1; then
+  pm_finish
+fi

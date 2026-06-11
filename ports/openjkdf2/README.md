@@ -4,7 +4,7 @@ Star Wars Jedi Knight: Dark Forces II (1997) by **LucasArts**. This port runs th
 
 You must own the game and copy the original files from **GOG** or **Steam** into `openjkdf2/jk1/`. Optional expansion **Mysteries of the Sith** goes in `openjkdf2/mots/`. Launch it via the optional **Mysteries of the Sith** PortMaster entry, or switch from the in-game **Expansions & Mods** menu.
 
-Launch logic lives in `ports/.openjkdf2.launch.inc` (not a `.sh` — EmulationStation only lists `*.sh` in Ports). The two PortMaster wrappers set `OPENJKDF2_MOTS` and `source` that file.
+Launch logic lives in `openjkdf2/launch.run` (not `*.sh` — hidden from EmulationStation). Each PortMaster wrapper sets `OPENJKDF2_MOTS` and `exec`s `launch.run`, which includes its own PortMaster header (`control.txt`, `get_controls`, `bind_directories`).
 
 Saves and settings are stored under `openjkdf2/conf/`.
 
@@ -34,7 +34,7 @@ Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent
 
 If the game fails to start, check `openjkdf2/log.txt` on the device SD card.
 
-If old launcher entries still appear in EmulationStation after updating, delete any of these on the SD card and restart ES (do not scrape the Ports folder): `ports/openjkdf2/launcher`, `ports/openjkdf2/.launch.sh`, `ports/openjkdf2/launch.sh`.
+If old launcher entries still appear in EmulationStation after updating, delete stray scripts on the SD card and restart ES (do not scrape the Ports folder): `ports/openjkdf2/launcher`, `ports/.openjkdf2.launch.inc`, `ports/openjkdf2/.launch.sh`.
 
 ## Controls (handheld)
 
@@ -51,7 +51,7 @@ If old launcher entries still appear in EmulationStation after updating, delete 
 | Hold A + stick | Inventory selection |
 | Start / Select | Pause menu (save, load, setup) |
 
-Select+Start quits the port (PortMaster standard).
+Select+Start quits the port (gptokeyb with `openjkdf2.gptk`, which leaves gamepad input to native SDL). Set `OPENJKDF2_GPTOKEYB=0` only if you do not need Select+Start quit.
 
 ## Build (porters)
 

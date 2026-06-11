@@ -23,7 +23,5 @@ source $controlfolder/control.txt
 
 get_controls
 
-PORTDIR="$(cd "$(dirname "$0")" && pwd)"
-GAMEDIR="$PORTDIR/openjkdf2"
-export GAMEDIR
-. "$PORTDIR/.openjkdf2.launch.inc"
+GAMEDIR="/$directory/ports/openjkdf2"
+exec bash "$GAMEDIR/launch.run"
