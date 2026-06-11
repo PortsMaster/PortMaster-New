@@ -10,7 +10,7 @@ Saves and settings are stored under `openjkdf2/conf/`.
 
 ## Supported firmware (PortMaster)
 
-Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent). Tested on **knulli**; should also work on other PortMaster CFWs that meet those requirements.
+Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent).
 
 | CFW | Ports folder (typical) | Status |
 |-----|------------------------|--------|
