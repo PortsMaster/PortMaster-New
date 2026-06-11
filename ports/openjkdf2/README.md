@@ -21,9 +21,9 @@ Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent
 | [Batocera](https://batocera.org/) | varies by device | Expected |
 | AmberELEC / JELOS / UnofficialOS | `/roms/ports/` | Expected (aarch64 devices) |
 
-**Not supported:** 32-bit **armhf** devices (RG351P/M/V, R36S, ODROID-GO Advance/Super, etc.) — this port ships `openjkdf2.aarch64` only.
+**Not supported:** 32-bit **armhf** devices, this port ships `openjkdf2.aarch64` only.
 
-**Recommended hardware:** Anbernic H700 family (RG35XX Plus/H/SP, RG34XX, RG40XX) or similar aarch64 handheld with 2 GB RAM and Mali GPU.
+**Recommended hardware:** Anbernic H700 family (RG35XX Plus/H/SP, RG34XX, RG40XX) or similar aarch64 handheld with 1 or 2 GB RAM and Mali GPU.
 
 ## Installation
 
