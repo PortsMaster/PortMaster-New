@@ -1,0 +1,90 @@
+#!/bin/bash
+
+sdv_smapi_is_default_mod_id() {
+  case "${1:-}" in
+    SMAPI.ConsoleCommands|SMAPI.SaveBackup)
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+sdv_smapi_manifest_unique_id() {
+  local manifest_path="$1"
+  [ -f "$manifest_path" ] || return 1
+
+  sed -n 's/.*"UniqueId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$manifest_path" | head -n 1
+}
+
+sdv_smapi_sync_default_mods() {
+  local source_dir="$1"
+  local target_dir="$2"
+  local source_mod
+  local target_mod
+
+  mkdir -p "$target_dir"
+  [ -d "$source_dir" ] || return 0
+
+  for source_mod in "$source_dir"/*; do
+    [ -d "$source_mod" ] || continue
+    target_mod="$target_dir/$(basename "$source_mod")"
+    mkdir -p "$target_mod"
+    cp -R "$source_mod/." "$target_mod/"
+  done
+}
+
+sdv_smapi_has_user_mods() {
+  local mods_dir="$1"
+  local entry
+  local entry_name
+  local manifest_path
+  local unique_id
+
+  [ -d "$mods_dir" ] || return 1
+
+  for entry in "$mods_dir"/*; do
+    [ -e "$entry" ] || continue
+
+    entry_name="$(basename "$entry")"
+    case "$entry_name" in
+      .gitkeep|.*)
+        continue
+        ;;
+      ConsoleCommands|SaveBackup)
+        if [ -d "$entry" ]; then
+          continue
+        fi
+        ;;
+    esac
+
+    if [ -d "$entry" ]; then
+      manifest_path="$entry/manifest.json"
+      if [ -f "$manifest_path" ]; then
+        unique_id="$(sdv_smapi_manifest_unique_id "$manifest_path" || true)"
+        if sdv_smapi_is_default_mod_id "$unique_id"; then
+          continue
+        fi
+      fi
+
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+sdv_smapi_determine_mode() {
+  local mods_dir="$1"
+
+  if [ "${SDV_FORCE_SMAPI:-0}" = "1" ]; then
+    echo "smapi"
+    return 0
+  fi
+
+  if sdv_smapi_has_user_mods "$mods_dir"; then
+    echo "smapi"
+  else
+    echo "vanilla"
+  fi
+}
