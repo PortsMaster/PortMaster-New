@@ -1,8 +1,10 @@
 #!/bin/bash
 
 export OPENJKDF2_MOTS=1
+
 export OPENJKDF2_HANDHELD=1
 export OPENJKDF2_CHEATS_MENU=1
+export OPENJKDF2_HUD_SCALE=2.0
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
