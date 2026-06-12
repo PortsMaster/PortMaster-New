@@ -46,7 +46,7 @@ if [ -z "${OPENJKDF2_SSAA+x}" ]; then
   if [ "${CFW_NAME^^}" = "ROCKNIX" ] && [ "$DISPLAY_HEIGHT" -gt 720 ]; then
     export OPENJKDF2_SSAA=0.5
   elif [ "$DISPLAY_HEIGHT" -gt 480 ] || [ "$DISPLAY_WIDTH" -gt 640 ]; then
-    export OPENJKDF2_SSAA=0.75
+    export OPENJKDF2_SSAA=1.0
   else
     export OPENJKDF2_SSAA=0.8
   fi
