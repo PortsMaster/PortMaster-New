@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export OPENJKDF2_MOTS=0
+export OPENJKDF2_HANDHELD=1
 export OPENJKDF2_HUD_SCALE=2.0
 export OPENJKDF2_CHEATS_MENU=1
 
