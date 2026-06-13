@@ -77,19 +77,113 @@ openjkdf2_prepare_jk1() {
   fi
 }
 
+openjkdf2_ensure_goo_or_gob() {
+  local root="$1" relpath_no_ext="$2" goo gob dir base src
+  goo="${relpath_no_ext}.goo"
+  gob="${relpath_no_ext}.gob"
+  dir="$root/$(dirname "$relpath_no_ext")"
+  base="$(basename "$relpath_no_ext")"
+  [ -e "$root/$goo" ] && return 0
+  openjkdf2_ensure_asset "$root" "$goo" && return 0
+  src=$(openjkdf2_find_insensitive "$dir" "$base.gob") || return 1
+  mv "$src" "$root/$goo"
+}
+
+openjkdf2_mots_cd_ok() {
+  local cd magic
+  cd=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT/resource" "jk_.cd") || return 1
+  magic=$(od -An -tx4 -N4 "$cd" 2>/dev/null | tr -d ' \n')
+  # MOTS jk_.cd magic (od -tx4 on LE: 0x3B426929; JKDF2 is 0xC4329269)
+  [ "$magic" = "3b426929" ]
+}
+
+# Min sizes from a working Steam MOTS install (Jun 2026).
+openjkdf2_mots_file_ok() {
+  local relpath="$1" min_bytes="$2"
+  local dir base found size
+  dir="$OPENJKMOTS_ROOT/$(dirname "$relpath")"
+  base="$(basename "$relpath")"
+  found=$(openjkdf2_find_insensitive "$dir" "$base") || return 1
+  size=$(stat -c%s "$found" 2>/dev/null) || return 1
+  [ "$size" -ge "$min_bytes" ]
+}
+
+openjkdf2_mots_music_ok() {
+  local dir count
+  dir=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" "MUSIC") || return 1
+  [ -d "$dir" ] || return 1
+  count=$(find "$dir" -maxdepth 1 -type f -iname '*.ogg' 2>/dev/null | wc -l)
+  [ "$count" -ge 10 ]
+}
+
+openjkdf2_mots_report_missing() {
+  local msg="$1"
+  echo "OpenJKDF2: MOTS — $msg" >&2
+  openjkdf2_mots_errors+=("$msg")
+}
+
 openjkdf2_prepare_mots_launch() {
-  local req missing=0
-  [ "${OPENJKDF2_MOTS:-0}" = "1" ] || return 0
+  local missing=0 warn=0 strict=0
+  openjkdf2_mots_errors=()
+  [ -d "$OPENJKMOTS_ROOT" ] || return 0
+  [ "${OPENJKDF2_MOTS:-0}" = "1" ] && strict=1
+  [ -d "$OPENJKMOTS_ROOT/episode" ] || [ -d "$OPENJKMOTS_ROOT/resource" ] || \
+    [ -d "$OPENJKMOTS_ROOT/Episode" ] || [ -d "$OPENJKMOTS_ROOT/Resource" ] || return 0
+
   openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" episode || true
   openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" resource || true
-  for req in episode/JKM_KFY.goo episode/JKM_MP.goo episode/JKM_SABER.goo episode/JKM.goo \
-             resource/Jkmres.goo resource/JKMsndLO.goo resource/jk_.cd; do
-    openjkdf2_ensure_asset "$OPENJKMOTS_ROOT" "$req" || true
-    [ -e "$OPENJKMOTS_ROOT/$req" ] || missing=1
+  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" MUSIC || true
+  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT/resource" video || true
+
+  for req in episode/JKM_KFY episode/JKM_MP episode/JKM_SABER episode/JKM \
+             resource/Jkmres resource/JKMsndLO; do
+    openjkdf2_ensure_goo_or_gob "$OPENJKMOTS_ROOT" "$req" || missing=1
   done
+  openjkdf2_ensure_asset "$OPENJKMOTS_ROOT" "resource/jk_.cd" || true
+
+  openjkdf2_mots_file_ok "episode/JKM.goo" 30000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM.goo (need ~36 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "episode/JKM_KFY.goo" 5000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_KFY.goo (need ~7 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "episode/JKM_MP.goo" 12000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_MP.goo (need ~15 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "episode/JKM_SABER.goo" 2000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_SABER.goo (need ~2.5 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "resource/Jkmres.goo" 70000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: resource/Jkmres.goo (need ~85 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "resource/JKMsndLO.goo" 40000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: resource/JKMsndLO.goo (need ~46 MB)"; missing=1; }
+  openjkdf2_mots_file_ok "resource/jk_.cd" 4 \
+    || { openjkdf2_mots_report_missing "missing: resource/jk_.cd"; missing=1; }
+
+  if ! openjkdf2_mots_cd_ok; then
+    openjkdf2_mots_report_missing "resource/jk_.cd is not a MOTS key file (copy from MOTS, not JKDF2)"
+    missing=1
+  fi
+
+  openjkdf2_mots_file_ok "resource/video/JKMINTRO.SAN" 10000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: resource/video/JKMINTRO.SAN"; missing=1; }
+
+  if ! openjkdf2_mots_music_ok; then
+    openjkdf2_mots_report_missing "MUSIC/ needs at least 10 .ogg tracks (copy the whole MUSIC folder)"
+    missing=1
+  fi
+
+  if [ -d "$OPENJKMOTS_ROOT/player" ] && ! openjkdf2_dir_empty "$OPENJKMOTS_ROOT/player"; then
+    : # GOG installs may include player/; Steam does not — both are fine
+  fi
+
   if [ "$missing" -eq 1 ]; then
-    pm_message "MOTS launch needs .goo files in mots/episode/ and mots/resource/."
-    sleep 5
+    warn=1
+  fi
+  if [ "$warn" -eq 1 ]; then
+    echo "OpenJKDF2: MOTS data check failed. Copy episode/, resource/ (incl. video/), and MUSIC/ from Steam or GOG." >&2
+  fi
+  if [ "$missing" -eq 1 ] && [ "$strict" -eq 1 ]; then
+    local detail="${openjkdf2_mots_errors[0]}"
+    [ -n "$detail" ] || detail="see log.txt"
+    pm_message "MOTS files incomplete: $detail"
+    sleep 6
     exit 1
   fi
 }
