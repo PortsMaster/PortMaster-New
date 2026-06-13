@@ -54,11 +54,13 @@ if [ -z "${OPENJKDF2_SSAA+x}" ]; then
 fi
 
 . "$GAMEDIR/helpers.inc"
+openjkdf2_log_launch
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 openjkdf2_ignore_handheld_if_external
+openjkdf2_ensure_swap
 
 $ESUDO chmod +x "$GAMEDIR/openjkdf2.${DEVICE_ARCH}"
 $GPTOKEYB "openjkdf2.${DEVICE_ARCH}" -c "./openjkdf2.gptk" &
@@ -66,4 +68,5 @@ pm_platform_helper "$GAMEDIR/openjkdf2.${DEVICE_ARCH}"
 
 ./openjkdf2.${DEVICE_ARCH}
 
+openjkdf2_swap_cleanup
 pm_finish

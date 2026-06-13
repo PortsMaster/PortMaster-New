@@ -38,28 +38,14 @@ openjkdf2_lowercase_tree() {
 openjkdf2_fixup_dir_case() {
   local base="$1" want="$2" entry name
   [ -d "$base" ] || return 1
-  if [ -d "$base/$want" ] && ! openjkdf2_dir_empty "$base/$want"; then
-    for entry in "$base"/*; do
-      [ -d "$entry" ] || continue
-      name=$(basename "$entry")
-      [ "$name" = "$want" ] && return 0
-      [ "${name,,}" = "$want" ] || continue
-      openjkdf2_mv_casefix "$entry" "$base/$want" && return 0
-    done
+  openjkdf2_fs_case_insensitive "$base" && return 0
+  if openjkdf2_find_insensitive "$base" "$want" >/dev/null; then
     return 0
-  fi
-  if [ -d "$base/$want" ] && openjkdf2_dir_empty "$base/$want"; then
-    for entry in "$base"/*; do
-      [ -d "$entry" ] || continue
-      name=$(basename "$entry")
-      [ "$name" = "$want" ] || [ "${name,,}" != "$want" ] && continue
-      openjkdf2_dir_empty "$entry" || { rm -rf "$base/$want"; openjkdf2_mv_casefix "$entry" "$base/$want"; return 0; }
-    done
   fi
   for entry in "$base"/*; do
     [ -d "$entry" ] || continue
     name=$(basename "$entry")
-    [ "${name,,}" = "$want" ] || continue
+    [ "${name,,}" = "${want,,}" ] || continue
     openjkdf2_mv_casefix "$entry" "$base/$want"
     return 0
   done
@@ -80,45 +66,213 @@ openjkdf2_find_insensitive() {
   return 1
 }
 
+# exFAT/vfat: case-only paths look identical to the kernel — bulk rename breaks layouts.
+openjkdf2_fs_case_insensitive() {
+  local dir="${1:-.}" tag hi lo
+  mkdir -p "$dir" 2>/dev/null || return 1
+  tag="openjkdf2_case_$$"
+  hi=".${tag}_Hi"
+  lo=".${tag}_lo"
+  rm -f "$dir/$hi" "$dir/$lo" 2>/dev/null
+  touch "$dir/$hi" 2>/dev/null || return 1
+  if [ -f "$dir/$lo" ]; then
+    rm -f "$dir/$hi" "$dir/$lo" 2>/dev/null
+    return 0
+  fi
+  rm -f "$dir/$hi" 2>/dev/null
+  return 1
+}
+
+openjkdf2_normalize_tree() {
+  local root="$1"
+  [ -d "$root" ] || return 0
+  if openjkdf2_fs_case_insensitive "$root"; then
+    echo "OpenJKDF2: case-insensitive FS at $root — no renames"
+    return 0
+  fi
+  openjkdf2_fixup_dir_case "$root" episode || true
+  openjkdf2_fixup_dir_case "$root" resource || true
+}
+
+openjkdf2_normalize_mots_tree() {
+  local root="$1"
+  [ -d "$root" ] || return 0
+  if openjkdf2_fs_case_insensitive "$root"; then
+    echo "OpenJKDF2: case-insensitive FS at $root — no renames (mots)"
+    return 0
+  fi
+  openjkdf2_fixup_dir_case "$root" episode || true
+  openjkdf2_fixup_dir_case "$root" resource || true
+  openjkdf2_fixup_dir_case "$root" MUSIC || true
+}
+
 openjkdf2_ensure_asset() {
-  local root="$1" relpath="$2" dir base src dest
-  dest="$root/$relpath"
-  dir="$root/$(dirname "$relpath")"
-  base=$(basename "$relpath")
+  local root="$1" relpath="$2" dir base src dest parent
+  parent="$(dirname "$relpath")"
+  base="$(basename "$relpath")"
+  dir=$(openjkdf2_find_insensitive "$root" "$parent") || dir="$root/$parent"
+  dest="$dir/$base"
   src=$(openjkdf2_find_insensitive "$dir" "$base") || return 1
   [ "$(basename "$src")" = "$base" ] && return 0
+  if openjkdf2_fs_case_insensitive "$dir"; then
+    return 0
+  fi
   openjkdf2_mv_casefix "$src" "$dest"
 }
 
+openjkdf2_find_recursive() {
+  local root="$1" name="$2" found
+  [ -d "$root" ] || return 1
+  found=$(find "$root" -maxdepth 5 -iname "$name" -print -quit 2>/dev/null)
+  [ -n "$found" ] || return 1
+  echo "$found"
+}
+
+openjkdf2_resolve_subdir() {
+  local root="$1" subdir="$2" part dir="$root"
+  local IFS='/'
+  for part in $subdir; do
+    dir=$(openjkdf2_find_insensitive "$dir" "$part") || dir="$dir/$part"
+  done
+  echo "$dir"
+}
+
+openjkdf2_relocate_if_found() {
+  local root="$1" subdir="$2" filename="$3"
+  local dest_dir found found_dir
+  dest_dir=$(openjkdf2_resolve_subdir "$root" "$subdir")
+  mkdir -p "$dest_dir" 2>/dev/null || return 1
+  if openjkdf2_find_insensitive "$dest_dir" "$filename" >/dev/null; then
+    return 0
+  fi
+  found=$(openjkdf2_find_recursive "$root" "$filename") || return 1
+  [ -n "$found" ] || return 1
+  found_dir=$(dirname "$found")
+  if [ "${found_dir,,}" = "${dest_dir,,}" ]; then
+    return 0
+  fi
+  echo "OpenJKDF2: moving misplaced $filename from $found_dir to $dest_dir"
+  openjkdf2_mv "$found" "$dest_dir/" || return 1
+  return 0
+}
+
+openjkdf2_recover_jk1_layout() {
+  local f
+  mkdir -p "$OPENJKDF2_ROOT/episode" "$OPENJKDF2_ROOT/resource" 2>/dev/null || true
+  openjkdf2_normalize_tree "$OPENJKDF2_ROOT"
+  for f in JK1.gob JK1CTF.gob JK1MP.gob; do
+    openjkdf2_relocate_if_found "$OPENJKDF2_ROOT" episode "$f" || true
+  done
+  for f in Res1hi.gob Res2.gob jk_.cd; do
+    openjkdf2_relocate_if_found "$OPENJKDF2_ROOT" resource "$f" || true
+  done
+}
+
+openjkdf2_find_goo_or_gob() {
+  local root="$1" relpath_no_ext="$2" base found
+  base="$(basename "$relpath_no_ext")"
+  found=$(openjkdf2_find_recursive "$root" "${base}.goo") || \
+    found=$(openjkdf2_find_recursive "$root" "${base}.gob") || return 1
+  [ -n "$found" ] || return 1
+  echo "$found"
+}
+
+openjkdf2_relocate_goo_or_gob() {
+  local root="$1" subdir="$2" base="$3"
+  openjkdf2_relocate_if_found "$root" "$subdir" "${base}.goo" || true
+  openjkdf2_relocate_if_found "$root" "$subdir" "${base}.gob" || true
+}
+
+openjkdf2_recover_mots_layout() {
+  local f found
+  mkdir -p "$OPENJKMOTS_ROOT/episode" "$OPENJKMOTS_ROOT/resource" 2>/dev/null || true
+  openjkdf2_normalize_mots_tree "$OPENJKMOTS_ROOT"
+  for f in JKM JKM_KFY JKM_MP JKM_SABER; do
+    openjkdf2_relocate_goo_or_gob "$OPENJKMOTS_ROOT" episode "$f"
+  done
+  for f in Jkmres JKMsndLO; do
+    openjkdf2_relocate_goo_or_gob "$OPENJKMOTS_ROOT" resource "$f"
+  done
+  openjkdf2_relocate_if_found "$OPENJKMOTS_ROOT" resource "jk_.cd" || true
+  found=$(openjkdf2_find_recursive "$OPENJKMOTS_ROOT" "JKMINTRO.SAN") || found=""
+  if [ -n "$found" ]; then
+    openjkdf2_relocate_if_found "$OPENJKMOTS_ROOT" "resource/video" "JKMINTRO.SAN" || true
+  fi
+  if ! openjkdf2_fs_case_insensitive "$OPENJKMOTS_ROOT"; then
+    for f in episode/JKM episode/JKM_KFY episode/JKM_MP episode/JKM_SABER \
+      resource/Jkmres resource/JKMsndLO; do
+      openjkdf2_ensure_goo_or_gob "$OPENJKMOTS_ROOT" "$f" || true
+    done
+  fi
+}
+
+openjkdf2_has_subdir() {
+  openjkdf2_find_insensitive "$1" "$2" >/dev/null
+}
+
+openjkdf2_jk1_has_asset() {
+  local subdir="$1" filename="$2" dir
+  dir=$(openjkdf2_find_insensitive "$OPENJKDF2_ROOT" "$subdir") || return 1
+  openjkdf2_find_insensitive "$dir" "$filename" >/dev/null && return 0
+  openjkdf2_find_recursive "$OPENJKDF2_ROOT" "$filename" >/dev/null
+}
+
+openjkdf2_has_jk1_layout() {
+  openjkdf2_has_subdir "$OPENJKDF2_ROOT" resource
+}
+
+openjkdf2_jk1_assets_complete() {
+  local missing=0 f
+  for f in JK1.gob JK1CTF.gob JK1MP.gob; do
+    openjkdf2_jk1_has_asset episode "$f" || missing=1
+  done
+  for f in Res1hi.gob Res2.gob jk_.cd; do
+    openjkdf2_jk1_has_asset resource "$f" || missing=1
+  done
+  [ "$missing" -eq 0 ]
+}
+
 openjkdf2_prepare_jk1() {
-  local req missing=0
+  local strict=1 epdir resdir f hint
+
   mkdir -p "$OPENJKDF2_ROOT" "$OPENJKMOTS_ROOT" "$GAMEDIR/expansions" "$GAMEDIR/mods"
-  [ -d "$OPENJKDF2_ROOT/episode" ] || [ -d "$OPENJKDF2_ROOT/resource" ] || \
-    [ -d "$OPENJKDF2_ROOT/Episode" ] || [ -d "$OPENJKDF2_ROOT/Resource" ] || true
-  if [ -d "$OPENJKDF2_ROOT/episode" ] || [ -d "$OPENJKDF2_ROOT/resource" ] || \
-     [ -d "$OPENJKDF2_ROOT/Episode" ] || [ -d "$OPENJKDF2_ROOT/Resource" ]; then
-    openjkdf2_lowercase_tree "$OPENJKDF2_ROOT"
-  fi
-  openjkdf2_fixup_dir_case "$OPENJKDF2_ROOT" episode || true
-  openjkdf2_fixup_dir_case "$OPENJKDF2_ROOT" resource || true
-  for req in episode/JK1.gob episode/JK1CTF.gob episode/JK1MP.gob \
-             resource/Res1hi.gob resource/Res2.gob resource/jk_.cd; do
-    openjkdf2_ensure_asset "$OPENJKDF2_ROOT" "$req" || true
-  done
-  if [ ! -d "$OPENJKDF2_ROOT/episode" ] || [ ! -d "$OPENJKDF2_ROOT/resource" ]; then
-    pm_message "Copy JKDF2 to openjkdf2/jk1/episode/ and jk1/resource/ (lowercase)."
-    sleep 5
+  [ "${OPENJKDF2_MOTS:-0}" = "1" ] && strict=0
+
+  if ! openjkdf2_has_subdir "$OPENJKDF2_ROOT" resource; then
+    if [ "$strict" -eq 0 ]; then
+      echo "OpenJKDF2: no jk1/ data (OK for MOTS-only)"
+      return 0
+    fi
+    echo "OpenJKDF2: missing jk1/resource/ under $OPENJKDF2_ROOT" >&2
+    ls -la "$OPENJKDF2_ROOT" 2>/dev/null >&2 || true
+    pm_message "Missing jk1/resource/. Copy JKDF2 game data."
+    sleep 6
     exit 1
   fi
-  for req in episode/JK1.gob episode/JK1CTF.gob episode/JK1MP.gob \
-             resource/Res1hi.gob resource/Res2.gob resource/jk_.cd; do
-    [ -e "$OPENJKDF2_ROOT/$req" ] || missing=1
-  done
-  if [ "$missing" -eq 1 ]; then
-    pm_message "Missing .gob/.cd in jk1/episode or jk1/resource."
-    sleep 5
+
+  openjkdf2_recover_jk1_layout
+
+  epdir=$(openjkdf2_find_insensitive "$OPENJKDF2_ROOT" episode) || epdir="$OPENJKDF2_ROOT/episode"
+  resdir=$(openjkdf2_find_insensitive "$OPENJKDF2_ROOT" resource) || resdir="$OPENJKDF2_ROOT/resource"
+  echo "OpenJKDF2: jk1 episode=$epdir resource=$resdir"
+
+  if ! openjkdf2_jk1_assets_complete; then
+    if [ "$strict" -eq 0 ]; then
+      echo "OpenJKDF2: jk1/ incomplete — skipped (MOTS uses mots/)" >&2
+      return 0
+    fi
+    for f in JK1.gob JK1CTF.gob JK1MP.gob Res1hi.gob Res2.gob jk_.cd; do
+      hint=$(openjkdf2_find_recursive "$OPENJKDF2_ROOT" "$f")
+      [ -n "$hint" ] && echo "OpenJKDF2: found $f at $hint" >&2
+    done
+    ls -la "$epdir" 2>/dev/null >&2 || true
+    ls -la "$resdir" 2>/dev/null >&2 || true
+    pm_message "Missing jk1/episode/ (.gob) or resource/ files. Re-copy from Steam/GOG."
+    sleep 6
     exit 1
   fi
+
+  echo "OpenJKDF2: jk1/ data OK"
 }
 
 openjkdf2_ensure_goo_or_gob() {
@@ -129,35 +283,53 @@ openjkdf2_ensure_goo_or_gob() {
   base="$(basename "$relpath_no_ext")"
   [ -e "$root/$goo" ] && return 0
   openjkdf2_ensure_asset "$root" "$goo" && return 0
-  src=$(openjkdf2_find_insensitive "$dir" "$base.gob") || return 1
+  if openjkdf2_fs_case_insensitive "$dir"; then
+    openjkdf2_find_insensitive "$dir" "${base}.gob" >/dev/null && return 0
+    openjkdf2_find_recursive "$root" "${base}.gob" >/dev/null && return 0
+    return 1
+  fi
+  src=$(openjkdf2_find_insensitive "$dir" "${base}.gob") || return 1
   openjkdf2_mv_casefix "$src" "$root/$goo"
 }
 
 openjkdf2_mots_cd_ok() {
-  local cd magic
-  cd=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT/resource" "jk_.cd") || return 1
+  local resdir cd magic
+  resdir=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" resource) || return 1
+  cd=$(openjkdf2_find_insensitive "$resdir" "jk_.cd") || return 1
   magic=$(od -An -tx4 -N4 "$cd" 2>/dev/null | tr -d ' \n')
   # MOTS jk_.cd magic (od -tx4 on LE: 0x3B426929; JKDF2 is 0xC4329269)
   [ "$magic" = "3b426929" ]
 }
 
-# Min sizes from a working Steam MOTS install (Jun 2026).
-openjkdf2_mots_file_ok() {
-  local relpath="$1" min_bytes="$2"
-  local dir base found size
-  dir="$OPENJKMOTS_ROOT/$(dirname "$relpath")"
-  base="$(basename "$relpath")"
-  found=$(openjkdf2_find_insensitive "$dir" "$base") || return 1
+# Min sizes from a working Steam MOTS install (Jun 2026). Accepts .goo or .gob.
+openjkdf2_mots_archive_ok() {
+  local relpath_no_ext="$1" min_bytes="$2"
+  local found size
+  found=$(openjkdf2_find_goo_or_gob "$OPENJKMOTS_ROOT" "$relpath_no_ext") || return 1
+  size=$(stat -c%s "$found" 2>/dev/null) || return 1
+  [ "$size" -ge "$min_bytes" ]
+}
+
+openjkdf2_mots_plain_file_ok() {
+  local filename="$1" min_bytes="$2"
+  local found size
+  found=$(openjkdf2_find_recursive "$OPENJKMOTS_ROOT" "$filename") || return 1
   size=$(stat -c%s "$found" 2>/dev/null) || return 1
   [ "$size" -ge "$min_bytes" ]
 }
 
 openjkdf2_mots_music_ok() {
   local dir count
-  dir=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" "MUSIC") || return 1
+  dir=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" "MUSIC") || \
+    dir=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" "music") || return 1
   [ -d "$dir" ] || return 1
   count=$(find "$dir" -maxdepth 1 -type f -iname '*.ogg' 2>/dev/null | wc -l)
   [ "$count" -ge 10 ]
+}
+
+openjkdf2_mots_has_layout() {
+  openjkdf2_has_subdir "$OPENJKMOTS_ROOT" episode && \
+    openjkdf2_has_subdir "$OPENJKMOTS_ROOT" resource
 }
 
 openjkdf2_mots_report_missing() {
@@ -167,39 +339,38 @@ openjkdf2_mots_report_missing() {
 }
 
 openjkdf2_prepare_mots_launch() {
-  local missing=0 warn=0 strict=0
+  local missing=0 strict=0 detail f hint
+
   openjkdf2_mots_errors=()
   [ -d "$OPENJKMOTS_ROOT" ] || return 0
   [ "${OPENJKDF2_MOTS:-0}" = "1" ] && strict=1
-  [ -d "$OPENJKMOTS_ROOT/episode" ] || [ -d "$OPENJKMOTS_ROOT/resource" ] || \
-    [ -d "$OPENJKMOTS_ROOT/Episode" ] || [ -d "$OPENJKMOTS_ROOT/Resource" ] || return 0
 
-  openjkdf2_lowercase_tree "$OPENJKMOTS_ROOT"
+  if ! openjkdf2_has_subdir "$OPENJKMOTS_ROOT" resource; then
+    if [ "$strict" -eq 1 ]; then
+      pm_message "Missing mots/resource/. Copy MOTS game data."
+      sleep 6
+      exit 1
+    fi
+    return 0
+  fi
 
-  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" episode || true
-  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" resource || true
-  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" MUSIC || true
-  openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT/resource" video || true
+  openjkdf2_recover_mots_layout
 
-  for req in episode/JKM_KFY episode/JKM_MP episode/JKM_SABER episode/JKM \
-             resource/Jkmres resource/JKMsndLO; do
-    openjkdf2_ensure_goo_or_gob "$OPENJKMOTS_ROOT" "$req" || missing=1
-  done
-  openjkdf2_ensure_asset "$OPENJKMOTS_ROOT" "resource/jk_.cd" || true
+  echo "OpenJKDF2: mots episode=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" episode) resource=$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" resource)"
 
-  openjkdf2_mots_file_ok "episode/JKM.goo" 30000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM.goo (need ~36 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "episode/JKM_KFY.goo" 5000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_KFY.goo (need ~7 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "episode/JKM_MP.goo" 12000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_MP.goo (need ~15 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "episode/JKM_SABER.goo" 2000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_SABER.goo (need ~2.5 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "resource/Jkmres.goo" 70000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: resource/Jkmres.goo (need ~85 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "resource/JKMsndLO.goo" 40000000 \
-    || { openjkdf2_mots_report_missing "missing or too small: resource/JKMsndLO.goo (need ~46 MB)"; missing=1; }
-  openjkdf2_mots_file_ok "resource/jk_.cd" 4 \
+  openjkdf2_mots_archive_ok "episode/JKM" 30000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM (.goo or .gob, need ~36 MB)"; missing=1; }
+  openjkdf2_mots_archive_ok "episode/JKM_KFY" 5000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_KFY (.goo or .gob, need ~7 MB)"; missing=1; }
+  openjkdf2_mots_archive_ok "episode/JKM_MP" 12000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_MP (.goo or .gob, need ~15 MB)"; missing=1; }
+  openjkdf2_mots_archive_ok "episode/JKM_SABER" 2000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: episode/JKM_SABER (.goo or .gob, need ~2.5 MB)"; missing=1; }
+  openjkdf2_mots_archive_ok "resource/Jkmres" 70000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: resource/Jkmres (.goo or .gob, need ~85 MB)"; missing=1; }
+  openjkdf2_mots_archive_ok "resource/JKMsndLO" 40000000 \
+    || { openjkdf2_mots_report_missing "missing or too small: resource/JKMsndLO (.goo or .gob, need ~46 MB)"; missing=1; }
+  openjkdf2_mots_plain_file_ok "jk_.cd" 4 \
     || { openjkdf2_mots_report_missing "missing: resource/jk_.cd"; missing=1; }
 
   if ! openjkdf2_mots_cd_ok; then
@@ -207,31 +378,32 @@ openjkdf2_prepare_mots_launch() {
     missing=1
   fi
 
-  openjkdf2_mots_file_ok "resource/video/JKMINTRO.SAN" 10000000 \
+  openjkdf2_mots_plain_file_ok "JKMINTRO.SAN" 10000000 \
     || { openjkdf2_mots_report_missing "missing or too small: resource/video/JKMINTRO.SAN"; missing=1; }
 
   if ! openjkdf2_mots_music_ok; then
-    openjkdf2_mots_report_missing "MUSIC/ needs at least 10 .ogg tracks (copy the whole MUSIC folder)"
+    openjkdf2_mots_report_missing "music/ or MUSIC/ needs at least 10 .ogg tracks"
     missing=1
   fi
 
-  if [ -d "$OPENJKMOTS_ROOT/player" ] && ! openjkdf2_dir_empty "$OPENJKMOTS_ROOT/player"; then
-    : # GOG installs may include player/; Steam does not — both are fine
+  if [ "$missing" -eq 1 ]; then
+    echo "OpenJKDF2: MOTS data check failed. Copy episode/, resource/ (incl. video/), and music/ from Steam or GOG." >&2
+    for f in JKM JKM_KFY JKM_MP JKM_SABER; do
+      hint=$(openjkdf2_find_goo_or_gob "$OPENJKMOTS_ROOT" "episode/$f")
+      [ -n "$hint" ] && echo "OpenJKDF2: found $f at $hint" >&2
+    done
+    ls -la "$(openjkdf2_find_insensitive "$OPENJKMOTS_ROOT" episode)" 2>/dev/null >&2 || true
+    if [ "$strict" -eq 1 ]; then
+      detail="${openjkdf2_mots_errors[0]}"
+      [ -n "$detail" ] || detail="see log.txt"
+      pm_message "MOTS incomplete: $detail"
+      sleep 6
+      exit 1
+    fi
+    return 0
   fi
 
-  if [ "$missing" -eq 1 ]; then
-    warn=1
-  fi
-  if [ "$warn" -eq 1 ]; then
-    echo "OpenJKDF2: MOTS data check failed. Copy episode/, resource/ (incl. video/), and MUSIC/ from Steam or GOG." >&2
-  fi
-  if [ "$missing" -eq 1 ] && [ "$strict" -eq 1 ]; then
-    local detail="${openjkdf2_mots_errors[0]}"
-    [ -n "$detail" ] || detail="see log.txt"
-    pm_message "MOTS files incomplete: $detail"
-    sleep 6
-    exit 1
-  fi
+  echo "OpenJKDF2: MOTS data OK"
 }
 
 openjkdf2_guid_to_vidpid() {
@@ -357,5 +529,210 @@ openjkdf2_ignore_handheld_if_external() {
   export SDL_GAMECONTROLLER_IGNORE_DEVICES="$ignore_vid"
 }
 
-openjkdf2_prepare_jk1
-openjkdf2_prepare_mots_launch
+# --- Swap helpers (< 2 GB RAM). Never tears down existing system swap. ---
+
+openjkdf2_device_ram_gb() {
+  if [ -n "${DEVICE_RAM:-}" ] && [ "${DEVICE_RAM:-0}" -gt 0 ] 2>/dev/null; then
+    echo "$DEVICE_RAM"
+    return 0
+  fi
+  awk '/MemTotal:/ {printf "%d\n", int(($2 + 524287) / 1048576)}' /proc/meminfo 2>/dev/null
+}
+
+openjkdf2_swap_total_kb() {
+  awk 'NR > 1 {sum += $3} END {print sum + 0}' /proc/swaps 2>/dev/null
+}
+
+openjkdf2_fs_supports_swap() {
+  local dir="$1" fstype
+  [ -d "$dir" ] || mkdir -p "$dir" 2>/dev/null || return 1
+  fstype=$(df -T "$dir" 2>/dev/null | awk 'NR == 2 {print $2}')
+  case "${fstype,,}" in
+    vfat|exfat|msdos|fuseblk|ntfs) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+openjkdf2_swap_try_activate() {
+  local path="$1"
+  [ -f "$path" ] || return 1
+  grep -Fq "$path" /proc/swaps 2>/dev/null && return 0
+  if [ -n "${ESUDO:-}" ]; then
+    $ESUDO swapon "$path" 2>/dev/null
+  else
+    swapon "$path" 2>/dev/null
+  fi
+  grep -Fq "$path" /proc/swaps 2>/dev/null
+}
+
+openjkdf2_swap_create_file() {
+  local path="$1" size_mb="$2"
+  local dir size_kb cur_kb
+  dir=$(dirname "$path")
+  mkdir -p "$dir" 2>/dev/null || return 1
+  openjkdf2_fs_supports_swap "$dir" || return 1
+
+  size_kb=$((size_mb * 1024))
+  cur_kb=$(openjkdf2_swap_total_kb)
+  if [ "$cur_kb" -ge "$size_kb" ]; then
+    echo "OpenJKDF2: swap already sufficient (${cur_kb} kB active)"
+    return 0
+  fi
+
+  if [ -f "$path" ]; then
+    if openjkdf2_swap_try_activate "$path"; then
+      echo "OpenJKDF2: reusing existing swap file $path"
+      return 0
+    fi
+    echo "OpenJKDF2: removing stale swap file $path"
+    if [ -n "${ESUDO:-}" ]; then
+      $ESUDO rm -f "$path"
+    else
+      rm -f "$path"
+    fi
+  fi
+
+  echo "OpenJKDF2: creating ${size_mb}M swap at $path"
+  if [ -n "${ESUDO:-}" ]; then
+    $ESUDO fallocate -l "${size_mb}M" "$path" || $ESUDO truncate -s "${size_mb}M" "$path" || return 1
+    $ESUDO chmod 600 "$path"
+    $ESUDO mkswap "$path" >/dev/null || return 1
+    $ESUDO swapon "$path" || return 1
+  else
+    fallocate -l "${size_mb}M" "$path" || truncate -s "${size_mb}M" "$path" || return 1
+    chmod 600 "$path"
+    mkswap "$path" >/dev/null || return 1
+    swapon "$path" || return 1
+  fi
+
+  export OPENJKDF2_SWAP_CREATED=1
+  export OPENJKDF2_SWAP_PATH="$path"
+  echo "OpenJKDF2: swap active ($(openjkdf2_swap_total_kb) kB total)"
+  return 0
+}
+
+openjkdf2_swap_try_zram() {
+  local size_mb="$1" size_kb cur_kb zdev
+  [ "${OPENJKDF2_SWAP_ZRAM:-1}" = "0" ] && return 1
+
+  cur_kb=$(openjkdf2_swap_total_kb)
+  size_kb=$((size_mb * 1024))
+  [ "$cur_kb" -ge "$size_kb" ] && return 0
+
+  if grep -q '[[:space:]]zram' /proc/swaps 2>/dev/null; then
+    echo "OpenJKDF2: zram swap already active ($(openjkdf2_swap_total_kb) kB), not resetting"
+    return 0
+  fi
+
+  if [ -n "${ESUDO:-}" ]; then
+    $ESUDO modprobe zram 2>/dev/null || return 1
+  else
+    modprobe zram 2>/dev/null || return 1
+  fi
+
+  zdev=""
+  for zdev in /dev/zram0 /dev/zram1 /dev/zram2; do
+    [ -b "$zdev" ] || continue
+    grep -Fq "$zdev" /proc/swaps 2>/dev/null && continue
+    echo "OpenJKDF2: enabling ${size_mb}M zram swap on $zdev"
+    if [ -n "${ESUDO:-}" ]; then
+      $ESUDO sh -c "echo ${size_mb}M > /sys/block/$(basename "$zdev")/disksize" 2>/dev/null || continue
+      $ESUDO mkswap "$zdev" >/dev/null 2>&1 || continue
+      $ESUDO swapon "$zdev" 2>/dev/null || continue
+    else
+      echo "${size_mb}M" > "/sys/block/$(basename "$zdev")/disksize" 2>/dev/null || continue
+      mkswap "$zdev" >/dev/null 2>&1 || continue
+      swapon "$zdev" 2>/dev/null || continue
+    fi
+    export OPENJKDF2_SWAP_CREATED=1
+    export OPENJKDF2_SWAP_PATH="$zdev"
+    export OPENJKDF2_SWAP_IS_ZRAM=1
+    echo "OpenJKDF2: zram swap active ($(openjkdf2_swap_total_kb) kB total)"
+    return 0
+  done
+  return 1
+}
+
+# Extra swap for MOTS / heavy levels on 1 GB devices. Skips if enough swap exists.
+openjkdf2_ensure_swap() {
+  local ram_gb want_mb want_kb cur_kb cfw
+  [ "${OPENJKDF2_SWAP:-1}" = "0" ] && return 0
+
+  ram_gb=$(openjkdf2_device_ram_gb)
+  [ -n "$ram_gb" ] && [ "$ram_gb" -lt 2 ] 2>/dev/null || return 0
+
+  want_mb="${OPENJKDF2_SWAP_MB:-420}"
+  want_kb=$((want_mb * 1024))
+  cur_kb=$(openjkdf2_swap_total_kb)
+  if [ "$cur_kb" -ge "$want_kb" ]; then
+    echo "OpenJKDF2: swap ok (${cur_kb} kB active, target ${want_kb} kB)"
+    return 0
+  fi
+
+  cfw="${CFW_NAME:-}"
+  echo "OpenJKDF2: low RAM (${ram_gb} GB), swap ${cur_kb} kB < ${want_kb} kB — adding swap"
+
+  # Reuse common CFW swap files if present (do not delete/recreate).
+  for path in /swapfile /media/SHARE/swapfile; do
+    if [ -f "$path" ] && openjkdf2_swap_try_activate "$path"; then
+      cur_kb=$(openjkdf2_swap_total_kb)
+      [ "$cur_kb" -ge "$want_kb" ] && { echo "OpenJKDF2: swap ok after activating $path"; return 0; }
+    fi
+  done
+
+  # Prefer a port-local swap file when the conf dir is on a Linux FS.
+  if [ -n "${CONFDIR:-}" ] && openjkdf2_swap_create_file "$CONFDIR/openjkdf2.swap" "$want_mb"; then
+    return 0
+  fi
+
+  case "$cfw" in
+    *dArkOS*|*ArkOS*|*ODROID*)
+      if openjkdf2_swap_create_file "/swapfile" "$want_mb"; then
+        return 0
+      fi
+      openjkdf2_swap_try_zram "$want_mb" && return 0
+      ;;
+    *KNULLI*|*knulli*)
+      if openjkdf2_swap_create_file "/media/SHARE/swapfile" "$want_mb"; then
+        return 0
+      fi
+      ;;
+    *)
+      openjkdf2_swap_try_zram "$want_mb" && return 0
+      ;;
+  esac
+
+  echo "OpenJKDF2: warning — could not add swap; MOTS may OOM on this device" >&2
+  return 1
+}
+
+openjkdf2_swap_cleanup() {
+  local path="${OPENJKDF2_SWAP_PATH:-}"
+  [ "${OPENJKDF2_SWAP_CREATED:-0}" = "1" ] || return 0
+  [ -n "$path" ] || return 0
+
+  echo "OpenJKDF2: removing session swap $path"
+  if [ -n "${ESUDO:-}" ]; then
+    $ESUDO swapoff "$path" 2>/dev/null || true
+    if [ "${OPENJKDF2_SWAP_IS_ZRAM:-0}" != "1" ] && [ -f "$path" ]; then
+      $ESUDO rm -f "$path"
+    fi
+  else
+    swapoff "$path" 2>/dev/null || true
+    if [ "${OPENJKDF2_SWAP_IS_ZRAM:-0}" != "1" ] && [ -f "$path" ]; then
+      rm -f "$path"
+    fi
+  fi
+  unset OPENJKDF2_SWAP_CREATED OPENJKDF2_SWAP_PATH OPENJKDF2_SWAP_IS_ZRAM
+}
+
+openjkdf2_log_launch() {
+  echo "OpenJKDF2 launch: mode=$([ "${OPENJKDF2_MOTS:-0}" = "1" ] && echo MOTS || echo JKDF2) CFW=${CFW_NAME:-?} arch=${DEVICE_ARCH:-?} ram=$(openjkdf2_device_ram_gb)GB display=${DISPLAY_WIDTH:-?}x${DISPLAY_HEIGHT:-?} swap=$(openjkdf2_swap_total_kb)kB"
+}
+
+if [ "${OPENJKDF2_MOTS:-0}" = "1" ]; then
+  openjkdf2_prepare_mots_launch
+  openjkdf2_prepare_jk1
+else
+  openjkdf2_prepare_jk1
+fi

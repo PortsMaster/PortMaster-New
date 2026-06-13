@@ -13,6 +13,9 @@ Steam installs have no player/ folder; GOG may include player/ (optional).
 
 Launch: Star Wars Jedi Knight - Mysteries of the Sith.sh
 
+Low RAM (1 GB handhelds): low memory mode auto-enables (smaller sound cache, aggressive texture purge).
+Override: OPENJKDF2_LOW_MEMORY=1 (force on) or =0 (force off). Cutscenes are not skipped.
+
 If you see "Could not load level", check log.txt for "OpenJKDF2: MOTS —" lines.
 
 Verify jk_.cd is from MOTS (not JKDF2):
