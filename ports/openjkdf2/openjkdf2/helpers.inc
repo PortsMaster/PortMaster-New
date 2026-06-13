@@ -4,10 +4,48 @@ openjkdf2_dir_empty() {
   [ ! -d "$1" ] || [ -z "$(ls -A "$1" 2>/dev/null)" ]
 }
 
+# exFAT/vfat: case-only renames need a temp hop (JK1.GOB -> jk1.gob). Use ESUDO on dArkOS.
+openjkdf2_mv() {
+  if [ -n "${ESUDO:-}" ]; then
+    $ESUDO mv "$@"
+  else
+    mv "$@"
+  fi
+}
+
+openjkdf2_mv_casefix() {
+  local src="$1" dst="$2" dir base tmp
+  [ -e "$src" ] || return 1
+  [ "$src" = "$dst" ] && return 0
+  dir=$(dirname "$dst")
+  base=$(basename "$dst")
+  tmp="$dir/.openjkdf2_casefix_${base}_$$"
+  openjkdf2_mv "$src" "$tmp" || return 1
+  openjkdf2_mv "$tmp" "$dst" || return 1
+}
+
+openjkdf2_lowercase_tree() {
+  local root="$1" src dst dst_base
+  [ -d "$root" ] || return 0
+  while IFS= read -r -d '' src; do
+    [ -e "$src" ] || continue
+    dst_base=$(basename "$src" | tr '[:upper:]' '[:lower:]')
+    dst="$(dirname "$src")/$dst_base"
+    [ "$src" != "$dst" ] && openjkdf2_mv_casefix "$src" "$dst" || true
+  done < <(find "$root" -depth -mindepth 1 -print0 2>/dev/null)
+}
+
 openjkdf2_fixup_dir_case() {
   local base="$1" want="$2" entry name
   [ -d "$base" ] || return 1
   if [ -d "$base/$want" ] && ! openjkdf2_dir_empty "$base/$want"; then
+    for entry in "$base"/*; do
+      [ -d "$entry" ] || continue
+      name=$(basename "$entry")
+      [ "$name" = "$want" ] && return 0
+      [ "${name,,}" = "$want" ] || continue
+      openjkdf2_mv_casefix "$entry" "$base/$want" && return 0
+    done
     return 0
   fi
   if [ -d "$base/$want" ] && openjkdf2_dir_empty "$base/$want"; then
@@ -15,14 +53,14 @@ openjkdf2_fixup_dir_case() {
       [ -d "$entry" ] || continue
       name=$(basename "$entry")
       [ "$name" = "$want" ] || [ "${name,,}" != "$want" ] && continue
-      openjkdf2_dir_empty "$entry" || { rm -rf "$base/$want"; mv "$entry" "$base/$want"; return 0; }
+      openjkdf2_dir_empty "$entry" || { rm -rf "$base/$want"; openjkdf2_mv_casefix "$entry" "$base/$want"; return 0; }
     done
   fi
   for entry in "$base"/*; do
     [ -d "$entry" ] || continue
     name=$(basename "$entry")
     [ "${name,,}" = "$want" ] || continue
-    mv "$entry" "$base/$want"
+    openjkdf2_mv_casefix "$entry" "$base/$want"
     return 0
   done
   return 1
@@ -45,16 +83,22 @@ openjkdf2_find_insensitive() {
 openjkdf2_ensure_asset() {
   local root="$1" relpath="$2" dir base src dest
   dest="$root/$relpath"
-  [ -e "$dest" ] && return 0
   dir="$root/$(dirname "$relpath")"
   base=$(basename "$relpath")
   src=$(openjkdf2_find_insensitive "$dir" "$base") || return 1
-  mv "$src" "$dest"
+  [ "$(basename "$src")" = "$base" ] && return 0
+  openjkdf2_mv_casefix "$src" "$dest"
 }
 
 openjkdf2_prepare_jk1() {
   local req missing=0
   mkdir -p "$OPENJKDF2_ROOT" "$OPENJKMOTS_ROOT" "$GAMEDIR/expansions" "$GAMEDIR/mods"
+  [ -d "$OPENJKDF2_ROOT/episode" ] || [ -d "$OPENJKDF2_ROOT/resource" ] || \
+    [ -d "$OPENJKDF2_ROOT/Episode" ] || [ -d "$OPENJKDF2_ROOT/Resource" ] || true
+  if [ -d "$OPENJKDF2_ROOT/episode" ] || [ -d "$OPENJKDF2_ROOT/resource" ] || \
+     [ -d "$OPENJKDF2_ROOT/Episode" ] || [ -d "$OPENJKDF2_ROOT/Resource" ]; then
+    openjkdf2_lowercase_tree "$OPENJKDF2_ROOT"
+  fi
   openjkdf2_fixup_dir_case "$OPENJKDF2_ROOT" episode || true
   openjkdf2_fixup_dir_case "$OPENJKDF2_ROOT" resource || true
   for req in episode/JK1.gob episode/JK1CTF.gob episode/JK1MP.gob \
@@ -86,7 +130,7 @@ openjkdf2_ensure_goo_or_gob() {
   [ -e "$root/$goo" ] && return 0
   openjkdf2_ensure_asset "$root" "$goo" && return 0
   src=$(openjkdf2_find_insensitive "$dir" "$base.gob") || return 1
-  mv "$src" "$root/$goo"
+  openjkdf2_mv_casefix "$src" "$root/$goo"
 }
 
 openjkdf2_mots_cd_ok() {
@@ -129,6 +173,8 @@ openjkdf2_prepare_mots_launch() {
   [ "${OPENJKDF2_MOTS:-0}" = "1" ] && strict=1
   [ -d "$OPENJKMOTS_ROOT/episode" ] || [ -d "$OPENJKMOTS_ROOT/resource" ] || \
     [ -d "$OPENJKMOTS_ROOT/Episode" ] || [ -d "$OPENJKMOTS_ROOT/Resource" ] || return 0
+
+  openjkdf2_lowercase_tree "$OPENJKMOTS_ROOT"
 
   openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" episode || true
   openjkdf2_fixup_dir_case "$OPENJKMOTS_ROOT" resource || true
