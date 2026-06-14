@@ -4,7 +4,7 @@ Star Wars Jedi Knight: Dark Forces II (1997) by **LucasArts**. This port runs th
 
 You must own the game and copy the original files from **GOG** or **Steam** into `openjkdf2/jk1/`. Optional expansion **Mysteries of the Sith** goes in `openjkdf2/mots/`. Launch it via the optional **Mysteries of the Sith** PortMaster entry, or switch from the in-game **Expansions & Mods** menu.
 
-Launch follows the [PortMaster shell template](http://portmaster.games/packaging.html) in each `*.sh` wrapper. Linux-specific game-data fixups and external-gamepad handling live in `openjkdf2/helpers.inc` (sourced after `get_controls`).
+Launch follows the [PortMaster shell template](http://portmaster.games/packaging.html) in each `*.sh` wrapper. External-gamepad and low-RAM swap helpers live in `openjkdf2/helpers/` (`gamepad.inc`, `swap.inc`). Game data paths are resolved case-insensitively by the engine on Linux (ext4); launch scripts do not rename or move user files.
 
 Saves and settings are stored under `openjkdf2/conf/`.
 

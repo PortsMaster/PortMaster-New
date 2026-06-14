@@ -25,7 +25,7 @@ get_controls
 
 GAMEDIR="/$directory/ports/openjkdf2"
 CONFDIR="$GAMEDIR/conf"
-mkdir -p "$CONFDIR"
+mkdir -p "$CONFDIR/openjkdf2" "$CONFDIR/openjkmots"
 
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -53,8 +53,8 @@ if [ -z "${OPENJKDF2_SSAA+x}" ]; then
   fi
 fi
 
-. "$GAMEDIR/helpers.inc"
-openjkdf2_log_launch
+. "$GAMEDIR/helpers/swap.inc"
+. "$GAMEDIR/helpers/gamepad.inc"
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"

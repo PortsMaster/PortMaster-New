@@ -1,4 +1,4 @@
-Mysteries of the Sith — copy into openjkdf2/mots/ (lowercase folder names).
+Mysteries of the Sith — copy into openjkdf2/mots/.
 
 From Steam (Jedi Knight Mysteries of the Sith) or GOG, copy:
 
