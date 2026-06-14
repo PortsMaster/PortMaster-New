@@ -18,7 +18,7 @@ source $controlfolder/control.txt
 
 get_controls
 
-GAMEDIR=/$directory/ports/2048_plus
+GAMEDIR=/$directory/ports/2048plus
 CONFDIR="$GAMEDIR/conf/"
 
 mkdir -p "$GAMEDIR/conf"
@@ -27,7 +27,7 @@ cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export XDG_DATA_HOME="$CONFDIR"
-bind_directories ~/.2048_plus $GAMEDIR/conf/.2048_plus
+bind_directories ~/.2048plus $GAMEDIR/conf/.2048plus
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
