@@ -1,4 +1,4 @@
--- 2048 for muOS — Global constants and scaling helpers
+-- 2048 Plus — Global constants and scaling helpers
 
 _G.timer = require("timer")
 
