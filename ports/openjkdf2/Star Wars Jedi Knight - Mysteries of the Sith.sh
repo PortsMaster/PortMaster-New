@@ -43,16 +43,6 @@ export LANG=C
 [ "${CFW_NAME^^}" = "ROCKNIX" ] && export SDL_HINT_APP_NAME="${SDL_HINT_APP_NAME:-OpenJKDF2}"
 [ "${CFW_NAME^^}" = "ROCKNIX" ] && export SDL_OPENGL_ES_DRIVER="${SDL_OPENGL_ES_DRIVER:-1}"
 
-if [ -z "${OPENJKDF2_SSAA+x}" ]; then
-  if [ "${CFW_NAME^^}" = "ROCKNIX" ] && [ "$DISPLAY_HEIGHT" -gt 720 ]; then
-    export OPENJKDF2_SSAA=0.5
-  elif [ "$DISPLAY_HEIGHT" -ge 480 ] || [ "$DISPLAY_WIDTH" -ge 640 ]; then
-    export OPENJKDF2_SSAA=0.75
-  else
-    export OPENJKDF2_SSAA=0.8
-  fi
-fi
-
 . "$GAMEDIR/helpers/swap.inc"
 . "$GAMEDIR/helpers/gamepad.inc"
 
