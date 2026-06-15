@@ -36,8 +36,6 @@ bind_directories "$HOME/.local/share/openjkmots" "$CONFDIR/openjkmots"
 
 export OPENJKDF2_ROOT="$GAMEDIR/jk1"
 export OPENJKMOTS_ROOT="$GAMEDIR/mots"
-export LC_ALL=C
-export LANG=C
 
 [ -z "${OPENJKDF2_SWAY_FULLSCREEN+x}" ] && [ "${CFW_NAME^^}" = "ROCKNIX" ] && export OPENJKDF2_SWAY_FULLSCREEN=0
 [ "${CFW_NAME^^}" = "ROCKNIX" ] && export SDL_HINT_APP_NAME="${SDL_HINT_APP_NAME:-OpenJKDF2}"
