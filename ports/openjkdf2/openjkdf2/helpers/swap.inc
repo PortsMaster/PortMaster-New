@@ -1,4 +1,15 @@
 # Swap for < 2 GB RAM (MOTS). Sourced from launch scripts after CONFDIR is set.
+#
+# CFW policy (Slayer366 / PortMaster trial-and-error):
+#   - AmberELEC: ships ~384M swap — never touch
+#   - dArkOS: zram only (never /swapfile on overlay)
+#   - ArkOS / ODROID: /swapfile
+#   - KNULLI: /media/SHARE/swapfile
+#   - Everything else: do not add swap; warn only
+#
+# Cleanup only reverts swap this port created (OPENJKDF2_SWAP_METHOD). Never swapoff -a.
+
+OPENJKDF2_SWAP_METHOD=""
 
 openjkdf2_device_ram_gb() {
   if [ -n "${DEVICE_RAM:-}" ] && [ "${DEVICE_RAM:-0}" -gt 0 ] 2>/dev/null; then
@@ -14,6 +25,20 @@ openjkdf2_swap_total_kb() {
 
 openjkdf2_cfw_is_darkos() {
   case "${1,,}" in *darkos*) return 0 ;; esac
+  return 1
+}
+
+# *ArkOS* matches dArkOS too — exclude darkos first.
+openjkdf2_cfw_is_arkos() {
+  openjkdf2_cfw_is_darkos "$1" && return 1
+  case "${1,,}" in *arkos*) return 0 ;; esac
+  return 1
+}
+
+openjkdf2_cfw_skip_swap() {
+  case "${1^^}" in
+    AMBERELEC* | JELOS*) return 0 ;;
+  esac
   return 1
 }
 
@@ -37,6 +62,7 @@ openjkdf2_swap_ensure_darkos() {
   cur_kb=$(openjkdf2_swap_total_kb)
   if [ "$cur_kb" -ge "$want_kb" ]; then
     echo "OpenJKDF2: dArkOS zram swap active (${cur_kb} kB total)"
+    OPENJKDF2_SWAP_METHOD=darkos
     return 0
   fi
   echo "OpenJKDF2: dArkOS zram setup failed (swap still ${cur_kb} kB)" >&2
@@ -61,6 +87,7 @@ openjkdf2_swap_ensure_arkos() {
   cur_kb=$(openjkdf2_swap_total_kb)
   if [ "$cur_kb" -ge "$want_kb" ]; then
     echo "OpenJKDF2: ArkOS swapfile active (${cur_kb} kB total)"
+    OPENJKDF2_SWAP_METHOD=arkos
     return 0
   fi
   echo "OpenJKDF2: ArkOS swapfile setup failed (swap still ${cur_kb} kB)" >&2
@@ -85,6 +112,7 @@ openjkdf2_swap_ensure_knulli() {
   cur_kb=$(openjkdf2_swap_total_kb)
   if [ "$cur_kb" -ge "$want_kb" ]; then
     echo "OpenJKDF2: KNULLI swapfile active (${cur_kb} kB total)"
+    OPENJKDF2_SWAP_METHOD=knulli
     return 0
   fi
   echo "OpenJKDF2: KNULLI swapfile setup failed (swap still ${cur_kb} kB)" >&2
@@ -102,6 +130,12 @@ openjkdf2_ensure_swap() {
   size_mb="${OPENJKDF2_SWAP_MB:-420}"
   want_kb=$((size_mb * 1024))
   cur_kb=$(openjkdf2_swap_total_kb)
+
+  if openjkdf2_cfw_skip_swap "$cfw"; then
+    echo "OpenJKDF2: swap left to CFW (${cfw}, ${cur_kb} kB active)"
+    return 0
+  fi
+
   if [ "$cur_kb" -ge "$want_kb" ]; then
     echo "OpenJKDF2: swap ok (${cur_kb} kB active, target ${want_kb} kB)"
     return 0
@@ -109,14 +143,13 @@ openjkdf2_ensure_swap() {
 
   echo "OpenJKDF2: low RAM (${ram_gb} GB), swap ${cur_kb} kB < ${want_kb} kB — adding swap (CFW_NAME=${cfw:-unset})"
 
-  # dArkOS: never use /swapfile (overlay → EINVAL). Slayer366 RG503 path.
   if openjkdf2_cfw_is_darkos "$cfw"; then
     openjkdf2_swap_ensure_darkos && return 0
     echo "OpenJKDF2: warning — could not add swap; MOTS may OOM on this device" >&2
     return 1
   fi
 
-  if [[ "${cfw:-}" == *"ArkOS"* ]] || [[ "${cfw:-}" == *"ODROID"* ]]; then
+  if openjkdf2_cfw_is_arkos "$cfw" || [[ "${cfw:-}" == *"ODROID"* ]]; then
     openjkdf2_swap_ensure_arkos && return 0
     echo "OpenJKDF2: warning — could not add swap; MOTS may OOM on this device" >&2
     return 1
@@ -128,10 +161,37 @@ openjkdf2_ensure_swap() {
     return 1
   fi
 
-  echo "OpenJKDF2: warning — no swap helper for CFW_NAME=${cfw:-unset}; MOTS may OOM on <2GB" >&2
+  echo "OpenJKDF2: swap not configured for CFW_NAME=${cfw:-unset} (${cur_kb} kB active); MOTS may OOM on <2GB" >&2
   return 1
 }
 
+openjkdf2_swap_cleanup_darkos() {
+  grep -q '[[:space:]]/dev/zram0[[:space:]]' /proc/swaps 2>/dev/null || return 0
+  echo "OpenJKDF2: dArkOS zram cleanup"
+  $ESUDO swapoff /dev/zram0 2>/dev/null || true
+  [ -e /dev/zram0 ] && $ESUDO zramctl --reset /dev/zram0 2>/dev/null || true
+}
+
+openjkdf2_swap_cleanup_arkos() {
+  [ -f /swapfile ] || return 0
+  echo "OpenJKDF2: ArkOS swapfile cleanup"
+  $ESUDO swapoff -v /swapfile 2>/dev/null || true
+  $ESUDO rm -f /swapfile 2>/dev/null || true
+}
+
+openjkdf2_swap_cleanup_knulli() {
+  [ -f /media/SHARE/swapfile ] || return 0
+  echo "OpenJKDF2: KNULLI swapfile cleanup"
+  $ESUDO swapoff -v /media/SHARE/swapfile 2>/dev/null || true
+  $ESUDO rm -f /media/SHARE/swapfile 2>/dev/null || true
+}
+
 openjkdf2_swap_cleanup() {
-  :
+  [ "${OPENJKDF2_SWAP:-1}" = "0" ] && return 0
+  case "${OPENJKDF2_SWAP_METHOD:-}" in
+    darkos) openjkdf2_swap_cleanup_darkos ;;
+    arkos) openjkdf2_swap_cleanup_arkos ;;
+    knulli) openjkdf2_swap_cleanup_knulli ;;
+  esac
+  OPENJKDF2_SWAP_METHOD=""
 }

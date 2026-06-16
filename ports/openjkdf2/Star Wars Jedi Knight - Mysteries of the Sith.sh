@@ -56,4 +56,5 @@ pm_platform_helper "$GAMEDIR/openjkdf2.${DEVICE_ARCH}"
 
 ./openjkdf2.${DEVICE_ARCH} -motsCompat
 
+openjkdf2_swap_cleanup
 pm_finish
