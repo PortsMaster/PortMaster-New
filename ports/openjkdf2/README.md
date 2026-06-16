@@ -10,7 +10,7 @@ Saves and settings are stored under `openjkdf2/conf/`.
 
 ## Supported firmware (PortMaster)
 
-Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent).
+**aarch64 handhelds:** Requires **PortMaster** with native **GLES** (Mali or equivalent).
 
 | CFW | Ports folder (typical) | Status |
 |-----|------------------------|--------|
@@ -20,9 +20,11 @@ Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent
 | [ArkOS / dArkOS](https://github.com/christianhaitian/arkos) | `/roms/ports/` or `/roms2/ports/` | Tested |
 | AmberELEC / JELOS / UnofficialOS | `/roms/ports/` | Tested (aarch64 devices) |
 
-**Not supported:** 32-bit **armhf** devices, this port ships `openjkdf2.aarch64` only.
+**x86_64 Linux:** [RetroDECK](https://retrodeck.net/) / PortMaster on PC (Steam Deck, desktop). Uses `openjkdf2.x86_64` (OpenGL desktop build); handheld QOL env vars still apply.
 
-**Recommended hardware:** Anbernic H700 family (RG35XX Plus/H/SP, RG34XX, RG40XX) or similar aarch64 handheld with 1 or 2 GB RAM and Mali GPU.
+**Not supported:** 32-bit **armhf** devices.
+
+**Recommended hardware (aarch64):** Anbernic H700 family (RG35XX Plus/H/SP, RG34XX, RG40XX) or similar aarch64 handheld with 1 or 2 GB RAM and Mali GPU.
 
 ## Installation
 
