@@ -14,11 +14,12 @@ Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent
 
 | CFW | Ports folder (typical) | Status |
 |-----|------------------------|--------|
-| [knulli](https://knulli.org/) | `/userdata/roms/ports/` | Tested |
-| [muOS](https://muos.dev/) | `/mnt/mmc/ROMS/Ports/` or `/roms/ports/` | Tested |
-| [ROCKNIX](https://rocknix.org/) | `/roms/ports/` | Tested |
-| [ArkOS / dArkOS](https://github.com/christianhaitian/arkos) | `/roms/ports/` or `/roms2/ports/` | Tested |
-| AmberELEC / JELOS / UnofficialOS | `/roms/ports/` | Tested (aarch64 devices) |
+| [knulli](https://knulli.org/) | `/userdata/roms/ports/` | Tested (RG34XX SP) |
+| [muOS](https://muos.dev/) | `/mnt/mmc/ROMS/Ports/` or `/roms/ports/` | Expected |
+| [ROCKNIX](https://rocknix.org/) | `/roms/ports/` | Expected |
+| [ArkOS](https://github.com/christianhaitian/arkos) | `/roms/ports/` or `/roms2/ports/` | Expected |
+| [Batocera](https://batocera.org/) | varies by device | Expected |
+| AmberELEC / JELOS / UnofficialOS | `/roms/ports/` | Expected (aarch64 devices) |
 
 **Not supported:** 32-bit **armhf** devices, this port ships `openjkdf2.aarch64` only.
 
@@ -33,26 +34,28 @@ Requires **aarch64** and **PortMaster** with native **GLES** (Mali or equivalent
 
 If the game fails to start, check `openjkdf2/log.txt` on the device SD card.
 
+If stray entries appear in EmulationStation after updating, delete obsolete scripts and restart ES: `ports/openjkdf2/launch.run`, `ports/.openjkdf2.launch.inc`.
+
 ## Controls (handheld)
 
 | Button | Action |
 |--------|--------|
 | Left stick / D-pad | Move |
 | Right stick | Look |
-| X | Use / Activate |
-| A + DPad / A + Joystick | Inventory / Force powers navigation |
-| Y | Jump |
-| A | Use inventory item / Force power |
-| B | Crouch |
-| L1 / R1 | Weapons prev / next |
-| L2 / R2 | Fire 1 / Fire 2 |
+| A | Use / Activate |
+| B | Jump |
+| X | Use inventory item / Force power |
+| Y | Cycle weapon |
+| L1 / R1 | Strafe |
+| L2 / R2 | Inventory prev / next |
+| Hold A + stick | Inventory selection |
 | Start / Select | Pause menu (save, load, setup) |
 
 Select+Start quits the port (`$GPTOKEYB` with `openjkdf2.gptk`, which unmaps default key injection so SDL keeps native gamepad).
 
 ## Build (porters)
 
-Engine submodule + scripts live in the [port repository](https://github.com/juanvillacortac/OpenJKDF2). From a clone with submodules:
+Engine submodule + scripts live in the [port repository](https://github.com/juanvillacortac/openjkdf2-aarch64-portmaster). From a clone with submodules:
 
 ```shell
 ./build.sh
