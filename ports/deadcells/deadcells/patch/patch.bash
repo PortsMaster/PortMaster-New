@@ -76,8 +76,8 @@ trap cleanup EXIT
 trap 'kill 0 2>/dev/null; exit 1' HUP INT TERM
 
 # MD5 checksums for known good hlboot.dat files
-GOG_MD5="83acca99d927b3fee939df98146bb152"
-STEAM_MD5="185147915f30d7ef9e6123bb0c69efbf"
+GOG_MD5="a9750d880dfb2cd32908a856e2cdb81d"
+STEAM_MD5="eca0d56bf7737ace52ebca620f63ed87"
 
 # Step version constants — bump when behavior/tools change to force re-run
 V_COMPILE="5"          # Step 2: hl-substitute + dc-patch-all + hl2llvm
