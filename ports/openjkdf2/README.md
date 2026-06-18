@@ -37,6 +37,12 @@ If the game fails to start, check `openjkdf2/log.txt` on the device SD card.
 
 **SDL / video:** The port links dynamically against the firmware’s SDL (kmsdrm, GLES, audio). Do **not** ship `libSDL2*.so` or `libSDL2_mixer*.so` in `libs.aarch64/` — if an older zip left them there, delete those files and relaunch.
 
+**Multiplayer (`conf/mp.conf`):** Copy `openjkdf2/conf/mp.conf.example` to `openjkdf2/conf/mp.conf` on the SD card and edit on a PC.
+
+- `[join]` — `host` (IP:port) and optional `password` for **Join Game**
+- `[character]` — `name` (multiplayer character name) and optional `rank` (0–8) for **New Character** / auto-load before join or host
+- `[host]` — game name, players, `episode`/`map`, limits, port, etc. for **Start Game**
+
 ## Controls (handheld)
 
 | Button | Action |
