@@ -35,6 +35,8 @@ Saves and settings are stored under `openjkdf2/conf/`.
 
 If the game fails to start, check `openjkdf2/log.txt` on the device SD card.
 
+**SDL / video:** The port links dynamically against the firmware’s SDL (kmsdrm, GLES, audio). Do **not** ship `libSDL2*.so` or `libSDL2_mixer*.so` in `libs.aarch64/` — if an older zip left them there, delete those files and relaunch.
+
 ## Controls (handheld)
 
 | Button | Action |

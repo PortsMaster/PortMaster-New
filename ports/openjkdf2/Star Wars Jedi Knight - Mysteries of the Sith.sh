@@ -48,7 +48,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 openjkdf2_ignore_handheld_if_external
 
-# --- Low-RAM swap (< 2 GB; Slayer366 / PortMaster DEVICE_RAM) ---
+# --- Low-RAM swap (< 2 GB; script from Slayer366 / PortMaster DEVICE_RAM) ---
 # Ensure swap space is prepared or MOTS may crash on level load.
 if [[ $DEVICE_RAM -lt "2" ]]; then
   if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
