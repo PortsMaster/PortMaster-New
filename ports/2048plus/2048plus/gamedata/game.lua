@@ -908,7 +908,7 @@ function Game:confirmTarget()
                     if _G.achievements.bombs_used >= 1 then
                         _G.unlockAchievement("ach_first_bomb")
                     end
-                    if _G.achievements.bombs_used >= 4 then
+                    if _G.achievements.bombs_used >= 10 then
                         _G.unlockAchievement("ach_demolition")
                     end
                 end

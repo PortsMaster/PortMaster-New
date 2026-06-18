@@ -118,15 +118,57 @@ local toast_timer = 0
 local toast_queue = {}
 local toast_max_duration = 1.5
 local TOAST_DURATION = 1.5
+local toast_particles = {}
 
-function renderer.showToast(msg, custom_duration)
+local function spawnToastParticles()
+    local w, h = love.graphics.getDimensions()
+    local theme_gold, theme_super = renderer.getThemeHighlightColors()
+    local tile_colors_t = renderer.getThemeTileColors()
+    
+    local possible_colors = {theme_gold, theme_super}
+    local values = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}
+    for _, v in ipairs(values) do
+        if tile_colors_t[v] then
+            table.insert(possible_colors, tile_colors_t[v])
+        end
+    end
+    
+    if #possible_colors < 2 then
+        possible_colors = { {0.93, 0.76, 0.18}, {0.95, 0.69, 0.39}, {0.96, 0.49, 0.25}, {0.96, 0.37, 0.23} }
+    end
+    
+    local cx = w / 2
+    local cy = (10 + 20) * _G.scale
+    
+    for i = 1, 45 do
+        local angle = love.math.random() * math.pi * 2
+        local speed = love.math.random(100, 400) * _G.scale
+        local p_color = possible_colors[love.math.random(#possible_colors)]
+        
+        table.insert(toast_particles, {
+            x = cx + (love.math.random() - 0.5) * 120 * _G.scale,
+            y = cy + (love.math.random() - 0.5) * 20 * _G.scale,
+            vx = math.cos(angle) * speed,
+            vy = math.sin(angle) * speed - love.math.random(50, 150) * _G.scale,
+            life = 0.6 + love.math.random() * 0.5,
+            size = love.math.random(2, 6) * _G.scale,
+            color = p_color,
+            drag = 0.94 + love.math.random() * 0.04
+        })
+    end
+end
+
+function renderer.showToast(msg, custom_duration, is_achievement)
     local duration = custom_duration or TOAST_DURATION
     if toast_timer > 0 then
-        table.insert(toast_queue, {msg = msg, duration = duration})
+        table.insert(toast_queue, {msg = msg, duration = duration, is_achievement = is_achievement})
     else
         toast_message = msg
         toast_timer = duration
         toast_max_duration = duration
+        if is_achievement then
+            spawnToastParticles()
+        end
     end
 end
 
@@ -2717,6 +2759,9 @@ function renderer.updateTransition(dt)
             toast_message = next_toast.msg
             toast_timer = next_toast.duration
             toast_max_duration = next_toast.duration
+            if next_toast.is_achievement then
+                spawnToastParticles()
+            end
         end
     end
 
@@ -2820,6 +2865,20 @@ function renderer.updateTransition(dt)
     if text_size_flash_timer > 0 then
         text_size_flash_timer = math.max(0, text_size_flash_timer - dt)
     end
+
+    -- Update toast particles
+    for i = #toast_particles, 1, -1 do
+        local p = toast_particles[i]
+        p.vx = p.vx * p.drag
+        p.vy = p.vy * p.drag
+        p.x = p.x + p.vx * dt
+        p.y = p.y + p.vy * dt
+        p.vy = p.vy + 200 * dt * _G.scale
+        p.life = p.life - dt
+        if p.life <= 0 then
+            table.remove(toast_particles, i)
+        end
+    end
 end
 
 local function drawToast()
@@ -2857,6 +2916,24 @@ local function drawToast()
 
     love.graphics.setColor(1, 1, 1, alpha)
     love.graphics.printf(toast_message, (w - text_w) / 2, y + padY, text_w, "center")
+
+    -- Draw particles in front of toast
+    for _, p in ipairs(toast_particles) do
+        local alpha_p = math.min(1, p.life * 2) * alpha
+        love.graphics.setColor(p.color[1], p.color[2], p.color[3], alpha_p)
+        
+        local speed = math.sqrt(p.vx * p.vx + p.vy * p.vy)
+        if speed > 20 then
+            love.graphics.push()
+            love.graphics.translate(p.x, p.y)
+            love.graphics.rotate(math.atan2(p.vy, p.vx))
+            local stretch = math.max(1, speed / 80)
+            love.graphics.rectangle("fill", -p.size * stretch / 2, -p.size / 2, p.size * stretch, p.size, p.size / 2, p.size / 2)
+            love.graphics.pop()
+        else
+            love.graphics.circle("fill", p.x, p.y, p.size / 2)
+        end
+    end
 end
 
 -- Internal functions
@@ -5464,7 +5541,7 @@ local achievementsList = {
     { id = "ach_2048", name = "2048 Master", desc = "Create a 2048 tile in Classic Mode", reward = "OLED Dark Theme" },
     { id = "ach_score_10k", name = "High Roller", desc = "Reach 10,000 points", reward = "Neon Theme" },
     { id = "ach_first_bomb", name = "Boom!", desc = "Use your first bomb in Plus Mode", reward = "Eclipse Theme" },
-    { id = "ach_demolition", name = "Demolition Expert", desc = "Use 4 bombs in Plus Mode", reward = "Retro Theme" },
+    { id = "ach_demolition", name = "Demolition Expert", desc = "Use 10 bombs in total in Plus Mode", reward = "Retro Theme" },
     { id = "ach_untouchable", name = "Untouchable", desc = "Create a 1024 tile without using undos or powerups", reward = "Peach Theme" },
     { id = "ach_2048_plus", name = "Plus Mode Master", desc = "Create a 2048 tile in Plus Mode", reward = "Cyberpunk Theme" },
     { id = "ach_4096", name = "The One", desc = "Create a 4096 tile", reward = "Glitch Theme" },

@@ -211,7 +211,7 @@ function love.load(args)
                 ach_nomercy_512 = "No Escape",
                 ach_goose_2048 = "Honk Honk!"
             }
-            renderer.showToast("Unlocked: " .. (names[id] or id) .. "!")
+            renderer.showToast("Unlocked: " .. (names[id] or id) .. "!", nil, true)
             sound.playAchievement()
         end
     end
