@@ -11,6 +11,23 @@ local menuSelectSource = nil
 local menuBackSource = nil
 local toastSource = nil
 
+local activeJoystick = nil
+local joystickInitialized = false
+
+local function getJoystick()
+    if joystickInitialized then
+        return activeJoystick
+    end
+    if love.joystick then
+        local joysticks = love.joystick.getJoysticks()
+        if #joysticks > 0 then
+            activeJoystick = joysticks[1]
+            joystickInitialized = true
+        end
+    end
+    return activeJoystick
+end
+
 local function triangle(phase)
     local p = phase - math.floor(phase)
     if p < 0.25 then
@@ -24,6 +41,7 @@ end
 
 function sound.init()
     enabled = save.loadSound()
+    pcall(getJoystick)
 
     -- Pre-generate the sounds so they are ready to play instantly
     if love.sound and love.audio then
@@ -286,14 +304,9 @@ end
 
 function sound.vibrate(duration)
     if not _G.vibration then return end
-    if love.joystick then
-        local joysticks = love.joystick.getJoysticks()
-        if #joysticks > 0 then
-            local joystick = joysticks[1]
-            if joystick:isVibrationSupported() then
-                joystick:setVibration(0.6, 0.6, duration or 0.1)
-            end
-        end
+    local j = getJoystick()
+    if j and j:isVibrationSupported() then
+        j:setVibration(0.6, 0.6, duration or 0.1)
     end
 end
 
