@@ -1259,3 +1259,21 @@ function love.draw()
         love.graphics.setShader()
     end
 end
+
+function love.quit()
+    if game then
+        pcall(function() game:saveGameState() end)
+    end
+    pcall(function() love.audio.stop() end)
+    if love.joystick then
+        pcall(function()
+            local joysticks = love.joystick.getJoysticks()
+            for _, j in ipairs(joysticks) do
+                if j:isVibrationSupported() then
+                    j:setVibration(0, 0)
+                end
+            end
+        end)
+    end
+    os.exit()
+end
