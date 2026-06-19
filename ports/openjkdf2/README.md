@@ -62,7 +62,7 @@ Select+Start quits the port (`$GPTOKEYB` with `openjkdf2.gptk`, which unmaps def
 
 ## Build (porters)
 
-Engine submodule + scripts live in the [port repository](https://github.com/juanvillacortac/OpenJKDF2). From a clone with submodules:
+Engine submodule + scripts live in the [port repository](https://github.com/juanvillacortac/openjkdf2-aarch64-portmaster). From a clone with submodules:
 
 ```shell
 ./build.sh
