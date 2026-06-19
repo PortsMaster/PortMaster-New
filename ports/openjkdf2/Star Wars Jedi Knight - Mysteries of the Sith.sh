@@ -41,6 +41,15 @@ export OPENJKMOTS_ROOT="$GAMEDIR/mots"
 [ "${CFW_NAME^^}" = "ROCKNIX" ] && export SDL_HINT_APP_NAME="${SDL_HINT_APP_NAME:-OpenJKDF2}"
 [ "${CFW_NAME^^}" = "ROCKNIX" ] && export SDL_OPENGL_ES_DRIVER="${SDL_OPENGL_ES_DRIVER:-1}"
 
+# Sound fix for some devices running ArkOS and/or dArkOS
+if [[ "${CFW_NAME^^}" == *"ARKOS"* ]]; then
+    if [ ! -f ~/.asoundrc ] && [ -f ~/.asoundrcbak ]; then
+        $ESUDO cp ~/.asoundrcbak ~/.asoundrc
+        $ESUDO chmod ugo+rw ~/.asoundrc
+        sleep 0.5
+    fi
+fi
+
 # --- Gamepad (external pad ignores built-in handheld controller) ---
 . "$GAMEDIR/helpers/gamepad.inc"
 
