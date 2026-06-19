@@ -1,20 +1,24 @@
 #!/bin/bash
-# OpenJKDF2 dedicated multiplayer server (Linux).
+# OpenJKDF2 / MOTS dedicated multiplayer server (Linux).
 #
 # Run from the openjkdf2/ folder after unzipping the port and copying game data
-# into jk1/. See MULTIPLAYER.md for setup, firewall, and client join instructions.
+# into jk1/ (and mots/ for MOTS). See MULTIPLAYER.md for setup, firewall, and
+# client join instructions.
 set -euo pipefail
 
 GAMEDIR="$(cd "$(dirname "$0")" && pwd)"
 CONFDIR="$GAMEDIR/conf"
-ARCH="${ARCH:-$(uname -m)}"
-BIN="$GAMEDIR/openjkdf2.${ARCH}"
-LIBS="$GAMEDIR/libs.${ARCH}"
+DEVICE_ARCH="${DEVICE_ARCH:-$(uname -m)}"
+BIN="$GAMEDIR/openjkdf2.${DEVICE_ARCH}"
+LIBS="$GAMEDIR/libs.${DEVICE_ARCH}"
 LOG="$GAMEDIR/log.txt"
 MPCONF="$CONFDIR/mp.conf"
 
-EPISODE="${OPENJKDF2_MP_EPISODE:-JK1MP}"
-MAP="${OPENJKDF2_MP_MAP:-m2}"
+MOTS_MODE=0
+USE_STEAM=1
+DOCKER_MODE=0
+EPISODE_SET=0
+MAP_SET=0
 HEADLESS=1
 VERBOSE_NET=1
 EXTRA_ARGS=()
@@ -22,30 +26,52 @@ EXTRA_ARGS=()
 usage() {
     cat <<EOF
 Usage: ./run-dedicated.sh [options] [-- extra-engine-args...]
+       ./run-dedicated.sh --docker [cmd] [options] [-- extra-engine-args...]
 
-Starts a headless JKDF2 multiplayer dedicated server (no local player).
+Starts a headless multiplayer dedicated server (no local player).
 
 Prerequisites:
-  - Linux (x86_64 or aarch64; ARCH from \$ARCH or uname -m)
-  - Game data in jk1/ (including jk1/episode/JK1MP.gob)
-  - openjkdf2.\$ARCH and libs.\$ARCH/ from the port zip
+  - Linux (x86_64 or aarch64; DEVICE_ARCH from \$DEVICE_ARCH or uname -m)
+  - JKDF2: game data in jk1/ (including jk1/episode/JK1MP.gob)
+  - MOTS (--mots): jk1/ plus mots/ with mots/episode/JKM_MP.goo
+  - openjkdf2.\$DEVICE_ARCH and libs.\$DEVICE_ARCH/ from the port zip
+  - --docker: Docker installed; port tree staged (./build.sh) or PortMaster zip (see MULTIPLAYER.md)
 
 Options:
-  --episode NAME     MP episode gob base name (default: JK1MP, or [host] episode in mp.conf)
-  --map NAME         Map jkl base name (default: m2, or [host] map in mp.conf)
+  --docker           Run via Docker (build, up, run, logs, down, …; default: up)
+  --mots             Run Mysteries of the Sith (JKM_MP; needs mots/ data)
+  --jkdf2-root PATH  JKDF2 data (episode/, resource/); default: jk1/ or Steam
+  --mots-root PATH   MOTS data; default: mots/ or Steam
+  --no-steam         Do not auto-detect Steam when jk1/ is empty
+  --episode NAME     MP episode gob/goo base name (default: JK1MP or JKM_MP)
+  --map NAME         Map jkl base name (default: m2 or mdm02_freezer)
   --no-headless      Keep video subsystem (not recommended on VPS)
   --quiet-net        Disable -verboseNetworking
   -h, --help         Show this help
 
 Environment:
-  ARCH                 Target arch for binary/libs (default: uname -m)
+  DEVICE_ARCH                 Target arch for binary/libs (default: uname -m)
+  OPENJKDF2_MOTS=1            Same as --mots
   OPENJKDF2_MP_EPISODE / OPENJKDF2_MP_MAP  Override episode/map
-  OPENJKDF2_ROOT       JKDF2 data path (default: \$GAMEDIR/jk1)
+  OPENJKDF2_ROOT       JKDF2 data (or use --jkdf2-root; auto-detects Steam)
+  OPENJKMOTS_ROOT      MOTS data (or use --mots-root; auto-detects Steam)
+  SDL_VIDEODRIVER      Video backend (auto: offscreen on VPS without DISPLAY)
+  LIBGL_ALWAYS_SOFTWARE  Force Mesa llvmpipe (auto: 1 on VPS without DISPLAY)
+  JKDF2_DATA / MOTS_DATA  Game paths for --docker (default: resolved jk1/mots roots)
 
-Host settings in conf/mp.conf ([host] episode/map) are read when present.
+Docker examples:
+  ./run-dedicated.sh --docker build
+  ./run-dedicated.sh --docker up          # detached (default)
+  ./run-dedicated.sh --docker run         # foreground
+  ./run-dedicated.sh --docker --mots
+  ./run-dedicated.sh --docker logs -f
+  ./run-dedicated.sh --docker down
+
+Host settings in conf/mp.conf ([host] episode/map) apply when you do not pass
+--episode/--map. In --mots mode, only JKM_* episodes from mp.conf are used.
 Other [host] keys (port, max_players, password) apply when hosting via the
 in-game menu; for CLI dedicated mode use defaults or host once from the menu
-to persist settings under conf/openjkdf2/.
+to persist settings under conf/openjkdf2/ or conf/openjkmots/.
 
 Logs: $LOG
 EOF
@@ -74,23 +100,320 @@ strip_ext() {
     local v="$1"
     v="${v%.gob}"
     v="${v%.GOB}"
+    v="${v%.goo}"
+    v="${v%.GOO}"
     v="${v%.jkl}"
     v="${v%.JKL}"
     printf '%s' "$v"
 }
 
-has_mp_data() {
-    local ep="$GAMEDIR/jk1/episode"
-    [[ -d "$ep" ]] || return 1
+has_jkdf2_data() {
+    local dir="$1"
+    [[ -d "$dir" ]] || return 1
+    [[ -d "$dir/episode" || -d "$dir/Episode" ]] || return 1
+    [[ -d "$dir/resource" || -d "$dir/Resource" ]] || return 1
+}
+
+jkdf2_episode_dir() {
+    local root="$1" d
+    for d in episode Episode; do
+        [[ -d "$root/$d" ]] && { printf '%s' "$root/$d"; return 0; }
+    done
+    return 1
+}
+
+mots_episode_dir() {
+    local root="$1" d
+    for d in episode Episode; do
+        [[ -d "$root/$d" ]] && { printf '%s' "$root/$d"; return 0; }
+    done
+    return 1
+}
+
+has_jkdf2_mp_data_at() {
+    local ep
+    ep="$(jkdf2_episode_dir "$1")" || return 1
     compgen -G "$ep/JK1MP.gob" >/dev/null 2>&1 \
         || compgen -G "$ep/jk1mp.gob" >/dev/null 2>&1 \
+        || compgen -G "$ep/JK1MP.GOB" >/dev/null 2>&1 \
+        || compgen -G "$ep/*MP*.gob" >/dev/null 2>&1 \
+        || compgen -G "$ep/*MP*.GOB" >/dev/null 2>&1
+}
+
+has_mots_mp_data_at() {
+    local ep
+    ep="$(mots_episode_dir "$1")" || return 1
+    compgen -G "$ep/JKM_MP.goo" >/dev/null 2>&1 \
+        || compgen -G "$ep/jkm_mp.goo" >/dev/null 2>&1 \
+        || compgen -G "$ep/JKM_MP.GOO" >/dev/null 2>&1 \
+        || compgen -G "$ep/JKM_MP.gob" >/dev/null 2>&1 \
+        || compgen -G "$ep/*MP*.goo" >/dev/null 2>&1 \
+        || compgen -G "$ep/*MP*.GOO" >/dev/null 2>&1 \
         || compgen -G "$ep/*MP*.gob" >/dev/null 2>&1
 }
 
+steam_common() {
+    local d
+    for d in \
+        "${STEAM_COMMON:-}" \
+        "$HOME/.local/share/Steam/steamapps/common" \
+        "$HOME/.steam/steam/steamapps/common" \
+        "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common"
+    do
+        [[ -n "$d" && -d "$d" ]] && { printf '%s' "$d"; return 0; }
+    done
+    return 1
+}
+
+find_steam_jkdf2() {
+    local common path
+    common="$(steam_common)" || return 1
+    for path in \
+        "$common/Star Wars Jedi Knight" \
+        "$common/Star Wars Jedi Knight Dark Forces II"
+    do
+        has_jkdf2_data "$path" && { printf '%s' "$path"; return 0; }
+    done
+    return 1
+}
+
+find_steam_mots() {
+    local common path
+    common="$(steam_common)" || return 1
+    for path in \
+        "$common/Jedi Knight Mysteries of the Sith" \
+        "$common/Star Wars Jedi Knight Mysteries of the Sith"
+    do
+        has_jkdf2_data "$path" && { printf '%s' "$path"; return 0; }
+    done
+    return 1
+}
+
+# OPENJKDF2_ROOT set by user wins; else port jk1/; else Steam (unless --no-steam).
+resolve_jkdf2_root() {
+    if [[ -n "${OPENJKDF2_ROOT:-}" ]]; then
+        printf '%s' "$OPENJKDF2_ROOT"
+        return 0
+    fi
+    if has_jkdf2_data "$GAMEDIR/jk1" || has_jkdf2_mp_data_at "$GAMEDIR/jk1"; then
+        printf '%s' "$GAMEDIR/jk1"
+        return 0
+    fi
+    if [[ $USE_STEAM -eq 1 ]]; then
+        find_steam_jkdf2 && return 0
+    fi
+    printf '%s' "$GAMEDIR/jk1"
+}
+
+resolve_mots_root() {
+    if [[ -n "${OPENJKMOTS_ROOT:-}" ]]; then
+        printf '%s' "$OPENJKMOTS_ROOT"
+        return 0
+    fi
+    if has_jkdf2_data "$GAMEDIR/mots" || has_mots_mp_data_at "$GAMEDIR/mots"; then
+        printf '%s' "$GAMEDIR/mots"
+        return 0
+    fi
+    if [[ $USE_STEAM -eq 1 ]]; then
+        find_steam_mots && return 0
+    fi
+    printf '%s' "$GAMEDIR/mots"
+}
+
+mp_data_error() {
+    local root="$1" ep
+    ep="$(jkdf2_episode_dir "$root" 2>/dev/null || true)"
+    echo "ERROR: JK1MP.gob not found under ${ep:-$root/episode/}." >&2
+    if [[ -n "${OPENJKDF2_ROOT:-}" ]]; then
+        echo "OPENJKDF2_ROOT=$OPENJKDF2_ROOT has no multiplayer episode data." >&2
+        echo "Steam installs use Episode/JK1MP.GOB under:" >&2
+        echo "  .../steamapps/common/Star Wars Jedi Knight/" >&2
+        echo "(not the OpenJKDF2 config folder \"Star Wars Jedi Knight - Dark Forces II\")." >&2
+    else
+        echo "Copy GOG/Steam JKDF2 into jk1/, set OPENJKDF2_ROOT, or omit --no-steam for auto-detect." >&2
+    fi
+}
+
+docker_cmd_verb() {
+    case "${1:-}" in
+        build|up|down|stop|start|restart|logs|ps|run) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+mpserver_image() {
+    printf '%s' "${MP_DOCKER_IMAGE:-openjkdf2-mpserver:local}"
+}
+
+mpserver_container() {
+    printf '%s' "${MP_CONTAINER_NAME:-openjkdf2-mpserver}"
+}
+
+docker_build_image() {
+    local arch="${MP_ARCH:-$DEVICE_ARCH}"
+    [[ -x "$GAMEDIR/openjkdf2.$arch" ]] || {
+        echo "ERROR: Missing $GAMEDIR/openjkdf2.$arch" >&2
+        echo "Stage the port tree first (repo: ./build.sh or ./scripts/package-port.sh)" >&2
+        echo "or unzip the PortMaster release into your ports folder." >&2
+        exit 1
+    }
+    docker build -t "$(mpserver_image)" -f "$GAMEDIR/Dockerfile.mpserver" "$GAMEDIR"
+}
+
+docker_run_container() {
+    local -a run_args=("$@")
+    local image volume mots_mount
+
+    image="$(mpserver_image)"
+    volume="${MP_CONF_VOLUME:-openjkdf2-mp-conf}"
+    mots_mount="${MOTS_DATA:-/var/empty}"
+
+    docker volume create "$volume" >/dev/null 2>&1 || true
+    docker rm -f "$(mpserver_container)" >/dev/null 2>&1 || true
+
+    docker run -dit \
+        --name "$(mpserver_container)" \
+        --restart unless-stopped \
+        -p "${MP_PORT:-27020}:27020/udp" \
+        -e SDL_VIDEODRIVER=offscreen \
+        -e LIBGL_ALWAYS_SOFTWARE=1 \
+        -v "$JKDF2_DATA:/opt/openjkdf2/jk1:ro" \
+        -v "$mots_mount:/opt/openjkdf2/mots:ro" \
+        -v "$volume:/opt/openjkdf2/conf" \
+        --tmpfs /var/lib/openjkdf2:size=768m,mode=1777 \
+        "$image" \
+        "${run_args[@]}"
+}
+
+run_docker_mode() {
+    local -a docker_args=() server_args=()
+    local cmd="${MP_DOCKER_CMD:-}"
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "ERROR: docker not found (required for --docker)." >&2
+        exit 1
+    fi
+
+    if [[ $MOTS_MODE -eq 1 ]]; then
+        if ! has_jkdf2_data "$JKDF2_ROOT"; then
+            echo "ERROR: MOTS needs JKDF2 base data at: $JKDF2_ROOT" >&2
+            exit 1
+        fi
+        if ! has_mots_mp_data_at "$MOTS_ROOT"; then
+            echo "ERROR: JKM_MP.goo not found under $MOTS_ROOT" >&2
+            exit 1
+        fi
+    else
+        if ! has_jkdf2_mp_data_at "$JKDF2_ROOT"; then
+            mp_data_error "$JKDF2_ROOT"
+            exit 1
+        fi
+    fi
+
+    export JKDF2_DATA="${JKDF2_DATA:-$JKDF2_ROOT}"
+    if [[ $MOTS_MODE -eq 1 ]]; then
+        export MOTS_DATA="${MOTS_DATA:-$MOTS_ROOT}"
+    fi
+
+    echo "Docker: JKDF2_DATA=$JKDF2_DATA"
+    [[ $MOTS_MODE -eq 1 ]] && echo "Docker: MOTS_DATA=$MOTS_DATA"
+
+    [[ $MOTS_MODE -eq 1 ]] && server_args+=(--mots)
+    [[ $EPISODE_SET -eq 1 ]] && server_args+=(--episode "$EPISODE")
+    [[ $MAP_SET -eq 1 ]] && server_args+=(--map "$MAP")
+    [[ $HEADLESS -eq 0 ]] && server_args+=(--no-headless)
+    [[ $VERBOSE_NET -eq 0 ]] && server_args+=(--quiet-net)
+
+    local -a rest=("${EXTRA_ARGS[@]}")
+    while [[ ${#rest[@]} -gt 0 ]] && docker_cmd_verb "${rest[0]}"; do
+        docker_args+=("${rest[0]}")
+        rest=("${rest[@]:1}")
+    done
+    while [[ ${#rest[@]} -gt 0 && "${rest[0]}" == -* && "${rest[0]}" != --* ]]; do
+        case "${rest[0]}" in
+            -d) rest=("${rest[@]:1}") ;;  # ignored; up is always detached
+            *) docker_args+=("${rest[0]}"); rest=("${rest[@]:1}") ;;
+        esac
+    done
+    server_args+=("${rest[@]}")
+
+    cmd="${docker_args[0]:-up}"
+
+    case "$cmd" in
+        build)
+            docker_build_image
+            ;;
+        up|start)
+            docker_build_image
+            docker_run_container "${server_args[@]}"
+            echo "Container: $(mpserver_container)"
+            echo "  logs:    docker logs -f $(mpserver_container)"
+            echo "  console: docker attach --sig-proxy=false $(mpserver_container)"
+            echo "           (Ctrl+C detaches only — does not stop the server; or Ctrl+P Ctrl+Q)"
+            ;;
+        run)
+            docker_build_image
+            docker volume create "${MP_CONF_VOLUME:-openjkdf2-mp-conf}" >/dev/null 2>&1 || true
+            docker run --rm -it \
+                --name "$(mpserver_container)" \
+                -p "${MP_PORT:-27020}:27020/udp" \
+                -e SDL_VIDEODRIVER=offscreen \
+                -e LIBGL_ALWAYS_SOFTWARE=1 \
+                -v "$JKDF2_DATA:/opt/openjkdf2/jk1:ro" \
+                -v "${MOTS_DATA:-/var/empty}:/opt/openjkdf2/mots:ro" \
+                -v "${MP_CONF_VOLUME:-openjkdf2-mp-conf}:/opt/openjkdf2/conf" \
+                --tmpfs /var/lib/openjkdf2:size=768m,mode=1777 \
+                "$(mpserver_image)" \
+                "${server_args[@]}"
+            ;;
+        down|stop)
+            docker rm -f "$(mpserver_container)"
+            ;;
+        restart)
+            docker restart "$(mpserver_container)"
+            ;;
+        logs)
+            docker logs "${docker_args[@]:1}" "$(mpserver_container)"
+            ;;
+        ps)
+            docker ps -a --filter "name=^/$(mpserver_container)$"
+            ;;
+        *)
+            echo "ERROR: Unknown --docker command: $cmd (use build, up, run, logs, down, …)" >&2
+            exit 1
+            ;;
+    esac
+}
+
+# VPS / SSH: no X11 or Wayland. SDL still needs a GL context briefly at startup;
+# offscreen + software Mesa (llvmpipe) avoids requiring Xorg or a GPU.
+configure_headless_vps() {
+  [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && return 0
+
+  if [[ -z "${SDL_VIDEODRIVER:-}" ]]; then
+    export SDL_VIDEODRIVER=offscreen
+    echo "VPS: no DISPLAY/Wayland — using SDL_VIDEODRIVER=offscreen"
+  fi
+
+  if [[ -z "${LIBGL_ALWAYS_SOFTWARE:-}" ]]; then
+    export LIBGL_ALWAYS_SOFTWARE=1
+    echo "VPS: no GPU display — using LIBGL_ALWAYS_SOFTWARE=1 (Mesa llvmpipe)"
+  fi
+}
+
+[[ "${OPENJKDF2_MOTS:-0}" == "1" ]] && MOTS_MODE=1
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --episode) EPISODE="$(strip_ext "$2")"; shift 2 ;;
-        --map) MAP="$(strip_ext "$2")"; shift 2 ;;
+        --docker) DOCKER_MODE=1; shift ;;
+        --mots) MOTS_MODE=1; shift ;;
+        --jkdf2-root=*) OPENJKDF2_ROOT="${1#*=}"; shift ;;
+        --jkdf2-root) OPENJKDF2_ROOT="$2"; shift 2 ;;
+        --mots-root=*) OPENJKMOTS_ROOT="${1#*=}"; shift ;;
+        --mots-root) OPENJKMOTS_ROOT="$2"; shift 2 ;;
+        --no-steam) USE_STEAM=0; shift ;;
+        --episode) EPISODE="$(strip_ext "$2")"; EPISODE_SET=1; shift 2 ;;
+        --map) MAP="$(strip_ext "$2")"; MAP_SET=1; shift 2 ;;
         --no-headless) HEADLESS=0; shift ;;
         --quiet-net) VERBOSE_NET=0; shift ;;
         -h|--help) usage; exit 0 ;;
@@ -100,16 +423,50 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-case "$ARCH" in
+JKDF2_ROOT="$(resolve_jkdf2_root)"
+MOTS_ROOT="$(resolve_mots_root)"
+
+if [[ $MOTS_MODE -eq 1 ]]; then
+    [[ $EPISODE_SET -eq 0 ]] && EPISODE="${OPENJKDF2_MP_EPISODE:-JKM_MP}"
+    [[ $MAP_SET -eq 0 ]] && MAP="${OPENJKDF2_MP_MAP:-mdm02_freezer}"
+else
+    [[ $EPISODE_SET -eq 0 ]] && EPISODE="${OPENJKDF2_MP_EPISODE:-JK1MP}"
+    [[ $MAP_SET -eq 0 ]] && MAP="${OPENJKDF2_MP_MAP:-m2}"
+fi
+
+if [[ -f "$MPCONF" ]]; then
+    if [[ $EPISODE_SET -eq 0 && -z "${OPENJKDF2_MP_EPISODE:-}" ]]; then
+        conf_ep="$(mpconf_host episode || true)"
+        if [[ -n "$conf_ep" ]]; then
+            conf_ep_base="$(strip_ext "$conf_ep")"
+            if [[ $MOTS_MODE -eq 1 ]]; then
+                [[ "$conf_ep_base" == JKM_* ]] && EPISODE="$conf_ep_base"
+            else
+                [[ "$conf_ep_base" != JKM_* ]] && EPISODE="$conf_ep_base"
+            fi
+        fi
+    fi
+    if [[ $MAP_SET -eq 0 && -z "${OPENJKDF2_MP_MAP:-}" ]]; then
+        conf_map="$(mpconf_host map || true)"
+        [[ -n "$conf_map" ]] && MAP="$(strip_ext "$conf_map")"
+    fi
+fi
+
+if [[ $DOCKER_MODE -eq 1 ]]; then
+    run_docker_mode
+    exit 0
+fi
+
+case "$DEVICE_ARCH" in
     x86_64|aarch64) ;;
     *)
-        echo "ERROR: Unsupported ARCH=$ARCH (need x86_64 or aarch64)." >&2
+        echo "ERROR: Unsupported DEVICE_ARCH=$DEVICE_ARCH (need x86_64 or aarch64)." >&2
         exit 1
         ;;
 esac
 
 [[ -x "$BIN" ]] || {
-    echo "ERROR: Missing $BIN — use the port zip with openjkdf2.$ARCH." >&2
+    echo "ERROR: Missing $BIN — use the port zip with openjkdf2.$DEVICE_ARCH." >&2
     exit 1
 }
 
@@ -125,23 +482,30 @@ for lib in libGameNetworkingSockets.so libcrypto.so.1.1 libssl.so.1.1; do
     }
 done
 
-if ! has_mp_data; then
-    echo "ERROR: JK1MP.gob not found under jk1/episode/." >&2
-    echo "Copy your GOG/Steam JKDF2 install into jk1/ first." >&2
-    exit 1
+if [[ $MOTS_MODE -eq 1 ]]; then
+    if ! has_jkdf2_data "$JKDF2_ROOT"; then
+        echo "ERROR: MOTS needs JKDF2 base data (episode/ + resource/) at:" >&2
+        echo "  $JKDF2_ROOT" >&2
+        exit 1
+    fi
+    if ! has_mots_mp_data_at "$MOTS_ROOT"; then
+        echo "ERROR: JKM_MP.goo not found under $MOTS_ROOT (episode/ or Episode/)." >&2
+        echo "Copy Steam/GOG MOTS into mots/, set OPENJKMOTS_ROOT, or use Steam auto-detect." >&2
+        exit 1
+    fi
+else
+    if ! has_jkdf2_mp_data_at "$JKDF2_ROOT"; then
+        mp_data_error "$JKDF2_ROOT"
+        exit 1
+    fi
 fi
 
-if [[ -f "$MPCONF" ]]; then
-    conf_ep="$(mpconf_host episode || true)"
-    conf_map="$(mpconf_host map || true)"
-    [[ -n "$conf_ep" ]] && EPISODE="$(strip_ext "$conf_ep")"
-    [[ -n "$conf_map" ]] && MAP="$(strip_ext "$conf_map")"
-fi
-
-export OPENJKDF2_ROOT="${OPENJKDF2_ROOT:-$GAMEDIR/jk1}"
-export OPENJKMOTS_ROOT="${OPENJKMOTS_ROOT:-$GAMEDIR/mots}"
+export OPENJKDF2_ROOT="$JKDF2_ROOT"
+export OPENJKMOTS_ROOT="$MOTS_ROOT"
 export XDG_DATA_HOME="$CONFDIR"
 export LD_LIBRARY_PATH="$LIBS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+configure_headless_vps
 
 mkdir -p "$CONFDIR/openjkdf2" "$CONFDIR/openjkmots"
 
@@ -152,6 +516,8 @@ ARGS=(
     "-episode" "$EPISODE"
     "-map" "$MAP"
 )
+[[ $MOTS_MODE -eq 1 ]] && ARGS+=(-motsCompat)
+[[ $MOTS_MODE -eq 1 ]] && export OPENJKDF2_MOTS=1
 [[ $HEADLESS -eq 1 ]] && ARGS+=(-headless)
 [[ $VERBOSE_NET -eq 1 ]] && ARGS+=(-verboseNetworking)
 ARGS+=("${EXTRA_ARGS[@]}")
@@ -159,8 +525,14 @@ ARGS+=("${EXTRA_ARGS[@]}")
 cd "$GAMEDIR"
 : >"$LOG"
 
-echo "== OpenJKDF2 dedicated server =="
+if [[ $MOTS_MODE -eq 1 ]]; then
+    echo "== OpenJKMOTS dedicated server =="
+else
+    echo "== OpenJKDF2 dedicated server =="
+fi
 echo "Gamedir:  $GAMEDIR"
+echo "JKDF2:    $OPENJKDF2_ROOT"
+[[ $MOTS_MODE -eq 1 ]] && echo "MOTS:     $OPENJKMOTS_ROOT"
 echo "Episode:  $EPISODE"
 echo "Map:      $MAP"
 echo "Log:      $LOG"

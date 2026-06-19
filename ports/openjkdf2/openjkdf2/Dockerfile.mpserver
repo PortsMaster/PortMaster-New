@@ -1,0 +1,48 @@
+# OpenJKDF2 dedicated multiplayer server (headless VPS / Docker).
+# Build context: port/openjkdf2/ — same tree as the PortMaster zip (openjkdf2/).
+#
+#   ./build.sh && cd port/openjkdf2 && ./run-dedicated.sh --docker build
+#   JKDF2_DATA=/path/to/jkdf2 ./run-dedicated.sh --docker up
+FROM ubuntu:20.04
+
+LABEL org.opencontainers.image.title="OpenJKDF2 MP dedicated server"
+LABEL org.opencontainers.image.description="Headless JKDF2/MOTS multiplayer server (GNS)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Runtime only — matches Ubuntu 20.04 glibc used by port builds.
+# GNS + OpenSSL 1.1 come from libs.* in the port tree; SDL from apt (omitted in handheld zip).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libgl1-mesa-glx \
+    libegl1-mesa \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libopenal1 \
+    libdrm2 \
+    libgbm1 \
+    libstdc++6 \
+    libsdl2-2.0-0 \
+    libsdl2-mixer-2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/openjkdf2
+
+COPY . .
+
+RUN chmod +x run-dedicated.sh openjkdf2.x86_64 openjkdf2.aarch64 2>/dev/null || chmod +x run-dedicated.sh
+
+COPY mpserver-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENV SDL_VIDEODRIVER=offscreen \
+    LIBGL_ALWAYS_SOFTWARE=1 \
+    SDL_AUDIODRIVER=dummy
+
+EXPOSE 27020/udp
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD []
