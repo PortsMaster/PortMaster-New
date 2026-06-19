@@ -41,7 +41,7 @@ If the game fails to start, check `openjkdf2/log.txt` on the device SD card.
 
 JKDF2 **LAN multiplayer** works on handheld (**aarch64**) and PC (**x86_64**) via **Valve GameNetworkingSockets**. Configure join/host defaults in `openjkdf2/conf/mp.conf` (copy from `mp.conf.example`).
 
-**Full guide:** [openjkdf2/MULTIPLAYER.md](openjkdf2/MULTIPLAYER.md) — LAN and Internet (Tailscale/VPS), `mp.conf` reference, dedicated server (`run-dedicated.sh`), bundled OpenSSL libs, and troubleshooting.
+**Full guide:** [openjkdf2/MULTIPLAYER.md](openjkdf2/MULTIPLAYER.md) — LAN and Internet (Tailscale/VPS), `mp.conf` reference, dedicated server (`run-dedicated.run`), bundled OpenSSL libs, and troubleshooting.
 
 ## Controls (handheld)
 

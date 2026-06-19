@@ -12,7 +12,7 @@ There is **no Steam matchmaking**, **no server browser**, and **no automatic Int
 |-------------|--------|
 | **Legal game files** | You must own JKDF2. Copy GOG/Steam data into `jk1/`. MOTS also needs `mots/` (see `mots/README.txt`). |
 | **`JK1MP.gob`** | Under `jk1/episode/` — required for JKDF2 multiplayer maps. |
-| **`JKM_MP.goo`** | Under `mots/episode/` — required for MOTS multiplayer (`run-dedicated.sh --mots`). |
+| **`JKM_MP.goo`** | Under `mots/episode/` — required for MOTS multiplayer (`run-dedicated.run --mots`). |
 | **Port zip libs** | Do not delete bundled networking libraries (see below). |
 | **Same reachable network** | LAN, Tailscale tailnet, or public IP + open UDP port. |
 
@@ -161,7 +161,7 @@ In the multiplayer UI, provider should be **Valve GNS**.
 
 ### Join Game (step by step)
 
-1. Start the server (`./run-dedicated.sh`, **Start Game**, or Docker — see below).
+1. Start the server (`./run-dedicated.run`, **Start Game**, or Docker — see below).
 2. Launch the client → **Multiplayer → Join Game**.
 3. Choose provider **Valve GNS** → OK.
 4. Type the server address in the **IP field** (e.g. `127.0.0.1:27020`), or rely on `mp.conf` `[join] host=`.
@@ -205,14 +205,14 @@ Clients connect to the **host** IP (`127.0.0.1` from the same machine, or the VP
 
 ## Dev console (dedicated / headless)
 
-`run-dedicated.sh` passes **`-headless`**, which enables a **stdin dev console** on Linux (no window needed). The process prints a `>` prompt; type a command and press **Enter**.
+`run-dedicated.run` passes **`-headless`**, which enables a **stdin dev console** on Linux (no window needed). The process prints a `>` prompt; type a command and press **Enter**.
 
 **Native or Docker foreground:**
 
 ```bash
-./run-dedicated.sh
+./run-dedicated.run
 # or
-./run-dedicated.sh --docker run
+./run-dedicated.run --docker run
 ```
 
 Example:
@@ -252,7 +252,7 @@ No router port forwarding required.
 1. Rent a Linux **x86_64** or **aarch64** VPS.
 2. Unzip this port, copy `jk1/` game data.
 3. Open **UDP 27020** (or your port) in the VPS firewall.
-4. Run `./run-dedicated.sh` (see below).
+4. Run `./run-dedicated.run` (see below).
 5. Clients join with the VPS **public IP** in `mp.conf`.
 
 ### Option C — Home PC + port forwarding
@@ -261,16 +261,20 @@ Forward **UDP 27020** on your router to the hosting PC. Clients use your **publi
 
 ---
 
-## Dedicated server (`run-dedicated.sh`)
+## Dedicated server (`run-dedicated.run`)
 
 A **dedicated** server simulates the match and accepts clients but **does not play as a human**. Useful for a VPS or a PC that only hosts.
+
+On handhelds, helper scripts use **`.run`** instead of **`.sh`** so EmulationStation does not list them as extra port entries. Game launchers remain `*.sh` at the zip root.
+
+**Docker shortcut:** `./run-mpserver.run` is the same as `./run-dedicated.run --docker`.
 
 ### From the zip (VPS / headless Linux)
 
 ```bash
 cd openjkdf2
-chmod +x run-dedicated.sh
-./run-dedicated.sh
+chmod +x run-dedicated.run
+./run-dedicated.run
 ```
 
 **Prerequisites:**
@@ -280,10 +284,10 @@ chmod +x run-dedicated.sh
 - `openjkdf2.$DEVICE_ARCH` + `libs.$DEVICE_ARCH/` present
 - Firewall allows **UDP 27020** (or configured port)
 
-**Steam note:** game files live under `Star Wars Jedi Knight/` (`Episode/JK1MP.GOB`), not the OpenJKDF2 config folder `Star Wars Jedi Knight - Dark Forces II/`. If `jk1/` is empty, `run-dedicated.sh` auto-detects Steam; or set:
+**Steam note:** game files live under `Star Wars Jedi Knight/` (`Episode/JK1MP.GOB`), not the OpenJKDF2 config folder `Star Wars Jedi Knight - Dark Forces II/`. If `jk1/` is empty, `run-dedicated.run` auto-detects Steam; or set:
 
 ```bash
-OPENJKDF2_ROOT="$HOME/.local/share/Steam/steamapps/common/Star Wars Jedi Knight" ./run-dedicated.sh
+OPENJKDF2_ROOT="$HOME/.local/share/Steam/steamapps/common/Star Wars Jedi Knight" ./run-dedicated.run
 ```
 
 The script:
@@ -302,11 +306,11 @@ The script:
 **Overrides:**
 
 ```bash
-./run-dedicated.sh --episode JK1MP --map m2
-OPENJKDF2_MP_MAP=m3 ./run-dedicated.sh
-./run-dedicated.sh --mots
-./run-dedicated.sh --mots --episode JKM_MP --map mdm15_homestead
-OPENJKDF2_MOTS=1 ./run-dedicated.sh --map mdm10_gantry
+./run-dedicated.run --episode JK1MP --map m2
+OPENJKDF2_MP_MAP=m3 ./run-dedicated.run
+./run-dedicated.run --mots
+./run-dedicated.run --mots --episode JKM_MP --map mdm15_homestead
+OPENJKDF2_MOTS=1 ./run-dedicated.run --map mdm10_gantry
 ```
 
 ### MOTS dedicated server
@@ -330,7 +334,7 @@ You **do not** need Xorg, a window manager, or a physical display. The engine st
 sudo apt install libgl1 libegl1
 ```
 
-`run-dedicated.sh` detects missing `DISPLAY` and `WAYLAND_DISPLAY` and sets:
+`run-dedicated.run` detects missing `DISPLAY` and `WAYLAND_DISPLAY` and sets:
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
@@ -340,7 +344,7 @@ sudo apt install libgl1 libegl1
 Override if your VPS has a GPU and you prefer hardware GL:
 
 ```bash
-LIBGL_ALWAYS_SOFTWARE=0 ./run-dedicated.sh
+LIBGL_ALWAYS_SOFTWARE=0 ./run-dedicated.run
 ```
 
 After startup, check `log.txt` for:
@@ -354,7 +358,7 @@ If SDL fails with `x11 not available` or `wayland not available`, you are not in
 
 ### Docker (`--docker` / `Dockerfile.mpserver`)
 
-For VPS or homelab, the image uses the **same `openjkdf2/` tree as the PortMaster zip** (binaries, `libs.*`, `run-dedicated.sh`, …). The container installs **Mesa** and **SDL** from apt; **GNS** and **OpenSSL 1.1** come from `libs.*` in the port. Your game files stay on the host as **read-only** bind mounts (permissions unchanged).
+For VPS or homelab, the image uses the **same `openjkdf2/` tree as the PortMaster zip** (binaries, `libs.*`, `run-dedicated.run`, …). The container installs **Mesa** and **SDL** from apt; **GNS** and **OpenSSL 1.1** come from `libs.*` in the port. Your game files stay on the host as **read-only** bind mounts (permissions unchanged).
 
 **Prerequisites:** Docker, and a staged port tree (`./build.sh` from the repo, or unzip `openjkdf2.zip` on the server).
 
@@ -362,8 +366,8 @@ For VPS or homelab, the image uses the **same `openjkdf2/` tree as the PortMaste
 cd port/openjkdf2
 export JKDF2_DATA="$HOME/.local/share/Steam/steamapps/common/Star Wars Jedi Knight"
 
-./run-dedicated.sh --docker build
-./run-dedicated.sh --docker up
+./run-dedicated.run --docker build
+./run-dedicated.run --docker up
 docker logs -f openjkdf2-mpserver
 ```
 
@@ -371,14 +375,14 @@ docker logs -f openjkdf2-mpserver
 
 ```bash
 export MOTS_DATA="$HOME/.local/share/Steam/steamapps/common/Jedi Knight Mysteries of the Sith"
-./run-dedicated.sh --docker --mots
+./run-dedicated.run --docker --mots
 ```
 
 **Other commands:** `run` (foreground, interactive console), `down`, `restart`, `logs -f`, `ps` — after `--docker`:
 
 ```bash
-./run-dedicated.sh --docker logs -f
-./run-dedicated.sh --docker down
+./run-dedicated.run --docker logs -f
+./run-dedicated.run --docker down
 ```
 
 | Mount | Mode | Contents |
@@ -390,6 +394,8 @@ export MOTS_DATA="$HOME/.local/share/Steam/steamapps/common/Jedi Knight Mysterie
 
 **Variables:** `MP_DOCKER_IMAGE`, `MP_CONTAINER_NAME`, `MP_CONF_VOLUME`, `MP_PORT`.
 
+**Files:** `Dockerfile.mpserver`, `.dockerignore`, `run-dedicated.run`, `run-mpserver.run`. `run-mpserver.run` → alias de `run-dedicated.run --docker`.
+
 #### Logs and console (background `up`)
 
 Engine output goes to **stdout** and **`/opt/openjkdf2/log.txt`**.
@@ -400,13 +406,13 @@ Engine output goes to **stdout** and **`/opt/openjkdf2/log.txt`**.
 docker logs -f openjkdf2-mpserver
 ```
 
-**Interactive console** after `./run-dedicated.sh --docker up` (container must be started with a TTY — `run-dedicated.sh` uses `docker run -dit`):
+**Interactive console** after `./run-dedicated.run --docker up` (container must be started with a TTY — `run-dedicated.run` uses `docker run -dit`):
 
 ```bash
 docker attach --sig-proxy=false openjkdf2-mpserver
 ```
 
-The game **turns off terminal echo** and redraws one line: `> yourcommand`. You will not see the usual double echo from the shell; the full line appears on the `>` prompt as you type. If typing looks broken (one stray character), recreate the container so it gets a TTY: `./run-dedicated.sh --docker down && ./run-dedicated.sh --docker up`.
+The game **turns off terminal echo** and redraws one line: `> yourcommand`. You will not see the usual double echo from the shell; the full line appears on the `>` prompt as you type. If typing looks broken (one stray character), recreate the container so it gets a TTY: `./run-dedicated.run --docker down && ./run-dedicated.run --docker up`.
 
 Type commands at the `>` prompt. To leave without stopping the server:
 
@@ -429,15 +435,15 @@ Persistent settings live in the Docker volume **`openjkdf2-mp-conf`** → `/opt/
 
 | Mode | Command | Console |
 |------|---------|---------|
-| **Foreground** | `./run-dedicated.sh --docker run` | `>` prompt in your terminal. Ctrl+C stops the server (expected in foreground). |
-| **Background** | `./run-dedicated.sh --docker up` | `docker logs -f` for output; `docker attach --sig-proxy=false …` to type commands. |
+| **Foreground** | `./run-dedicated.run --docker run` | `>` prompt in your terminal. Ctrl+C stops the server (expected in foreground). |
+| **Background** | `./run-dedicated.run --docker up` | `docker logs -f` for output; `docker attach --sig-proxy=false …` to type commands. |
 
 Example (foreground, local testing):
 
 ```bash
 export JKDF2_DATA="$HOME/.local/share/Steam/steamapps/common/Star Wars Jedi Knight"
 cd port/openjkdf2
-./run-dedicated.sh --docker run
+./run-dedicated.run --docker run
 # wait for "Server listening on port 27020", then:
 # > players
 # > help
@@ -459,7 +465,7 @@ Or inspect the volume path: `docker volume inspect openjkdf2-mp-conf`.
 1. Set `dedicated=1` in `mp.conf` `[host]`, or toggle **Dedicated** in **Start Game**.
 2. Launch normally and start the match.
 
-The host machine still runs the full game binary (video, menus). On a VPS without a display, prefer `run-dedicated.sh`.
+The host machine still runs the full game binary (video, menus). On a VPS without a display, prefer `run-dedicated.run`.
 
 ### Dedicated server implications
 
@@ -467,11 +473,11 @@ The host machine still runs the full game binary (video, menus). On a VPS withou
 |-------|--------|
 | **Slots** | Dedicated mode reserves the server slot; max human players is effectively `max_players - 1`. |
 | **No graphics on VPS** | `-headless` skips rendering after startup; the sim still runs. Without a desktop, the script auto-sets `SDL_VIDEODRIVER=offscreen` and `LIBGL_ALWAYS_SOFTWARE=1` (needs `libgl1` / Mesa, not Xorg). |
-| **Not a system service** | `run-dedicated.sh` is a foreground process — use `screen`, `tmux`, or systemd if you want 24/7. |
+| **Not a system service** | `run-dedicated.run` is a foreground process — use `screen`, `tmux`, or systemd if you want 24/7. |
 | **Security** | Exposing UDP to the Internet carries risk; use `password` in `[host]` and firewall allowlists when possible. |
 | **Game files on server** | The VPS must legally hold a copy of JKDF2 data in `jk1/`. |
-| **CLI vs `mp.conf`** | `run-dedicated.sh` reads **episode/map** from `mp.conf`. Port, password, and player limits from `[host]` are fully applied via the **Start Game** menu; hosting once from the menu saves settings under `conf/openjkdf2/` or `conf/openjkmots/`. |
-| **MOTS multiplayer** | Use `./run-dedicated.sh --mots` on the server; clients launch MOTS. Less tested than JKDF2 — check `log.txt` if a map fails to load. |
+| **CLI vs `mp.conf`** | `run-dedicated.run` reads **episode/map** from `mp.conf`. Port, password, and player limits from `[host]` are fully applied via the **Start Game** menu; hosting once from the menu saves settings under `conf/openjkdf2/` or `conf/openjkmots/`. |
+| **MOTS multiplayer** | Use `./run-dedicated.run --mots` on the server; clients launch MOTS. Less tested than JKDF2 — check `log.txt` if a map fails to load. |
 
 ### Example: systemd unit (optional)
 
@@ -485,7 +491,7 @@ Type=simple
 WorkingDirectory=/opt/openjkdf2
 Environment=SDL_VIDEODRIVER=offscreen
 Environment=LIBGL_ALWAYS_SOFTWARE=1
-ExecStart=/opt/openjkdf2/run-dedicated.sh
+ExecStart=/opt/openjkdf2/run-dedicated.run
 Restart=on-failure
 User=openjkdf2
 
@@ -509,9 +515,9 @@ Adjust paths and user. Open UDP in `iptables` / cloud firewall separately.
 | Join works on LAN but not Internet | Use Tailscale or forward UDP; GNS has no built-in relay. |
 | Provider **Valve GNS** | Networking OK. |
 | **Telnet to 27020 fails** | Normal — the game port is **UDP**, not TCP. Use `ss -ulnp` / `nc -u` (see [Testing connectivity](#testing-connectivity-udp)). |
-| **No console in Docker `up` mode** | `docker attach --sig-proxy=false openjkdf2-mpserver`, or `./run-dedicated.sh --docker run` for foreground. |
+| **No console in Docker `up` mode** | `docker attach --sig-proxy=false openjkdf2-mpserver`, or `./run-dedicated.run --docker run` for foreground. |
 | **Ctrl+C killed the server after `up`** | You used `docker attach` without `--sig-proxy=false`. Use `docker logs -f` for logs, or attach with `--sig-proxy=false`. |
-| **Attach console shows one letter while typing** | Container was created without `-t`. Run `./run-dedicated.sh --docker down && ./run-dedicated.sh --docker up`, then attach again. Or use `./run-dedicated.sh --docker run` for a normal foreground console. |
+| **Attach console shows one letter while typing** | Container was created without `-t`. Run `./run-dedicated.run --docker down && ./run-dedicated.run --docker up`, then attach again. Or use `./run-dedicated.run --docker run` for a normal foreground console. |
 
 Always check **`openjkdf2/log.txt`** on the device SD card or next to the binary on PC/VPS.
 
@@ -525,4 +531,4 @@ Always check **`openjkdf2/log.txt`** on the device SD card or next to the binary
 - Official LucasArts / Valve hosted infrastructure
 - Guaranteed MOTS multiplayer (experimental; use `--mots` dedicated + MOTS client)
 
-For most users: **LAN** or **Tailscale + `mp.conf`** is the intended experience. For 24/7 public servers: **VPS + `run-dedicated.sh` + firewall + `mp.conf` on clients**.
+For most users: **LAN** or **Tailscale + `mp.conf`** is the intended experience. For 24/7 public servers: **VPS + `run-dedicated.run` + firewall + `mp.conf` on clients**.

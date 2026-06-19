@@ -37,4 +37,4 @@ if [[ $needs_mots -eq 1 ]]; then
 fi
 
 cd "$GAMEDIR"
-exec ./run-dedicated.sh --no-steam "$@"
+exec ./run-dedicated.run --no-steam "$@"
