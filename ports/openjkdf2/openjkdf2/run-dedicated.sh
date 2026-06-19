@@ -1,5 +1,5 @@
 #!/bin/bash
-# OpenJKDF2 dedicated multiplayer server (x86_64 Linux).
+# OpenJKDF2 dedicated multiplayer server (Linux).
 #
 # Run from the openjkdf2/ folder after unzipping the port and copying game data
 # into jk1/. See MULTIPLAYER.md for setup, firewall, and client join instructions.
@@ -7,8 +7,9 @@ set -euo pipefail
 
 GAMEDIR="$(cd "$(dirname "$0")" && pwd)"
 CONFDIR="$GAMEDIR/conf"
-BIN="$GAMEDIR/openjkdf2.x86_64"
-LIBS="$GAMEDIR/libs.x86_64"
+ARCH="${ARCH:-$(uname -m)}"
+BIN="$GAMEDIR/openjkdf2.${ARCH}"
+LIBS="$GAMEDIR/libs.${ARCH}"
 LOG="$GAMEDIR/log.txt"
 MPCONF="$CONFDIR/mp.conf"
 
@@ -25,9 +26,9 @@ Usage: ./run-dedicated.sh [options] [-- extra-engine-args...]
 Starts a headless JKDF2 multiplayer dedicated server (no local player).
 
 Prerequisites:
-  - Linux x86_64
+  - Linux (x86_64 or aarch64; ARCH from \$ARCH or uname -m)
   - Game data in jk1/ (including jk1/episode/JK1MP.gob)
-  - openjkdf2.x86_64 and libs.x86_64/ from the port zip
+  - openjkdf2.\$ARCH and libs.\$ARCH/ from the port zip
 
 Options:
   --episode NAME     MP episode gob base name (default: JK1MP, or [host] episode in mp.conf)
@@ -37,6 +38,7 @@ Options:
   -h, --help         Show this help
 
 Environment:
+  ARCH                 Target arch for binary/libs (default: uname -m)
   OPENJKDF2_MP_EPISODE / OPENJKDF2_MP_MAP  Override episode/map
   OPENJKDF2_ROOT       JKDF2 data path (default: \$GAMEDIR/jk1)
 
@@ -98,14 +100,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "$(uname -m)" != "x86_64" ]]; then
-    echo "ERROR: Dedicated server script requires Linux x86_64 (VPS / PC)." >&2
-    echo "Handhelds can join games but should not run this script." >&2
-    exit 1
-fi
+case "$ARCH" in
+    x86_64|aarch64) ;;
+    *)
+        echo "ERROR: Unsupported ARCH=$ARCH (need x86_64 or aarch64)." >&2
+        exit 1
+        ;;
+esac
 
 [[ -x "$BIN" ]] || {
-    echo "ERROR: Missing $BIN — use the port zip with openjkdf2.x86_64." >&2
+    echo "ERROR: Missing $BIN — use the port zip with openjkdf2.$ARCH." >&2
     exit 1
 }
 

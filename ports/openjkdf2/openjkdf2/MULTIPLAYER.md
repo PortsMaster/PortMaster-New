@@ -94,7 +94,7 @@ Applied when you open **Multiplayer → Join Game**.
 
 Applied when you open **Multiplayer → Start Game** (after loading saved host settings from `conf/openjkdf2/`).
 
-### Example: handheld joins PC on LAN
+### Example: handheld joins to game on LAN
 
 ```ini
 [join]
@@ -128,9 +128,9 @@ dedicated=1
 
 ### PC hosts, handheld joins (typical)
 
-1. **Host (x86_64):** launch game → **Multiplayer → Start Game** → configure → start.
+1. **Host:** launch game → **Multiplayer → Start Game** → configure → start.
 2. Note host **LAN IP** (`ip addr`, router DHCP list, etc.).
-3. **Client (handheld):** set `mp.conf` `[join] host=` to that IP, launch → **Join Game**.
+3. **Client:** set `mp.conf` `[join] host=` to that IP, launch → **Join Game**.
 
 ### Handheld vs handheld / PC vs PC
 
@@ -167,7 +167,7 @@ No router port forwarding required.
 
 ### Option B — Public VPS dedicated server
 
-1. Rent a Linux **x86_64** VPS.
+1. Rent a Linux **x86_64** or **aarch64** VPS.
 2. Unzip this port, copy `jk1/` game data.
 3. Open **UDP 27020** (or your port) in the VPS firewall.
 4. Run `./run-dedicated.sh` (see below).
@@ -193,14 +193,15 @@ chmod +x run-dedicated.sh
 
 **Prerequisites:**
 
-- Linux **x86_64** only (not for aarch64 handhelds).
-- `jk1/` with `JK1MP.gob`.
-- `openjkdf2.x86_64` + `libs.x86_64/` present.
-- Firewall allows **UDP 27020** (or configured port).
+- Linux **x86_64** or **aarch64** (`ARCH` from `$ARCH` or `uname -m`)
+- `jk1/` with `JK1MP.gob`
+- `openjkdf2.$ARCH` + `libs.$ARCH/` present
+- Firewall allows **UDP 27020** (or configured port)
 
 The script:
 
-- Sets `LD_LIBRARY_PATH` to `libs.x86_64/`
+- Picks `openjkdf2.${ARCH}` and `libs.${ARCH}/` (`ARCH` defaults to `uname -m`)
+- Sets `LD_LIBRARY_PATH` to the matching `libs.*` folder
 - Sets `OPENJKDF2_ROOT` and `XDG_DATA_HOME=conf/`
 - Reads `[host] episode` / `map` from `conf/mp.conf` if present
 - Launches: `-dedicatedServer -autostart -mp -headless -verboseNetworking`
