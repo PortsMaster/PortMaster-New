@@ -267,8 +267,6 @@ A **dedicated** server simulates the match and accepts clients but **does not pl
 
 On handhelds, helper scripts use **`.run`** instead of **`.sh`** so EmulationStation does not list them as extra port entries. Game launchers remain `*.sh` at the zip root.
 
-**Docker shortcut:** `./run-mpserver.run` is the same as `./run-dedicated.run --docker`.
-
 ### From the zip (VPS / headless Linux)
 
 ```bash
@@ -394,7 +392,7 @@ export MOTS_DATA="$HOME/.local/share/Steam/steamapps/common/Jedi Knight Mysterie
 
 **Variables:** `MP_DOCKER_IMAGE`, `MP_CONTAINER_NAME`, `MP_CONF_VOLUME`, `MP_PORT`.
 
-**Files:** `Dockerfile.mpserver`, `.dockerignore`, `run-dedicated.run`, `run-mpserver.run`. `run-mpserver.run` → alias de `run-dedicated.run --docker`.
+**Files:** `Dockerfile.mpserver`, `.dockerignore`, `run-dedicated.run`.
 
 #### Logs and console (background `up`)
 
