@@ -31,10 +31,18 @@ $ESUDO chmod 666 /dev/uinput
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-$GPTOKEYB "devil.${DEVICE_ARCH}" &
+$GPTOKEYB "devil.${DEVICE_ARCH}" -c "$GAMEDIR/devilutionx.gptk" &
+
+if command -v pm_platform_helper >/dev/null 2>&1; then
+  pm_platform_helper "$GAMEDIR/devil.${DEVICE_ARCH}"
+fi
+
 ./devil.${DEVICE_ARCH} --config-dir $GAMEDIR --data-dir $GAMEDIR --save-dir $GAMEDIR 2>&1 | tee $GAMEDIR/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
 
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-
+if command -v pm_finish >/dev/null 2>&1; then
+  pm_finish
+else
+  $ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null || true
+  $ESUDO systemctl restart oga_events &
+  printf "\033c" >> /dev/tty1
+fi

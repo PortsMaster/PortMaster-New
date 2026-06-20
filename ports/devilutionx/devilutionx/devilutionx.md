@@ -1,8 +1,12 @@
 ## Notes
 
-Copy diabdat.mpq from your CD or GoG installation (or extract it from the GoG installer) into /roms/ports/devilution folder. 
+Copy `DIABDAT.MPQ` from your CD or GOG installation, or extract it from the GOG installer, into `/roms/ports/devilutionx/`.
 
-Do not delete the gamecontrollerdb.txt file in the /roms/ports/devilution folder or there will be no controller support in the game! For controls, see here
+To run the Diablo: Hellfire expansion, also copy `hellfire.mpq`, `hfmonk.mpq`, `hfmusic.mpq`, and `hfvoice.mpq` into `/roms/ports/devilutionx/`.
+
+Some locales require extra assets. For example, `zh_CN` and `zh_TW` require `fonts.mpq` from the official [devilutionx-assets releases](https://github.com/diasurgical/devilutionx-assets/releases). Without this file, DevilutionX exits with a missing fonts error.
+
+The port uses DevilutionX SDL controller support for gameplay. The included `devilutionx.gptk` file leaves gameplay controls unassigned in gptokeyb, while keeping the PortMaster Start+Select kill switch available if the game freezes. Do not delete the `gamecontrollerdb.txt` file in `/roms/ports/devilutionx/` if it is present, or there will be no controller support in the game.
 
 If you experience issues after a version upgrade, backup your save file and uninstall/reinstall the port.
 
@@ -31,5 +35,3 @@ cp build/devilution "destionation_path/devilution"
 cp -r build/assets/ "destionation_path/assets"
 
 ```
-
-
