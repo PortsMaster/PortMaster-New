@@ -195,6 +195,11 @@ if [ "$DEVICE_CPU" = "a133plus" ]; then
     echo "gothic: TrimUI A133P — registered PowerVR Vulkan ICD (libVK_IMG)"
 fi
 
+## rg52-mini has a portrait screen which rotates vulkan so we force gles
+if [ "$DEVICE_NAME" = "RG52MINI" ]; then
+    export GOTHIC_BACKEND = "gles"
+fi
+
 $ESUDO env \
     "${SDLVID_ARG[@]}" \
     "${VK_ICD_ARG[@]}" \
