@@ -1,5 +1,6 @@
 Thanks to [banteg](https://github.com/banteg/crimson) for this faithful rewrite of Crimsonland.
 Modded for handhelds: [jckhng](https://github.com/jckhng/crimson)
+Thanks to NotYerAvgPorter for testing.
 
 # Crimsonland PortMaster
 
