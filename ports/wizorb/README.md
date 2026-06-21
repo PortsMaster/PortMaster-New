@@ -2,9 +2,10 @@
 
 Special thanks to [Tribute Games Inc.](https://tributegames.com/) for making this wonderful game!
 
-Source: https://www.humblebundle.com/store/wizorb
+Source: https://wizorb.com/
 
-Thanks to CEpeep for the initial work on the port, Johnny on Flame for his work with FNA patches and the libs, and Fraxinus88 for packaging the port!
+Thanks to CEpeep for the initial work on the port, Johnny on Flame for his work with FNA patches and the libs, Fraxinus88 for packaging the port and the testers from the PortMaster Discord.
+
 
 ## Controls
 

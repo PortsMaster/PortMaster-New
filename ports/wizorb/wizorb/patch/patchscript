@@ -53,9 +53,24 @@ patch_game() {
         rm -f "$GAMEDIR/gamedata/place humble linux installer here.txt"
     fi
 
-    # Patch Wizorb.exe
-    if ! $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/Wizorb.exe" "$GAMEDIR/patch/wizorbhumble.xdelta" "$GAMEDIR/gamedata/Wizorb2.exe"; then
-        echo "Error: xdelta3 patch failed. Wrong installer version?"
+    # Check md5 of Wizorb.exe to determine which xdelta to use
+    MD5=$(md5sum "$GAMEDIR/gamedata/Wizorb.exe" | awk '{print $1}')
+    echo "Wizorb.exe md5: $MD5"
+
+    if [ "$MD5" = "9b627b7c373f294367ac45aff5c0e996" ]; then
+        XDELTA="$GAMEDIR/patch/wizorbhumble.xdelta"
+        echo "Humble version detected."
+    elif [ "$MD5" = "df83caa9ae0175659d6b7e8a2bd5a622" ]; then
+        XDELTA="$GAMEDIR/patch/wizorbsteam.xdelta"
+        echo "Steam version detected."
+    else
+        echo "Error: Wizorb.exe md5 does not match any known version."
+        patch_failure
+    fi
+
+# Patch Wizorb.exe
+    if ! $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/Wizorb.exe" "$XDELTA" "$GAMEDIR/gamedata/Wizorb2.exe"; then
+        echo "Error: xdelta3 patch failed."
         rm -f "$GAMEDIR/gamedata/Wizorb2.exe"
         patch_failure
     fi
@@ -64,6 +79,25 @@ patch_game() {
     rm -f "$GAMEDIR/gamedata/Wizorb.exe"
     mv "$GAMEDIR/gamedata/Wizorb2.exe" "$GAMEDIR/gamedata/Wizorb.exe"
     sleep 1
+
+    # Patch ParisEngine.dll if steam version
+    PARIS_MD5=$(md5sum "$GAMEDIR/gamedata/ParisEngine.dll" 2>/dev/null | awk '{print $1}')
+    echo "ParisEngine.dll md5: $PARIS_MD5"
+    if [ "$PARIS_MD5" = "e53b23c866440da684d9d91258743f21" ]; then
+        echo "Patching ParisEngine.dll..."
+        if ! $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/ParisEngine.dll" "$GAMEDIR/patch/parisenginesteam.xdelta" "$GAMEDIR/gamedata/ParisEngine2.dll"; then
+            echo "Error: xdelta3 patch failed for ParisEngine.dll."
+            rm -f "$GAMEDIR/gamedata/ParisEngine2.dll"
+            patch_failure
+        fi
+        echo "ParisEngine.dll patched successfully..."
+        rm -f "$GAMEDIR/gamedata/ParisEngine.dll"
+        mv "$GAMEDIR/gamedata/ParisEngine2.dll" "$GAMEDIR/gamedata/ParisEngine.dll"
+        sleep 1
+    else
+        echo "ParisEngine.dll md5 does not match steam version, skipping patch."
+    fi
+
     install_complete
     sleep 1
 }
