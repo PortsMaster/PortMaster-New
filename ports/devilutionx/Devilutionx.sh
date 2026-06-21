@@ -23,6 +23,8 @@ get_controls
 GAMEDIR="/$directory/ports/devilutionx"
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 $ESUDO chmod 666 /dev/tty1
@@ -33,16 +35,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "devil.${DEVICE_ARCH}" -c "$GAMEDIR/devilutionx.gptk" &
 
-if command -v pm_platform_helper >/dev/null 2>&1; then
-  pm_platform_helper "$GAMEDIR/devil.${DEVICE_ARCH}"
-fi
+pm_platform_helper "$GAMEDIR/devil.${DEVICE_ARCH}" >/dev/null
+./devil.${DEVICE_ARCH} --config-dir $GAMEDIR --data-dir $GAMEDIR --save-dir $GAMEDIR
 
-./devil.${DEVICE_ARCH} --config-dir $GAMEDIR --data-dir $GAMEDIR --save-dir $GAMEDIR 2>&1 | tee $GAMEDIR/log.txt
-
-if command -v pm_finish >/dev/null 2>&1; then
-  pm_finish
-else
-  $ESUDO kill -9 $(pidof gptokeyb) 2>/dev/null || true
-  $ESUDO systemctl restart oga_events &
-  printf "\033c" >> /dev/tty1
-fi
+pm_finish
