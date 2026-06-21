@@ -1,4 +1,3 @@
-# Mina the Hollower
 Thank you to Yacht Club Games for creating such an incredible game,
 and to the [Darling Project](https://www.darlinghq.org/) whose macOS
 compatibility layer provided the foundation for Machismo.
@@ -50,9 +49,6 @@ mina/
 
 ## Controls
 The game uses the controller natively. Use PortMaster's standard hotkey to quit.
-
-## Technical Details
-This port uses [Machismo](https://github.com/bmdhacks/machismo) to load the arm64 Mach-O binary on aarch64 Linux. The Metal renderer is replaced with GLES, and the GLSL ES shader corpus is generated at install time from your own game copy.
 
 ## Licenses
 Game assets are proprietary and must be purchased from Steam or GOG.

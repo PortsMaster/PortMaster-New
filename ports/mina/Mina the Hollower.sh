@@ -117,16 +117,6 @@ fi
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Redirect game save/config data into the port directory.
-mkdir -p "$GAMEDIR/userdata"
-
-# The load splash is shown by machismo itself (conf splash_image = splash.png):
-# it modesets splash.png onto the panel the instant machismo starts — covering the
-# whole black-screen window including LSE patching, which an external pre-launch
-# splash process could not — then drops the DRM master so the game's renderer
-# (GLES via SDL, or Vulkan via VK_KHR_display) takes the display over with no
-# fight. See machismo/src/splash_kms.c. No external splash binary is needed.
-
 # Run the game via machismo (Mach-O loader). The Apple-Silicon arm64 binary
 # runs natively; libgothic_patches.so replaces the Metal renderer with GLES and
 # provides the objc_msgSend / Metal-device shim. SDL2 (statically linked in the
@@ -199,6 +189,9 @@ fi
 if [ "$DEVICE_NAME" = "RG52MINI" ]; then
     export GOTHIC_BACKEND = "gles"
 fi
+
+## uncomment this if you have rendering issues on high end hardware on rocknix
+#export GOTHIC_BACKEND = "gles"
 
 $ESUDO env \
     "${SDLVID_ARG[@]}" \
