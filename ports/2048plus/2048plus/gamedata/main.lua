@@ -211,7 +211,7 @@ function love.load(args)
                 ach_nomercy_512 = "No Escape",
                 ach_goose_2048 = "Honk Honk!"
             }
-            renderer.showToast("Unlocked: " .. (names[id] or id) .. "!")
+            renderer.showToast("Unlocked: " .. (names[id] or id) .. "!", nil, true)
             sound.playAchievement()
         end
     end
@@ -1258,4 +1258,22 @@ function love.draw()
         love.graphics.draw(crt_main_canvas, 0, 0)
         love.graphics.setShader()
     end
+end
+
+function love.quit()
+    if game then
+        pcall(function() game:saveGameState() end)
+    end
+    pcall(function() love.audio.stop() end)
+    if love.joystick then
+        pcall(function()
+            local joysticks = love.joystick.getJoysticks()
+            for _, j in ipairs(joysticks) do
+                if j:isVibrationSupported() then
+                    j:setVibration(0, 0)
+                end
+            end
+        end)
+    end
+    os.exit()
 end
