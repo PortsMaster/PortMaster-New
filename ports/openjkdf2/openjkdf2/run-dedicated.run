@@ -55,7 +55,7 @@ Environment:
   OPENJKDF2_MP_EPISODE / OPENJKDF2_MP_MAP  Override episode/map
   OPENJKDF2_ROOT       JKDF2 data (or use --jkdf2-root; auto-detects Steam)
   OPENJKMOTS_ROOT      MOTS data (or use --mots-root; auto-detects Steam)
-  SDL_VIDEODRIVER      Video backend (auto: offscreen on VPS without DISPLAY)
+  SDL_VIDEODRIVER      Video backend (unused with -headless; do not set offscreen on older SDL2)
   LIBGL_ALWAYS_SOFTWARE  Force Mesa llvmpipe (auto: 1 on VPS without DISPLAY)
   JKDF2_DATA / MOTS_DATA  Game paths for --docker (default: resolved jk1/mots roots)
 
@@ -275,7 +275,6 @@ docker_run_container() {
         --name "$(mpserver_container)" \
         --restart unless-stopped \
         -p "${MP_PORT:-27020}:27020/udp" \
-        -e SDL_VIDEODRIVER=offscreen \
         -e LIBGL_ALWAYS_SOFTWARE=1 \
         -v "$JKDF2_DATA:/opt/openjkdf2/jk1:ro" \
         -v "$mots_mount:/opt/openjkdf2/mots:ro" \
@@ -357,7 +356,6 @@ run_docker_mode() {
             docker run --rm -it \
                 --name "$(mpserver_container)" \
                 -p "${MP_PORT:-27020}:27020/udp" \
-                -e SDL_VIDEODRIVER=offscreen \
                 -e LIBGL_ALWAYS_SOFTWARE=1 \
                 -v "$JKDF2_DATA:/opt/openjkdf2/jk1:ro" \
                 -v "${MOTS_DATA:-/var/empty}:/opt/openjkdf2/mots:ro" \
@@ -385,14 +383,14 @@ run_docker_mode() {
     esac
 }
 
-# VPS / SSH: no X11 or Wayland. SDL still needs a GL context briefly at startup;
-# offscreen + software Mesa (llvmpipe) avoids requiring Xorg or a GPU.
+# VPS / SSH: no X11 or Wayland. With -headless the engine skips SDL video entirely.
+# Do not force SDL_VIDEODRIVER=offscreen — Ubuntu 20.04 / Debian SDL2 often lacks it.
 configure_headless_vps() {
   [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] && return 0
 
-  if [[ -z "${SDL_VIDEODRIVER:-}" ]]; then
-    export SDL_VIDEODRIVER=offscreen
-    echo "VPS: no DISPLAY/Wayland — using SDL_VIDEODRIVER=offscreen"
+  if [[ -n "${SDL_VIDEODRIVER:-}" && "${SDL_VIDEODRIVER}" == "offscreen" ]]; then
+    unset SDL_VIDEODRIVER
+    echo "VPS: unset SDL_VIDEODRIVER=offscreen (not in older SDL2; -headless needs no video)"
   fi
 
   if [[ -z "${LIBGL_ALWAYS_SOFTWARE:-}" ]]; then

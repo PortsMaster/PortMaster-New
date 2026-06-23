@@ -294,7 +294,7 @@ The script:
 - Sets `LD_LIBRARY_PATH` to the matching `libs.*` folder
 - Sets `OPENJKDF2_ROOT` and `XDG_DATA_HOME=conf/`
 - Reads `[host] episode` / `map` from `conf/mp.conf` if present
-- On VPS without `DISPLAY`, sets `SDL_VIDEODRIVER=offscreen` and `LIBGL_ALWAYS_SOFTWARE=1`
+- On VPS without `DISPLAY`, unsets stale `SDL_VIDEODRIVER=offscreen` (missing on Ubuntu 20.04 SDL2) and sets `LIBGL_ALWAYS_SOFTWARE=1`
 - Launches: `-dedicatedServer -autostart -mp -headless -verboseNetworking`
 - **JKDF2 (default):** episode `JK1MP`, map `m2`
 - **MOTS (`--mots`):** adds `-motsCompat`, episode `JKM_MP`, map `mdm02_freezer` (Carbon-freeze Chamber)
@@ -325,7 +325,7 @@ Use `--episode` / `--map` or `[host]` in `mp.conf` (`.goo`/`.jkl` extensions are
 
 ### VPS without a desktop (no X11 / Wayland)
 
-You **do not** need Xorg, a window manager, or a physical display. The engine still creates a short-lived OpenGL context at startup (before `-headless` tears down rendering), so install basic Mesa userspace libraries:
+You **do not** need Xorg, a window manager, or a physical display. With **`-headless`**, the engine skips SDL video entirely (stdin dev console only). Install basic Mesa userspace libraries for any linked GL deps:
 
 ```bash
 # Debian / Ubuntu
@@ -336,8 +336,9 @@ sudo apt install libgl1 libegl1
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `SDL_VIDEODRIVER` | `offscreen` | SDL GL context without X11/Wayland |
-| `LIBGL_ALWAYS_SOFTWARE` | `1` | CPU rendering (llvmpipe) when there is no GPU |
+| `LIBGL_ALWAYS_SOFTWARE` | `1` | CPU rendering fallback when there is no GPU |
+
+Do **not** set `SDL_VIDEODRIVER=offscreen` on Ubuntu 20.04 / Debian — that SDL build often reports `offscreen not available`. The Docker image and script no longer set it.
 
 Override if your VPS has a GPU and you prefer hardware GL:
 
@@ -352,7 +353,7 @@ Loaded libGameNetworkingSockets.so successfully.
 Server listening on port 27020
 ```
 
-If SDL fails with `x11 not available` or `wayland not available`, you are not in offscreen mode — confirm `DISPLAY` is unset and re-run the script (or set `SDL_VIDEODRIVER=offscreen` manually).
+If SDL fails with `offscreen not available`, rebuild the engine (or pull a newer port zip) and re-run — `-headless` should not need any video driver. Remove `SDL_VIDEODRIVER=offscreen` from your environment or systemd unit if you set it manually.
 
 ### Docker (`--docker` / `Dockerfile.mpserver`)
 
@@ -470,7 +471,7 @@ The host machine still runs the full game binary (video, menus). On a VPS withou
 | Topic | Detail |
 |-------|--------|
 | **Slots** | Dedicated mode reserves the server slot; max human players is effectively `max_players - 1`. |
-| **No graphics on VPS** | `-headless` skips rendering after startup; the sim still runs. Without a desktop, the script auto-sets `SDL_VIDEODRIVER=offscreen` and `LIBGL_ALWAYS_SOFTWARE=1` (needs `libgl1` / Mesa, not Xorg). |
+| **No graphics on VPS** | `-headless` skips SDL video/rendering; the sim still runs. Do not set `SDL_VIDEODRIVER=offscreen` on older SDL2 (Ubuntu 20.04 Docker / Raspberry Pi). |
 | **Not a system service** | `run-dedicated.run` is a foreground process — use `screen`, `tmux`, or systemd if you want 24/7. |
 | **Security** | Exposing UDP to the Internet carries risk; use `password` in `[host]` and firewall allowlists when possible. |
 | **Game files on server** | The VPS must legally hold a copy of JKDF2 data in `jk1/`. |
@@ -487,7 +488,6 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/openjkdf2
-Environment=SDL_VIDEODRIVER=offscreen
 Environment=LIBGL_ALWAYS_SOFTWARE=1
 ExecStart=/opt/openjkdf2/run-dedicated.run
 Restart=on-failure
