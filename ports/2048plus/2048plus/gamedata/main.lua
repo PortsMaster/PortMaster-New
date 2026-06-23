@@ -65,9 +65,10 @@ end
 
 local function queueTransitionAction(key, delay, action, direction)
     if not _G.screen_transitions then
-        if action then
-            action()
-        end
+        transition_next_direction = direction or 1
+        transition_delay_key = key
+        transition_delay_timer = 0.08 -- short delay to let the button tactile animation render
+        transition_delay_action = action
         return
     end
     transition_next_direction = direction or 1
@@ -320,10 +321,6 @@ function love.update(dt)
         end
         if transition_delay_timer <= 0 then
             transition_delay_timer = 0
-            if transition_delay_key then
-                input.state[transition_delay_key] = false
-                transition_delay_key = nil
-            end
             if transition_delay_action then
                 -- Capture the current (old) screen BEFORE state changes
                 if _G.screen_transitions then
@@ -332,6 +329,10 @@ function love.update(dt)
                 local action = transition_delay_action
                 transition_delay_action = nil
                 action()
+            end
+            if transition_delay_key then
+                input.state[transition_delay_key] = false
+                transition_delay_key = nil
             end
         end
         if game then
@@ -467,6 +468,7 @@ function love.update(dt)
             end
 
             local options = renderer.getMainMenuOptions()
+            menuSelection = math.max(1, math.min(#options, menuSelection))
             local max_menu = #options
             if event == input.events.UP then
                 menuSelection = menuSelection > 1 and (menuSelection - 1) or max_menu
@@ -478,7 +480,13 @@ function love.update(dt)
                 sound.playMenuSelect()
                 queueTransitionAction(event, 0.08, function()
                     local sel = options[menuSelection]
-                    if sel == "Play Game" then
+                    if sel == "Continue" then
+                        local mode = save.loadLastMode()
+                        if mode then
+                            _G.appState = "GAME"
+                            game = Game.new(mode)
+                        end
+                    elseif sel == "Play Game" then
                         _G.appState = "PLAY_SELECT"
                         _G.play_select_selection = 1
                         _G.arcade_selection = 1

@@ -456,4 +456,37 @@ function save.loadStats()
     return nil
 end
 
+local LAST_MODE_FILE = "last_mode.dat"
+
+function save.saveLastMode(mode)
+    local path = getFilePath(LAST_MODE_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(mode)
+        file:close()
+    end
+end
+
+function save.loadLastMode()
+    local path = getFilePath(LAST_MODE_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return nil
+end
+
+function save.hasLastActiveGame()
+    local mode = save.loadLastMode()
+    if not mode then return false end
+    local state = save.loadState(mode)
+    if not state or not state.gridState then return false end
+    local s = state.state or 0
+    return s ~= 1 and s ~= 2
+end
+
 return save
