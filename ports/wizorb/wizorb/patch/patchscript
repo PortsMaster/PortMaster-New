@@ -1,0 +1,106 @@
+#!/bin/bash
+LOGFILE="$GAMEDIR/patchlog.txt"
+LOGERR="$GAMEDIR/patchlog_error.txt"
+START_TIME=$(date +%s)
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Patch failure function
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    echo "Patching process failed."
+    exit 1
+}
+
+# Exports
+export PATH="$controlfolder:$PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib:/usr/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ZIPFILE=$(ls "$GAMEDIR/gamedata/wizorb"*"bin" 2>/dev/null | head -n 1)
+
+# Permissions
+chmod 666 /dev/uinput
+
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+# Create install completion flag
+install_complete() {
+	touch "install_completed"
+    # Measure time to complete
+	END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    echo "Script completed in $DURATION seconds"
+	echo "Installation completed successfully!"
+	echo "-----------------------------"
+	echo "Process finished at: $(date)"
+}
+
+patch_game() {
+    echo "Patching game..."
+    if [ -n "$ZIPFILE" ]; then
+        if ! $controlfolder/7zzs.${DEVICE_ARCH} x "$ZIPFILE" "data/*" -o"$GAMEDIR/gamedata"; then
+            echo "Error: extraction failed."
+            patch_failure
+        fi
+        sleep 1
+        echo "Humble installer unzipped"
+        mv "$GAMEDIR/gamedata/data/"* "$GAMEDIR/gamedata/"
+        rmdir "$GAMEDIR/gamedata/data"
+        rm -f "$ZIPFILE"
+        rm -f "$GAMEDIR/gamedata/place humble linux installer here.txt"
+    fi
+
+    # Check md5 of Wizorb.exe to determine which xdelta to use
+    MD5=$(md5sum "$GAMEDIR/gamedata/Wizorb.exe" | awk '{print $1}')
+    echo "Wizorb.exe md5: $MD5"
+
+    if [ "$MD5" = "9b627b7c373f294367ac45aff5c0e996" ]; then
+        XDELTA="$GAMEDIR/patch/wizorbhumble.xdelta"
+        echo "Humble version detected."
+    elif [ "$MD5" = "df83caa9ae0175659d6b7e8a2bd5a622" ]; then
+        XDELTA="$GAMEDIR/patch/wizorbsteam.xdelta"
+        echo "Steam version detected."
+    else
+        echo "Error: Wizorb.exe md5 does not match any known version."
+        patch_failure
+    fi
+
+# Patch Wizorb.exe
+    if ! $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/Wizorb.exe" "$XDELTA" "$GAMEDIR/gamedata/Wizorb2.exe"; then
+        echo "Error: xdelta3 patch failed."
+        rm -f "$GAMEDIR/gamedata/Wizorb2.exe"
+        patch_failure
+    fi
+    sleep 1
+    echo "Wizorb.exe patched successfully..."
+    rm -f "$GAMEDIR/gamedata/Wizorb.exe"
+    mv "$GAMEDIR/gamedata/Wizorb2.exe" "$GAMEDIR/gamedata/Wizorb.exe"
+    sleep 1
+
+    # Patch ParisEngine.dll if steam version
+    PARIS_MD5=$(md5sum "$GAMEDIR/gamedata/ParisEngine.dll" 2>/dev/null | awk '{print $1}')
+    echo "ParisEngine.dll md5: $PARIS_MD5"
+    if [ "$PARIS_MD5" = "e53b23c866440da684d9d91258743f21" ]; then
+        echo "Patching ParisEngine.dll..."
+        if ! $controlfolder/xdelta3 -d -s "$GAMEDIR/gamedata/ParisEngine.dll" "$GAMEDIR/patch/parisenginesteam.xdelta" "$GAMEDIR/gamedata/ParisEngine2.dll"; then
+            echo "Error: xdelta3 patch failed for ParisEngine.dll."
+            rm -f "$GAMEDIR/gamedata/ParisEngine2.dll"
+            patch_failure
+        fi
+        echo "ParisEngine.dll patched successfully..."
+        rm -f "$GAMEDIR/gamedata/ParisEngine.dll"
+        mv "$GAMEDIR/gamedata/ParisEngine2.dll" "$GAMEDIR/gamedata/ParisEngine.dll"
+        sleep 1
+    else
+        echo "ParisEngine.dll md5 does not match steam version, skipping patch."
+    fi
+
+    install_complete
+    sleep 1
+}
+
+# Call the function
+patch_game
