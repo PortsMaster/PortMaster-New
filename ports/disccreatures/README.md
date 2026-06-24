@@ -1,6 +1,7 @@
 ## Notes
 
-Special thanks to PICORINNE SOFT For making this game
+Special thanks to [PICORINNE SOFT](https://picorinnesoft.main.jp/) For making this game.
+
 ## Controls
 
 | Button | Action |
