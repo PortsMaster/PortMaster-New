@@ -154,8 +154,10 @@ echo "gothic: corpus=$GOTHIC_SHADER_DIR vk_corpus=$GOTHIC_VK_SHADER_DIR"
 # EGL/GLES/GBM to the Vulkan blob on rk3566 dArkOS, whose GLES stack defaults to
 # the frozen-region g13) is therefore GONE. The ES-strip stays as cheap insurance
 # for the GLES fallback path on devices where ES's g13 shadows the system g24.
+# Rejoin with tr|sed, NOT `paste -sd:` — busybox paste lacks -s on ROCKNIX (it
+# errors out and mangles LD_LIBRARY_PATH). This emits output identical to paste.
 LD_LIBRARY_PATH=$(printf '%s' "${LD_LIBRARY_PATH:-}" | tr ':' '\n' \
-    | grep -vxF '/opt/emulationstation/lib' | paste -sd: -)
+    | grep -vxF '/opt/emulationstation/lib' | tr '\n' ':' | sed 's/:$//')
 
 # Optional frame-rate logging (diagnostic). machismo prints fps to log.txt when
 # MACHISMO_FPS is set, but it must be forwarded explicitly below — $ESUDO (sudo)
@@ -170,32 +172,23 @@ if [ -f "$GAMEDIR/fps.on" ]; then
     [ -z "$MACHISMO_FPS" ] && MACHISMO_FPS=1
 fi
 
-# PowerVR Vulkan ICD for the TrimUI A133P (Smart Pro / Brick). libgothic_patches
-# auto-prefers the Vulkan backend and reaches the IMG DDK through the Khronos loader
-# (libvulkan.so.1), but the A133P firmware ships no ICD manifest, so the loader finds
-# no driver and the probe would fall back to GLES. Write a minimal manifest pointing
-# at libVK_IMG and hand it to the loader via VK_ICD_FILENAMES. Gated on DEVICE_CPU so
-# every other device keeps its own ICD / GLES path untouched. /tmp is tmpfs (recreated
-# each boot, so this is rebuilt every launch). api_version MUST be "1.0.0" — libVK_IMG
-# is rejected by the loader if the manifest advertises a higher version.
-VK_ICD_ARG=()
-if [ "$DEVICE_CPU" = "a133plus" ]; then
-    printf '%s\n' '{ "file_format_version": "1.0.0", "ICD": { "library_path": "/usr/lib/libVK_IMG.so.1", "api_version": "1.0.0" } }' > /tmp/img_icd.json
-    VK_ICD_ARG=(VK_ICD_FILENAMES="/tmp/img_icd.json")
-    echo "gothic: TrimUI A133P — registered PowerVR Vulkan ICD (libVK_IMG)"
-fi
+# uncomment the below block if you want to use vulkan on trimui
+#if [ "$DEVICE_CPU" = "a133plus" ]; then
+#    printf '%s\n' '{ "file_format_version": "1.0.0", "ICD": { "library_path": "/usr/lib/libVK_IMG.so.1", "api_version": "1.0.0" } }' > /tmp/img_icd.json
+#    export VK_ICD_ARG=(VK_ICD_FILENAMES="/tmp/img_icd.json")
+#    echo "gothic: TrimUI A133P — registered PowerVR Vulkan ICD (libVK_IMG)"
+#fi
 
 ## rg52-mini has a portrait screen which rotates vulkan so we force gles
 if [ "$DEVICE_NAME" = "RG52MINI" ]; then
-    export GOTHIC_BACKEND = "gles"
+    export GOTHIC_BACKEND="gles"
 fi
 
 ## uncomment this if you have rendering issues on high end hardware on rocknix
-#export GOTHIC_BACKEND = "gles"
+#export GOTHIC_BACKEND="gles"
 
 $ESUDO env \
     "${SDLVID_ARG[@]}" \
-    "${VK_ICD_ARG[@]}" \
     SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" \
     MALLOC_ARENA_MAX=2 \
     MACHISMO_FPS="$MACHISMO_FPS" \
