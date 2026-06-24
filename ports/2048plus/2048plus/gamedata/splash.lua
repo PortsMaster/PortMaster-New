@@ -102,6 +102,7 @@ function splash.load()
 
     -- Load assets
     logo = love.graphics.newImage("assets/logo_2048.png")
+    logo:setFilter("linear", "linear")
 
     -- Reset state
     anim.tiles_progress = 0

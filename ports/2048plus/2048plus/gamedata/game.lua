@@ -35,6 +35,7 @@ local vectors = {
 function Game.new(mode)
     local self = setmetatable({}, Game)
     self.mode = mode or "classic"
+    save.saveLastMode(self.mode)
     self.size = 4
     self.targetValue = 2048
     if self.mode == "huge" then
