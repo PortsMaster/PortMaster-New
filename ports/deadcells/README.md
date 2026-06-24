@@ -22,7 +22,7 @@ and `hlboot.dat` files from the installations `game` folder into the port's `gam
 You can copy the GoG DLC installers into the `gamedata` folder too.
 ### Steam Instructions
 * Open Steam console: `steam://open/console`
-* Copy and paste command: `download_depot 588650 588653 5814907161645516281`
+* Copy and paste command: `download_depot 588650 588653 325905742812183616`
 * Open the folder where this depot was downloaded and copy `res.pak`
   and `hlboot.dat` into the port's `gamedata` folder.  On windows this folder will be `C:\Program Files (x86)\Steam\steamapps\content\app_588650\depot_588653`
 
