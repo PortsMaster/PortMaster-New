@@ -20,7 +20,7 @@ present.
 
 Thanks to [banteg](https://github.com/banteg/crimson) for this faithful rewrite of Crimsonland.
 Modded for handhelds: [jckhng](https://github.com/jckhng/crimson/tree/portmaster-rg35xxh)
-Thanks to NotYerAvgPorter, Old Pixel for testing.
+Thanks to NotYerAvgPorter, Old Pixel, Ganimoth for testing.
 
 ## Controls
 
