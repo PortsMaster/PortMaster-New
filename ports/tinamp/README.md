@@ -91,6 +91,10 @@ Everything of the following is build inside ./build directory:
 ```make portmaster``` (to create a distributable portmaster .zip)
 
 ## Version history
+v00.00.09 (June 2026)  
+
+- updated FFmpeg libraries to 8.1.2 to fix critical CVEs
+
 v00.00.08 (May 2026)  
 
  - add missing saves directory for bookmarks into portmaster repo
