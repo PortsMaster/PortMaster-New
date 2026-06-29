@@ -48,10 +48,12 @@ if [[ $CFW_NAME == *"ArkOS"* ]] || [[ $CFW_NAME == *"ODROID"* ]]; then
     fi
     [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
-    if [ ! -e /dev/zram0 ]; then
-        pm_message "For Knulli, you must enable ZRAM.  Start -> System Settings -> Services -> ZRAMSWAP"
-        sleep 7
-    fi
+    [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
+    [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
+    $ESUDO fallocate -l 384M /media/SHARE/swapfile
+    $ESUDO chmod 600 /media/SHARE/swapfile
+    $ESUDO mkswap /media/SHARE/swapfile
+    $ESUDO swapon /media/SHARE/swapfile
     [ -f $GAMEDIR/timidity.cfg ] && $ESUDO rm -f $GAMEDIR/timidity.cfg
 fi
 
