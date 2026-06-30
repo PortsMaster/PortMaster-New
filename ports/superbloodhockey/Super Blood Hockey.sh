@@ -14,32 +14,38 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-source $controlfolder/tasksetter
+
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
 
-gamedir="/$directory/ports/superbloodhockey"
-cd "$gamedir/"
+GAMEDIR=/$directory/ports/superbloodhockey
+CONFDIR="$GAMEDIR/conf/"
 
-$ESUDO chmod 666 /dev/tty0
-printf "\033c" > /dev/tty0
-echo "Loading... Please Wait." > /dev/tty0
+mkdir -p "$GAMEDIR/conf"
 
+cd $GAMEDIR
+
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
+# Mono runtime
 monodir="$HOME/mono"
 monofile="$controlfolder/libs/mono-6.12.0.122-aarch64.squashfs"
 $ESUDO mkdir -p "$monodir"
 $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
-bind_directories ~/.config/SuperBloodHockey "$gamedir/savedata"
+# Save data
+bind_directories ~/.config/SuperBloodHockey "$CONFDIR/savedata"
 
 export MONO_IOMAP=all
-export MONO_PATH="$gamedir/gamedata/lib64":"$gamedir/dlls"
+export MONO_PATH="$GAMEDIR/gamedata/lib64":"$GAMEDIR/dlls"
 export PATH="$monodir/bin":"$PATH"
-export LD_LIBRARY_PATH="$gamedir/libs":"/usr/lib":"/lib":"$controlfolder/libs":"$monodir/lib":$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$GAMEDIR/libs":"$controlfolder/libs":"$monodir/lib":$LD_LIBRARY_PATH
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-rm -f $gamedir/libs/libGL.so.1 $gamedir/libs/libEGL.so.1
+# GL4ES setup
+rm -f $GAMEDIR/libs/libGL.so.1 $GAMEDIR/libs/libEGL.so.1
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -48,22 +54,18 @@ else
 fi
 
 if [[ "$LIBGL_ES" != "" ]]; then
-        export SDL_VIDEO_GL_DRIVER="${gamedir}/gl4es/libGL.so.1"
-        export SDL_VIDEO_EGL_DRIVER="${gamedir}/gl4es/libEGL.so.1"
+  export SDL_VIDEO_GL_DRIVER="${GAMEDIR}/gl4es/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="${GAMEDIR}/gl4es/libEGL.so.1"
 fi
 
-cd "$gamedir/gamedata"
+cd "$GAMEDIR/gamedata"
 
-# Patch exe to support 640x480 and 720x720 resolutions.
-python3 "$gamedir/scripts/patch_sbh.py" "SuperBloodHockey.exe"
-
-gameassembly="SuperBloodHockey.exe"
+# Patch exe for 640x480 and 720x720
+python3 "$GAMEDIR/scripts/patch_sbh.py" "SuperBloodHockey.exe"
 
 $GPTOKEYB "mono" &
-$TASKSET mono "${gameassembly}" 2>&1 | tee "${gamedir}/log.txt"
+pm_platform_helper "$GAMEDIR/gamedata/SuperBloodHockey.exe"
+$TASKSET mono "SuperBloodHockey.exe"
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
-
-printf "\033c" >> /dev/tty1
+pm_finish
