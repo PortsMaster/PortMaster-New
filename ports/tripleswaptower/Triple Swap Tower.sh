@@ -40,7 +40,7 @@ if [ -f ./assets/data.win ]; then
 	checksum=$(md5sum "assets/data.win" | awk '{ print $1 }')
 	
 	# Check for Steam full version
-	if [ "$checksum" == "2f3b0d82a54a349b7e5042024036b2ee" ]; then
+	if [ "$checksum" == "5c7f3ce277d7e253e4046636c9e25d91" ]; then
 		$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/tst.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
 		pm_message "Patch for the Steam version has been applied"
 		rm -f assets/*.{exe,dll,win}
