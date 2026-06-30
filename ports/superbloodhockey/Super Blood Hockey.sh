@@ -54,8 +54,7 @@ fi
 
 cd "$gamedir/gamedata"
 
-# Patch exe for 640x480 (replaces 3840x2160). After patching, go to
-# Settings > Display and select 640x480 once — it stays saved.
+# Patch exe to support 640x480 and 720x720 resolutions.
 python3 "$gamedir/scripts/patch_sbh.py" "SuperBloodHockey.exe"
 
 gameassembly="SuperBloodHockey.exe"
