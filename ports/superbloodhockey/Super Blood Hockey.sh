@@ -41,7 +41,7 @@ $ESUDO mount "$monofile" "$monodir"
 bind_directories ~/.config/SuperBloodHockey "$CONFDIR/savedata"
 
 export MONO_IOMAP=all
-export MONO_PATH="$GAMEDIR/gamedata/lib64":"$GAMEDIR/dlls"
+export MONO_PATH="$GAMEDIR/dlls"
 export PATH="$monodir/bin":"$PATH"
 export LD_LIBRARY_PATH="$GAMEDIR/libs":"$controlfolder/libs":"$monodir/lib":$LD_LIBRARY_PATH
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
