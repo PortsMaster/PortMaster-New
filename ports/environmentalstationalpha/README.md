@@ -87,7 +87,7 @@ Thanks to [Arvi "*Hempuli*" Teikari](https://www.hempuli.com/) for creating ['*E
 
 ## Issues
 * This port may not perform well on RK3326 devices (e.g. Game Console R36S, BATLEXP G350), although it has been found to perform acceptably on some of them (e.g. GKD Pixel 2, Anbernic RG351M). Consequently—although *some* users may find it to be playable on such devices—it has been flagged as a `power` port.
-    * This port port may exhibit occasional slowdown even on less-underpowered devices (e.g. Anbernic RG-35XX H), but this is generally limited to a only a few locations in the game (i.e. specific rooms in the forest area), and the game is otherwise quite playable.
+    * This port may exhibit occasional slowdown even on less-underpowered devices (e.g. Anbernic RG-35XX H), but this is generally limited to only a few locations in the game (i.e. specific rooms in the forest area), and the game is otherwise quite playable.
 * On the TrimUI Brick, minor graphical glitches have been observed in areas of the game (i.e. underwater areas, hot areas) which use a particular graphical warping effect. These glitches *may* also be seen on similar devices, such as the TrimUI Smart Pro.
 
 ## Shim
