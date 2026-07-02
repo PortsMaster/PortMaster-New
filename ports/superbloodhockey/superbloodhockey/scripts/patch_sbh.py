@@ -126,6 +126,27 @@ if not os.path.exists(backup):
         f.write(data)
     print('SBH: original backup saved')
 
+# Detect resolution (manual override takes precedence)
+if manual_res:
+    w, h = manual_res
+else:
+    w, h = detect_resolution()
+if w is None:
+    print('SBH: could not detect resolution')
+    sys.exit(1)
+print(f'SBH: detected {w}x{h}')
+
+# Check if the detected resolution already exists in any slot.
+# If so, no patches needed — the game handles it natively.
+slot_offsets = [0x01, 0x38, 0x6f, 0xa6, 0xe2, 0x11c, 0x156,
+                0x190, 0x1ca, 0x204, 0x244, 0x284, 0x2c4, 0x304, 0x344]
+for idx, off in enumerate(slot_offsets):
+    sw = struct.unpack('<I', data[IL_OFF+off+1:IL_OFF+off+5])[0]
+    sh = struct.unpack('<I', data[IL_OFF+off+6:IL_OFF+off+10])[0]
+    if sw == w and sh == h:
+        print(f'SBH: slot {idx} already has {w}x{h} — no patches needed')
+        sys.exit(0)
+
 # Apply camera-zoom fix (IL patches to prevent franchise zoom compounding)
 # On first-run or after restore, the bytes are original and patching works.
 # If re-patching in-place, the fix may already be applied — check patched patterns.
@@ -148,19 +169,8 @@ if not apply_camera_zoom_fix(data):
 else:
     print('SBH: camera-zoom fix applied')
 
-# Detect resolution (manual override takes precedence)
-if manual_res:
-    w, h = manual_res
-else:
-    w, h = detect_resolution()
-if w is None:
-    print('SBH: could not detect resolution')
-    sys.exit(1)
-print(f'SBH: detected {w}x{h}')
-
-il = IL_OFF
-slot14_off = il + 0x344
-fz14_off = il + 0x036d
+slot14_off = IL_OFF + 0x344
+fz14_off = IL_OFF + 0x036d
 
 # Calculate ideal values
 # Unified zoom ref (1024 minus a few px) to hide TV frame edges on small screens.
