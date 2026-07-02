@@ -15,10 +15,9 @@ https://store.steampowered.com/app/532190
 Supports both Windows and Linux versions.
 Place all game files into the `superbloodhockey/gamedata` folder.
 
-On first launch, the port automatically patches the game's last two
-resolution slots: slot 13 (2560x1440) → 640x480, slot 14 (3840x2160) → 720x720. 
-Patcher works with version 1.5.4 only. Otherwise, the unpatched 
-game has a minimum supported resolution of 1024x768.
+On first launch, the port auto-detects the device resolution and
+patches the game's last resolution slot with the device's resolution and
+zoom values, if necessary. Patcher works with version 1.5.4 only.
 
 ## Notes
 
