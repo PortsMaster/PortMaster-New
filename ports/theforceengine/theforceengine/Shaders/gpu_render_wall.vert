@@ -9,6 +9,7 @@ TFE_DECLARE_FBUFFER(Walls);
 TFE_DECLARE_FBUFFER(DrawListPos);
 TFE_DECLARE_UBUFFER(DrawListData);
 TFE_DECLARE_FBUFFER(DrawListPlanes);	// Top and Bottom planes for each portal.
+TFE_DECLARE_IBUFFER(TextureTable);
 
 // in int gl_VertexID;
 #include "Shaders/clipDistance.h"
@@ -18,6 +19,7 @@ out vec4 Texture_Data;
 flat out vec4 Frag_Color;
 flat out float Frag_Scale;
 flat out int Frag_TextureId;
+flat out ivec4 Frag_TexTableEntry;
 flat out int Frag_Flags;
 
 void unpackPortalInfo(uint portalInfo, out uint portalOffset, out uint portalCount)
@@ -318,4 +320,5 @@ void main()
 	Texture_Data = texture_data;
 	Frag_Flags = flags;
 	Frag_Scale = scale;
+	Frag_TexTableEntry = tfe_fetchIBuffer(TextureTable, Frag_TextureId);
 }

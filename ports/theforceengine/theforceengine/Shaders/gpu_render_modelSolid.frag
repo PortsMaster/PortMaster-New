@@ -22,6 +22,7 @@ flat in vec4 Frag_Color;
 flat in int Frag_Color;
 #endif
 flat in int Frag_TextureId;
+flat in ivec4 Frag_TexTableEntry;
 flat in int Frag_TextureMode;
 
 #ifdef OPT_BLOOM
@@ -81,7 +82,7 @@ void main()
 				light = getDepthAttenuation(z, ambient, light, 0.0);
 			}
 		}
-		baseColor = sampleTexture(Frag_TextureId, uv);
+		baseColor = sampleTexture(Frag_TexTableEntry, uv);
 
 		#ifdef MODEL_TRANSPARENT_PASS
 			#ifdef OPT_TRUE_COLOR

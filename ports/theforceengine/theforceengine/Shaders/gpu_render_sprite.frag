@@ -14,6 +14,7 @@ in vec3 Frag_Pos;
 flat in vec3 Frag_Lighting;
 
 flat in int Frag_TextureId;
+flat in ivec4 Frag_TexTableEntry;
 flat in vec4 Texture_Data;
 #ifdef OPT_BLOOM
 	layout(location = 0) out vec4 Out_Color;
@@ -62,7 +63,7 @@ void main()
 	}
 
 	// Sample the texture.
-	baseColor = sampleTextureClamp(Frag_TextureId, Frag_Uv);
+	baseColor = sampleTextureClamp(Frag_TexTableEntry, Frag_Uv);
 	// if (discardPixel(baseColor, LightData.w)) { discard; }
 	// Either discard very close to the iso-value or
 	// do a two-pass filter - close cut with depth-write + alpha blend without depth-write.

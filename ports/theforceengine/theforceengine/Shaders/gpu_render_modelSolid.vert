@@ -18,6 +18,7 @@ uniform vec3 ModelPos;
 uniform uvec2 PortalInfo;
 
 TFE_DECLARE_FBUFFER(DrawListPlanes);
+TFE_DECLARE_IBUFFER(TextureTable);
 
 // Vertex Data
 in vec3 vtx_pos;
@@ -40,6 +41,7 @@ flat out vec4 Frag_Color;
 flat out int Frag_Color;
 #endif
 flat out int Frag_TextureId;
+flat out ivec4 Frag_TexTableEntry;
 flat out int Frag_TextureMode;
 
 void unpackPortalInfo(uint portalInfo, out uint portalOffset, out uint portalCount)
@@ -147,5 +149,13 @@ void main()
 #endif
 	Frag_Light = vertexLighting ? light : ambient;
 	Frag_TextureId = TFE_FTOI(floor(vtx_color.y * 255.0 + 0.5) + floor(vtx_color.z * 255.0 + 0.5)*256.0 + 0.5);
+	if (Frag_TextureId < 65535)
+	{
+		Frag_TexTableEntry = tfe_fetchIBuffer(TextureTable, Frag_TextureId);
+	}
+	else
+	{
+		Frag_TexTableEntry = ivec4(0);
+	}
 	Frag_TextureMode = textureMode;
 }

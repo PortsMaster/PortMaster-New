@@ -18,6 +18,7 @@ out vec3 Frag_Pos;     // camera relative position for lighting.
 #include "Shaders/clipDistance.h"
 flat out vec4 Texture_Data; // not much here yet.
 flat out int Frag_TextureId;
+flat out ivec4 Frag_TexTableEntry;
 
 void unpackPortalInfo(uint portalInfo, out uint portalOffset, out uint portalCount)
 {
@@ -36,6 +37,7 @@ void main()
 	uvec2 texPortalData = uvec2(tfe_fetchIBuffer8(DrawListTexId_Texture, spriteIndex).rg);
 	uint tex_flags = texPortalData.x;
 	Frag_TextureId = int(tex_flags & 32767u);
+	Frag_TexTableEntry = tfe_fetchIBuffer(TextureTable, Frag_TextureId);
 
 	float u = float(vertexId&1);
 	float v = float(1-(vertexId/2));
@@ -44,7 +46,7 @@ void main()
 	vtx_pos.xz = mix(posTextureXZ.xy, posTextureXZ.zw, u);
 	vtx_pos.y  = mix(posTextureYU.x, posTextureYU.y, v);
 
-	ivec2 sh = tfe_fetchIBuffer(TextureTable, Frag_TextureId).yw;
+	ivec2 sh = Frag_TexTableEntry.yw;
 	float scaleFactor = 1.0 / float(sh.x >> 12);
 
 	vec2 vtx_uv;

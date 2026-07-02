@@ -18,6 +18,7 @@ flat in vec4 Frag_Uv;
 flat in vec4 Frag_Color;
 flat in float Frag_Scale;
 flat in int Frag_TextureId;
+flat in ivec4 Frag_TexTableEntry;
 flat in int Frag_Flags;
 in vec3 Frag_Pos;
 in vec4 Texture_Data;
@@ -210,7 +211,7 @@ void main()
 
 #ifdef SECTOR_TRANSPARENT_PASS
 	// Sign overlays use a full-wall quad; skip shading outside the sign bounds.
-	if (sign && signSampleOutOfBounds(Frag_TextureId, uv, opaque))
+	if (sign && signSampleOutOfBounds(Frag_TexTableEntry, uv, opaque))
 	{
 		discard;
 	}
@@ -229,14 +230,14 @@ void main()
 #ifdef SECTOR_TRANSPARENT_PASS
 	if (sign)
 	{
-		baseColor = sampleTextureClamp(Frag_TextureId, uv, opaque);
+		baseColor = sampleTextureClamp(Frag_TexTableEntry, uv, opaque);
 	}
 	else
 #endif
 	{
 	#ifdef OPT_TRUE_COLOR
 		vec3 tint;
-		baseColor = sampleTexture(Frag_TextureId, uv, sky, flip, applyFlatWarp, tint);
+		baseColor = sampleTexture(Frag_TexTableEntry, uv, sky, flip, applyFlatWarp, tint);
 		// Per-texture color correction factor.
 		if (light < 31.0)
 		{
@@ -244,7 +245,7 @@ void main()
 			baseColor.rgb *= mix(vec3(1.0), tint, tintFactor);
 		}
 	#else
-		baseColor = sampleTexture(Frag_TextureId, uv, sky, flip, applyFlatWarp);
+		baseColor = sampleTexture(Frag_TexTableEntry, uv, sky, flip, applyFlatWarp);
 	#endif
 	}
 
@@ -253,9 +254,9 @@ void main()
 	{
 	#ifdef OPT_TRUE_COLOR
 		vec3 tint; // ignore.
-		baseColor = sampleTexture(Frag_TextureId, vec2(256.0, yLimit), sky, flip, false, tint);
+		baseColor = sampleTexture(Frag_TexTableEntry, vec2(256.0, yLimit), sky, flip, false, tint);
 	#else
-		baseColor = sampleTexture(Frag_TextureId, vec2(256.0, yLimit), sky, flip, false);
+		baseColor = sampleTexture(Frag_TexTableEntry, vec2(256.0, yLimit), sky, flip, false);
 	#endif
 	}
 

@@ -150,9 +150,9 @@ vec2 scaleUv(vec2 uv, int data)
 	return uv;
 }
 
-vec4 sampleTexture(int id, vec2 uv)
+vec4 sampleTexture(ivec4 sampleDataIn, vec2 uv)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	uv = scaleUv(uv, sampleData.y);
@@ -173,9 +173,14 @@ vec4 sampleTexture(int id, vec2 uv)
 #endif
 }
 
-vec4 sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp, out vec3 tint)
+vec4 sampleTexture(int id, vec2 uv)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTexture(tfe_fetchIBuffer(TextureTable, id), uv);
+}
+
+vec4 sampleTexture(ivec4 sampleDataIn, vec2 uv, bool sky, bool flip, bool applyFlatWarp, out vec3 tint)
+{
+	ivec4 sampleData = sampleDataIn;
 	tint = TextureSettings == 0u ? vec3(1.0) : getHalfTint(sampleData.zw);
 	sampleData.zw &= ivec2(32767);
 
@@ -234,9 +239,14 @@ vec4 sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp, out
 #endif
 }
 
-vec4 sampleTextureClamp(int id, vec2 uv)
+vec4 sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp, out vec3 tint)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTexture(tfe_fetchIBuffer(TextureTable, id), uv, sky, flip, applyFlatWarp, tint);
+}
+
+vec4 sampleTextureClamp(ivec4 sampleDataIn, vec2 uv)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	uv = scaleUv(uv, sampleData.y);
@@ -249,9 +259,14 @@ vec4 sampleTextureClamp(int id, vec2 uv)
 	return textureLod(Textures, normalizeAtlasUv(uv3), 0.0);
 }
 
-vec4 sampleTextureClamp(int id, vec2 uv, bool opaque)
+vec4 sampleTextureClamp(int id, vec2 uv)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTextureClamp(tfe_fetchIBuffer(TextureTable, id), uv);
+}
+
+vec4 sampleTextureClamp(ivec4 sampleDataIn, vec2 uv, bool opaque)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	uv = scaleUv(uv, sampleData.y);
@@ -276,10 +291,15 @@ vec4 sampleTextureClamp(int id, vec2 uv, bool opaque)
 	return textureLod(Textures, normalizeAtlasUv(uv3), 0.0);
 #endif
 }
-#else
-float sampleTexture(int id, vec2 uv)
+
+vec4 sampleTextureClamp(int id, vec2 uv, bool opaque)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTextureClamp(tfe_fetchIBuffer(TextureTable, id), uv, opaque);
+}
+#else
+float sampleTexture(ivec4 sampleDataIn, vec2 uv)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	ivec3 iuv;
@@ -298,9 +318,14 @@ float sampleTexture(int id, vec2 uv)
 	return texelFetch(Textures, iuv, 0).r * 255.0;
 }
 
-float sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp)
+float sampleTexture(int id, vec2 uv)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTexture(tfe_fetchIBuffer(TextureTable, id), uv);
+}
+
+float sampleTexture(ivec4 sampleDataIn, vec2 uv, bool sky, bool flip, bool applyFlatWarp)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	ivec3 iuv;
@@ -347,9 +372,14 @@ float sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp)
 	return texelFetch(Textures, iuv, 0).r * 255.0;
 }
 
-float sampleTextureClamp(int id, vec2 uv)
+float sampleTexture(int id, vec2 uv, bool sky, bool flip, bool applyFlatWarp)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTexture(tfe_fetchIBuffer(TextureTable, id), uv, sky, flip, applyFlatWarp);
+}
+
+float sampleTextureClamp(ivec4 sampleDataIn, vec2 uv)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	ivec3 iuv;
@@ -372,9 +402,14 @@ float sampleTextureClamp(int id, vec2 uv)
 	return texelFetch(Textures, iuv, 0).r * 255.0;
 }
 
-float sampleTextureClamp(int id, vec2 uv, bool opaque)
+float sampleTextureClamp(int id, vec2 uv)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	return sampleTextureClamp(tfe_fetchIBuffer(TextureTable, id), uv);
+}
+
+float sampleTextureClamp(ivec4 sampleDataIn, vec2 uv, bool opaque)
+{
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 
 	ivec3 iuv;
@@ -397,12 +432,17 @@ float sampleTextureClamp(int id, vec2 uv, bool opaque)
 	if (opaque) { value = max(0.75, value); }	// avoid clipping if opaque.
 	return value;
 }
+
+float sampleTextureClamp(int id, vec2 uv, bool opaque)
+{
+	return sampleTextureClamp(tfe_fetchIBuffer(TextureTable, id), uv, opaque);
+}
 #endif
 
 // Matches sampleTextureClamp() bounds so sign overlays can discard before lighting.
-bool signSampleOutOfBounds(int id, vec2 uv, bool opaque)
+bool signSampleOutOfBounds(ivec4 sampleDataIn, vec2 uv, bool opaque)
 {
-	ivec4 sampleData = tfe_fetchIBuffer(TextureTable, id);
+	ivec4 sampleData = sampleDataIn;
 	sampleData.zw &= ivec2(32767);
 #ifdef OPT_TRUE_COLOR
 	uv = scaleUv(uv, sampleData.y);
@@ -416,6 +456,11 @@ bool signSampleOutOfBounds(int id, vec2 uv, bool opaque)
 	ivec2 iuv = opaque ? TFE_FTOI2(floor(uv)) : TFE_FTOI2(uv);
 	return any(lessThan(iuv, ivec2(0))) || any(greaterThan(iuv, sampleData.zw - 1));
 #endif
+}
+
+bool signSampleOutOfBounds(int id, vec2 uv, bool opaque)
+{
+	return signSampleOutOfBounds(tfe_fetchIBuffer(TextureTable, id), uv, opaque);
 }
 
 vec3 getAttenuatedColor(int baseColor, int light)
