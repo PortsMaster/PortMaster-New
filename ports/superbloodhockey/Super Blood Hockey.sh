@@ -62,6 +62,9 @@ fi
 
 cd "$GAMEDIR/gamedata"
 
+# Ensure Franchises directory exists (game doesn't create it gracefully)
+mkdir -p "Franchises"
+
 # Patch exe for 640x480 and 720x720
 python3 "$GAMEDIR/scripts/patch_sbh.py" "SuperBloodHockey.exe"
 
