@@ -61,6 +61,12 @@ if [[ ${CFW_NAME} == ROCKNIX ]]; then
   # disable cursor auto-hide if on rocknix
   swaymsg 'seat * hide_cursor 0'
 
+  # Remove conflicting libraries
+  rm -f libs.aarch64/libharfbuzz.so.0
+  rm -f libs.aarch64/libpangocairo-1.0.so.0
+  rm -f libs.aarch64/libpango-1.0.so.0
+  rm -f libs.aarch64/libpangoft2-1.0.so.0
+
 else
   # sim-cursor usually needed on other platforms
   BINARYPATH="$GAMEDIR/sim-cursor/wesnoth"

@@ -1,0 +1,2978 @@
+diff -ruN old/batch.shader new/batch.shader
+--- old/batch.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/batch.shader	2025-08-18 22:44:52.000000000 +0300
+@@ -1,345 +1,345 @@
+-diffuseTex
+-
+->> vertex <<
+-
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-vec3 IN_normal;
+-vec4 IN_tangent;
+-vec4 IN_weight;
+-
+-uniform mat4 viewProjMatrix;
+-uniform vec4 spritesheetSize;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-
+-void main()
+-{
+-	IN_position = ( gl_Vertex.xyz);
+-	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
+-	IN_normal = gl_MultiTexCoord1.xyz;
+-	IN_tangent = gl_MultiTexCoord2.xyzw;
+-	IN_weight = gl_MultiTexCoord4.xyzw;
+-
+-    vec2 is = spritesheetSize.xy;
+-    vec2 topLeft = IN_weight.xy / is;
+-    vec2 spriteSize = IN_normal.xy / is;
+-
+-	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
+-	pos2 *= IN_normal.xy * IN_tangent.xy;
+-
+-
+-	mat2 rotmat;
+-	rotmat[0][0] = cos(IN_position.z);
+-	rotmat[1][0] = -sin(IN_position.z);
+-	rotmat[0][1] = sin(IN_position.z);
+-	rotmat[1][1] = cos(IN_position.z);
+-
+-    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
+-	pos4.xy = floor(pos4.xy+0.5);
+-	vec2 tc = IN_weight.zw * 0.5 + 0.5;
+-
+-    OUT_texCoords = topLeft + tc * spriteSize;
+-	//pos4.y = -0.5*pos4.y;
+-	OUT_position = pos4;
+-
+-	gl_Position = viewProjMatrix * OUT_position;
+-}
+-
+->> vertex-reflect <<
+-
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-vec3 IN_normal;
+-vec4 IN_tangent;
+-vec4 IN_weight;
+-
+-
+-uniform mat4 viewProjMatrix;
+-uniform vec4 spritesheetSize;
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-#define NEW_REFLECTION 1
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
+-	IN_normal = gl_MultiTexCoord1.xyz;
+-	IN_tangent = gl_MultiTexCoord2.xyzw;
+-	IN_weight = gl_MultiTexCoord4.xyzw;
+-
+-    vec2 is = spritesheetSize.xy;
+-    vec2 topLeft = IN_weight.xy / is;
+-    vec2 spriteSize = IN_normal.xy / is;
+-
+-	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
+-	pos2 *= IN_normal.xy * IN_tangent.xy;
+-
+-	mat2 rotmat;
+-	rotmat[0][0] = cos(IN_position.z);
+-	rotmat[1][0] = -sin(IN_position.z);
+-	rotmat[0][1] = sin(IN_position.z);
+-	rotmat[1][1] = cos(IN_position.z);
+-
+-    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
+-
+-	vec2 tc = IN_weight.zw * 0.5 + 0.5;
+-
+-    OUT_texCoords = topLeft + tc * spriteSize;
+-
+-	/// REFLECT
+-#if !NEW_REFLECTION
+-	pos4.y = -0.5*pos4.y;
+-#else
+-	pos4.y = -1.0*pos4.y;
+-#endif
+-	OUT_position = pos4;
+-
+-	gl_Position = viewProjMatrix * OUT_position;
+-}
+-
+->> fragment <<
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-uniform vec4 uniform_colors[8];
+-
+-
+-void main()
+-{
+-	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
+-	int thecolind = int(diffuse.x * 8);
+-	vec4 outdiffuse = uniform_colors[thecolind];
+-	if (diffuse.rgb == vec3(0))
+-		discard;
+-	if (OUT_position.y > 0)
+-		discard;
+-	gl_FragColor = outdiffuse;
+-}
+-
+->> fragment-reflect <<
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-uniform vec4 uniform_colors[8];
+-
+-
+-void main()
+-{
+-	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
+-	int thecolind = int(diffuse.x * 8);
+-	vec4 outdiffuse = uniform_colors[thecolind];
+-	if (diffuse.rgb == vec3(0))
+-		discard;
+-	if (OUT_position.y < 0)
+-		discard;
+-	gl_FragColor = outdiffuse;
+-}
+-
+->> vertex/CG <<
+-
+-struct input
+-{
+-float3 position 	: POSITION;
+-float3 normal	: TEXCOORD1;
+-float4 tangent	: TEXCOORD2;
+-float4 weight	: TEXCOORD4;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
+-{
+-float2 is = spritesheetSize.xy;
+-float2 topLeft = IN.weight.xy / is;
+-float2 spriteSize = IN.normal.xy / is;
+-
+-float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
+-pos2 *= IN.normal.xy * IN.tangent.xy;
+-
+-
+-float2x2 rotmat;
+-rotmat[0][0] = cos(IN.position.z);
+-rotmat[0][1] = -sin(IN.position.z);
+-rotmat[1][0] = sin(IN.position.z);
+-rotmat[1][1] = cos(IN.position.z);
+-
+-float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
+-pos4.xy = floor(pos4.xy+0.5);
+-float2 tc = IN.weight.zw * 0.5 + 0.5;
+-
+-output OUT;
+-
+-OUT.texCoords = topLeft + tc * spriteSize;
+-OUT.position = pos4;
+-
+-OUT.gl_Position = mul(viewProjMatrix, OUT.position);
+-
+-return OUT;
+-}
+-
+-
+-
+->> fragment/CG <<
+-
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
+-uniform float4 uniform_colors[8]) : COLOR
+-{
+-output OUT;
+-float4 diffuse = tex2D( diffuseTex, IN.texCoords);
+-int thecolind = int(diffuse.x * 8);
+-	/*float4 outdiffuse = uniform_colors[thecolind];
+-	//float4 outdiffuse = diffuse;*/
+-	float4 outdiffuse = float4(0);
+-	if (thecolind == 0)
+-		outdiffuse = uniform_colors[0];
+-	if (thecolind == 1)
+-		outdiffuse = uniform_colors[1];
+-	if (thecolind == 2)
+-		outdiffuse = uniform_colors[2];
+-	if (thecolind == 3)
+-		outdiffuse = uniform_colors[3];
+-	if (thecolind == 4)
+-		outdiffuse = uniform_colors[4];
+-	if (thecolind == 5)
+-		outdiffuse = uniform_colors[5];
+-	if (thecolind == 6)
+-		outdiffuse = uniform_colors[6];
+-	if (thecolind == 7)
+-		outdiffuse = uniform_colors[7];
+-if (diffuse.r == 0 && diffuse.g == 0 && diffuse.b == 0)
+-discard;
+-if (IN.position.y > 0)
+-discard;
+-OUT.color = outdiffuse;
+-return OUT;
+-};
+-
+->> vertex-reflect/CG <<
+-
+-struct input
+-{
+-float3 position 	: POSITION;
+-float3 normal	: TEXCOORD1;
+-float4 tangent	: TEXCOORD2;
+-float4 weight	: TEXCOORD4;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-#define NEW_REFLECTION 1
+-
+-output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
+-{
+-float2 is = spritesheetSize.xy;
+-float2 topLeft = IN.weight.xy / is;
+-float2 spriteSize = IN.normal.xy / is;
+-
+-float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
+-pos2 *= IN.normal.xy * IN.tangent.xy;
+-
+-
+-float2x2 rotmat;
+-rotmat[0][0] = cos(IN.position.z);
+-rotmat[0][1] = -sin(IN.position.z);
+-rotmat[1][0] = sin(IN.position.z);
+-rotmat[1][1] = cos(IN.position.z);
+-
+-float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
+-pos4.xy = floor(pos4.xy+0.5);
+-float2 tc = IN.weight.zw * 0.5 + 0.5;
+-
+-output OUT;
+-
+-OUT.texCoords = topLeft + tc * spriteSize;
+-
+-/// REFLECT
+-#if !NEW_REFLECTION
+-	pos4.y *= -0.5;
+-#else
+-	pos4.y *= -1.0;
+-#endif
+-OUT.position = pos4;
+-
+-OUT.gl_Position = mul(viewProjMatrix, OUT.position);
+-
+-return OUT;
+-}
+-
+-
+->> fragment-reflect/CG <<
+-
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
+-uniform float4 uniform_colors[8]) : COLOR
+-{
+-if (IN.position.y < 0) discard;
+-
+-float4 diffuse = tex2D( diffuseTex, IN.texCoords);
+-int thecolind = int(diffuse.x * 8);
+-output OUT;
+-OUT.color = float4(0);
+-if (thecolind == 0)
+-	discard;
+-else if (thecolind == 1)
+-	OUT.color = uniform_colors[1];
+-else if (thecolind == 2)
+-	OUT.color = uniform_colors[2];
+-else if (thecolind == 3)
+-	OUT.color = uniform_colors[3];
+-else if (thecolind == 4)
+-	OUT.color = uniform_colors[4];
+-else if (thecolind == 5)
+-	OUT.color = uniform_colors[5];
+-else if (thecolind == 6)
+-	OUT.color = uniform_colors[6];
+-else OUT.color = uniform_colors[7];
+-
+-return OUT;
+-};
++diffuseTex
++
++>> vertex <<
++
++vec3 IN_position;
++vec2 IN_texCoords;
++vec3 IN_normal;
++vec4 IN_tangent;
++vec4 IN_weight;
++
++uniform mat4 viewProjMatrix;
++uniform vec4 spritesheetSize;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++
++void main()
++{
++	IN_position = ( gl_Vertex.xyz);
++	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
++	IN_normal = gl_MultiTexCoord1.xyz;
++	IN_tangent = gl_MultiTexCoord2.xyzw;
++	IN_weight = gl_MultiTexCoord4.xyzw;
++
++    vec2 is = spritesheetSize.xy;
++    vec2 topLeft = IN_weight.xy / is;
++    vec2 spriteSize = IN_normal.xy / is;
++
++	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
++	pos2 *= IN_normal.xy * IN_tangent.xy;
++
++
++	mat2 rotmat;
++	rotmat[0][0] = cos(IN_position.z);
++	rotmat[1][0] = -sin(IN_position.z);
++	rotmat[0][1] = sin(IN_position.z);
++	rotmat[1][1] = cos(IN_position.z);
++
++    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
++	pos4.xy = floor(pos4.xy+0.5);
++	vec2 tc = IN_weight.zw * 0.5 + 0.5;
++
++    OUT_texCoords = topLeft + tc * spriteSize;
++	//pos4.y = -0.5*pos4.y;
++	OUT_position = pos4;
++
++	gl_Position = viewProjMatrix * OUT_position;
++}
++
++>> vertex-reflect <<
++
++vec3 IN_position;
++vec2 IN_texCoords;
++vec3 IN_normal;
++vec4 IN_tangent;
++vec4 IN_weight;
++
++
++uniform mat4 viewProjMatrix;
++uniform vec4 spritesheetSize;
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++#define NEW_REFLECTION 1
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
++	IN_normal = gl_MultiTexCoord1.xyz;
++	IN_tangent = gl_MultiTexCoord2.xyzw;
++	IN_weight = gl_MultiTexCoord4.xyzw;
++
++    vec2 is = spritesheetSize.xy;
++    vec2 topLeft = IN_weight.xy / is;
++    vec2 spriteSize = IN_normal.xy / is;
++
++	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
++	pos2 *= IN_normal.xy * IN_tangent.xy;
++
++	mat2 rotmat;
++	rotmat[0][0] = cos(IN_position.z);
++	rotmat[1][0] = -sin(IN_position.z);
++	rotmat[0][1] = sin(IN_position.z);
++	rotmat[1][1] = cos(IN_position.z);
++
++    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
++
++	vec2 tc = IN_weight.zw * 0.5 + 0.5;
++
++    OUT_texCoords = topLeft + tc * spriteSize;
++
++	/// REFLECT
++#if !NEW_REFLECTION
++	pos4.y = -0.5*pos4.y;
++#else
++	pos4.y = -1.0*pos4.y;
++#endif
++	OUT_position = pos4;
++
++	gl_Position = viewProjMatrix * OUT_position;
++}
++
++>> fragment <<
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++uniform vec4 uniform_colors[8];
++
++
++void main()
++{
++	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
++	int thecolind = int(diffuse.x * 8.0);
++	vec4 outdiffuse = uniform_colors[thecolind];
++	if (diffuse.rgb == vec3(0))
++		discard;
++	if (OUT_position.y > 0.0)
++		discard;
++	gl_FragColor = outdiffuse;
++}
++
++>> fragment-reflect <<
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++uniform vec4 uniform_colors[8];
++
++
++void main()
++{
++	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
++	int thecolind = int(diffuse.x * 8.0);
++	vec4 outdiffuse = uniform_colors[thecolind];
++	if (diffuse.rgb == vec3(0))
++		discard;
++	if (OUT_position.y < 0.0)
++		discard;
++	gl_FragColor = outdiffuse;
++}
++
++>> vertex/CG <<
++
++struct input
++{
++float3 position 	: POSITION;
++float3 normal	: TEXCOORD1;
++float4 tangent	: TEXCOORD2;
++float4 weight	: TEXCOORD4;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
++{
++float2 is = spritesheetSize.xy;
++float2 topLeft = IN.weight.xy / is;
++float2 spriteSize = IN.normal.xy / is;
++
++float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
++pos2 *= IN.normal.xy * IN.tangent.xy;
++
++
++float2x2 rotmat;
++rotmat[0][0] = cos(IN.position.z);
++rotmat[0][1] = -sin(IN.position.z);
++rotmat[1][0] = sin(IN.position.z);
++rotmat[1][1] = cos(IN.position.z);
++
++float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
++pos4.xy = floor(pos4.xy+0.5);
++float2 tc = IN.weight.zw * 0.5 + 0.5;
++
++output OUT;
++
++OUT.texCoords = topLeft + tc * spriteSize;
++OUT.position = pos4;
++
++OUT.gl_Position = mul(viewProjMatrix, OUT.position);
++
++return OUT;
++}
++
++
++
++>> fragment/CG <<
++
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
++uniform float4 uniform_colors[8]) : COLOR
++{
++output OUT;
++float4 diffuse = tex2D( diffuseTex, IN.texCoords);
++int thecolind = int(diffuse.x * 8.0);
++	/*float4 outdiffuse = uniform_colors[thecolind];
++	//float4 outdiffuse = diffuse;*/
++	float4 outdiffuse = float4(0.0);
++	if (thecolind == 0.0)
++		outdiffuse = uniform_colors[0];
++	if (thecolind == 1.0)
++		outdiffuse = uniform_colors[1];
++	if (thecolind == 2.0)
++		outdiffuse = uniform_colors[2];
++	if (thecolind == 3.0)
++		outdiffuse = uniform_colors[3];
++	if (thecolind == 4.0)
++		outdiffuse = uniform_colors[4];
++	if (thecolind == 5.0)
++		outdiffuse = uniform_colors[5];
++	if (thecolind == 6.0)
++		outdiffuse = uniform_colors[6];
++	if (thecolind == 7.0)
++		outdiffuse = uniform_colors[7];
++if (diffuse.r == 0.0 && diffuse.g == 0.0 && diffuse.b == 0.0)
++discard;
++if (IN.position.y > 0.0)
++discard;
++OUT.color = outdiffuse;
++return OUT;
++};
++
++>> vertex-reflect/CG <<
++
++struct input
++{
++float3 position 	: POSITION;
++float3 normal	: TEXCOORD1;
++float4 tangent	: TEXCOORD2;
++float4 weight	: TEXCOORD4;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++#define NEW_REFLECTION 1
++
++output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
++{
++float2 is = spritesheetSize.xy;
++float2 topLeft = IN.weight.xy / is;
++float2 spriteSize = IN.normal.xy / is;
++
++float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
++pos2 *= IN.normal.xy * IN.tangent.xy;
++
++
++float2x2 rotmat;
++rotmat[0][0] = cos(IN.position.z);
++rotmat[0][1] = -sin(IN.position.z);
++rotmat[1][0] = sin(IN.position.z);
++rotmat[1][1] = cos(IN.position.z);
++
++float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
++pos4.xy = floor(pos4.xy+0.5);
++float2 tc = IN.weight.zw * 0.5 + 0.5;
++
++output OUT;
++
++OUT.texCoords = topLeft + tc * spriteSize;
++
++/// REFLECT
++#if !NEW_REFLECTION
++	pos4.y *= -0.5;
++#else
++	pos4.y *= -1.0;
++#endif
++OUT.position = pos4;
++
++OUT.gl_Position = mul(viewProjMatrix, OUT.position);
++
++return OUT;
++}
++
++
++>> fragment-reflect/CG <<
++
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
++uniform float4 uniform_colors[8]) : COLOR
++{
++if (IN.position.y < 0.0) discard;
++
++float4 diffuse = tex2D( diffuseTex, IN.texCoords);
++int thecolind = int(diffuse.x * 8.0);
++output OUT;
++OUT.color = float4(0.0);
++if (thecolind == 0.0)
++	discard;
++else if (thecolind == 1.0)
++	OUT.color = uniform_colors[1];
++else if (thecolind == 2.0)
++	OUT.color = uniform_colors[2];
++else if (thecolind == 3.0)
++	OUT.color = uniform_colors[3];
++else if (thecolind == 4.0)
++	OUT.color = uniform_colors[4];
++else if (thecolind == 5.0)
++	OUT.color = uniform_colors[5];
++else if (thecolind == 6.0)
++	OUT.color = uniform_colors[6];
++else OUT.color = uniform_colors[7];
++
++return OUT;
++};
+diff -ruN old/batch_menu_hack.shader new/batch_menu_hack.shader
+--- old/batch_menu_hack.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/batch_menu_hack.shader	2025-08-18 23:07:04.000000000 +0300
+@@ -1,181 +1,181 @@
+-diffuseTex
+-
+->> vertex <<
+-
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-vec3 IN_normal;
+-vec4 IN_tangent;
+-vec4 IN_weight;
+-
+-uniform mat4 viewProjMatrix;
+-uniform vec4 spritesheetSize;
+-
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
+-	IN_normal = gl_MultiTexCoord1.xyz;
+-	IN_tangent = gl_MultiTexCoord2.xyzw;
+-	IN_weight = gl_MultiTexCoord4.xyzw;
+-
+-
+-    vec2 is = spritesheetSize.xy;
+-    vec2 topLeft = IN_weight.xy / is;
+-    vec2 spriteSize = IN_normal.xy / is;
+-
+-	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
+-	pos2 *= IN_normal.xy * IN_tangent.xy;
+-
+-	mat2 rotmat;
+-	rotmat[0][0] = cos(IN_position.z);
+-	rotmat[1][0] = -sin(IN_position.z);
+-	rotmat[0][1] = sin(IN_position.z);
+-	rotmat[1][1] = cos(IN_position.z);
+-
+-    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
+-	vec2 tc = IN_weight.zw * 0.5 + 0.5;
+-    OUT_texCoords = topLeft + tc * spriteSize;
+-	OUT_position = pos4;
+-	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
+-}
+-
+->> fragment <<
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-uniform vec4 uniform_colors[8];
+-
+-void main()
+-{
+-	int thecolind;
+-	vec2 texc = OUT_texCoords;
+-	int colc = 0;
+-	if (texc.x >= 1)
+-	{
+-		texc.x -= 1;
+-		colc = 2;
+-	}
+-	float colv;
+-	if (colc == 0)
+-	{
+-		colv = texture2D(diffuseTex, texc).x;
+-		thecolind = int(colv * 8);
+-	}
+-	else if (colc == 2)
+-	{
+-		colv = texture2D(diffuseTex, texc).z;
+-		thecolind = int(colv * 8);
+-	}
+-
+-	if (colv == 0)
+-		discard;
+-
+-	vec4 outdiffuse = uniform_colors[thecolind];
+-
+-	gl_FragColor = outdiffuse;
+-}
+-
+-
+->> vertex/CG <<
+-
+-struct input
+-{
+-float3 position 	: POSITION;
+-float3 normal	: TEXCOORD1;
+-float4 tangent	: TEXCOORD2;
+-float4 weight	: TEXCOORD4;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords : TEXCOORD0;
+-};
+-
+-output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
+-{
+-	float2 is = spritesheetSize;
+-	float2 topLeft = IN.weight.xy / is;
+-	float2 spriteSize = IN.normal.xy / is;
+-
+-	float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
+-	pos2 *= IN.normal.xy * IN.tangent.xy;
+-
+-
+-	float2x2 rotmat;
+-	rotmat[0][0] = cos(IN.position.z);
+-	rotmat[0][1] = -sin(IN.position.z);
+-	rotmat[1][0] = sin(IN.position.z);
+-	rotmat[1][1] = cos(IN.position.z);
+-
+-	float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
+-	pos4.xy = floor(pos4.xy+0.5);
+-	float2 tc = IN.weight.zw * 0.5 + 0.5;
+-
+-	output OUT;
+-
+-	OUT.texCoords = topLeft + tc * spriteSize;
+-	OUT.position = pos4;
+-
+-	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
+-
+-	return OUT;
+-}
+-
+-
+-
+->> fragment/CG <<
+-
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords : TEXCOORD0;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
+-uniform float4 uniform_colors[8]) : COLOR
+-{
+-	output OUT;
+-	float4 diffuse = tex2D( diffuseTex, IN.texCoords);
+-	int thecolind = int(diffuse.x * 8);
+-	/*float4 outdiffuse = uniform_colors[thecolind];
+-	//float4 outdiffuse = diffuse;*/
+-	float4 outdiffuse = float4(0);
+-	if (thecolind == 0)
+-		outdiffuse = uniform_colors[0];
+-	if (thecolind == 1)
+-		outdiffuse = uniform_colors[1];
+-	if (thecolind == 2)
+-		outdiffuse = uniform_colors[2];
+-	if (thecolind == 3)
+-		outdiffuse = uniform_colors[3];
+-	if (thecolind == 4)
+-		outdiffuse = uniform_colors[4];
+-	if (thecolind == 5)
+-		outdiffuse = uniform_colors[5];
+-	if (thecolind == 6)
+-		outdiffuse = uniform_colors[6];
+-	if (thecolind == 7)
+-		outdiffuse = uniform_colors[7];
+-	if (diffuse.r == 0 && diffuse.g == 0 && diffuse.b == 0)
+-	discard;
+-	OUT.color = outdiffuse;
+-	return OUT;
+-};
++diffuseTex
++
++>> vertex <<
++
++vec3 IN_position;
++vec2 IN_texCoords;
++vec3 IN_normal;
++vec4 IN_tangent;
++vec4 IN_weight;
++
++uniform mat4 viewProjMatrix;
++uniform vec4 spritesheetSize;
++
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_texCoords = vec2(gl_MultiTexCoord2.w, 0.0);
++	IN_normal = gl_MultiTexCoord1.xyz;
++	IN_tangent = gl_MultiTexCoord2.xyzw;
++	IN_weight = gl_MultiTexCoord4.xyzw;
++
++
++    vec2 is = spritesheetSize.xy;
++    vec2 topLeft = IN_weight.xy / is;
++    vec2 spriteSize = IN_normal.xy / is;
++
++	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
++	pos2 *= IN_normal.xy * IN_tangent.xy;
++
++	mat2 rotmat;
++	rotmat[0][0] = cos(IN_position.z);
++	rotmat[1][0] = -sin(IN_position.z);
++	rotmat[0][1] = sin(IN_position.z);
++	rotmat[1][1] = cos(IN_position.z);
++
++    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_texCoords.x, 1.0);
++	vec2 tc = IN_weight.zw * 0.5 + 0.5;
++    OUT_texCoords = topLeft + tc * spriteSize;
++	OUT_position = pos4;
++	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1.0,1.0,1.0);;
++}
++
++>> fragment <<
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++uniform vec4 uniform_colors[8];
++
++void main()
++{
++	int thecolind;
++	vec2 texc = OUT_texCoords;
++	int colc = 0;
++	if (texc.x >= 1.0)
++	{
++		texc.x -= 1.0;
++		colc = 2;
++	}
++	float colv;
++	if (colc == 0)
++	{
++		colv = texture2D(diffuseTex, texc).x;
++		thecolind = int(colv * 8.0);
++	}
++	else if (colc == 2)
++	{
++		colv = texture2D(diffuseTex, texc).z;
++		thecolind = int(colv * 8.0);
++	}
++
++	if (colv == 0.0)
++		discard;
++
++	vec4 outdiffuse = uniform_colors[thecolind];
++
++	gl_FragColor = outdiffuse;
++}
++
++
++>> vertex/CG <<
++
++struct input
++{
++float3 position 	: POSITION;
++float3 normal	: TEXCOORD1;
++float4 tangent	: TEXCOORD2;
++float4 weight	: TEXCOORD4;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords : TEXCOORD0;
++};
++
++output main(input IN, uniform float4x4 viewProjMatrix, uniform float2 spritesheetSize)
++{
++	float2 is = spritesheetSize;
++	float2 topLeft = IN.weight.xy / is;
++	float2 spriteSize = IN.normal.xy / is;
++
++	float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
++	pos2 *= IN.normal.xy * IN.tangent.xy;
++
++
++	float2x2 rotmat;
++	rotmat[0][0] = cos(IN.position.z);
++	rotmat[0][1] = -sin(IN.position.z);
++	rotmat[1][0] = sin(IN.position.z);
++	rotmat[1][1] = cos(IN.position.z);
++
++	float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
++	pos4.xy = floor(pos4.xy+0.5);
++	float2 tc = IN.weight.zw * 0.5 + 0.5;
++
++	output OUT;
++
++	OUT.texCoords = topLeft + tc * spriteSize;
++	OUT.position = pos4;
++
++	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1.0,-1.0,1.0,1.0);
++
++	return OUT;
++}
++
++
++
++>> fragment/CG <<
++
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords : TEXCOORD0;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
++uniform float4 uniform_colors[8]) : COLOR
++{
++	output OUT;
++	float4 diffuse = tex2D( diffuseTex, IN.texCoords);
++	int thecolind = int(diffuse.x * 8.0);
++	/*float4 outdiffuse = uniform_colors[thecolind];
++	//float4 outdiffuse = diffuse;*/
++	float4 outdiffuse = float4(0.0);
++	if (thecolind == 0)
++		outdiffuse = uniform_colors[0];
++	if (thecolind == 1)
++		outdiffuse = uniform_colors[1];
++	if (thecolind == 2)
++		outdiffuse = uniform_colors[2];
++	if (thecolind == 3)
++		outdiffuse = uniform_colors[3];
++	if (thecolind == 4)
++		outdiffuse = uniform_colors[4];
++	if (thecolind == 5)
++		outdiffuse = uniform_colors[5];
++	if (thecolind == 6)
++		outdiffuse = uniform_colors[6];
++	if (thecolind == 7)
++		outdiffuse = uniform_colors[7];
++	if (diffuse.r == 0.0 && diffuse.g == 0.0 && diffuse.b == 0.0)
++	discard;
++	OUT.color = outdiffuse;
++	return OUT;
++};
+diff -ruN old/combofont.shader new/combofont.shader
+--- old/combofont.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/combofont.shader	2025-08-18 22:44:52.000000000 +0300
+@@ -1,158 +1,158 @@
+-diffuseTex
+-
+->> vertex-flip <<
+-
+-// Input Attributes
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-
+-uniform mat4 worldMatrix;
+-uniform mat4 viewProjMatrix;
+-
+-uniform vec2 viewport;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_texCoords = gl_MultiTexCoord0.xy;
+-	vec4 pos4 = vec4(IN_position, 1);
+-	OUT_position = worldMatrix * pos4;
+-	OUT_texCoords = IN_texCoords;
+-	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
+-}
+-
+->> fragment <<
+-//#extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-uniform vec4 textColor;
+-uniform vec4 fillColor;
+-uniform vec4 barh;
+-
+-
+-varying	vec2 OUT_texCoords;
+-varying	vec4 OUT_position;
+-
+-void main()
+-{
+-	float thebarh = barh.x;
+-	float posy = OUT_position.y;
+-	//vec4 diffuse = texelFetch(diffuseTex,ivec2((IN.texCoords * textureSize2D(diffuseTex, 0))), 0);
+-	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
+-	
+-	diffuse.w = diffuse.x;
+-	if (diffuse.w == 0)
+-		discard;
+-	diffuse.xyz = fillColor.xyz;
+-	if (thebarh > posy)
+-	{
+-		diffuse.xyz = textColor.xyz;
+-	}
+-	
+-	gl_FragColor = diffuse.xyzw;
+-}
+-
+-
+->> vertex/CG <<
+-
+-struct input 
+-{
+-	float3 position 	: POSITION;
+-	float2 texCoords : TEXCOORD0;
+-};
+-
+-struct output
+-{
+-	float4 position;
+-	float4 gl_Position : POSITION;
+-	float2 texCoords;
+-};
+-
+-output main(
+-	input IN,
+-	uniform float4x4 worldMatrix,
+-	uniform float4x4 viewProjMatrix,
+-	uniform float2 viewport
+-)
+-{
+-	float4 pos4 = float4(IN.position, 1);
+-	output OUT;
+-	OUT.position = worldMatrix * pos4;
+-	OUT.texCoords = IN.texCoords;
+-	OUT.gl_Position = viewProjMatrix * OUT.position * vec4(1,-1,1,1);
+-	return OUT;
+-}
+-
+->> vertex-flip/CG <<
+-	
+-struct input 
+-{
+-	float3 position 	: POSITION;
+-	float2 texCoords : TEXCOORD0;
+-};
+-
+-struct output
+-{
+-	float4 position;
+-	float4 gl_Position : POSITION;
+-	float2 texCoords;
+-};
+-
+-output main(
+-	input IN,
+-	uniform float4x4 worldMatrix,
+-	uniform float4x4 viewProjMatrix,
+-	uniform float2 viewport
+-)
+-{
+-	float4 pos4 = float4(IN.position, 1);
+-	output OUT;
+-	OUT.position = mul(worldMatrix, pos4);
+-	OUT.texCoords = IN.texCoords;
+-	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
+-	return OUT;
+-}
+-
+->> fragment/CG <<
+-
+-struct input
+-{
+-	float4 position;
+-	float4 gl_Position : POSITION;
+-	float2 texCoords;
+-};
+-
+-struct output
+-{
+-	float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0
+-, uniform float4 textColor
+-, uniform float4 fillColor
+-, uniform float4 barh) : COLOR
+-{
+-	float thebarh = barh.x;
+-	float posy = IN.position.y;
+-	float4 diffuse = tex2D(diffuseTex, IN.texCoords);
+-	
+-	diffuse.w = diffuse.x;
+-	if (diffuse.w == 0)
+-		discard;
+-		
+-	diffuse.xyz = fillColor.xyz;
+-	if (thebarh > posy)
+-	{
+-		diffuse.xyz = textColor.xyz;
+-	}
+-	
+-	output OUT;
+-		
+-	OUT.color = diffuse.xyzw;
+-
+-	return OUT;
+-}
++diffuseTex
++
++>> vertex-flip <<
++
++// Input Attributes
++vec3 IN_position;
++vec2 IN_texCoords;
++
++uniform mat4 worldMatrix;
++uniform mat4 viewProjMatrix;
++
++uniform vec2 viewport;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_texCoords = gl_MultiTexCoord0.xy;
++	vec4 pos4 = vec4(IN_position, 1.0);
++	OUT_position = worldMatrix * pos4;
++	OUT_texCoords = IN_texCoords;
++	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1.0,1.0,1.0);;
++}
++
++>> fragment <<
++//#extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++uniform vec4 textColor;
++uniform vec4 fillColor;
++uniform vec4 barh;
++
++
++varying	vec2 OUT_texCoords;
++varying	vec4 OUT_position;
++
++void main()
++{
++	float thebarh = barh.x;
++	float posy = OUT_position.y;
++	//vec4 diffuse = texelFetch(diffuseTex,ivec2((IN.texCoords * textureSize2D(diffuseTex, 0.0))), 0.0);
++	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords);
++	
++	diffuse.w = diffuse.x;
++	if (diffuse.w == 0.0)
++		discard;
++	diffuse.xyz = fillColor.xyz;
++	if (thebarh > posy)
++	{
++		diffuse.xyz = textColor.xyz;
++	}
++	
++	gl_FragColor = diffuse.xyzw;
++}
++
++
++>> vertex/CG <<
++
++struct input 
++{
++	float3 position 	: POSITION;
++	float2 texCoords : TEXCOORD0;
++};
++
++struct output
++{
++	float4 position;
++	float4 gl_Position : POSITION;
++	float2 texCoords;
++};
++
++output main(
++	input IN,
++	uniform float4x4 worldMatrix,
++	uniform float4x4 viewProjMatrix,
++	uniform float2 viewport
++)
++{
++	float4 pos4 = float4(IN.position, 1.0);
++	output OUT;
++	OUT.position = worldMatrix * pos4;
++	OUT.texCoords = IN.texCoords;
++	OUT.gl_Position = viewProjMatrix * OUT.position * vec4(1,-1.0,1.0,1.0);
++	return OUT;
++}
++
++>> vertex-flip/CG <<
++	
++struct input 
++{
++	float3 position 	: POSITION;
++	float2 texCoords : TEXCOORD0;
++};
++
++struct output
++{
++	float4 position;
++	float4 gl_Position : POSITION;
++	float2 texCoords;
++};
++
++output main(
++	input IN,
++	uniform float4x4 worldMatrix,
++	uniform float4x4 viewProjMatrix,
++	uniform float2 viewport
++)
++{
++	float4 pos4 = float4(IN.position, 1.0);
++	output OUT;
++	OUT.position = mul(worldMatrix, pos4);
++	OUT.texCoords = IN.texCoords;
++	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1.0,-1.0,1.0,1.0);
++	return OUT;
++}
++
++>> fragment/CG <<
++
++struct input
++{
++	float4 position;
++	float4 gl_Position : POSITION;
++	float2 texCoords;
++};
++
++struct output
++{
++	float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0
++, uniform float4 textColor
++, uniform float4 fillColor
++, uniform float4 barh) : COLOR
++{
++	float thebarh = barh.x;
++	float posy = IN.position.y;
++	float4 diffuse = tex2D(diffuseTex, IN.texCoords);
++	
++	diffuse.w = diffuse.x;
++	if (diffuse.w == 0.0)
++		discard;
++		
++	diffuse.xyz = fillColor.xyz;
++	if (thebarh > posy)
++	{
++		diffuse.xyz = textColor.xyz;
++	}
++	
++	output OUT;
++		
++	OUT.color = diffuse.xyzw;
++
++	return OUT;
++}
+diff -ruN old/cutscene.shader new/cutscene.shader
+--- old/cutscene.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/cutscene.shader	2025-08-19 10:32:52.000000000 +0300
+@@ -1,193 +1,193 @@
+-diffuseTex
+-
+->> vertex <<
+-
+-vec3 IN_position;
+-vec3 IN_normal;
+-vec4 IN_tangent;
+-vec4 IN_weight;
+-
+-uniform mat4 viewProjMatrix;
+-uniform vec4 spritesheetSize;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_normal = gl_MultiTexCoord1.xyz;
+-	IN_tangent = gl_MultiTexCoord2.xyzw;
+-	IN_weight = gl_MultiTexCoord4.xyzw;
+-
+-
+-    vec2 is = spritesheetSize.xy;
+-    vec2 topLeft = IN_weight.xy / is;
+-    vec2 spriteSize = IN_normal.xy / is;
+-
+-	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
+-	pos2 *= IN_normal.xy * IN_tangent.xy;
+-
+-	mat2 rotmat;
+-	rotmat[0][0] = cos(IN_position.z);
+-	rotmat[1][0] = -sin(IN_position.z);
+-	rotmat[0][1] = sin(IN_position.z);
+-	rotmat[1][1] = cos(IN_position.z);
+-
+-    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_tangent.w, 1.0);
+-	vec2 tc = IN_weight.zw * 0.5 + 0.5;
+-    OUT_texCoords = topLeft + tc * spriteSize;
+-	OUT_position = pos4;
+-	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
+-}
+-
+->> fragment <<
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-uniform vec4 uniform_colors[8];
+-
+-void main()
+-{
+-	int thecolind;
+-	vec2 texc = OUT_texCoords;
+-	int colc = 0;
+-	if (texc.x >= 1)
+-	{
+-		texc.x -= 1;
+-		colc = 2;
+-	}
+-	float colv;
+-	if (colc == 0)
+-	{
+-		colv = texture2D(diffuseTex, texc).x;
+-		thecolind = int(colv * 8);
+-	}
+-	else if (colc == 2)
+-	{
+-		colv = texture2D(diffuseTex, texc).z;
+-		thecolind = int(colv * 8);
+-	}
+-
+-	if (colv == 0)
+-		discard;
+-
+-	vec4 outdiffuse = uniform_colors[thecolind];
+-
+-	gl_FragColor = outdiffuse;
+-}
+-
+-
+->> vertex/CG <<
+-
+-struct input
+-{
+-float3 position 	: POSITION;
+-float3 normal	: TEXCOORD1;
+-float4 tangent	: TEXCOORD2;
+-float4 weight	: TEXCOORD4;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords : TEXCOORD0;
+-};
+-
+-output main(input IN, uniform float4x4 viewProjMatrix, uniform float4 spritesheetSize)
+-{
+-	float2 is = spritesheetSize.xy;
+-	float2 topLeft = IN.weight.xy / is;
+-	float2 spriteSize = IN.normal.xy / is;
+-
+-	float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
+-	pos2 *= IN.normal.xy * IN.tangent.xy;
+-
+-	float2x2 rotmat;
+-	rotmat[0][0] = cos(IN.position.z);
+-	rotmat[0][1] = -sin(IN.position.z);
+-	rotmat[1][0] = sin(IN.position.z);
+-	rotmat[1][1] = cos(IN.position.z);
+-
+-	float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
+-	//pos4.xy = floor(pos4.xy+0.5);
+-	float2 tc = IN.weight.zw * 0.5 + 0.5;
+-
+-	output OUT;
+-
+-	OUT.texCoords = topLeft + tc * spriteSize;
+-	OUT.position = pos4;
+-
+-	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
+-
+-	return OUT;
+-}
+-
+-
+-
+->> fragment/CG <<
+-
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
+-uniform float4 uniform_colors[8]) : COLOR
+-{
+-	int thecolind =0;
+-	float2 texc = IN.texCoords;
+-	int colc = 0;
+-	if (texc.x >= 1)
+-	{
+-		texc.x -= 1;
+-		colc = 2;
+-	}
+-	float colv = 0;
+-	if (colc == 0)
+-	{
+-		colv = tex2D(diffuseTex, texc).x;
+-		thecolind = int(colv * 8);
+-	}
+-	else if (colc == 2)
+-	{
+-		colv = tex2D(diffuseTex, texc).z;
+-		thecolind = int(colv * 8);
+-	}
+-
+-	if (colv == 0)
+-		discard;
+-
+-	output OUT;
+-	OUT.color = float4(0);
+-	if (thecolind == 0)
+-		discard;
+-	else if (thecolind == 1)
+-		OUT.color = uniform_colors[1];
+-	else if (thecolind == 2)
+-		OUT.color = uniform_colors[2];
+-	else if (thecolind == 3)
+-		OUT.color = uniform_colors[3];
+-	else if (thecolind == 4)
+-		OUT.color = uniform_colors[4];
+-	else if (thecolind == 5)
+-		OUT.color = uniform_colors[5];
+-	else if (thecolind == 6)
+-		OUT.color = uniform_colors[6];
+-	else OUT.color = uniform_colors[7];
+-	return OUT;
++diffuseTex
++
++>> vertex <<
++
++vec3 IN_position;
++vec3 IN_normal;
++vec4 IN_tangent;
++vec4 IN_weight;
++
++uniform mat4 viewProjMatrix;
++uniform vec4 spritesheetSize;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_normal = gl_MultiTexCoord1.xyz;
++	IN_tangent = gl_MultiTexCoord2.xyzw;
++	IN_weight = gl_MultiTexCoord4.xyzw;
++
++
++    vec2 is = spritesheetSize.xy;
++    vec2 topLeft = IN_weight.xy / is;
++    vec2 spriteSize = IN_normal.xy / is;
++
++	vec2 pos2 = IN_weight.zw*0.5 - (vec2(IN_normal.z, IN_tangent.z) / IN_normal.xy);
++	pos2 *= IN_normal.xy * IN_tangent.xy;
++
++	mat2 rotmat;
++	rotmat[0][0] = cos(IN_position.z);
++	rotmat[1][0] = -sin(IN_position.z);
++	rotmat[0][1] = sin(IN_position.z);
++	rotmat[1][1] = cos(IN_position.z);
++
++    vec4 pos4 = vec4(rotmat*pos2 + IN_position.xy, IN_tangent.w, 1.0);
++	vec2 tc = IN_weight.zw * 0.5 + 0.5;
++    OUT_texCoords = topLeft + tc * spriteSize;
++	OUT_position = pos4;
++	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
++}
++
++>> fragment <<
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++uniform vec4 uniform_colors[8];
++
++void main()
++{
++	int thecolind;
++	vec2 texc = OUT_texCoords;
++	int colc = 0;
++	if (texc.x >= 1.0)
++	{
++		texc.x -= 1.0;
++		colc = 2;
++	}
++	float colv;
++	if (colc == 0)
++	{
++		colv = texture2D(diffuseTex, texc).x;
++		thecolind = int(colv * 8.0);
++	}
++	else if (colc == 2)
++	{
++		colv = texture2D(diffuseTex, texc).z;
++		thecolind = int(colv * 8.0);
++	}
++
++	if (colv == 0.0)
++		discard;
++
++	vec4 outdiffuse = uniform_colors[thecolind];
++
++	gl_FragColor = outdiffuse;
++}
++
++
++>> vertex/CG <<
++
++struct input
++{
++float3 position 	: POSITION;
++float3 normal	: TEXCOORD1;
++float4 tangent	: TEXCOORD2;
++float4 weight	: TEXCOORD4;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords : TEXCOORD0;
++};
++
++output main(input IN, uniform float4x4 viewProjMatrix, uniform float4 spritesheetSize)
++{
++	float2 is = spritesheetSize.xy;
++	float2 topLeft = IN.weight.xy / is;
++	float2 spriteSize = IN.normal.xy / is;
++
++	float2 pos2 = IN.weight.zw*0.5 - (float2(IN.normal.z, IN.tangent.z) / IN.normal.xy);
++	pos2 *= IN.normal.xy * IN.tangent.xy;
++
++	float2x2 rotmat;
++	rotmat[0][0] = cos(IN.position.z);
++	rotmat[0][1] = -sin(IN.position.z);
++	rotmat[1][0] = sin(IN.position.z);
++	rotmat[1][1] = cos(IN.position.z);
++
++	float4 pos4 = float4(mul(rotmat,pos2) + IN.position.xy, IN.tangent.w, 1.0);
++	//pos4.xy = floor(pos4.xy+0.5);
++	float2 tc = IN.weight.zw * 0.5 + 0.5;
++
++	output OUT;
++
++	OUT.texCoords = topLeft + tc * spriteSize;
++	OUT.position = pos4;
++
++	OUT.gl_Position = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
++
++	return OUT;
++}
++
++
++
++>> fragment/CG <<
++
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0,
++uniform float4 uniform_colors[8]) : COLOR
++{
++	int thecolind =0;
++	float2 texc = IN.texCoords;
++	int colc = 0;
++	if (texc.x >= 1.0)
++	{
++		texc.x -= 1.0;
++		colc = 2;
++	}
++	float colv = 0.0;
++	if (colc == 0)
++	{
++		colv = tex2D(diffuseTex, texc).x;
++		thecolind = int(colv * 8.0);
++	}
++	else if (colc == 2)
++	{
++		colv = tex2D(diffuseTex, texc).z;
++		thecolind = int(colv * 8.0);
++	}
++
++	if (colv == 0.0)
++		discard;
++
++	output OUT;
++	OUT.color = float4(0);
++	if (thecolind == 0)
++		discard;
++	else if (thecolind == 1)
++		OUT.color = uniform_colors[1];
++	else if (thecolind == 2)
++		OUT.color = uniform_colors[2];
++	else if (thecolind == 3)
++		OUT.color = uniform_colors[3];
++	else if (thecolind == 4)
++		OUT.color = uniform_colors[4];
++	else if (thecolind == 5)
++		OUT.color = uniform_colors[5];
++	else if (thecolind == 6)
++		OUT.color = uniform_colors[6];
++	else OUT.color = uniform_colors[7];
++	return OUT;
+ };
+\ No newline at end of file
+diff -ruN old/font.shader new/font.shader
+--- old/font.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/font.shader	2025-08-18 22:44:52.000000000 +0300
+@@ -1,160 +1,160 @@
+-diffuseTex
+-	
+->> vertex <<
+-
+-// Input Attributes
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-
+-uniform mat4 worldMatrix;
+-uniform mat4 viewProjMatrix;
+-
+-uniform vec2 viewport;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_texCoords = gl_MultiTexCoord0.xy;
+-	vec4 pos4 = vec4(IN_position, 1);
+-	OUT_position = worldMatrix * pos4;
+-	OUT_texCoords = IN_texCoords;
+-	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
+-}
+-
+->> vertex-flip <<
+-
+-// Input Attributes
+-vec3 IN_position;
+-vec2 IN_texCoords;
+-
+-uniform mat4 worldMatrix;
+-uniform mat4 viewProjMatrix;
+-
+-uniform vec2 viewport;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	IN_texCoords = gl_MultiTexCoord0.xy;
+-	vec4 pos4 = vec4(IN_position, 1);
+-	OUT_position = worldMatrix * pos4;
+-	OUT_texCoords = IN_texCoords;
+-	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1,1,1);;
+-}
+-
+->> fragment <<
+-//#extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D diffuseTex;
+-
+-uniform vec4 textColor;
+-uniform vec4 cutoff;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords).xxxx;
+-	if (diffuse.x == 0)
+-		discard;
+-	if (OUT_position.y > cutoff.y)
+-		discard;
+-	gl_FragColor = diffuse * textColor;
+-}
+-
+->> vertex/CG <<
+-
+-struct input 
+-{
+-	float3 position 	: POSITION;
+-	float2 texCoords 	: TEXCOORD0;
+-};
+-
+-struct output
+-{
+-	float4 position;
+-	float4 glPosition : POSITION;
+-	float2 texCoords 	: TEXCOORD0;
+-};
+-
+-output main(
+-	input IN,
+-	uniform float4x4 worldMatrix,
+-	uniform float4x4 viewProjMatrix,
+-	uniform float2 viewport
+-)  
+-{
+-	float4 pos4 = float4(IN.position, 1); 
+-	output OUT;
+-	OUT.position = mul(worldMatrix, pos4);
+-	OUT.texCoords = IN.texCoords;
+-	OUT.glPosition = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
+-	return OUT;
+-} 
+- 
+->> vertex-flip/CG <<
+-	
+-struct input
+-{
+-float3 position 	: POSITION;
+-float2 texCoords 	: TEXCOORD0;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 glPosition : POSITION;
+-float2 texCoords 	: TEXCOORD0;
+-};
+-
+-output main(
+-input IN,
+-uniform float4x4 worldMatrix,
+-uniform float4x4 viewProjMatrix,
+-uniform float2 viewport
+-)
+-{
+-float4 pos4 = float4(IN.position, 1);
+-output OUT;
+-OUT.position = mul(worldMatrix, pos4);
+-OUT.texCoords = IN.texCoords;
+-OUT.glPosition = mul(viewProjMatrix, OUT.position) * float4(1,-1,1,1);
+-return OUT;
+-}
+-
+-
+->> fragment/CG <<
+-	
+-struct input
+-{
+-float4 position;
+-float4 glPosition;
+-float2 texCoords 	: TEXCOORD0;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0, uniform float4 textColor, uniform float4 cutoff) : COLOR
+-{
+-	float4 diffuse = tex2D(diffuseTex, IN.texCoords.xy).xxxx;
+-
+-	if (diffuse.x < 0.5)
+-	discard;
+-	if (IN.glPosition.y > cutoff.y)
+-		discard;
+-	diffuse = float4(1);
+-	output OUT;
+-	OUT.color = diffuse * textColor;
+-	return OUT;
+-}
+-
++diffuseTex
++	
++>> vertex <<
++
++// Input Attributes
++vec3 IN_position;
++vec2 IN_texCoords;
++
++uniform mat4 worldMatrix;
++uniform mat4 viewProjMatrix;
++
++uniform vec2 viewport;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_texCoords = gl_MultiTexCoord0.xy;
++	vec4 pos4 = vec4(IN_position, 1.0);
++	OUT_position = worldMatrix * pos4;
++	OUT_texCoords = IN_texCoords;
++	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1.0,1.0,1.0);;
++}
++
++>> vertex-flip <<
++
++// Input Attributes
++vec3 IN_position;
++vec2 IN_texCoords;
++
++uniform mat4 worldMatrix;
++uniform mat4 viewProjMatrix;
++
++uniform vec2 viewport;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	IN_texCoords = gl_MultiTexCoord0.xy;
++	vec4 pos4 = vec4(IN_position, 1.0);
++	OUT_position = worldMatrix * pos4;
++	OUT_texCoords = IN_texCoords;
++	gl_Position = viewProjMatrix * OUT_position * vec4(1,-1.0,1.0,1.0);;
++}
++
++>> fragment <<
++//#extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D diffuseTex;
++
++uniform vec4 textColor;
++uniform vec4 cutoff;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	vec4 diffuse = texture2D(diffuseTex, OUT_texCoords).xxxx;
++	if (diffuse.x == 0.0)
++		discard;
++	if (OUT_position.y > cutoff.y)
++		discard;
++	gl_FragColor = diffuse * textColor;
++}
++
++>> vertex/CG <<
++
++struct input 
++{
++	float3 position 	: POSITION;
++	float2 texCoords 	: TEXCOORD0;
++};
++
++struct output
++{
++	float4 position;
++	float4 glPosition : POSITION;
++	float2 texCoords 	: TEXCOORD0;
++};
++
++output main(
++	input IN,
++	uniform float4x4 worldMatrix,
++	uniform float4x4 viewProjMatrix,
++	uniform float2 viewport
++)  
++{
++	float4 pos4 = float4(IN.position, 1.0); 
++	output OUT;
++	OUT.position = mul(worldMatrix, pos4);
++	OUT.texCoords = IN.texCoords;
++	OUT.glPosition = mul(viewProjMatrix, OUT.position) * float4(1.0,-1.0,1.0,1.0);
++	return OUT;
++} 
++ 
++>> vertex-flip/CG <<
++	
++struct input
++{
++float3 position 	: POSITION;
++float2 texCoords 	: TEXCOORD0;
++};
++
++struct output
++{
++float4 position;
++float4 glPosition : POSITION;
++float2 texCoords 	: TEXCOORD0;
++};
++
++output main(
++input IN,
++uniform float4x4 worldMatrix,
++uniform float4x4 viewProjMatrix,
++uniform float2 viewport
++)
++{
++float4 pos4 = float4(IN.position, 1.0);
++output OUT;
++OUT.position = mul(worldMatrix, pos4);
++OUT.texCoords = IN.texCoords;
++OUT.glPosition = mul(viewProjMatrix, OUT.position) * float4(1.0,-1.0,1.0,1.0);
++return OUT;
++}
++
++
++>> fragment/CG <<
++	
++struct input
++{
++float4 position;
++float4 glPosition;
++float2 texCoords 	: TEXCOORD0;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex: TEXUNIT0, uniform float4 textColor, uniform float4 cutoff) : COLOR
++{
++	float4 diffuse = tex2D(diffuseTex, IN.texCoords.xy).xxxx;
++
++	if (diffuse.x < 0.5)
++	discard;
++	if (IN.glPosition.y > cutoff.y)
++		discard;
++	diffuse = float4(1.0);
++	output OUT;
++	OUT.color = diffuse * textColor;
++	return OUT;
++}
++
+diff -ruN old/pauselines.shader new/pauselines.shader
+--- old/pauselines.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/pauselines.shader	2025-08-18 22:44:52.000000000 +0300
+@@ -1,67 +1,67 @@
+-diffuseTex
+-
+->> vertex-flip <<
+-
+-vec3 IN_position;
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-	gl_Position = vec4(IN_position.xy, 0.8, 1);
+-}
+-
+->> fragment <<
+-uniform sampler2D diffuseTex;
+-
+-varying	vec4 OUT_position;
+-
+-void main()
+-{
+-	vec4 diffuse = texture2D(diffuseTex, gl_FragCoord.xy*vec2(1,0.5));
+-	if (diffuse.r == 0)
+-		discard;
+-	gl_FragColor = vec4(1); // TODO: Proper color
+-}
+-
+-
+->> vertex-flip/CG <<
+-
+-struct input
+-{
+-float3 position 	: POSITION;
+-float2 texCoords 	: TEXCOORD0;
+-};
+-
+-struct output
+-{
+-float4 gl_Position : POSITION;
+-};
+-
+-
+-output main(input IN)
+-{
+-	output OUT;
+-	OUT.gl_Position = float4(IN.position.xy, 0.8, 1);
+-	return OUT;
+-}
+-
+->> fragment/CG <<
+-struct input
+-{
+-float4 gl_Position : POSITION;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-output main(input IN, uniform sampler2D diffuseTex, float4 FragCoord : WPOS)
+-{
+-	float4 diffuse = tex2D(diffuseTex, FragCoord.xy*float2(1,0.5));
+-	if (diffuse.r == 0)	
+-		discard;
+-	
+-	output OUT;
+-	OUT.color = float4(1); // TODO: Proper color
+-	return OUT;
+-}
++diffuseTex
++
++>> vertex-flip <<
++
++vec3 IN_position;
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++	gl_Position = vec4(IN_position.xy, 0.8, 1.0);
++}
++
++>> fragment <<
++uniform sampler2D diffuseTex;
++
++varying	vec4 OUT_position;
++
++void main()
++{
++	vec4 diffuse = texture2D(diffuseTex, gl_FragCoord.xy*vec2(1,0.5));
++	if (diffuse.r == 0.0)
++		discard;
++	gl_FragColor = vec4(1); // TODO: Proper color
++}
++
++
++>> vertex-flip/CG <<
++
++struct input
++{
++float3 position 	: POSITION;
++float2 texCoords 	: TEXCOORD0;
++};
++
++struct output
++{
++float4 gl_Position : POSITION;
++};
++
++
++output main(input IN)
++{
++	output OUT;
++	OUT.gl_Position = float4(IN.position.xy, 0.8, 1.0);
++	return OUT;
++}
++
++>> fragment/CG <<
++struct input
++{
++float4 gl_Position : POSITION;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++output main(input IN, uniform sampler2D diffuseTex, float4 FragCoord : WPOS)
++{
++	float4 diffuse = tex2D(diffuseTex, FragCoord.xy*float2(1.0,0.5));
++	if (diffuse.r == 0.0)	
++		discard;
++	
++	output OUT;
++	OUT.color = float4(1.0); // TODO: Proper color
++	return OUT;
++}
+diff -ruN old/post.shader new/post.shader
+--- old/post.shader	2014-03-17 23:37:17.000000000 +0200
++++ new/post.shader	2025-08-18 22:44:52.000000000 +0300
+@@ -1,371 +1,371 @@
+-
+->> vertex << //////////////////////////////
+-
+-vec3 IN_position;
+-uniform vec2 viewport;
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-    float ar = viewport.y / viewport.x;
+-    float targetAr = 400.0/600.0;
+-    OUT_texCoords = (IN_position.xy + 1.0) / 2;
+-    OUT_position = vec4(IN_position, 1.0);
+-    if (ar/targetAr < 1)
+-        gl_Position = OUT_position * vec4(ar/targetAr,1,0,1);
+-    else
+-        gl_Position = OUT_position * vec4(1,targetAr/ar,0,1);
+-}
+-
+->> vertex-water << //////////////////////////////
+-
+-vec3 IN_position;
+-uniform vec2 viewport;
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-void main()
+-{
+-	IN_position = gl_Vertex.xyz;
+-
+-		
+-	OUT_texCoords = (IN_position.xy + 1.0) / 2;
+-    OUT_position = vec4(IN_position, 1.0);
+-    gl_Position = OUT_position * vec4(1,1,0,1);
+-}
+-
+->> fragment-water << //////////////////////////////
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D colorTexture;
+-uniform vec2 viewport;
+-uniform vec4 cameraPosition;
+-uniform vec4 healthRadius;
+-uniform vec4 playerPosition;
+-uniform vec4 cameraWorldPosition;
+-uniform vec4 delta;
+-uniform vec4 uniform_colors[8];
+-uniform vec4 uniform_backcol;
+-
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-#define NEW_REFLECTION 1
+-
+-void main()
+-{
+-	vec2 pixelPosition = (cameraWorldPosition.xy - OUT_position.xy*vec2(-300,200)); // correct AR
+-	vec2 playerToPixelPosition = playerPosition.xy-pixelPosition;
+-
+-	// do the pixelation effect of the health
+-	playerToPixelPosition /= 2;
+-	playerToPixelPosition -= fract(playerToPixelPosition);
+-	playerToPixelPosition *= 2;
+-
+-	float distanceToPlayer = length(playerToPixelPosition);
+-	distanceToPlayer /= 350;
+-
+-	float healthAmount = healthRadius.x/healthRadius.y;
+-	if (healthAmount > 0.99)
+-		healthAmount = 1000;
+-		
+-    vec2 texCoords = OUT_texCoords;
+-	texCoords.y = 1.0-texCoords.y;
+-
+-	float cameraYViewSpace = cameraPosition.x;
+-	float wobbleWave = cameraPosition.y;
+-
+-	float seaGradient = (texCoords.y) + (cameraYViewSpace-0.5); // below 0 means above sea level, above 0 means deeper
+-	if (seaGradient < 0) 
+-		seaGradient = 0;
+-#if NEW_REFLECTION
+-	seaGradient = 0;
+-#endif		
+-	float wobblingGradient = ((texCoords.y+cameraYViewSpace)*350+wobbleWave*7.0);
+-	float wobbleWidth = 1.0/2.5; // screen scale
+-	float maxWobbleWidth = 1;
+-
+-	float xWobbleOffset = clamp((sin(wobblingGradient)*wobbleWidth),-maxWobbleWidth,maxWobbleWidth) * clamp(seaGradient, 0,0.01);
+-#if !NEW_REFLECTION
+-	vec2 wobblingTexCoords = texCoords + vec2(xWobbleOffset, 0);
+-#else
+-	vec2 wobblingTexCoords  = texCoords;
+-#endif
+-	float fader = clamp(seaGradient * 5.0, 0, 1);
+-
+-	vec4 finalColor;
+-
+-	vec2 requiredTexCoords;
+-	if (seaGradient > 0)
+-		requiredTexCoords = wobblingTexCoords;
+-	else
+-		requiredTexCoords = texCoords;
+-
+-	finalColor = texture2D(colorTexture, requiredTexCoords);
+-	vec4 backCol = uniform_backcol;
+-#if NEW_REFLECTION
+-	if(((texCoords.y) + (cameraYViewSpace-0.5)) > 0)
+-	{
+-		float delta = 0.01;
+-		if (length(finalColor.xyz-uniform_colors[1].xyz) < delta)
+-			finalColor = uniform_colors[3];
+-		else if (length(finalColor.xyz-uniform_colors[2].xyz) < delta)
+-			finalColor = uniform_colors[3];
+-		else if (length(finalColor.xyz-uniform_colors[4].xyz) < delta)
+-			finalColor = uniform_backcol; //no silly bg cloud, looks weird
+-		else if (length(finalColor.xyz-uniform_colors[5].xyz) < delta)
+-			finalColor = uniform_colors[6];
+-		else if (length(finalColor.xyz-uniform_colors[6].xyz) < delta)
+-			finalColor = uniform_backcol; //no silly bg cloud, looks weird
+-		if (length(finalColor.xyz-uniform_colors[7].xyz) < delta)
+-			finalColor = uniform_colors[6];
+-	}
+-#endif
+-	if (finalColor.a == 0)
+-	{
+-#if !NEW_REFLECTION
+-		if (healthAmount < distanceToPlayer && seaGradient == 0)
+-#else
+-		if (healthAmount < distanceToPlayer && ((texCoords.y) + (cameraYViewSpace-0.5)) < 0)
+-#endif
+-		{
+-			if(healthRadius.z  < 1 ) gl_FragColor = uniform_colors[7];
+-			else gl_FragColor = uniform_colors[6];
+-		}
+-		else
+-		{
+-			gl_FragColor = backCol;
+-		}
+-		return;
+-	}
+-	gl_FragColor = (1.0 - fader) * finalColor + fader * backCol;
+-}
+-
+->> fragment << //////////////////////////////
+-// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
+-
+-uniform sampler2D colorTexture;
+-uniform sampler2D diffuseTex;
+-varying	vec4 OUT_position;
+-varying	vec2 OUT_texCoords;
+-
+-uniform vec4 uniform_colors[8];
+-uniform vec4 cameraPosition;
+-
+-void main()
+-{
+-    vec2 tc = OUT_texCoords;
+-
+-	// vec4 cta = texelFetch(colorTexture,ivec2(tc * textureSize2D(colorTexture, 0)), 0);
+-	vec4 cta = texture2D(colorTexture,tc);
+-	
+-	if (cta.rgb == vec4(1).rgb) // TODO: Why?
+-		cta = uniform_colors[7];
+-		
+-	
+-
+-	gl_FragColor = cta;
+-	//gl_FragColor.rgb = thergb;
+-}
+-
+->> vertex/CG << //////////////////////////////
+-	
+-struct input
+-{
+-float3 position 	: POSITION;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-output main(input IN, uniform float2 viewport)
+-{
+-float ar = viewport.y / viewport.x;
+-float targetAr = 400.0/600.0;
+-output OUT;
+-OUT.texCoords = (IN.position.xy + 1.0) / 2.0;
+-OUT.position = float4(IN.position, 1.0);
+-if (ar/targetAr < 1.0)
+-{
+-OUT.gl_Position = OUT.position * float4(ar/targetAr,1,0,1);
+-}
+-else
+-{
+-OUT.gl_Position = OUT.position * float4(1,targetAr/ar,0,1);
+-}
+-return OUT;
+-}
+-
+-
+->> vertex-water/CG << //////////////////////////////
+-	
+-struct input
+-{
+-float3 position 	: POSITION;
+-};
+-
+-struct output
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-output main(input IN, uniform float2 viewport)
+-{
+-output OUT;
+-OUT.texCoords = (IN.position.xy + 1.0) / 2.0;
+-OUT.position = float4(IN.position, 1.0);
+-OUT.gl_Position = OUT.position * float4(1,1,0,1);
+-return OUT;
+-}
+-
+-
+->> fragment-water/CG << //////////////////////////////
+-	
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-#define NEW_REFLECTION 1
+-
+-output main(input IN,
+-uniform sampler2D colorTexture : TEXUNIT0,
+-uniform float2 viewport,
+-uniform float4 cameraPosition,
+-uniform float4 healthRadius,
+-uniform float4 playerPosition,
+-uniform float4 cameraWorldPosition,
+-uniform float4 delta,
+-uniform float4 uniform_backcol,
+-uniform float4 uniform_colors[8])
+-{
+-	float2 pixelPosition = (cameraWorldPosition.xy - IN.position.xy*float2(-300,200));
+-	float2 playerToPixelPosition = playerPosition.xy-pixelPosition;
+-	float distanceToPlayer = length(playerToPixelPosition);
+-	distanceToPlayer /= 350;
+-	float healthAmount = healthRadius.x/healthRadius.y;
+-	if (healthAmount > 0.99)
+-		healthAmount = 1000;
+-	float2 texCoords = IN.texCoords;
+-	texCoords.y = 1.0-texCoords.y;
+-	float cameraYViewSpace = cameraPosition.x;
+-	float wobbleWave = cameraPosition.y;
+-	float seaGradient = (texCoords.y) + (cameraYViewSpace-0.5); // below 0 means above sea level, above 0 means deeper
+-	if (seaGradient < 0) 
+-		seaGradient = 0;
+-#if NEW_REFLECTION
+-	seaGradient = 0;
+-#endif
+-	float wobblingGradient = ((texCoords.y+cameraYViewSpace)*350+wobbleWave*7.0);
+-	float wobbleWidth = 1.0/2.5; // screen scale
+-	float maxWobbleWidth = 1;
+-	float xWobbleOffset = clamp((sin(wobblingGradient)*wobbleWidth),-maxWobbleWidth,maxWobbleWidth) * clamp(seaGradient, 0,0.01);
+-#if !NEW_REFLECTION
+-	float2 wobblingTexCoords = texCoords + float2(xWobbleOffset, 0);
+-#else
+-	float2 wobblingTexCoords = texCoords;
+-#endif
+-	float fader = clamp(seaGradient * 5.0, 0, 1);
+-	float4 finalColor;
+-	float2 requiredTexCoords;
+-	if (seaGradient > 0)
+-		requiredTexCoords = wobblingTexCoords;
+-	else
+-		requiredTexCoords = texCoords;
+-	finalColor = tex2D(colorTexture, requiredTexCoords);
+-	float4 backCol = uniform_backcol;
+-#if NEW_REFLECTION
+-	if(((texCoords.y) + (cameraYViewSpace-0.5)) > 0)
+-	{
+-		float delta = 0.01;
+-		if (length(finalColor.xyz-uniform_colors[1].xyz) < delta)
+-			finalColor = uniform_colors[3];
+-		else if (length(finalColor.xyz-uniform_colors[2].xyz) < delta)
+-			finalColor = uniform_colors[3];
+-		else if (length(finalColor.xyz-uniform_colors[4].xyz) < delta)
+-			finalColor = uniform_backcol; //no silly bg cloud, looks weird
+-		else if (length(finalColor.xyz-uniform_colors[5].xyz) < delta)
+-			finalColor = uniform_colors[6];			
+-		else if (length(finalColor.xyz-uniform_colors[6].xyz) < delta)
+-			finalColor = uniform_backcol; //no silly bg cloud, looks weird
+-		else if (length(finalColor.xyz-uniform_colors[7].xyz) < delta)
+-			finalColor = uniform_colors[6];
+-	}
+-#endif
+-
+-	output OUT;
+-
+-	if (finalColor.a == 0)
+-	{
+-#if !NEW_REFLECTION
+-		if (healthAmount < distanceToPlayer && seaGradient == 0)
+-#else
+-		if (healthAmount < distanceToPlayer && ((texCoords.y) + (cameraYViewSpace-0.5)) < 0)
+-#endif
+-		{
+-			if(healthRadius.z  < 1 ) OUT.color = uniform_colors[7];
+-			else OUT.color = uniform_colors[6];
+-		}
+-		else
+-		{
+-			OUT.color = backCol;
+-		}
+-		return OUT;
+-	}
+-	OUT.color = (1.0 - fader) * finalColor + fader * backCol;
+-	return OUT;
+-}
+-
+-
+->> fragment/CG << //////////////////////////////
+-	
+-struct input
+-{
+-float4 position;
+-float4 gl_Position : POSITION;
+-float2 texCoords;
+-};
+-
+-struct output
+-{
+-float4 color 	: COLOR;
+-};
+-
+-uniform float4 uniform_colors[8];
+-uniform float4 cameraPosition;
+-
+-output main(input IN,
+-uniform sampler2D colorTexture: TEXUNIT0,
+-uniform float4 uniform_colors[8],
+-uniform float4 cameraPosition ) : COLOR
+-{
+-float2 tc = (IN.texCoords + 1.0) / 2.0;
+-float4 cta = tex2D(colorTexture,tc);
+-
+-//if (cta.rgb == float3(1))
+-if (cta.r == 1.0 && cta.g == 1.0 && cta.b == 1.0)
+-cta = uniform_colors[7];
+-
+-output OUT;
+-
+-OUT.color = cta;
+-OUT.color.a = 1.0;
+-return OUT;
+-}
+-
++
++>> vertex << //////////////////////////////
++
++vec3 IN_position;
++uniform vec2 viewport;
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++    float ar = viewport.y / viewport.x;
++    float targetAr = 400.0/600.0;
++    OUT_texCoords = (IN_position.xy + 1.0) / 2.0;
++    OUT_position = vec4(IN_position, 1.0);
++    if (ar/targetAr < 1.0)
++        gl_Position = OUT_position * vec4(ar/targetAr,1.0,0.0,1.0);
++    else
++        gl_Position = OUT_position * vec4(1,targetAr/ar,0.0,1.0);
++}
++
++>> vertex-water << //////////////////////////////
++
++vec3 IN_position;
++uniform vec2 viewport;
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++void main()
++{
++	IN_position = gl_Vertex.xyz;
++
++		
++	OUT_texCoords = (IN_position.xy + 1.0) / 2.0;
++    OUT_position = vec4(IN_position, 1.0);
++    gl_Position = OUT_position * vec4(1,1.0,0.0,1.0);
++}
++
++>> fragment-water << //////////////////////////////
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D colorTexture;
++uniform vec2 viewport;
++uniform vec4 cameraPosition;
++uniform vec4 healthRadius;
++uniform vec4 playerPosition;
++uniform vec4 cameraWorldPosition;
++uniform vec4 delta;
++uniform vec4 uniform_colors[8];
++uniform vec4 uniform_backcol;
++
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++#define NEW_REFLECTION 1
++
++void main()
++{
++	vec2 pixelPosition = (cameraWorldPosition.xy - OUT_position.xy*vec2(-300.0,200.0)); // correct AR
++	vec2 playerToPixelPosition = playerPosition.xy-pixelPosition;
++
++	// do the pixelation effect of the health
++	playerToPixelPosition /= 2.0;
++	playerToPixelPosition -= fract(playerToPixelPosition);
++	playerToPixelPosition *= 2.0;
++
++	float distanceToPlayer = length(playerToPixelPosition);
++	distanceToPlayer /= 350.0;
++
++	float healthAmount = healthRadius.x/healthRadius.y;
++	if (healthAmount > 0.99)
++		healthAmount = 1000.0;
++		
++    vec2 texCoords = OUT_texCoords;
++	texCoords.y = 1.0-texCoords.y;
++
++	float cameraYViewSpace = cameraPosition.x;
++	float wobbleWave = cameraPosition.y;
++
++	float seaGradient = (texCoords.y) + (cameraYViewSpace-0.5); // below 0.0 means above sea level, above 0.0 means deeper
++	if (seaGradient < 0.0) 
++		seaGradient = 0.0;
++#if NEW_REFLECTION
++	seaGradient = 0.0;
++#endif		
++	float wobblingGradient = ((texCoords.y+cameraYViewSpace)*350.0+wobbleWave*7.0);
++	float wobbleWidth = 1.0/2.5; // screen scale
++	float maxWobbleWidth = 1.0;
++
++	float xWobbleOffset = clamp((sin(wobblingGradient)*wobbleWidth),-maxWobbleWidth,maxWobbleWidth) * clamp(seaGradient, 0.0,0.01);
++#if !NEW_REFLECTION
++	vec2 wobblingTexCoords = texCoords + vec2(xWobbleOffset, 0.0);
++#else
++	vec2 wobblingTexCoords  = texCoords;
++#endif
++	float fader = clamp(seaGradient * 5.0, 0.0, 1.0);
++
++	vec4 finalColor;
++
++	vec2 requiredTexCoords;
++	if (seaGradient > 0.0)
++		requiredTexCoords = wobblingTexCoords;
++	else
++		requiredTexCoords = texCoords;
++
++	finalColor = texture2D(colorTexture, requiredTexCoords);
++	vec4 backCol = uniform_backcol;
++#if NEW_REFLECTION
++	if(((texCoords.y) + (cameraYViewSpace-0.5)) > 0.0)
++	{
++		float delta = 0.01;
++		if (length(finalColor.xyz-uniform_colors[1].xyz) < delta)
++			finalColor = uniform_colors[3];
++		else if (length(finalColor.xyz-uniform_colors[2].xyz) < delta)
++			finalColor = uniform_colors[3];
++		else if (length(finalColor.xyz-uniform_colors[4].xyz) < delta)
++			finalColor = uniform_backcol; //no silly bg cloud, looks weird
++		else if (length(finalColor.xyz-uniform_colors[5].xyz) < delta)
++			finalColor = uniform_colors[6];
++		else if (length(finalColor.xyz-uniform_colors[6].xyz) < delta)
++			finalColor = uniform_backcol; //no silly bg cloud, looks weird
++		if (length(finalColor.xyz-uniform_colors[7].xyz) < delta)
++			finalColor = uniform_colors[6];
++	}
++#endif
++	if (finalColor.a == 0.0)
++	{
++#if !NEW_REFLECTION
++		if (healthAmount < distanceToPlayer && seaGradient == 0.0)
++#else
++		if (healthAmount < distanceToPlayer && ((texCoords.y) + (cameraYViewSpace-0.5)) < 0.0)
++#endif
++		{
++			if(healthRadius.z  < 1.0 ) gl_FragColor = uniform_colors[7];
++			else gl_FragColor = uniform_colors[6];
++		}
++		else
++		{
++			gl_FragColor = backCol;
++		}
++		return;
++	}
++	gl_FragColor = (1.0 - fader) * finalColor + fader * backCol;
++}
++
++>> fragment << //////////////////////////////
++// #extension GL_EXT_gpu_shader4 : enable //Enabled for texelFetch
++
++uniform sampler2D colorTexture;
++uniform sampler2D diffuseTex;
++varying	vec4 OUT_position;
++varying	vec2 OUT_texCoords;
++
++uniform vec4 uniform_colors[8];
++uniform vec4 cameraPosition;
++
++void main()
++{
++    vec2 tc = OUT_texCoords;
++
++	// vec4 cta = texelFetch(colorTexture,ivec2(tc * textureSize2D(colorTexture, 0.0)), 0.0);
++	vec4 cta = texture2D(colorTexture,tc);
++	
++	if (cta.rgb == vec4(1).rgb) // TODO: Why?
++		cta = uniform_colors[7];
++		
++	
++
++	gl_FragColor = cta;
++	//gl_FragColor.rgb = thergb;
++}
++
++>> vertex/CG << //////////////////////////////
++	
++struct input
++{
++float3 position 	: POSITION;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++output main(input IN, uniform float2 viewport)
++{
++float ar = viewport.y / viewport.x;
++float targetAr = 400.0/600.0;
++output OUT;
++OUT.texCoords = (IN.position.xy + 1.0) / 2.0;
++OUT.position = float4(IN.position, 1.0);
++if (ar/targetAr < 1.0)
++{
++OUT.gl_Position = OUT.position * float4(ar/targetAr,1.0,0.0,1.0);
++}
++else
++{
++OUT.gl_Position = OUT.position * float4(1.0,targetAr/ar,0.0,1.0);
++}
++return OUT;
++}
++
++
++>> vertex-water/CG << //////////////////////////////
++	
++struct input
++{
++float3 position 	: POSITION;
++};
++
++struct output
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++output main(input IN, uniform float2 viewport)
++{
++output OUT;
++OUT.texCoords = (IN.position.xy + 1.0) / 2.0;
++OUT.position = float4(IN.position, 1.0);
++OUT.gl_Position = OUT.position * float4(1.0,1.0,0.0,1.0);
++return OUT;
++}
++
++
++>> fragment-water/CG << //////////////////////////////
++	
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++#define NEW_REFLECTION 1
++
++output main(input IN,
++uniform sampler2D colorTexture : TEXUNIT0,
++uniform float2 viewport,
++uniform float4 cameraPosition,
++uniform float4 healthRadius,
++uniform float4 playerPosition,
++uniform float4 cameraWorldPosition,
++uniform float4 delta,
++uniform float4 uniform_backcol,
++uniform float4 uniform_colors[8])
++{
++	float2 pixelPosition = (cameraWorldPosition.xy - IN.position.xy*float2(-300.0,200.0));
++	float2 playerToPixelPosition = playerPosition.xy-pixelPosition;
++	float distanceToPlayer = length(playerToPixelPosition);
++	distanceToPlayer /= 350.0;
++	float healthAmount = healthRadius.x/healthRadius.y;
++	if (healthAmount > 0.99)
++		healthAmount = 1000.0;
++	float2 texCoords = IN.texCoords;
++	texCoords.y = 1.0-texCoords.y;
++	float cameraYViewSpace = cameraPosition.x;
++	float wobbleWave = cameraPosition.y;
++	float seaGradient = (texCoords.y) + (cameraYViewSpace-0.5); // below 0.0 means above sea level, above 0.0 means deeper
++	if (seaGradient < 0.0) 
++		seaGradient = 0.0;
++#if NEW_REFLECTION
++	seaGradient = 0.0;
++#endif
++	float wobblingGradient = ((texCoords.y+cameraYViewSpace)*350.0+wobbleWave*7.0);
++	float wobbleWidth = 1.0/2.5; // screen scale
++	float maxWobbleWidth = 1.0;
++	float xWobbleOffset = clamp((sin(wobblingGradient)*wobbleWidth),-maxWobbleWidth,maxWobbleWidth) * clamp(seaGradient, 0.0,0.01);
++#if !NEW_REFLECTION
++	float2 wobblingTexCoords = texCoords + float2(xWobbleOffset, 0.0);
++#else
++	float2 wobblingTexCoords = texCoords;
++#endif
++	float fader = clamp(seaGradient * 5.0, 0.0, 1.0);
++	float4 finalColor;
++	float2 requiredTexCoords;
++	if (seaGradient > 0.0)
++		requiredTexCoords = wobblingTexCoords;
++	else
++		requiredTexCoords = texCoords;
++	finalColor = tex2D(colorTexture, requiredTexCoords);
++	float4 backCol = uniform_backcol;
++#if NEW_REFLECTION
++	if(((texCoords.y) + (cameraYViewSpace-0.5)) > 0.0)
++	{
++		float delta = 0.01;
++		if (length(finalColor.xyz-uniform_colors[1].xyz) < delta)
++			finalColor = uniform_colors[3];
++		else if (length(finalColor.xyz-uniform_colors[2].xyz) < delta)
++			finalColor = uniform_colors[3];
++		else if (length(finalColor.xyz-uniform_colors[4].xyz) < delta)
++			finalColor = uniform_backcol; //no silly bg cloud, looks weird
++		else if (length(finalColor.xyz-uniform_colors[5].xyz) < delta)
++			finalColor = uniform_colors[6];			
++		else if (length(finalColor.xyz-uniform_colors[6].xyz) < delta)
++			finalColor = uniform_backcol; //no silly bg cloud, looks weird
++		else if (length(finalColor.xyz-uniform_colors[7].xyz) < delta)
++			finalColor = uniform_colors[6];
++	}
++#endif
++
++	output OUT;
++
++	if (finalColor.a == 0.0)
++	{
++#if !NEW_REFLECTION
++		if (healthAmount < distanceToPlayer && seaGradient == 0.0)
++#else
++		if (healthAmount < distanceToPlayer && ((texCoords.y) + (cameraYViewSpace-0.5)) < 0.0)
++#endif
++		{
++			if(healthRadius.z  < 1.0 ) OUT.color = uniform_colors[7];
++			else OUT.color = uniform_colors[6];
++		}
++		else
++		{
++			OUT.color = backCol;
++		}
++		return OUT;
++	}
++	OUT.color = (1.0 - fader) * finalColor + fader * backCol;
++	return OUT;
++}
++
++
++>> fragment/CG << //////////////////////////////
++	
++struct input
++{
++float4 position;
++float4 gl_Position : POSITION;
++float2 texCoords;
++};
++
++struct output
++{
++float4 color 	: COLOR;
++};
++
++uniform float4 uniform_colors[8];
++uniform float4 cameraPosition;
++
++output main(input IN,
++uniform sampler2D colorTexture: TEXUNIT0,
++uniform float4 uniform_colors[8],
++uniform float4 cameraPosition ) : COLOR
++{
++float2 tc = (IN.texCoords + 1.0) / 2.0;
++float4 cta = tex2D(colorTexture,tc);
++
++//if (cta.rgb == float3(1.0))
++if (cta.r == 1.0 && cta.g == 1.0 && cta.b == 1.0)
++cta = uniform_colors[7];
++
++output OUT;
++
++OUT.color = cta;
++OUT.color.a = 1.0;
++return OUT;
++}
++

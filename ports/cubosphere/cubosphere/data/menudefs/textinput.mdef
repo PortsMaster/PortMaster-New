@@ -1,0 +1,179 @@
+logotxt=-1;
+EntrySize=0.03;
+SelectedSize=0.04;
+logoactive=0; -- Set it to 0 for overmenus
+Caption="Enter Text";
+Text="";
+TextTable={}
+OldText="";
+overwriteconfirmed=0;
+
+darkbg=-1;
+
+local function UpdateText()
+	Text = table.concat(TextTable)
+end
+
+USING("FILESYS");
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ logotxt=TEXDEF_Load("logo");
+ Caption=GLOBAL_GetVar("TextInput_Caption");
+ TextTable = {}
+ Text=GLOBAL_GetVar("TextInput_Text");
+ OldText=Text;
+ for s in Text:gmatch('.[\128-\191]*') do
+	 TextTable[#TextTable+1] = s
+ end
+ GLOBAL_SetVar("TextInput_Ok",-1);
+ darkbg=TEXDEF_Load("darkbg");
+end;
+
+
+
+
+function StartMenu()
+
+ 
+FONT_Load(TRANS_Str("font"));
+ FONT_Begin(); 
+ LIGHT_Disable();
+ MATERIAL_SetColor(COLOR_New(1,1,1,1));
+ MATRIX_Push();
+ --MATRIX_AxisRotate(VECTOR_New(1,0,0),270);
+ --MATRIX_Translate(VECTOR_New(0,0,-10));
+ 
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+ 
+
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin(); 
+ 
+end; 
+
+function Headline(Menuname)
+ FONT_SetAlign("center","center");
+ FONT_Goto(0,0.3);
+ FONT_SetSize(0.05);
+ MATERIAL_SetColor(COLOR_New(0.0,0.95,0.05,1));
+ FONT_TextOut(Menuname);
+end;
+
+function Render()
+ StartMenu();
+ Headline(Caption);
+ FONT_Goto(0,0);
+ FONT_SetSize(0.03)
+ MATERIAL_SetColor(COLOR_New(0.95,0.95,0.0,1));
+ FONT_TextOut(Text);
+
+ if overwriteconfirmed==1 then
+   FONT_Goto(0,-0.25);
+   FONT_SetSize(0.02)
+   MATERIAL_SetColor(COLOR_New(0.95,0.0,0.0,1));
+   FONT_TextOut(TRANS_Str("editor:save:fileexists"));
+
+
+ end;
+
+  FONT_End();
+ end;
+
+
+function CheckUserLevelExists()
+ if FILESYS_WillOverwrite("/user/levels/"..Text..".ldef")~=0 then
+   return 1;
+ else
+   return 0;
+ end;
+ --local numulvl=FILESYS_StartListDirectory("/user/levels/",true,false,false,false,"*.ldef"); 
+ --for index = 0, numulvl-1, 1 do
+ --  if Text==string.sub(FILESYS_GetListDirectoryEntry(index),1,string.len(FILESYS_GetListDirectoryEntry(index))-5) then
+ --    return 1;
+ --  end; 
+ --end;
+ --return 0;
+end;
+
+
+function CheckInput()
+  local typ=GLOBAL_GetVar("TextInput_Type");
+  
+  if typ=="userlevel_save" then
+
+    if Text=="" then 
+      return false;
+    end;
+    if Text==GLOBAL_GetVar("Editor_Filename") then
+      return true; 
+    end;
+   
+    --Check overwriting
+    if overwriteconfirmed==1 then
+      return true;
+    end;
+    if CheckUserLevelExists()==1 then
+     overwriteconfirmed=1; -- Means that we have to press enter again
+     return false;
+    end;
+  
+  elseif typ=="filename" then
+     return not (Text == "")
+ 
+  elseif typ=="string" then
+        return true;
+     
+  elseif typ=="float" or typ=="int" then
+    return not (Text == "")
+
+  end;
+  
+  return true;
+end;
+
+function OnTextInput(str)
+	local typ = GLOBAL_GetVar("TextInput_Type")
+	
+	if typ == "userlevel_save" or typ == "filename" or typ == "string" then
+		overwriteconfirmed=0;
+		TextTable[#TextTable+1] = str
+		UpdateText()
+	elseif typ == "float" or typ == "int" then
+		if tonumber(str) or (str == '-' and #TextTable == 0) or (typ == "float" and str == '.' and not Text:match('%.')) then
+			TextTable[#TextTable+1] = str
+			UpdateText()
+		end
+	end
+end
+
+function OnKeyPressed(key,down,toggle)
+  if toggle==0 then
+    return;
+  end;
+  local typ=GLOBAL_GetVar("TextInput_Type");
+  
+  keyn=KEYB_GetKeyName(key);
+
+  if (keyn=="Return")then
+    if CheckInput() then
+      GLOBAL_SetVar("TextInput_Text",Text);
+      GLOBAL_SetVar("TextInput_Ok",1);
+      MENU_Load(GLOBAL_GetVar("TextInput_OkMenu"));
+    end;
+  elseif (keyn=="Escape") then
+    if overwriteconfirmed==1 then
+      overwriteconfirmed=0;
+      return;
+    end;
+    GLOBAL_SetVar("TextInput_Text",OldText);
+    GLOBAL_SetVar("TextInput_Ok",0);
+    MENU_Load(GLOBAL_GetVar("TextInput_CancelMenu"));
+  elseif (keyn=="Backspace") then
+    overwriteconfirmed=0;
+    TextTable[#TextTable] = nil
+	UpdateText()
+  end;
+end; 

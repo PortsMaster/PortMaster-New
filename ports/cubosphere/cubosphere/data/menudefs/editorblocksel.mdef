@@ -1,0 +1,100 @@
+menuname="editorblocksel";
+
+INCLUDE("/include/std.inc");
+USING("FILESYS");
+
+logoactive=0;
+darkbg=-1;
+EntrySize=0.02;
+SelectedSize=0.03;
+
+numblockdefs=-1;
+
+function SortEntries()
+ for i=1,NumEntries-1,1 do
+   for j=i+1,NumEntries,1 do
+   -- print("Sorting "..i.."  "..j);
+    if Entries[i]>Entries[j] then
+     --print("  Swap : "..Entries[i].." and "..Entries[j]);
+      Entries[i],Entries[j]=Entries[j],Entries[i];
+      oEntries[i],oEntries[j]=oEntries[j],oEntries[i];
+      Hints[i],Hints[j]=Hints[j],Hints[i];
+    end;
+   end;
+ end;
+end;
+
+
+blockblacklist={"_selection"};
+if GLOBAL_GetVar("DeveloperMode")==0 then
+  blockblacklist={"_selection","warptunnel"};
+end;
+
+function BlockOnBlacklist(bname)
+ for i,v in pairs(blockblacklist) do
+  if v==bname then return true; end;
+ end;
+ return false;
+end;
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ oEntries={};
+ local numblockdefs=FILESYS_StartListDirectory("/blockdefs/",true,false,false,false,".*\\.lua"); 
+ local index=0;
+ for i = 0, numblockdefs-1, 1 do
+   local bnam=FILESYS_GetListDirectoryEntry(i):match('^(.+)%..-$')
+   if BlockOnBlacklist(bnam)==false then
+     oEntries[index+1]=bnam;
+     Entries[index+1]=TRANS_StrD("block:type:"..oEntries[index+1],oEntries[index+1]);
+     Hints[index+1]=TRANS_Str("editor:blocktype:hint")..Entries[index+1];
+     index=index+1;
+   end;
+ end;
+ --Entries[numblockdefs+1]=""; Hints[numblockdefs+1]="";
+ --Entries[numblockdefs+2]="Cancel"; Hints[numblockdefs+2]="Returns without changing the current block";
+ --NumEntries=numblockdefs+2;
+  NumEntries=index;
+  SortEntries();
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ darkbg=TEXDEF_Load("darkbg");
+ --Entries={"Start Game","Level-Editor","Options","Credits","Quit"};
+ --Hints={"Starts a new game","Tool for the creation of user levels","Configure controls and graphics","View the credits","Leave Cubosphere"};
+end;
+
+function Render()
+ StartMenu();
+  FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+ Headline(TRANS_Str("editor:blocktype:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+   MENU_Deactivate();
+   GLOBAL_SetVar("EditorNewBlockType","");
+   GLOBAL_SetVar("EditorToolCommand","Return");
+   GLOBAL_SetVar("EditorTool","Editing");
+ else
+   MENU_Deactivate();
+   GLOBAL_SetVar("EditorNewBlockType",oEntries[sel+1]);
+   GLOBAL_SetVar("EditorToolCommand","ChangeBlockType");
+   GLOBAL_SetVar("EditorTool","Editing");
+ end;
+end;
+ 

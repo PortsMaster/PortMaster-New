@@ -96,28 +96,32 @@ def parse_gameinfo(gameinfo_file, gameinfo_status):
         file.resolve()
         for file in port_dir.glob('*.sh')]
 
+    # print(gameinfo_file)
     gamelist_tree = ET.parse(gameinfo_file)
     gamelist_root = gamelist_tree.getroot()
 
     gameinfo_data = []
 
     if gamelist_root.tag != 'gameList':
-        error(port_name, f"bad root level tag, got {gamelist_root.tag!r} expected 'gameList'")
+        if gamelist_root.tag.lower() == 'gamelist':
+            warning(port_name, f"{gameinfo_file}: bad root level tag, got {gamelist_root.tag!r} expected 'gameList'")
+        else:
+            error(port_name, f"{gameinfo_file}: bad root level tag, got {gamelist_root.tag!r} expected 'gameList'")
 
     for gamelist_game in gamelist_root:
         if gamelist_game.tag != 'game':
-            error(port_name, f"Unknown tag {gamelist_game.tag!r} found.")
+            error(port_name, f"{gameinfo_file}: Unknown tag {gamelist_game.tag!r} found.")
             continue
 
         gameinfo_item = {}
         for gamelist_item in gamelist_game:
             if gamelist_item.tag not in ALLOWED_XML_TAGS:
-                error(port_name, f"Unknown tag {gamelist_item.tag!r} found.")
+                error(port_name, f"{gameinfo_file}: Unknown tag {gamelist_item.tag!r} found.")
                 continue
 
             if gamelist_item.text is None:
                 if gamelist_item.tag in REQUIRED_XML_TAGS:
-                    error(port_name, f"Tag {gamelist_item.tag!r} is None")
+                    error(port_name, f"{gameinfo_file}: Tag {gamelist_item.tag!r} is None")
 
                 continue
 
@@ -139,20 +143,18 @@ def parse_gameinfo(gameinfo_file, gameinfo_status):
             error(port_name, f"{gameinfo_file}: bad value for 'path': {gameinfo_item['path']!r}")
 
         elif not script_file.is_file():
-            error(port_name, f"{gameinfo_file}: unknown script file {str(script_file.name)!r}")
-
-        elif script_file not in port_scripts:
-            error(port_name, f"{gameinfo_file}: unknown script file {str(script_file.name)!r}")
+            warning(port_name, f"{gameinfo_file}: unknown script file {str(script_file.name)!r}")
 
         else:
             port_scripts.remove(script_file)
 
         if 'image' not in gameinfo_item:
-            gameinfo_status[str(gameinfo_file)]['temp'] = 1
+            # gameinfo_status[str(gameinfo_file)]['temp'] = 1
+            error(port_name, f"{gameinfo_file}: missing 'image' entry.")
             continue
 
         if not gameinfo_item['image'].startswith('./'):
-            gameinfo_status[str(gameinfo_file)]['temp'] = 1
+            # gameinfo_status[str(gameinfo_file)]['temp'] = 1
             error(port_name, f"{gameinfo_file}: bad value for 'image': {gameinfo_item['image']!r}")
             continue
 
@@ -162,15 +164,29 @@ def parse_gameinfo(gameinfo_file, gameinfo_status):
 
         directory, filename = gameinfo_item['image'].rsplit('/', 1)
 
-        directory = (port_dir / directory).resolve()
-        filename = (port_dir / filename).resolve()
+        filename_fix = filename
 
-        if not directory.is_dir():
-            error(port_name, f"{gameinfo_file}: bad value for 'image', unknown directory: {directory.name!r}")
+        if filename.rsplit('.', 1)[-1] in ('png', 'jpg'):
+            fixes = {'jpg': '.png', 'png': '.jpg'}
+
+            filename_fix = filename.rsplit('.', 1)[0] + fixes[filename.rsplit('.', 1)[-1]]
+
+        directory_base   = (port_dir / directory).resolve()
+        filename_base    = (port_dir / filename).resolve()
+        filename_portdir = (port_dir / directory / filename).resolve()
+
+        filename_base_fix    = (port_dir / filename_fix).resolve()
+        filename_portdir_fix = (port_dir / directory / filename_fix).resolve()
+
+        if not directory_base.is_dir():
+            error(port_name, f"{gameinfo_file}: bad value for 'image', unknown directory: {directory_base.name!r}")
             continue
 
-        if not filename.is_file():
-            error(port_name, f"{gameinfo_file}: bad value for 'image', unknown file: {filename.name!r}")
+        if not filename_base.is_file() and not filename_portdir.is_file():
+            if filename_base_fix.is_file() or filename_portdir_fix.is_file():
+                error(port_name, f"{gameinfo_file}: bad value for 'image', unknown file: {directory + '/' + filename!r} (found: {directory + '/' + filename_fix!r})")
+            else:
+                error(port_name, f"{gameinfo_file}: bad value for 'image', unknown file: {directory + '/' + filename!r}")
             continue
 
     if len(port_scripts) > 0:

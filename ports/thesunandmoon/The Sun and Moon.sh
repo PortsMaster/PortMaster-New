@@ -13,77 +13,81 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/thesunandmoon"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
+# CD and set permissions
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-#Extract game files
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+$ESUDO chmod +x "$GAMEDIR/tools/SDL_swap_gpbuttons.py"
+
+# Prepare game files and patch game
 expected_checksum="9e5f9d9f00aff805b47030217b64795b"
 
+# Extract game files
 if [ -f "$GAMEDIR/The Sun and Moon.exe" ]; then
     # Calculate the MD5 checksum of The Sun and Moon.exe
     actual_checksum=$(md5sum "$GAMEDIR/The Sun and Moon.exe" | awk '{print $1}')
 
     # Check if the file exists and the checksum matches
     if [ "$actual_checksum" = "$expected_checksum" ]; then
-        # Change directory to the specified directory
-        cd "$GAMEDIR" || exit
 
         # Use 7zip to extract the .exe file to the destination directory
-        "$GAMEDIR/patch/7zzs" x "$GAMEDIR/The Sun and Moon.exe" -o"$GAMEDIR/gamedata" & pid=$!
+        "$TOOLDIR/7zzs" x "$GAMEDIR/The Sun and Moon.exe" -o"$GAMEDIR/assets" & pid=$!
 
         # Wait for the extraction process to complete
         wait $pid
 
         # Check if the The Sun and Moon.exe file exists
-        if [ -f "$GAMEDIR/gamedata/The Sun and Moon.exe" ]; then
+        if [ -f "$GAMEDIR/assets/The Sun and Moon.exe" ]; then
             # Delete the redundant .exe files
-            rm "$GAMEDIR/gamedata/The Sun and Moon.exe"
             rm "$GAMEDIR/The Sun and Moon.exe"
         fi
     else
-        echo "Error: MD5 checksum of The Sun and Moon.exe does not match the expected checksum."
+        pm_message "Error: MD5 checksum of The Sun and Moon.exe does not match the expected checksum."
     fi
 else
-    echo "Error: Missing files in gamedata folder!"
+    pm_message "The Sun and Moon.exe not detected in $GAMEDIR"
 fi
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.unx gamedata/game.droid
+# Patch data.win 
+if [ -f ./assets/data.win ]; then
+	# Apply a patch
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" "$TOOLDIR/thesunandmoon.xdelta" "$GAMEDIR/assets/game.droid"
+	# Delete all redundant files
+	rm -f assets/*.{exe,dll,win,gitkeep}
+	# Zip all game files into the game.port
+	zip -r -0 ./game.port ./assets/
+	rm -rf ./assets/
+fi
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Swap buttons
+"$GAMEDIR/tools/SDL_swap_gpbuttons.py" -i "$SDL_GAMECONTROLLERCONFIG_FILE" -o "$GAMEDIR/gamecontrollerdb_swapped.txt" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"
+export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/gamecontrollerdb_swapped.txt"
+export SDL_GAMECONTROLLERCONFIG="`pm_message "$SDL_GAMECONTROLLERCONFIG" | "$GAMEDIR/tools/SDL_swap_gpbuttons.py" -l "$GAMEDIR/SDL_swap_gpbuttons.txt"`"
 
-$GPTOKEYB "gmloader" -c ./thesunandmoon.gptk &
+# Display loading splash
+if [ ! -d ./assets ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "thesunandmoon.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-./gmloader thesunandmoon.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish

@@ -1,0 +1,190 @@
+menuname="videooptions";
+prevshader=GLOBAL_GetVar("ShadersActive");
+tsize=GLOBAL_GetVar("TextureSize"); -- Min: 0 .. 4
+prevsize=tsize;
+numSizes=5;
+SizeNames={TRANS_Str("sizes:tiny"),TRANS_Str("sizes:small"),TRANS_Str("sizes:normal"),TRANS_Str("sizes:large"),TRANS_Str("sizes:xxl")};
+
+INCLUDE("/include/std.inc");
+
+
+function ShaderString()
+if DEVICE_HasGLSL()==0 then
+ return TRANS_Str("base:n/a");
+end;
+local a=GLOBAL_GetVar("ShadersActive");
+if a==1 then 
+  shadersactive=TRANS_Str("base:activated");
+else 
+  shadersactive=TRANS_Str("base:deactivated");
+end;
+return shadersactive;
+end;
+
+function SizeString()
+  return SizeNames[tsize+1];
+end;
+
+function ToggleSize()
+ tsize=math.fmod(tsize+1,numSizes);
+ GLOBAL_SetVar("TextureSize",tsize);
+end;
+
+function ToggleShaders()
+if DEVICE_HasGLSL()==0 then
+  return;
+end;
+local a=GLOBAL_GetVar("ShadersActive");
+if a==1 then 
+  a=0;
+else 
+  a=1;
+end;
+GLOBAL_SetVar("ShadersActive",a);
+print("Shaders set to "..a);
+end;
+
+
+function FPSString()
+  local a=GLOBAL_GetVar("ShowFPS");
+  if a==1 then
+    return TRANS_Str("base:yes");
+  else 
+    return TRANS_Str("base:no");
+  end;
+end;
+
+function ToggleFPS()
+ local a=GLOBAL_GetVar("ShowFPS");
+  if a==1 then
+    GLOBAL_SetVar("ShowFPS",0);
+  else 
+    GLOBAL_SetVar("ShowFPS",1);
+  end;
+end;
+
+function ToggleHQMdls()
+ local a=GLOBAL_GetVar("HighQualityModels");
+  if a==1 then
+    GLOBAL_SetVar("HighQualityModels",0);
+  else 
+    GLOBAL_SetVar("HighQualityModels",1);
+  end;
+end;
+
+function HQMdlsString()
+  local a=GLOBAL_GetVar("HighQualityModels");
+  if a==1 then
+    return TRANS_Str("base:yes");
+  else 
+    return TRANS_Str("base:no");
+  end;
+end;
+
+function FSAAString()
+ if GLOBAL_GetVar("FSAA_Supported")==0 then
+   return TRANS_Str("base:n/a");
+ end;
+  local a=GLOBAL_GetVar("FSAA");
+  if a==0 then
+    return TRANS_Str("base:no");
+  else 
+    return TRANS_Str("base:yes");
+  end;
+end;
+
+function ToggleFSAA()
+ if GLOBAL_GetVar("FSAA_Supported")==0 then
+  return
+ end;
+ local a=GLOBAL_GetVar("FSAA");
+ a=a+1; if a>1 then a=0; end;
+ GLOBAL_SetVar("NewFSAA",a);
+
+ MENU_Load("changeffaa");
+ --DEVICE_Init(GLOBAL_GetVar("ScreenWidth"),GLOBAL_GetVar("ScreenHeight"),GLOBAL_GetVar("HardwareActive"),GLOBAL_GetVar("FullScreenActive"),0);
+
+
+end;
+
+function ToggleParticles()
+ local a=GLOBAL_GetVar("UseParticles");
+  if a==1 then
+    GLOBAL_SetVar("UseParticles",0);
+  else 
+    GLOBAL_SetVar("UseParticles",1);
+  end;
+end;
+
+function ParticleString()
+  local a=GLOBAL_GetVar("UseParticles");
+  if a==1 then
+    return TRANS_Str("base:yes");
+  else 
+    return TRANS_Str("base:no");
+  end;
+end;
+
+
+function BuildEntries()
+
+Entries={TRANS_Str("videooptions:shader")..": "..ShaderString(),TRANS_Str("videooptions:texturesize")..": "..SizeString(),TRANS_Str("videooptions:hqmodels")..": "..HQMdlsString(),TRANS_Str("videooptions:fsaa")..": "..FSAAString(), TRANS_Str("videooptions:showfps")..": "..FPSString(), TRANS_Str("videooptions:particles")..": "..ParticleString() ,TRANS_Str("videooptions:resolution"),"",TRANS_Str("base:ok")};
+ 
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ Hints={TRANS_Str("videooptions:hint:shader"),TRANS_Str("videooptions:hint:texturesize"),TRANS_Str("videooptions:hint:hqmodels"),TRANS_Str("videooptions:hint:fsaa"),TRANS_Str("videooptions:hint:showfps"),TRANS_Str("videooptions:hint:particles"),TRANS_Str("videooptions:hint:resolution"),"",TRANS_Str("videooptions:hint:ok")};
+end;
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("videooptions:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+function HandleSelection(sel)
+ if (sel==8) or (sel==-1) then
+   ResetStoredSelection();
+   if (prevshader~=GLOBAL_GetVar("ShadersActive")) or (presize~=GLOBAL_GetVar("TextureSize")) then
+     local maxsize=math.pow(2,GLOBAL_GetVar("TextureSize")+7)
+     TEXTURE_SetMaxSize(maxsize);
+     print("Max. Texture Size set to "..maxsize);
+  
+     MENU_Load("reloadmedia");
+   else  
+     MENU_Load("options");
+   end;
+   
+ elseif sel==0 then
+   ToggleShaders();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+ elseif sel==1 then
+   ToggleSize();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+ elseif sel==2 then
+   ToggleHQMdls();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+elseif sel==3 then
+   ToggleFSAA();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+
+ elseif sel==4 then
+   ToggleFPS();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+elseif sel==5 then
+   ToggleParticles();
+   BuildEntries();
+   INCLUDE("/include/writecfg.inc");
+ elseif sel==6 then
+   MENU_Load("resolution");
+ end;
+end;
+

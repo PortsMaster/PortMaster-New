@@ -23,10 +23,12 @@ port based on version found here [Github](https://github.com/nevat/abbayedesmort
 
 ## Compile
 
-Extract the contents of abbayedesmorts-src.7z
+Extract the contents of abbayedesmorts-src.7z or use the github repo
 The following is for building on a Debian/Ubuntu based distro:
 
 ```shell
+git clone https://github.com/slayer366/abbayedesmorts-portmaster
+cd abbayedesmorts-portmaster
 sudo apt install libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
 make -j4
 ```

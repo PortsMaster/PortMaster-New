@@ -1,0 +1,190 @@
+menuname="tutorial";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.025;
+
+
+TotalLevels=0;
+
+
+NumEpi=0;
+Folders={}
+TransNames={};
+
+
+function AddSingleLevel(ln) end;
+
+function AddEpisodePart(foldername,transname)
+ NumEpi=NumEpi+1;
+ Folders[NumEpi]=foldername;
+ TransNames[NumEpi]=transname;
+end;
+
+
+INCLUDEABSOLUTE("/levels/"..GLOBAL_GetVar("CurrentEpisode")..".epi");
+
+
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ oEntries={};
+ Scores={}
+
+ if Selected==-1 then Selected=0; end;
+
+
+ local counter=0;
+ local ende=0;
+for fc=1,NumEpi,1 do
+ local numulvl=FILESYS_StartListDirectory("/levels/"..Folders[fc],true,false,false,false,".*\\.ldef"); 
+
+ 
+ TotalLevels=0;
+ for index = 0, numulvl-1, 1 do
+   local f=FILESYS_GetListDirectoryEntry(index);
+   --Strip the extention
+   f=string.sub(f,1,string.len(f)-5);
+
+     TotalLevels=TotalLevels+1;
+     if ende==0 then
+       oEntries[counter+1]=Folders[fc].."/"..f;
+       if SCORE_VarDefined(oEntries[counter+1])==1 then
+           local s=SCORE_GetVar(oEntries[counter+1])
+           if s>=0 then 
+             Entries[counter+1]=TRANS_Str("tutorial:level")..string.format("%2d",counter+1)..TRANS_Str("tutorial:completed"); 
+             Hints[counter+1]=TRANS_Str("tutorial:hint:completed");
+           end;
+        
+           Scores[counter+1]=s;
+           counter=counter+1;
+       else
+           Entries[counter+1]=TRANS_Str("tutorial:level")..string.format("%2d",counter+1);
+           Hints[counter+1]=TRANS_Str("tutorial:hint:notyet");
+           Scores[counter+1]=-1; --Means not completed
+           Selected=counter;
+           counter=counter+1;
+           ende=1;
+       end
+     end;
+   end;
+end;
+
+NumEntries=counter;
+
+if NumEntries==TotalLevels then
+ if Scores[TotalLevels]<0 then
+  Selected=NumEntries-1;
+ end;
+end;
+
+ if GLOBAL_VarDefined("MENUSELECTION_"..menuname)==1 then
+  if GLOBAL_GetVar("MENUSELECTION_"..menuname)>=0 then 
+       Selected=GLOBAL_GetVar("MENUSELECTION_"..menuname);
+  else
+      GLOBAL_SetVar("MENUSELECTION_tutorial",0) 
+  end; 
+ end;
+
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ OnNavigate(0);
+end;
+
+
+MenuXOffs=0.2;
+MenuYOffs=0.05;
+PreviewXSize=0.4;
+PreviewYSize=0.4;
+PreviewXPos=-MenuXOffs;
+PreviewYPos=-0.125;
+nopreviewtxt=TEXDEF_Load("nopreview");
+previewtxt=TEXDEF_Load("preview");
+haspreview=0;
+
+
+function RenderPreview()
+  MATRIX_Push();
+  MATRIX_Translate(VECTOR_New(PreviewXPos,PreviewYPos,0));
+  MATRIX_Scale(VECTOR_New(PreviewXSize,PreviewYSize,1));
+MATERIAL_SetColor(COLOR_New(1,1,1,1));
+ 
+if haspreview==1 then
+  TEXDEF_Render(previewtxt,0);
+else
+  TEXDEF_Render(nopreviewtxt,0);
+end;
+  MATRIX_Pop();
+
+if haspreview==0 then
+  FONT_SetSize(0.03);
+  MATERIAL_SetColor(COLOR_New(0.8,0.8,0.8,1));
+  FONT_SetAlign("center","center");
+  FONT_Goto(PreviewXPos,PreviewYPos);
+  FONT_TextOut(TRANS_Str("levelpreview:nopreview"));
+end;
+
+end;
+
+function OnNavigate(dir)
+ if NumEntries==0 then
+   return;
+ end;
+  local svname="levels/"..oEntries[Selected+1]..".png";
+  if FILESYS_FileExists(svname)==1 then
+    tinxed=TEXTURE_LoadTempTexture("_levelpreview",svname); 
+    haspreview=1;
+  else
+      haspreview=0;
+  end;
+end;
+
+
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("tutorial:level:title"));
+ RenderMenu();
+ RenderPreview();
+
+ local score=Scores[Selected+1];
+ local msg;
+ if score>=0 then
+   msg=TRANS_Str("tutorial:label:completed");
+ else
+     msg=TRANS_Str("tutorial:label:notyet");
+ end;
+
+ FONT_Begin();
+ FONT_SetSize(0.025);
+ MATERIAL_SetColor(COLOR_New(0.9,0.9,0.9,1));
+ FONT_SetAlign("left","top");
+ FONT_Goto(PreviewXPos-PreviewXSize*0.5,PreviewYPos-PreviewYSize*0.5-0.01);
+ FONT_TextOut(msg);
+
+ EndMenu();
+end;
+
+
+
+function HandleSelection(sel)
+ if  (sel==-1) or (NumEntries==0) then
+  MENU_Load("gameselect");
+ else
+   GLOBAL_SetVar("TotalScore",0);
+   GLOBAL_SetVar("CurrentLevelNum",0);
+   GLOBAL_SetVar("CurrentEpisode","tutorial");
+   GLOBAL_SetVar("StartLevel",oEntries[sel+1])
+   GLOBAL_SetVar("EditorMode",0)
+   GLOBAL_SetVar("SaveGameProtectScore",0);
+   MENU_Load("startgame");
+ end;
+end;
+ 

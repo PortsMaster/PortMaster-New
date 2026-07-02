@@ -45,7 +45,7 @@ CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
 # Copy over default options.ini
-if [ ! -f "$CONFDIR/the binding of isaac rebirth/options.ini" ]; then
+if [ ! -f "$CONFDIR/binding of isaac rebirth/options.ini" ]; then
     mkdir -p "$CONFDIR/binding of isaac rebirth"
     cp $GAMEDIR/patch/options.ini "$CONFDIR/binding of isaac rebirth/options.ini"
     # patch the device resolution into it
@@ -144,6 +144,7 @@ if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
     fi
 fi
 
+pm_platform_helper "$GAMEDIR/gamefiles/$game_executable" >/dev/null
 $ESUDO env $gl4es_params WRAPPED_PRELOAD=$input_blocker_preload CRUSTY_BLOCK_INPUT=1 $weston_dir/westonwrap.sh headless noop kiosk crusty_glx_gl4es \
 XDG_DATA_HOME=$CONFDIR BOX64_DYNAREC_CALLRET=1 BOX64_LD_PRELOAD=$box_preload BOX64_LD_LIBRARY_PATH=$GAMEDIR/libs.x64/:$GAMEDIR/gamefiles/lib64/ \
 $GAMEDIR/box64 $game_executable

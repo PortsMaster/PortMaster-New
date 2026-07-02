@@ -18,6 +18,7 @@ if [ -z ${TASKSET+x} ]; then
 fi
 source $controlfolder/device_info.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,

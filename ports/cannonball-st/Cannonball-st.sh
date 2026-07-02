@@ -14,6 +14,7 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 exec > >(tee "$GAMEDIR/log.txt") 2>&1

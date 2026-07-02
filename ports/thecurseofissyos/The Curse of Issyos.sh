@@ -13,44 +13,41 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
-
+# Variables
 GAMEDIR="/$directory/ports/thecurseofissyos"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
- 
-cd "$GAMEDIR"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/thecurseofissyos/lib:$LD_LIBRARY_PATH"
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+	# Apply the patch
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Delete all redundant files
+	rm -f assets/*.{dll,exe,txt,win}
+	# Zip all game files into the thecurseofissyos.port
+	zip -r -0 ./thecurseofissyos.port ./assets/
+	rm -Rf ./assets/
 fi
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Display a loading splash
+[ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1
+$ESUDO ./tools/splash "splash.png" 2000 &
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" &
-echo "Loading, please wait... " > /dev/tty0
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader IssyosWrapper.apk
-
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish

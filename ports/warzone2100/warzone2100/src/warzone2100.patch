@@ -1,0 +1,158 @@
+diff --git a/data/base/shaders/quad_texture2darray.frag b/data/base/shaders/quad_texture2darray.frag
+index 268793943..4daea770a 100644
+--- a/data/base/shaders/quad_texture2darray.frag
++++ b/data/base/shaders/quad_texture2darray.frag
+@@ -7,9 +7,6 @@
+ #extension GL_EXT_texture_array : require // only enable this on OpenGL < 3.0
+ #endif
+ // 2. OpenGL ES 3.0+
+-#if (defined(GL_ES) && (__VERSION__ < 300))
+-#error "Unsupported version of GLES"
+-#endif
+ 
+ uniform ivec4 swizzle;
+ uniform vec4 color;
+diff --git a/data/base/shaders/terrain_combined.vert b/data/base/shaders/terrain_combined.vert
+index 467644017..9a70bfd47 100644
+--- a/data/base/shaders/terrain_combined.vert
++++ b/data/base/shaders/terrain_combined.vert
+@@ -2,10 +2,7 @@
+ // (This shader supports GLSL 1.30 - 1.50 core.)
+ 
+ // Aspects of shader limiting GLSL compat:
+-// - "flat" interpolation_qualifier (Desktop GLSL 130+, or GLES 300+)
+-#if (!defined(GL_ES) && (__VERSION__ < 130)) || (defined(GL_ES) && (__VERSION__ < 300))
+-#error "Unsupported version of GLSL"
+-#endif
++// - flat interpolation_qualifier (Desktop GLSL 130+, or GLES 300+)
+ 
+ uniform mat4 ModelViewProjectionMatrix;
+ uniform mat4 ModelUVLightmapMatrix;
+diff --git a/data/base/shaders/terrain_combined_classic.frag b/data/base/shaders/terrain_combined_classic.frag
+index b855d5281..5ca48bc2f 100644
+--- a/data/base/shaders/terrain_combined_classic.frag
++++ b/data/base/shaders/terrain_combined_classic.frag
+@@ -7,9 +7,6 @@
+ //#extension GL_EXT_texture_array : require // only enable this on OpenGL < 3.0
+ //#endif
+ // 2. OpenGL ES 3.0+
+-#if (defined(GL_ES) && (__VERSION__ < 300))
+-#error "Unsupported version of GLES"
+-#endif
+ 
+ // constants overridden by WZ when loading shaders (do not modify here in the shader source!)
+ #define WZ_MIP_LOAD_BIAS 0.f
+diff --git a/data/base/shaders/terrain_combined_high.frag b/data/base/shaders/terrain_combined_high.frag
+index f06879e61..b21a7d6cd 100644
+--- a/data/base/shaders/terrain_combined_high.frag
++++ b/data/base/shaders/terrain_combined_high.frag
+@@ -7,9 +7,6 @@
+ //#extension GL_EXT_texture_array : require // only enable this on OpenGL < 3.0
+ //#endif
+ // 2. OpenGL ES 3.0+
+-#if (defined(GL_ES) && (__VERSION__ < 300))
+-#error "Unsupported version of GLES"
+-#endif
+ 
+ // constants overridden by WZ when loading shaders (do not modify here in the shader source!)
+ #define WZ_MIP_LOAD_BIAS 0.f
+diff --git a/data/base/shaders/terrain_combined_medium.frag b/data/base/shaders/terrain_combined_medium.frag
+index aa7b34bb8..fcc3937f8 100644
+--- a/data/base/shaders/terrain_combined_medium.frag
++++ b/data/base/shaders/terrain_combined_medium.frag
+@@ -7,9 +7,6 @@
+ //#extension GL_EXT_texture_array : require // only enable this on OpenGL < 3.0
+ //#endif
+ // 2. OpenGL ES 3.0+
+-#if (defined(GL_ES) && (__VERSION__ < 300))
+-#error "Unsupported version of GLES"
+-#endif
+ 
+ // constants overridden by WZ when loading shaders (do not modify here in the shader source!)
+ #define WZ_MIP_LOAD_BIAS 0.f
+diff --git a/lib/sound/openal_track.cpp b/lib/sound/openal_track.cpp
+index 203438017..aaa3cfa74 100644
+--- a/lib/sound/openal_track.cpp
++++ b/lib/sound/openal_track.cpp
+@@ -332,6 +332,12 @@ HRTFMode sound_GetHRTFMode()
+ 
+ bool sound_SetHRTFMode(HRTFMode mode)
+ {
++    if (strstr(alGetString(AL_VERSION), "1.19") != NULL)
++    {
++		debug(LOG_INFO, "HRTF is not supported by the current OpenAL version\n");
++        return false;
++    }
++
+ #if defined(ALC_SOFT_HRTF)
+ 	if(alcIsExtensionPresent(device, "ALC_SOFT_HRTF"))
+ 	{
+diff --git a/src/init.cpp b/src/init.cpp
+index f69617977..b37c82e43 100644
+--- a/src/init.cpp
++++ b/src/init.cpp
+@@ -1061,6 +1061,24 @@ bool systemInitialise(unsigned int horizScalePercentage, unsigned int vertScaleP
+ 		return false;
+ 	}
+ 
++    // crusty cursor disappears when no widget is visible (e.g. notification, in-game overlay menu, etc)
++    // to avoid that, we need to create a hidden widget which is always on-screen
++	auto hiddenScreen = W_SCREEN::make();
++	hiddenScreen->psForm->hide();
++	widgRegisterOverlayScreen(hiddenScreen, std::numeric_limits<uint16_t>::max());
++
++	auto hiddenForm = std::make_shared<W_FORM>();
++	hiddenScreen->psForm->attach(hiddenForm);
++	hiddenForm->setGeometry(0, 0, 1, 1);
++
++	W_BUTINIT hiddenButtonInit;
++    hiddenButtonInit.width = 1;
++	hiddenButtonInit.x = 0;
++	hiddenButtonInit.pText = " ";
++	std::shared_ptr<W_BUTTON> hiddenButton = std::make_shared<W_BUTTON>(&hiddenButtonInit);
++	hiddenForm->attach(hiddenButton);
++    // END adding hidden screen
++
+ 	buildMapList();
+ 
+ 	// Initialize render engine
+diff --git a/src/quickjs_backend.cpp b/src/quickjs_backend.cpp
+index 6e74a8305..15f79586f 100644
+--- a/src/quickjs_backend.cpp
++++ b/src/quickjs_backend.cpp
+@@ -81,6 +81,8 @@
+ #include <unordered_map>
+ #include <limits>
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 8
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wcast-function-type"
+diff --git a/src/version.cpp b/src/version.cpp
+index 7db79e892..c2b915830 100644
+--- a/src/version.cpp
++++ b/src/version.cpp
+@@ -252,9 +252,9 @@ const char *version_getFormattedVersionString(bool translated /* = true */)
+ 	// Compose the working copy state string
+ #if (VCS_WC_MODIFIED)
+ 	// TRANSLATORS: Printed when compiling with uncommitted changes
+-	const char *wc_state = (translated) ? _(" (modified locally)") : " (modified locally)";
++	// const char *wc_state = (translated) ? _(" (modified locally)") : " (modified locally)";
+ #else
+-	const char *wc_state = "";
++	// const char *wc_state = "";
+ #endif
+ 	// Compose the build type string
+ #ifdef DEBUG
+@@ -268,7 +268,9 @@ const char *version_getFormattedVersionString(bool translated /* = true */)
+ 	// TRANSLATORS: This string looks as follows when expanded.
+ 	// "Version: <version name/number>, <working copy state>,
+ 	// Built: <BUILD DATE><BUILD TYPE>"
+-	snprintf(versionString, MAX_STR_LENGTH, (translated) ? _("Version: %s,%s Built: %s%s") : "Version: %s,%s Built: %s%s", version_getVersionString(), wc_state, getCompileDate(), build_type);
++	// snprintf(versionString, MAX_STR_LENGTH, (translated) ? _("Version: %s,%s Built: %s%s") : "Version: %s,%s Built: %s%s", version_getVersionString(), wc_state, getCompileDate(), build_type);
++
++	snprintf(versionString, MAX_STR_LENGTH, "Version: PortMaster Built: %s%s", getCompileDate(), build_type);
+ 
+ 	return versionString;
+ }

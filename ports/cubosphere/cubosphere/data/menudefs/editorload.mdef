@@ -1,0 +1,128 @@
+menuname="editorload";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.025;
+
+
+
+--if GLOBAL_GetVar("EditorMode")==1 then
+-- logoactive=0;
+--end;
+
+numblockdefs=-1;
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ local numulvl=FILESYS_StartListDirectory("/user/levels/",true,false,false,false,".*\\.ldef"); 
+
+local index=0;
+ for i = 0, numulvl-1, 1 do
+   local lname=string.sub(FILESYS_GetListDirectoryEntry(i),1,string.len(FILESYS_GetListDirectoryEntry(i))-5);
+   if lname~="_selection" then
+     Entries[index+1]=lname;
+     Hints[index+1]=TRANS_Str("editorload:hint").." "..Entries[index+1];
+     index=index+1;
+   end;
+ end;
+
+NumEntries=index;
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ OnNavigate(0);
+end;
+
+MenuXOffs=0.2;
+PreviewXSize=0.4;
+PreviewYSize=0.4;
+PreviewXPos=-MenuXOffs;
+PreviewYPos=-0.145;
+nopreviewtxt=TEXDEF_Load("nopreview");
+previewtxt=TEXDEF_Load("preview");
+haspreview=0;
+
+
+function RenderPreview()
+  MATRIX_Push();
+  MATRIX_Translate(VECTOR_New(PreviewXPos,PreviewYPos,0));
+  MATRIX_Scale(VECTOR_New(PreviewXSize,PreviewYSize,1));
+  MATERIAL_SetColor(COLOR_New(1,1,1,1));
+if haspreview==1 then
+  TEXDEF_Render(previewtxt,0);
+else
+  TEXDEF_Render(nopreviewtxt,0);
+end;
+  MATRIX_Pop();
+
+if haspreview==0 then
+  FONT_SetSize(0.03);
+  MATERIAL_SetColor(COLOR_New(0.8,0.8,0.8,1));
+  FONT_SetAlign("center","center");
+  FONT_Goto(PreviewXPos,PreviewYPos);
+  FONT_TextOut(TRANS_Str("levelpreview:nopreview"));
+end;
+
+end;
+
+function Render()
+ StartMenu();
+ Headline(TRANS_Str("editorload:title"));
+ RenderMenu();
+ RenderPreview();
+ EndMenu();
+end;
+
+function OnNavigate(dir)
+ if NumEntries==0 then
+   return;
+ end;
+ if Selected>=NumEntries then
+  Selected=NumEntries-1;
+ end;
+  
+  
+  local svname="/user/levels/"..Entries[Selected+1]..".png";
+  if FILESYS_FileExists(svname)==1 then
+    tinxed=TEXTURE_LoadTempTexture("_levelpreview",svname); 
+    if tinxed>0 then
+      haspreview=1;
+    else
+      haspreview=0;
+    end;
+  else
+    haspreview=0;
+  end;
+end;
+
+function HandleSelection(sel)
+ if  (sel==-1) or (NumEntries==0) then
+  MENU_Load("editor");
+ else
+   --LEVEL_Deactivate();
+   GLOBAL_SetVar("Editor_LoadLevel",Entries[sel+1]);
+   GLOBAL_SetVar("Editor_Filename",Entries[sel+1])
+   MENU_Load("editorstart");
+ end;
+end;
+ 
+
+function SpecialKeyHandler(key,down,toggle)
+ local kn=KEYB_GetKeyName(key);
+ if kn=="delete" and down==1 and toggle==1 then
+   if NumEntries>0 and Selected>=0 then
+      GLOBAL_SetVar("MENUSELECTION_"..menuname,Selected);
+      SOUND_Play(snd_sel,-1);
+      GLOBAL_SetVar("Editor_LoadLevel",Entries[Selected+1]);
+      GLOBAL_SetVar("Editor_Filename",Entries[Selected+1]);
+      MENU_Load("deletelevel");
+     --print("delete "..Entries[Selected+1]);
+   end;
+ end;
+end;

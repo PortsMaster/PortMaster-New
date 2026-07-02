@@ -1,0 +1,166 @@
+#!/bin/bash
+
+GAMEDIR="$PWD"
+GAME_FILE="diab.exe"
+LAUNCH_FILE="diab.love"
+LOGFILE="$GAMEDIR/patchlog.txt"
+START_TIME=$(date +%s)
+
+# Setup logging
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
+echo "=== START $(date) ==="
+echo "Working directory: $GAMEDIR"
+
+cd "$GAMEDIR"
+
+echo ""
+echo "Patching Dungeon in a Bottle..."
+echo ""
+
+# ============================================================================
+# EXTRACTION
+# ============================================================================
+DATAFILE_ACTUAL=""
+
+echo "Looking for game file..."
+for f in "$GAMEDIR"/*;
+do
+    filename=$(basename "$f")
+    if [ "$(echo "$filename" | tr '[:upper:]' '[:lower:]')" = "diab.exe" ];
+    then
+        DATAFILE_ACTUAL="$filename"
+        break
+    fi
+done
+
+if [ -z "$DATAFILE_ACTUAL" ];
+then
+    echo "[ERROR] ERROR: diab.exe not found in $GAMEDIR"
+    ls -la "$GAMEDIR"
+    exit 1
+fi
+
+echo "Found: $DATAFILE_ACTUAL"
+
+OUTDIR="$GAMEDIR/temp_patch"
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
+
+EXTRACT_TOOL="$controlfolder/7zzs.${DEVICE_ARCH}"
+
+if [ ! -f "$EXTRACT_TOOL" ]; then
+    echo "[ERROR] ERROR: 7zzs tool not found at $EXTRACT_TOOL"
+    ls -la "$controlfolder" | grep 7z
+    exit 1
+fi
+
+echo "Extracting $DATAFILE_ACTUAL..."
+if "$EXTRACT_TOOL" x "$GAMEDIR/$DATAFILE_ACTUAL" -o"$OUTDIR" -y 2>&1;
+then
+    echo "[OK] Extraction complete"
+else
+    echo "[ERROR] ERROR: Extraction failed"
+    exit 1
+fi
+
+# Normalize CRLF -> LF on all extracted Lua files.
+# diab.exe is a Windows zip so its contents use CRLF line endings,
+# which causes `patch` to fail when comparing context lines.
+echo "Normalizing line endings..."
+find "$OUTDIR" -name "*.lua" -exec sed -i 's/\r//' {} +
+log_ok "Line endings normalized"
+
+echo ""
+echo "Applying patches..."
+echo ""
+
+# ============================================================================
+# PATCH 1/3: Update window resolution & performance settings
+# Must remain as sed — uses runtime env vars DISPLAY_WIDTH / DISPLAY_HEIGHT
+# that cannot be baked into a static patch file.
+# ============================================================================
+if [ -f "$OUTDIR/conf.lua" ];
+then
+    echo "Patch 1/3: Setting resolution to ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}..."
+    sed -i "s/t\.window\.width *= *[0-9]\+/t.window.width = ${DISPLAY_WIDTH}/" "$OUTDIR/conf.lua"
+    sed -i "s/t\.window\.height *= *[0-9]\+/t.window.height = ${DISPLAY_HEIGHT}/" "$OUTDIR/conf.lua"
+    sed -i "s/t\.accelerometerjoystick *= *.*/t.accelerometerjoystick = false/" "$OUTDIR/conf.lua"
+    sed -i "s/t\.window\.vsync *= *.*/t.window.vsync = 0/" "$OUTDIR/conf.lua"
+    echo "[OK] Resolution and settings updated"
+else
+    echo "[WARN] conf.lua not found — resolution not set"
+fi
+
+# ============================================================================
+# PATCH 2/3: Apply diab.patch (all .lua file changes)
+# ============================================================================
+PATCH_TOOL="$GAMEDIR/tools/patch/patch"
+PATCH_FILE="$GAMEDIR/tools/patch/diab.patch"
+
+if [ ! -f "$PATCH_TOOL" ]; then
+    echo "[ERROR] ERROR: patch tool not found at $PATCH_TOOL"
+    exit 1
+fi
+
+if [ ! -f "$PATCH_FILE" ]; then
+    echo "[ERROR] ERROR: diab.patch not found at $PATCH_FILE"
+    exit 1
+fi
+
+echo "Patch 2/3: Applying diab.patch..."
+pushd "$OUTDIR" > /dev/null
+if "$PATCH_TOOL" -p1 < "$PATCH_FILE";
+then
+    echo "[OK] diab.patch applied successfully"
+else
+    echo "[ERROR] ERROR: diab.patch failed to apply"
+    popd > /dev/null
+    exit 1
+fi
+popd > /dev/null
+
+# ============================================================================
+# PATCH 3/3: Copy Silver.ttf font
+# (not included in diab.patch as it is a binary file)
+# ============================================================================
+if [ -f "$GAMEDIR/tools/patch/Silver.ttf" ];
+then
+    echo "Patch 3/3: Copying Silver.ttf..."
+    cp "$GAMEDIR/tools/patch/Silver.ttf" "$OUTDIR/Silver.ttf"
+    echo "[OK] Silver.ttf copied"
+else
+    echo "[WARN] Silver.ttf not found at $GAMEDIR/tools/patch/Silver.ttf"
+fi
+
+# ============================================================================
+# REPACK AND CLEANUP
+# ============================================================================
+echo ""
+echo "Repacking game as $LAUNCH_FILE..."
+if "$EXTRACT_TOOL" a -tzip "$GAMEDIR/$LAUNCH_FILE" "$OUTDIR"/* > /dev/null 2>&1;
+then
+    echo "[OK] Repacking successful"
+else
+    echo "[ERROR] ERROR: Repacking failed"
+    exit 1
+fi
+
+echo "Cleaning up..."
+cd "$GAMEDIR"
+rm -rf temp_patch
+rm -f "$DATAFILE_ACTUAL"
+rm -f "$GAMEDIR/Place diab.exe here.txt"
+echo "[OK] Cleanup complete"
+
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+echo ""
+echo "========================================="
+echo "Patching complete! ($DURATION seconds)"
+echo "========================================="
+echo "1.  Resolution fix:                 [OK]"
+echo "2.  diab.patch (.lua changes):      [OK]"
+echo "3.  Silver.ttf font:                [OK]"
+echo "========================================="
+echo "=== END $(date) ==="

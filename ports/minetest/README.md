@@ -1,13 +1,11 @@
-This port contains [Minetest](https://www.minetest.net/) and a Minecraft-like game [Mineclonia](https://codeberg.org/mineclonia/mineclonia). More games, mods, and texture packs can be downloaded within the Minetest client.
-
-Thanks to the Perttu Ahola and the Minetest team for creating this awesome game and making it available for free! If you enjoy Minetest please consider [modding](https://rubenwardy.com/minetest_modding_book/en/index.html), [contributing](https://www.minetest.net/get-involved/), or [donating](https://www.minetest.net/get-involved/#donate)!
+This port contains [Luanti / Minetest](https://www.luanti.org/) and a Minecraft-like game [Mineclonia](https://codeberg.org/mineclonia/mineclonia). More games, mods, and texture packs can be downloaded within the Minetest client.
 
 # Notes
 - **Touch screen**
   - Touch screen controls work on supported devices
 - **Menus**
   - For some devices menus extend off-screen. All menu items can be adjusted manually though with the config file: `/path/to/your/ports/minetest/minetest.conf`.
-    - Settings options are [described here](http://doxy.minetest.net/settings.html)
+    - Settings options are [described here](https://docs.luanti.org/)
   - Invisible cursor in menus
 - **Low-memory devices**
   - Single-player play requires >1 GB in order to run both the host and client instances. For this reason 1 GB devices should stick to server play because RAM requirements are only ~700 MB. There are public servers available or you can host your own private server!
@@ -15,7 +13,7 @@ Thanks to the Perttu Ahola and the Minetest team for creating this awesome game 
 # Controls
 Defaults are below
 - Controls can be customized via the keyboard map files at `/path/to/your/ports/minetest/minetest_<num>stick.gptk`
-- Useful reference: [Minetest's default keyboard layout](https://wiki.minetest.net/Controls)
+- Useful reference: [Luanti's default keyboard layout](https://docs.luanti.org/for-players/controls/)
 
 ## 2-Stick Controls
 |Button|Action|
@@ -86,5 +84,5 @@ Defaults are below
 |`D-pad`  |Look|
 
 # Licenses
-- Minetest: [MIT](https://github.com/minetest/minetest.github.io?tab=MIT-1-ov-file#readme)
+- Luanti / Minetest: [MIT](https://github.com/luanti-org/luanti-org.github.io?tab=MIT-1-ov-file#readme)
 - Mineclonia: [GPLv3](https://codeberg.org/mineclonia/mineclonia/src/branch/main/LICENSE.txt)

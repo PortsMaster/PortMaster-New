@@ -12,45 +12,54 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
+export controlfolder
+
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-printf "\033c" > /dev/tty0
-printf "\033c" > /dev/tty1
-
+# Variables
 GAMEDIR="/$directory/ports/neoncityriders"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-cd "$GAMEDIR"
+# CD and set up logging
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+
+# Check if the patching needs to be applied
+if [ ! -f "$GAMEDIR/patchlog.txt" ] && [ -f "$GAMEDIR/assets/data.win" ]; then
+	if [ -f "$controlfolder/utils/patcher.txt" ]; then
+		set -o pipefail
+			
+		# Setup mono environment variables
+		DOTNETDIR="$HOME/mono"
+		DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+		$ESUDO mkdir -p "$DOTNETDIR"
+		$ESUDO umount "$DOTNETFILE" || true
+		$ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+		export PATH="$DOTNETDIR":"$PATH"
+		
+		# Setup and execute the Portmaster Patcher utility with our patch file
+		export ESUDO
+		export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+		export PATCHER_GAME="$(basename "${0%.*}")"
+		export PATCHER_TIME="10-15 minutes"
+		source "$controlfolder/utils/patcher.txt"
+		$ESUDO umount "$DOTNETDIR"
+	else
+		pm_message "This port requires the latest version of PortMaster."
+		pm_finish
+		exit 1
+	fi
 fi
 
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$directory/ports/neoncityriders/libs:$LD_LIBRARY_PATH"
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
-
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" textinput &
-echo "Loading, please wait... " > /dev/tty0
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader neoncityriders.apk
-
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
-
+# Kill processes
+pm_finish

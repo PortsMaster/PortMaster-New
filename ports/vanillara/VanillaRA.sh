@@ -17,6 +17,7 @@ source $controlfolder/device_info.txt
 
 DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 ## TODO: Change to PortMaster/tty when Johnnyonflame merges the changes in,

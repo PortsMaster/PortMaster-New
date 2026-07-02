@@ -26,6 +26,8 @@ export TEXTINPUTINTERACTIVE="Y"
 
 cd $GAMEDIR
 
+$ESUDO chmod +x "$GAMEDIR/xye.${DEVICE_ARCH}"
+
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $GPTOKEYB "xye.${DEVICE_ARCH}" -c "$GAMEDIR/xye.gptk" &

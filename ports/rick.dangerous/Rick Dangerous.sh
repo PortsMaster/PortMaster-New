@@ -13,8 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 if [[ $CFW_NAME == "TheRA" ]]; then
@@ -23,15 +22,17 @@ if [[ $CFW_NAME == "TheRA" ]]; then
 elif [[ $CFW_NAME == "RetroOZ" ]]; then
   raloc="/opt/retroarch/bin"
   raconf="--config /home/odroid/.config/retroarch/retroarch.cfg"
-elif [[ $CFW_NAME == "ArkOS"* ]]; then
+elif [[ $CFW_NAME == *"ArkOS"* ]]; then
   raloc="/usr/local/bin"
   raconf=""
 elif [[ $CFW_NAME == "muOS" ]]; then
   raloc="/usr/bin"
   if [ -f /run/muos/storage/info/config/retroarch.cfg ]; then
     raconf="--config /run/muos/storage/info/config/retroarch.cfg"
-  else
+  elif [ -f /mnt/mmc/MUOS/retroarch/retroarch.cfg ]; then
     raconf="--config /mnt/mmc/MUOS/retroarch/retroarch.cfg"
+  else
+    raconf=""
   fi
 elif [[ $CFW_NAME == "Miyoo" ]]; then
   raloc="/mnt/sdcard/RetroArch"
@@ -43,5 +44,6 @@ fi
 
 GAMEDIR="/$directory/ports/xrick"
 
+$GPTOKEYB "retroarch" &
 $raloc/retroarch $raconf -L $GAMEDIR/xrick_libretro.so $GAMEDIR
-
+pm_finish

@@ -1,64 +1,114 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patchlog_error.txt"
+START_TIME=$(date +%s)
 
 # Redirect output and error to the log file
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="game.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$controlfolder:$GAMEDIR/tools:$PATH"
 
-# Permissions
-chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
-chmod 777 "$TOOLDIR/oggdec"
+prepare_system() {
+    # Test for commands: python, zip
+    PYTHON=$(which python3)
+    if [ -z "$PYTHON" ]; then
+        echo "Missing Python!"
+        return 1
+    fi
+    
+    # Mount the GMToolkit runtime
+    TOOLKIT="$HOME/gmtoolkit"
+    RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+    if [ -f "$RUNTIME" ]; then
+        $ESUDO mkdir -p "$TOOLKIT"
+        $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+        $ESUDO mount "$RUNTIME" "$TOOLKIT"
+    else
+        echo "This port requires the GMToolkit runtime. Please download it."
+        return 1
+    fi
 
-cd "$GAMEDIR"
-
-remove_files() {
-    # Delete unnecessary files
-    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
-	echo "Removed unnecessary files"
-    sleep 1
+    # Mount the dotnet runtime
+    DOTNETDIR="$HOME/mono"
+    DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+    if [ -f "$DOTNETFILE" ]; then
+        $ESUDO mkdir -p "$DOTNETDIR"
+        $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+        $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+    else
+        echo "This port requires the Dotnet runtime. Please download it."
+        return 1
+    fi
+    
+    # Attempt to get SAVEDIR from gmloader.json using jq
+    if command -v jq >/dev/null 2>&1; then
+        SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+    else
+        SAVEDIR="$GAMEDIR/saves"
+    fi
+    
+    # Exports
+    export PYTHON
+    export SAVEDIR
+    export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+    export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
 }
 
-apply_xdelta() {
-    # Check if the data.win file exists and apply xdelta
-    if [ -f "$DATADIR/data.win" ]; then
-        echo "Applying xdelta patch"
-		output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patch/driftsurvivor.xdelta" "$DATADIR/game.droid" 2>&1)
-        if [ $? -eq 0 ]; then
-            echo "Patch applied successfully"
-            echo "$output"
-            rm "$DATADIR/data.win"
-        else
-            echo "Failed to apply patch"
-            echo "$output"
-            exit 1
-        fi
+# Prepare game data
+# If there are audiogroups in the game.port file, unzip them
+prepare_files() {
+    # Delete unnecessary files
+    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
+    echo "Removed unnecessary files"
+}
+
+# Replace game code entries for data.win
+replace_code() {
+    # Build --code args from all gml files
+    CODEARGS=()
+    for file in "$GAMEDIR/tools/gml/"*.gml; do
+        [ -f "$file" ] || continue
+        entry=$(basename "$file" .gml)
+        echo "Adding modified gml script: $file"
+        CODEARGS+=(--code "$entry=$file")
+    done
+
+    # Replace scripts
+    if dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" replace "$DATADIR/data.win" -o "$DATADIR/data2.win" "${CODEARGS[@]}"; then
+        echo "Successfully replaced gml scripts."
+        mv -f "$DATADIR/data2.win" "$DATADIR/data.win"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     else
-        echo "No data.win file found to patch!"
+        echo "Failed to replace gml scripts."
+        return 1
     fi
 }
 
+# Compress audio files inside datafile and audiogroups
 compress_audio() {
-    echo "Compressing audio..."
-    # Clear out the temporary directory
-    mkdir -p "$TMPDIR"
-    rm -rf $TMPDIR/*
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Test for data.win
+    if [ -f "$DATADIR/data.win" ]; then
+        mv "$DATADIR/data.win" "$DATADIR/game.droid"
+    fi
 
     # Run the compression tool
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON $TOOLDIR/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    PYTHON=$(which python3)
+    if [ "$PREPATCH" != 1 ]; then
+        echo "Running GMTools on data and audiogroups."
+        $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    else
+        echo "Running GMTools on data file only."
+        $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -O 0 -m 1000 -b 64 -r -d "$TMPDIR" "$DATADIR/game.droid"
+    fi
 
     if [ $? -eq 0 ]; then
         echo "Compression completed successfully."
@@ -67,43 +117,65 @@ compress_audio() {
         rm -rf "$TMPDIR"
         echo "Temporary directory $TMPDIR removed."
         echo "Audio compression applied successfully."
-        sleep 1
     else
-        echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
-        rm -rf "$TMPDIR"
-        sleep 1
+        # Failure
+        echo "Audio compression failed
+        ."
+        rmdir "$TMPDIR"
+        return 1
     fi
 }
 
+# Zip it all into the .port file
 zip_archive() {
-        zip -r -0 $DATAFILE ./assets/
-        rm -rf ./assets
-        mkdir -p saves
+    if "$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR"; then
+        rm -rf "$DATADIR"/*
+    else
+        echo "Failed to create $DATAFILE."
+        return 1
+    fi
 }
 
-install_complete() {
+# Cleanup function
+cleanup() {
+    rm -rf "$TMPDIR"
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+}
+
 # Create install completion flag
-touch "install_completed"
-echo "Installation completed successfully!"
-echo "-----------------------------"
-echo "Process finished at: $(date)"
+install_complete() {
+	touch "install_completed"
+    # Measure time to complete
+	END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    echo "Script completed in $DURATION seconds"
+	echo "Installation completed successfully!"
+	echo "-----------------------------"
+	echo "Process finished at: $(date)"
 }
 
+# Main function
 process_game() {
-    # Delete unnecessary files
-    remove_files
-	sleep 1
-    apply_xdelta
-    sleep 1
+    prepare_system
+	echo "Preparing game files..."
+    prepare_files
+    echo "Adding modified scripts..."
+    replace_code || { cleanup; return 1; }
     echo "Compressing audio..."
-    compress_audio
-    sleep 1
+    compress_audio || { cleanup; return 1; }
     echo "Finishing up..."
-    zip_archive
-    sleep 1
-    install_complete
+    zip_archive || { cleanup; return 1; }
+	install_complete || { cleanup; return 1; }
 }
 
-# Call the function
-process_game
+# Call main
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Always run cleanup at the end
+cleanup

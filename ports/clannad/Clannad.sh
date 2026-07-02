@@ -53,8 +53,9 @@ $ESUDO mount "$rlvm_file" "$rlvm_dir"
 PATH="$rlvm_dir:$PATH"
 
 # Create config dir
-rm -rf "$HOME/.rlvm/KEY_CLANNAD_ENHD"
-ln -s "$GAMEDIR/saves" "$HOME/.rlvm/KEY_CLANNAD_ENHD"
+mkdir -p "$GAMEDIR/saves/KEY_CLANNAD_ENHD"
+
+bind_directories "$HOME/.rlvm/KEY_CLANNAD_ENHD" "$GAMEDIR/saves/KEY_CLANNAD_ENHD"
 
 # Export libs
 export LD_LIBRARY_PATH="$rlvm_dir/libs":$LD_LIBRARY_PATH
@@ -64,17 +65,14 @@ if [ "$LIBGL_FB" != "" ]; then
 fi
 
 # Setup controls
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
 $GPTOKEYB "$runtime" -c "rlvm.gptk" & 
 
 # Disable touchscreen
 modprobe -r edt_ft5x06
 
 # Run the game
-echo "Loading, please wait... (might take a while!)" > /dev/tty0
-pm_platform_helper "$runtime"
+pm_message "Loading, please wait... (might take a while!)"
+pm_platform_helper "$rlvm_dir/$runtime"
 $runtime $font "$GAMEDIR/gamedata"
 
 # Cleanup

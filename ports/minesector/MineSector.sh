@@ -13,32 +13,26 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-
 get_controls
 
-GAMEDIR=/$directory/ports/minesector
+GAMEDIR="/$directory/ports/minesector"
 
 cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$ESUDO chmod 777 -R $GAMEDIR/*
+$ESUDO chmod +x "$GAMEDIR/minesector.${DEVICE_ARCH}"
 
-$ESUDO chmod 666 /dev/tty0
-$ESUDO chmod 666 /dev/tty1
-$ESUDO chmod 666 /dev/uinput
+if [[ "${CFW_NAME^^}" == "MUOS" ]] && [[ "$DEVICE_ARCH" == "aarch64" ]]; then
+  $ESUDO rm "$GAMEDIR/libs.aarch64/libasound.so.2"
+fi
 
 $GPTOKEYB "minesector.${DEVICE_ARCH}" -c "$GAMEDIR/minesector.gptk" &
+pm_platform_helper "$GAMEDIR/minesector.${DEVICE_ARCH}"
 ./minesector.${DEVICE_ARCH}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty1
-printf "\033c" > /dev/tty0
+pm_finish

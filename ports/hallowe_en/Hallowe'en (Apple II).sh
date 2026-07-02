@@ -24,6 +24,8 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 
+[ "${CFW_NAME^^}" == "RETRODECK" ] && ADDLPARAMS=" -f"
+
 cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -32,6 +34,6 @@ cd $GAMEDIR
 
 $GPTOKEYB "linapple.${DEVICE_ARCH}" -c "$GAMEDIR/halloween.gptk" &
 pm_platform_helper "$GAMEDIR/linapple.${DEVICE_ARCH}"
-./linapple.${DEVICE_ARCH} --conf $GAMEDIR/conf/nojoy.conf --d1 $GAMEDIR/disks/halloween.dsk --autoboot
+./linapple.${DEVICE_ARCH} --conf $GAMEDIR/conf/nojoy.conf --d1 $GAMEDIR/disks/halloween.dsk --autoboot $ADDLPARAMS
 
 pm_finish

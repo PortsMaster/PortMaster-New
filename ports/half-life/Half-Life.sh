@@ -16,6 +16,7 @@ source $controlfolder/control.txt
 source $controlfolder/tasksetter
 source $controlfolder/device_info.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 CUR_TTY=/dev/tty0
 

@@ -1,94 +1,191 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
 
 # Redirect output and error to the log file
-exec > >(tee -a "$LOGFILE") 2>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+# Patch failure function
+patch_failure() {
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+echo $PATCH
+
 # Exports
+export PATH="$TOOLKIT/gmtools:$PATH"
+export LD_LIBRARY_PATH="$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="game.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggdec"
-chmod 777 "$TOOLDIR/oggenc"
 
 cd "$GAMEDIR"
 
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(command -v python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(command -v zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+    
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
+
+    # Move splash file if it exists
+    if [ -f "$DATADIR/splash.png" ]; then
+        mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
+    fi
+}
+
 apply_xdelta() {
     # Check if the data.win file exists and apply xdelta
+    echo "applying xdelta to data.win"
+    xdeltastart_time=$(date '+%H:%M:%S')
+    echo "[${xdeltastart_time}] Starting xdelta patch process..."
     if [ -f "$DATADIR/data.win" ]; then
-        output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patch/hyperlightdrifter.xdelta" "$DATADIR/game.droid" 2>&1)
-        if [ $? -eq 0 ]; then
+        # Start xdelta in background
+        $controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patch/hyperlightdrifter.xdelta" "$DATADIR/data2.win" 2>&1 &
+        xdelta_pid=$!
+        
+        # Target file size in KB
+        target_size=128921 # Final patch size in KB
+        
+        # Monitor progress while xdelta is running
+        while kill -0 $xdelta_pid 2>/dev/null; do
+            sleep 3  # Wait 3 seconds
+            
+            # Check if output file exists and get its size
+            if [ -f "$DATADIR/data2.win" ]; then
+                current_size=$(du -k "$DATADIR/data2.win" 2>/dev/null | cut -f1)
+                if [ -n "$current_size" ] && [ "$current_size" -gt 0 ]; then
+                    # Calculate percentage with 1 decimal place
+                    percentage=$(awk "BEGIN {printf \"%.1f\", ($current_size / $target_size) * 100}")
+                    current_time=$(date '+%H:%M:%S')
+                    echo "[${current_time}] Progress: ${current_size}KB / ${target_size}KB (${percentage}%)"
+                fi
+            fi
+        done
+        
+        # Wait for xdelta to complete and get exit status
+        wait $xdelta_pid
+        exit_status=$?
+        
+        if [ $exit_status -eq 0 ]; then
+            completion_time=$(date '+%H:%M:%S')
+            echo "[${completion_time}] Progress: ${target_size}KB / ${target_size}KB (100.0%)"
             echo "Patch applied successfully"
-            echo "$output"
             rm "$DATADIR/data.win"
+            mv "$DATADIR/data2.win" "$DATADIR/game.droid"
         else
             echo "Failed to apply patch"
-            echo "$output"
             exit 1
         fi
     else
         echo "No data.win file found to patch!"
     fi
+    
+    sleep 1
 }
-compress_audio() {
-    # Find and compress all .ogg files in the /assets directory
-    find "$DATADIR" -type f -name "*.ogg" | while read -r file; do
-    # Create a temporary file for the compressed version
-    temp_file="${file%.ogg}_temp.ogg"
 
-    # Decode the .ogg file and encode it with the specified bitrate
-    "$TOOLDIR/oggdec" -o - "$file" | "$TOOLDIR/oggenc" -q 0 -o "$temp_file" -
-    if [ $? -eq 0 ]; then
-        # Replace the original file with the compressed version if successful
-        mv "$temp_file" "$file"
-        echo "Compressed: $file to quality 0"
-    else
-        echo "Failed to compress: $file" >&2
-        rm -f "$temp_file" # Clean up the temp file in case of error
-    fi
+compress_audio() {
+    # Find and compress all .ogg files in the /gamedata directory
+    find "$DATADIR" -type f -name "*.ogg" | while read -r file; do
+        # Create a temporary file for the compressed version
+        temp_file="${file%.ogg}_temp.ogg"
+    
+        # Decode the .ogg file and encode it with the specified bitrate
+        if "$TOOLKIT/gmtools/oggdec" -o - "$file" 2>/dev/null | "$TOOLKIT/gmtools/oggenc" -b 64 -o "$temp_file" - 2>/dev/null; then
+            # Replace the original file with the compressed version if successful
+            mv "$temp_file" "$file"
+            echo "Compressed: $file to 64 kbps"
+        else
+            echo "Failed to compress: $file" >&2
+            rm -f "$temp_file" # Clean up the temp file in case of error
+        fi
     done
 
     echo "All .ogg files have been processed."
-    sleep 3    
+    
+    sleep 1
 }
 
 zip_archive() {
-        rm -rf ./assets/cttVideoPlayer
-		zip -r $DATAFILE ./assets/game.droid
-		rm -f ./assets/game.droid
-        zip -r -0 $DATAFILE ./assets/
-		rm -rf ./assets
-        mkdir -p saves
+    rm -rf ./assets/cttVideoPlayer
+    $ZIP -r $DATAFILE "./assets/game.droid"
+    rm -f "./assets/game.droid"
+    $ZIP -r -0 "$DATAFILE" "./assets/"
+    echo "Zipped contents to $DATAFILE"
+    rm -rf "$DATADIR/"*
 }
 
 process_game() {
-    # Delete unnecessary files
-    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
-    echo "Removed unnecessary files"
+    echo "Preparing game..."
+    prepare_files || { patch_failure; return 1; }
+    if [ "$PATCH" = "false" ]; then ##palceholder 4 now
+        echo "Skipping patch..."
+    else
+        echo "Patching game..."
+        apply_xdelta || { patch_failure; return 1; }
+    fi
+    echo "Compressing audio..."
+    compress_audio || { patch_failure; return 1; }
+
     sleep 1
-    echo "Applying xdelta patch"
-    apply_xdelta
-    sleep 1
-	compress_audio
-	sleep 1
     echo "Finishing up..."
-    zip_archive
-    sleep 1
-	
-    # Final completion message
-    echo "Patching process complete!"
+    zip_archive || { patch_failure; return 1; }
 }
 
 # Call the function
-process_game
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Unmount runtimes
+$ESUDO umount "$TOOLKIT" 2>/dev/null || true

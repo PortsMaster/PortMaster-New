@@ -17,24 +17,21 @@ source $controlfolder/control.txt
 
 GAMEDIR="/$directory/ports/iortcw"
 
-if [ ! -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg ]; then
-  if [ "$LOWRES" == "Y" ]; then 
-    mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.480 $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
-    rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
+# Create default config if none exists
+if [ ! -f "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg" ]; then
+  if [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]] && [[ -e "/dev/input/by-path/platform-singleadc-joypad-event-joystick" ]]; then
+    cp -f "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg.rg552" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
   elif [[ -f /etc/trimui_device.txt && "x$(cat /etc/trimui_device.txt)" == "xtsp" ]]; then
-      mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.tsp $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
-      rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
-  elif [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG552" ]] && [[ -e "/dev/input/by-path/platform-singleadc-joypad-event-joystick" ]]; then 
-    mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.rg552 $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
-    rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.* 
-  elif [[ -e "/dev/input/by-path/platform-odroidgo3-joypad-event-joystick" ]] || [[ "$(cat /sys/firmware/devicetree/base/model)" == "Rockchip RK3566 EVB2 LP4X V10 Board" ]] || [[ "$(cat /sys/firmware/devicetree/base/model)" == "Anbernic RG503" ]]; then
-    mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.ogs $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
-    rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
+    cp -f "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg.tsp" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
   else
-    mv -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.640 $GAMEDIR/conf/.wolf/main/wolfconfig.cfg
-    rm -f $GAMEDIR/conf/.wolf/main/wolfconfig.cfg.*
+    cp -f "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg.640" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
   fi
 fi
+
+# Patch resolution to match device display
+sed -i "s/seta r_customwidth \"[0-9]*\"/seta r_customwidth \"${DISPLAY_WIDTH}\"/" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
+sed -i "s/seta r_customheight \"[0-9]*\"/seta r_customheight \"${DISPLAY_HEIGHT}\"/" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
+sed -i "s/seta r_mode \"[^\"]*\"/seta r_mode \"-1\"/" "$GAMEDIR/conf/.wolf/main/wolfconfig.cfg"
 
 bind_directories ~/.wolf $GAMEDIR/conf/.wolf/
 cd $GAMEDIR

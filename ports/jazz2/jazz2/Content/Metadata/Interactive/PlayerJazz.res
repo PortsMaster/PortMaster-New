@@ -261,12 +261,12 @@
 			"States": [ 131072 ]
 		},
 		"LiftStart": {
-			"Path": "Jazz/lift_jump_heavy.aura",
+			"Path": "Jazz/lift_start.aura",
 			"FrameRate": 16,
 			"States": [ 1073741859 ]
 		},
 		"LiftEnd": {
-			"Path": "Jazz/lift_jump_light.aura",
+			"Path": "Jazz/lift_end.aura",
 			"States": [ 1073741860 ]
 		},
 		"Ledge": {
@@ -293,23 +293,28 @@
 		
 		"IdleBored1": {
 			"Path": "Jazz/idle_flavor_1.aura",
-			"FrameRate": 2
+			"FrameRate": 2,
+			"States": [ 536870944 ]
 		},
 		"IdleBored2": {
 			"Path": "Jazz/idle_flavor_2.aura",
-			"FrameRate": 1
+			"FrameRate": 1,
+			"States": [ 536870945 ]
 		},
 		"IdleBored3": {
 			"Path": "Jazz/idle_flavor_3.aura",
-			"FrameRate": 2
+			"FrameRate": 2,
+			"States": [ 536870946 ]
 		},
 		"IdleBored4": {
 			"Path": "Jazz/idle_flavor_4.aura",
-			"FrameRate": 3
+			"FrameRate": 3,
+			"States": [ 536870947 ]
 		},
 		"IdleBored5": {
 			"Path": "Jazz/idle_flavor_5.aura",
-			"FrameRate": 3
+			"FrameRate": 3,
+			"States": [ 536870948 ]
 		},
 		
 		"TransformFromFrog": {
@@ -319,23 +324,34 @@
 		},
 		
 		"Corpse": {
-			"Path": "Jazz/corpse.aura"
+			"Path": "Jazz/corpse.aura",
+			"States": [ 536870912 ]
 		},
 
 		"SugarRush": {
-			"Path": "Common/sugar_rush_stars.aura"
+			"Path": "Common/sugar_rush_stars.aura",
+			"States": [ 536870913 ]
 		},
 		"Shield": {
-			"Path": "Common/player_shield.aura"
+			"Path": "Common/player_shield.aura",
+			"States": [ 536870928 ]
 		},
 		"ShieldFire": {
-			"Path": "Common/shield_fire.aura"
+			"Path": "Common/shield_fire.aura",
+			"States": [ 536870929 ]
 		},
 		"ShieldWater": {
-			"Path": "Common/shield_water.aura"
+			"Path": "Common/shield_water.aura",
+			"States": [ 536870930 ]
 		},
 		"ShieldLightning": {
-			"Path": "Common/shield_lightning.aura"
+			"Path": "Common/shield_lightning.aura",
+			"States": [ 536870931 ]
+		},
+		
+		"WeaponFlare": {
+			"Path": "Weapon/flare_hor_2.aura",
+			"States": [ 536870950 ]
 		}
 	},
 
@@ -360,6 +376,9 @@
 		},
 		"Hurt": {
 			"Paths": [ "Jazz/hurt_1.wav", "Jazz/hurt_2.wav", "Jazz/hurt_3.wav", "Jazz/hurt_4.wav", "Jazz/hurt_5.wav", "Jazz/hurt_6.wav", "Jazz/hurt_7.wav", "Jazz/hurt_8.wav" ]
+		},
+		"HurtSoft": {
+			"Paths": [ "Jazz/hurt_1.wav", "Jazz/hurt_5.wav", "Jazz/hurt_6.wav", "Jazz/hurt_7.wav", "Jazz/hurt_8.wav" ]
 		},
 		"Die": {
 			"Paths": [ "Common/gunsm1.wav" ]
@@ -396,6 +415,12 @@
 		},
 		"WeaponThunderbolt": {
 			"Paths": [ "Unknown/unknown_bonus1.wav" ]
+		},
+		"WeaponThunderboltStart": {
+			"Paths": [ "Cinematics/opening_shot.wav" ]
+		},
+		"WeaponThunderboltEnd": {
+			"Paths": [ "Pickup/shield_lightning_bullet_1.wav" ]
 		},
 		"HookAttach": {
 			"Paths": [ "Common/swish_9.wav" ]

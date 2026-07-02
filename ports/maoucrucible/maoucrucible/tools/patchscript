@@ -1,0 +1,161 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
+
+# Redirect output and error to the log file
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="maoucrucible.port"
+export TMPDIR="$GAMEDIR/tmp"
+
+prepare_system() {
+    # Test for commands: python, zip
+    PYTHON=$(which python3)
+    if [ -z "$PYTHON" ]; then
+        echo "Missing Python!"
+        return 1
+    fi
+    
+    # Mount the GMToolkit runtime
+    TOOLKIT="$HOME/gmtoolkit"
+    RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+    if [ -f "$RUNTIME" ]; then
+        $ESUDO mkdir -p "$TOOLKIT"
+        $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+        $ESUDO mount "$RUNTIME" "$TOOLKIT"
+    else
+        echo "This port requires the GMToolkit runtime. Please download it."
+        return 1
+    fi
+
+    # Mount the dotnet runtime
+    DOTNETDIR="$HOME/mono"
+    DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+    if [ -f "$DOTNETFILE" ]; then
+        $ESUDO mkdir -p "$DOTNETDIR"
+        $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+        $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+    else
+        echo "This port requires the Dotnet runtime. Please download it."
+        return 1
+    fi
+    
+    # Attempt to get SAVEDIR from gmloader.json using jq
+    if command -v jq >/dev/null 2>&1; then
+        SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+    else
+        SAVEDIR="$GAMEDIR/saves"
+    fi
+    
+    # Exports
+    export PYTHON
+    export SAVEDIR
+    export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+    export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+}
+
+# Prepare game data
+prepare_files() {
+    # Delete unnecessary files
+    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
+    echo "Removed unnecessary files"
+}
+
+# Replace game code with blank scripts
+replace_code() {
+    # Build --code args from all gml files
+    CODEARGS=()
+    for file in "$GAMEDIR/tools/gml/"*.gml; do
+        [ -f "$file" ] || continue
+        entry=$(basename "$file" .gml)
+        echo "Adding empty script: $file"
+        CODEARGS+=(--code "$entry=$file")
+    done
+
+    # Replace scripts
+    if dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" replace "$DATADIR/data.win" -o "$DATADIR/data2.win" "${CODEARGS[@]}"; then
+        echo "Successfully replaced gml scripts."
+		mv -f "$DATADIR/data2.win" "$DATADIR/data.win"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    else
+        echo "Failed to modify the game file."
+        return 1
+    fi
+	
+}
+
+# change the interpolate flag
+enable_interpolate() {
+    # Check if INTERPOLATION is set to true
+    if [ "$INTERPOLATION" != "true" ]; then
+        echo "INTERPOLATION was not selected, skipping..."
+        return 0
+    fi
+    
+    export ENABLE_INTERPOLATE="true"
+    
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        load "$DATADIR/data.win" \
+        -s "$GAMEDIR/tools/toggleflag.csx" \
+        -o "$DATADIR/data2.win"
+        
+    if [ $? -ne 0 ]; then
+        echo "Failed to enable Interpolate flag."
+        return 1
+    else
+        echo "Successfully enabled Interpolate flag."
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/data2.win" "$DATADIR/data.win"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
+
+
+# Zip it all into the .port file
+zip_archive() {
+	
+	mv -f "$DATADIR/data.win" "$DATADIR/game.droid"
+    if "$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR"; then
+        rm -rf "$DATADIR"
+	else
+        echo "Failed to create $DATAFILE."
+        return 1
+    fi
+}
+
+# Cleanup function
+cleanup() {
+    rm -rf "$TMPDIR"
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+}
+
+# Main function
+process_game() {
+    echo "Preparing system..."
+    prepare_system || { cleanup; return 1; }
+	echo "Preparing game files..."
+    prepare_files || { cleanup; return 1; }
+	echo "Enabling the interpolate flag..."
+	enable_interpolate  || { cleanup; return 1; }
+    echo "Adding modified scripts..."
+    replace_code || { cleanup; return 1; }
+	echo "Finishing up..."
+	zip_archive || { cleanup; return 1; }
+}
+
+# Call main
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Always run cleanup at the end
+cleanup

@@ -17,14 +17,23 @@ You must have a copy of the [compatibility version](https://www.stardewvalley.ne
     4. Click on the drop down menu, and select “Compatibility”
     5. Your game should receive an update.
     
-    *On GOG:*
+    *On GOG (Galaxy):*
     
     1. In your games list, right click “Stardew Valley”
     2. Hover over “Manage Installation” and select “Configure”
     3. Click the “Beta Channels” drop down menu and select “Compatability”
-    4. Your game should receive an update.
+    4. Make sure to select latest version under "Auto-updates" section.
+    5. Your game should receive an update.
+  
+    *On GOG (Heroic):*
     
-2. **Install Stardew Valley via PortVaster**
+    1. You will need to do a fresh installation to access the compatibility version
+    2. In your games list, right click “Stardew Valley”
+    3. Click "Install"
+    4. An installer dialog will pop up, click the "Select beta channel" drop down menu and select "compatibility"
+    5. Click "Install"
+    
+2. **Install Stardew Valley via PortMaster**
     1. Open the PortMaster app
     2. Choose All Ports
     3. Navigate to Stardew Valley

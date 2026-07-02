@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 export ESUDO=$ESUDO
@@ -34,9 +35,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Brushfire\ Games
-mkdir -p ~/.local/share/Brushfire\ Games
-ln -sfv "$GAMEDIR/savedata" ~/.local/share/Brushfire\ Games/Shipwreck
+bind_directories ~/.local/share/Brushfire\ Games "$GAMEDIR/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # Custom version of FNA included with patcher- v23, but with VorbisFile-CS added back (from v16)

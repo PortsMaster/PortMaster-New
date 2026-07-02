@@ -2,35 +2,107 @@
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
 LOGFILE="$GAMEDIR/patchlog.txt"
+LOGERR="$GAMEDIR/patchlog_error.txt"
+START_TIME=$(date +%s)
 
 # Redirect output and error to the log file
 exec > >(tee -a "$LOGFILE") 2>&1
 echo "GAMEDIR is set to: $GAMEDIR"
 
+# Patch failure function
+patch_failure() {
+    mv "$LOGFILE" "$LOGERR"
+    $ESUDO umount "$DOTNETDIR"
+    $ESUDO umount "$TOOLKIT"
+    echo "Patching process failed."
+    exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$RUNTIME" || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+# Mount the dotnet runtime
+DOTNETDIR="$HOME/mono"
+DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+if [ -f "$DOTNETFILE" ]; then
+    $ESUDO mkdir -p "$DOTNETDIR"
+    $ESUDO umount "$DOTNETFILE" || true
+    $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+else
+    echo "This port requires the Dotnet runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
 # Exports
+export PATH="$controlfolder:$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+export LD_LIBRARY_PATH="/usr/lib:$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export DATADIR="$GAMEDIR/assets"
 export DATAFILE="game.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
 
-cd "$GAMEDIR"
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"; echo "Cleaned up temporary files." >> "$LOGFILE"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(which python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(which zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+prepare_files() {
+	# Create the savedir
+	mkdir -p $SAVEDIR
+	
+	# Copy files and folders
+	cp "$DATADIR/data.txt" "$SAVEDIR/data.txt"
+	[ -d "$DATADIR/local" ] && cp -r "$DATADIR/local" "$SAVEDIR/"
+	echo "Moved some files..."
+	
+	# Delete files we don't need
+	rm -rf "$DATADIR/Place game files here"
+	echo "Removed unnecessary files..."
+	sleep 1
+}
 
 apply_xdelta() {
-    # Check if the game.unx file exists and apply xdelta
+    # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/game.unx" ]; then
-        output=$(xdelta3 -d -s "$DATADIR/game.unx" -f "./tools/patch/forager.xdelta" "$DATADIR/game.droid" 2>&1)
+        echo "Applying xdelta patch"
+		output=$(xdelta3 -d -s "$DATADIR/game.unx" -f "./tools/forager.xdelta" "$DATADIR/game2.unx" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully"
             echo "$output"
             rm "$DATADIR/game.unx"
+			mv "$DATADIR/game2.unx" "$DATADIR/game.unx"
         else
             echo "Failed to apply patch"
             echo "$output"
@@ -39,60 +111,107 @@ apply_xdelta() {
     else
         echo "No game.unx file found to patch!"
     fi
+	
+	sleep 1
 }
 
-compress_audio() {
-    mkdir -p "$TMPDIR"
+# Externalize game textures with compression
+dump_textures() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Begin texture operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/game.unx" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
 
-    # Run the compression tool
-    PYTHON=$(which python3)
-    echo "Running GMTools on data and audiogroups."
-    $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Texture dumping failed to apply."
+        patch_failure
+    else
+        rm -f "$DATADIR/game.unx"
+        mv "$DATADIR/textures" "$SAVEDIR/textures"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+	
+	sleep 1
+}
 
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        echo "Moved compressed files to $DATADIR."
-        rmdir "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
+compress_audio() {  
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
         echo "Audio compression applied successfully."
     else
-        echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
-        rm -rf "$TMPDIR"
+        # Failure
+        echo "Audio compression failed for game.droid."
+        rm -rf "$TMPDIR"  # Changed from rmdir to handle non-empty dirs
+        patch_failure
     fi
+	
+    sleep 1
+	
+    # Find and compress all .ogg files in the /gamedata directory
+    find "$DATADIR" -type f -name "*.ogg" | while read -r file; do
+    # Create a temporary file for the compressed version
+    temp_file="${file%.ogg}_temp.ogg"
+
+    # Decode the .ogg file and encode it with the specified bitrate
+    "$TOOLKIT/gmtools/oggdec" -o - "$file" | "$TOOLKIT/gmtools/oggenc" -b 64 -o "$temp_file" -
+    if [ $? -eq 0 ]; then
+        # Replace the original file with the compressed version if successful
+        mv "$temp_file" "$file"
+        echo "Compressed: $file to 64 kbps"
+    else
+        echo "Failed to compress: $file" >&2
+        rm -f "$temp_file" # Clean up the temp file in case of error
+    fi
+    done
+
+    echo "All .ogg files have been processed."
+	
+    sleep 1
 }
 
 zip_archive() {
-        zip -r -0 $DATAFILE ./assets/
-        rm -rf ./assets
-        mkdir -p saves
+        zip -r -0 "$DATAFILE" ./assets/
+        echo "Zipped contents to $DATAFILE"
+        rm -rf "$GAMEDIR/assets/"
+		
+		sleep 1
 }
 
-install_complete() {
 # Create install completion flag
-touch "install_completed"
-echo "Installation completed successfully!"
-echo "-----------------------------"
-echo "Process finished at: $(date)"
+install_complete() {
+	touch "install_completed"
+    # Measure time to complete
+	END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    echo "Script completed in $DURATION seconds"
+	echo "Installation completed successfully!"
+	echo "-----------------------------"
+	echo "Process finished at: $(date)"
 }
 
-process_game() {
-    # Delete unnecessary files
-    rm -rf $DATADIR/.gitkeep
-    echo "Removed unnecessary files"
-
-    echo "Applying xdelta patch"
-    apply_xdelta
-    sleep 1
+process_game() { 
+    echo "Preparing game..."
+    prepare_files || patch_failure
+	echo "Patching data.win..."
+	apply_xdelta || patch_failure
+	echo "Externalizing textures..."
+    dump_textures || patch_failure
     echo "Compressing audio..."
-    compress_audio
-    sleep 1
-    echo "Finishing up..."
-    zip_archive
-    sleep 1
-	install_complete
+	compress_audio || patch_failure
+	echo "Finishing up..."
+    zip_archive || patch_failure
+    install_complete
 	sleep 1
+	
+    # Unmount runtimes
+    $ESUDO umount "$DOTNETDIR"
+    $ESUDO umount "$TOOLKIT"
+	
+    # Final completion message
+    echo "Patching process complete!"
 }
 
 # Call the function

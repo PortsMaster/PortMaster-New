@@ -13,8 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/nova_pinball
@@ -31,9 +30,13 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 $ESUDO chmod 666 /dev/uinput
 
-$GPTOKEYB "love" -c "./game.gptk" &
-./love game
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "./game.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN game
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

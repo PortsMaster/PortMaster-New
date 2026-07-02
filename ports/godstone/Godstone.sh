@@ -14,8 +14,6 @@ fi
 
 source $controlfolder/control.txt
 
-export PORT_32BIT="Y"
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -24,12 +22,14 @@ GAMEDIR=/$directory/ports/godstone
 
 # Enable logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 cd "$GAMEDIR"
 
 # Set file permissions
-$ESUDO chmod +x "$GAMEDIR/gmloadernext.armhf"
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
 # Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="Godstone" 
 export PATCHER_TIME="2-5 minutes"
@@ -47,11 +47,9 @@ else
     echo "Patching process already completed. Skipping."
 fi
 
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.armhf:$LD_LIBRARY_PATH"
-
-$GPTOKEYB "gmloadernext.armhf" -c "./godstone.gptk" &
-pm_platform_helper "$GAMEDIR/gmloadernext.armhf"
-./gmloadernext.armhf -c gmloader.json
+./gmloadernext.aarch64 -c gmloader.json
 
 pm_finish

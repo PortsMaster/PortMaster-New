@@ -1,0 +1,269 @@
+#!/bin/bash
+# High-speed xdelta-based LÖVE/exe patcher
+# ==============================================================================
+
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+REPACK_LOVE="$GAMEDIR/arco.love"
+PATCH_FILE="$GAMEDIR/tools/patch/arco.xdelta"
+TARGET_SIZE_KB=38912 # Final size of arco.love in KB
+START_TIME=$(date +%s)
+
+# 101: Setup logging
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
+echo "=== START $(date) ==="
+
+# 201: Locate Source EXE
+DATAFILE_ACTUAL=""
+for f in "$GAMEDIR"/*; do
+    filename=$(basename "$f")
+    # Case-insensitive check for Arco.exe 
+    if [ "$(echo "$filename" | tr '[:upper:]' '[:lower:]')" = "arco.exe" ]; then
+        DATAFILE_ACTUAL="$filename"
+        break
+    fi
+done
+
+if [ -z "$DATAFILE_ACTUAL" ]; then
+    echo "Error: Arco.exe not found in $GAMEDIR" [cite: 10]
+    exit 1
+fi
+
+# 301: Xdelta Application with Progress Tracking
+apply_xdelta() {
+    local src_file="$GAMEDIR/$DATAFILE_ACTUAL"
+    local out_file="$REPACK_LOVE"
+    
+    echo "Applying xdelta patch to create $REPACK_LOVE..."
+    xdeltastart_time=$(date '+%H:%M:%S')
+    echo "[${xdeltastart_time}] Starting xdelta patch process..."
+
+    # Start xdelta in background using $controlfolder path
+    "$controlfolder/xdelta3" -d -s "$src_file" -f "$PATCH_FILE" "$out_file" 2>&1 &
+    xdelta_pid=$!
+    
+    # Monitor progress while xdelta is running
+    while kill -0 $xdelta_pid 2>/dev/null; do
+        sleep 2
+        
+        if [ -f "$out_file" ]; then
+            # Get current size of the growing .love file
+            current_size=$(du -k "$out_file" 2>/dev/null | cut -f1)
+            if [ -n "$current_size" ] && [ "$current_size" -gt 0 ]; then
+                # Calculate percentage with 1 decimal place
+                percentage=$(awk "BEGIN {printf \"%.1f\", ($current_size / $TARGET_SIZE_KB) * 100}")
+                current_time=$(date '+%H:%M:%S')
+                echo "[${current_time}] Progress: ${current_size}KB / ${TARGET_SIZE_KB}KB (${percentage}%)"
+            fi
+        fi
+    done
+    
+    # Wait for completion and check exit status
+    wait $xdelta_pid
+    exit_status=$?
+    
+    if [ $exit_status -eq 0 ]; then
+        completion_time=$(date '+%H:%M:%S')
+        echo "[${completion_time}] Progress: 100.0% - Patch applied successfully."
+    else
+        echo "Error: xdelta3 failed with exit code $exit_status"
+        exit 1
+    fi
+}
+
+# 302: Modify conf.lua with display resolution
+modify_conf_lua() {
+    local love_file="$REPACK_LOVE"
+    local temp_dir="$GAMEDIR/temp_extract"
+    
+    echo "Modifying conf.lua with display resolution..."
+    
+    # Create temp directory
+    mkdir -p "$temp_dir"
+    
+    # Extract conf.lua from arco.love
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" conf.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/conf.lua" ]; then
+        echo "Error: conf.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Apply sed replacements
+    sed -i "s/t\.window\.width = 960/t.window.width = ${DISPLAY_WIDTH}/" "$temp_dir/conf.lua"
+    sed -i "s/t\.window\.height = 540/t.window.height = ${DISPLAY_HEIGHT}/" "$temp_dir/conf.lua"
+    
+    echo "Updated resolution to ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
+    
+    # Update the archive with modified conf.lua
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" "$temp_dir/conf.lua" -y > /dev/null
+    
+    # Cleanup temp directory
+    rm -rf "$temp_dir"
+    
+    echo "conf.lua updated successfully..."
+}
+
+# 303: Modify display.lua with display resolution
+modify_display_lua() {
+    local love_file="$REPACK_LOVE"
+    local temp_dir="$GAMEDIR/temp_extract"
+    
+    echo "Modifying display.lua with custom resolution..."
+    
+    mkdir -p "$temp_dir"
+    
+    # Extract display.lua from arco.love
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" src/display.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/display.lua" ]; then
+        echo "Error: display.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Calculate height for 9/16 aspect ratio
+    CALCULATED_HEIGHT=$(awk "BEGIN {printf \"%.0f\", $DISPLAY_WIDTH * 9 / 16}")
+    
+    # Determine scale values based on display width
+    if [ "$DISPLAY_WIDTH" -eq 480 ]; then
+        JOURNEY_SCALE="1.5"
+        COMBAT_SCALE="1.5"
+    else
+        JOURNEY_SCALE="2"
+        COMBAT_SCALE="2"
+    fi
+    
+    # Find line number of "display.target_resolution = table.back"
+    LINE_NUM=$(grep -n "^display\.target_resolution = table\.back" "$temp_dir/display.lua" | cut -d: -f1)
+    
+    if [ -z "$LINE_NUM" ]; then
+        echo "Error: Could not find display.target_resolution line"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Get everything up to 2 lines before display.target_resolution
+    head -n $((LINE_NUM - 2)) "$temp_dir/display.lua" > "$temp_dir/part1.txt"
+    
+    # Remove the last line (which is the closing })
+    head -n -1 "$temp_dir/part1.txt" > "$temp_dir/part1_trimmed.txt"
+    
+    # Add the new resolution entry and closing brace
+    cat >> "$temp_dir/part1_trimmed.txt" << 'EOF'
+	{
+		size = vec2($DISPLAY_WIDTH, $CALCULATED_HEIGHT),
+		scale = {
+			journey = $JOURNEY_SCALE,
+			combat = $COMBAT_SCALE,
+		},
+	},
+}
+EOF
+    
+    # Replace variables
+    sed -i "s/\$DISPLAY_WIDTH/$DISPLAY_WIDTH/g" "$temp_dir/part1_trimmed.txt"
+    sed -i "s/\$CALCULATED_HEIGHT/$CALCULATED_HEIGHT/g" "$temp_dir/part1_trimmed.txt"
+    sed -i "s/\$JOURNEY_SCALE/$JOURNEY_SCALE/g" "$temp_dir/part1_trimmed.txt"
+    sed -i "s/\$COMBAT_SCALE/$COMBAT_SCALE/g" "$temp_dir/part1_trimmed.txt"
+    
+    # Add blank line then the rest of the file
+    echo "" >> "$temp_dir/part1_trimmed.txt"
+    tail -n +$LINE_NUM "$temp_dir/display.lua" >> "$temp_dir/part1_trimmed.txt"
+    
+    # Replace original
+    mv "$temp_dir/part1_trimmed.txt" "$temp_dir/display.lua"
+    rm -f "$temp_dir/part1.txt"
+    
+    echo "Added custom resolution ${DISPLAY_WIDTH}x${CALCULATED_HEIGHT} (journey: ${JOURNEY_SCALE}, combat: ${COMBAT_SCALE}) to display.lua"
+    
+    # Need to recreate the directory structure for 7zzs to update correctly
+    mkdir -p "$temp_dir/src"
+    mv "$temp_dir/display.lua" "$temp_dir/src/display.lua"
+    
+    # Update the archive with correct path structure
+    cd "$temp_dir"
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" src/display.lua -y > /dev/null
+    cd "$GAMEDIR"
+    
+    rm -rf "$temp_dir"
+    echo "display.lua updated successfully"
+}
+
+# 304: Modify gamepad.lua for D-pad emulation
+modify_gamepad_lua() {
+    # Only proceed if analog sticks are disabled
+    if [ "$DPADPATCH" = "true" ]; then
+        echo "Applying D-pad toggle patch..."
+    else
+        echo "Skipping D-pad toggle patch..."
+        return 0
+    fi
+    
+    local love_file="$REPACK_LOVE"
+    local temp_dir="$GAMEDIR/temp_extract"
+    local gamepad_patch="$GAMEDIR/tools/patch/gamepad.xdelta"
+    
+    echo "Applying D-pad emulation patch to gamepad.lua..."
+    
+    # Check if patch file exists
+    if [ ! -f "$gamepad_patch" ]; then
+        echo "Error: gamepad.xdelta not found at $gamepad_patch"
+        exit 1
+    fi
+    
+    mkdir -p "$temp_dir"
+    
+    # Extract gamepad.lua from arco.love (preserves directory structure)
+    "$controlfolder/7zzs.$DEVICE_ARCH" e "$love_file" -o"$temp_dir" lib/ferris/input/gamepad.lua -y > /dev/null
+    
+    if [ ! -f "$temp_dir/gamepad.lua" ]; then
+        echo "Error: gamepad.lua not found in arco.love"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Apply xdelta patch to gamepad.lua
+    "$controlfolder/xdelta3" -d -s "$temp_dir/gamepad.lua" "$gamepad_patch" "$temp_dir/gamepad_patched.lua"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to apply gamepad.xdelta patch"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Recreate directory structure and move patched file
+    mkdir -p "$temp_dir/lib/ferris/input"
+    mv "$temp_dir/gamepad_patched.lua" "$temp_dir/lib/ferris/input/gamepad.lua"
+    rm -f "$temp_dir/gamepad.lua"
+    
+    echo "D-pad to L-stick emulation patch applied successfully"
+    
+    # Update the archive with the patched file
+    cd "$temp_dir"
+    "$controlfolder/7zzs.$DEVICE_ARCH" u "$love_file" lib/ferris/input/gamepad.lua -y > /dev/null
+    cd "$GAMEDIR"
+    
+    rm -rf "$temp_dir"
+    echo "gamepad.lua updated successfully"
+}
+
+# 401 Execute Patch
+apply_xdelta
+modify_conf_lua
+modify_display_lua
+modify_gamepad_lua
+
+# 501: Cleanup
+echo "Cleaning up source files..."
+rm "$GAMEDIR/$DATAFILE_ACTUAL"
+[ -f "$GAMEDIR/Place arco.exe here.txt" ] && rm "$GAMEDIR/Place arco.exe here.txt"
+
+# 601: Execution Summary
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+echo "-----------------------------------"
+echo "Process Complete in $DURATION seconds"
+echo "Final File: $REPACK_LOVE"
+echo "=== END $(date) ==="

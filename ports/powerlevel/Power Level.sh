@@ -13,39 +13,57 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
+# Variables
+GAMEDIR="/$directory/ports/powerlevel"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+TOOLDIR="$GAMEDIR/tools"
+SAVEDIR="$GAMEDIR/saves"
 
-GAMEDIR=/$directory/ports/powerlevel
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# CD and set permissions
+cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
+
+# Extract the contents of Power Level v1.2.zip
+if [ -f "./assets/Power Level v1.2.zip" ]; then
+    $controlfolder/7zzs.${DEVICE_ARCH} x "./assets/Power Level v1.2.zip" -o./assets
+    rm -f "./assets/Power Level v1.2.zip" \
+          "./assets/place Power Level v1.2.zip here"
 fi
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+    mkdir -p "$SAVEDIR"
+    # Copy Directories and Files
+    [ -d "./assets/Fonts" ] && cp -r "./assets/Fonts" "$SAVEDIR/"
+    # Apply a patch
+    $controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" "$TOOLDIR/powerlevel.xdelta" "$GAMEDIR/assets/game.droid"
+    # Delete all redundant files
+    rm -f assets/*.{exe,dll}
+    # Zip all game files into the game.port
+    zip -r -0 ./game.port ./assets/
+    rm -Rf ./assets/
+fi
 
-cd $GAMEDIR
+# Display loading splash
+if [ ! -d ./assets ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "powerlevel.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c ./powerlevel.gptk &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader powerlevel.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish

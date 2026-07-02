@@ -13,27 +13,31 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/geometrystrike"
 
 export XDG_DATA_HOME="$GAMEDIR/conf" # allowing saving to the same path as the game
 export XDG_CONFIG_HOME="$GAMEDIR/conf"
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 
 mkdir -p "$XDG_DATA_HOME"
 mkdir -p "$XDG_CONFIG_HOME"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+# Enable logging
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
 LAUNCH_FILE="geometrystrike.love"
 
-$GPTOKEYB "love" -c "geometrystrike.gptk" &
-./bin/love "$LAUNCH_FILE"
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "geometrystrike.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN "$LAUNCH_FILE"
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

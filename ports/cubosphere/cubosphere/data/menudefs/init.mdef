@@ -1,0 +1,343 @@
+USING("FILESYS");
+
+--Adjust this value for good sound
+SOUND_BUFFER_SIZE=1024;
+withsound=1;
+
+--Write logfile? (Can also be invoked by staring with arg -log)
+logmode=0;
+
+--Use this to initialize some stuff
+--GLOBAL_SetVar("NumLevels",300); --NumLevels not used anymore
+
+--Desired Mod
+desiredmod="";
+
+
+editlevel="";
+userlevel="";
+userepisode="";
+
+
+function StartUserLevel(lev)
+   GLOBAL_SetVar("EditorMode",0);
+   GLOBAL_SetVar("StartUserLevel",lev);
+   GLOBAL_SetVar("TotalScore",0);
+   GLOBAL_SetVar("CurrentLevelNum",0);
+   GLOBAL_SetVar("SaveGameProtectScore",0);
+   MENU_Load("startgame");
+end;
+
+function StartEditor(ulevel)
+   GLOBAL_SetVar("Editor_LoadLevel",ulevel);
+   GLOBAL_SetVar("Editor_Filename",ulevel)
+   MENU_Load("editorstart");
+end;
+
+function InitSound()
+--  local res=SOUND_Init(44100,16,2,4096);
+   local res=SOUND_Init(22050,16,2,SOUND_BUFFER_SIZE);
+   
+ print("Initializing Sound returns "..res);
+ GLOBAL_SetVar("SoundInitialized",res);
+
+ 
+ local mus=SOUND_LoadMusic(GLOBAL_GetVar("MusicTrack"));
+ SOUND_PlayMusic(mus);
+
+ SOUND_SetVolume(GLOBAL_GetVar("SoundVolume"));
+ SOUND_SetMusicVolume(GLOBAL_GetVar("MusicVolume"));
+end;
+
+
+
+function ParseCmdLine()
+  --print("COMMANDLINE");
+  for i=0,ARGS_Count()-1,1 do
+   local key=ARGS_Key(i);
+   local var=ARGS_Val(i);
+   if key=="episode" then
+     userepisode=var;
+   elseif key=="edit" then
+     editlevel=var;
+   elseif key=="userlevel" then
+     userlevel=var;
+   elseif key=="nosound" then
+     withsound=0;
+   elseif key=="speed" then
+     if 0+var<0.25 then
+        var=0.25;
+        print("Move speed clamped to 0.25");
+     elseif 0+var>1.5 then
+        print("Move speed clamped to 1.50");
+        var=1.5;
+     end;
+     GLOBAL_SetVar("MoveSpeedMultiply",0+var);
+   elseif key=="lang" then
+     GLOBAL_SetVar("Language",var);
+   elseif key=="loop" then  
+     GAME_SetGameLoopSource(var); -- This allows you to set a game loop source file
+   elseif key=="verbose" then
+     if var=="" then 
+        LOG_SetVerboseMode(1);
+     else
+        LOG_SetVerboseMode(var);
+     end;
+   end;
+
+  end;
+  return 0;
+end;
+
+function BuildNewConfig()
+ --Find a good video mode... should be small at best and using hardware
+ hw=1;
+ DEVICE_SetHWRender(true)
+ nummodes=DEVICE_GetVideoModes(1,0);
+ if (nummodes==0) then
+   hw=0;
+   DEVICE_SetHWRender(false)
+   nummodes=DEVICE_GetVideoModes(0,0);
+   if (nummodes==0) then
+     print("found no valid video modes! -> EXIT");
+     GLOBAL_Quit();
+   end;
+ end;
+ --Select the smallest one
+ minw=100000;
+ minind=-1;
+ for i=1,nummodes,1 do
+  local w=DEVICE_GetVideoWidths(i-1);
+  if w<=minw then
+   minind=i;
+   minw=w;
+  end;
+ end;
+ GLOBAL_SetVar("HardwareActive",hw);
+ GLOBAL_SetVar("ScreenWidth",DEVICE_GetVideoWidths(minind-1));
+ GLOBAL_SetVar("ScreenHeight",DEVICE_GetVideoHeights(minind-1));
+ GLOBAL_SetVar("Language","english");
+
+ --And write the cfg
+ INCLUDE("/include/writecfg.inc");
+ GLOBAL_SetVar("FirstRun",1);
+ MENU_Load("language");
+end;
+
+function Precache()
+  --PLEASE USE THE FOLLOWING BLOCK UNCHANGED IN YOUR MODIFICATION
+  local function SetKey(name, key)
+	  GLOBAL_SetVar("Key_"..name, KEYB_GetKeyConst(key));
+  end
+  if MOD_GetName()=="" then
+    if desiredmod~="" then
+      MOD_SetName(desiredmod);
+      
+    end;
+  end;
+
+  GLOBAL_SetVar("FirstRun",0);
+  GLOBAL_SetVar("TotalScore",0);
+
+  GLOBAL_SetVar("ScreenWidth",640);
+  GLOBAL_SetVar("ScreenHeight",480);
+  --Default config
+  GLOBAL_SetVar("ShadersActive",0); 
+  GLOBAL_SetVar("ShowFPS",0); 
+  GLOBAL_SetVar("FullScreenActive",0);
+  GLOBAL_SetVar("TextureSize",1);
+  GLOBAL_SetVar("HardwareActive",1);
+  GLOBAL_SetVar("SoundVolume",100);
+  GLOBAL_SetVar("MusicVolume",100);
+
+  SetKey("Forward", "Up")
+  SetKey("Left", "Left")
+  SetKey("Right", "Right")
+  SetKey("Jump", "Space")
+  SetKey("LookUp", "W")
+  SetKey("LookDown", "S")
+  SetKey("Special", "Return")
+
+  GLOBAL_SetVar("Key_Forward_p2",-1);
+  GLOBAL_SetVar("Key_Left_p2",-1);
+  GLOBAL_SetVar("Key_Right_p2",-1);
+  GLOBAL_SetVar("Key_Jump_p2",-1);
+  GLOBAL_SetVar("Key_Special_p2",-1);
+  GLOBAL_SetVar("Key_LookUp_p2",-1);
+  GLOBAL_SetVar("Key_LookDown_p2",-1);
+
+  GLOBAL_SetVar("Joy_Forward","0,-1,1");
+  GLOBAL_SetVar("Joy_Backward","0,1,1");  
+  GLOBAL_SetVar("Joy_Left","0,-1,0");
+  GLOBAL_SetVar("Joy_Right","0,1,0");
+  GLOBAL_SetVar("Joy_Jump","0,0,1");
+  GLOBAL_SetVar("Joy_Cancel","0,0,2");
+  GLOBAL_SetVar("Joy_LookUp","0,0,3");
+  GLOBAL_SetVar("Joy_LookDown","0,0,4");
+  GLOBAL_SetVar("Joy_Special","0,0,5");
+
+
+  GLOBAL_SetVar("Joy_Forward_p2",-1);
+  GLOBAL_SetVar("Joy_Backward_p2",-1);  
+  GLOBAL_SetVar("Joy_Left_p2",-1);
+  GLOBAL_SetVar("Joy_Right_p2",-1);
+  GLOBAL_SetVar("Joy_Jump_p2",-1);
+  GLOBAL_SetVar("Joy_Cancel_p2",-1);
+  GLOBAL_SetVar("Joy_LookUp_p2",-1);
+  GLOBAL_SetVar("Joy_LookDown_p2",-1);
+  GLOBAL_SetVar("Joy_Special_p2",-1);
+
+
+
+  GLOBAL_SetVar("ViewAutoReset",1);
+  GLOBAL_SetVar("ViewAutoReset_p2",1);
+  GLOBAL_SetVar("HighQualityModels",1); --Which models should be used? HQ (George) or normal
+
+  GLOBAL_SetVar("Editor_Changed",0);
+  GLOBAL_SetVar("ThemeOverride","");
+  GLOBAL_SetVar("StartTime",60);
+  GLOBAL_SetVar("MaxTime",60);
+  GLOBAL_SetVar("RenderingPrevPic",0);
+  GLOBAL_SetVar("InsideTutorial",0);
+  GLOBAL_SetVar("DeveloperMode",0);
+
+  GLOBAL_SetVar("MoveSpeedMultiply",1);
+
+  GLOBAL_SetVar("Language","english");
+  TRANS_Load(GLOBAL_GetVar("Language"));
+
+  GLOBAL_SetVar("MusicTrack","Ziggurat");
+
+  GLOBAL_SetVar("InGame",0);
+  GLOBAL_SetVar("FinalUnlocked",0);
+
+  GLOBAL_SetVar("ExploreMode",0);
+  GLOBAL_SetVar("MainEpisode","main_episode");
+  GLOBAL_SetVar("TwoPlayerEpisode","two_player");
+  GLOBAL_SetVar("TwoPlayers",0);
+  GLOBAL_SetVar("ControlsForPlayer",1);
+  GLOBAL_SetVar("LoadESCMenu","classicmode");
+
+   GLOBAL_SetVar("UseParticles",1);
+   GLOBAL_SetVar("PostEffect","");
+   GLOBAL_SetVar("FlushOrFinishBeforeSwap",0);
+
+ GLOBAL_SetVar("SaveGameProtectScore",0);
+ GLOBAL_SetVar("LastLevelIndexInEpisode",-1);
+
+GLOBAL_SetVar("FSAA",1);
+
+  GLOBAL_SetMaxElapsed(1.0/30.0); -- Means at least 30 FPS for Physical Calculations -- Otherwise there are more Phys. Calcs. done each Frame
+  GLOBAL_SetMinFrames(10); -- Means at least 15 FPS  -- Otherwise the game is slowed down
+  
+  confdir="/user/";
+ 
+
+  cfg=CONFIG_Load(confdir.."config.cdef");
+  if cfg==0 then
+      print(" >Cannot find any configuration!");
+      BuildNewConfig();
+  else 
+    print(" >config loaded");
+  end;
+
+  GAME_SetFlushOrFinishBeforeSwap(GLOBAL_GetVar("FlushOrFinishBeforeSwap"));
+
+  local scores=SCORE_Load(confdir.."scores.cdef");
+  if scores==0 then
+     SCORE_SetVar("level001",-1);
+     INCLUDEABSOLUTE("/menudefs/include/writescores.inc");
+     print(" >new scores created");
+   else 
+    print(" >scores loaded");
+  end;
+  --LEVEL_Load("level001"); 
+
+  
+  DEVICE_SetAntiAliasing(1);
+  local hasAA=DEVICE_Init(GLOBAL_GetVar("ScreenWidth"),GLOBAL_GetVar("ScreenHeight"),GLOBAL_GetVar("HardwareActive"),GLOBAL_GetVar("FullScreenActive"));
+  GLOBAL_SetVar("FSAA_Supported",hasAA);
+
+  res=hasAA;
+
+  if hasAA==1 then
+      print("   > Anti-Aliasing supported");
+  end;
+
+  if hasAA==0 then
+    GLOBAL_SetVar("FSAA",0);
+    DEVICE_SetAntiAliasing(0);
+    print("   > Anti-Aliasing not supported");
+    res=DEVICE_Init(GLOBAL_GetVar("ScreenWidth"),GLOBAL_GetVar("ScreenHeight"),GLOBAL_GetVar("HardwareActive"),GLOBAL_GetVar("FullScreenActive"));
+  elseif GLOBAL_GetVar("FSAA")==0 then
+    DEVICE_SetAntiAliasing(0);
+    res=DEVICE_Update(GLOBAL_GetVar("ScreenWidth"),GLOBAL_GetVar("ScreenHeight"),GLOBAL_GetVar("HardwareActive"),GLOBAL_GetVar("FullScreenActive"));
+  end;
+
+
+  if res==0 then
+   print(">Failed to create an OpenGL context");
+   GLOBAL_Quit();
+   return;
+  end;
+
+  print(">OpenGL Initialized");
+  
+  if DEVICE_HasGLSL()>0 then
+    print("  >GLSL should be supported");
+     if GLOBAL_GetVar("FirstRun")==1 then
+       GLOBAL_SetVar("ShadersActive",1); 
+       GLOBAL_SetVar("TextureSize",3);
+        INCLUDE("/include/writecfg.inc");
+     end;
+  else
+    print("  >GLSL not supported > Shaders disabled");
+      GLOBAL_SetVar("ShadersActive",0); 
+  end;
+
+  local maxsize=math.pow(2,GLOBAL_GetVar("TextureSize")+7)
+  TEXTURE_SetMaxSize(maxsize);
+  print("Max. Texture Size set to "..maxsize);
+
+  
+  --Parsing the command line
+
+    THEME_Load("egypt");
+
+  ParseCmdLine();
+  if userepisode~="" then
+    if FILESYS_FileExists("/levels/"..userepisode..".epi")==0 then
+       print(">Cannot find user episode: ".."/levels/"..userepisode..".epi");
+       GLOBAL_Quit();
+      return;
+    end;
+    GLOBAL_SetVar("MainEpisode",userepisode);
+  end;
+  GLOBAL_SetVar("CurrentEpisode",GLOBAL_GetVar("MainEpisode"));
+  
+  TRANS_Load(GLOBAL_GetVar("Language"));
+
+  if withsound==1 then
+    InitSound();
+  end;
+  
+
+  if GLOBAL_GetVar("FirstRun")==1 then
+   return;
+  end;
+
+  if editlevel=="" then
+    if userlevel=="" then
+      MENU_Load("main");
+    else
+      StartUserLevel(userlevel);
+    end;
+  else
+    StartEditor(editlevel);
+  end;
+end;
+
+function Think()
+ --MENU_Deactivate();
+ --LEVEL_Activate();  
+end;

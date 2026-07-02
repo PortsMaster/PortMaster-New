@@ -5,6 +5,10 @@ Everything is included and ready to run.
 Thanks to the [Upperland](https://rockbot.upperland.net/?page_id=301) team for Rockbot and RockDroid!
 Thanks to Slayer366 for porting this game to PortMaster!
 
+Versions downloaded from Upperland:
+1.2.74   for RockBot   (Version Number is 2.0.0b70 in file/version.h and 1.20.074 in archive name)
+2.01.067 for RockDroid (Version Number is 2.01.065 in file/version.h and 2.01.067 in archive name)
+
 </br>
 
 ## Controls

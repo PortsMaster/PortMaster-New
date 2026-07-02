@@ -13,51 +13,47 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
+# Variables
+GAMEDIR="/$directory/ports/flywrench"
+SAVEDIR="$GAMEDIR/saves"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
+PATCHDIR="$GAMEDIR/patch"
 
-GAMEDIR=/$directory/ports/flywrench
-
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+# Exports
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-cd $GAMEDIR
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
-# pack audio into apk if not done yet
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mkdir ./assets
-    mv ./gamedata/*.ogg ./assets/
-    echo "Moved .ogg files from ./gamedata to ./assets/"
-
-    # Zip the contents of ./breaker.apk including the new .ogg files
-    zip -r -0 ./flywrench.apk ./assets/
-    echo "Zipped contents to ./flywrench.apk"
-    rm -Rf "$GAMEDIR/assets/"
-
-    # cleanup if extra files were copied in from steam
-    rm -Rf $GAMEDIR/gamedata/FlywrenchStudio.exe
+# Prepare game files
+if [ -f ./assets/data.win ]; then
+	# Make a savedir
+	mkdir -p "$SAVEDIR"
+	# Copy Directories and Files
+	[ -d "$DATADIR/readOnlyFiles" ] && cp -r "$DATADIR/readOnlyFiles" "$SAVEDIR/"
+	[ -d "$DATADIR/themes" ] && cp -r "$DATADIR/themes" "$SAVEDIR/"
+	cp "$DATADIR/"*txt "$SAVEDIR/"
+	# Apply a patch
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" "$PATCHDIR/flywrench.xdelta" "$GAMEDIR/assets/game.droid"
+	# Delete all redundant files
+	rm -f assets/*.{exe,dll,,win}
+	# Zip all game files into the game.port
+	zip -r -0 ./game.port ./assets/
+	rm -Rf ./assets/
 fi
 
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.unx" ] && mv gamedata/game.win gamedata/game.droid
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "flywrench.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" -c ./flywrench.gptk &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader flywrench.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish

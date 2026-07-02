@@ -7,10 +7,11 @@ A thanks goes out to [Pond Games](https://pond.games/) for making this incredibl
 ## Controls
 
 | Button | Action |
-|--|--| 
-|A|Jump|
+|--|--|
+|D-pad/L-stick|Movment|
+|South|Jump|
 |L1/R1|Jump|
-|Y|Reset|
+|North|Reset|
 |Start/Select|Pause/Menu|
 
 

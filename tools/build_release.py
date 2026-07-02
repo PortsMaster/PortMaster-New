@@ -1171,6 +1171,13 @@ def main(argv):
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
 
+    # Copy across runtimes.zip files to the new_manifest structure
+    for manifest_item, manifest_value in old_manifest.items():
+        if not (manifest_item.startswith('runtimes.') and manifest_item.endswith('.zip')):
+            continue
+
+        new_manifest[manifest_item] = manifest_value
+
     if STATUS_FILE.is_file():
         with open(STATUS_FILE, 'r') as fh:
             port_status = json.load(fh)

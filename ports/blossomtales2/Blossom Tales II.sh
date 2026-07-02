@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR="/$directory/ports/blossomtales2"
@@ -33,17 +34,12 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir linux
-$ESUDO rm -rf ~/.local/share/Blossom\ Tales\ 2
-mkdir -p ~/.local/share
 mkdir -p "$GAMEDIR/savedata/linux"
-ln -sfv "$GAMEDIR/savedata/linux" ~/.local/share/Blossom\ Tales\ 2
-
+bind_directories ~/.local/share/Blossom\ Tales\ 2 "$GAMEDIR/savedata/linux"
 
 # Setup savedir windows
-$ESUDO rm -rf ~/.config/Blossom\ Tales\ 2
-mkdir -p ~/.config
 mkdir -p "$GAMEDIR/savedata/windows"
-ln -sfv "$GAMEDIR/savedata/windows" ~/.config/Blossom\ Tales\ 2
+bind_directories ~/.config/Blossom\ Tales\ 2 "$GAMEDIR/savedata/windows"
 
 
 

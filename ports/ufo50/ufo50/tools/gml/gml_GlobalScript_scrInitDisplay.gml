@@ -1,0 +1,78 @@
+function scrInitDisplay()
+{
+    display_reset(0, true);
+    surface_depth_disable(true);
+    global.windowHasFocus = window_has_focus();
+    global.scaleMax = 1;
+    global.scaleFill = min(display_get_width() / 384, display_get_height() / 216);
+    global.DEFAULT_SCALE = 1;
+    scrSetDisplayDefaults(true);
+    global.scale = 1;
+    global.canDoShaders = shaders_are_supported();
+    instance_create_depth(-32, -32, 0, oScreenHandler);
+    window_set_size(384 * global.scale, 216 * global.scale);
+
+    if (!window_get_fullscreen())
+        window_center();
+
+    scrDefinePalette();
+    texturegroup_set_mode(true, false, sBlank);
+    global.TEXTUREGROUP = array_create(53);
+    global.TEXTUREGROUP[0] = "texturegroup00_library";
+    global.TEXTUREGROUP[1] = "texturegroup01";
+    global.TEXTUREGROUP[2] = "texturegroup02";
+    global.TEXTUREGROUP[3] = "texturegroup03";
+    global.TEXTUREGROUP[4] = "texturegroup04";
+    global.TEXTUREGROUP[5] = "texturegroup05";
+    global.TEXTUREGROUP[6] = "texturegroup06";
+    global.TEXTUREGROUP[7] = "texturegroup07";
+    global.TEXTUREGROUP[8] = "texturegroup08";
+    global.TEXTUREGROUP[9] = "texturegroup09";
+    global.TEXTUREGROUP[10] = "texturegroup10";
+    global.TEXTUREGROUP[11] = "texturegroup11";
+    global.TEXTUREGROUP[12] = "texturegroup12";
+    global.TEXTUREGROUP[13] = "texturegroup13";
+    global.TEXTUREGROUP[14] = "texturegroup14";
+    global.TEXTUREGROUP[15] = "texturegroup15";
+    global.TEXTUREGROUP[16] = "texturegroup16";
+    global.TEXTUREGROUP[17] = "texturegroup17";
+    global.TEXTUREGROUP[18] = "texturegroup18";
+    global.TEXTUREGROUP[19] = "texturegroup19";
+    global.TEXTUREGROUP[20] = "texturegroup20";
+    global.TEXTUREGROUP[21] = "texturegroup21";
+    global.TEXTUREGROUP[22] = "texturegroup22";
+    global.TEXTUREGROUP[23] = "texturegroup23";
+    global.TEXTUREGROUP[24] = "texturegroup24";
+    global.TEXTUREGROUP[25] = "texturegroup25";
+    global.TEXTUREGROUP[26] = "texturegroup26";
+    global.TEXTUREGROUP[27] = "texturegroup27";
+    global.TEXTUREGROUP[28] = "texturegroup28";
+    global.TEXTUREGROUP[29] = "texturegroup29";
+    global.TEXTUREGROUP[30] = "texturegroup30";
+    global.TEXTUREGROUP[31] = "texturegroup31";
+    global.TEXTUREGROUP[32] = "texturegroup32";
+    global.TEXTUREGROUP[33] = "texturegroup33";
+    global.TEXTUREGROUP[34] = "texturegroup34";
+    global.TEXTUREGROUP[35] = "texturegroup35";
+    global.TEXTUREGROUP[36] = "texturegroup36";
+    global.TEXTUREGROUP[37] = "texturegroup37";
+    global.TEXTUREGROUP[38] = "texturegroup38";
+    global.TEXTUREGROUP[39] = "texturegroup39";
+    global.TEXTUREGROUP[40] = "texturegroup40";
+    global.TEXTUREGROUP[41] = "texturegroup41";
+    global.TEXTUREGROUP[42] = "texturegroup42";
+    global.TEXTUREGROUP[43] = "texturegroup43";
+    global.TEXTUREGROUP[44] = "texturegroup44";
+    global.TEXTUREGROUP[45] = "texturegroup45";
+    global.TEXTUREGROUP[46] = "texturegroup46";
+    global.TEXTUREGROUP[47] = "texturegroup47";
+    global.TEXTUREGROUP[48] = "texturegroup48";
+    global.TEXTUREGROUP[49] = "texturegroup49";
+    global.TEXTUREGROUP[50] = "texturegroup50";
+    global.TEXTUREGROUP[51] = "texturegroup51";
+    global.TEXTUREGROUP[52] = "texturegroup00_intro";
+    texturegroup_load("texturegroup00_shared", true);
+    texturegroup_load(global.TEXTUREGROUP[0], true);
+    texturegroup_load(global.TEXTUREGROUP[52], true);
+    return true;
+}

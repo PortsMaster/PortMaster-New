@@ -4,6 +4,8 @@ Special thanks to [Pug Fugly Games](https://x.com/pugfuglygames) for making this
 
 Source: https://store.steampowered.com/app/1124990/Destructivator_2/
 
+Thanks to Jeod for gmtoolkit and Johnny On Flame for gmloader.next!
+
 ## Controls
 
 | Button | Action |

@@ -30,6 +30,7 @@ to_lower_case() {
     done
 }
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 PORTDIR="/$directory/ports/fallout1"

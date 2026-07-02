@@ -35,14 +35,14 @@ Filelist for full versions:
 The included pilot file is tailored to retro handhelds with a combination of joystick and gptokeyb controls, since the port does not use `gamecontrollerdb.txt`. The launchscript selects this pilot file by default, 
 but you can modify the name by opening the file in a text editor.
 
-You can modify game options in `d3.ini` or ingame using buttons--R1 to scroll options, START to confirm.
+You can modify game options in `settings.json` or ingame using buttons--R1 to scroll options, START to confirm.
 
-If you need to invert joystick axis, open `descent3/config/joy.gptk` and change the line `r1_hk = f8` to `r1_hk = /`. Save the file and open the game, and in the config options you can use `HOTKEY + R1` to open the invert dialog. If you don't care about the ship log, you can keep things this way, otherwise change `joy.gptk` again after you're done.
+If you need to invert joystick axis, open `descent3/config/joy.gptk` and change the line `r1_hk = f8` to `r1_hk = /`. If you don't care about the ship log, you can keep things this way, otherwise change `joy.gptk` again after you're done. Save the file, open the game, and go to the config options. Open the joystick config and use `HOTKEY + L1` to navigate to the axis you wish to invert. Use `HOTKEY + R1` to open the invert dialog, and use `HOTKEY + L1` to get to the toggles. To save, use `L3` to get back to the OK button.
 
 ## Multiplayer
-You can play multiplayer via PXO. Go to https://pxo.nottheeye.com and register an account, then validate your email. Then, on the account details page, copy your game credentials and paste into `d3.ini`. When you start Descent 3 and try to connect to PXO, your login detals will be filled automatically and you can just press `Start` to log in. Now you can host or join games!
+You can play multiplayer via PXO. Go to https://pxo.nottheeye.com and register an account, then validate your email. Then, on the account details page, copy your game credentials and paste into `settings.json`. When you start Descent 3 and try to connect to PXO, your login detals will be filled automatically and you can just press `Start` to log in. Now you can host or join games!
 
-You can also play multiplayer via Direct TCP-IP. In `d3.ini`, specify an IP address to connect to. Then, load your game, choose the Direct TCP-IP multiplayer protocol, and it will be prefilled for you.
+You can also play multiplayer via Direct TCP-IP. In `settings.json`, specify an IP address to connect to. Then, load your game, choose the Direct TCP-IP multiplayer protocol, and it will be prefilled for you.
 
 ## Default Gameplay Controls
 You can use the `D-PAD` buttons in menus to select items and scroll pages.

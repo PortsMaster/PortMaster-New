@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 export ESUDO=$ESUDO
@@ -36,9 +37,8 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/Tribute\ Games/PanzerPaladin
-mkdir -p ~/.local/share/Tribute\ Games/
-ln -sfv "$gamedir/savedata" ~/.local/share/Tribute\ Games/PanzerPaladin
+
+bind_directories ~/.local/share/Tribute\ Games/PanzerPaladin "$gamedir/savedata"
 
 rm -f mscorlib.dll FNA.dll Mono.*.dll
 

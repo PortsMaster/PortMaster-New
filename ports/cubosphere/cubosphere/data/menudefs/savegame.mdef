@@ -1,0 +1,203 @@
+menuname="savegame";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.03;
+
+logoactive=0;
+
+darkbg=-1;
+
+numblockdefs=-1;
+
+theFinal=GLOBAL_GetVar("InsideFinal");
+
+
+
+
+
+EpisodeLevelCount=0;
+
+function AddSingleLevel(ln)
+        EpisodeLevelCount=EpisodeLevelCount+1;
+end;
+
+function AddEpisodePart(fold,tn)
+   local numulvl=FILESYS_StartListDirectory("/levels/"..fold.."/",true,false,false,false,".*\\.ldef"); 
+   EpisodeLevelCount=EpisodeLevelCount+numulvl;
+end;
+
+
+
+
+LastEpisode="";
+
+LOAD_EPISODE=GLOBAL_GetVar("CurrentEpisode");
+
+function GetNumLevels(epi)
+ if epi==LastEpisode then 
+   return NumLevels;
+ end;
+
+ EpisodeLevelCount=0;
+ INCLUDEABSOLUTE("/levels/"..epi..".epi");
+ LastEpisode=epi;
+ return EpisodeLevelCount;
+end;
+
+
+NumLevels=GetNumLevels(LOAD_EPISODE);
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ local cind=1;
+ 
+
+
+ local numsvs=FILESYS_StartListDirectory("/user/saves/"..GLOBAL_GetVar("CurrentEpisode").."/",true,false,false,false,".*\\.lua"); 
+ local fnames={};
+  for index = 0, numsvs-1, 1 do
+    fnames[index] = FILESYS_GetListDirectoryEntry(index):match('^(.+)%..-$')
+  end;
+
+
+if theFinal==0 then
+ for index = 1, 4, 1 do
+   Entries[index]=TRANS_Str("loadgame:slot")..(index);
+   Hints[index]=TRANS_Str("loadgame:empty");     
+ end;
+
+ for index = 0, numsvs-1, 1 do
+   local fname=fnames[index]
+   if fname=="0" or fname=="1" or fname=="2" or fname=="3" then
+     SAVE_VERSION=0;
+     SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/"..fname);
+      NumLevels=GetNumLevels(LOAD_EPISODE);
+     if SAVE_VERSION>=GLOBAL_GetVar("CuboVersion") then
+        Hints[(1+fname)]=math.floor((LEVEL_NUM)/(NumLevels-1)*100)..TRANS_Str("loadgame:hint:completed").." - "..TRANS_Str("loadgame:hint:score")..LOAD_SCORE;
+     end;
+     end;
+ end;
+ NumEntries=numsvs;
+else
+   Entries[1]=TRANS_Str("final:onlyslot");
+   Hints[1]=TRANS_Str("loadgame:empty");   
+
+ for index = 0, numsvs-1, 1 do
+   local fname=string.sub(FILESYS_GetListDirectoryEntry(index),1,string.len(FILESYS_GetListDirectoryEntry(index))-5);
+   if fname=="f" then
+     SAVE_VERSION=0;
+     SAVE_Load(GLOBAL_GetVar("CurrentEpisode").."/"..fname);
+     if SAVE_VERSION>=GLOBAL_GetVar("CuboVersion") then
+      Hints[1]=TRANS_Str("final:hint:level")..": "..(LEVEL_NUM).." - "..TRANS_Str("loadgame:hint:score")..LOAD_SCORE;
+     end; 
+   end;
+ end;
+
+end;
+
+end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ darkbg=TEXDEF_Load("darkbg");
+ --Entries={"Start Game","Level-Editor","Options","Credits","Quit"};
+ --Hints={"Starts a new game","Tool for the creation of user levels","Configure controls and graphics","View the credits","Leave Cubosphere"};
+end;
+
+function RenderMenu()
+ 
+
+ local pos=0.0;
+ NumEntries=0;
+ for i,v in pairs(Entries) do
+            if Selected==i-1 then
+              FONT_SetSize(SelectedSize);
+              MATERIAL_SetColor(COLOR_New(0.95,0.95,0.0,1));
+            else 
+              FONT_SetSize(EntrySize);
+              MATERIAL_SetColor(COLOR_New(0.5,0.5,0.5,1));
+              
+            end;
+
+            FONT_Goto(0,pos);
+            FONT_TextOut(Entries[i]);
+            pos=pos-SelectedSize*1.2;
+            if Selected==i-1 then
+              FONT_SetSize(0.025);
+            else
+              FONT_SetSize(0.02);
+            end;
+            MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+            FONT_Goto(0,pos);
+            
+            FONT_TextOut(Hints[i]);
+            pos=pos-SelectedSize*2;
+            
+            NumEntries=NumEntries+1;
+        end
+
+  FONT_Goto(0.0,0.15);
+  --FONT_SetAlign("center","center");
+  --MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+  FONT_SetSize(0.02);
+
+if theFinal==0 then
+  FONT_TextOut(math.floor((GLOBAL_GetVar("LastLevelIndexInEpisode"))/(NumLevels-1)*100)..TRANS_Str("loadgame:hint:completed").." - "..TRANS_Str("loadgame:hint:score")..GLOBAL_GetVar("TotalScore"));
+else
+  FONT_TextOut(TRANS_Str("final:hint:level")..": "..(GLOBAL_GetVar("LastLevelIndexInEpisode")).." - "..TRANS_Str("loadgame:hint:score")..GLOBAL_GetVar("TotalScore"));
+end;
+
+ if NumEntries==0 then
+  return;
+ end;
+ FONT_SetSize(0.02);
+ MATERIAL_SetColor(COLOR_New(0.5,0.95,0.5,1));
+ FONT_SetAlign("center","bottom");
+ FONT_Goto(0,-0.5);
+ FONT_TextOut(TRANS_Str("savegame:hint"));
+end;
+
+function Render()
+ StartMenu();
+   FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ Headline(TRANS_Str("savegame:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+   GLOBAL_SetVar("ProgressSaved",1); --Actually it isn't saved, but this triggers the nextlevel to be loaded
+   MENU_Deactivate(); 
+ else
+   if theFinal==0 then
+     GLOBAL_SetVar("SaveToSlot",sel);
+   else
+     GLOBAL_SetVar("SaveToSlot","f");
+   end;
+   if Hints[sel+1]~=TRANS_Str("loadgame:empty") then
+     --Ask overriding
+      MENU_Load("saveoverwrite");
+   else      
+      --Save it 
+      MENU_Load("saved");
+   end;
+ end;
+end;
+ 

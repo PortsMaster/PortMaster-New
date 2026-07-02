@@ -13,70 +13,49 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/youdiedbanry"
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
+# CD and set log
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ -f "${controlfolder}/libgl_${CFWNAME}.txt" ]; then 
-  source "${controlfolder}/libgl_${CFW_NAME}.txt"
-else
-  source "${controlfolder}/libgl_default.txt"
-fi
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
-# check if we have new engough version of PortMaster that contains xdelta3
-if [ ! -f "$controlfolder/xdelta3" ]; then
-  echo "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info." > /dev/tty0
-  sleep 5
-  exit 1
-fi
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
 
-# Patch game
-cd "$GAMEDIR"
-
-# If "gamedata/game.unx" exists and matches the checksum of the itch or steam versions
-if [ -f "./gamedata/game.unx" ]; then
-    checksum=$(md5sum "./gamedata/game.unx" | awk '{print $1}')
-    
-    # Checksum for the itch.io version
-    if [ "$checksum" = "8e431e1cd5919f64d1c301029cadcfcf" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/itch.xdelta gamedata/game.droid && \
-        rm gamedata/game.unx
-    # Checksum for the Steam version
-    elif [ "$checksum" = "e5173a24f1f4b6b41a1b727a965d00b9" ]; then
-        $ESUDO $controlfolder/xdelta3 -d -s gamedata/game.unx -f ./patch/steam.xdelta gamedata/game.droid && \
-        rm gamedata/game.unx
+# Check if we need to patch the game
+if [ ! -f install_completed ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="You Died but a Necomancer Revived You"
+        export PATCHER_TIME="5 to 10 minutes"
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "Error: MD5 checksum of game.unx does not match any expected version."
+        pm_message "This port requires the latest version of PortMaster."
     fi
-else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
 fi
 
+# Display loading splash
+if [ -f install_completed ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
+fi
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "youdiedbanry.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$GPTOKEYB "gmloader" -c ./youdiedbanry.gptk &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader youdiedbanry.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish

@@ -10,6 +10,7 @@ function love.conf(t)
     t.window.icon = "image/icon.png"
     t.window.width = 320
     t.window.height = 240
+    t.window.fullscreen = true
     -- t.window.borderless = true
     t.window.vsync = 1
     t.modules.touch = false

@@ -37,15 +37,15 @@ export SIGNUS_DATA_DIR=$GAMEDIR/data
 cd $GAMEDIR
 
 if [[ ${CFW_NAME} == ROCKNIX ]]; then
-  cp vanilla/signus .
+  cp vanilla/signus.${DEVICE_ARCH} .
 else
-  cp sim-cursor/signus .
+  cp sim-cursor/signus.${DEVICE_ARCH} .
 fi
 
-$GPTOKEYB "$BINARY" -c ./$BINARY.gptk &
+$GPTOKEYB "$BINARY.${DEVICE_ARCH}" -c ./$BINARY.gptk &
 
-pm_platform_helper "$GAMEDIR/$BINARY"
+pm_platform_helper "$GAMEDIR/$BINARY.${DEVICE_ARCH}"
 
-./$BINARY
+./$BINARY.${DEVICE_ARCH}
 
 pm_finish

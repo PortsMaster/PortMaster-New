@@ -1,3 +1,4 @@
+Thanks to Yal for developing this game. Download it from [Itch.io](https://yaru.itch.io/touhou-hotline-sanzu).
 
 ## Notes
 

@@ -52,7 +52,7 @@ export FRT_NO_EXIT_SHORTCUTS=FRT_NO_EXIT_SHORTCUTS
 
 $GPTOKEYB "$runtime" -c "./ametadatagame.gptk" &
 pm_platform_helper "$runtime" 
-"$runtime" $GODOT_OPTS --main-pack "gamedata/a_meta_data_game-test-3.5.2.pck"
+"$runtime" $GODOT_OPTS --main-pack "gamedata/a_meta_data_game.pck"
 
 $ESUDO umount "$godot_dir"
 pm_finish

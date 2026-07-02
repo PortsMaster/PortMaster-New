@@ -26,6 +26,8 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+$ESUDO chmod +x "$GAMEDIR/skifree_sdl.${DEVICE_ARCH}"
+
 $GPTOKEYB "skifree_sdl.${DEVICE_ARCH}" -c "$GAMEDIR/skifree.gptk" &
 pm_platform_helper "$GAMEDIR/skifree_sdl.${DEVICE_ARCH}"
 ./skifree_sdl.${DEVICE_ARCH}

@@ -1,0 +1,165 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
+
+# Redirect output and error to the log file
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Patch failure function
+patch_failure() {
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    # Exit script, or return if sourced
+    return 1 2>/dev/null || exit 1
+}
+
+# Mount the GMToolkit runtime
+TOOLKIT="$HOME/gmtoolkit"
+RUNTIME="$controlfolder/libs/gmtoolkit.squashfs"
+if [ -f "$RUNTIME" ]; then
+    $ESUDO mkdir -p "$TOOLKIT"
+    $ESUDO umount "$TOOLKIT" 2>/dev/null || true
+    $ESUDO mount "$RUNTIME" "$TOOLKIT"
+else
+    echo "This port requires the GMToolkit runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+# Mount the dotnet runtime
+DOTNETDIR="$HOME/mono"
+DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+if [ -f "$DOTNETFILE" ]; then
+    $ESUDO mkdir -p "$DOTNETDIR"
+    $ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+    $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+else
+    echo "This port requires the Dotnet runtime. Please download it."
+    sleep 2
+    patch_failure
+fi
+
+# Exports
+export PATH="$DOTNETDIR:$TOOLKIT/gmtools:$TOOLKIT/utmt-cli:$PATH"
+export LD_LIBRARY_PATH="$TOOLKIT/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="game.port"
+export TMPDIR="$GAMEDIR/tmp"
+
+# Permissions
+chmod 666 /dev/uinput
+
+cd "$GAMEDIR"
+
+# Set up trap for cleaning TMPDIR on exit
+trap 'rm -rf "$TMPDIR"' 0
+
+# Attempt to get SAVEDIR from gmloader.json using jq
+if command -v jq >/dev/null 2>&1; then
+    SAVEDIR=$(jq -r '.save_dir // empty' "$GAMEDIR/gmloader.json" 2>/dev/null)
+else
+    SAVEDIR="$GAMEDIR/saves"
+fi
+
+# Test for commands: python, zip
+PYTHON=$(command -v python3)
+if [ -z "$PYTHON" ]; then
+    echo "Missing Python!"
+    patch_failure
+fi
+
+ZIP=$(command -v zip)
+if [ -z "$ZIP" ]; then
+    echo "Missing zip!"
+    patch_failure
+fi
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+    
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
+
+    # Move splash file if it exists
+    if [ -f "$DATADIR/splash.png" ]; then
+        mv "$DATADIR/splash.png" "$GAMEDIR/splash.png"
+    fi
+}
+
+# Externalize game textures with compression
+dump_textures() {
+    # Purge cache before operations
+    rm -rf "$TMPDIR/"*
+    
+    # Begin texture operations
+    dotnet "$TOOLKIT/utmt-cli/UndertaleModCli.dll" \
+        dump "$DATADIR/data.win" \
+        -e "$DATADIR/textures" "$DATADIR/game.droid"
+
+    if [ $? -ne 0 ]; then
+        echo "[DOTNET]: Texture dumping failed to apply."
+        return 1
+    else
+        rm -f "$DATADIR/data.win"
+        mv "$DATADIR/textures" "$SAVEDIR/textures"
+        [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
+    fi
+}
+
+compress_audio() {
+    # Test for data.win
+    if [ -f "$DATADIR/data.win" ]; then
+        mv "$DATADIR/data.win" "$DATADIR/game.droid"
+    fi
+    
+    # Do audio compression
+    if $PYTHON "$TOOLKIT/gmtools/gmKtool.py" -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"; then
+        mv "$TMPDIR/"* "$DATADIR" && rmdir "$TMPDIR"
+        echo "Audio compression applied successfully."
+    else
+        # Failure
+        echo "Audio compression failed for $GAMEFILE."
+        rmdir "$TMPDIR"
+        return 1
+    fi
+}
+
+zip_archive() {
+    $ZIP -r -0 "$DATAFILE" ./assets/
+    echo "Zipped contents to $DATAFILE"
+    rm -rf "$DATADIR/"*
+}
+
+process_game() {
+    echo "Preparing game..."
+    prepare_files || { patch_failure; return 1; }
+
+    echo "Externalizing textures..."
+    dump_textures || { patch_failure; return 1; }
+
+    echo "Compressing audio..."
+    compress_audio || { patch_failure; return 1; }
+
+    sleep 1
+    echo "Finishing up..."
+    zip_archive || { patch_failure; return 1; }
+}
+
+# Call the function
+if ! process_game; then
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+else
+    echo "Patching process complete!"
+fi
+
+# Unmount runtimes
+$ESUDO umount "$DOTNETDIR" 2>/dev/null || true
+$ESUDO umount "$TOOLKIT" 2>/dev/null || true

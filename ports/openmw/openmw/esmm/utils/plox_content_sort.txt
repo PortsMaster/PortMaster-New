@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+#
+# TITLE: plox Content Sorter
+# AUTHOR: kloptops
+# DESCRIPTION: Sorts content files (plugins) using the external plox tool.
+# ARGS: --config-dir "$OPENMW_DIR" --openmw-config "$OPENMW_CFG"
+# REGISTER: SORT_CONTENT
+# PRIORITY: 1000
+# HAS_OUTPUT: TRUE
+#
+
+import argparse
+import json
+import os
+import sys
+import subprocess
+import tempfile
+
+
+def find_plox_executable():
+    """Finds the plox executable in common locations."""
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    plox_path = os.path.join(script_dir, "plox")
+    if os.path.exists(plox_path):
+        return plox_path
+    for path_dir in os.environ.get("PATH", "").split(os.pathsep):
+        if os.path.exists(os.path.join(path_dir, "plox")):
+            return "plox"
+    return None
+
+
+def extract_plugins_from_cfg(cfg_path):
+    """Extract active content= plugin names from openmw.cfg."""
+    plugins = []
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped.lower().startswith('content='):
+                plugin_name = stripped.split('=', 1)[1].strip().strip('"')
+                plugins.append(plugin_name)
+    return plugins
+
+
+def parse_sorted_plugins(stdout, stderr):
+    """
+    Parse the sorted plugin list from plox dry-run output.
+
+    plox outputs via info!("New order:\\n{:?}", result) which produces:
+        [INFO  plox] New order:
+        ["morrowind.esm", "tribunal.esm", ...]
+
+    The array line is Rust's Vec<String> debug format, which is valid JSON.
+    """
+    output = (stdout or "") + "\n" + (stderr or "")
+
+    found_header = False
+    for line in output.splitlines():
+        if "New order:" in line:
+            # The array might be on the same line after "New order:"
+            idx = line.find("New order:")
+            remainder = line[idx + len("New order:"):].strip()
+            if remainder.startswith("["):
+                return json.loads(remainder)
+            found_header = True
+            continue
+
+        if found_header:
+            stripped = line.strip()
+            if stripped.startswith("["):
+                return json.loads(stripped)
+            # Skip blank lines between header and array
+            if stripped:
+                break
+
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Sorts content files in openmw.cfg using plox.")
+    parser.add_argument('--openmw-config', required=True, help="Path to openmw.cfg")
+    parser.add_argument('--config-dir', required=True, help="Directory containing mlox rule files.")
+    parser.add_argument('--dry-run', action='store_true', help="Print the new order without modifying the file.")
+    args = parser.parse_args()
+
+    plox_exec = find_plox_executable()
+    if not plox_exec:
+        print("ESMM::ALERT::Error::plox executable not found in PATH or scripts directory.")
+        sys.exit(1)
+
+    if not os.path.exists(args.openmw_config):
+        print(f"ESMM::ALERT::Error::Config file not found: {args.openmw_config}")
+        sys.exit(1)
+
+    # Extract plugin list from openmw.cfg and write to a temp file.
+    # plox's gather_openmw_mods() uses openmw-cfg which tries to resolve each
+    # plugin to an absolute path on disk — this fails on devices where the data
+    # directory layout doesn't match what openmw-cfg expects.  Using -m (mod list)
+    # bypasses that entirely.
+    plugins = extract_plugins_from_cfg(args.openmw_config)
+    if not plugins:
+        print("No content entries found in openmw.cfg, nothing to sort.")
+        sys.exit(0)
+
+    mod_list_file = tempfile.NamedTemporaryFile(
+        mode='w', suffix='.txt', prefix='plox_mods_', delete=False)
+    try:
+        for p in plugins:
+            mod_list_file.write(p + '\n')
+        mod_list_file.close()
+
+        # Build command:
+        #   -n          (global) = non-interactive, skip "Press any button" prompts
+        #   -g openmw   (global) = force OpenMW game detection
+        #   sort        subcommand
+        #   -d          = dry-run (print sorted order, don't rewrite openmw.cfg;
+        #                 we rewrite it ourselves to preserve disabled plugins)
+        #   -m <file>   = read mod list from file instead of filesystem/openmw.cfg
+        #   -r <dir>    = rules directory containing mlox_base.txt / mlox_user.txt
+        command = [plox_exec, "-n", "-g", "openmw", "sort", "-d",
+                   "-m", mod_list_file.name, "-r", args.config_dir]
+
+        # -n on the sort subcommand = skip downloading rules if we have local copies
+        if (os.path.exists(os.path.join(args.config_dir, 'mlox_base.txt'))
+                and os.path.exists(os.path.join(args.config_dir, 'mlox_user.txt'))):
+            command.append('-n')
+
+        print(f"Running command: {' '.join(command)}")
+
+        process = subprocess.run(command, text=True, capture_output=True, check=False)
+
+        if process.stdout:
+            print("\n--- plox stdout ---\n" + process.stdout)
+        if process.stderr:
+            print("\n--- plox stderr ---\n" + process.stderr)
+
+        if process.returncode != 0:
+            print(f"\nESMM::ALERT::Error::plox exited with a non-zero status code: {process.returncode}")
+            sys.exit(process.returncode)
+
+        sorted_plugins = parse_sorted_plugins(process.stdout, process.stderr)
+
+        if sorted_plugins is None:
+            output = (process.stdout or "") + (process.stderr or "")
+            if "no sorting needed" in output.lower():
+                print("Plugins are already in correct order.")
+            else:
+                print("plox did not return a new order. Assuming order is already correct.")
+            sys.exit(0)
+
+        # plox returns lowercase plugin names.  Build a case-insensitive map
+        # from the original openmw.cfg to preserve the user's original casing,
+        # and track which plugins are disabled (commented out).
+        with open(args.openmw_config, 'r', encoding='utf-8') as f:
+            original_lines = f.readlines()
+
+        case_map = {}        # lowercase -> original casing
+        disabled_plugins = set()  # lowercase names of #content= entries
+
+        for line in original_lines:
+            stripped = line.strip()
+            if stripped.lower().startswith('content='):
+                plugin_name = stripped.split('=', 1)[1].strip().strip('"')
+                case_map[plugin_name.lower()] = plugin_name
+            elif stripped.lower().startswith('#content='):
+                plugin_name = stripped.split('=', 1)[1].strip().strip('"')
+                case_map[plugin_name.lower()] = plugin_name
+                disabled_plugins.add(plugin_name.lower())
+
+        if args.dry_run:
+            print("\n--- Dry Run: New Content File Order (from plox) ---")
+            for plugin in sorted_plugins:
+                name = case_map.get(plugin, plugin)
+                status = " (disabled)" if plugin in disabled_plugins else ""
+                print(f"  content={name}{status}")
+            sys.exit(0)
+
+        # Rewrite openmw.cfg: preserve all non-content lines in place,
+        # insert the sorted content block at the position of the first
+        # content line.
+        sorted_set = set(sorted_plugins)
+
+        with open(args.openmw_config, 'w', encoding='utf-8') as f:
+            content_written = False
+            for line in original_lines:
+                stripped = line.strip()
+                is_content = (stripped.lower().startswith('content=')
+                              or stripped.lower().startswith('#content='))
+                if not is_content:
+                    f.write(line)
+                elif not content_written:
+                    # Write sorted plugins (active ones from plox, disabled preserved)
+                    for plugin in sorted_plugins:
+                        name = case_map.get(plugin, plugin)
+                        if plugin in disabled_plugins:
+                            f.write(f'#content={name}\n')
+                        else:
+                            f.write(f'content={name}\n')
+
+                    # Write any disabled plugins that plox didn't know about
+                    for dp in disabled_plugins:
+                        if dp not in sorted_set:
+                            name = case_map.get(dp, dp)
+                            f.write(f'#content={name}\n')
+
+                    content_written = True
+
+        print("\nSuccessfully sorted content files using plox and saved openmw.cfg.")
+
+    except FileNotFoundError:
+        print("ESMM::ALERT::Error::plox command not found. Is it installed and in your PATH?")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print("ESMM::ALERT::Error::Could not parse the sorted plugin list from plox output.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"ESMM::ALERT::Error::An unexpected error occurred: {e}")
+        sys.exit(1)
+    finally:
+        os.unlink(mod_list_file.name)
+
+
+if __name__ == '__main__':
+    main()

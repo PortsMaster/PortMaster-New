@@ -1,0 +1,1 @@
+press numpad 5 key while in the game to make a screen shot in this directory 

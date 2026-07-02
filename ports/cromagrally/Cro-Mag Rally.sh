@@ -13,18 +13,16 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+
 
 GAMEDIR=/$directory/ports/cromagrally
 exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
-export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then 
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
@@ -41,9 +39,9 @@ export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.aarch64/libEGL.so.1"
 fi 
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "CroMagRally" &
-./CroMagRally
+$GPTOKEYB "CroMagRally.${DEVICE_ARCH}" &
+pm_platform_helper "$GAMEDIR/CroMagRally.${DEVICE_ARCH}"
+./CroMagRally.${DEVICE_ARCH}
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

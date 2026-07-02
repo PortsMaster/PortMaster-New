@@ -15,14 +15,20 @@ Thanks to the [Mdashdotdashn](https://github.com/Mdashdotdashn), [djdiskmachine]
 | L1+UP/DOWN | Jump up/down to next populated row after a blank row |
 | START | Start/Stop song playback from the Highlighted Row |
 
-For advanced controls visit this [link](https://github.com/ohol-vitaliy/LittleGPTracker/blob/master/docs/wiki/What-is-LittlePiggyTracker.md#basic-editing--navigation)
+For advanced controls visit this [link](https://github.com/djdiskmachine/LittleGPTracker/blob/1.5.0-bacon1/docs/wiki/What-is-LittlePiggyTracker.md#basic-editing--navigation).
 
 ## Version
-1.4.3-bacon0
+1.5.0-bacon1
 
 ## Compile
 ```shell
-git clone https://github.com/ohol-vitaliy/LittleGPTracker
-cd LittleGPTracker/projects
-make PLATFORM=PORTMASTER #¯\_(ツ)_/¯
+git clone https://github.com/ohol-vitaliy/PortMaster-LittleGPTracker
+cd PortMaster-LittleGPTracker
+
+# update Dockerfile to use your chosen LittleGPTracker release version
+version="1.5.0-bacon1" && sed -ie "s/\( --branch\) \S*/\1 $version/g" Dockerfile
 ```
+Then follow these [Docker steps](https://github.com/ohol-vitaliy/PortMaster-LittleGPTracker#steps).
+
+## Useful Links
+[LittleGPTracker releases](https://github.com/djdiskmachine/LittleGPTracker/releases)

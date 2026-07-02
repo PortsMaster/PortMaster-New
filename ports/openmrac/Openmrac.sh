@@ -14,6 +14,7 @@ fi
 
 source $controlfolder/control.txt
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/openmrac
@@ -24,13 +25,15 @@ mkdir -p "$GAMEDIR/conf"
 
 cd $GAMEDIR
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "openmrac-es2" -c "./openmrac.gptk" &
-./openmrac-es2 ./openmrac.dat --skip-settings 2>&1 | tee -a ./log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+$GPTOKEYB "openmrac-es2.${DEVICE_ARCH}" -c "./openmrac.gptk" &
+pm_platform_helper "$GAMEDIR/openmrac-es2.${DEVICE_ARCH}"
+./openmrac-es2.${DEVICE_ARCH} ./openmrac.dat --skip-settings
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

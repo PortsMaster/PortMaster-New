@@ -18,4 +18,13 @@ Shoot baddies at the wall to destroy them.
 |B|Fire|
 |Select|Quit|
 
+## Compile
 
+```shell
+git clone https://github.com/szymor/methane-sdl
+# edit methane-sdl/source/gp2x/SDL_framerate.h
+# change #define FPS_DEFAULT from 50 to 31 (the sweet spot)
+# save and exit
+cd methane-sdl/source/amigaos4
+make -j4
+```

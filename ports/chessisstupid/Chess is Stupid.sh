@@ -21,6 +21,7 @@ source $controlfolder/control.txt
 export PORT_32BIT="Y"
 
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 # We pull the controller configs from the get_controls function from the control.txt file here
 get_controls
 

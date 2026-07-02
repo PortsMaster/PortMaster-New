@@ -1,122 +1,111 @@
 #!/bin/bash
 # Set GAMEDIR to the current directory and set logfile
 GAMEDIR="$PWD"
-LOGFILE="$GAMEDIR/patchlog.txt"
-LOGERR="$GAMEDIR/patch_error.txt"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
 
 # Redirect output and error to the log file
-rm -rf $LOGFILE $LOGERR
-exec > >(tee -a "$LOGFILE") 2>&1
+rm -f "$GAMEDIR/$LOGERR"
+# Save the patcher pipe (original stdout) on fd 3 before redirecting stdout
+# through tee. This lets emit_fail_msg send dialog overrides straight to the
+# patcher GUI without them appearing in patchlog.txt.
+exec 3>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+
+emit_fail_msg() {
+    echo "PATCH_FAIL_MSG:$1" >&3
+    echo "$1"
+    FAIL_MSG_SET=1
+}
+
 echo "GAMEDIR is set to: $GAMEDIR"
 
 # Exports
 export DATADIR="$GAMEDIR/assets"
+export SAVEDIR="$GAMEDIR/saves"
 export DATAFILE="ufo50.port"
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
-export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
-export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
 
-# Permissions
-chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/gmKtool.py"
-chmod 777 "$TOOLDIR/oggenc"
+# Tight-RAM devices can't sustain a parallel astcenc / vorbis workload.
+THREADS_FLAG=""
+if [ "${DEVICE_RAM:-0}" -le 2 ]; then
+    THREADS_FLAG="--threads 1"
+fi
 
-cd "$GAMEDIR"
 
-unzip_audiogroups() {
-    # Unzip from $DATAFILE into $DATADIR
-    echo "Unzipping ${DATAFILE}..."
-    mkdir -p assets
-    unzip -j -o "$DATAFILE" "assets/*.dat" -d "$DATADIR"
-    if [ $? -eq 0 ]; then
-        echo "Unzipped successfully to $DATADIR."
-    else
-        echo "Failed to unzip file."
-        mv $LOGFILE $LOGERR
-        exit 1
+ORIG_MAX_FREQS=""
+thermal_setup() {
+    for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+        [ -d "$policy" ] && [ -f "$policy/scaling_max_freq" ] || continue
+        orig=$(cat "$policy/scaling_max_freq") || continue
+        target=$((orig * 8 / 10))
+        $ESUDO sh -c "echo $target > '$policy/scaling_max_freq'" 2>/dev/null || true
+        ORIG_MAX_FREQS="$ORIG_MAX_FREQS|$policy=$orig"
+    done
+}
+
+thermal_restore() {
+    OLDIFS=$IFS
+    IFS='|'
+    for entry in $ORIG_MAX_FREQS; do
+        [ -z "$entry" ] && continue
+        policy="${entry%=*}"
+        orig="${entry#*=}"
+        $ESUDO sh -c "echo $orig > '$policy/scaling_max_freq'" 2>/dev/null || true
+    done
+    IFS=$OLDIFS
+}
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.gitkeep" -o -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
+
+    if [ -d "$SAVEDIR/textures" ]; then
+        rm -rf "$SAVEDIR/textures"
     fi
 }
 
-apply_xdelta() {
-    # Check if the data.win file exists and apply xdelta
-    if [ -f "$DATADIR/data.win" ]; then
-        # v1.7.6
-        output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patches/ufo50.xdelta" "$DATADIR/game.droid" 2>&1)
-        if [ $? -eq 0 ]; then
-            echo "Patch applied successfully"
-            echo "$output"
-            rm "$DATADIR/data.win"
-        else
-            echo "Failed to apply patch"
-            echo "$output"
-            mv $LOGFILE $LOGERR
-            exit 1
-        fi
-    else
-        echo "No data.win file found to patch!"
+patch_datafile() {
+    if ! "$GAMEDIR/tools/gmtoolkit.${DEVICE_ARCH}" --config  "$GAMEDIR/tools/ufo50.json" $THREADS_FLAG $BLOCK_FLAGS "$DATADIR/data.win"; then
+        emit_fail_msg "gmtoolkit patch failed."
+        return 1
     fi
 }
 
-compress_audio() {
-    mkdir -p "$TMPDIR"
-
-    # Run the compression tool
-    PYTHON=$(which python3)
-    if [ "$PREPATCH" != 1 ]; then
-        echo "Running GMTools on data and audiogroups."
-        $PYTHON ./tools/gmKtool.py -vv -m 1000 -r -b 64 -d "$TMPDIR" "$DATADIR/game.droid"
-    else
-        echo "Running GMTools on data file only."
-        $PYTHON ./tools/gmKtool.py -vv -O 0 -m 1000 -b 64 -r -d "$TMPDIR" "$DATADIR/game.droid"
-    fi
-
-    if [ $? -eq 0 ]; then
-        echo "Compression completed successfully."
-        mv "$TMPDIR/"* "$DATADIR"
-        echo "Moved compressed files to $DATADIR."
-        rm -rf "$TMPDIR"
-        echo "Temporary directory $TMPDIR removed."
-        echo "Audio compression applied successfully."
-    else
-        echo "Audio compression failed."
-        echo "Cleaning up temporary directory $TMPDIR."
-        rm -rf "$TMPDIR"
-    fi
-}
-
+# Zip it all into the .port file
 zip_archive() {
-        zip -r -0 $DATAFILE ./assets/
-        mkdir -p saves
-        rm -rf $DATADIR/*
+    [ -f "$DATADIR/data.win" ] && mv "$DATADIR/data.win" "$DATADIR/game.droid"
+    local zip_out
+    if zip_out=$("$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR" 2>&1); then
+        rm -rf "$DATADIR"/*
+    else
+        echo "$zip_out"
+        emit_fail_msg "Failed to create $DATAFILE."
+        return 1
+    fi
 }
 
 process_game() {
-    # Delete unnecessary files
-    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep
-    echo "Removed unnecessary files"
-    
-    # Check if we're using a prepatched game
-    if unzip -l "$DATAFILE" "assets/*" | grep -q "assets/.*\.dat"; then
-        echo "Prepatched game detected." && sleep 1
-        PREPATCH=1
-        unzip_audiogroups
-    fi
-    
-    echo "Applying xdelta patch"
-    apply_xdelta
-    sleep 1
-    echo "Compressing audio..."
-    compress_audio
-    sleep 1
+    echo "Preparing game..."
+    prepare_files || return 1
+    thermal_setup
+    echo "Applying patches..."
+    patch_datafile
+    rc=$?
+    thermal_restore
+    [ "$rc" -ne 0 ] && return 1
     echo "Finishing up..."
-    zip_archive
-    sleep 1
-	
-    # Final completion message
-    echo "Patching process complete!"
+    zip_archive || return 1
 }
 
-# Call the function
-process_game
+if ! process_game; then
+    [ -z "$FAIL_MSG_SET" ] && emit_fail_msg "Patching failed. Report on the Portmaster Discord with patcherr.txt."
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+    exit 1
+fi
+echo "Patching process complete!"

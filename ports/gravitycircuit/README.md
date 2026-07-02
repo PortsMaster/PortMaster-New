@@ -2,7 +2,7 @@
 
 Massive thanks to [Domesticated Ant Games](https://store.steampowered.com/search/?developer=Domesticated%20Ant%20Games) for creating this very attractive game!
 
-Tested with both the [GOG](https://www.gog.com/en/game/gravity_circuit) and [Steam](https://store.steampowered.com/app/858710) Windows versions.
+Tested with the [Epic](https://store.epicgames.com/en-US/p/gravity-circuit-489baa), [GOG](https://www.gog.com/en/game/gravity_circuit) and [Steam](https://store.steampowered.com/app/858710) Windows versions.
 
 On first run the game will be unpacked and patched, this will take a while.
 

@@ -2,7 +2,6 @@
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-# Below we assign the source of the control folder (which is the PortMaster folder) based on the distro:
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -13,65 +12,71 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-# We source the control.txt file contents here
-# The $ESUDO, $directory, $param_device and necessary 
-# Sdl configuration controller configurations will be sourced from the control.txt
+export controlfolder
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-
-# We pull the controller configs from the get_controls function from the control.txt file here
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
+# Variables
+GAMEDIR="/$directory/ports/hotlinesanzu"
 
-# We check on emuelec based CFWs the OS_NAME 
-[ -f "/etc/os-release" ] && source "/etc/os-release"
-
-if [ "$OS_NAME" == "JELOS" ]; then
-  export SPA_PLUGIN_DIR="/usr/lib32/spa-0.2"
-  export PIPEWIRE_MODULE_DIR="/usr/lib32/pipewire-0.3/"
-fi
-
-GAMEDIR=/$directory/ports/hotlinesanzu
-
-# We log the execution of the script into log.txt
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-# Port specific additional libraries should be included within the port's directory in a separate subfolder named libs.
-# Prioritize the armhf libs to avoid conflicts with aarch64
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
+# CD and set up logging
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Check for file existence before trying to manipulate them:
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-[ -f "./gamedata/game.win" ] && mv gamedata/game.win gamedata/game.droid
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-if [ -n "$(ls -d ./gamedata/*/ 2>/dev/null)" ]; then
-    # List and move all directories in ./gamedata to ./assets
-    for dir in ./gamedata/*/; do
-        mv "$dir" ./assets/
-    done
-    echo "Moved directories from ./gamedata to ./assets/"
-    zip -r ./hotlinesanzu.apk ./hotlinesanzu.apk ./assets/
-    echo "Packed assets into apk"
+check_patch() {
+    # Check if the patching needs to be applied
+    if [ ! -f "$GAMEDIR/patchlog.txt" ] && [ -f "$GAMEDIR/assets/data.win" ]; then
+        if [ -f "$controlfolder/utils/patcher.txt" ]; then
+            set -o pipefail
+            
+            # Setup mono environment variables
+            DOTNETDIR="$HOME/mono"
+            DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
+            $ESUDO mkdir -p "$DOTNETDIR"
+            $ESUDO umount "$DOTNETFILE" || true
+            $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
+            export PATH="$DOTNETDIR":"$PATH"
+            
+            # Setup and execute the Portmaster Patcher utility with our patch file
+            export ESUDO
+            export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+            export PATCHER_GAME="$(basename "${0%.*}")"
+            export PATCHER_TIME="few minutes at most"
+            source "$controlfolder/utils/patcher.txt"
+            $ESUDO umount "$DOTNETDIR"
+        else
+            pm_message "This port requires the latest version of PortMaster."
+            pm_finish
+            exit 1
+        fi
+    fi
+}
+
+# Check if we need to start the external patcher as it is not needed on high-end devices
+if [[ "$DEVICE_RAM" -gt 5 ]] && [ -f "$GAMEDIR/assets/data.win" ]; then 
+	if [ -f ./assets/data.win ]; then
+	# Patch out the flashing border that breaks on non-16:9 screens
+	$controlfolder/xdelta3 -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patchhe.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Delete all redundant files
+	rm -f assets/*.{exe,dll,win}
+	# Zip all game files into the hotlinesanzu.port
+	zip -r -0 ./hotlinesanzu.port ./assets/
+	rm -Rf ./assets/
+	fi
+else
+	check_patch
 fi
 
 
-# Make sure uinput is accessible so we can make use of the gptokeyb controls
-$ESUDO chmod 666 /dev/uinput
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$GPTOKEYB "gmloader" textinput &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader hotlinesanzu.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
-
+# Kill processes
+pm_finish

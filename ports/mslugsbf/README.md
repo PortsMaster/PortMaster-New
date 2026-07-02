@@ -1,5 +1,5 @@
 ## Installation
-Download the game from  [GameJolt](https://gamejolt.com/games/MslugSBFan/478697) and put all the files from the `Files` folder (the one with all the audiogroups) into the `ports/mslugsbf/assets` folder.
+Download the game from  [GameJolt](https://gamejolt.com/games/MslugSBFan/478697) and put all the files from the `GAME` folder (the one with all the audiogroups) into the `ports/mslugsbf/assets` folder.
 
 ## Default Controls
 | Button | Action |
@@ -20,4 +20,5 @@ Information about the game can be found [here](https://metal-slug-fanon.fandom.c
 ## Thanks
 SuperBlinky -- For the game  
 Jareth247 and moneymaster0 -- Original port idea  
+Jeod - For initial porting
 Testers & Devs from the PortMaster Discord  

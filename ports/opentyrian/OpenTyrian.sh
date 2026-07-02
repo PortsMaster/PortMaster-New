@@ -31,12 +31,14 @@ if [[ $whichos == *"ArkOS"* ]]; then
 elif [[ $whichos == *"RetroOZ"* ]]; then
   cp /home/odroid/.asoundrcfords /home/odroid/.asoundrc
 fi
-
+#export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 bind_directories ~/.config/opentyrian $GAMEDIR/
 
 cd $GAMEDIR
-$GPTOKEYB opentyrian &
-$GAMEDIR/opentyrian --data=$GAMEDIR/data 2>&1 | tee $GAMEDIR/log.txt
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+$GPTOKEYB opentyrian.${DEVICE_ARCH} -c ./opentyrian.gptk &
+pm_platform_helper "$GAMEDIR/opentyrian.${DEVICE_ARCH}"
+$GAMEDIR/opentyrian.${DEVICE_ARCH} --data=$GAMEDIR/data
 
 if [[ $whichos == *"ArkOS"* ]]; then
   cp /home/ark/.asoundrcbak /home/ark/.asoundrc
@@ -44,8 +46,7 @@ elif [[ $whichos == *"RetroOZ"* ]]; then
   cp /home/odroid/.asoundrcbak /home/odroid/.asoundrc
 fi
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish
 
 

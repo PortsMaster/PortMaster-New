@@ -19,45 +19,44 @@ get_controls
 # Variables
 GAMEDIR="/$directory/ports/downwell"
 
-# CD and set permissions
+# CD and set log
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
+
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export PATCHER_FILE="$GAMEDIR/tools/patchscript"
-export PATCHER_GAME="Downwell"
-export PATCHER_TIME="3 to 5 minutes"
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder 
+export DEVICE_ARCH
 
-# dos2unix in case we need it
-dos2unix "$GAMEDIR/tools/gmKtool.py"
-dos2unix "$GAMEDIR/tools/Klib/GMblob.py"
-dos2unix "$GAMEDIR/tools/patchscript"
-
-# Check if patchlog.txt to skip patching
-if [ ! -f patchlog.txt ]; then
+# Check if we need to patch the game
+if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="Downwell"
+        export PATCHER_TIME="a few minutes"
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         pm_message "This port requires the latest version of PortMaster."
     fi
-else
-    pm_message "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
-if [ -f "$GAMEDIR/patchlog.txt" ]; then
-    [ "$CFW_NAME" == "muOS" ] && $ESUDO ./tools/splash "splash.png" 1 
-    $ESUDO ./tools/splash "splash.png" 2000 &
+if [ -f install_completed ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 fi
 
 # Assign gptokeyb and load the game
-$GPTOKEYB "gmloadernext.aarch64" -c "downwell.gptk"  &
-pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
-./gmloadernext.aarch64 -c "gmloader.json"
+$GPTOKEYB "gmloadernext.aarch64" -c "downwell.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
 # Cleanup
 pm_finish

@@ -13,8 +13,7 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 GAMEDIR=/$directory/ports/clockwind/
@@ -25,19 +24,23 @@ CONFDIR="$GAMEDIR/conf/"
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"
 
-DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
+#DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
 # Set the XDG environment variables for config & savefiles
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 cd $GAMEDIR
 
-$GPTOKEYB "love.${DEVICE_ARCH}" -c "./clockwind.gptk" &
-./love.${DEVICE_ARCH} gamedata
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "./clockwind.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN gamedata
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

@@ -12,17 +12,19 @@ export DATADIR="$GAMEDIR/assets"
 export DATAFILE="game.port"
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export TOOLDIR="$GAMEDIR/tools"
 export TMPDIR="$GAMEDIR/tmp"
-export PATH="$GAMEDIR/tools:$PATH"
+export PATH="$controlfolder:$DOTNETDIR:$TOOLKIT/gmtools:$PATH"
 
 # Permissions
 chmod 666 /dev/uinput
-chmod 777 "$TOOLDIR/7zzs"
 
 cd "$GAMEDIR"
 
 unzip_exe() {
+	if [ -f "$GAMEDIR/assets/Roguelight.exe" ]; then
+	    mv "$GAMEDIR/assets/Roguelight.exe" "$GAMEDIR/Roguelight.exe"
+	fi
+	
 	if [ -f "$GAMEDIR/Roguelight.exe" ]; then
     # Calculate the MD5 checksum of Mezzer.exe
     actual_checksum=$(md5sum "$GAMEDIR/Roguelight.exe" | awk '{print $1}')
@@ -30,7 +32,7 @@ unzip_exe() {
     # Check if the file exists and the checksum matches
     if [ "$actual_checksum" = "63f6f3acb59133fb95e2ec88520289c4" ]; then
         # Use 7zip to extract the .exe file to the destination directory
-        "$TOOLDIR/7zzs" x "$GAMEDIR/Roguelight.exe" -o"$DATADIR" & pid=$!
+        "$controlfolder/7zzs.${DEVICE_ARCH}" x "$GAMEDIR/Roguelight.exe" -o"$DATADIR" & pid=$!
 
         # Wait for the extraction process to complete
         wait $pid
@@ -52,7 +54,7 @@ fi
 apply_xdelta() {
     # Check if the data.win file exists and apply xdelta
     if [ -f "$DATADIR/data.win" ]; then
-        output=$($controlfolder/xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patch/roguelight.xdelta" "$DATADIR/game.droid" 2>&1)
+        output=$(xdelta3 -d -s "$DATADIR/data.win" -f "./tools/patch/roguelight.xdelta" "$DATADIR/game.droid" 2>&1)
         if [ $? -eq 0 ]; then
             echo "Patch applied successfully"
             echo "$output"
@@ -76,7 +78,7 @@ zip_archive() {
 process_game() {
 	unzip_exe
     echo "Removed unnecessary files"
-	sleep1
+	sleep 1
     echo "Applying xdelta patch"
     apply_xdelta
 	sleep 1

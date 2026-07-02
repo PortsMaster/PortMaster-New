@@ -14,19 +14,10 @@ Thanks to gfififid for making 1.12.2 Possible
 
 1.7.10 - Forge and Vanilla
 1.12.2 - Forge and Vanilla
-1.16.5 - Fabric
-
 ## Performance
 If you want the best Performance then i would recommend Vanilla 1.7.10 but regardless 1.12.2 can run good enough too
-## Bugs and Unsupported Mods
-- On 1.16.5 you dont have a mouse cursor
-- No Sound/Music on ArkOS
-
-Unsupported Mods for 1.16.5:
-- Distant Horizons
-- Sodium can work but crashes sometimes
-- Hydrogen
-
+## Server
+If you want to play on a server add the server IP into a file named server.txt
 ## Controls
 
 | Button | Action |

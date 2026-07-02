@@ -28,9 +28,12 @@ cd "$GAMEDIR/rockdroid"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+$ESUDO chmod +x "$GAMEDIR/rockdroid/rockbot.${DEVICE_ARCH}"
+$ESUDO chmod +x "$GAMEDIR/7zzs.${DEVICE_ARCH}"
+
 # Extract game files on 1st run
 if [ ! -d "$GAMEDIR/rockdroid/games" ]; then
-    "$GAMEDIR/7zzs" x "$GAMEDIR/rockdroid/gamedata.7z" -o"$GAMEDIR/rockdroid/"
+    "$GAMEDIR/7zzs.${DEVICE_ARCH}" x "$GAMEDIR/rockdroid/gamedata.7z" -o"$GAMEDIR/rockdroid/"
     sleep 1
     rm -f "$GAMEDIR/rockdroid/gamedata.7z"
 fi

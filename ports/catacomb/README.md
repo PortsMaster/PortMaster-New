@@ -39,3 +39,11 @@ Game files needed:
 |Left|Move Left|
 |Right|Move Right|
 |Left Analog|Move (same as D-Pad)|
+
+## Compile
+```shell
+git clone https://github.com/Slayer366/CatacombSDL-hh
+cd CatacombSDL-hh
+cmake . -DCMAKE_BUILD_TYPE=Release
+make -j4
+```

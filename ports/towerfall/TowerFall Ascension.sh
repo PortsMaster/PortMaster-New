@@ -15,6 +15,7 @@ fi
 source $controlfolder/control.txt
 source $controlfolder/tasksetter
 
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
 gameassembly="TowerFall.exe"
@@ -46,7 +47,7 @@ gog_game_file="$gamedir/gamedata/gog_towerfall_ascension_2.5.0.9.sh"
 if [ -f "$gog_game_file" ]; then
     temporary="${gog_game_file%.sh}.gz"
     mv "$gog_game_file" "$temporary"
-    unzip "$temporary" 'data/noarch/game/*' -d "$gamedir/gamedata"
+    "$controlfolder/7zzs.$DEVICE_ARCH" x "$temporary" -o"$gamedir/gamedata" 'data/noarch/game/*'
     mv "$gamedir/gamedata/data/noarch/game"/* "$gamedir/gamedata"
     rm -rf "$gamedir/gamedata/data"  # Remove the extracted directory after moving if needed
     rm -f "$temporary"  # Remove the gz file after extraction if needed
@@ -57,7 +58,7 @@ gog_dlc_file="$gamedir/gamedata/gog_towerfall_ascension_dark_world_2.3.0.5.sh"
 if [ -f "$gog_dlc_file" ]; then
     temporary="${gog_dlc_file%.sh}.gz"
     mv "$gog_dlc_file" "$temporary"
-    unzip "$temporary" 'data/noarch/game/*' -d "$gamedir/gamedata"
+    "$controlfolder/7zzs.$DEVICE_ARCH" x "$temporary" -o"$gamedir/gamedata" 'data/noarch/game/*'
     mv "$gamedir/gamedata/data/noarch/game"/* "$gamedir/gamedata"
     rm -rf "$gamedir/gamedata/data"  # Remove the extracted directory after moving if needed
     rm -f "$temporary"  # Remove the gz file after extraction if needed
@@ -76,9 +77,7 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
-$ESUDO rm -rf ~/.local/share/TowerFall
-mkdir -p ~/.local/share
-ln -sfv "$gamedir/savedata" ~/.local/share/TowerFall
+bind_directories ~/.local/share/TowerFall "$gamedir/savedata"
 
 # Remove all the dependencies in favour of system libs - e.g. the included 
 # newer version of FNA with patcher included

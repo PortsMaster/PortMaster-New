@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+#
+# TITLE: Font Selector
+# AUTHOR: bmdhacks
+# DESCRIPTION: Change the default UI font. Discovers fonts from game data and installed mods.
+# ARGS: --openmw-config $OPENMW_CFG --font $FONT
+# HAS_OUTPUT: TRUE
+#
+# FONT_TYPE: SELECT
+# FONT_OPTIONS: magic_cards_regular;MysticCards;DejaVuLGCSansMono;century_gothic_font_regular
+# FONT_DEFAULT: magic_cards_regular
+#
+
+import argparse
+import os
+import re
+import sys
+
+
+# Fonts known to exist inside Morrowind's BSA archives.
+BSA_FONTS = {
+    "magic_cards_regular":          "Morrowind default (bitmap)",
+    "century_gothic_font_regular":  "Century Gothic (bitmap)",
+    "daedric_font":                 "Daedric / scroll font (bitmap)",
+}
+
+# Fonts shipped with OpenMW in resources/vfs/fonts/.
+OPENMW_FONTS = {
+    "MysticCards":          "OpenMW default (TrueType)",
+    "DemonicLetters":       "Daedric / scroll font (TrueType)",
+    "DejaVuLGCSansMono":    "DejaVu Mono (TrueType)",
+}
+
+
+def parse_data_paths(cfg_path):
+    """Extract data= paths from openmw.cfg."""
+    paths = []
+    cfg_dir = os.path.dirname(os.path.abspath(cfg_path))
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.lower().startswith("data="):
+                path = line[5:].strip().strip('"')
+                if not os.path.isabs(path):
+                    path = os.path.join(cfg_dir, path)
+                paths.append(path)
+    return paths
+
+
+def discover_fonts(data_paths):
+    """
+    Scan data paths for font files (.fnt and .omwfont) in Fonts/ subdirectories.
+    Returns a dict of {font_name: description}.
+    """
+    found = {}
+
+    for data_path in data_paths:
+        if not os.path.isdir(data_path):
+            continue
+
+        # Case-insensitive search for a "Fonts" directory
+        fonts_dir = None
+        try:
+            for entry in os.listdir(data_path):
+                if entry.lower() == "fonts" and os.path.isdir(os.path.join(data_path, entry)):
+                    fonts_dir = os.path.join(data_path, entry)
+                    break
+        except OSError:
+            continue
+
+        if not fonts_dir:
+            continue
+
+        try:
+            for entry in os.listdir(fonts_dir):
+                lower = entry.lower()
+                if lower.endswith(".fnt") or lower.endswith(".omwfont"):
+                    name = os.path.splitext(entry)[0]
+                    if name not in found and name not in BSA_FONTS and name not in OPENMW_FONTS:
+                        ext = "TrueType" if lower.endswith(".omwfont") else "bitmap"
+                        found[name] = f"Custom font ({ext})"
+        except OSError:
+            continue
+
+    return found
+
+
+def get_current_font(cfg_path):
+    """Read the current Fonts_Font_0 fallback from openmw.cfg."""
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.lower().startswith("fallback=fonts_font_0,"):
+                return line.split(",", 1)[1].strip()
+    return None
+
+
+def set_font(cfg_path, font_name):
+    """Update the Fonts_Font_0 fallback in openmw.cfg."""
+    pattern = re.compile(r"^(\s*fallback\s*=\s*Fonts_Font_0\s*,)", re.IGNORECASE)
+    lines = []
+    replaced = False
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = pattern.match(line)
+            if m and not replaced:
+                lines.append(f"{m.group(1)}{font_name}\n")
+                replaced = True
+            else:
+                lines.append(line)
+
+    if not replaced:
+        # Fallback line doesn't exist yet — add it
+        lines.append(f"fallback=Fonts_Font_0,{font_name}\n")
+
+    temp_path = cfg_path + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    os.replace(temp_path, cfg_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Change the default game font.")
+    parser.add_argument("--openmw-config", required=True, help="Path to openmw.cfg")
+    parser.add_argument("--font", required=True, help="Font name to set, or 'list' to show available fonts.")
+    args = parser.parse_args()
+
+    if not os.path.exists(args.openmw_config):
+        print(f"ESMM::ALERT::Error::Config file not found: {args.openmw_config}")
+        sys.exit(1)
+
+    # Build the full list of available fonts.
+    all_fonts = {}
+    all_fonts.update(BSA_FONTS)
+    all_fonts.update(OPENMW_FONTS)
+
+    data_paths = parse_data_paths(args.openmw_config)
+    custom_fonts = discover_fonts(data_paths)
+    all_fonts.update(custom_fonts)
+
+    current = get_current_font(args.openmw_config)
+
+    if args.font == "list":
+        print("Available fonts:")
+        for name, desc in sorted(all_fonts.items(), key=lambda x: x[0].lower()):
+            marker = " <-- current" if name == current else ""
+            print(f"  {name:40s} {desc}{marker}")
+        sys.exit(0)
+
+    font_name = args.font
+
+    if font_name == current:
+        print(f"Font is already set to '{font_name}'. No changes needed.")
+        sys.exit(0)
+
+    if font_name not in all_fonts:
+        print(f"Warning: Font '{font_name}' was not found in any data path.")
+        print("It may still work if it exists inside a BSA archive or is installed later.")
+
+    set_font(args.openmw_config, font_name)
+    print(f"Font changed: '{current}' -> '{font_name}'")
+    print("Restart the game for the change to take effect.")
+
+
+if __name__ == "__main__":
+    main()

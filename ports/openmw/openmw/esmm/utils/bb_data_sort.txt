@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+#
+# TITLE: INI Data Sorter
+# AUTHOR: Gemini 2.5 Pro
+# DESCRIPTION: Sorts data paths in openmw.cfg based on rules in openmw_esmm.ini.
+# ARGS: --openmw-config $OPENMW_CFG --openmw-esmm-ini $OPENMW_ESMM_INI
+# REGISTER: SORT_DATA
+# PRIORITY: 1000
+# HAS_OUTPUT: TRUE
+#
+import argparse
+import os
+import sys
+
+# --- Wildcard Matching ---
+def wildcard_match(text, pattern):
+    """Simple, case-insensitive wildcard matching for * and ?."""
+    text, pattern = text.lower(), pattern.lower()
+    text_idx, pattern_idx = 0, 0
+    star_idx, last_text_idx = -1, -1
+
+    while text_idx < len(text):
+        if pattern_idx < len(pattern) and pattern[pattern_idx] in ('?', text[text_idx]):
+            text_idx += 1
+            pattern_idx += 1
+        elif pattern_idx < len(pattern) and pattern[pattern_idx] == '*':
+            star_idx = pattern_idx
+            last_text_idx = text_idx
+            pattern_idx += 1
+        elif star_idx != -1:
+            pattern_idx = star_idx + 1
+            text_idx = last_text_idx + 1
+            last_text_idx += 1
+        else:
+            return False
+
+    while pattern_idx < len(pattern) and pattern[pattern_idx] == '*':
+        pattern_idx += 1
+
+    return pattern_idx == len(pattern)
+
+# --- Rule & Config Loading ---
+def load_rules(ini_path):
+    """Loads sorting rules from the [data] section of an INI file."""
+    rules = []
+    if not os.path.exists(ini_path):
+        print(f"Warning: Rules file not found at {ini_path}", file=sys.stderr)
+        return rules
+    
+    in_data_section = False
+    with open(ini_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.split('#', 1)[0].split(';', 1)[0].strip()
+            if not line: continue
+            
+            if line.lower() == '[data]': in_data_section = True
+            elif line.startswith('['): in_data_section = False
+            
+            if in_data_section:
+                parts = line.split('=', 1)
+                pattern = parts[0].strip()
+                if not pattern: continue
+                priority = 99999
+                if len(parts) > 1:
+                    try: priority = int(parts[1].strip())
+                    except ValueError: pass
+                rules.append({'pattern': pattern, 'priority': priority})
+    return rules
+
+def get_sort_key(path_str, rules):
+    """
+    Finds the first matching rule by testing against relevant path segments.
+    The order of rules in the INI file is the primary source of priority.
+    """
+    path_norm = path_str.replace('\\', '/')
+    parts = [part for part in path_norm.split('/') if part]
+    
+    # Heuristically find the start of the 'mod' part of the path.
+    # This identifies what comes after directories like 'mod_data', 'mods', etc.
+    mod_root_index = -1
+    ignore_bases = ('mod_data', 'mods', 'alt_mods', 'openmw')
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i].lower() in ignore_bases:
+            mod_root_index = i + 1
+            break
+
+    # Generate a list of candidate strings to test against the rules,
+    # from most specific to least specific.
+    candidates = []
+    if mod_root_index != -1 and mod_root_index < len(parts):
+        # Full relative path from the mod directory (e.g., "Project Atlas/00 Core")
+        candidates.append("/".join(parts[mod_root_index:]))
+        # Just the mod's root folder name (e.g., "Project Atlas")
+        candidates.append(parts[mod_root_index])
+    # Fallback to the last component of the full path (e.g., "00 Core")
+    if len(parts) > 0:
+        candidates.append(parts[-1])
+
+    # The main logic: Iterate through rules in their INI file order.
+    # For each rule, test all our candidate strings. The first hit wins.
+    for rule in rules:
+        for candidate in candidates:
+            if wildcard_match(candidate, rule['pattern']):
+                # We found the first matching rule. This is the one we use.
+                return (rule['priority'], candidate.lower(), rule['pattern'])
+
+    # If no rule matched after checking all candidates, this should never be reached
+    # because of the catch-all '*' rule, but as a safeguard:
+    return (99999, path_norm.lower(), "DEFAULT_CATCH_ALL")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Sorts data paths in openmw.cfg based on openmw_esmm.ini rules.")
+    parser.add_argument('--openmw-config', required=True, help="Path to openmw.cfg")
+    parser.add_argument('--openmw-esmm-ini', required=True, help="Path to openmw_esmm.ini rules file.")
+    parser.add_argument('--dry-run', action='store_true', help="Print the new order without modifying the file.")
+    args = parser.parse_args()
+
+    if not os.path.exists(args.openmw_config):
+        print(f"ESMM::ALERT::Error::Config file not found: {args.openmw_config}")
+        sys.exit(1)
+
+    rules = load_rules(args.openmw_esmm_ini)
+    if not rules:
+        print(f"ESMM::ALERT::Warning::No rules found in [data] section of {args.openmw_esmm_ini}. No sorting will occur.")
+        sys.exit(0)
+
+    try:
+        print(f"Reading {args.openmw_config}")
+        with open(args.openmw_config, 'r', encoding='utf-8') as f:
+            original_lines = f.readlines()
+    except Exception as e:
+        print(f"ESMM::ALERT::Error::Could not read openmw.cfg: {e}")
+        sys.exit(1)
+
+    data_items = []
+    game_data_line = None
+    other_lines = []
+
+    for line in original_lines:
+        stripped = line.strip()
+        if stripped.lower().startswith('data='):
+            path_val = stripped[5:].strip().strip('"')
+            if os.path.exists(os.path.join(path_val, "Morrowind.esm")):
+                game_data_line = line
+            else:
+                sort_key = get_sort_key(path_val, rules)
+                data_items.append({'line': line, 'path': path_val, 'key': sort_key})
+        else:
+            other_lines.append(line)
+
+    print("Before:")
+    for i, data_item in enumerate(data_items):
+        print(f"- {i}: {data_item['line']}")
+    print("\n")
+
+    # Sort by priority first, then alphabetically by the matched string as a tie-breaker.
+    sorted_items = sorted(data_items, key=lambda item: (item['key'][0], item['key'][1], item['path'].lower()))
+
+    print("After:")
+    for i, data_item in enumerate(sorted_items):
+        print(f"- {i}: {data_item['line']}")
+    print("\n")
+
+    if args.dry_run:
+        print("--- Dry Run: No files will be changed. ---")
+        print("\n--- New Sorted Order ---")
+        if game_data_line: print(game_data_line.strip())
+        for item in sorted_items:
+            priority, match_segment, pattern = item['key']
+            print(f"Prio: {priority:<5} | Rule: '{pattern}' matched '{match_segment}'")
+            print(f"  -> Path: {item['path']}\n")
+        sys.exit(0)
+
+    try:
+        with open(args.openmw_config, 'w', encoding='utf-8') as f:
+            # Reconstruct the file safely
+            has_written_data = False
+            for line in original_lines:
+                stripped = line.strip()
+                if stripped.lower().startswith('data='):
+                    if not has_written_data:
+                        if game_data_line: f.write(game_data_line)
+                        for item in sorted_items: f.write(item['line'])
+                        has_written_data = True
+                else:
+                    f.write(line)
+
+        print(f"Successfully sorted and saved {args.openmw_config}.")
+    except Exception as e:
+        print(f"Unable to save {args.openmw_config}.")
+        print(f"ESMM::ALERT::Error::Could not write to openmw.cfg: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

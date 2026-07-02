@@ -99,7 +99,7 @@ chmod +x "$GAMEDIR/box86/box86"
 chmod +x "$GAMEDIR/gamedata/bin32/Chowdren"
 
 $GPTOKEYB "Chowdren" -c "$GAMEDIR/iconoclasts.gptk" &
-pm_message "Loading, please wait... (might take a while!)"
-$GAMEDIR/box86/box86 bin32/Chowdren
+pm_platform_helper "$GAMEDIR/box86/box86"
+$GAMEDIR/box86/box86 bin32/Chowdren 
 
 pm_finish

@@ -1,0 +1,833 @@
+#!/usr/bin/env python3
+#
+# TITLE: Netch Compressor
+# AUTHOR: kloptops
+# DESCRIPTION: Stateful Texture Management & Compression. Discovers, catalogs, and compresses Morrowind textures to KTX/ASTC format.
+# ARGS: --esmm-progress --openmw-cfg openmw/openmw.cfg --db-path netch_compressor.db --quality $QUALITY --block-size $BLOCK_SIZE --cancel-file $CANCEL_FILE
+# HAS_OUTPUT: TRUE
+# HAS_PROGRESS: TRUE
+# CAN_CANCEL: TRUE
+# REGISTER: RUN_BEFORE_LAUNCH
+#
+# QUALITY_TYPE: SELECT
+# QUALITY_OPTIONS: fastest;fast;medium;thorough;verythorough;exhaustive
+# QUALITY_DEFAULT: medium
+#
+# BLOCK_SIZE_TYPE: SELECT
+# BLOCK_SIZE_OPTIONS: 6x6;8x8;12x12
+# BLOCK_SIZE_DEFAULT: 8x8
+#
+
+import argparse
+import multiprocessing
+import os
+import pickle
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import traceback
+
+from collections import namedtuple, deque
+from pathlib import Path
+from queue import Queue, Empty as QueueEmpty # Use a specific import for clarity
+from types import TracebackType
+from typing import Optional, Type, ContextManager, List, Tuple
+
+# --- Constants & Configuration ---
+MOD_NAME = "Netch Leather Compressor"
+SUPPORTED_EXTENSIONS = ('.tga', '.bmp', '.dds')
+QUALITY_HIERARCHY = {
+    'fastest': 0, 'fast': 1, 'medium': 2, 'thorough': 3, 'verythorough': 4, 'exhaustive': 5}
+
+QUALITY_VALUE = {
+    'fastest': 0,
+    'fast': 25,
+    'medium': 50,
+    'thorough': 75,
+    'verythorough': 90,
+    'exhaustive': 100,
+    }
+
+BAD_CHECK_DIRECTORIES = (
+    'animations',
+    # Meshes is a huge timesink.
+    'meshes',
+    'music',
+    'sound',
+    )
+
+CANNOT_CONTAIN = ("menu_", "_menu", "_cursor", "cursor_")
+CANNOT_ENDWITH = (
+    "compass.dds", "scroll.dds", "target.dds", "mapfowtexture.dds",
+    "detect_animal_icon.dds", "detect_enchantment_icon.dds", "detect_key_icon.dds",
+    "door_icon.dds", "tx_leveluptoken.dds", "tx_scroll_bar.dds", "tx_scroll_button.dds",
+    )
+
+
+# --- Resource Management ---
+class ResourceManager:
+    """A multiprocessing-safe resource manager to prevent deadlocks."""
+    def __init__(self, total_resources, manager = None):
+        if total_resources < 1:
+            raise ValueError("Total resources must be a positive integer.")
+
+        if manager is None:
+            manager = multiprocessing
+
+        self._total_resources = manager.Value('i', total_resources)
+        self._initial_max_resources = total_resources
+        self._lock = manager.Lock()
+        self._condition = manager.Condition(self._lock)
+
+    def _acquire(self, num_resources: int):
+        with self._condition:
+            while self._total_resources.value < num_resources:
+                # This print is helpful for debugging resource contention
+                # print(f"Process {multiprocessing.current_process().name}: Needs {num_resources}, only {self._total_resources.value} available. Waiting...")
+                self._condition.wait()
+            self._total_resources.value -= num_resources
+
+    def _release(self, num_resources: int):
+        with self._condition:
+            self._total_resources.value += num_resources
+            self._condition.notify_all()
+
+    def get_acquirer(self, num_resources: int) -> ContextManager[None]:
+        if num_resources > self._initial_max_resources:
+            raise ValueError(f"Cannot request {num_resources} resources; max is {self._initial_max_resources}.")
+
+        return self._ResourceAcquirer(self, num_resources)
+
+    class _ResourceAcquirer:
+        def __init__(self, manager: 'ResourceManager', num_resources: int):
+            self.manager = manager
+            self.num_resources = num_resources
+
+        def __enter__(self):
+            self.manager._acquire(self.num_resources)
+
+        def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]):
+            self.manager._release(self.num_resources)
+
+
+# --- In-Python Header Parsers ---
+def get_image_dimensions(path: Path) -> Tuple[int, int]:
+    """Reads image headers directly in Python to get dimensions."""
+    try:
+        with open(path, 'rb') as f:
+            header = f.read(32)
+            if not header:
+                return 0, 0
+
+            ext = path.suffix.lower()
+            if ext == '.dds' and header.startswith(b'DDS '):
+                h, w = struct.unpack_from('<II', header, 12)
+                return w, h
+
+            elif ext == '.tga':
+                w, h = struct.unpack_from('<HH', header, 12)
+                return w, h
+
+            elif ext == '.bmp' and header.startswith(b'BM'):
+                w, h = struct.unpack_from('<ii', header, 18)
+                return w, abs(h)
+
+    except Exception:
+        pass
+    return 0, 0
+
+
+# --- Utility Functions ---
+def normalize_path(path_str: str) -> str:
+    base, _, _ = path_str.strip().replace('\\', '/').lower().rpartition('.')
+    return base
+
+
+def safe_resolve_path(base_path: Path, path_str: str) -> Path:
+    """
+    Resolves a path string from a base path case-insensitively.
+
+    This function walks through each component of the `path_str`. If a component
+    exists on disk (regardless of case), its true casing is used for the
+    next step. If it does not exist, its lowercase version is used to construct
+    the final path.
+
+    This function does NOT create any files or directories.
+
+    Args:
+        base_path (Path): The starting directory for the resolution.
+        path_str (str): A string representing the relative path to resolve.
+
+    Returns:
+        Path: The fully resolved Path object, reflecting on-disk casing where
+              possible and lowercase for non-existent parts.
+    """
+    current_path = base_path
+    
+    # Use Path(path_str).parts to correctly handle OS-specific separators.
+    parts = Path(path_str.replace('\\', '/')).parts
+
+    for part in parts:
+        # If the current path doesn't exist or isn't a directory,
+        # we can't search inside it. From here on, all subsequent
+        # parts must be treated as non-existent.
+        if not current_path.is_dir():
+            current_path /= part.lower()
+            continue
+
+        # Search for a matching child path case-insensitively.
+        try:
+            match = next(p for p in current_path.iterdir() if p.name.lower() == part.lower())
+            # A match was found, use its real path.
+            current_path = match
+
+        except (StopIteration, OSError):
+            # No match found, or a permission error occurred.
+            # Append the lowercase version of the part.
+            current_path /= part.lower()
+            
+    return current_path
+
+
+def run_command(cmd: List[str]) -> str:
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8')
+        return result.stdout.strip()
+
+    except FileNotFoundError:
+        raise RuntimeError(f"Command not found: '{cmd[0]}'. Is it in your system's PATH?")
+
+    except subprocess.CalledProcessError as e:
+        error_message = (f"Command failed with exit code {e.returncode}:\n"
+                         f"  Command: {' '.join(cmd)}\n  Stderr: {e.stderr.strip()}")
+        raise RuntimeError(error_message)
+
+
+def unpack_bsa_file(bsa_path: Path, rel_path_in_bsa: str, dest_dir: Path) -> Path:
+    try:
+        output_path = dest_dir / Path(rel_path_in_bsa).name
+        run_command(['bsatool', 'extract', str(bsa_path), rel_path_in_bsa, str(dest_dir)])
+        return output_path
+    except Exception as e:
+        raise RuntimeError(f"Failed to unpack '{rel_path_in_bsa}' from '{bsa_path.name}': {e}")
+
+
+# --- ESMM Integration ---
+def esmm_progress(stage_name, step, total, info=""):
+    print(f'ESMM::PROGRESS::{step}/{total}::{stage_name}::{info}')
+    sys.stdout.flush()
+
+
+def esmm_error(title, message):
+    safe_title = str(title).replace(':', '-').replace('\n', ' ')
+    safe_message = str(message).replace(':', '-').replace('\n', ' ')
+    print(f"ESMM::ALERT::{safe_title}::{safe_message}")
+    sys.exit(255)
+
+
+# --- Core Classes ---
+class CacheManager:
+    """
+    Manages an in-memory texture cache using a dedicated thread.
+
+    This provides a high-performance, thread-safe, and multiprocessing-safe
+    way to read and write texture metadata. The cache is loaded from a pickle
+    file at startup and saved back at shutdown.
+    """
+    def __init__(self, cache_path: Path, manager):
+        self._cache_path = cache_path
+        self._request_queue = manager.Queue()
+        self._shutdown_event = manager.Event()
+        self._thread = None
+        self._cache = {}
+
+    def _load_cache_from_disk(self):
+        """Loads the cache from a pickle file if it exists."""
+        if not self._cache_path.exists():
+            print("No cache file found. Starting with a fresh cache.")
+            return
+
+        try:
+            with open(self._cache_path, 'rb') as f:
+                self._cache = pickle.load(f)
+            print(f"Successfully loaded {len(self._cache)} entries from cache.")
+        except (pickle.UnpicklingError, EOFError, Exception) as e:
+            print(f"Warning: Could not load cache file '{self._cache_path}'. "
+                  f"Starting with a fresh cache. Reason: {e}")
+            self._cache = {}
+
+    def _save_cache_to_disk(self, quiet=False):
+        """Saves the current in-memory cache to a pickle file."""
+        if not quiet:
+            print(f"Saving {len(self._cache)} cache entries to disk...")
+        try:
+            # Write to a temporary file first for atomicity
+            temp_path = self._cache_path.with_suffix('.tmp')
+            with open(temp_path, 'wb') as f:
+                pickle.dump(self._cache, f, protocol=pickle.HIGHEST_PROTOCOL)
+            
+            # Atomically rename/replace the old cache file
+            os.replace(temp_path, self._cache_path)
+            if not quiet:
+                print("Cache saved successfully.")
+        except Exception as e:
+            print(f"CRITICAL: Failed to save cache to '{self._cache_path}'. "
+                  f"Reason: {e}", file=sys.stderr)
+
+    def _update_compression_details(self, key, new_data):
+        data = self._cache.get(key, None)
+        if data is None:
+            return
+
+        mtime, size, w, h, _, _ = data
+
+        self._cache[key] = (mtime, size, w, h, new_data[0], new_data[1])
+
+    def _run(self):
+        """The main loop for the dedicated cache management thread."""
+        print("Cache manager thread started.")
+        self._load_cache_from_disk()
+
+        commands = {
+            'get': self._cache.get,
+            'set': self._cache.__setitem__,
+            'update_compression_details': self._update_compression_details,
+        }
+
+        update_commands = (
+            'set',
+            'update_compression_details')
+
+        # We save every 100 updates.
+        updates = 0
+
+        while not self._shutdown_event.is_set():
+            try:
+                # Wait for a request from any other thread/process.
+                request = self._request_queue.get(timeout=0.5)
+                command, args, response_queue = request
+
+                # Execute the command (get or set).
+                result = commands[command](*args)
+
+                # If the requester is waiting for a response (only for 'get'), send it back.
+                if response_queue:
+                    response_queue.put(result)
+
+                if command in update_commands:
+                    updates += 1
+                    if updates > 100:
+                        self._save_cache_to_disk(quiet=True)
+                        updates = 0
+
+            except QueueEmpty:
+                continue  # Just means no work to do, loop again.
+            except Exception as e:
+                print(f"Error in cache manager thread: {e}", file=sys.stderr)
+
+        self._save_cache_to_disk()
+        print("Cache manager thread shut down.")
+
+    def start(self):
+        """Starts the cache manager thread."""
+        if self._thread is not None:
+            return  # Already started
+
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        """Signals the cache manager thread to shut down and waits for it."""
+        if self._thread is None:
+            return # Never started
+
+        print("Shutting down cache manager...")
+        self._shutdown_event.set()
+        self._thread.join(timeout=5)
+
+    # --- Public Interface ---
+    # These methods are what your other threads/processes will call.
+
+class CacheManagerClient:
+    def __init__(self, request_queue, manager):
+        self._request_queue = request_queue
+        self._manager = manager
+
+    def get_cache_entry(self, source_key: str):
+        """Requests a cache entry. This is a blocking call."""
+        # This temporary queue is local to the calling thread.
+        response_queue = self._manager.Queue(1)
+        self._request_queue.put(('get', (source_key, None), response_queue)) # .get needs a default
+        return response_queue.get()
+
+    def update_cache_entry(self, source_key: str, data: tuple):
+        """
+        Updates a cache entry. This is a non-blocking, "fire and forget" call.
+        """
+        self._request_queue.put(('set', (source_key, data), None))
+
+    def update_compression_details(self, source_key, block_size, quality):
+        """
+        Updates a compression details shortcut. This is a non-blocking, "fire and forget" call.
+        """
+        self._request_queue.put(('update_compression_details', (source_key, (block_size, quality)), None))
+
+# --- Worker and Processor Functions ---
+def calculate_resource_cost(texture_item) -> int:
+    """Determines how many resource points a texture requires to process."""
+    key, source_path, source_type, bsa_path, w, h = texture_item
+
+    if w > 1024 or h > 1024:
+        return 3
+
+    if w > 512 or h > 512:
+        return 2
+
+    return 1
+
+
+worker_manager = None
+def init_texture_processor_worker(manager):
+    """Initializer for each worker in the multiprocessing pool."""
+    global worker_manager
+    worker_manager = manager
+    print(f"Initializing worker {os.getpid()}...")
+
+
+def texture_processor_worker(texture_queue, cache_queue, done_queue, resource_manager, cancel_event, args):
+    """A worker process that consumes textures, processes them, and reports results."""
+
+    global worker_manager
+    cache = CacheManagerClient(cache_queue, worker_manager)
+
+    temp_dir = None
+    try:
+        temp_dir = Path(tempfile.mkdtemp(prefix=f'nlc_{os.getpid()}_'))
+
+        while not cancel_event.is_set():
+            try:
+                texture_item = texture_queue.get()
+                if texture_item is None: # Poison pill
+                    break
+
+                cost = calculate_resource_cost(texture_item)
+                with resource_manager.get_acquirer(cost):
+                    if cancel_event.is_set():
+                        break # Check again after acquiring resources
+
+                    result = process_single_texture(texture_item, cache, args, temp_dir)
+                    done_queue.put(result)
+
+            except Exception as e:
+                # Report failure for this specific texture
+                done_queue.put({'status': 'failed', 'info': texture_item[1], 'error': str(e)})
+    finally:
+        if temp_dir is not None:
+            shutil.rmtree(temp_dir)
+
+
+def process_single_texture(texture_item: tuple, cache: CacheManagerClient, args: argparse.Namespace, temp_dir: Path) -> dict:
+    """The core logic for compressing a single texture."""
+
+    key, source_path, source_type, bsa_path, w, h = texture_item
+
+    if source_type == 'bsa_file':
+        ktx_path = safe_resolve_path(bsa_path.parent, source_path).with_suffix('.ktx')
+    else:
+        ktx_path = source_path.with_suffix('.ktx')
+
+    source_for_processing, temp_source_to_clean = None, None
+    temp_file = None
+
+    try:
+        if source_type == 'data_file':
+            source_for_processing = source_path
+        else:
+            temp_source_to_clean = unpack_bsa_file(bsa_path, source_path, temp_dir)
+            source_for_processing = temp_source_to_clean
+
+        # If the file exists, see if we need to compress it.
+        if ktx_path.is_file and not args.force_recompress:
+            # We already checked mtime during discovery, so now we just check compression settings
+            cache_item = cache.get_cache_entry(key)
+            if cache_item:
+                _, _, _, _, stored_block, stored_quality = cache_item
+
+                if stored_block == args.block_size and QUALITY_HIERARCHY.get(args.quality, -1) <= QUALITY_HIERARCHY.get(stored_quality, -1):
+                    return {'status': 'skipped', 'info': source_for_processing.name, 'original_size': source_for_processing.stat().st_size, 'compressed_size': ktx_path.stat().st_size}
+
+        ktx_path.parent.mkdir(exist_ok=True, parents=True)
+
+        if source_for_processing.suffix.lower() == '.dds':
+            temp_file = temp_dir / (source_for_processing.stem + '.ktx')
+            run_command(['kram', 'decode', '-i', str(source_for_processing), '-o', str(temp_file)])
+        else:
+            temp_file = temp_dir / (source_for_processing.stem + '.png')
+            run_command(['minimg', 'convert', str(source_for_processing), str(temp_file)])
+
+        kram_cmd = ['kram', 'encode', '-f', f'astc{args.block_size}', '-encoder', 'astcenc', '-quality', str(QUALITY_VALUE.get(args.quality, 50)), '-i', str(temp_file), '-o', str(ktx_path)]
+        run_command(kram_cmd)
+
+        cache.update_compression_details(key, args.block_size, args.quality)
+        return {'status': 'compressed', 'info': source_for_processing.name, 'original_size': source_for_processing.stat().st_size, 'compressed_size': ktx_path.stat().st_size}
+
+    finally:
+        if temp_file is not None and temp_file.exists():
+            temp_file.unlink()
+
+
+def end_processor_consumer(done_queue, total_textures, cancel_event, stats, args):
+    """A single thread to safely handle results, update the DB, and report progress."""
+    processed_count = 0
+    while not cancel_event.is_set():
+        try:
+            result = done_queue.get(timeout=1)
+
+            if result is None:
+                break
+
+            stats[result['status']] += 1
+            stats['total_original_size'] += result.get('original_size', 0)
+            stats['total_compressed_size'] += result.get('compressed_size', 0)
+
+            processed_count += 1
+            if args.esmm_progress:
+                esmm_progress("Compressing Textures", processed_count, total_textures.value, result['info'])
+
+            if result['status'] == 'failed':
+                print(f"\nERROR processing {result['info']}: {result.get('error', 'Unknown')}", file=sys.stderr)
+
+        except Exception: # Catches queue.Empty and other potential issues
+            continue
+
+
+# --- Discovery Logic ---
+def discover_textures(cfg_path, resolve_queue, cancel_event, start_event, total_textures):
+    """Discovers all textures, reconciles metadata with the cache, and queues them for processing."""
+
+    print("Discovering textures...")
+    cfg_dir = cfg_path.parent
+    data_paths, fallback_archives = [], []
+
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+
+            if not line or line.startswith(('#', ';')):
+                continue
+
+            key, _, value = line.partition('=')
+
+            if value:
+                path_str = value.strip().strip('"')
+
+                if key.strip().lower() == 'data':
+                    data_paths.append((cfg_dir / path_str).resolve())
+
+                elif key.strip().lower() == 'fallback-archive':
+                    fallback_archives.append(path_str)
+
+    active_keys = set()
+
+    for data_root in reversed(data_paths):
+        if cancel_event.is_set():
+            if not start_event.is_set():
+                start_event.set()
+
+            return
+
+        if not data_root.is_dir():
+            continue
+
+        to_scan = deque([(0, data_root)])
+        while to_scan:
+            if cancel_event.is_set():
+                if not start_event.is_set():
+                    start_event.set()
+
+                return
+
+            depth, current_path = to_scan.popleft()
+            # print(f"- {depth}: {current_path}")
+            try:
+                for entry in current_path.iterdir():
+                    if entry.is_dir():
+                        if depth == 0 and entry.name.lower() in BAD_CHECK_DIRECTORIES:
+                            # Skip these directories as they don't have textures.
+                            continue
+
+                        to_scan.append((depth + 1, entry))
+                        continue
+
+                    if not entry.is_file() or entry.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                        continue
+
+                    filename_lower = entry.name.lower()
+                    if any(bad_name in filename_lower for bad_name in CANNOT_CONTAIN) or filename_lower.endswith(CANNOT_ENDWITH):
+                        continue
+
+                    key = normalize_path(str(entry.relative_to(data_root)))
+                    if key in active_keys:
+                        continue
+
+                    active_keys.add(key)
+                    resolve_queue.put((key, entry, 'data_file', None))
+
+                    total_textures.value += 1
+                    if not start_event.is_set():
+                        start_event.set()
+
+            except (PermissionError, FileNotFoundError):
+                pass
+
+    for bsa_name in fallback_archives:
+        if cancel_event.is_set():
+            if not start_event.is_set():
+                start_event.set()
+            return
+
+        for data_root in data_paths:
+            bsa_path = data_root / bsa_name
+
+            # print(f"- {bsa_path}")
+            if not bsa_path.is_file():
+                continue
+
+            try:
+                bsa_list_raw = run_command(['bsatool', 'list', str(bsa_path)])
+
+                for rel_path_str in bsa_list_raw.splitlines():
+                    rel_path_str = rel_path_str.replace('\\', '/')
+                    entry = Path(rel_path_str)
+                    filename_lower = entry.name.lower()
+
+                    if entry.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                        continue
+
+                    if any(bad_name in filename_lower for bad_name in CANNOT_CONTAIN) or filename_lower.endswith(CANNOT_ENDWITH):
+                        continue
+
+                    key = normalize_path(rel_path_str)
+                    if key in active_keys:
+                        continue
+
+                    active_keys.add(key)
+                    resolve_queue.put((key, rel_path_str, 'bsa_file', bsa_path))
+                    total_textures.value += 1
+
+                    if not start_event.is_set():
+                        start_event.set()
+
+            except RuntimeError:
+                pass
+            break
+
+    if not start_event.is_set():
+        start_event.set()
+
+    print("All textures found.")
+
+    resolve_queue.put(None)
+
+
+# --- Resolve logic ---
+def resolve_textures(texture_queue, cache, num_workers, resolve_queue, cancel_event):
+    print("Beginning texture resolver.")
+
+    while True:
+        if cancel_event.is_set():
+            break
+
+        try:
+            texture_item = resolve_queue.get()
+
+            if texture_item is None:
+                break
+
+            key, source_path, source_type, bsa_path = texture_item
+
+            # Resolve the dimensions of the files and pass them to the compressors
+            if source_type == 'data_file':
+                texture_stat = source_path.stat()
+                mtime, size = texture_stat.st_mtime, texture_stat.st_size
+
+                cache_item = cache.get_cache_entry(key)
+
+                if cache_item and abs(cache_item[0] - mtime) < 1 and cache_item[1] == size:
+                    w, h = cache_item[2], cache_item[3]
+
+                else:
+                    w, h = get_image_dimensions(source_path)
+                    cache.update_cache_entry(key, (mtime, size, w, h, None, None))
+
+                texture_queue.put((key, source_path, 'data_file', None, w, h))
+
+            elif source_type == 'bsa_file':
+                bsa_stat = bsa_path.stat()
+                mtime, size = bsa_stat.st_mtime, bsa_stat.st_size
+
+                cache_item = cache.get_cache_entry(key)
+
+                if cache_item and abs(cache_item[0] - mtime) < 1 and cache_item[1] == size:
+                    w, h = cache_item[2], cache_item[3]
+
+                else:
+                    ## TODO: somehow preserve these files to save on BSA files from being extracted twice, without using too much space in /tmp...
+                    temp_dir = Path(tempfile.mkdtemp(prefix=f"nlc_{os.getpid()}_"))
+                    unpacked_file = unpack_bsa_file(bsa_path, source_path, temp_dir)
+                    w, h = get_image_dimensions(unpacked_file)
+                    cache.update_cache_entry(key, (mtime, size, w, h, None, None))
+                    shutil.rmtree(temp_dir)
+
+                texture_queue.put((key, source_path, 'bsa_file', bsa_path, w, h))
+
+            # else: lol ?
+
+        except (PermissionError, FileNotFoundError):
+            pass
+
+    print("All textures resolved.")
+
+    # Send poison pills to the queue so workers can exit
+    for _ in range(num_workers):
+        texture_queue.put(None)
+
+    # One for good luck.
+    texture_queue.put(None)
+
+def bool_argument(string):
+    return (string.lower() not in ('n', 'false', 'no', '0'))
+
+def nice_duration(seconds):
+    seconds = int(seconds)
+    output = ""
+    if (seconds >= (60 * 60)):
+        output += f" {seconds // (60 * 60)}h"
+        seconds %= (60 * 60)
+    if (seconds >= 60):
+        output += f" {seconds // 60}m"
+        seconds %= 60
+    if (seconds > 0):
+        output += f" {seconds}s"
+    return output.strip()
+
+# --- Main Execution ---
+def main():
+    """Sets up and runs the texture compression process."""
+    parser = argparse.ArgumentParser(description=f"{MOD_NAME}: A clean, stateful texture compressor.")
+    parser.add_argument('--openmw-cfg', required=True, type=Path, help='Path to your openmw.cfg file.')
+    parser.add_argument('--db-path', required=True, type=Path, help='Path to the SQLite database file.')
+    parser.add_argument('--block-size', default='8x8', choices=['6x6', '8x8', '12x12'], help='ASTC block size.')
+    parser.add_argument('--quality', default='medium', choices=['fastest', 'fast', 'medium', 'thorough', 'verythorough', 'exhaustive'], help='ASTC encoding quality.')
+    parser.add_argument('--force-recompress', default=False, type=bool_argument, help='Re-compress textures even if settings are not an upgrade.')
+    parser.add_argument('--esmm-progress', action='store_true', help='Output machine-parseable progress for GUI integration.')
+    parser.add_argument('--cancel-file', type=Path, default=None, help='A file that signals cancellation if it exists.')
+    args = parser.parse_args()
+
+    start_time = time.monotonic()
+    stats = {'compressed': 0, 'skipped': 0, 'failed': 0, 'total_original_size': 0, 'total_compressed_size': 0}
+
+    # Use a multiprocessing Manager for shared state between processes
+    manager          = multiprocessing.Manager()
+    resolve_queue    = manager.Queue()
+    texture_queue    = manager.Queue()
+    done_queue       = manager.Queue()
+    cancel_event     = manager.Event()
+    start_event      = manager.Event()
+    total_textures   = manager.Value('i', 0)
+
+    def cancellation_watcher():
+        while not cancel_event.is_set():
+            if args.cancel_file and args.cancel_file.exists():
+                print("\nCancellation signal received. Shutting down gracefully...")
+                cancel_event.set()
+                break
+
+            time.sleep(0.5)
+
+    watcher_thread = threading.Thread(target=cancellation_watcher, daemon=True)
+    watcher_thread.start()
+
+    try:
+        print(f"--- {MOD_NAME} ---")
+
+        num_workers   = max(int((os.cpu_count() or 1) / 2), 1)
+        num_resources = max(int((os.cpu_count() or 1) * 2), 3)
+
+        # Start the dedicated database process
+        cache_manager = CacheManager(args.db_path.with_suffix('.pkl'), manager)
+        cache_manager.start()
+
+        cache_client = CacheManagerClient(cache_manager._request_queue, manager)
+
+        # Resource manager
+        resource_manager = ResourceManager(num_resources, manager)
+
+        # Texture discovery
+        texture_discoverer = threading.Thread(target=discover_textures, args=(args.openmw_cfg, resolve_queue, cancel_event, start_event, total_textures), daemon=True)
+        texture_discoverer.start()
+
+        while not start_event.is_set() and not cancel_event.is_set():
+            # print("Zzzz")
+            time.sleep(0.5)
+
+        if total_textures.value > 0 and not cancel_event.is_set():
+            # Texture resolver
+            texture_resolver = threading.Thread(target=resolve_textures, args=(texture_queue, cache_client, num_workers, resolve_queue, cancel_event), daemon=True)
+            texture_resolver.start()
+
+            end_processor = threading.Thread(target=end_processor_consumer, args=(done_queue, total_textures, cancel_event, stats, args), daemon=True)
+            end_processor.start()
+
+            print("Beginning compressing textures.")
+            with multiprocessing.Pool(processes=num_workers, initializer=init_texture_processor_worker, initargs=(manager, )) as pool:
+                # Start worker processes
+                worker_args = (texture_queue, cache_manager._request_queue, done_queue, resource_manager, cancel_event, args)
+                pool.starmap(texture_processor_worker, [worker_args] * num_workers)
+
+            print("Texture compression complete.")
+            texture_resolver.join() # This should be done. :)
+            done_queue.put(None)
+            end_processor.join() # Wait for the final results to be processed
+
+        texture_discoverer.join()
+
+        total_time = time.monotonic() - start_time
+        print("\n--- Run Summary ---")
+        print(f"Total Time:             {total_time:.2f}s ({nice_duration(total_time)})")
+        print("-" * 25)
+        print(f"Textures Processed:")
+        print(f"  - Compressed:           {stats['compressed']}")
+        print(f"  - Skipped (up-to-date): {stats['skipped']}")
+        print(f"  - Failed:               {stats['failed']}")
+        print("-" * 25)
+
+        if stats['total_original_size'] > 0 and stats['total_compressed_size'] > 0:
+            saved_bytes = stats['total_original_size'] - stats['total_compressed_size']
+            reduction = (saved_bytes / stats['total_original_size']) * 100 if stats['total_original_size'] > 0 else 0
+            print(f"Space Saved (for new compressions):")
+            print(f"  - Original Size:          {stats['total_original_size'] / (1024*1024):.2f} MB")
+            print(f"  - Compressed Size:        {stats['total_compressed_size'] / (1024*1024):.2f} MB")
+            print(f"  - Space Saved:            {saved_bytes / (1024*1024):.2f} MB ({reduction:.1f}% reduction)")
+
+        print("\n--- All Done! ---")
+
+    except (Exception, SystemExit) as e:
+        if args.esmm_progress:
+            esmm_error(f"{MOD_NAME} Error", e)
+
+        # print(f"\nAn error occurred: {e}", file=sys.stderr)
+        # sys.exit(1)
+        raise
+
+    finally:
+        cache_manager.stop()
+
+        cancel_event.set()
+
+if __name__ == '__main__':
+    main()

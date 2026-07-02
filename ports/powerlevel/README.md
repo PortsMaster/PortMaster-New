@@ -1,19 +1,20 @@
 ## Notes
 
-Thanks to SmithManC [https://smithmanc.itch.io/power-level] for this game.
+Special thanks to [SmithManC](https://smithmanc.itch.io/) for making this wonderful game.
 
 Source: https://smithmanc.itch.io/power-level
 
+Thanks to JohnnyOnFlame for GMLoader-Next.
 
-## Controls
-
+### Controls
 | Button | Action |
 |--|--| 
-|D-pad/L-stick|Movement|
-|ABXY/R-stick|Attack Direction|
-|L1|Back|
-|L2|Heal|
-|R1|Select/Sprint|
-|R2|Special Attack|
+|D-pad|Movement|
+|ABXY|Attack Direction|
+|L1|Heal|
+|L2|Map|
+|R1|Special Attack|
+|R2|Sprint|
+|Start|Pause/Menu|
 
 

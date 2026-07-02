@@ -13,42 +13,44 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-export PORT_32BIT="N"
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
 GAMEDIR="/$directory/ports/gravitycircuit"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+TOOLDIR=$GAMEDIR/tools
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 cd $GAMEDIR
 
 # extract, diff
 GAMEFILE="./gamedata/GravityCircuit.exe"
 if [ -f "$GAMEFILE" ]; then
-  # Replace with splashscreen?
-  echo "Unpacking and patching game, this takes a while on the first start..." > /dev/tty0
-  # unpack the game
-  unzip -o "$GAMEFILE" -d ./gamedata 
-  rm "$GAMEFILE"
-  rm -Rf ./gamedata/platform
-  cd ./gamedata
-  # ungh, mixed line ends, there's probably a better way
-  grep -E '^\+\+\+ ' "../gravitycircuit.diff" | sed -E 's/^\+\+\+ ([^\/]+\/)?//' | cut -f1 | xargs -I {} dos2unix "{}"
-  # patch the unpacked game
-  $GAMEDIR/bin/patch -p1 < "$GAMEDIR/gravitycircuit.diff"
+  export PATCHER_FILE="$TOOLDIR/patchscript"
+  export PATCHER_TIME="2-5 minutes"
+  export controlfolder
+  if [ -f "$controlfolder/utils/patcher.txt" ]; then
+    $ESUDO chmod a+x "$TOOLDIR/patchscript"
+    source "$controlfolder/utils/patcher.txt"
+    pm_gptokeyb_finish
+  else
+    pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
+    sleep 5
+    exit
+  fi
 fi
 
 export XDG_DATA_HOME="$GAMEDIR/conf" # allowing saving to the same path as the game
 export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 mkdir -p "$XDG_DATA_HOME"
 
-echo "Loading game.." > /dev/tty0
-
 cd $GAMEDIR
-$GPTOKEYB "love" -c gravitycircuit.gptk &
-./bin/love ./gamedata
+# Source love2d runtime
+source $controlfolder/runtimes/"love_11.5"/love.txt
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Use the love runtime
+$GPTOKEYB "$LOVE_GPTK" -c "./gravitycircuit.gptk" &
+pm_platform_helper "$LOVE_BINARY"
+$LOVE_RUN ./gamedata
+
+# Cleanup any running gptokeyb instances, and any platform specific stuff.
+pm_finish

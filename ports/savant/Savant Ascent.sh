@@ -2,7 +2,6 @@
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
-# Source PortMaster tools
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
 elif [ -d "/opt/tools/PortMaster/" ]; then
@@ -14,56 +13,42 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-# Declare variables
+# Variables
 GAMEDIR="/$directory/ports/savant"
 
-# Exports
-export LD_LIBRARY_PATH="/usr/lib:/usr/lib32:/$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-
-# Change dir & add config
+# CD and set logging
 cd $GAMEDIR
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Check if the 'installed' file exists
-if [ ! -f "$GAMEDIR/installed" ]; then
-   
-    ASSETS="assets"
-    
-    # Redirect output to install.log only for the commands within the if condition
-    (
-        exec > >(tee -a "$GAMEDIR/install.log") 2>&1
+# Setup permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
 
-        # Move all .ogg files from ./gamedata to ./assets
-        mkdir -p assets && mv ./gamedata/*.ogg ./assets/
+# Exports
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-        # Rename data.win
-        mv "gamedata/data.win" "gamedata/game.droid"
-
-        # Add assets to savant.apk
-        echo "Zipping $ASSETS into apk..."
-        ./libs/7za a -r "./savant.apk" "./$ASSETS" 2>/dev/null || { echo "Error: Unable to add assets to savant.apk" >&2; exit 1; }
-
-        # Create 'installed' file to indicate successful installation
-        touch "$GAMEDIR/installed"
-    )
+# Check if we need to patch the game
+if [ ! -f patchlog.txt ] && [ -f "$GAMEDIR/assets/data.win" ]; then
+	if [ -f "$controlfolder/utils/patcher.txt" ]; then
+		export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+		export PATCHER_GAME="$(basename "${0%.*}")"
+		export PATCHER_TIME="1 minute"
+		export controlfolder
+		export ESUDO
+		source "$controlfolder/utils/patcher.txt"
+		$ESUDO kill -9 $(pidof gptokeyb)
+	else
+		echo "This port requires the latest version of PortMaster."
+	fi
 fi
 
-# Setup controls
-$ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "gmloader" & 
-echo "Loading, please wait... " > /dev/tty0
 
-# Run the game
-./gmloader savant.apk 2>&1 | tee log.txt /dev/tty0
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c gmloader.json
 
-# Kill proccesses & restart services
-$ESUDO kill -9 "$(pidof gptokeyb)"
-$ESUDO systemctl restart oga_events &
-printf "\033c" >> /dev/tty1
-printf "\033c" > /dev/tty0
-
+# Cleanup
+pm_finish

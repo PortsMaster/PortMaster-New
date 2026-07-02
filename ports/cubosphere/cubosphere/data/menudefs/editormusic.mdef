@@ -1,0 +1,99 @@
+menuname="editormusic";
+
+INCLUDE("/include/std.inc");
+
+USING("FILESYS");
+
+EntrySize=0.02;
+SelectedSize=0.025;
+
+
+--if GLOBAL_GetVar("EditorMode")==1 then
+ logoactive=0;
+--end;
+
+numthemes=-1;
+
+oEntries={};
+
+ darkbg=-1;
+
+
+
+function SortEntries() -- FIXME: bubble sort?!
+ for i=1,NumEntries-1,1 do
+   for j=i+1,NumEntries,1 do
+   -- print("Sorting "..i.."  "..j);
+    if Entries[i]>Entries[j] then
+     --print("  Swap : "..Entries[i].." and "..Entries[j]);
+      Entries[i],Entries[j]=Entries[j],Entries[i];
+      oEntries[i],oEntries[j]=oEntries[j],oEntries[i];
+      Hints[i],Hints[j]=Hints[j],Hints[i];
+    end;
+   end;
+ end;
+end;
+
+
+
+function BuildEntries()
+ Entries={};
+ Hints={};
+ oEntries={};
+ local numthemes=FILESYS_StartListDirectory("/music/",true,false,false,false,".*\\.mp3"); 
+ for index = 0, numthemes-1, 1 do
+   oEntries[index+1]=string.sub(FILESYS_GetListDirectoryEntry(index),1,string.len(FILESYS_GetListDirectoryEntry(index))-4);
+   Entries[index+1]=TRANS_StrD("music:"..oEntries[index+1],oEntries[index+1]);
+
+   Hints[index+1]=TRANS_Str("editor:music:hint")..Entries[index+1];
+ end;
+NumEntries=numthemes;
+SortEntries();
+
+for index=0,numthemes-1,1 do
+   if oEntries[index+1]==GLOBAL_GetVar("MusicTrack") then
+    Selected=index;
+   end;
+end;
+
+ end;
+
+function Precache()
+ FONT_Load(TRANS_Str("font"));
+ BuildEntries();
+ darkbg=TEXDEF_Load("darkbg");
+end;
+
+function Render()
+ StartMenu();
+
+  FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ MATRIX_Push();
+ TEXDEF_Render(darkbg,0);
+ MATRIX_Pop();
+
+ FONT_Load(TRANS_Str("font"));
+ FONT_Begin();
+
+ Headline(TRANS_Str("editor:music:title"));
+ RenderMenu();
+ EndMenu();
+end;
+
+
+function HandleSelection(sel)
+ if  (sel==-1) then
+  MENU_Load("editorsettings");
+ else
+    GLOBAL_SetVar("MusicTrack",oEntries[sel+1]);
+  --GLOBAL_SetVar("Editor_Changed",1);
+    GLOBAL_SetVar("EditorToolCommand","changed");
+    local mus=SOUND_LoadMusic(GLOBAL_GetVar("MusicTrack"));
+     SOUND_PlayMusic(mus);
+
+    MENU_Load("editorsettings");
+ end;
+end;
+ 

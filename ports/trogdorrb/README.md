@@ -18,11 +18,13 @@ Thanks to [Mode8fx](https://github.com/Mode8fx/Trogdor-Reburninated) for making 
 
 
 ## Compile
+All previous custom steps have been merged into the main repo so below steps are all that are needed.
 
 ```shell
-git clone https://github.com/christopher-roelofs/Trogdor-Reburninated.git
+git clone https://github.com/Mode8fx/Trogdor-Reburninated.git
 cd Trogdor-Reburninated/Trogdor-Reburninated
-chmod +x make_portmaster.sh
-./make_portmaster.sh
-
+mkdir build
+cd build
+cmake ../ -DLINUX=ON
+make
 ```

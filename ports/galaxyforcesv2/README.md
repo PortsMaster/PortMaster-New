@@ -8,16 +8,16 @@ Global hi-score and achievements with replays on the website.
 
 Features
 
-    Space shooter
-    Multiplayer
-    Online hiscore
-    Replays
-    Race
-    Dogfight
-    Mission
-    AI
-    Editor
-    Cross platform
+- Space shooter
+- Multiplayer
+- Online hiscore
+- Replays
+- Race
+- Dogfight
+- Mission
+- AI
+- Editor
+- Cross platform
 
 
 

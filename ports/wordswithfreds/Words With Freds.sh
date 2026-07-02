@@ -13,53 +13,31 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
-export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-$ESUDO chmod 666 /dev/tty0
+# Variables
+GAMEDIR="/$directory/ports/wordswithfreds"
 
-GAMEDIR=/$directory/ports/wordswithfreds
-
+# CD and set log
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$GAMEDIR/utils/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=1
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
-cd $GAMEDIR
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-#Patch Game
-if [ -f "$GAMEDIR/game.7z" ]; then
-   
-    # Change directory to the specified directory
-    cd "$GAMEDIR" || exit
+# Display loading splash
+$ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 4000 & 
 
-    # Use 7zip to extract the .exe file to the destination directory
-    "$GAMEDIR/patch/7zzs" x "$GAMEDIR/game.7z" -o"$GAMEDIR/gamedata" & pid=$!
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "www.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-    # Wait for the extraction process to complete
-    wait $pid
-
-    # Check if the panicroom.exe file exists
-    if [ -f "$GAMEDIR/gamedata/game.droid" ]; then
-        # Delete the redundant .exe files
-	rm "$GAMEDIR/game.7z"
-    fi
-else
-    echo "Game has been patched!"
-fi
-
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloader" &
-
-$ESUDO chmod +x "$GAMEDIR/gmloader"
-
-./gmloader wordswithfreds.apk
-
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
