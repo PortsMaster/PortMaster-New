@@ -9,6 +9,39 @@ EXE_MD5 = 'c6ea018babf9f000a9aee44e2a5db2e1'
 # File offset of populateResolutions IL body
 IL_OFF = 0x14d68c
 
+# ---- Camera zoom fix: prevent franchise zoom compounding -------------------
+# Root cause: get_transformation() and get_transformationFacility() multiply
+# Camera::Zoom into the scale transform. When OpenLineUpMenu or DrawScene set
+# Camera::Zoom to a non-1.0 value, the compound (franchiseZoom * Zoom) gives
+# ~0.393 instead of ~0.625 at 640x480 → 1628 virtual pixels (zoom way out).
+# Fix: replace ldsfld Camera::Zoom with ldc.r4 1.0 in those methods, and nop
+# the stsfld Camera::Zoom in OpenLineUpMenu and DrawScene.
+CAMERA_ZOOM_PATCHES = [
+    # (file_offset, old_5bytes, new_5bytes)
+    # get_transformation (RVA 0x4b80, code_off 0x2d8c): 4x ldsfld -> ldc.r4 1.0
+    (0x2db5, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    (0x2dc0, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    (0x2e25, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    (0x2e30, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    # get_transformationFacility (RVA 0x4cf0, code_off 0x2efc): 2x ldsfld -> ldc.r4 1.0
+    (0x2f2f, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    (0x2f3f, b'\x7e\x25\x00\x00\x04', b'\x22\x00\x00\x80\x3f'),
+    # OpenLineUpMenu (RVA 0x7ede0, code_off 0x7cfec): stsfld -> pop + 4 nops
+    (0x7cff7, b'\x80\x25\x00\x00\x04', b'\x26\x00\x00\x00\x00'),
+    # DrawScene (RVA 0x76df4, code_off 0x75000): stsfld -> pop + 4 nops
+    (0x75059, b'\x80\x25\x00\x00\x04', b'\x26\x00\x00\x00\x00'),
+]
+
+def apply_camera_zoom_fix(data):
+    # Must be called on original (unpatched) data
+    for off, old, new in CAMERA_ZOOM_PATCHES:
+        if data[off:off+5] != old:
+            print(f'SBH: camera-zoom: unexpected bytes at 0x{off:x}')
+            print(f'  expected {old.hex()}, got {data[off:off+5].hex()}')
+            return False
+        data[off:off+5] = new
+    return True
+
 # ---- Resolution detection ------------------------------------------------
 def detect_resolution():
     # 1) fbset (reports actual visible geometry, not buffer size)
@@ -51,20 +84,6 @@ def detect_resolution():
         pass
     return None, None
 
-# ---- Patch helpers -------------------------------------------------------
-def read_slot(data, off):
-    w = struct.unpack('<I', data[off+1:off+5])[0]
-    h = struct.unpack('<I', data[off+6:off+10])[0]
-    z = struct.unpack('<f', data[off+0xb:off+0xf])[0]
-    bw = struct.unpack('<I', data[off+0x10:off+0x14])[0]
-    bh = struct.unpack('<I', data[off+0x15:off+0x19])[0]
-    mz = struct.unpack('<f', data[off+0x1c:off+0x20])[0]
-    return w, h, z, bw, bh, mz
-
-def slot_matches(data, off, w, h, z, mz):
-    cw, ch, cz, cbw, cbh, cmz = read_slot(data, off)
-    return cw == w and ch == h and abs(cz - z) < 0.001 and abs(cmz - mz) < 0.001
-
 # ---- Main -----------------------------------------------------------------
 exe_path = sys.argv[1]
 if not os.path.exists(exe_path):
@@ -96,11 +115,38 @@ if not is_original:
                     data = bytearray(f.read())
                 is_original = True
             else:
-                print('SBH: unknown exe, skipping')
-                sys.exit(1)
+                print('SBH: backup exists but is not the original EXE')
+                print('SBH: patching current EXE in-place (camera fix + slot 14)')
     else:
-        print('SBH: unknown exe, skipping')
+        print('SBH: no backup found, patching current EXE in-place')
+
+# Save original backup (before any modifications)
+if not os.path.exists(backup):
+    with open(backup, 'wb') as f:
+        f.write(data)
+    print('SBH: original backup saved')
+
+# Apply camera-zoom fix (IL patches to prevent franchise zoom compounding)
+# On first-run or after restore, the bytes are original and patching works.
+# If re-patching in-place, the fix may already be applied — check patched patterns.
+CAMERA_PATCHED = [b'\x22\x00\x00\x80\x3f', b'\x26\x00\x00\x00\x00']
+def camera_patch_already_applied(data):
+    for off, old, new in CAMERA_ZOOM_PATCHES:
+        actual = bytes(data[off:off+5])
+        if actual not in (old, new):
+            return False  # unknown bytes — can't safely determine
+        if actual == old:
+            return False  # still original — needs patching
+    return True
+
+if not apply_camera_zoom_fix(data):
+    if camera_patch_already_applied(data):
+        print('SBH: camera-zoom fix already applied, skipping')
+    else:
+        print('SBH: camera-zoom fix FAILED — unknown EXE version')
         sys.exit(1)
+else:
+    print('SBH: camera-zoom fix applied')
 
 # Detect resolution (manual override takes precedence)
 if manual_res:
@@ -112,45 +158,20 @@ if w is None:
     sys.exit(1)
 print(f'SBH: detected {w}x{h}')
 
-# Scan all 15 slots for an exact resolution match
 il = IL_OFF
-# Slot offsets from IL body (verified by scanning original EXE)
-slot_offsets = [0x01, 0x38, 0x6f, 0xa6, 0xe2, 0x11c, 0x156,
-                0x190, 0x1ca, 0x204, 0x244, 0x284, 0x2c4, 0x304, 0x344]
-match_slot = None
-for idx, off in enumerate(slot_offsets):
-    sw, sh, sz, sbw, sbh, smz = read_slot(data, il + off)
-    if sw == w and sh == h:
-        match_slot = idx
-        break
-if match_slot is not None:
-    print(f'SBH: slot {match_slot} already matches {w}x{h}, no patch needed')
-    sys.exit(0)
-
 slot14_off = il + 0x344
 fz14_off = il + 0x036d
 
 # Calculate ideal values
-GW = 1280  # game world width
-REF = 1024  # reference width (1024x768)
-zoom_factor = w / GW
-menu_zoom = w / REF
-franchise_zoom = w / REF
+# Unified zoom ref (1024 minus a few px) to hide TV frame edges on small screens.
+# All three zoom values are unified so get_transformation* methods produce
+# consistent scaling regardless of which transform is active.
+ZOOM_REF = 1020
+zoom_factor = w / ZOOM_REF
+menu_zoom = w / ZOOM_REF
+franchise_zoom = w / ZOOM_REF
 backbuf_w = w
 backbuf_h = h
-
-# Check if slot 14 already matches
-if slot_matches(data, slot14_off, w, h, zoom_factor, menu_zoom):
-    fz = struct.unpack('<f', data[fz14_off+1:fz14_off+5])[0]
-    if abs(fz - franchise_zoom) < 0.001:
-        print(f'SBH: slot 14 already matches {w}x{h}')
-        sys.exit(0)
-
-# Save original backup if not done already
-if not os.path.exists(backup):
-    with open(backup, 'wb') as f:
-        f.write(data)
-    print(f'SBH: backup saved')
 
 # Patch slot 14
 def patch_slot(off, w, h, z, bw, bh, mz):
@@ -170,4 +191,4 @@ data[fz14_off+1:fz14_off+5] = struct.pack('<f', franchise_zoom)
 with open(exe_path, 'wb') as f:
     f.write(data)
 
-print(f'SBH: slot 14 set to {w}x{h} game={zoom_factor:.4f} menu={menu_zoom:.4f} fZ={franchise_zoom:.4f}')
+print(f'SBH: slot 14 set to {w}x{h} zoom={zoom_factor:.4f} menu={menu_zoom:.4f} fZ={franchise_zoom:.4f}')
