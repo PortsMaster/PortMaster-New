@@ -173,13 +173,19 @@ slot14_off = IL_OFF + 0x344
 fz14_off = IL_OFF + 0x036d
 
 # Calculate ideal values
-# Unified zoom ref (1024 minus a few px) to hide TV frame edges on small screens.
-# All three zoom values are unified so get_transformation* methods produce
-# consistent scaling regardless of which transform is active.
-ZOOM_REF = 1020
-zoom_factor = w / ZOOM_REF
-menu_zoom = w / ZOOM_REF
-franchise_zoom = w / ZOOM_REF
+# Aspect-aware zoom: match the original game's per-aspect patterns.
+#   16:9 (AR >= 1.5): zoom = h / 720  (matches every supported 16:9 slot)
+#   16:10 (AR >= 1.5): zoom = h / 720 (within 3% of supported 16:10 slots)
+#   4:3 / square (AR < 1.5): zoom = w / 1020 (1024 - 4 to hide TV frame edges)
+AR = w / h
+if AR >= 1.5:
+    ZOOM_REF = 720
+    zoom_factor = h / ZOOM_REF
+else:
+    ZOOM_REF = 1020
+    zoom_factor = w / ZOOM_REF
+menu_zoom = zoom_factor
+franchise_zoom = zoom_factor
 backbuf_w = w
 backbuf_h = h
 
