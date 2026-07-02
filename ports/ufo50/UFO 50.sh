@@ -30,6 +30,8 @@ export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
 export PATCHER_TIME="20 to 30 minutes"
+export ESUDO
+export DEVICE_ARCH
 
 # Check if patchlog.txt to skip patching
 if [ ! -f patchlog.txt ] || [ -f "$GAMEDIR/assets/data.win" ]; then
