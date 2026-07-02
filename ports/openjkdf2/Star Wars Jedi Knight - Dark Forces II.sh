@@ -80,12 +80,10 @@ if [[ $DEVICE_RAM -lt "2" ]]; then
       $ESUDO swapon /swapfile
     fi
   elif [[ "${CFW_NAME^^}" == "KNULLI" ]]; then
-    [ -f /media/SHARE/swapfile ] && $ESUDO swapoff -v /media/SHARE/swapfile
-    [ -f /media/SHARE/swapfile ] && $ESUDO rm -f /media/SHARE/swapfile
-    $ESUDO fallocate -l 420M /media/SHARE/swapfile
-    $ESUDO chmod 600 /media/SHARE/swapfile
-    $ESUDO mkswap /media/SHARE/swapfile
-    $ESUDO swapon /media/SHARE/swapfile
+    if [ ! -e /dev/zram0 ]; then
+        pm_message "For Knulli, you must enable ZRAM.  Start -> System Settings -> Services -> ZRAMSWAP"
+        sleep 7
+    fi
   fi
 fi
 
