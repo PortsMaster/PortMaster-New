@@ -19,6 +19,15 @@ On first launch, the port auto-detects the device resolution and
 patches the game's last resolution slot with the device's resolution and
 zoom values, if necessary. Patcher works with version 1.5.4 only.
 
+## Controls
+
+| Button | Action |
+|--|--| 
+|A| Pass|
+|B| Check|
+|X| Shoot|
+|Y| Change Player|
+
 ## Notes
 
 Thanks to the MonoGame project for the framework.

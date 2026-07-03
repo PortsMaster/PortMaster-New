@@ -1,6 +1,4 @@
 #!/bin/bash
-# PORTMASTER: superbloodhockey.zip, Super Blood Hockey.sh
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -50,8 +48,6 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 cp -u "$GAMEDIR/libs/libCSteamworks.so" "$GAMEDIR/libs/libsteam_api.so"
 
 # GL4ES setup
-rm -f $GAMEDIR/libs/libGL.so.1 $GAMEDIR/libs/libEGL.so.1
-
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
