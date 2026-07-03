@@ -119,7 +119,7 @@ These use the classic Dark Forces UI (not ImGui).
 
 - **Pause menu** — **Start** during gameplay.
 - **PDA** — **Select** during gameplay; **B** closes it.
-- **Mission / agent selection** (between missions) — **D-Pad** left/right changes agent or mission; **A** confirms.
+- **Mission / agent selection** (between missions) — **D-Pad** left/right changes agent or mission; **A** confirms. With a USB/BT keyboard: **arrow keys** navigate, **Enter** confirms, **Esc** cancels (same as PC).
 
 ### System menu (TFE settings)
 
