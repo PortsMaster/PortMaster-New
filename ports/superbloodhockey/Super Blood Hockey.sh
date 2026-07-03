@@ -46,6 +46,9 @@ export PATH="$monodir/bin":"$PATH"
 export LD_LIBRARY_PATH="$GAMEDIR/libs":"$controlfolder/libs":"$monodir/lib":$LD_LIBRARY_PATH
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+# Create libsteam_api.so for Steamworks.NET (Windows gamedata expects this name)
+cp -u "$GAMEDIR/libs/libCSteamworks.so" "$GAMEDIR/libs/libsteam_api.so"
+
 # GL4ES setup
 rm -f $GAMEDIR/libs/libGL.so.1 $GAMEDIR/libs/libEGL.so.1
 
