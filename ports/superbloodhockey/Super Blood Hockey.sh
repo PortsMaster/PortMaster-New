@@ -12,7 +12,6 @@ else
 fi
 
 source $controlfolder/control.txt
-
 source $controlfolder/tasksetter
 
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
@@ -20,9 +19,8 @@ source $controlfolder/tasksetter
 get_controls
 
 GAMEDIR=/$directory/ports/superbloodhockey
-CONFDIR="$GAMEDIR/conf/"
-
-mkdir -p "$GAMEDIR/conf"
+GAMEDATA_DIR="$GAMEDIR/gamedata"
+CONF_DIR=~/.config/SuperBloodHockey
 
 cd $GAMEDIR
 
@@ -36,7 +34,14 @@ $ESUDO umount "$monofile" || true
 $ESUDO mount "$monofile" "$monodir"
 
 # Save data
-bind_directories ~/.config/SuperBloodHockey "$CONFDIR/savedata"
+if [ ! -d "$CONF_DIR" ]; then
+  $ESUDO mkdir -p "$CONF_DIR"
+fi
+if [ ! -d "$GAMEDATA_DIR/Franchises" ]; then
+  # Needed for the link, and also to prevent crash on Load Franchise
+  $ESUDO mkdir "$GAMEDATA_DIR/Franchises"
+fi
+$ESUDO mount --bind "$CONF_DIR" "$GAMEDATA_DIR/Franchises"
 
 export MONO_IOMAP=all
 export MONO_PATH="$GAMEDIR/dlls"
@@ -45,7 +50,7 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs":"$controlfolder/libs":"$monodir/lib":$LD_
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Create libsteam_api.so for Steamworks.NET (Windows gamedata expects this name)
-cp -u "$GAMEDIR/libs/libCSteamworks.so" "$GAMEDIR/libs/libsteam_api.so"
+$ESUDO cp -u "$GAMEDIR/libs/libCSteamworks.so" "$GAMEDIR/libs/libsteam_api.so"
 
 # GL4ES setup
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
@@ -59,17 +64,16 @@ if [[ "$LIBGL_ES" != "" ]]; then
   export SDL_VIDEO_EGL_DRIVER="${GAMEDIR}/gl4es/libEGL.so.1"
 fi
 
-cd "$GAMEDIR/gamedata"
-
-# Ensure Franchises directory exists (game doesn't create it gracefully)
-mkdir -p "Franchises"
+cd "$GAMEDATA_DIR"
 
 # Patch exe for 640x480 and 720x720
-python3 "$GAMEDIR/scripts/patch_sbh.py" "SuperBloodHockey.exe"
+$ESUDO python3 "$GAMEDIR/scripts/patch_sbh.py" "SuperBloodHockey.exe"
 
 $GPTOKEYB "mono" &
-pm_platform_helper "$GAMEDIR/gamedata/SuperBloodHockey.exe"
+pm_platform_helper "$GAMEDATA_DIR/SuperBloodHockey.exe"
 $TASKSET mono "SuperBloodHockey.exe"
 
 $ESUDO umount "$monodir"
+$ESUDO umount "$GAMEDATA_DIR/Franchises"
+
 pm_finish
