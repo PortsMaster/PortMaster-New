@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks [Shiromofu Factory](https://dungeon-antiqua.com/) for making this game.
+Thanks [Shiromofu Factory](https://dungeon-antiqua.com/da1.html) for making this game.
 
 ## Language
 By default the game will be in Japanese, you can change this in the config menu.
