@@ -25,6 +25,7 @@ cd $GAMEDIR
 
 # Permissions
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x $GAMEDIR/tools/ffmpeg
 
 # Exports
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
@@ -45,22 +46,13 @@ check_patch() {
     if [ ! -f "$GAMEDIR/patchlog.txt" ] || [ -n "$install_items" ] || [ "$has_data_win" = true ] || [ -n "$has_other_subdir" ]; then
         if [ -f "$controlfolder/utils/patcher.txt" ]; then
             set -o pipefail
-            
-            # Setup mono environment variables
-            DOTNETDIR="$HOME/mono"
-            DOTNETFILE="$controlfolder/libs/dotnet-8.0.12.squashfs"
-            $ESUDO mkdir -p "$DOTNETDIR"
-            $ESUDO umount "$DOTNETFILE" || true
-            $ESUDO mount "$DOTNETFILE" "$DOTNETDIR"
-            export PATH="$DOTNETDIR":"$PATH"
-            
+			
             # Setup and execute the Portmaster Patcher utility with our patch file
             export ESUDO
             export PATCHER_FILE="$GAMEDIR/tools/patchscript"
             export PATCHER_GAME="$(basename "${0%.*}")"
-            export PATCHER_TIME="a while"
+            export PATCHER_TIME="quite a while, so watch an episode of your favorite show."
             source "$controlfolder/utils/patcher.txt"
-            $ESUDO umount "$DOTNETDIR"
         else
             pm_message "This port requires the latest version of PortMaster."
             pm_finish
