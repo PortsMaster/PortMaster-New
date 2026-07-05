@@ -84,6 +84,21 @@ def detect_resolution():
         pass
     return None, None
 
+def apply_fbcon_rotation(w, h):
+    # Some handhelds (e.g. RG28XX) mount the LCD panel rotated 90/270°
+    # in the bezel. fbset reports the physical framebuffer geometry (e.g.
+    # 480x640) but the logical display is swapped (640x480). The kernel
+    # cmdline includes fbcon=rotate:1 or :3 when this is the case.
+    try:
+        cmdline = open('/proc/cmdline').read()
+        m = re.search(r'fbcon=rotate:([0-3])', cmdline)
+        if m and int(m.group(1)) in (1, 3):
+            w, h = h, w
+            print(f'SBH: fbcon rotation detected ({m.group(0)}) → swapped to {w}x{h}')
+    except:
+        pass
+    return w, h
+
 # ---- Main -----------------------------------------------------------------
 exe_path = sys.argv[1]
 if not os.path.exists(exe_path):
@@ -135,6 +150,8 @@ if w is None:
     print('SBH: could not detect resolution')
     sys.exit(1)
 print(f'SBH: detected {w}x{h}')
+
+w, h = apply_fbcon_rotation(w, h)
 
 # Check if the detected resolution already exists in any slot.
 # If so, no patches needed — the game handles it natively.
