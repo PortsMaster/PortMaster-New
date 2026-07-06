@@ -119,6 +119,20 @@ function Game.new(mode)
             self.timeLeft = savedState.timeLeft or 60.0
             self.totalTime = savedState.totalTime or 60.0
         end
+
+        local saved_undo = savedState.undo_used_this_run
+        if type(saved_undo) == "boolean" then
+            self.undo_used_this_run = saved_undo and 1 or 0
+        else
+            self.undo_used_this_run = saved_undo or 0
+        end
+
+        local saved_swap = savedState.swap_used_this_run
+        if type(saved_swap) == "boolean" then
+            self.swap_used_this_run = saved_swap and 1 or 0
+        else
+            self.swap_used_this_run = saved_swap or 0
+        end
     else
         -- Start a fresh game if no save state exists
         self:addStartTiles()
@@ -139,7 +153,12 @@ function Game.new(mode)
             _G.achievements.powerups_used_this_run = 0
             save.saveAchievements(_G.achievements)
         end
+
+        self.runTime = 0
+        self.undo_used_this_run = 0
+        self.swap_used_this_run = 0
     end
+
     -- Trigger "First Steps" achievement
     if _G.unlockAchievement and self.mode ~= "huge" then
         _G.unlockAchievement("ach_first_game")
@@ -182,8 +201,12 @@ function Game:saveGameState()
         gridState = self.grid:saveState(),
         undoHistory = self.undoHistory,
         powerups = self.powerups,
-        milestonesReached = self.milestonesReached
+        milestonesReached = self.milestonesReached,
+        runTime = self.runTime,
+        undo_used_this_run = self.undo_used_this_run,
+        swap_used_this_run = self.swap_used_this_run
     }
+
     if self.mode == "timeattack" then
         stateTable.timeLeft = self.timeLeft
         stateTable.totalTime = self.totalTime
@@ -476,6 +499,19 @@ function Game:move(direction)
                         _G.unlockAchievement("ach_goose_2048")
                     end
 
+                    if merged.value >= 8192 and _G.unlockAchievement and self.mode ~= "huge" then
+                        _G.unlockAchievement("ach_merge_8192")
+                    end
+
+                    if merged.value >= 2048 and self.runTime and self.runTime <= 300 and _G.unlockAchievement then
+                        _G.unlockAchievement("ach_speedrun_2048")
+                    end
+
+                    if self.mode == "plus" and merged.value >= 2048 and _G.achievements.powerups_used_this_run == 0 and _G.unlockAchievement then
+                        _G.unlockAchievement("ach_hardcore_2048")
+                    end
+
+
                     -- Time Attack: add bonus time for merges (challenging balance)
                     if self.mode == "timeattack" and self.timeLeft then
                         local bonus = 0
@@ -593,6 +629,7 @@ function Game:move(direction)
             if self.score >= 25000 then _G.unlockAchievement("ach_score_25k") end
             if self.score >= 50000 then _G.unlockAchievement("ach_score_50k") end
             if self.score >= 100000 then _G.unlockAchievement("ach_score_100k") end
+            if self.score >= 250000 then _G.unlockAchievement("ach_score_250k") end
         end
         self:saveGameState()
         -- Check for loss
@@ -678,8 +715,14 @@ function Game:undo()
     if self.mode == "plus" then
         if self.powerups.undo <= 0 then return end
         self.powerups.undo = self.powerups.undo - 1
+        self.undo_used_this_run = (self.undo_used_this_run or 0) + 1
+        if self.undo_used_this_run >= 5 and self.swap_used_this_run >= 5 and _G.unlockAchievement then
+            _G.unlockAchievement("ach_tactician")
+        end
     end
+
     if _G.achievements.powerups_used_this_run then
+
         _G.achievements.powerups_used_this_run = _G.achievements.powerups_used_this_run + 1
         save.saveAchievements(_G.achievements)
     end
@@ -903,17 +946,16 @@ function Game:confirmTarget()
                 _G.stats.bombs_used = (_G.stats.bombs_used or 0) + 1
             end
 
-            if _G.achievements.bombs_used then
-                _G.achievements.bombs_used = _G.achievements.bombs_used + 1
-                if _G.unlockAchievement then
-                    if _G.achievements.bombs_used >= 1 then
-                        _G.unlockAchievement("ach_first_bomb")
-                    end
-                    if _G.achievements.bombs_used >= 10 then
-                        _G.unlockAchievement("ach_demolition")
-                    end
+            _G.achievements.bombs_used = (_G.achievements.bombs_used or 0) + 1
+            if _G.unlockAchievement then
+                if _G.achievements.bombs_used >= 1 then
+                    _G.unlockAchievement("ach_first_bomb")
+                end
+                if _G.achievements.bombs_used >= 10 then
+                    _G.unlockAchievement("ach_demolition")
                 end
             end
+
             if _G.achievements.powerups_used_this_run then
                 _G.achievements.powerups_used_this_run = _G.achievements.powerups_used_this_run + 1
             end
@@ -972,10 +1014,16 @@ function Game:confirmTarget()
             if t2 then t2:setPosition(self.swapTarget.x, self.swapTarget.y) end
 
             self.powerups.swap = self.powerups.swap - 1
+            self.swap_used_this_run = (self.swap_used_this_run or 0) + 1
+            if self.undo_used_this_run >= 5 and self.swap_used_this_run >= 5 and _G.unlockAchievement then
+                _G.unlockAchievement("ach_tactician")
+            end
             if _G.stats then
                 _G.stats.swaps_used = (_G.stats.swaps_used or 0) + 1
             end
             self.swapTarget = nil
+
+
 
             if _G.achievements.powerups_used_this_run then
                 _G.achievements.powerups_used_this_run = _G.achievements.powerups_used_this_run + 1
@@ -994,10 +1042,12 @@ end
 
 function Game:update(dt)
     if self.state == Game.STATE_PLAYING or self.state == Game.STATE_ENDLESS then
+        self.runTime = (self.runTime or 0) + dt
         if _G.stats then
             _G.stats.time_played = (_G.stats.time_played or 0) + dt
         end
     end
+
 
     if self.animationTimer > 0 then
         self.animationTimer = self.animationTimer - dt
