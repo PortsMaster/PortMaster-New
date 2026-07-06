@@ -16,6 +16,9 @@ source $controlfolder/control.txt
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+[ -n "${DISPLAY_WIDTH:-}" ] && export DISPLAY_WIDTH
+[ -n "${DISPLAY_HEIGHT:-}" ] && export DISPLAY_HEIGHT
+
 GAMEDIR="/$directory/ports/stardewvalleymainline"
 gamedir="$GAMEDIR"
 
