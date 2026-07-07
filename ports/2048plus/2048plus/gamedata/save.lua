@@ -135,6 +135,29 @@ function save.loadSound()
     return true -- default to enabled
 end
 
+local MUSIC_FILE = "music.dat"
+
+function save.saveMusic(enabled)
+    local path = getFilePath(MUSIC_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(enabled and "1" or "0")
+        file:close()
+    end
+end
+
+function save.loadMusic()
+    local path = getFilePath(MUSIC_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        return content == "1"
+    end
+    return true -- default to enabled
+end
+
+
 
 local CHEATS_FILE = "cheats.dat"
 
