@@ -14,19 +14,19 @@ This project was originally developed for muOS and subsequently ported to PortMa
   - **Huge Mode (5x5)**: A spacious 5×5 grid for a more relaxed play style.
   - **No Mercy**: Hardcore mode — no undos, no powerups, two tiles spawn every move.
   - **Goose Mode**: A chaotic mode where a silly Goose tile waddles around the board, blocking random cells.
-- **Procedural Sound Effects**: Rich chiptune audio effects generated dynamically with zero file size overhead.
-- **Unified Settings Menu**: Grouped text size toggles, sound, and a suite of preference parameters under a clean, unified Settings sub-menu:
-  - **Sound**: Toggle audio effects on/off.
-  - **Gameplay Animation Speed**: Choose between Slow (0.24s), Normal (0.12s), Fast (0.06s), or Instant (0s).
+- **Background Music**: Playlist of lo-fi tracks that play during matches, complete with a non-distracting cross-fade track info reveal in the footer.
+- **Procedural Sound Effects**: Retro sound effects generated dynamically with zero file size overhead.
+- **Unified Settings Menu**: Grouped text size toggles, transition animations, animation speeds, and gameplay limits under a clean dashboard:
+  - **Audio & Haptics**: Grouped toggle options for sound effects, background music, and vibration.
+  - **Gameplay Animation Speed**: Choose between Slow, Normal, Fast, or Instant.
   - **Screen Transitions**: Toggle menu transition animations on/off.
-  - **Undo Limit**: Adjust undo limitations (1-Move, Unlimited, or Disabled) to customize your strategic difficulty.
+  - **Undo Limit**: Adjust undo limitations (1-Move, Unlimited, or Disabled).
   - **Time Attack Max Limit**: Adjust the Time Attack starting and maximum threshold ceiling (30s, 60s, 90s).
-  - **Vibration**: Toggle haptic rumble feedback on supported devices.
-  - **CRT Shader**: Toggle retro curved screen curvature, scanline, and phosphor mask post-processing filters.
+  - **CRT Shader**: Toggle retro scanlines and curvature filters.
 - **Advanced Undo History Stack**: Refactored the gameplay engine to support rolling backward history logs all the way up to 100 consecutive turns.
-- **Achievements & Unlockable Themes**: Track your progress by unlocking 23 unique achievements, ranging from reaching high tiles to mastering arcade modes. Completing achievements rewards you with beautifully crafted custom themes — 25 themes total!
+- **Achievements & Unlockable Themes**: Track your progress by unlocking 28 unique achievements, ranging from reaching high tiles to mastering arcade modes. Completing achievements rewards you with beautifully crafted custom themes — 30 themes total!
 - **Statistics Dashboard**: Tracks real-time statistics including highest score, highest tile reached, games started per mode, total play time, moves, merges, undos, and power-up usage persistently.
-- **Dynamic Animated Backgrounds**: Premium themes (Aurora, Nebula, Inferno, Honk, Matrix, Glitch) feature layered, animated background effects like aurora curtains, twinkling starfields, rising embers, water ripples, falling green digital rain, and cyberpunk glitch effects.
+- **Dynamic Animated Backgrounds**: Premium themes (Aurora, Nebula, Inferno, Honk, Matrix, Glitch, Quantum, Hyperdrive, Retro Gold, Spectrum, Vaporwave, Dracula, Ocean, Forest, Volcano, Candy) feature layered, animated background effects like scrolling 3D Vaporwave grids, flying Dracula bats, starfield warp speed, falling green digital rain, aurora curtains, twinkling starfields, rising embers, and retro pixel sparkles.
 - **Themes**: Instantly toggle between unlocked themes with a beautifully animated reveal. Your theme preference is saved automatically!
 - **Auto-Save & Resume**: Your progress, board state, and score are saved automatically after every move. Close the game anytime and pick up right where you left off.
 - **Interactive Pause Menu**: A built-in pause overlay makes it easy to safely quit the app or restart a new game cleanly.
@@ -42,8 +42,8 @@ This project was originally developed for muOS and subsequently ported to PortMa
 |A|Confirm / Continue / Confirm Powerup Target|
 |B|Undo previous move|
 |Y|Cycle through unlocked themes|
-|L1|Activate Swap Powerup (Plus Mode)|
-|R1|Activate Bomb Powerup (Plus Mode)|
+|L1|Activate Swap Powerup (Plus Mode) / Skip BGM Track (Pause State)|
+|R1|Activate Bomb Powerup (Plus Mode) / Skip BGM Track (Pause State)|
 |Start / Select|Open Pause Menu (Restart / Quit / Resume)|
 |Menu + Start|Exit the game safely (force quit)|
 
@@ -51,6 +51,7 @@ This project was originally developed for muOS and subsequently ported to PortMa
 
 ## Credits & Acknowledgements
 
-- Original Web Game: [Gabriele Cirulli](https://github.com/gabrielecirulli/2048)
+- Original Concept By: [Gabriele Cirulli](https://github.com/gabrielecirulli/2048)
 - Android Port Reference: [tpcstld - 2048](https://github.com/tpcstld/2048)
-- Built using the [LÖVE Framework](https://love2d.org/).
+- Built using the [LÖVE Framework](https://love2d.org/)
+- Background Music tracks provided via [Chosic](https://www.chosic.com/) by authors: AudioCoffee, Ghostrifter, Purrple Cat, Roa, Sakura Girl, and Tokyo Music Walker.

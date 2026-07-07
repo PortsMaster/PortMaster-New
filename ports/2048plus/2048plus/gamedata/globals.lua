@@ -3,9 +3,9 @@
 _G.timer = require("timer")
 
 local sem_ver = {
-    major = 4,
+    major = 5,
     minor = 0,
-    patch = 4,
+    patch = 1,
     extra = ""
 }
 
@@ -89,6 +89,13 @@ _G.achievements = {
     ach_huge_2048 = false,       -- Spacious Giant -- Reach 2048 in Huge Mode -> unlocks 'nebula'
     ach_nomercy_512 = false,      -- No Escape -- Reach 512 in No Mercy Mode -> unlocks 'inferno'
     ach_goose_2048 = false,      -- Honk Honk! -- Reach 2048 in Goose Mode -> unlocks 'honk'
+
+    -- High-Tier Challenges
+    ach_merge_8192 = false,      -- The Chosen One -> unlocks 'quantum'
+    ach_score_250k = false,      -- Infinity Legend -> unlocks 'hyperdrive'
+    ach_speedrun_2048 = false,   -- Speed Demon -> unlocks 'retrogold'
+    ach_hardcore_2048 = false,   -- Hardcore Gamer -> unlocks 'spectrum'
+    ach_tactician = false,       -- Tactician -> unlocks 'steel'
 
     -- Hidden tracking stats
     bombs_used = 0,
