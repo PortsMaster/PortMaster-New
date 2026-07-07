@@ -1,4 +1,5 @@
 #!/bin/bash
+# PORTMASTER: lisathetimeless.zip, LISA The Timeless.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -42,10 +43,19 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 [ -f falcon_mkxp.bin ] && mv falcon_mkxp.bin gamedata/falcon_mkxp.bin
 cp conf/mkxp.conf gamedata/
 
+# Apply the Main-script FrozenError fix (self==nil in falcon-mkxp's rgss_main)
+# Pure-stdlib Python, safe to re-run every launch - it no-ops once patched.
+if [ -f "$GAMEDIR/fix_lisa_timeless.py" ] && [ -f "$GAMEDIR/gamedata/Game.rgss3a" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$GAMEDIR/fix_lisa_timeless.py" "$GAMEDIR/gamedata/Game.rgss3a"
+  else
+    echo "python3 not found - skipping Main script patch, game may crash with FrozenError"
+  fi
+fi
+
 $GPTOKEYB "falcon_mkxp.bin" -c "./lisathetimeless.gptk" &
 $GAMEDIR/gamedata/falcon_mkxp.bin
 
 $ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
