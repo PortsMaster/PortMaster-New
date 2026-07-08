@@ -1,7 +1,4 @@
-#!/bin/bash
-# PORTMASTER: crop_and_claw.zip, Crop and Claw.sh
-
-
+#!/bin/sh
 # PortMaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
