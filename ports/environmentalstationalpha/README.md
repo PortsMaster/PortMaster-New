@@ -48,7 +48,7 @@ Thanks to [Arvi "*Hempuli*" Teikari](https://www.hempuli.com/) for creating ['*E
         |**D-Pad Down**|Enter the Letter "*S*"|
         |**D-Pad Right**|Enter the Letter "*E*"|
         |**D-Pad Left**|Enter the Letter "*W*"|
-    * #### ABXY (*self-explanatory*, watch out for potential issues as [mentioned below](#control-notes))
+    * #### ABXY (*self-explanatory*, watch out for potential issues as [mentioned below in "Control Notes"](#control-notes))
         | **Button** | *Action* |
         |---|---|
         |**A Button**|Enter the Letter "*A*"|
@@ -83,7 +83,7 @@ Thanks to [Arvi "*Hempuli*" Teikari](https://www.hempuli.com/) for creating ['*E
     * using the keyboard controls section of the in-game settings menu.
     * editing `Chowdren.ini` and/or `savedata/ESA_Settings.txt`.
 
-    In the event that **ABXY** do not correspond to the expected buttons on your device/firmware, you may wish to make use of your firmware's options (ex.: [Knulli](https://knulli.org/play/basic-inputs/#switch-ab-and-xy-for-ports), [muOS](https://muos.dev/tour/modules/muxcontrol)), or to modify the aforementioned game options.
+    In the event that **ABXY** do not correspond to the expected buttons on your device/firmware, you may wish to make use of your firmware's options (ex.: [Knulli](https://knulli.org/play/basic-inputs/#switch-ab-and-xy-for-ports), [muOS](https://muos.dev/tour/modules/muxcontrol)), or to modify the aforementioned game options. This may be especially relevant when using ***Password Entry Mode***.
 
 ## Issues
 * This port may not perform well on RK3326 devices (e.g. Game Console R36S, BATLEXP G350), although it has been found to perform acceptably on some of them (e.g. GKD Pixel 2, Anbernic RG351M). Consequently—although *some* users may find it to be playable on such devices—it has been flagged as a `power` port.
