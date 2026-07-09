@@ -1,4 +1,4 @@
-## Acknowledgements
+## Notes
 
 YKnytt by YoukaiCountry, up-left: https://youkaicountry.itch.io/yknytt or https://github.com/youkaicountry/yknytt/
 
@@ -27,8 +27,8 @@ Levels by Knytt Stories community: https://nifflas.lp1.nl/
 |Map +/-|Umbrella / Walk|
 |Map Marker|Jump|
 |Console|Info + Pause|
-|Adjust Height|Info + Umbrella + Left/Right|
-|Emergency Save|Info + Umbrella + Down|
+|Adjust Height|Info + Umbrella + Up/Down|
+|Emergency Save|Info + press Down twice|
 |Emergency Exit|Start + Select|
 
 If you are experiencing lags at save points or screen transitions, you can turn off detailed maps in the settings.
