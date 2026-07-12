@@ -28,7 +28,6 @@ cd $GAMEDIR
 export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 $ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
-$ESUDO chmod +x $GAMEDIR/tools/bc7toqoi
 
 # Prepare game files
 if [ -f ./assets/data.win ]; then
