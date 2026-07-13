@@ -57,6 +57,5 @@ $GAMEDIR/gamedata/falcon_mkxp.bin
 
 $ESUDO kill -9 $(pidof gptokeyb)
 $ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
 printf "\033c" > /dev/tty1
 printf "\033c" > /dev/tty0
