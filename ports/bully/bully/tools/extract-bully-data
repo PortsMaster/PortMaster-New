@@ -1,0 +1,1043 @@
+#!/bin/bash
+# Transactional first-run extractor for the user's legal Bully 1.4.311 data.
+set -u
+set -o pipefail
+
+DEST="${2:-.}"
+APK="${1:-}"
+mkdir -p "$DEST" || exit 1
+DEST="$(cd "$DEST" && pwd)"
+BIN="${BULLY_BINARY:-$DEST/bully}"
+GAMEDATA="${BULLY_GAMEDATA_DIR:-$DEST/gamedata}"
+RUN_TOKEN="$$.$(date +%s 2>/dev/null || printf 0).${RANDOM:-0}.${RANDOM:-0}"
+SETUPF="${BULLY_SETUP_FILE:-/tmp/bully_setup.$RUN_TOKEN.txt}"
+STOPF="${BULLY_SETUP_STOP:-/tmp/bully_setup_stop.$RUN_TOKEN}"
+SETUPLOG="${BULLY_SETUP_LOG:-$DEST/setup.log}"
+MARKER="$DEST/.bully-v12-data.ok"
+STAGE="$DEST/.bully-v12-stage.$RUN_TOKEN"
+BACKUP="$DEST/.bully-v12-backup.$RUN_TOKEN"
+LOCKDIR="$DEST/.bully-v12-extract.lock"
+BUNDLE_DIR="$STAGE/.bundles"
+PATCH_SCRIPT="$DEST/tools/patch-bully-menu.py"
+VALIDATOR="$DEST/tools/validate-bully-data.py"
+ENSURE_PATCH="$DEST/tools/ensure-bully-menu-patch"
+LIBGAME_MD5=47468f5ce23ad05dc2a855b2801133b5
+LIBGAME_BUILD_ID=6139a628aa7a260dd7bf443665bb822a459d5ba1
+LIBCXX_SHA256=83269b3124a287fac36b17c9fb64beb398c83dad6677b19ce63cf80d09966fd7
+PATCH_REVISION=1
+EXTRACTION_TOTAL_BYTES=2910051840
+SP=""
+POLL=""
+COMMIT_STARTED=0
+COMMIT_DONE=0
+LOCK_HELD=0
+LIB_SOURCE=""
+FILE_SIZE_BACKEND=""
+declare -a SOURCES=()
+declare -a SOURCE_PARENTS=()
+declare -a VALID_SOURCES=()
+declare -a USED_ORIGINALS=()
+declare -a DATA_SOURCES=("" "" "" "" "")
+declare -a DATA_PREFIXES=("" "" "" "" "")
+declare -a IDX_SHA256=(
+  357efd8fb79743807eecc1f4e451d13c5905b7fc6d05a273caa04ed0b5e05dcf
+  7a7163f4a35633673aabf1a925582c6ac7de0b02380d9c070a57fc57107c8da2
+  20b1deaf1a52ca09eb3cd672d29ee595ee4060642eeeffb6984788f9db21abd2
+  47301aa41c4c18c206e3b7e1562de05c7fe43186a015f0b9a845fd6bff9138b2
+  b25fe73bae7fac402ecbd0bb9f3c7b22444f7aff41104ab7a7977479e64db49d
+)
+declare -a DATA_ZIP_SIZES=(
+  175603992 864079869 536975677 537122756 774609572
+)
+declare -a TOUCHED_FILES=()
+declare -a INSTALL_FILES=(
+  libGame.so libc++_shared.so
+  assets/data_0.zip assets/data_0.zip.idx
+  assets/data_1.zip assets/data_1.zip.idx
+  assets/data_2.zip assets/data_2.zip.idx
+  assets/data_3.zip assets/data_3.zip.idx
+  assets/data_4.zip assets/data_4.zip.idx
+  assets/bully2_patch.zip
+)
+
+mkdir -p "$GAMEDATA" || exit 1
+
+blog() {
+  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$SETUPLOG"
+}
+
+release_lock() {
+  if [ "$LOCK_HELD" = 1 ]; then
+    rm -rf "$LOCKDIR"
+    LOCK_HELD=0
+  fi
+}
+
+acquire_lock() {
+  local owner cmdline
+  if mkdir "$LOCKDIR" 2>/dev/null; then
+    LOCK_HELD=1
+    printf '%s\n' "$$" > "$LOCKDIR/pid" || {
+      release_lock
+      return 1
+    }
+    return 0
+  fi
+
+  owner=$(sed -n '1p' "$LOCKDIR/pid" 2>/dev/null || true)
+  case "$owner" in
+    ''|*[!0-9]*)
+      sleep 1
+      owner=$(sed -n '1p' "$LOCKDIR/pid" 2>/dev/null || true)
+      case "$owner" in
+        ''|*[!0-9]*)
+          blog "removing stale extraction lock without a live owner"
+          rm -rf "$LOCKDIR" || return 1
+          mkdir "$LOCKDIR" 2>/dev/null || return 1
+          LOCK_HELD=1
+          printf '%s\n' "$$" > "$LOCKDIR/pid" || {
+            release_lock
+            return 1
+          }
+          return 0
+          ;;
+      esac
+      ;;
+  esac
+  cmdline=$(tr '\0' ' ' < "/proc/$owner/cmdline" 2>/dev/null || true)
+  if [ -n "$cmdline" ] && [[ "$cmdline" == *extract-bully-data* ]]; then
+    blog "another Bully extraction is active (pid=$owner)"
+    return 1
+  fi
+
+  blog "removing stale extraction lock from pid=$owner"
+  rm -rf "$LOCKDIR" || return 1
+  mkdir "$LOCKDIR" 2>/dev/null || return 1
+  LOCK_HELD=1
+  printf '%s\n' "$$" > "$LOCKDIR/pid" || {
+    release_lock
+    return 1
+  }
+}
+
+clamp_permille() {
+  local value=${1:-0}
+  case "$value" in
+    ''|*[!0-9-]*) value=0 ;;
+  esac
+  [ "$value" -ge 0 ] 2>/dev/null || value=0
+  [ "$value" -le 1000 ] 2>/dev/null || value=1000
+  printf '%s' "$value"
+}
+
+setup_progress() {
+  local state=$1 phase=$2 validation extraction message active tmp
+  validation=$(clamp_permille "$3")
+  extraction=$(clamp_permille "$4")
+  message=$5
+  active=$validation
+  [ "$phase" = 4 ] && active=$extraction
+  tmp="${SETUPF}.tmp.${BASHPID:-$$}"
+  if ! printf '%d %d 1000\n%s\nBULLY_SETUP_V2 %d %d %d\n' \
+    "$state" "$active" "$message" "$phase" "$validation" "$extraction" \
+      > "$tmp" 2>/dev/null; then
+    rm -f "$tmp" 2>/dev/null || true
+    return 0
+  fi
+  mv -f "$tmp" "$SETUPF" 2>/dev/null || rm -f "$tmp" 2>/dev/null || true
+  return 0
+}
+
+setup_error() {
+  local message=$1 phase=0 validation=0 extraction=0 line tag
+  if [ -s "$SETUPF" ]; then
+    line=$(sed -n '3p' "$SETUPF" 2>/dev/null || true)
+    read -r tag phase validation extraction <<< "$line"
+    if [ "$tag" != BULLY_SETUP_V2 ]; then
+      phase=0
+      validation=0
+      extraction=0
+    fi
+  fi
+  setup_progress 2 "$phase" "$validation" "$extraction" "$message"
+}
+
+process_running() {
+  local pid=$1 state
+  kill -0 "$pid" 2>/dev/null || return 1
+  state=$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)
+  [ "$state" != Z ]
+}
+
+wait_process_deadline() {
+  local pid=$1 seconds=$2 elapsed=0
+  while process_running "$pid" && [ "$elapsed" -lt "$seconds" ]; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  ! process_running "$pid"
+}
+
+splash_start() {
+  [ -z "$SP" ] || return 0
+  [ "${BULLY_NO_SPLASH:-0}" != 1 ] || return 0
+  [ -x "$BIN" ] || return 0
+  rm -f "$STOPF"
+  BULLY_SETUPSPLASH=1 BULLY_SETUP_FILE="$SETUPF" BULLY_SETUP_STOP="$STOPF" \
+    "$BIN" >> "$SETUPLOG" 2>&1 </dev/null &
+  SP=$!
+  blog "setup splash pid=$SP"
+}
+
+splash_stop() {
+  [ -n "$SP" ] || return 0
+  touch "$STOPF" 2>/dev/null || true
+  if ! wait_process_deadline "$SP" 3; then
+    blog "setup splash did not stop in 3s; sending TERM"
+    kill -TERM "$SP" 2>/dev/null || true
+    wait_process_deadline "$SP" 1 || true
+  fi
+  if process_running "$SP"; then
+    blog "setup splash ignored TERM; sending KILL and continuing headless"
+    kill -KILL "$SP" 2>/dev/null || true
+    wait_process_deadline "$SP" 1 || true
+  fi
+  if ! process_running "$SP"; then
+    wait "$SP" 2>/dev/null || true
+  else
+    blog "warning: setup splash is stuck in kernel I/O; not waiting"
+  fi
+  rm -f "$STOPF"
+  SP=""
+}
+
+stop_poll() {
+  [ -n "$POLL" ] || return 0
+  kill -TERM "$POLL" 2>/dev/null || true
+  wait_process_deadline "$POLL" 2 || true
+  if process_running "$POLL"; then
+    kill -KILL "$POLL" 2>/dev/null || true
+    wait_process_deadline "$POLL" 1 || true
+  fi
+  if ! process_running "$POLL"; then
+    wait "$POLL" 2>/dev/null || true
+  else
+    blog "warning: progress poll is stuck; continuing without waiting"
+  fi
+  POLL=""
+}
+
+rollback_commit() {
+  local rel failed=0
+  [ "$COMMIT_STARTED" = 1 ] || return 0
+  [ "$COMMIT_DONE" = 0 ] || return 0
+  blog "rolling back interrupted payload commit"
+  for rel in "${TOUCHED_FILES[@]}"; do
+    rm -f "$DEST/$rel" || failed=1
+  done
+  for rel in "${INSTALL_FILES[@]}"; do
+    if [ -e "$BACKUP/$rel" ]; then
+      mkdir -p "$(dirname "$DEST/$rel")" || failed=1
+      mv -f "$BACKUP/$rel" "$DEST/$rel" 2>> "$SETUPLOG" || failed=1
+    fi
+  done
+  if [ -f "$BACKUP/marker" ]; then
+    rm -f "$MARKER" || failed=1
+    mv -f "$BACKUP/marker" "$MARKER" 2>> "$SETUPLOG" || failed=1
+  elif [ ! -f "$BACKUP/previous-marker" ]; then
+    rm -f "$MARKER" || failed=1
+  fi
+  sync
+  [ "$failed" = 0 ]
+}
+
+cleanup() {
+  local rc=$? rollback_ok=1
+  trap - EXIT INT TERM HUP
+  stop_poll
+  rollback_commit || rollback_ok=0
+  rm -rf "$STAGE"
+  if [ "$rollback_ok" = 1 ]; then
+    rm -rf "$BACKUP"
+  else
+    blog "ERROR: rollback incomplete; recovery kept at $BACKUP"
+  fi
+  splash_stop
+  release_lock
+  rm -f "$SETUPF" "$STOPF"
+  exit "$rc"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+fail_extract() {
+  local message="${1:-EXTRACTION FAILED}"
+  blog "ERROR: $message"
+  stop_poll
+  setup_error "$message"
+  splash_start
+  sleep "${BULLY_SETUP_ERROR_DELAY:-5}"
+  exit 1
+}
+
+is_unsigned_integer() {
+  case "${1:-}" in
+    ''|*[!0-9]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+init_file_size_backend() {
+  local probe=$VALIDATOR size
+
+  # Do not assume GNU coreutils. Several muOS images expose BusyBox applets
+  # without installing a standalone `stat` command.
+  if command -v stat >/dev/null 2>&1; then
+    size=$(stat -c '%s' "$probe" 2>/dev/null) || size=""
+    if is_unsigned_integer "$size"; then
+      FILE_SIZE_BACKEND=stat-c
+      return 0
+    fi
+  fi
+  if command -v busybox >/dev/null 2>&1; then
+    size=$(busybox stat -c '%s' "$probe" 2>/dev/null) || size=""
+    if is_unsigned_integer "$size"; then
+      FILE_SIZE_BACKEND=busybox-stat
+      return 0
+    fi
+  fi
+  if command -v stat >/dev/null 2>&1; then
+    size=$(stat -f '%z' "$probe" 2>/dev/null) || size=""
+    if is_unsigned_integer "$size"; then
+      FILE_SIZE_BACKEND=stat-f
+      return 0
+    fi
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    size=$(python3 -c 'import os,sys; print(os.path.getsize(sys.argv[1]))' \
+      "$probe" 2>/dev/null) || size=""
+    if is_unsigned_integer "$size"; then
+      FILE_SIZE_BACKEND=python3
+      return 0
+    fi
+  fi
+  if command -v wc >/dev/null 2>&1; then
+    size=$(LC_ALL=C wc -c < "$probe" 2>/dev/null) || size=""
+    size=${size//[[:space:]]/}
+    if is_unsigned_integer "$size"; then
+      FILE_SIZE_BACKEND=wc-c
+      return 0
+    fi
+  fi
+  return 1
+}
+
+file_size() {
+  local path=$1 size
+  [ -f "$path" ] || return 1
+  case "$FILE_SIZE_BACKEND" in
+    stat-c) size=$(stat -c '%s' "$path" 2>/dev/null) || return 1 ;;
+    busybox-stat) size=$(busybox stat -c '%s' "$path" 2>/dev/null) || return 1 ;;
+    stat-f) size=$(stat -f '%z' "$path" 2>/dev/null) || return 1 ;;
+    python3)
+      size=$(python3 -c 'import os,sys; print(os.path.getsize(sys.argv[1]))' \
+        "$path" 2>/dev/null) || return 1
+      ;;
+    wc-c)
+      size=$(LC_ALL=C wc -c < "$path" 2>/dev/null) || return 1
+      size=${size//[[:space:]]/}
+      ;;
+    *) return 1 ;;
+  esac
+  is_unsigned_integer "$size" || return 1
+  printf '%s\n' "$size"
+}
+
+require_tools() {
+  local command
+  for command in unzip md5sum sha256sum python3; do
+    command -v "$command" >/dev/null 2>&1 \
+      || fail_extract "MISSING REQUIRED TOOL: $command"
+  done
+  [ -s "$PATCH_SCRIPT" ] || fail_extract "MISSING MENU PATCH GENERATOR"
+  [ -s "$VALIDATOR" ] || fail_extract "MISSING DATA VALIDATOR"
+  [ -x "$ENSURE_PATCH" ] || fail_extract "MISSING MENU PATCH TOOL"
+  init_file_size_backend || fail_extract "NO PORTABLE FILE-SIZE BACKEND"
+  blog "file-size backend: $FILE_SIZE_BACKEND"
+}
+
+payload_files_present() {
+  local i
+  [ -s "$DEST/libGame.so" ] || return 1
+  [ -s "$DEST/libc++_shared.so" ] || return 1
+  for i in 0 1 2 3 4; do
+    [ -s "$DEST/assets/data_${i}.zip" ] || return 1
+    [ -s "$DEST/assets/data_${i}.zip.idx" ] || return 1
+  done
+  return 0
+}
+
+library_md5_ok() {
+  local digest libcxx_digest
+  digest=$(md5sum "$DEST/libGame.so" 2>/dev/null | awk '{print $1}') || return 1
+  [ "$digest" = "$LIBGAME_MD5" ] || return 1
+  libcxx_digest=$(sha256sum "$DEST/libc++_shared.so" 2>/dev/null | awk '{print $1}') \
+    || return 1
+  [ "$libcxx_digest" = "$LIBCXX_SHA256" ]
+}
+
+patch_is_valid() {
+  local root=$1 patch="$1/assets/bully2_patch.zip"
+  [ -s "$patch" ] || return 1
+  unzip -tq "$patch" >/dev/null 2>&1 || return 1
+  zip_has "$patch" "resource_files.list" || return 1
+  zip_has "$patch" "bully/MenuSettings.xml"
+}
+
+marker_payload_sizes_valid() {
+  local rel key expected actual
+  for rel in "${INSTALL_FILES[@]}"; do
+    key=${rel//\//_}
+    key=${key//./_}
+    expected=$(sed -n "s/^size_${key}=//p" "$MARKER" | head -n 1)
+    [ -n "$expected" ] || return 1
+    actual=$(file_size "$DEST/$rel") || return 1
+    [ "$actual" = "$expected" ] || return 1
+  done
+}
+
+marker_idx_hashes_valid() {
+  local index digest
+  for index in 0 1 2 3 4; do
+    digest=$(sha256sum "$DEST/assets/data_${index}.zip.idx" 2>/dev/null \
+      | awk '{print $1}') || return 1
+    [ "$digest" = "${IDX_SHA256[$index]}" ] || return 1
+  done
+}
+
+marker_is_valid() {
+  local patch_script_sha256
+  [ -s "$MARKER" ] || return 1
+  grep -Fxq 'format=1' "$MARKER" || return 1
+  grep -Fxq "libgame_md5=$LIBGAME_MD5" "$MARKER" || return 1
+  grep -Fxq "libgame_buildid=$LIBGAME_BUILD_ID" "$MARKER" || return 1
+  grep -Fxq "libcxx_sha256=$LIBCXX_SHA256" "$MARKER" || return 1
+  grep -Fxq "patch_revision=$PATCH_REVISION" "$MARKER" || return 1
+  patch_script_sha256=$(sha256sum "$PATCH_SCRIPT" 2>/dev/null | awk '{print $1}') \
+    || return 1
+  grep -Fxq "patch_script_sha256=$patch_script_sha256" "$MARKER" || return 1
+  payload_files_present && library_md5_ok && patch_is_valid "$DEST" \
+    && marker_payload_sizes_valid && marker_idx_hashes_valid
+}
+
+write_marker() {
+  local root=$1 marker tmp rel key size patch_script_sha256
+  marker="$root/.bully-v12-data.ok"
+  tmp="${marker}.tmp.$$"
+  patch_script_sha256=$(sha256sum "$PATCH_SCRIPT" 2>/dev/null | awk '{print $1}') \
+    || return 1
+  {
+    echo 'format=1'
+    echo 'port=Final'
+    echo "libgame_md5=$LIBGAME_MD5"
+    echo "libgame_buildid=$LIBGAME_BUILD_ID"
+    echo "libcxx_sha256=$LIBCXX_SHA256"
+    echo "patch_revision=$PATCH_REVISION"
+    echo "patch_script_sha256=$patch_script_sha256"
+    echo 'idx_counts=549,407,823,2003,26427'
+    for rel in "${INSTALL_FILES[@]}"; do
+      key=${rel//\//_}
+      key=${key//./_}
+      size=$(file_size "$root/$rel") || return 1
+      echo "size_${key}=$size"
+    done
+  } > "$tmp" || return 1
+  chmod 644 "$tmp" 2>/dev/null || true
+  mv -f "$tmp" "$marker"
+}
+
+recover_orphan_backup() {
+  local backup=$1 rel failed=0 previous has_payload=0
+  previous="$backup/previous-files"
+
+  if marker_is_valid; then
+    blog "removing completed orphan transaction: $backup"
+    rm -rf "$backup"
+    return 0
+  fi
+  if [ ! -f "$previous" ]; then
+    for rel in "${INSTALL_FILES[@]}" marker previous-marker; do
+      if [ -e "$backup/$rel" ]; then
+        has_payload=1
+        break
+      fi
+    done
+    if [ "$has_payload" = 0 ]; then
+      blog "removing empty orphan transaction: $backup"
+      rm -rf "$backup"
+      return 0
+    fi
+    blog "WARNING: unknown backup layout preserved for manual recovery: $backup"
+    return 1
+  fi
+
+  while IFS= read -r rel || [ -n "$rel" ]; do
+    [ -n "$rel" ] || continue
+    case " ${INSTALL_FILES[*]} " in
+      *" $rel "*) ;;
+      *) blog "WARNING: unsafe orphan manifest preserved: $backup"; return 1 ;;
+    esac
+  done < "$previous"
+
+  blog "recovering interrupted payload transaction: $backup"
+  for rel in "${INSTALL_FILES[@]}"; do
+    if [ -e "$backup/$rel" ]; then
+      rm -f "$DEST/$rel" || failed=1
+      mkdir -p "$(dirname "$DEST/$rel")" || failed=1
+      mv -f "$backup/$rel" "$DEST/$rel" 2>> "$SETUPLOG" || failed=1
+    elif ! grep -Fxq "$rel" "$previous"; then
+      rm -f "$DEST/$rel" || failed=1
+    fi
+  done
+
+  if [ -f "$backup/marker" ]; then
+    rm -f "$MARKER" || failed=1
+    mv -f "$backup/marker" "$MARKER" 2>> "$SETUPLOG" || failed=1
+  elif [ ! -f "$backup/previous-marker" ]; then
+    rm -f "$MARKER" || failed=1
+  fi
+
+  if [ "$failed" = 0 ]; then
+    sync
+    rm -rf "$backup"
+    blog "orphan transaction recovered"
+    return 0
+  fi
+  blog "ERROR: orphan recovery incomplete; preserved $backup"
+  return 1
+}
+
+recover_orphan_transactions() {
+  local path
+  shopt -s nullglob
+  for path in "$DEST"/.bully-v12-backup.*; do
+    recover_orphan_backup "$path" || return 1
+  done
+  for path in "$DEST"/.bully-v12-stage.*; do
+    blog "removing orphan extraction stage: $path"
+    rm -rf "$path" || return 1
+  done
+  shopt -u nullglob
+  return 0
+}
+
+validate_payload() {
+  local root=$1 range_start=${2:-0} range_end=${3:-1000}
+  local extraction=${4:-1000} range_span total_bytes=0 processed_bytes=0
+  local unit_bytes unit_start unit_end unit_span path size i
+
+  [ -s "$root/libGame.so" ] && [ -s "$root/libc++_shared.so" ] || return 1
+  for i in 0 1 2 3 4; do
+    [ -s "$root/assets/data_${i}.zip" ] \
+      && [ -s "$root/assets/data_${i}.zip.idx" ] || return 1
+  done
+
+  for path in "$root/libGame.so" "$root/libc++_shared.so" \
+    "$root/assets"/data_[0-4].zip "$root/assets"/data_[0-4].zip.idx; do
+    size=$(file_size "$path") || return 1
+    total_bytes=$((total_bytes + size))
+  done
+  [ "$total_bytes" -gt 0 ] || return 1
+  range_span=$((range_end - range_start))
+
+  unit_bytes=$(file_size "$root/libGame.so") || return 1
+  size=$(file_size "$root/libc++_shared.so") || return 1
+  unit_bytes=$((unit_bytes + size))
+  unit_start=$((range_start + range_span * processed_bytes / total_bytes))
+  unit_end=$((range_start + range_span * (processed_bytes + unit_bytes) / total_bytes))
+  setup_progress 1 5 "$unit_start" "$extraction" "VALIDATING GAME LIBRARIES"
+  python3 "$VALIDATOR" lib "$root/libGame.so" "$root/libc++_shared.so" \
+    >> "$SETUPLOG" 2>&1 || return 1
+  processed_bytes=$((processed_bytes + unit_bytes))
+  setup_progress 1 5 "$unit_end" "$extraction" "GAME LIBRARIES VALIDATED"
+
+  for i in 0 1 2 3 4; do
+    unit_bytes=$(file_size "$root/assets/data_${i}.zip") || return 1
+    size=$(file_size "$root/assets/data_${i}.zip.idx") || return 1
+    unit_bytes=$((unit_bytes + size))
+    unit_start=$((range_start + range_span * processed_bytes / total_bytes))
+    unit_end=$((range_start + range_span * (processed_bytes + unit_bytes) / total_bytes))
+    unit_span=$((unit_end - unit_start))
+    BULLY_SETUP_PROGRESS_FILE="$SETUPF" \
+      BULLY_SETUP_PHASE=5 \
+      BULLY_VALIDATION_BASE="$unit_start" \
+      BULLY_VALIDATION_SPAN="$unit_span" \
+      BULLY_EXTRACTION_PERMILLE="$extraction" \
+      BULLY_SETUP_MESSAGE="VALIDATING DATA $((i + 1)) / 5" \
+      python3 "$VALIDATOR" pair "$root/assets/data_${i}.zip" \
+        "$root/assets/data_${i}.zip.idx" "$i" >> "$SETUPLOG" 2>&1 \
+      || return 1
+    processed_bytes=$((processed_bytes + unit_bytes))
+    setup_progress 1 5 "$unit_end" "$extraction" \
+      "DATA $((i + 1)) / 5 VALIDATED"
+  done
+  setup_progress 1 5 "$range_end" "$extraction" "GAME DATA VALIDATED"
+  return 0
+}
+
+generate_patch() {
+  local root=$1
+  BULLY_PATCH_SCRIPT="$PATCH_SCRIPT" "$ENSURE_PATCH" "$root" \
+    >> "$SETUPLOG" 2>&1 || return 1
+  patch_is_valid "$root"
+}
+
+add_source() {
+  local path=$1 parent=${2:-$1} current index=0
+  [ -f "$path" ] || return 0
+  for current in "${SOURCES[@]}"; do
+    if [ "$current" = "$path" ]; then
+      [ -n "${SOURCE_PARENTS[$index]:-}" ] \
+        || SOURCE_PARENTS[$index]=$parent
+      return 0
+    fi
+    index=$((index + 1))
+  done
+  SOURCES+=("$path")
+  SOURCE_PARENTS+=("$parent")
+}
+
+add_used_original() {
+  local path=$1 current
+  [ -f "$path" ] || return 0
+  for current in "${USED_ORIGINALS[@]}"; do
+    [ "$current" = "$path" ] && return 0
+  done
+  USED_ORIGINALS+=("$path")
+}
+
+zip_has() {
+  [ -f "$1" ] || return 1
+  unzip -l "$1" "$2" 2>/dev/null \
+    | awk -v entry="$2" \
+      '$1 ~ /^[0-9]+$/ && $4 == entry { found=1 } END { exit !found }'
+}
+
+archive_has_apk() {
+  [ -f "$1" ] || return 1
+  unzip -l "$1" 2>/dev/null \
+    | awk '$1 ~ /^[0-9]+$/ && $0 ~ /[.]apk[[:space:]]*$/ { found=1 } \
+           END { exit !found }'
+}
+
+archive_is_direct_source() {
+  zip_has "$1" 'lib/arm64-v8a/libGame.so' \
+    || zip_has "$1" 'assets/data_0.zip' \
+    || zip_has "$1" 'data_0.zip' \
+    || zip_has "$1" 'com.rockstargames.bully/assets/data_0.zip'
+}
+
+validate_archive_source() {
+  local source=$1 base=${2:-0} span=${3:-0}
+  local message=${4:-VALIDATING APK} end
+  end=$((base + span))
+  setup_progress 1 2 "$base" 0 "$message"
+  if BULLY_SETUP_PROGRESS_FILE="$SETUPF" \
+      BULLY_SETUP_PHASE=2 \
+      BULLY_VALIDATION_BASE="$base" \
+      BULLY_VALIDATION_SPAN="$span" \
+      BULLY_EXTRACTION_PERMILLE=0 \
+      BULLY_SETUP_MESSAGE="$message" \
+      python3 "$VALIDATOR" archive "$source" >> "$SETUPLOG" 2>&1; then
+    setup_progress 1 2 "$end" 0 "$message"
+    return 0
+  fi
+
+  # Python's zipfile may not support every compression method present on a
+  # target. The system unzip is a CRC-validating fallback, never a bypass.
+  blog "Python ZIP validation failed; retrying with system unzip: $source"
+  setup_progress 1 2 "$base" 0 "$message (SYSTEM FALLBACK)"
+  if unzip -tq "$source" </dev/null >> "$SETUPLOG" 2>&1; then
+    setup_progress 1 2 "$end" 0 "$message"
+    return 0
+  fi
+  return 1
+}
+
+expand_bundle() {
+  local bundle=$1 sub apk_file
+  if archive_is_direct_source "$bundle"; then
+    add_source "$bundle" "$bundle"
+    return 0
+  fi
+  if ! validate_archive_source "$bundle" 0 0 "VALIDATING APK BUNDLE"; then
+    blog "rejected damaged bundle: $bundle"
+    return 1
+  fi
+  if ! archive_has_apk "$bundle"; then
+    blog "ignored ZIP without Bully data or APK splits: $bundle"
+    return 1
+  fi
+  sub="$BUNDLE_DIR/bundle_${#SOURCES[@]}_${BASHPID:-$$}"
+  mkdir -p "$sub" || return 1
+  if ! unzip -o -j "$bundle" '*.apk' -d "$sub" >> "$SETUPLOG" 2>&1; then
+    blog "failed to expand bundle: $bundle"
+    return 1
+  fi
+  for apk_file in "$sub"/*.apk; do
+    [ -f "$apk_file" ] && add_source "$apk_file" "$bundle"
+  done
+  return 0
+}
+
+gather_sources() {
+  local dir candidate
+  shopt -s nullglob
+  mkdir -p "$BUNDLE_DIR" || return 1
+
+  if [ -n "$APK" ] && [ -f "$APK" ]; then
+    case "${APK,,}" in
+      *.apks|*.apkm|*.xapk|*.zip) expand_bundle "$APK" || true ;;
+      *) add_source "$APK" "$APK" ;;
+    esac
+  fi
+
+  for dir in "$GAMEDATA" "$GAMEDATA/com.rockstargames.bully" "$DEST"; do
+    [ -d "$dir" ] || continue
+    for candidate in "$dir"/*.apks "$dir"/*.apkm "$dir"/*.xapk "$dir"/*.zip; do
+      case "$candidate" in
+        "$DEST/assets/bully2_patch.zip"|"$DEST/assets"/data_*.zip) continue ;;
+      esac
+      expand_bundle "$candidate" || true
+    done
+    for candidate in "$dir"/*.apk "$dir"/*.APK "$dir"/*.obb "$dir"/*.OBB; do
+      add_source "$candidate" "$candidate"
+    done
+  done
+  shopt -u nullglob
+  return 0
+}
+
+validate_sources() {
+  local source count=${#SOURCES[@]} index=0 base end span
+  [ "$count" -gt 0 ] || return 1
+  for source in "${SOURCES[@]}"; do
+    base=$((index * 400 / count))
+    end=$(((index + 1) * 400 / count))
+    span=$((end - base))
+    if validate_archive_source "$source" "$base" "$span" \
+      "VALIDATING APK $((index + 1)) / $count"; then
+      VALID_SOURCES+=("$source")
+    else
+      blog "rejected damaged source archive: $source"
+    fi
+    index=$((index + 1))
+  done
+  setup_progress 1 2 400 0 "APK INTEGRITY VALIDATED"
+  [ "${#VALID_SOURCES[@]}" -gt 0 ]
+}
+
+source_has_library_set() {
+  zip_has "$1" 'lib/arm64-v8a/libGame.so' \
+    && zip_has "$1" 'lib/arm64-v8a/libc++_shared.so'
+}
+
+source_library_set_is_exact() {
+  local source=$1 game_digest libcxx_digest
+  source_has_library_set "$source" || return 1
+  game_digest=$(unzip -p "$source" 'lib/arm64-v8a/libGame.so' 2>> "$SETUPLOG" \
+    | md5sum | awk '{print $1}') || return 1
+  [ "$game_digest" = "$LIBGAME_MD5" ] || return 1
+  libcxx_digest=$(unzip -p "$source" 'lib/arm64-v8a/libc++_shared.so' \
+    2>> "$SETUPLOG" | sha256sum | awk '{print $1}') || return 1
+  [ "$libcxx_digest" = "$LIBCXX_SHA256" ]
+}
+
+source_data_index_is_exact() {
+  local source=$1 prefix=$2 index=$3 digest zip_size
+  digest=$(unzip -p "$source" "${prefix}data_${index}.zip.idx" \
+    2>> "$SETUPLOG" | sha256sum | awk '{print $1}') || return 1
+  [ "$digest" = "${IDX_SHA256[$index]}" ] || return 1
+  zip_size=$(unzip -l "$source" "${prefix}data_${index}.zip" 2>> "$SETUPLOG" \
+    | awk -v entry="${prefix}data_${index}.zip" \
+      '$4 == entry && !found { size=$1; found=1 } END { if (found) print size }') \
+    || return 1
+  [ "$zip_size" = "${DATA_ZIP_SIZES[$index]}" ]
+}
+
+select_atomic_sources() {
+  local source prefix index
+  for source in "${VALID_SOURCES[@]}"; do
+    if source_has_library_set "$source"; then
+      if ! source_library_set_is_exact "$source"; then
+        blog "rejected modified/wrong arm64 game libraries: $source"
+        continue
+      fi
+      if [ -z "$LIB_SOURCE" ]; then
+        LIB_SOURCE=$source
+      fi
+    fi
+    for index in 0 1 2 3 4; do
+      [ -z "${DATA_SOURCES[$index]}" ] || continue
+      for prefix in 'assets/' '' 'com.rockstargames.bully/assets/'; do
+        if zip_has "$source" "${prefix}data_${index}.zip" \
+          && zip_has "$source" "${prefix}data_${index}.zip.idx"; then
+          if ! source_data_index_is_exact "$source" "$prefix" "$index"; then
+            blog "rejected wrong data_${index} index in: $source"
+            continue
+          fi
+          DATA_SOURCES[$index]=$source
+          DATA_PREFIXES[$index]=$prefix
+          break
+        fi
+      done
+    done
+  done
+  [ -n "$LIB_SOURCE" ] || return 1
+  for index in 0 1 2 3 4; do
+    if [ -z "${DATA_SOURCES[$index]}" ]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+collect_used_originals() {
+  local selected source index
+  for selected in "$LIB_SOURCE" "${DATA_SOURCES[@]}"; do
+    index=0
+    for source in "${SOURCES[@]}"; do
+      if [ "$source" = "$selected" ]; then
+        add_used_original "${SOURCE_PARENTS[$index]:-$source}"
+        break
+      fi
+      index=$((index + 1))
+    done
+  done
+}
+
+log_selected_sources() {
+  local index
+  blog "library source: $LIB_SOURCE"
+  for index in 0 1 2 3 4; do
+    blog "data_${index} pair source: ${DATA_SOURCES[$index]} (layout=${DATA_PREFIXES[$index]:-root})"
+  done
+}
+
+extract_selected_data_pairs() {
+  local index source prefix
+  for index in 0 1 2 3 4; do
+    source=${DATA_SOURCES[$index]}
+    prefix=${DATA_PREFIXES[$index]}
+    extract_entry "$source" "${prefix}data_${index}.zip" \
+      "$STAGE/assets/data_${index}.zip" \
+      || fail_extract "FAILED TO EXTRACT data_${index}.zip"
+    extract_entry "$source" "${prefix}data_${index}.zip.idx" \
+      "$STAGE/assets/data_${index}.zip.idx" \
+      || fail_extract "FAILED TO EXTRACT data_${index}.zip.idx"
+  done
+}
+
+extract_entry() {
+  local source=$1 entry=$2 target=$3 tmp="${3}.part.$$"
+  mkdir -p "$(dirname "$target")" || return 1
+  rm -f "$tmp"
+  if ! unzip -p "$source" "$entry" > "$tmp" 2>> "$SETUPLOG"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  [ -s "$tmp" ] || { rm -f "$tmp"; return 1; }
+  mv -f "$tmp" "$target"
+}
+
+stage_payload_bytes() {
+  local file size total=0
+  local -a files=()
+
+  # A Python size backend is still useful on minimal muOS images, but spawning
+  # one interpreter per file every second would add avoidable CPU and I/O load.
+  # Sum the whole staging set in one process while extraction is active.
+  if [ "$FILE_SIZE_BACKEND" = python3 ]; then
+    python3 - "$STAGE" <<'PY'
+import glob
+import os
+import sys
+
+root = sys.argv[1]
+patterns = (
+    "libGame.so*",
+    "libc++_shared.so*",
+    "assets/data_[0-4].zip*",
+)
+paths = []
+for pattern in patterns:
+    paths.extend(glob.glob(os.path.join(root, pattern)))
+print(sum(os.path.getsize(path) for path in paths if os.path.isfile(path)))
+PY
+    return $?
+  fi
+
+  shopt -s nullglob
+  files=("$STAGE"/libGame.so* "$STAGE"/libc++_shared.so* \
+    "$STAGE"/assets/data_[0-4].zip*)
+  shopt -u nullglob
+  for file in "${files[@]}"; do
+    [ -f "$file" ] || continue
+    size=$(file_size "$file") || continue
+    total=$((total + size))
+  done
+  printf '%s\n' "$total"
+}
+
+start_progress_poll() {
+  (
+    while [ ! -f "$STOPF" ]; do
+      done_bytes=$(stage_payload_bytes)
+      [ "$done_bytes" -le "$EXTRACTION_TOTAL_BYTES" ] \
+        || done_bytes=$EXTRACTION_TOTAL_BYTES
+      extraction=$((done_bytes * 1000 / EXTRACTION_TOTAL_BYTES))
+      done_mb=$((done_bytes / 1048576))
+      total_mb=$((EXTRACTION_TOTAL_BYTES / 1048576))
+      setup_progress 1 4 500 "$extraction" \
+        "COPYING GAME DATA $done_mb / $total_mb MB"
+      sleep 1
+    done
+  ) &
+  POLL=$!
+}
+
+commit_payload() {
+  local rel
+  mkdir -p "$BACKUP/assets" "$DEST/assets" || return 1
+  : > "$BACKUP/previous-files" || return 1
+  for rel in "${INSTALL_FILES[@]}"; do
+    [ -e "$STAGE/$rel" ] || return 1
+    if [ -e "$DEST/$rel" ]; then
+      printf '%s\n' "$rel" >> "$BACKUP/previous-files" || return 1
+    fi
+  done
+  if [ -f "$MARKER" ]; then
+    : > "$BACKUP/previous-marker" || return 1
+  fi
+  sync
+  COMMIT_STARTED=1
+  if [ -f "$MARKER" ]; then
+    mv -f "$MARKER" "$BACKUP/marker" || return 1
+  fi
+  # Phase 1: preserve the complete previous payload before replacing any file.
+  for rel in "${INSTALL_FILES[@]}"; do
+    mkdir -p "$(dirname "$BACKUP/$rel")" "$(dirname "$DEST/$rel")" || return 1
+    if [ -e "$DEST/$rel" ]; then
+      mv -f "$DEST/$rel" "$BACKUP/$rel" || return 1
+    fi
+  done
+  sync
+  # Phase 2: install only the tree that already passed every validator.
+  for rel in "${INSTALL_FILES[@]}"; do
+    TOUCHED_FILES+=("$rel")
+    mv -f "$STAGE/$rel" "$DEST/$rel" || return 1
+  done
+  sync
+  write_marker "$DEST" || return 1
+  sync
+  COMMIT_DONE=1
+  rm -rf "$BACKUP"
+  return 0
+}
+
+delete_sources_after_success() {
+  local source
+  [ "${BULLY_DELETE_APK_AFTER_EXTRACT:-1}" = 1 ] || {
+    blog "source cleanup disabled by BULLY_DELETE_APK_AFTER_EXTRACT"
+    return 0
+  }
+  for source in "${USED_ORIGINALS[@]}"; do
+    [ -e "$source" ] || continue
+    case "$source" in
+      "$DEST/libGame.so"|"$DEST/libc++_shared.so"|"$DEST/assets"/*) continue ;;
+    esac
+    if rm -f "$source" 2>> "$SETUPLOG"; then
+      blog "deleted source after successful commit: $source"
+    else
+      blog "warning: could not delete source: $source"
+    fi
+  done
+}
+
+acquire_lock || fail_extract "ANOTHER EXTRACTION IS ACTIVE"
+: > "$SETUPLOG" || fail_extract "CANNOT WRITE SETUP LOG"
+blog "=== Bully Final setup start (dest=$DEST) ==="
+blog "input=${APK:-<scan>} gamedata=$GAMEDATA"
+require_tools
+recover_orphan_transactions \
+  || fail_extract "INTERRUPTED INSTALL RECOVERY FAILED (SEE setup.log)"
+
+# Fast path for a previously validated installation. No APK is required.
+if marker_is_valid; then
+  blog "validated marker and payload already present"
+  exit 0
+fi
+
+# Migrate a complete v11 payload by validating it in place and generating the
+# mandatory patch. This deliberately works when the original APK was deleted.
+if payload_files_present && library_md5_ok; then
+  setup_progress 1 5 0 1000 "VALIDATING EXISTING GAME DATA"
+  splash_start
+  blog "complete legacy payload found; validating for Final"
+  if validate_payload "$DEST" 0 1000 1000 \
+      && setup_progress 1 6 1000 1000 "GENERATING MENU PATCH" \
+      && generate_patch "$DEST" \
+      && write_marker "$DEST"; then
+    sync
+    setup_progress 3 8 1000 1000 "GAME DATA READY"
+    blog "legacy payload migrated without requiring an APK"
+    exit 0
+  fi
+  blog "legacy payload validation failed; looking for a clean source"
+fi
+
+rm -rf "$STAGE" "$BACKUP"
+mkdir -p "$STAGE/assets" "$BUNDLE_DIR" || fail_extract "CANNOT CREATE EXTRACTION STAGING"
+setup_progress 1 1 0 0 "LOOKING FOR BULLY 1.4.311 FILES"
+splash_start
+gather_sources || fail_extract "CANNOT SCAN APK SOURCES"
+[ "${#SOURCES[@]}" -gt 0 ] \
+  || fail_extract "COPY BULLY 1.4.311 APK TO GAMEDATA"
+setup_progress 1 2 0 0 "VALIDATING APK INTEGRITY"
+validate_sources || fail_extract "NO VALID APK OR BUNDLE FOUND"
+setup_progress 1 3 400 0 "SELECTING COMPATIBLE GAME DATA"
+select_atomic_sources \
+  || fail_extract "APK SET INCOMPLETE OR MIXED (NEED FULL 1.4.311 DATA)"
+setup_progress 1 3 500 0 "BULLY 1.4.311 DATA SELECTED"
+collect_used_originals
+
+log_selected_sources
+setup_progress 1 4 500 0 "COPYING GAME DATA 0 MB"
+start_progress_poll
+
+extract_entry "$LIB_SOURCE" 'lib/arm64-v8a/libGame.so' "$STAGE/libGame.so" \
+  || fail_extract "FAILED TO EXTRACT libGame.so"
+extract_entry "$LIB_SOURCE" 'lib/arm64-v8a/libc++_shared.so' "$STAGE/libc++_shared.so" \
+  || fail_extract "FAILED TO EXTRACT libc++_shared.so"
+
+extract_selected_data_pairs
+
+stop_poll
+setup_progress 1 5 500 1000 "VALIDATING EXTRACTED GAME DATA"
+validate_payload "$STAGE" 500 1000 1000 \
+  || fail_extract "DATA VALIDATION FAILED (SEE setup.log)"
+setup_progress 1 6 1000 1000 "GENERATING MENU PATCH"
+generate_patch "$STAGE" \
+  || fail_extract "MENU PATCH FAILED (SEE setup.log)"
+
+setup_progress 1 7 1000 1000 "INSTALLING VALIDATED GAME DATA"
+if ! commit_payload; then
+  fail_extract "FAILED TO COMMIT VALIDATED GAME DATA"
+fi
+delete_sources_after_success
+setup_progress 3 8 1000 1000 "GAME DATA READY"
+blog "=== Bully Final setup complete ==="
+sleep "${BULLY_SETUP_SUCCESS_DELAY:-1}"
+exit 0
