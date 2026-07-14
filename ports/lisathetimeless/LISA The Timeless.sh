@@ -55,5 +55,5 @@ fi
 $GPTOKEYB "falcon_mkxp.bin" -c "./lisathetimeless.gptk" &
 $GAMEDIR/gamedata/falcon_mkxp.bin
 
-$ESUDO kill -9 $(pidof gptokeyb)
+pm_finish
 $ESUDO systemctl restart oga_events &
