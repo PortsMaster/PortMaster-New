@@ -56,4 +56,3 @@ $GPTOKEYB "falcon_mkxp.bin" -c "./lisathetimeless.gptk" &
 $GAMEDIR/gamedata/falcon_mkxp.bin
 
 pm_finish
-$ESUDO systemctl restart oga_events &
