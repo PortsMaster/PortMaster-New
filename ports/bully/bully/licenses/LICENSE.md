@@ -1,4 +1,4 @@
-# Bully: Anniversary Edition Final package licenses and notices
+# Bully: Anniversary Edition package licenses and notices
 
 This is a BYO-data PortMaster/NextOS package. It includes the Linux
 compatibility loader, launcher, metadata, preview images and first-run setup
@@ -39,6 +39,6 @@ optional fallback is enabled; it is not included in this package.
 
 ## Preview images
 
-The included `cover.png`, `screenshot.png` and `splash.png` identify the port in
+The included `cover.png` and `screenshot.png` identify the port in
 the frontend. They are not a substitute for the game and grant no right to
 redistribute the original game assets.
