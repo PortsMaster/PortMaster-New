@@ -13,11 +13,13 @@ You must provide the Steam data files for Super Blood Hockey.
 https://store.steampowered.com/app/532190
 
 Supports both Windows and Linux versions.
-Place all game files into the `superbloodhockey/gamedata` folder.
+Place game files into the `superbloodhockey/gamedata` folder.
+But do NOT copy the `SubparBloopHokeyCon.fig` file! (Doing so will
+boot the game into the wrong resolution).
 
 On first launch, the port auto-detects the device resolution and
 patches the game's last resolution slot with the device's resolution and
-zoom values, if necessary. Patcher works with version 1.5.4 only.
+zoom values, if necessary. Patcher works with game version 1.5.4 only.
 
 ## Controls
 
