@@ -56,7 +56,7 @@ for bundle in "${sources[@]}"; do
     else
       rm -f "$split"
     fi
-  done < <(unzip -l "$bundle" 2>/dev/null | awk '$1 ~ /^[0-9]+$/ && $4 ~ /[.]apk$/ {print $4}')
+  done < <(unzip -l "$bundle" 2>/dev/null | awk '$1 ~ /^[0-9]+$/ && $4 ~ /[.](apk|obb)$/ {print $4}')
 done
 
 extract_entry() {
