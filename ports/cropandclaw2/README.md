@@ -2,7 +2,7 @@
 
 Many years after the events of Crop and Claw have passed. A hermit dragon by name of Wend and his friends set sail to a far away continent in search of a new home. But an ominous wind carries news that Wend's past has come to haunt him, even across the ocean itself.
 
-# Features
+## Features
 
 * Build a custom party of dragons and join story characters throughout an adventure.
 * Dragons, everywhere.
