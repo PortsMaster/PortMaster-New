@@ -79,10 +79,10 @@ Overly verbose, AI-generated ports are the current #1 rejection reason and are r
 - 320x240
 
 ### Additionally, PortMaster supports the following CPU types so consider testing on each:
-- rk3326 (mali g32)
-- rk3566 (mali g52)
-- h700 (mali g32)
-- a133p (PowerVR)
+- rk3326 (mali g31mp2)
+- rk3566 (mali g52mp2)
+- h700 (mali g31mp2)
+- a133p (PowerVR GE8300)
 - snapdragon 865 (adreno/turnip/rocknix/wayland)
 - snapdragon 662
 - amlogic s922x (rare)
