@@ -5,7 +5,7 @@ native Zig rewrite with controller-first handheld controls, compact 640x480 UI
 fixes, and twin-stick aim/fire for small Linux handhelds.
 
 The current release package is `aarch64` only and has been tested on 
-amberelec, muos, and rocknix. It uses raylib's SDL2 backend with GLES2 and 
+AmberELEC, muOS, and ROCKNIX. It uses raylib's SDL2 backend with GLES2 and 
 packages the required ARM64 `libraylib.so`.
 
 This package does not include Crimsonland game data. Copy your own files into
@@ -18,7 +18,7 @@ This package does not include Crimsonland game data. Copy your own files into
 The game can run without music. Sound effects still work when `sfx.paq` is
 present.
 
-Thanks to 10tons Entertainment for Crimsonland
+Thanks to 10tons Entertainment for developing Crimsonland
 Thanks to [banteg](https://github.com/banteg/crimson) for this faithful rewrite of Crimsonland.
 Modded for handhelds: [jckhng](https://github.com/jckhng/crimson/tree/portmaster-rg35xxh)
 Thanks to NotYerAvgPorter, Old Pixel, Ganimoth for testing.
