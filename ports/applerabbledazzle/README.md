@@ -5,6 +5,7 @@ Another big thanks to all who tested this port!
 
 ## Controls
 <img src="https://raw.githubusercontent.com/PortsMaster/PortMaster-New/main/ports/applerabbledazzle/applerabbledazzle/controls.png" type="image/png" style="max-width: 65%" alt="Controls image">
+(Image Credit: Jaime Gifte)
 
 | Button | Action |
 |--|--| 
@@ -13,5 +14,3 @@ Another big thanks to all who tested this port!
 |A button|Select/up|
 |B button|Cancel/down|
 |Start|Pause|
-
-
