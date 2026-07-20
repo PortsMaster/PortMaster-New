@@ -1,1 +1,0 @@
-(setf difficulty 'easy)

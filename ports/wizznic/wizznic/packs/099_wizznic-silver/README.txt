@@ -1,1 +1,0 @@
-To install: Move wizznic-silver into wizznic/packs/

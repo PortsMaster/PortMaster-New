@@ -1,1 +1,0 @@
-MP3 files are needed to run the game are downloadable from http://drl.chaosforge.org/

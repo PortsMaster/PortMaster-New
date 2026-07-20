@@ -1,1 +1,0 @@
-d3l3(dl)ldlul3u3drddldd3(ru)ulldrulldd5uluur5duurdrdrrdlru3(ul)dlud3rddlurulullddrrdrrurulullrrdrrull3dlluurldllurluluur3d3(rd)r3(ru)lulldu3r3ldrurrddldludlur3druluurruullddldd3ruulduluurdururrd3ldldld3(dr)uudllull3(dr)urdu3luurdldrdrruullulldldrdrrulrurrdlrdrddl3ululul3(ld)rr
