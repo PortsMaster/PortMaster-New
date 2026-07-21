@@ -147,6 +147,7 @@ function splash.load()
                 target_scale = 1,
                 rotation = 0,
                 corner_r = math.floor(cell_size * 0.08),
+                alpha = 1,
             })
         end
     end
@@ -173,90 +174,35 @@ function splash.load()
 
 
     -- =============================================
-    -- PHASE 5: Exit — Tiles merge inward, golden shockwave
+    -- PHASE 5: Exit — Radiant Ripple Sweep
     -- =============================================
     timer.after(2.3, function()
-        -- All tiles shrink and merge toward center aggressively with a violent spin
+        splash.is_revealing = true
+        local cx, cy = w / 2, h / 2
+
+        -- Tiles shrink to 0 in a ripple radiating from the center
+        local max_delay = 0
         for _, tile in ipairs(anim.tile_data) do
-            local cx, cy = w / 2, h / 2
-            timer.tween(0.45, tile, {
-                x = cx,
-                y = cy,
-                scale = 0,
-                rotation = tile.rotation + (math.random() > 0.5 and 1 or -1) * math.pi * 1.5
-            }, 'in-cubic')
+            local tcx, tcy = tile.x + tile.size / 2, tile.y + tile.size / 2
+            local dist = math.sqrt((tcx - cx)^2 + (tcy - cy)^2)
+            local delay = dist * 0.0012 -- adjust speed of ripple
+
+            if delay > max_delay then max_delay = delay end
+
+            timer.after(delay, function()
+                timer.tween(0.3, tile, { scale = 0 }, 'in-back')
+            end)
         end
 
-        -- Logo bulges up intensely, then snaps to zero
-        timer.tween(0.3, anim, {logo_scale = 1.3}, 'in-out-quad', function()
-            timer.tween(0.15, anim, {logo_scale = 0}, 'in-cubic')
+        -- Logo does a satisfying pop after the ripple reaches the edges
+        timer.after(max_delay + 0.1, function()
+            timer.tween(0.3, anim, { logo_scale = 0 }, 'in-back')
         end)
 
-        -- After merge: GOLDEN SHOCKWAVE (Triggered exactly when merge completes at 0.45s)
-        timer.after(0.45, function()
-            -- Screen flash (warm golden-orange pop)
-            anim.exit_flash = 1
-
-            -- Screen shake
-            anim.shake_x = 0
-            anim.shake_y = 0
-            local shake_dur = 0.35
-            timer.during(shake_dur, function(dt)
-                anim.shake_x = (math.random() - 0.5) * 8
-                anim.shake_y = (math.random() - 0.5) * 8
-            end, function()
-                anim.shake_x = 0
-                anim.shake_y = 0
-            end)
-
-            -- Flash fades
-            timer.tween(0.6, anim, {exit_flash = 0}, 'out-quad')
-
-            -- Hide all tiles instantly
-            for _, tile in ipairs(anim.tile_data) do
-                tile.scale = 0
-            end
-            anim.logo_scale = 0
-
-            -- Expanding golden ring
-            timer.tween(0.7, anim, {exit_ring_r = math.max(w, h) * 1.2}, 'out-quad')
-
-            -- Spawn explosive particles (huge dynamic burst with standard alpha blending)
-            local cx, cy = w / 2, h / 2
-            for i = 1, 120 do
-                local angle = (i / 120) * math.pi * 2 + math.random() * 0.1
-                local speed = math.random(100, 1100)
-
-                -- Mix of colored tile chunks and pure gold sparks
-                local is_gold = math.random() > 0.5
-                local color = is_gold and colors.gold or cascade_tile_colors[math.random(#cascade_tile_colors)]
-                local p_type = is_gold and "spark" or "chunk"
-
-                -- Add a slight organic starting offset
-                local offset_x = (math.random() - 0.5) * 16
-                local offset_y = (math.random() - 0.5) * 16
-
-                table.insert(anim.exit_particles, {
-                    x = cx + offset_x,
-                    y = cy + offset_y,
-                    vx = math.cos(angle) * speed,
-                    vy = math.sin(angle) * speed,
-                    life = 1.0 + math.random() * 0.6,
-                    size = p_type == "chunk" and (6 + math.random() * 12) or (2 + math.random() * 4),
-                    color = color,
-                    rotation = math.random() * math.pi * 2,
-                    rot_speed = (math.random() - 0.5) * 15,
-                    type = p_type,
-                    drag = 0.91 + math.random() * 0.06
-                })
-            end
-
-            -- Mark as revealing, then finish after ample time for particles to fade
-            splash.is_revealing = true
-            timer.after(1.2, function()
-                splash.finished = true
-                splash.is_revealing = false
-            end)
+        -- Finish when everything is done
+        timer.after(max_delay + 0.45, function()
+            splash.finished = true
+            splash.is_revealing = false
         end)
     end)
 end
@@ -301,7 +247,7 @@ function splash.draw()
             love.graphics.rotate(tile.rotation)
             love.graphics.scale(tile.scale, tile.scale)
 
-            love.graphics.setColor(tile.color[1], tile.color[2], tile.color[3], 0.6)
+            love.graphics.setColor(tile.color[1], tile.color[2], tile.color[3], 0.6 * (tile.alpha or 1))
             roundedRect("fill", -tile.size / 2, -tile.size / 2, tile.size, tile.size, tile.corner_r)
 
             love.graphics.pop()
