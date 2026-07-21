@@ -36,7 +36,7 @@ if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
   $ESUDO $controlfolder/harbourmaster --quiet --no-check runtime_check "${runtime}.squashfs"
 fi
 
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/libs:$solarus_dir"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO mkdir -p "$solarus_dir"
