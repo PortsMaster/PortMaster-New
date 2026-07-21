@@ -1929,115 +1929,83 @@ function renderer.drawDynamicBackground(themeName)
         local t = love.timer.getTime()
         love.graphics.push("all")
 
-        -- Cycle through forest modes every 4 minutes
-        -- Mode 0: Summer green forest
-        -- Mode 1: Autumn/fall forest
-        -- Mode 2: Sakura cherry blossom
-        local cycle_duration = 240.0  -- 4 minutes per mode
-        local total_modes = 3
-        local mode_raw = math.floor(t / cycle_duration) % total_modes
-        -- Transition blend: last 10 seconds of each mode fade to next
-        local mode_frac = (t % cycle_duration) / cycle_duration
-        local transition_start = 0.96
-        local blend = math.max(0.0, math.min(1.0, (mode_frac - transition_start) / (1.0 - transition_start)))
-        local forest_mode = mode_raw
-
-        -- Draw ambient ground mist
-        for mist = 1, 5 do
-            local mx = w * (mist / 6) + math.sin(t * 0.08 + mist * 1.3) * 40 * scale
-            local my = h - math.sin(t * 0.12 + mist) * 8 * scale
-            local mr = (80 + mist * 25) * scale
-            if forest_mode == 2 then
-                love.graphics.setColor(0.95, 0.75, 0.85, 0.05) -- sakura: pink mist
-            else
-                love.graphics.setColor(0.35, 0.55, 0.25, 0.05) -- day: green mist
-            end
+        -- Layer 1: Ambient Forest Canopy Light (Wide spread)
+        local pulse1 = 0.5 + 0.5 * math.sin(t * 0.25)
+        local pulse2 = 0.5 + 0.5 * math.sin(t * 0.35 + 2.0)
+        
+        love.graphics.setColor(0.18, 0.45, 0.25, 0.12 * pulse1)
+        love.graphics.circle("fill", w * 0.3, h * 0.2, 400 * scale)
+        
+        love.graphics.setColor(0.20, 0.50, 0.30, 0.10 * pulse2)
+        love.graphics.circle("fill", w * 0.7, h * 0.3, 350 * scale)
+        
+        love.graphics.setColor(0.25, 0.60, 0.35, 0.08 * pulse1)
+        love.graphics.circle("fill", w * 0.5, h * 0.1, 250 * scale)
+        -- Layer 2: Subtle Ground Mist
+        for mist = 1, 3 do
+            local mx = w * (mist / 4) + math.sin(t * 0.08 + mist * 1.3) * 30 * scale
+            local my = h - math.sin(t * 0.12 + mist) * 5 * scale
+            local mr = (70 + mist * 15) * scale
+            love.graphics.setColor(0.20, 0.45, 0.25, 0.06)
             love.graphics.circle("fill", mx, my, mr)
         end
 
-        -- Main particle loop
-        local particle_count = 22
-        for i = 1, particle_count do
-            local start_x = w * ((i * 0.618) % 1.0)
+        -- Layer 3: Tiny Gentle Fireflies
+        local ff_rng = love.math.newRandomGenerator(321)
+        for i = 1, 8 do
+            local base_x = ff_rng:random() * w
+            local speed = 0.2 + (i % 4) * 0.1
+            local y_cycle = h * 1.2
+            local fy = (h * 1.1) - ((t * speed * 30 + i * 117) % y_cycle)
+            local fx = base_x + math.sin(t * speed + i * 1.7) * 25 * scale
+            
+            local f_pulse = 0.5 + 0.5 * math.sin(t * 1.5 + i * 1.3)
+            local alpha = (0.1 + 0.3 * f_pulse) * math.min(1.0, fy / (h * 0.8))
+            
+            if alpha > 0.01 then
+                local sz = (0.8 + (i % 3) * 0.3) * scale
+                love.graphics.setColor(0.60, 0.98, 0.50, alpha * 0.3)
+                love.graphics.circle("fill", fx, fy, sz * 2.5)
+                love.graphics.setColor(0.80, 1.0, 0.60, alpha * 0.8)
+                love.graphics.circle("fill", fx, fy, sz * 0.8)
+            end
+        end
+
+        -- Layer 4: Elegant Falling Leaves (Minimalist Elongated Ellipses)
+        for i = 1, 24 do
+            local start_x = ((i * 0.6180339887) % 1.0) * w
             local speed_y = 12 + (i % 5) * 5
-            local y_cycle = h + 50 * scale
-            local y = -25 * scale + ((t * speed_y + i * 61.3) % y_cycle)
-            local x = start_x + math.sin(t * (0.4 + (i % 3) * 0.2) + i * 1.7) * 20 * scale
-            local size = (3.5 + (i % 4) * 1.8) * scale
+            local y_cycle = h + 60 * scale
+            local y = -30 * scale + ((t * speed_y + i * 61.3) % y_cycle)
+            local x = start_x + math.sin(t * (0.4 + (i % 3) * 0.2) + i * 1.7) * 25 * scale
+            local size = (4.0 + (i % 4) * 2.0) * scale
+            local rot = (t * 0.5 + i * 0.8) + math.sin(t * 0.8 + i) * 0.3
             local life = 1.0 - (y / h)
-            local alpha = math.max(0, math.min(0.38, life * 0.55))
+            local alpha = math.max(0, math.min(0.6, life * 0.8))
 
-            love.graphics.push()
-            love.graphics.translate(x, y)
+            if alpha > 0.01 then
+                love.graphics.push()
+                love.graphics.translate(x, y)
+                love.graphics.rotate(rot)
 
-            if forest_mode == 0 then
-                -- Summer: vibrant green leaves
+                -- Curated forest green palette
                 local greens = {
                     {0.15, 0.55, 0.18}, {0.30, 0.72, 0.20},
                     {0.08, 0.42, 0.12}, {0.45, 0.78, 0.22}
                 }
                 local c = greens[(i % 4) + 1]
+
+                -- Leaf body
                 love.graphics.setColor(c[1], c[2], c[3], alpha)
-                love.graphics.rotate(t * 0.5 + i * 0.8)
                 love.graphics.ellipse("fill", 0, 0, size, size * 0.38)
-                love.graphics.setColor(c[1] * 0.7, c[2] * 0.7, c[3] * 0.7, alpha * 0.4)
+                
+                -- Leaf center vein
+                love.graphics.setColor(c[1] * 0.6, c[2] * 0.6 + 0.1, c[3] * 0.6, alpha * 0.6)
                 love.graphics.setLineWidth(math.max(1, math.floor(0.7 * scale)))
                 love.graphics.line(-size * 0.8, 0, size * 0.8, 0)
 
-            elseif forest_mode == 1 then
-                -- Autumn: warm amber, red, orange leaves
-                local autumns = {
-                    {0.90, 0.35, 0.05}, {0.85, 0.55, 0.10},
-                    {0.75, 0.20, 0.08}, {0.95, 0.65, 0.15}
-                }
-                local c = autumns[(i % 4) + 1]
-                love.graphics.setColor(c[1], c[2], c[3], alpha)
-                love.graphics.rotate(t * 0.45 + i)
-                love.graphics.ellipse("fill", 0, 0, size, size * 0.42)
-                love.graphics.ellipse("fill", size * 0.3, -size * 0.15, size * 0.5, size * 0.28)
-
-            elseif forest_mode == 2 then
-                -- Sakura: proper 5-petal cherry blossom flower
-                local sakuras = {
-                    {0.98, 0.72, 0.78}, {0.95, 0.55, 0.68},
-                    {1.00, 0.88, 0.92}, {0.92, 0.62, 0.72}
-                }
-                local c = sakuras[(i % 4) + 1]
-                -- Slow rotation for the whole flower
-                love.graphics.rotate(t * 0.20 + i * 0.9)
-                -- Draw 5 petals evenly spaced around center
-                local petal_r = size * 0.72   -- distance from center to petal center
-                local petal_a = size * 0.55   -- petal semi-major axis
-                local petal_b = size * 0.38   -- petal semi-minor axis
-                for p = 0, 4 do
-                    local angle = p * (math.pi * 2 / 5)
-                    local px = math.cos(angle) * petal_r
-                    local py = math.sin(angle) * petal_r
-                    love.graphics.push()
-                    love.graphics.translate(px, py)
-                    love.graphics.rotate(angle)  -- orient petal outward
-                    love.graphics.setColor(c[1], c[2], c[3], alpha)
-                    love.graphics.ellipse("fill", 0, 0, petal_a, petal_b)
-                    -- Subtle petal vein
-                    love.graphics.setColor(c[1] * 0.8, c[2] * 0.7, c[3] * 0.75, alpha * 0.35)
-                    love.graphics.setLineWidth(math.max(1, math.floor(0.6 * scale)))
-                    love.graphics.line(0, -petal_b * 0.6, 0, petal_b * 0.6)
-                    love.graphics.pop()
-                end
-                -- Yellow center (stamen cluster)
-                love.graphics.setColor(1.0, 0.88, 0.30, alpha * 0.85)
-                love.graphics.circle("fill", 0, 0, size * 0.28)
-                love.graphics.setColor(0.95, 0.65, 0.20, alpha * 0.55)
-                love.graphics.circle("line", 0, 0, size * 0.35)
+                love.graphics.pop()
             end
-
-            love.graphics.pop()
-        end
-
-        -- Transition fade overlay
-        if blend > 0 then
-            love.graphics.setColor(0, 0, 0, blend * 0.5)
-            love.graphics.rectangle("fill", 0, 0, w, h)
         end
 
         love.graphics.pop()
