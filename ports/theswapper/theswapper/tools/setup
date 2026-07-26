@@ -1,0 +1,112 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+GAMEDIR="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+GAMEDATA="$GAMEDIR/gamedata"
+SAVEDIR="$GAMEDIR/savedata-home"
+PROFILE_DIR="$SAVEDIR/.local/share/Facepalm Games/The Swapper 1000"
+SETUP_LOG="$GAMEDIR/setup.log"
+ASTC_CACHE_DIR="$GAMEDIR/asset-patches/astc"
+ASTC_GUIDE_DIR="$GAMEDIR/asset-patches/astc-guides"
+ASTC_JOBS="$ASTC_CACHE_DIR/jobs.tsv"
+ASTC_MANIFEST="$ASTC_CACHE_DIR/manifest.tsv"
+ASTC_ENCODER="${PATCHER_ASTC_ENCODER:-}"
+ASTC_MANIFEST_TOOL="$GAMEDIR/tools/texture-astc-manifest"
+TEXTURE_DOWNSCALE_TOOL="$GAMEDIR/tools/texture-downscale"
+SETUP_MARKER="$GAMEDIR/.setup_complete"
+NORMAL_MAP_MAX_DIMENSION=512
+ATLAS_MAX_DIMENSION=0
+
+mkdir -p "$GAMEDATA" "$PROFILE_DIR"
+: >"$SETUP_LOG"
+exec > >(tee -a "$SETUP_LOG") 2>&1
+
+fail() {
+  echo "PATCH_FAIL_MSG:$1"
+  echo "ERROR: $1"
+  exit 1
+}
+
+require_file() {
+  [ -f "$1" ] || fail "$2"
+}
+
+require_dir() {
+  [ -d "$1" ] || fail "$2"
+}
+
+require_executable() {
+  [ -x "$1" ] || fail "$2"
+}
+
+clear_astc_cache() {
+  mkdir -p "$ASTC_CACHE_DIR"
+  find "$ASTC_CACHE_DIR" -mindepth 1 -depth -exec rm -rf {} + || fail "Failed to clear old ASTC texture cache."
+}
+
+apply_texture_patches() {
+  require_file "$TEXTURE_DOWNSCALE_TOOL" "Port install is incomplete: missing texture downscale tool."
+  require_executable "$TEXTURE_DOWNSCALE_TOOL" "Port install is incomplete: texture downscale tool is not executable."
+
+  "$TEXTURE_DOWNSCALE_TOOL" "$GAMEDATA" "$NORMAL_MAP_MAX_DIMENSION" "$ATLAS_MAX_DIMENSION" ||
+    fail "Failed to optimize texture assets."
+}
+
+prepare_astc_cache() {
+  require_dir "$GAMEDATA/data/textures" "Missing texture data. Copy the full Steam Windows install into ports/theswapper/gamedata."
+  [ -n "$ASTC_ENCODER" ] || fail "Missing PortMaster ASTC encoder. Update PortMaster and launch the port again."
+  require_executable "$ASTC_ENCODER" "PortMaster ASTC encoder is not executable. Update PortMaster and launch the port again."
+  require_file "$ASTC_MANIFEST_TOOL" "Port install is incomplete: missing ASTC manifest tool."
+
+  clear_astc_cache
+  mkdir -p "$ASTC_GUIDE_DIR"
+  "$ASTC_MANIFEST_TOOL" "$GAMEDATA" "$ASTC_CACHE_DIR" "$ASTC_JOBS" "$ASTC_MANIFEST" || fail "Failed to prepare ASTC texture cache."
+
+  compressed_count=0
+  while IFS="$(printf '\t')" read -r source_path astc_path profile block kind width height relative_path; do
+    [ -n "$source_path" ] || continue
+    case "$profile" in
+      -cl | -cs) ;;
+      *) fail "Invalid ASTC profile for $relative_path." ;;
+    esac
+    if [ -f "$astc_path" ]; then
+      continue
+    fi
+    echo "Compressing $kind texture $relative_path (${width}x${height}, ASTC ${block})"
+    guide_path="$ASTC_GUIDE_DIR/$relative_path.guide"
+    mkdir -p "${guide_path%/*}"
+    if [ -f "$guide_path" ]; then
+      "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -guide-in "$guide_path" ||
+        rm -f "$astc_path" "$guide_path"
+    fi
+    if [ ! -f "$astc_path" ] &&
+      ! "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -guide-out "$guide_path"; then
+      rm -f "$astc_path"
+      fail "ASTC compression failed for $relative_path."
+    fi
+    compressed_count=$((compressed_count + 1))
+  done < "$ASTC_JOBS"
+
+  [ "$compressed_count" -gt 0 ] || fail "ASTC texture cache did not produce any compressed textures."
+  while IFS="$(printf '\t')" read -r _source_path astc_path _profile _block _kind _width _height relative_path; do
+    [ -n "$astc_path" ] || continue
+    [ -f "$astc_path" ] || fail "ASTC texture cache is incomplete: missing $relative_path."
+  done < "$ASTC_JOBS"
+}
+
+require_file "$GAMEDATA/TheSwapper.exe" "Missing TheSwapper.exe. Copy the Steam Windows files into ports/theswapper/gamedata."
+require_file "$GAMEDATA/mainSettings.ini" "Missing mainSettings.ini. Copy the full Steam Windows install into ports/theswapper/gamedata."
+require_dir "$GAMEDATA/data" "Missing data directory. Copy the full Steam Windows install into ports/theswapper/gamedata."
+require_file "$GAMEDIR/config/TheSwapper.exe.config" "Port install is incomplete: missing TheSwapper.exe.config."
+
+cp "$GAMEDIR/config/TheSwapper.exe.config" "$GAMEDATA/TheSwapper.exe.config"
+apply_texture_patches
+prepare_astc_cache
+
+if ! find "$PROFILE_DIR" -maxdepth 1 -type f -name "*.pro" | grep -q .; then
+  cp "$GAMEDIR/savedata-seed/"* "$PROFILE_DIR/"
+fi
+
+touch "$SETUP_MARKER"
+echo "Setup complete."
