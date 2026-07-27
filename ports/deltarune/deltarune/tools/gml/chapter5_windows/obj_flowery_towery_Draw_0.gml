@@ -26,7 +26,7 @@ if (!surface_exists(tower_surface[0]))
     
     if (depth_map || true)
     {
-        layers = 20;
+        layers = 10;
         //shader_replace_simple_set_hook(mapshader);
         shader_set_uniform_f(u_top, 1);
         shader_set_uniform_f(u_thickness, 1);
