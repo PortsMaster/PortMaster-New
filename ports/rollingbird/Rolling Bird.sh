@@ -33,7 +33,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 # Check if 7zzs present
 if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
-    echo "this port requires the latest portmaster to run, please go to https://portmaster.games/ for more info."
+   pm_message "this port requires the latest portmaster to run, please go to https://portmaster.games/ for more info."
     sleep 5
     exit 1
 fi
@@ -50,7 +50,7 @@ if [ ! -f install_completed ]; then
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
-        echo "This port requires the latest version of PortMaster."
+        pm_message "This port requires the latest version of PortMaster."
     fi
 fi
 
