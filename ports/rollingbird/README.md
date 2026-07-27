@@ -1,6 +1,6 @@
 ## Notes
 
-	Thanks to `hijon park` for developing this game. Download it from [Itch.io](https://hijong-park.itch.io/rolling-bird)
+Thanks to `Hijon Park` for developing this game and allowing us to host it on PortMaster. Feel free to check other great games at [Itch.io](https://hijong-park.itch.io/) or [Steam](https://store.steampowered.com/developer/HijongPark).
 
 ## Controls
 
