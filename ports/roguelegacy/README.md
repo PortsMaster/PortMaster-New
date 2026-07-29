@@ -5,7 +5,7 @@ Special thanks to [Cellar Door Games](https://www.cellardoorgames.com/) for maki
 Source: https://github.com/flibitijibibo/RogueLegacy1/  
 Code optimizations can be found at: https://github.com/Fraxinus88/RogueLegacy1/commit/923f0e4b6b3eedcfc959abf3122d9607d4d1c759
 
-Thanks to Johnny on Flame for his work with FNA patches and the libs. 
+Thanks to Johnny on Flame for his work with FNA patches and the libs as well as the testers from the PortMaster Discord!
 
 ## Controls
 
