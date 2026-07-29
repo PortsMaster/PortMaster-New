@@ -42,7 +42,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
-pm_message "Starting Launcher"
+#pm_message "Starting Launcher"
 
 # Remove debug log
 rm -f "debug.log"
