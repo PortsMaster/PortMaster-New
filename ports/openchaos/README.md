@@ -6,6 +6,58 @@ The current release package is `aarch64` only. It ships an SDL3 shim that uses
 the device's SDL2 runtime, plus the required ARM64 shared libraries under
 `openchaos/libs.aarch64/`.
 
+The SDL3 shim is built from bmdhacks' `sdl2-backend` branch at the pinned
+revision below:
+
+```text
+repository: https://github.com/bmdhacks/SDL.git
+branch: sdl2-backend
+commit: 6057d79baf8321bf190479a699655f06cc2a962f
+```
+
+The OpenChaos repository records this revision in
+`release/portmaster-dependencies.lock`. Its PortMaster build script checks out
+the exact commit, verifies `HEAD`, enables `SDL_SDL2_BACKEND`, and confirms that
+the packaged `libSDL3.so.0` matches the source-built output.
+
+The reproducible build entry points in the OpenChaos repository are:
+
+```text
+release/docker/portmaster-aarch64-focal.Dockerfile
+release/scripts/build-portmaster-aarch64.sh
+release/portmaster-dependencies.lock
+```
+
+Build the pinned Focal toolchain image and package from the OpenChaos repository
+root:
+
+```sh
+docker build \
+  -f release/docker/portmaster-aarch64-focal.Dockerfile \
+  -t openchaos-portmaster-aarch64-focal .
+
+docker run --rm \
+  -e VERSION=0.1.4 \
+  -v "$PWD:/workspace" \
+  openchaos-portmaster-aarch64-focal
+```
+
+`libs.aarch64/` contains only the required runtime SONAME files:
+
+```text
+libSDL3.so.0
+libavcodec.so.62
+libavformat.so.62
+libavutil.so.60
+libfmt.so.12
+libopenal.so.1
+libswresample.so.6
+libswscale.so.9
+```
+
+Unversioned linker aliases, fully versioned duplicate files, and symlinks are
+not included.
+
 This package does not include Urban Chaos game data. Copy your own game resources
 into `openchaos/assets/` before launching, including:
 
@@ -39,7 +91,8 @@ Thanks to Mucky Foot Productions Ltd.
 
 #### Porting support
 
-Thanks to bmdhacks for the SDL3-to-SDL2 backend shim.
+Thanks to bmdhacks for the SDL3-to-SDL2 backend shim. The PortMaster build uses
+the pinned revision documented above.
 
 #### Testing
 
