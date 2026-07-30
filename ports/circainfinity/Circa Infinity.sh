@@ -13,71 +13,40 @@ else
 fi
 
 source $controlfolder/control.txt
-export PORT_32BIT="Y"
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
+# Variables
 GAMEDIR="/$directory/ports/circainfinity"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
-# We log the execution of the script into log.txt
+# CD and set permissions
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-$ESUDO chmod +x -R $GAMEDIR/*
-
-cd "$GAMEDIR"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Exports
-export LD_LIBRARY_PATH="/usr/lib32:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-export GMLOADER_DEPTH_DISABLE=0
-export GMLOADER_SAVEDIR="$GAMEDIR/gamedata/"
-export GMLOADER_PLATFORM="os_windows"
+export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Extract the full version
-if [ -f "$GAMEDIR/gamedata/CircaInfinity.exe" ]; then
-    		
-	# Use 7zip to extract the CircaInfinity.exee file to the destination directory
-    	"$GAMEDIR/tools/7zzs" -aos x "$GAMEDIR/gamedata/CircaInfinity.exe" -o"$GAMEDIR/gamedata" 
-   
-   	# Delete all redundant files
-	rm "$GAMEDIR/gamedata/CircaInfinity.exe"  
-	rm "$GAMEDIR/gamedata/D3DX9_43.dll"
-	rm "$GAMEDIR/gamedata/steam_api.dll"
-	rm "$GAMEDIR/gamedata/options.ini"  
-else
-	pm_message "The exe file is missing, skipping the extraction step!"
+
+# Prepare game files
+if [ -f "$GAMEDIR/assets/CircaInfinity.exe" ]; then
+    # Use 7zip to extract the CircaInfinity.exee file to the destination directory
+    "$controlfolder/7zzs.$DEVICE_ARCH" -aos x "$GAMEDIR/assets/CircaInfinity.exe" -o"$GAMEDIR/assets" 
+	# Apply a patch
+	"$controlfolder/xdelta3" -d -s "$GAMEDIR/assets/data.win" -f "$GAMEDIR/tools/patch.xdelta" "$GAMEDIR/assets/game.droid" 2>&1
+	# Delete all redundant files
+	rm -f assets/*.{exe,dll,win}
+	# Zip all game files into the circainfinity.port
+	zip -r -0 ./circainfinity.port ./assets/
+	rm -Rf ./assets/
 fi
 
-# Extract the demo version
-if [ -f "$GAMEDIR/gamedata/CircaInfinityDemo.exe" ]; then
-    		
-	# Use 7zip to extract the CircaInfinityDemo.exe file to the destination directory
-    	"$GAMEDIR/tools/7zzs" -aos x "$GAMEDIR/gamedata/CircaInfinityDemo.exe" -o"$GAMEDIR/gamedata" 
-   
-   	# Delete all redundant files
-	rm "$GAMEDIR/gamedata/CircaInfinityDemo.exe"  
-	rm "$GAMEDIR/gamedata/D3DX9_43.dll"
-	rm "$GAMEDIR/gamedata/options.ini"  
-else
-	pm_message "The exe file is missing, skipping the extraction step!"
-fi
+# Assign configs and load the game
+$GPTOKEYB "gmloadernext.aarch64" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64"
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
-# Rename the data file
-[ -f "./gamedata/data.win" ] && mv gamedata/data.win gamedata/game.droid
-
-# Pack all .ogg files into game.apk ./gamedata
-if [ -n "$(ls ./gamedata/*.ogg 2>/dev/null)" ]; then
-    # Move all .ogg files from ./gamedata to ./assets
-    mkdir -p ./assets
-    mv ./gamedata/*.ogg ./assets/ || exit 1
-
-    # Zip the contents of ./game.apk
-    zip -r -0 ./game.apk ./assets/ || exit 1
-    rm -Rf "$GAMEDIR/assets/" || exit 1
-fi
-
-$GPTOKEYB "gmloader" &
-
-pm_platform_helper "$GAMEDIR/gmloader"
-./gmloader game.apk
-
+# Cleanup
 pm_finish
