@@ -32,4 +32,67 @@ else
 fi
 
 sleep 1
+
+# The on-device 'as'/'ld' used by mono's AOT backend are bundled inside the
+# PortMaster mono-6.12.0.122-aarch64 runtime itself, alongside a sibling lib/
+# dir containing libopcodes-2.35.2-system.so / libbfd-2.35.2-system.so.
+# That lib/ dir isn't on LD_LIBRARY_PATH by default, so locate it relative to
+# the actual mono binary in use and export it before AOT'ing anything.
+MONO_BIN=$(command -v mono)
+AS_LIBS_DIR=""
+
+if [ -n "$MONO_BIN" ]; then
+    MONO_RUNTIME_DIR=$(dirname "$(dirname "$(readlink -f "$MONO_BIN")")")
+    if [ -f "${MONO_RUNTIME_DIR}/lib/libopcodes-2.35.2-system.so" ]; then
+        AS_LIBS_DIR="${MONO_RUNTIME_DIR}/lib"
+    fi
+fi
+
+if [ -z "$AS_LIBS_DIR" ]; then
+    echo "AOT: libopcodes-2.35.2-system.so not found next to active mono binary — searching common runtime mounts"
+    AS_LIBS_DIR=$(dirname "$(find /usr/lib /opt /usr/local/lib /mnt /storage /userdata /roms /tmp \
+        -maxdepth 8 -iname 'libopcodes-2.35.2-system.so' 2>/dev/null | head -n1)")
+fi
+
+if [ -z "$AS_LIBS_DIR" ] || [ "$AS_LIBS_DIR" = "." ]; then
+    echo "AOT: still not found — falling back to a full filesystem search (no -xdev, since the runtime is often FUSE-mounted)"
+    AS_LIBS_DIR=$(dirname "$(find / -maxdepth 10 \
+        -iname 'libopcodes-2.35.2-system.so' 2>/dev/null | head -n1)")
+fi
+
+if [ -n "$AS_LIBS_DIR" ] && [ "$AS_LIBS_DIR" != "." ] && [ -d "$AS_LIBS_DIR" ]; then
+    export LD_LIBRARY_PATH="${AS_LIBS_DIR}:${LD_LIBRARY_PATH}"
+    echo "AOT: found binutils libs at $AS_LIBS_DIR — added to LD_LIBRARY_PATH"
+else
+    echo "AOT: WARNING — could not locate libopcodes-2.35.2-system.so anywhere; AOT will likely fail again"
+fi
+
+# AOT compile the game assemblies with the on-device mono runtime
+AOT_ASSEMBLIES="Tweener.dll SpriteSystem.dll InputSystem.dll DS2DEngine.dll RogueLegacy.exe"
+
+for asm in $AOT_ASSEMBLIES; do
+    ASMPATH="${GAMEDIR}/gamedata/${asm}"
+
+    if [ ! -f "$ASMPATH" ]; then
+        echo "AOT: $asm not found at $ASMPATH — skipping"
+        continue
+    fi
+
+    if [ -f "${ASMPATH}.so" ]; then
+        echo "AOT: ${asm}.so already exists — skipping"
+        continue
+    fi
+
+    echo "AOT: compiling $asm"
+    mono --aot=full,verbose,print-skipped-methods "$ASMPATH"
+    AOT_EXIT=$?
+
+    if [ $AOT_EXIT -ne 0 ] || [ ! -f "${ASMPATH}.so" ]; then
+        echo "AOT: FAILED for $asm (exit $AOT_EXIT) — ${ASMPATH}.so was not produced"
+    else
+        echo "AOT: success — ${asm}.so"
+    fi
+done
+
+sleep 1
 touch "$GAMEDIR/patch_completed"

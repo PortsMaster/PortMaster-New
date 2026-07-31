@@ -76,7 +76,7 @@ if [ ! -f "$GAMEDIR/patch_completed" ]; then
 	export GAMEDIR
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="Rogue Legacy"
-        export PATCHER_TIME="about 5 minutes"
+        export PATCHER_TIME="about 5 to 10 minutes"
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
