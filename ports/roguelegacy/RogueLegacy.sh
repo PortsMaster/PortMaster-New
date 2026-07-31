@@ -47,7 +47,7 @@ $ESUDO mount "$monofile" "$monodir"
 bind_directories "$HOME/.local/share/RogueLegacy" "$GAMEDIR/savedata"
 
 # Setup path and other environment variables
-export MONO_PATH="$GAMEDIR/gamedata"
+export MONO_PATH="$GAMEDIR/dlls":"$GAMEDIR/gamedata"
 export LD_LIBRARY_PATH="$GAMEDIR/libs:/usr/config/emuelec/lib:/usr/lib:$LD_LIBRARY_PATH"
 export PATH="$monodir/bin:$GAMEDIR/libs:$PATH"
 export MONO_GC_PARAMS="major=marksweep,nursery-size=32m"
@@ -67,6 +67,21 @@ export SDL_MOUSE_TOUCH_EVENTS=0
 isitarkos=$(grep "title=" /usr/share/plymouth/themes/text.plymouth 2>/dev/null)
 if [[ $isitarkos == *"ArkOS"* ]]; then
   $ESUDO perfnorm
+fi
+
+# Check if we need to patch the game
+if [ ! -f "$GAMEDIR/patch_completed" ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export controlfolder
+	export GAMEDIR
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="Rogue Legacy"
+        export PATCHER_TIME="about 5 minutes"
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        pm_message "This port requires the latest version of PortMaster."
+    fi
 fi
 
 # Run the game

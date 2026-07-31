@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#
+#   Rogue Legacy
+#   Author: Fraxinus88
+#   Version: 1.0
+#
+
+# Set GAMEDIR to the current directory and set logfile
+export ASTC_QUALITY=60.0
+LOGFILE="$GAMEDIR/patchlog.txt"
+
+# Redirect output and error to the log file
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# ----------------- BEGIN PATCH -----------------
+
+# Apply repacking process using FNARepacker
+mono "${GAMEDIR}/tools/FNARepacker.exe" "${GAMEDIR}/gamedata/Content/GameSpritesheets"
+sleep 1
+
+SFXBANK="${GAMEDIR}/gamedata/Content/Audio/SFXWaveBank.xwb"
+mono "${GAMEDIR}/tools/xwbshrink.exe" optimize "${SFXBANK}" --rate 44100
+XWB_EXIT=$?
+
+if [ $XWB_EXIT -eq 0 ] && [ -f "${SFXBANK}.bak" ]; then
+    echo "xwbshrink reported success — removing backup: ${SFXBANK}.bak"
+    rm -f "${SFXBANK}.bak"
+else
+    echo "xwbshrink exit code was $XWB_EXIT — keeping ${SFXBANK}.bak for safety."
+fi
+
+sleep 1
+touch "$GAMEDIR/patch_completed"
