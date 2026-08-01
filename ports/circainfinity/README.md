@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to Kenny Sun for developing of this game. Check it on Steam https://store.steampowered.com/app/390610/Circa_Infinity/ or Itch.io https://kennysun.itch.io/circa-infinity	
+Thanks to Kenny Sun for developing of this game. Check it on Steam https://store.steampowered.com/app/390610/Circa_Infinity/
 
 ## Controls
 
