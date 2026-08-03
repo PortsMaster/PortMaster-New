@@ -1,46 +1,16 @@
--- Balatro button setup.
---
--- Handhelds disagree about which physical button is A. Some print the Xbox
--- arrangement, some the Nintendo one, and the SDL mapping a device ships with
--- does not always agree with its own case lettering -- so the button under the
--- player's thumb can report itself as something else, or as nothing at all.
--- Balatro only ever sees SDL's names, so the fix belongs below the game: this
--- asks for each button by the letter printed on the device, writes an SDL
--- mapping that matches the hardware, and the launcher hands that mapping to
--- the game through SDL_GAMECONTROLLERCONFIG.
---
--- The game and its saves are untouched. The only thing written is one mapping
--- line in the port's saves folder, and that file is also the record of having
--- run: removing it is how the questions get asked again, which is all the
--- game's own "Set Up Buttons" option does.
-
 local mapping = require('mapping')
 
 local OUTPUT_PATH = os.getenv('BALATRO_PM_BUTTON_MAP_FILE')
 local FONT_PATH = os.getenv('BALATRO_PM_BUTTON_FONT')
 
--- Nothing here may leave the device sitting on a screen it cannot get off, so
--- every state has a way out that needs no particular button to work: an idle
--- run gives up on its own, and the wizard is skipped rather than retried.
 local IDLE_TIMEOUT = 60
 local NO_PAD_TIMEOUT = 12
--- Giving up is the only way past a question the device cannot answer, so it is
--- shown as a countdown rather than left for the player to discover by waiting
--- out a minute of nothing. It appears late: counting the whole minute down would
--- hurry someone who is only reading, while the last few seconds are exactly when
--- "am I stuck here?" is the question being asked.
 local SKIP_WARNING = 15
--- One press must not answer two questions.
 local INPUT_COOLDOWN = 0.3
 local AXIS_TRAVEL = 0.6
 local AXIS_RETURN = 0.35
 local MESSAGE_TIME = 1.6
 
--- The buttons whose lettering is the device's own business. A device that
--- already has a usable SDL mapping needs no more than these: everything else in
--- that mapping was right to begin with. All four shoulders are asked for
--- outright: every handheld this runs on has them, and the game reads each one
--- -- the shoulders page through tabs and option cycles, the triggers tilt.
 local CORE_STEPS = {
     {control = 'a', cue = 'A', prompt = 'Press the button marked A'},
     {control = 'b', cue = 'B', prompt = 'Press the button marked B'},
@@ -52,8 +22,6 @@ local CORE_STEPS = {
     {control = 'righttrigger', cue = 'R2', prompt = 'Press the RIGHT trigger'},
 }
 
--- Asked only when SDL has no mapping for the device at all, in which case none
--- of its buttons reach the game and the short version would not be enough.
 local REST_STEPS = {
     {control = 'dpup', cue = 'UP', prompt = 'Press D-pad UP'},
     {control = 'dpdown', cue = 'DOWN', prompt = 'Press D-pad DOWN'},
@@ -80,8 +48,6 @@ local axis_rest, axis_held, axis_pending = {}, {}, {}
 local cooldown, idle, message, message_timer = 0, 0, nil, 0
 local fonts, font_data
 
---------------------------------------------------------------------------- io
-
 local function write_output(contents)
     if not OUTPUT_PATH then return false end
     local file = io.open(OUTPUT_PATH, 'w')
@@ -91,9 +57,6 @@ local function write_output(contents)
     return true
 end
 
--- A run that ends without an answer still records that it happened. Otherwise
--- a device that cannot complete the wizard -- no controller, a crash, a player
--- who walked away -- would meet it again on every single launch.
 local function finish_without_mapping(reason)
     write_output('# Balatro button setup: ' .. reason .. '.\n' ..
         '# The device\'s own button mapping is being used.\n' ..
@@ -109,15 +72,10 @@ local function save_and_quit()
     message_timer = 1.2
 end
 
--- An unhandled error would otherwise park the device on LÖVE's error screen,
--- which on a handheld cannot be dismissed. Record the skip and get out of the
--- way so the game still launches.
 function love.errorhandler(_)
     pcall(finish_without_mapping, 'setup could not run')
     return function() return 0 end
 end
-
-------------------------------------------------------------------- appearance
 
 local function build_fonts()
     local h = love.graphics.getHeight()
@@ -134,8 +92,6 @@ local function build_fonts()
 end
 
 function love.load()
-    -- The port's own font, read straight off disk: this is a bare LÖVE game
-    -- folder, so the file is outside its filesystem and cannot be required.
     if FONT_PATH then
         local file = io.open(FONT_PATH, 'rb')
         if file then
@@ -152,12 +108,7 @@ function love.resize()
     build_fonts()
 end
 
----------------------------------------------------------------------- capture
-
 local function begin_steps()
-    -- getGamepadMappingString is what SDL would use for this pad as things
-    -- stand. When there is one, the answers are patched into it; when there is
-    -- not, the device is unmapped and the long form has to build one.
     base_mapping = nil
     if love.joystick.getGamepadMappingString then
         local ok, existing = pcall(love.joystick.getGamepadMappingString, pad:getGUID())
@@ -169,10 +120,6 @@ local function begin_steps()
     if not base_mapping then
         for _, step in ipairs(REST_STEPS) do steps[#steps + 1] = step end
     else
-        -- The last screen is confirmed with START and SELECT. On a device whose
-        -- mapping does not bind them there would be nothing to confirm with, so
-        -- ask for whichever is missing even though it is otherwise the short
-        -- form. Everything else in an existing mapping is left alone.
         local bound = mapping.controls(base_mapping)
         for _, step in ipairs(REST_STEPS) do
             if (step.control == 'start' or step.control == 'back') and
@@ -182,8 +129,6 @@ local function begin_steps()
         end
     end
 
-    -- Triggers rest at one end of their travel rather than in the middle, so
-    -- rest is whatever each axis reads before anything has been touched.
     axis_rest, axis_held, axis_pending = {}, {}, {}
     for i = 1, pad:getAxisCount() do axis_rest[i] = pad:getAxis(i) end
 
@@ -200,8 +145,6 @@ end
 
 local function finish_steps()
     built_mapping = mapping.build(pad:getGUID(), pad:getName(), learned, base_mapping)
-    -- Apply it here so the confirmation below is answered through the mapping
-    -- that is about to be saved, rather than through the old one.
     if love.joystick.loadGamepadMappings then
         pcall(love.joystick.loadGamepadMappings, built_mapping)
     end
@@ -243,8 +186,6 @@ local function record(input)
     next_step()
 end
 
--- Any pad may claim the wizard on its first press; after that only that one is
--- listened to, so a second controller cannot answer half the questions.
 local function accepts(joystick)
     if state == 'intro' then return true end
     return pad ~= nil and joystick == pad
@@ -261,10 +202,6 @@ local function handle(joystick, input)
     elseif state == 'prompt' then
         record(input)
     elseif state == 'confirm' then
-        -- Only reached on a device SDL still will not treat as a gamepad, where
-        -- the buttons below cannot answer for themselves. Nothing but START and
-        -- SELECT is accepted here: the face buttons are the ones being changed,
-        -- which makes them the wrong thing to confirm the change with.
         local start_input = learned_input('start')
         local back_input = learned_input('back')
         if start_input and same_input(input, start_input) then
@@ -282,7 +219,6 @@ function love.joystickpressed(joystick, button)
 end
 
 function love.joystickhat(joystick, hat, direction)
-    -- Diagonals are two directions at once and belong to neither.
     local mask = mapping.HAT_MASK[direction]
     if not mask then return end
     handle(joystick, 'h' .. (hat - 1) .. '.' .. mask)
@@ -307,14 +243,6 @@ function love.keypressed(key)
     end
 end
 
--- How the axis an answer arrived on should be written into the mapping.
---
--- A trigger that rests at one end of its travel is the whole axis: that is what
--- tells SDL to read the resting end as "not pressed" and the far end as fully
--- pressed. A trigger that rests in the middle -- and every stick and axis D-pad,
--- which all do -- takes the half that was actually moved instead. Writing the
--- second kind as a whole axis is what leaves a trigger reading half pressed
--- while nothing is touching it, which the game sees as very nearly held down.
 local function axis_input(index, travel)
     local step = state == 'prompt' and steps[step_index] or nil
     local rest = axis_rest[index] or 0
@@ -324,14 +252,6 @@ local function axis_input(index, travel)
     return (travel > 0 and '+a' or '-a') .. (index - 1)
 end
 
--- A button announces itself again on every press, so one that arrives during the
--- cooldown after the previous answer is simply pressed again. An axis has no
--- such event: it is read, and once it has been seen past the threshold it is not
--- seen crossing it again until it goes back to rest. Dropping that crossing
--- because the cooldown was still running is why a trigger held down from the
--- moment the question appeared could seem not to register at all. Hold the
--- crossing instead and answer with it when the cooldown ends, unless the axis
--- returns to rest first, which means it was let go rather than kept pressed.
 local function poll_axes()
     if not pad then return end
     for i = 1, pad:getAxisCount() do
@@ -377,8 +297,6 @@ function love.update(dt)
     end
 end
 
-------------------------------------------------------------------------- draw
-
 local function set_colour(colour, alpha)
     love.graphics.setColor(colour[1], colour[2], colour[3], alpha or 1)
 end
@@ -406,7 +324,6 @@ local function draw_cue(text, y)
     return y + h
 end
 
--- One pip per question, filled in as they are answered.
 local function draw_progress(y)
     local total = #steps
     if total == 0 then return end
@@ -419,9 +336,6 @@ local function draw_progress(y)
     end
 end
 
--- Whole seconds until this run gives up, or nil while that is far enough off to
--- be worth saying nothing about. Which timeout is counting depends on the state,
--- so this reads it back the same way love.update decides it.
 local function skip_countdown()
     local timeout = IDLE_TIMEOUT
     if state == 'intro' and #love.joystick.getJoysticks() == 0 then
@@ -432,8 +346,6 @@ local function skip_countdown()
     return math.max(0, math.ceil(left))
 end
 
--- Any input at all puts idle back to zero, so this stays honest about what it
--- takes to stop it: pressing something is the whole of it.
 local function draw_countdown(y)
     local left = skip_countdown()
     if not left then return end
@@ -451,7 +363,6 @@ function love.draw()
     if state == 'intro' then
         centred(fonts.body, 'Press any button to begin.', h*0.42, ACCENT)
         if #love.joystick.getJoysticks() == 0 then
-            -- Nothing to press, so the countdown is the whole of the message.
             centred(fonts.hint, string.format(
                 'No controller detected. Skipping in %ds.', skip_countdown() or 0),
                 h*0.8, DIM)
@@ -478,8 +389,6 @@ function love.draw()
         local y = centred(fonts.body, 'Buttons set.', h*0.28, TEXT)
         y = centred(fonts.body, 'Press START to save.', y + h*0.06, ACCENT)
         centred(fonts.body, 'Press SELECT to start over.', y)
-        -- Timing out here throws the answers away rather than saving them, so
-        -- the warning matters more on this screen than on any of the others.
         draw_countdown(h*0.72)
         centred(fonts.hint,
             'START and SELECT are not changed by this setup, so they\n' ..

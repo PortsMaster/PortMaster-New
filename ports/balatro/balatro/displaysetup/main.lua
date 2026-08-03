@@ -1,37 +1,9 @@
--- Balatro display setup.
---
--- Two questions asked before the game starts: which layout to play with, and
--- whether to take the performance changes. Neither can be a setting inside the
--- game, because both decide how the patched archive is assembled -- by the time
--- the game is running, the build it was started from has already been made. So
--- they are asked here, the launcher builds to the answers, and the game that
--- opens afterwards is the one that was asked for.
---
--- The answers live in one file in the port's saves folder, which is also the
--- record of having asked: the questions come up when it is missing, and the
--- game's options menu offers to ask again by marking it. Nothing else is
--- written, and the game's own saves are untouched.
---
--- Written to be answerable before the button setup has run, which is the first
--- launch's order: the D-pad moves and START approves through whatever mapping
--- SDL has, and a pad SDL cannot map at all is read raw instead (see profiles
--- below), so this screen is never the thing standing between a device and its
--- button setup.
-
 local OUTPUT_PATH = os.getenv('BALATRO_PM_SETUP_FILE')
 local FONT_PATH = os.getenv('BALATRO_PM_SETUP_FONT')
 
--- Nothing here may leave the device sitting on a screen it cannot get off, so
--- an idle run answers with what is already highlighted and gets out of the way.
--- Longer than the button setup's minute: that screen is answered as fast as the
--- questions are read, and this one is read before it is answered.
 local IDLE_TIMEOUT = 90
 local NO_PAD_TIMEOUT = 12
--- Shown as a countdown rather than left for the player to discover by waiting,
--- and late enough that someone who is only reading is not hurried by it.
 local SKIP_WARNING = 20
--- One press must not move two rows. Short enough that held-down navigation
--- still feels like a repeat rate rather than a stall.
 local INPUT_COOLDOWN = 0.16
 local AXIS_TRAVEL = 0.6
 local AXIS_RETURN = 0.35
@@ -42,9 +14,6 @@ local ACCENT = {0.99, 0.37, 0.33}
 local TEXT = {0.96, 0.96, 0.94}
 local DIM = {0.62, 0.68, 0.72}
 
--- The order they are asked in is the order they take effect in: the layout
--- decides what the game looks like, and the performance answer decides how much
--- of that look is paid for every frame.
 local PAGES = {
     {
         key = 'layout',
@@ -99,10 +68,6 @@ local fonts, font_data
 local axis_rest, axis_held = {}, {}
 local profiles = setmetatable({}, {__mode = 'k'})
 
---------------------------------------------------------------------------- io
-
--- Comment lines are skipped by the pattern rather than by looking for a `#`:
--- the only lines that mean anything are `key=value`.
 local function read_existing()
     local values = {}
     if not OUTPUT_PATH then return values end
@@ -130,8 +95,6 @@ local function write_output()
     return true
 end
 
--- Whether anything is about to be rebuilt, which is the one thing worth saying
--- on the way out: a changed answer costs a wait that an unchanged one does not.
 local function answers_changed()
     for _, page in ipairs(PAGES) do
         if page.options[chosen[page.key]].value ~= previous[page.key] then
@@ -148,15 +111,10 @@ local function save_and_quit()
     message_timer = changed and 2.2 or 1.2
 end
 
--- An unhandled error would otherwise park the device on LÖVE's error screen,
--- which on a handheld cannot be dismissed. Record the answers as they stand and
--- get out of the way so the game still launches.
 function love.errorhandler(_)
     pcall(write_output)
     return function() return 0 end
 end
-
-------------------------------------------------------------------- appearance
 
 local sized_fonts = {}
 
@@ -174,12 +132,6 @@ local function font_at(size)
     return font
 end
 
--- The panels this runs on are between 1:1 and 2.4:1, so the width a piece of
--- text gets varies by more than twice while the height it may take does not
--- vary at all. A size taken from the height alone therefore fits on some
--- devices and runs over what is under it on others. Ask for the largest size
--- that fits the space instead, and let the text be smaller on the panels where
--- it has to be.
 local fitted = {}
 
 local function fitted_font(text, largest, key, fits)
@@ -197,7 +149,6 @@ local function fitted_font(text, largest, key, fits)
     return font
 end
 
--- A paragraph, wrapped, in no more than the height it is given.
 local function fitted_block(text, width, height, largest)
     return fitted_font(text, largest, math.floor(width) .. 'x' .. math.floor(height),
         function(font)
@@ -206,15 +157,11 @@ local function fitted_block(text, width, height, largest)
         end)
 end
 
--- A single line, kept to one line.
 local function fitted_line(text, width, largest)
     return fitted_font(text, largest, 'line' .. math.floor(width),
         function(font) return font:getWidth(text) <= width end)
 end
 
--- The two sizes nothing has to be fitted into: an option's label sits in a box
--- built around it, and the one paragraph drawn without a height to respect is
--- the last thing on its screen.
 local function build_fonts()
     sized_fonts, fitted = {}, {}
     local h = love.graphics.getHeight()
@@ -222,8 +169,6 @@ local function build_fonts()
 end
 
 function love.load()
-    -- The port's own font, read straight off disk: this is a bare LÖVE game
-    -- folder, so the file is outside its filesystem and cannot be required.
     if FONT_PATH then
         local file = io.open(FONT_PATH, 'rb')
         if file then
@@ -235,8 +180,6 @@ function love.load()
     end
     build_fonts()
 
-    -- Start on what is already in force, so re-running this to look at the
-    -- other answer and leaving it alone changes nothing.
     local saved = read_existing()
     for _, page in ipairs(PAGES) do
         chosen[page.key] = 1
@@ -253,16 +196,6 @@ function love.resize()
     build_fonts()
 end
 
------------------------------------------------------------------------ input
-
--- What SDL can already do with a pad decides which of its events are listened
--- to. A pad SDL has a mapping for reports every press twice -- once raw and
--- once as a gamepad button -- so taking both would move two rows per press;
--- the gamepad events are the ones kept, because they are the ones that mean
--- the same thing on every device. A pad SDL cannot map reports only the raw
--- events, and this screen runs before the button setup that would fix that, so
--- those are read instead: any hat or axis moves, and any button approves --
--- there is no START to insist on when nothing is bound.
 local function profile_of(joystick)
     local profile = profiles[joystick]
     if profile then return profile end
@@ -288,9 +221,6 @@ end
 local function move(delta)
     local page = PAGES[page_index]
     local index = chosen[page.key] + delta
-    -- Clamped rather than wrapped: on an unmapped pad a stick answers as a
-    -- D-pad, and a list that jumps from one end to the other under a noisy axis
-    -- is how the wrong answer gets approved.
     if index < 1 then index = 1 end
     if index > #page.options then index = #page.options end
     chosen[page.key] = index
@@ -337,7 +267,6 @@ end
 function love.joystickhat(joystick, _, direction)
     idle = 0
     if state ~= 'ask' or cooldown > 0 or profile_of(joystick).dpad then return end
-    -- Diagonals are two directions at once and belong to neither.
     if direction == 'u' or direction == 'l' then
         move(-1)
     elseif direction == 'd' or direction == 'r' then
@@ -361,10 +290,6 @@ function love.keypressed(key)
     end
 end
 
--- An axis is read rather than announced, so a crossing has to be noticed here
--- and then not noticed again until the axis goes back to rest. Rest is whatever
--- each axis reads before anything has been touched, because a trigger sits at
--- one end of its travel rather than in the middle.
 local function poll_axes()
     if state ~= 'ask' then return end
     for _, joystick in ipairs(love.joystick.getJoysticks()) do
@@ -410,14 +335,10 @@ function love.update(dt)
     if idle > IDLE_TIMEOUT then save_and_quit() end
 end
 
-------------------------------------------------------------------------- draw
-
 local function set_colour(colour, alpha)
     love.graphics.setColor(colour[1], colour[2], colour[3], alpha or 1)
 end
 
--- printf wraps, so the height of what it drew is a line count rather than one
--- line's height. Measured with the same width it is drawn at.
 local function wrapped(font, text, y, width, colour)
     local w = love.graphics.getWidth()
     local x = (w - width)/2
@@ -443,7 +364,6 @@ local function draw_option(option, selected, y, width)
     return y + h
 end
 
--- One pip per question, filled in as they are passed.
 local function draw_progress(y)
     local total = #PAGES
     local radius = math.max(3, love.graphics.getHeight()*0.009)
@@ -455,10 +375,6 @@ local function draw_progress(y)
     end
 end
 
--- Whole seconds until this run answers for itself, or nil while that is far
--- enough off to be worth saying nothing about. Which timeout is counting
--- depends on whether there is a pad, so this reads it back the same way
--- love.update decides it.
 local function skip_countdown()
     local timeout = IDLE_TIMEOUT
     if #love.joystick.getJoysticks() == 0 then timeout = NO_PAD_TIMEOUT end
@@ -467,9 +383,6 @@ local function skip_countdown()
     return math.max(0, math.ceil(left))
 end
 
--- Every fixed row on this screen is one line, and each has only its own height
--- before the next one starts, so wrapping any of them is how it lands on top of
--- what is under it. Shrink rather than wrap.
 local function centred_line(text, y, largest, colour)
     local w = love.graphics.getWidth()
     local font = fitted_line(text, w*0.94, largest)
@@ -479,8 +392,6 @@ local function centred_line(text, y, largest, colour)
     return y + font:getHeight()
 end
 
--- Any input at all puts idle back to zero, so this stays honest about what it
--- takes to stop it: pressing something is the whole of it.
 local function draw_countdown(y)
     local left = skip_countdown()
     if not left then return end
@@ -516,8 +427,6 @@ function love.draw()
         y = y + h*0.022
     end
 
-    -- What is left between the options and the countdown is the description's,
-    -- and it is sized to take no more than that.
     local description = page.options[chosen[page.key]].description
     local top = y + h*0.03
     local font = fitted_block(description, w*0.78, h*0.775 - top, h*0.042)

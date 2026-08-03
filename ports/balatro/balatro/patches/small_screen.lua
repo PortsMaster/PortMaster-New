@@ -1,27 +1,3 @@
--- PortMaster handheld layout for Balatro.
---
--- This file is injected into the user's licensed Balatro archive by the
--- Balatro launcher, and only when the launcher's display setup was
--- answered with the small screen layout -- choosing the original one builds
--- without it, which is the whole of what that answer does. Its siblings
--- options.lua, controls.lua and perf.lua are injected either way: nothing in
--- them depends on the room the game is drawn into.
---
--- It deliberately overrides only presentation functions; game rules and saves are
--- left untouched. Every measurement below is derived from the panel the game is
--- actually running on, so one patched archive is portable across devices.
-
--- Within the supported 1:1 to 2.4:1 range, the room is given the panel's own
--- aspect ratio and the desktop border is dropped, so the logical playfield covers
--- every pixel instead of sitting inside letterbox margins. Stock Balatro's
--- 20x11.5 room plus its border is a 22x12.9 logical window; on a 1024x768 panel
--- its width limits rendering to about 46.5 pixels per tile. The 4:3 room below
--- maps to 60 pixels per tile, about 29% larger.
---
--- The room is then grown from a 4:3 reference until it satisfies both of that
--- reference's dimensions, so one build serves every panel: 4:3 keeps exactly the
--- proportions everything here is tuned against, wider panels gain width at the
--- same height, and squarer ones gain height at the same width.
 local REFERENCE_W = 17.0667
 local REFERENCE_H = 12.8
 
@@ -35,46 +11,31 @@ local function display_ratio()
         if ok and dw and dh and dh > 0 then w, h = dw, dh end
     end
     if not (w and h and w > 0 and h > 0) then return REFERENCE_W/REFERENCE_H end
-    -- Portrait panels are clamped to square: love.resize refuses to scale a room
-    -- taller than it is wide, so anything past that would letterbox regardless.
     return math.min(math.max(w/h, 1.0), 2.4)
 end
 
 local RATIO = display_ratio()
 local ROOM_W = math.max(REFERENCE_W, REFERENCE_H*RATIO)
 local ROOM_H = ROOM_W/RATIO
--- Every edge keeps this gap, so nothing is flush against the bezel.
 local SAFE_MARGIN = 0.2
--- CardArea hangs its "cards left" counter below itself, and the play/discard
--- buttons hang below the hand. The desktop room padding used to catch both; this
--- layout has no padding, so the bottom row of areas is inset by that much more.
 local BOTTOM_INSET = SAFE_MARGIN + 0.42
 local HUD_ROW_H = 1.72
 local OWNED_CARDS_Y = 2.18
--- Below the owned cards and the "3/5" counters that hang under them.
 local RUN_OVERLAY_Y = 5.02
 local OWNED_JOKER_SCALE = 0.95
 local HAND_W = 6.8*G.CARD_W
--- Measured height of a blind-selection column: its cards, tag, and skip button.
 local BLIND_SELECT_H = 7.7
 
--- Status bar cells are proportional to the room so the bar reaches both margins.
--- The 0.9 covers the root, row, and inter-cell padding the layout engine adds.
 local HUD_INNER_W = ROOM_W - SAFE_MARGIN*2 - 0.9
 local HUD_BLIND_W = HUD_INNER_W*0.29
 local HUD_SCORE_W = HUD_INNER_W*0.165
 local HUD_HAND_W = HUD_INNER_W*0.315
 local HUD_META_W = HUD_INNER_W*0.23
 
--- Sizes the bar's readouts are pinned to. Each row is then built a little taller
--- than its capped text, so a value that rescales itself never resizes its row.
 local SCORE_SCALE = 0.8
 local SCORE_TEXT_W = HUD_SCORE_W - 0.26
 local TARGET_SCALE = 0.42
--- The hand readout draws itself into fixed boxes (see FixedText), so these are
--- the sizes of those boxes rather than caps a measured layout has to respect.
 local HAND_TEXT_SCALE = 0.48
--- The level rides beside the name at a fraction of its size.
 local HAND_LEVEL_MULT = 0.72
 local HAND_NUM_SCALE = 0.84
 local HAND_NUM_BOX_W = 2.0
@@ -88,10 +49,6 @@ G.F_SMALL_SCREEN_UI = true
 G.TILE_W = ROOM_W
 G.TILE_H = ROOM_H
 
--- Game:init_window reserves a one tile horizontal and 0.7 tile vertical border
--- around the room, which on a handheld is only ever letterboxing. Rebuild the
--- window transform without it; love.resize then maps the room onto the whole
--- display because the room and the panel share an aspect ratio.
 local original_init_window = Game.init_window
 function Game:init_window(...)
     local windows_runner = os.getenv('BALATRO_PM_WINDOWS_WINDOWED') == '1'
@@ -121,37 +78,12 @@ function Game:init_window(...)
     return result
 end
 
--- Text is the one thing smoothing alone does not rescue, and not for want of
--- resolution -- it has far more than the panel can show. Every font is
--- rasterized at ten tiles, 200 pixels a glyph, and then drawn at
--- FONTSCALE/TILESIZE, which on this layout is about one tile of height per unit
--- of text scale. A 480p panel puts 37.5 pixels in a tile, so ordinary label text
--- lands between 11 and 30 pixels: a 200 pixel glyph squeezed into fifteen or so.
--- Fonts carry no mipmaps, so each pixel is a two-by-two tap taken out of a glyph
--- being minified seven to eighteen times, and undersampling at that ratio is
--- what breaks up thin strokes and makes the letters look ragged.
---
--- So rasterize nearer the size they are actually drawn at. At five tiles the
--- minification halves everywhere and still never turns into magnification: the
--- largest text this layout draws is around 1.5 tiles, which is 90 pixels on a
--- 768p panel against a 100 pixel glyph. The glyph atlas also costs a quarter of
--- what it did.
---
--- Layout is untouched. FONTSCALE converts glyph pixels to tiles and TEXT_OFFSET
--- is measured in glyph pixels, so both are compensated by the same factor the
--- glyphs shrank by -- render_scale*FONTSCALE, which is what sets the on-screen
--- size, comes out unchanged.
---
--- Lower this for sharper small text at the cost of softening the largest; 10 is
--- what the game ships.
 local FONT_RASTER_TILES = 5
 
 local function retune_fonts()
     if not G.FONTS then return end
     local target = G.TILESIZE*FONT_RASTER_TILES
     for _, font in ipairs(G.FONTS) do
-        -- Only ever downward: a font already rasterized below the target is
-        -- being sampled well enough, and rebuilding it larger would undo that.
         if font.FONT and font.render_scale and font.render_scale > target and
            font.file and love.filesystem.getInfo(font.file) then
             local ok, rebuilt = pcall(love.graphics.newFont, font.file, target)
@@ -168,8 +100,6 @@ local function retune_fonts()
     end
 end
 
--- set_language rebuilds the whole table from the stock sizes, so the retune has
--- to follow it rather than happen once.
 local original_set_language = Game.set_language
 function Game:set_language(...)
     local result = original_set_language(self, ...)
@@ -177,23 +107,6 @@ function Game:set_language(...)
     return result
 end
 
--- Layout is untouched only for the numbers the retune actually compensates.
--- DynaText's config mixes two kinds: scale multiplies a measured glyph width, so
--- the smaller raster and the larger FONTSCALE cancel; spacing, x_offset and
--- y_offset are constants in the font's own glyph pixels, and FONTSCALE scales
--- them with nothing to cancel against. Every one of them therefore grows by the
--- factor the glyphs shrank by.
---
--- The round evaluation panel is where that becomes visible rather than merely
--- loose. Its dotted divider is 38 dots at 13.5 spacing, which measures 11.5
--- tiles at the stock raster -- just inside the panel's width -- and 18.5 tiles
--- after the retune. The row is what the panel is then sized to, so the whole
--- cash-out screen is drawn wider than the room and runs off the display.
---
--- So divide the factor back out where those constants enter, and the retune
--- stays invisible to layout. Recorded on the config table because a definition
--- built from a table that outlives its first DynaText would otherwise be
--- divided again on every rebuild.
 local original_dynatext_init = DynaText.init
 function DynaText:init(config)
     config = config or {}
@@ -208,14 +121,8 @@ function DynaText:init(config)
     return original_dynatext_init(self, config)
 end
 
--- Once for what already exists: globals.lua builds G, and so loads every font
--- before this file is read. They are rebuilt later, in Game:set_language, and
--- are caught by the wrapper above.
 retune_fonts()
 
--- Use the Brick's vertical pixels instead of preserving a desktop-width playfield.
--- Gameplay cards retain their normal dimensions; only the persistent owned-Joker
--- strip is reduced, without changing its capacity or any card behaviour.
 local function resize_owned_joker(card)
     if not card then return end
     local target_w = G.CARD_W*OWNED_JOKER_SCALE
@@ -236,24 +143,8 @@ local function compact_owned_jokers()
     G.jokers:hard_set_cards()
 end
 
--- The hand is the one area with room to spare, and its cards are the ones
--- actually being read. align_cards centres a card on the area's own middle, so
--- growing the area's height alongside the card leaves the bottom edge within a
--- few hundredths of where it was: the whole increase is spent upward, into the
--- gap the play area sits in.
---
--- The ceiling is that gap. set_screen_positions parks the play area 3.6 above
--- the hand, and it has to stay clear of the owned-card strip at RUN_OVERLAY_Y,
--- which puts the limit around 1.36 on the 4:3 room -- the squattest this
--- layout supports, and so the one that decides it. Jokers and consumables keep
--- their own sizes; the strip they live in has no room to give.
 local HAND_CARD_SCALE = 1.25
 
--- Except while a booster pack is open. That state lays the hand out at
--- 1.8 card heights above the area instead of inside it, to raise the cards
--- clear for selection, and at normal size that already reaches the underside of
--- the owned-card strip. Scaling the cards scales the offset with them, so this
--- one state keeps the size it was tuned for.
 local function hand_card_scale()
     if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK or
        G.STATE == G.STATES.PLANET_PACK then
@@ -272,10 +163,6 @@ local function resize_card(card, scale)
     end
 end
 
--- A card is only enlarged while it is in the hand. Playing, discarding or
--- returning it to the deck puts it back first, so every other area keeps the
--- dimensions it was laid out for -- the play area in particular is only 5.3
--- cards wide and would start overlapping the scoring row.
 local function restore_played_card(card)
     if not card or not card.small_screen_hand_sized then return end
     card.small_screen_hand_sized = nil
@@ -288,8 +175,6 @@ local function resize_hand_card(card, scale)
     card.small_screen_hand_sized = (scale ~= 1) or nil
 end
 
--- Cheap enough to check every frame, and it has to be: the scale depends on the
--- state, and cards arrive in the hand throughout a round.
 local hand_scale_applied
 local function apply_hand_card_scale()
     if not G.hand then return end
@@ -302,7 +187,6 @@ local function apply_hand_card_scale()
     for _, card in ipairs(G.hand.cards) do resize_hand_card(card, scale) end
 end
 
--- Newly purchased Jokers enter the existing area after start_run has completed.
 local original_cardarea_emplace = CardArea.emplace
 function CardArea:emplace(card, ...)
     if self == G.jokers then
@@ -315,14 +199,9 @@ function CardArea:emplace(card, ...)
     return original_cardarea_emplace(self, card, ...)
 end
 
--- CardArea:move re-drives the hand to G.TILE_H minus its height on every frame,
--- which parks it flush against the bottom edge. Show that one call a shorter room
--- so the hand keeps the same border as everything else and its card counter, and
--- the play/discard/sort buttons that hang beneath it, stay on screen.
 local original_cardarea_move = CardArea.move
 function CardArea:move(dt)
     if self == G.hand then
-        -- Before the stock move reads T.h to decide where the hand sits.
         apply_hand_card_scale()
         local room_h = G.TILE_H
         G.TILE_H = room_h - BOTTOM_INSET
@@ -333,12 +212,6 @@ function CardArea:move(dt)
     return original_cardarea_move(self, dt)
 end
 
--- Every visible CardArea lazily builds a box holding a translucent black plate
--- the size of itself, with its "5/5" counter underneath. The counter is worth
--- keeping and the plate is not, so hide just that row the first time the box
--- exists -- hiding it rather than clearing its colour also drops the fill, since
--- a fully transparent node is still drawn. The shop's voucher slot is left alone:
--- its plate is nil-coloured already and carries the restock message as a child.
 local original_cardarea_draw = CardArea.draw
 function CardArea:draw(...)
     local result = original_cardarea_draw(self, ...)
@@ -353,11 +226,6 @@ function CardArea:draw(...)
     return result
 end
 
--- The desktop main menu places its four large buttons beside a separate
--- language/social column. Together their reserved widths sit almost exactly on
--- the edge of a 4:3 handheld room, and localized labels can push them past it.
--- Compact only this menu: preserve the button arrangement and hit targets while
--- reducing label text, wide reservations, and generous desktop padding.
 local original_main_menu_buttons = create_UIBox_main_menu_buttons
 local function compact_main_menu_node(node)
     if not node then return end
@@ -390,24 +258,17 @@ end
 function set_screen_positions()
     if G.STAGE == G.STAGES.RUN then
         compact_owned_jokers()
-        -- Sets the hand's height, which every line below is measured against.
         apply_hand_card_scale()
 
         G.deck.T.x = ROOM_W - G.deck.T.w - SAFE_MARGIN
         G.deck.T.y = ROOM_H - G.deck.T.h - BOTTOM_INSET
 
-        -- The reclaimed width goes to the hand, which is the only area whose
-        -- cards were overlapping by more than half a card at eight cards. The
-        -- area still stops clear of the deck.
         G.hand.T.w = HAND_W
         G.hand.T.x = SAFE_MARGIN +
             math.max(0, (G.deck.T.x - 0.15 - SAFE_MARGIN - G.hand.T.w)/2)
-        -- CardArea:move drives the hand to exactly this line, so start it there.
         G.hand.T.y = ROOM_H - G.hand.T.h - BOTTOM_INSET
 
         G.play.T.x = (ROOM_W - G.play.T.w)/2
-        -- 3.6 above the hand on a 4:3 room, but centred in the free band on a
-        -- squarer one, where holding that gap would leave a hole in the middle.
         G.play.T.y = math.min(G.hand.T.y - 3.6,
             (RUN_OVERLAY_Y + G.hand.T.y - G.play.T.h)/2)
 
@@ -437,9 +298,6 @@ function set_screen_positions()
     end
 end
 
--- Stock tutorial steps are attached to the desktop sidebar and sometimes place
--- Jimbo beyond the left or top edge. Keep the narration in a consistent safe
--- region while retaining each step's highlights, input listener, and snap target.
 local original_tutorial_info = tutorial_info
 
 local function append_unique(list, node)
@@ -460,8 +318,6 @@ local function append_shop_highlights(list)
 end
 
 function tutorial_info(args)
-    -- Recreate the stock tutorial shade with a real controller shortcut for Skip.
-    -- Start is otherwise unused while a tutorial step owns input.
     if not G.OVERLAY_TUTORIAL then
         local overlay_colour = {0.32,0.36,0.41,0}
         ease_value(overlay_colour, 4, 0.6, nil, 'REAL', true, 0.4)
@@ -494,9 +350,6 @@ function tutorial_info(args)
     args.pos = {x=G.TILE_W/2, y=G.TILE_H/2 + 1.05}
     args.align = args.align or 'tm'
 
-    -- The desktop tutorial only redraws one shop card above its dark shade.
-    -- On the Brick that reads as an absent shop, so keep the complete storefront
-    -- visible and interactive throughout shop tutorial steps.
     if args.text_key and string.sub(args.text_key, 1, 2) == 's_' then
         local original_highlight = args.highlight
         args.highlight = function()
@@ -542,11 +395,6 @@ local function dyn(ref_table, ref_value, colour, scale, id, extra)
     return {n=G.UIT.O, config=node_config}
 end
 
--- Largest scale at which a string still fits a given width, mirroring the
--- measurement engine/ui.lua does when it lays a text node out. Relying on the
--- node's own maxw is not enough here: that path rewrites the child's scale in
--- place and only runs when the box is recalculated, while these readouts have
--- funcs that reset their scale on every value change.
 local function fit_scale(text, max_w, font, cap)
     font = font or G.LANG.font
     local width = font.FONT:getWidth(text or '')*(font.squish or 1)*
@@ -555,32 +403,12 @@ local function fit_scale(text, max_w, font, cap)
     return math.min(cap, max_w/width)
 end
 
--- Text height, by the same measurement, is FONT:getHeight()*scale*FONTSCALE*
--- TEXT_HEIGHT_SCALE/TILESIZE. Rows are given a minh above whatever their capped
--- text can reach, so a readout that rescales itself never resizes its row.
 local function text_height(scale, font)
     font = font or G.LANG.font
     return font.FONT:getHeight()*scale*font.FONTSCALE*
         font.TEXT_HEIGHT_SCALE/G.TILESIZE
 end
 
--- Hold a DynaText at a fixed size instead of the size the game picks from the
--- value's magnitude or the name's length. Shrinking below the cap to fit the
--- width is fine -- the row is pinned taller than the cap, so a smaller readout
--- simply sits centred in it.
--- A readout that owns its own box.
---
--- Everything in this bar was laid out by measuring text, and that is what kept
--- moving it. A DynaText measures itself; the game rescales it from the value's
--- magnitude; its node takes that size; every container above it follows. Capping
--- the scales, declaring node heights and budgeting the padding each narrowed
--- that path without closing it -- the layout still had a route from the string
--- to the height of the bar.
---
--- These nodes declare a fixed w and h, which calculate_xywh uses instead of
--- measuring anything at all, and the object below draws its own string inside
--- that box: centred, and scaled down only when it would otherwise run past the
--- edge. There is no longer a path from any string to any dimension.
 local FixedText = Moveable:extend()
 
 function FixedText:init(W, H, args)
@@ -599,8 +427,6 @@ function FixedText:init(W, H, args)
     end
 end
 
--- Parts are drawn as one line, so a name and its level stay centred together
--- rather than each being centred in a slot of its own.
 function FixedText:set_parts(parts)
     for i = 1, #parts do
         local part = self.parts[i]
@@ -627,8 +453,6 @@ end
 function FixedText:draw()
     if not self.states.visible then return end
     local font = self.font
-    -- Pixels to tiles at scale 1, the same conversion engine/ui.lua uses when it
-    -- lays out and draws a text node.
     local unit = font.FONTSCALE/G.TILESIZE
     local natural, shown = 0, 0
     for _, part in ipairs(self.parts) do
@@ -646,8 +470,6 @@ function FixedText:draw()
     prep_draw(self, 1)
     for _, part in ipairs(self.parts) do
         if part.width and part.width > 0 then
-            -- Each part sits centred on the box's own middle, so a smaller
-            -- suffix rides with the text it follows rather than its top edge.
             local part_scale = scale*part.mult
             local height = font.FONT:getHeight()*part_scale*unit*
                 font.TEXT_HEIGHT_SCALE
@@ -662,9 +484,6 @@ function FixedText:draw()
     love.graphics.pop()
 end
 
--- The game pulses, quivers and refreshes these objects while a hand is scored.
--- Keep that surface; juice_up already carries the pop, and the rest described
--- per-letter animation that no longer exists here.
 function FixedText:pulse(amount)
     self:juice_up(0.4*(amount or 0.2), 0.05)
 end
@@ -697,20 +516,6 @@ local function gap(width, height)
     return {n=G.UIT.C, config={minw=width or 0.08, minh=height or 0.08}, nodes={}}
 end
 
--- The desktop shop is a two-row panel next to a 4.7x3.1 animated sign that alone
--- is taller than the band this layout has to spend. Keep the game's familiar
--- arrangement -- controls beside the card row, voucher and packs beneath -- drop
--- the sign, and size the panel to fill the band under the owned-card strip.
---
---   +-------------------------------------------+
---   | [ Next  ] | [ card  card  card  card    ] |
---   | [ Reroll] |                               |
---   | [ Ante N voucher ] | [ pack      pack   ] |
---   +-------------------------------------------+
---
--- Every plate holds only R children: the layout engine measures a container that
--- mixes rows and bare objects as if they sat side by side, which is what made the
--- old voucher plate too wide and too short for its contents.
 function G.UIDEF.shop()
     local slots = G.GAME.shop.joker_max
 
@@ -720,13 +525,11 @@ function G.UIDEF.shop()
     G.shop_vouchers = CardArea(0, ROOM_H + 5,
         2.1*G.CARD_W, 1.05*G.CARD_H,
         {card_limit=1, type='shop', highlight_limit=1})
-    -- 2.55 card widths leave the two packs just clear of each other.
     G.shop_booster = CardArea(0, ROOM_H + 5,
         2.55*G.CARD_W, 1.15*G.CARD_H,
         {card_limit=2, type='shop', highlight_limit=1,
             card_w=1.27*G.CARD_W})
 
-    -- Keep the global expected by the tutorial, but omit the decorative sign.
     G.SHOP_SIGN = UIBox{
         definition={n=G.UIT.ROOT, config={align='cm', minw=0.01,
             minh=0.01, colour=G.C.CLEAR}, nodes={}},
@@ -777,8 +580,6 @@ function G.UIDEF.shop()
         }}
     }}
 
-    -- A shelf that stays wider than its cards reads as a shop with room on it,
-    -- and keeps the panel steady when a Voucher raises the slot count.
     local card_shelf = plate(math.max(7.9, G.shop_jokers.T.w + 1.4), {
         area_row(G.shop_jokers)
     })
@@ -794,9 +595,6 @@ function G.UIDEF.shop()
 
     local boosters = plate(nil, {area_row(G.shop_booster)})
 
-    -- Only maxh: when a node carries both, an overflow in either direction is
-    -- resolved against maxw, which would scale a panel narrower than the room
-    -- up rather than down. maxh alone shrinks the panel to fit the band.
     return {n=G.UIT.ROOT, config={align='cm', padding=0.03,
         maxh=ROOM_H-RUN_OVERLAY_Y-SAFE_MARGIN,
         colour=G.C.CLEAR}, nodes={
@@ -812,44 +610,17 @@ function G.UIDEF.shop()
     }}
 end
 
--- Set when the shop's slot count changes, cleared once the panel has been laid
--- out again from where it actually sits. Read by Game:update_shop below.
 local shop_needs_relayout = false
 
--- Overstock and Overstock Plus are the only things that change the number of
--- shop slots, and change_shop_size does it by widening the card area in place
--- and calling G.shop:recalculate().
---
--- calculate_xywh writes absolute room coordinates into every element from the
--- box's position at that moment, and the shop is redeemed from while the panel
--- is still sliding in -- the entrance runs from below the room up to its resting
--- place. So the panel gets rebuilt around a position it is only passing through,
--- and the elements are left where it was rather than where it ends up. On this
--- layout that strands them below the room: plates, both buttons, everything but
--- the cards, which are drawn from G.I.CARD independently of the panel.
---
--- The buttons stop responding for the same reason rather than a second one.
--- Controller:process_registry only dispatches a registered button while its node
--- is inside the room, so a button sitting below it silently swallows the press
--- and the shop cannot be left.
---
--- Nothing is wrong with the layout itself, only with when it is measured. Defer
--- it: Game:update_shop pins the panel to its resting place every frame, so let
--- the slot change happen and lay the panel out on the next frame, from there.
 local original_change_shop_size = change_shop_size
 function change_shop_size(mod)
     original_change_shop_size(mod)
     if G.shop and G.shop_jokers then
-        -- change_shop_size writes the stock game's slot width; restore this
-        -- layout's own spacing before the shelf is measured against it.
         G.shop_jokers.T.w = G.GAME.shop.joker_max*1.05*G.CARD_W
         shop_needs_relayout = true
     end
 end
 
--- Retain the stock blind cards and callbacks, but give the selector the full room
--- width and a hard vertical budget below the owned-card strip. The prompt remains
--- in the HUD's blind cell, scaled to that cell instead of spilling across the bar.
 local original_blind_select_uidef = create_UIBox_blind_select
 function create_UIBox_blind_select(...)
     local result = original_blind_select_uidef(...)
@@ -867,13 +638,9 @@ function create_UIBox_blind_select(...)
     return result
 end
 
--- A single horizontal status bar replaces the desktop HUD's tall left sidebar.
--- All IDs used by scoring, easing, tutorials, and blind logic are preserved.
 function create_UIBox_HUD()
     local panel = G.C.DYN_UI.BOSS_MAIN
     local inset = G.C.DYN_UI.BOSS_DARK
-    -- Measured, not guessed: the numeric readouts are built with the en-us font
-    -- whatever the profile language is, and the hand name uses the profile's.
     local numeric = G.LANGUAGES['en-us'].font
     local score_text_h = text_height(SCORE_SCALE, numeric)
     local score_row_h = score_text_h + 0.04
@@ -881,21 +648,13 @@ function create_UIBox_HUD()
     local target_row_h = target_text_h + 0.04
     local dollars_box_h = text_height(DOLLARS_SCALE, numeric) + 0.08
 
-    -- Hand readout boxes. Each of these is a declared size: the row heights are
-    -- the text heights they were built for, and nothing measured contributes.
     local name_box_w = HUD_HAND_W - 0.06
     local name_box_h = text_height(HAND_TEXT_SCALE)
     local num_text_w = HAND_NUM_BOX_W - 2*HAND_BOX_PAD
     local num_text_h = text_height(HAND_NUM_SCALE, numeric)
     local num_box_h = num_text_h + 2*HAND_BOX_PAD
-    -- Every term here is declared, so this is the cell's height, not a budget
-    -- it might exceed. All four cells take it, which keeps the panels level.
     local row_h = math.max(HUD_ROW_H, name_box_h + num_box_h + 0.06 + 0.09)
 
-    -- Score and requirement get the same treatment as the hand readouts: a
-    -- declared box that the number is fitted into, rather than a text node the
-    -- number sizes. See the score cell below for why. The requirement keeps the
-    -- profile's font, which is the one its row height has always been built for.
     local score_text = FixedText(SCORE_TEXT_W, score_text_h,
         {scale=SCORE_SCALE, font=numeric, colour=G.C.WHITE})
     local target_text = FixedText(SCORE_TEXT_W, target_text_h,
@@ -913,19 +672,6 @@ function create_UIBox_HUD()
         r=0.1, colour=inset
     }, nodes={}}
 
-    -- Score and requirement belong to each other: the number you have over the
-    -- number you need. Both readouts fit themselves to SCORE_TEXT_W, so a seven
-    -- digit score cannot widen the cell and push the bar past the margins.
-    --
-    -- The score is an object rather than a text node. A text node is measured
-    -- from its own string, and this one carries no_recalc so that a growing
-    -- score cannot re-lay-out the whole bar every time it ticks -- which also
-    -- means its box keeps whatever width the first value happened to need. Past
-    -- four or five digits the number simply drew past that box, and since the
-    -- text is laid out from the box's left edge, a number narrower than the box
-    -- sat off to one side instead of in the middle of it. FixedText owns a
-    -- declared box, centres inside it, and scales the number down when it would
-    -- otherwise run past the edge, which is all three complaints at once.
     local score = {n=G.UIT.C, config={
         id='row_dollars_chips', align='cm', minw=HUD_SCORE_W, minh=row_h,
         padding=0.06, r=0.1, colour=panel, emboss=0.05
@@ -935,9 +681,6 @@ function create_UIBox_HUD()
             {n=G.UIT.O, config={id='chip_UI_count', w=SCORE_TEXT_W,
                 h=score_text_h, object=score_text, func='chip_UI_set'}}
         }},
-        -- No ref_table here: UIElement:update_object treats one on an object
-        -- node as the source of the object itself, and would swap the readout
-        -- for the string. The func feeds it instead.
         {n=G.UIT.R, config={align='cm', minh=target_row_h}, nodes={
             {n=G.UIT.O, config={id='small_screen_blind_target', w=SCORE_TEXT_W,
                 h=target_text_h, object=target_text,
@@ -949,16 +692,9 @@ function create_UIBox_HUD()
         id='hand_text_area', align='cm', minw=HUD_HAND_W, minh=row_h,
         padding=0.03, r=0.1, colour=darken(G.C.BLACK, 0.1), emboss=0.05
     }, nodes={
-        -- The hand name and its level on one line, then the chips and mult in
-        -- their plates. Every node here carries its own w and h, so the cell is
-        -- the same size whatever a hand is called and however large its numbers
-        -- get -- the strings live inside the boxes rather than defining them.
         {n=G.UIT.R, config={align='cm', minh=name_box_h}, nodes={
             {n=G.UIT.O, config={id='hand_name', w=name_box_w, h=name_box_h,
                 object=hand_line_text, func='small_screen_hand_line'}},
-            -- The game reaches for these two by ID: it pulses the hand total
-            -- through the object of one and colours the level through the
-            -- config of the other. start_run points the total at hand_name.
             {n=G.UIT.B, config={id='hand_chip_total', w=0, h=0}},
             {n=G.UIT.B, config={id='hand_level', w=0, h=0,
                 colour=G.C.UI.TEXT_LIGHT}}
@@ -1037,9 +773,6 @@ function create_UIBox_HUD()
         }}
     }}
 
-    -- No backing plate: each cell carries its own panel, so a strip behind them
-    -- only greys out the table. minw still spans the room to keep the row
-    -- centred on the same line whatever the cells measure.
     return {n=G.UIT.ROOT, config={align='cm', padding=0.06, minw=ROOM_W-SAFE_MARGIN*2,
         colour=G.C.CLEAR}, nodes={
         {n=G.UIT.R, config={id='row_round', align='cm', padding=0.06,
@@ -1050,13 +783,6 @@ function create_UIBox_HUD()
     }}
 end
 
--- The requirement moved to the score cell, so this panel is now identity only:
--- the blind's chip beside its name, with the debuff lines under it. That matters
--- for more than tidiness. HUD_blind_debuff forces each debuff row to 0.35 with
--- 0.36 text, so the old four-row panel measured 2.29 against a 1.72 slot: it was
--- centred on the slot, and its bottom row -- the score you needed -- was drawn
--- underneath the Joker strip. Three rows fit the slot with the debuffs shown,
--- and collapse to the name alone when a blind has none.
 function create_UIBox_HUD_blind()
     local box_w = HUD_BLIND_W - 0.12
     local inner_w = box_w - 0.12
@@ -1090,11 +816,6 @@ function create_UIBox_HUD_blind()
                 ref_table=G.GAME.blind.loc_debuff_lines, ref_value=2,
                 scale=0.31, colour=G.C.UI.TEXT_LIGHT, func='HUD_blind_debuff'}}
         }},
-        -- Blind.lua drives both of these IDs during its reveal animation, and
-        -- hides dollars_to_be_earned by way of its grandparent node -- so keep
-        -- them, nested deep enough that the hidden grandparent is this dead row
-        -- and not the panel itself. HUD_blind_count keeps no scaling func: it is
-        -- the score cell that shows the requirement now.
         {n=G.UIT.R, config={align='cm', minh=0.001}, nodes={
             {n=G.UIT.C, config={align='cm'}, nodes={
                 {n=G.UIT.T, config={id='HUD_blind_count', ref_table=G.GAME.blind,
@@ -1108,12 +829,6 @@ function create_UIBox_HUD_blind()
     }}
 end
 
--- Requirement readout for the score cell. Balatro already formats the target on
--- the blind itself, so this only decides when it is meaningful to show. A slash
--- rather than a localized "score at least": the cell is 2.6 tiles wide, and the
--- number has to stay the thing you read.
--- Runs every frame, so the comparison earns its keep: set_text builds a table
--- per call, and the requirement only changes when the blind does.
 G.FUNCS.small_screen_blind_target = function(e)
     local blind = G.GAME.blind
     local active = blind and blind.blind_set and blind.name and blind.name ~= ''
@@ -1123,10 +838,6 @@ G.FUNCS.small_screen_blind_target = function(e)
     e.config.object:set_text(text)
 end
 
--- The stock func keeps G.GAME.chips_text current and picks a scale from the
--- score's magnitude; the scale lands on a field FixedText ignores, since it
--- measures the string against its own box instead. Feeding it the string is all
--- that is left to do here.
 local original_chip_UI_set = G.FUNCS.chip_UI_set
 G.FUNCS.chip_UI_set = function(e)
     original_chip_UI_set(e)
@@ -1136,14 +847,6 @@ G.FUNCS.chip_UI_set = function(e)
     end
 end
 
--- The hand readout is fed strings; its boxes were sized when the HUD was built.
--- The stock funcs still run first for their bookkeeping and their scoring juice
--- -- the scale they write lands on a field FixedText ignores.
---
--- One object owns the line: the selected hand's name, or its final total once
--- the hand has been submitted, followed by the level in whatever colour the game
--- has assigned it. The stock pair of texts cannot overlap because there is only
--- one of them.
 G.FUNCS.small_screen_hand_line = function(e)
     local hand = G.GAME.current_round.current_hand
     if hand.handname ~= hand.handname_text then
@@ -1177,8 +880,6 @@ G.FUNCS.hand_mult_UI_set = function(e)
     e.config.object:set_text(G.GAME.current_round.current_hand.mult_text)
 end
 
--- DynaText only applies its own maxw when it is constructed, so the money and
--- blind name readouts need the same treatment to stay inside their panels.
 G.FUNCS.small_screen_dollars = function(e)
     pin_dyna_scale(e, localize('$')..tostring(G.GAME.dollars or 0),
         DOLLARS_W, DOLLARS_SCALE)
@@ -1189,12 +890,9 @@ G.FUNCS.small_screen_blind_name = function(e)
         BLIND_NAME_W, BLIND_NAME_SCALE)
 end
 
--- Move the compact HUD to the top after the run objects have been created.
 local original_start_run = Game.start_run
 function Game:start_run(...)
     local result = original_start_run(self, ...)
-    -- update_hand_text pulses the hand total through its object. There is no
-    -- separate total text any more, so point that lookup at the line itself.
     if G.hand_text_area and G.hand_text_area.handname then
         G.hand_text_area.chip_total = G.hand_text_area.handname
     end
@@ -1207,12 +905,6 @@ function Game:start_run(...)
     return result
 end
 
--- The cash-out screen, the booster packs and the deck preview are all centred on
--- the hand by the stock game, which is the same thing as the screen centre on a
--- desktop layout. Here it is not: the hand shares its row with the deck, so it
--- sits left of centre to clear it, and everything anchored to it inherited that
--- offset. Nudge those boxes back to the middle of the room without touching the
--- vertical placement or the entrance animations the game drives through it.
 local function centre_on_room(box)
     if not box or not G.hand then return end
     local shift = ROOM_W/2 - (G.hand.T.x + G.hand.T.w/2)
@@ -1226,22 +918,13 @@ local function pin_run_overlay(box, y, x)
     if not box then return end
     box:set_alignment({major=G.ROOM_ATTACH, type='tmi',
         offset={x=x or 0, y=y}, bond='Strong'})
-    -- Source transitions rewrite the offset after constructing these boxes. Force
-    -- a fresh alignment so the desktop animation cannot pull them under Jokers.
     box.alignment.prev_type = nil
     box:align_to_major()
     box:hard_set_VT()
 end
 
--- Centre the panel in the space that is actually free: the whole content band
--- vertically, and everything left of the deck horizontally, so it is never
--- crowded against the card stack. Measured once per shop so the pin cannot
--- jitter, and it falls back to the top of the band if the panel is oversized.
 local shop_pin_box, shop_pin_x, shop_pin_y, shop_pin_w, shop_pin_h
 local function shop_pin()
-    -- Keyed on the panel's size as well as its identity: a panel that changed
-    -- shape needs centring again, and measuring it once was only ever meant to
-    -- stop the pin jittering frame to frame.
     if G.shop ~= shop_pin_box or
        (G.shop and (G.shop.T.w ~= shop_pin_w or G.shop.T.h ~= shop_pin_h)) then
         shop_pin_box, shop_pin_x, shop_pin_y = G.shop, nil, nil
@@ -1265,23 +948,15 @@ local function shop_pin()
     return shop_pin_x, shop_pin_y
 end
 
--- The shop transition normally targets a negative offset relative to the hand.
--- Re-pin the panel on every shop frame, since a queued desktop entrance event
--- also rewrites its offset shortly after construction.
 local original_update_shop = Game.update_shop
 function Game:update_shop(dt)
     local result = original_update_shop(self, dt)
     if G.shop then
         local x, y = shop_pin()
         pin_run_overlay(G.shop, y, x)
-        -- Only now, with the panel at the position it will keep, is it worth
-        -- measuring: recalculate bakes absolute coordinates into every element,
-        -- so doing it from anywhere else strands them there.
         if shop_needs_relayout then
             shop_needs_relayout = false
             G.shop:recalculate()
-            -- The pin is derived from the panel's size, which recalculate may
-            -- have just changed, so take it again for the new shape.
             x, y = shop_pin()
             pin_run_overlay(G.shop, y, x)
         end
@@ -1290,11 +965,6 @@ function Game:update_shop(dt)
     return result
 end
 
--- Blind selection gets the same explicit lower content zone. Owned Jokers and
--- consumables remain visible for decision-making, but can no longer cover a blind.
--- Cash out, the five booster pack types, and the deck preview. Each keeps the
--- vertical placement and the slide-in the stock game gives it; only the
--- horizontal centring is corrected.
 local original_update_round_eval = Game.update_round_eval
 function Game:update_round_eval(dt)
     local result = original_update_round_eval(self, dt)
@@ -1322,11 +992,6 @@ end
 local original_update_blind_select = Game.update_blind_select
 function Game:update_blind_select(dt)
     local result = original_update_blind_select(self, dt)
-    -- The selector carries 0.12 of padding above its cards, so pin it that much
-    -- higher than the band top: the blinds start exactly under the owned cards
-    -- and the skip tags stay inside the bottom margin. Its own height cannot be
-    -- measured -- each column is padded to a fixed ten tiles for the pop-up
-    -- animation -- so a taller band is shared out from the known content height.
     if G.blind_select then
         local band = ROOM_H - SAFE_MARGIN - RUN_OVERLAY_Y
         pin_run_overlay(G.blind_select, RUN_OVERLAY_Y - 0.12 +
@@ -1335,9 +1000,6 @@ function Game:update_blind_select(dt)
     return result
 end
 
--- Card descriptions are the smallest important text in the desktop UI. Increase
--- only text nodes in freshly generated ability tables, leaving menu geometry and
--- dynamic score text alone.
 local function enlarge_description_text(node)
     if type(node) ~= 'table' then return end
     if node.n == G.UIT.T and node.config and node.config.scale then
@@ -1360,9 +1022,6 @@ function Card:generate_UIBox_ability_table(...)
     return result
 end
 
--- Keep transient UI inside the logical room. The stock engine only supports a
--- horizontal clamp, so tall controller-hover descriptions can still escape above
--- the HUD or below the bottom edge on a 4:3 screen.
 local function clamp_popup_to_room(box)
     local max_x = math.max(SAFE_MARGIN, G.ROOM.T.w - box.T.w - SAFE_MARGIN)
     local max_y = math.max(SAFE_MARGIN, G.ROOM.T.h - box.T.h - SAFE_MARGIN)
@@ -1388,8 +1047,6 @@ function UIBox:move(dt)
     return original_uibox_move(self, dt)
 end
 
--- Unlock notifications use the desktop room's fixed width (20 logical tiles),
--- which is wider than this layout. Preserve the banner look with safe side margins.
 local original_notify_alert = create_UIBox_notify_alert
 function create_UIBox_notify_alert(...)
     local result = original_notify_alert(...)
@@ -1406,22 +1063,6 @@ function create_UIBox_notify_alert(...)
     return result
 end
 
--- Mark card descriptions for the engine-wide popup clamp, especially the leftmost
--- shop slot, top-row Jokers, and rightmost consumable.
--- A card with extra properties -- an edition, a seal, an enhancement, a Joker
--- whose text cites another card -- describes each of them in its own small
--- panel. show_infotip hangs those off the left of the description box, as a
--- separate UIBox parented to it, and that is the one piece of the popup nothing
--- clamps: UIBox:move only pulls instance_type POPUP back inside the room, which
--- is the description box and not its children. A description sitting near the
--- left margin therefore pushes its panels straight off the screen.
---
--- Stack them under the description instead of beside it, and do it by moving
--- them into the description's own column rather than by re-aligning the box
--- they live in. Inside a container the layout engine stacks R nodes vertically,
--- and every info panel is one, so appending them puts each under the last. The
--- popup then measures its own full height and the room clamp covers all of it,
--- which the side panel never got.
 local function stack_info_boxes(node)
     if type(node) ~= 'table' then return false end
     if node.config and node.config.func == 'show_infotip' and
@@ -1429,8 +1070,6 @@ local function stack_info_boxes(node)
         for _, box in ipairs(node.config.ref_table) do
             node.nodes[#node.nodes + 1] = box
         end
-        -- show_infotip builds the side panel only while this is set, so
-        -- clearing it is what stops the panels being shown twice.
         node.config.ref_table = nil
         return true
     end
@@ -1444,7 +1083,6 @@ end
 
 local original_card_h_popup = G.UIDEF.card_h_popup
 G.UIDEF.card_h_popup = function(...)
-    -- Returns nothing for a card with no ability table yet.
     local definition = original_card_h_popup(...)
     if type(definition) == 'table' then pcall(stack_info_boxes, definition) end
     return definition

@@ -4,7 +4,7 @@ A [PortMaster](https://portmaster.games/) port of [Balatro](https://www.playbala
 
 **This is not the game itself.** It is the wrapper that makes a copy you already own run on a handheld: you buy Balatro on Steam, copy one file from it onto your device, and this patches and launches it there. Nothing here works without that file, and the game is never distributed with it.
 
-This update builds on nkahoang's original PortMaster port - thank you - and keeps the existing Balatro catalogue identity while adding the small-screen layout, performance options, and button setup.
+This port builds on nkahoang's original PortMaster work—thank you.
 
 ## What's different
 
