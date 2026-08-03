@@ -80,7 +80,26 @@ export PYTHONPATH="${GAMEDIR}/gamedata/${DEVICE_ARCH}:${PYTHONPATH:-}"
 
 export DEVICE_NAME
 export CFW_NAME
-"${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/gamedata/${PYXEL_PKG}"
+
+# pyxel.reset() workaround (Pyxel 2.5.0+)
+#    pyxel.reset() spawns a background process and then terminates the parent
+#    process. Therefore, the spawned process is left running. As a result, it
+#    is highly likely to affect applications launched by the user.
+#    Setting PYXEL_WATCH_STATE_FILE=/dev/null prevents this and returns
+#    exit code 82, allowing this loop to safely restart the game.
+# https://github.com/kitao/pyxel/blob/v2.9.5/crates/pyxel-binding/src/system_wrapper.rs#L66-L67
+export PYXEL_WATCH_STATE_FILE=/dev/null
+
+while true; do
+    "${pyxel_dir}/bin/pyxel" play "${GAMEDIR}/gamedata/${PYXEL_PKG}"
+    EXIT_CODE=$?
+    
+    # 0x52 (82) is returned when pyxel.reset() is called by the game (e.g. changing resolution)
+    if [ $EXIT_CODE -ne 82 ]; then
+        break
+    fi
+    echo "pyxel.reset() detected. Restarting game cleanly..."
+done
 
 if [[ "$PM_CAN_MOUNT" != "N" ]]; then
     $ESUDO umount "${pyxel_dir}"
