@@ -12,120 +12,183 @@ else
   controlfolder="/roms/ports/PortMaster"
 fi
 
-source $controlfolder/control.txt
+source "$controlfolder/control.txt"
 
 get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 GAMEDIR="/$directory/ports/balatro"
 
-export XDG_DATA_HOME="$GAMEDIR/saves" # allowing saving to the same path as the game
+export XDG_DATA_HOME="$GAMEDIR/saves"
 export XDG_CONFIG_HOME="$GAMEDIR/saves"
-export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
-mkdir -p "$XDG_DATA_HOME"
-mkdir -p "$XDG_CONFIG_HOME"
+mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
 
-## Uncomment the following file to log the output, for debugging purpose
-# > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+LAUNCHER="$0"
+case "$LAUNCHER" in
+  /*) ;;
+  *) LAUNCHER="$PWD/$LAUNCHER" ;;
+esac
 
-cd $GAMEDIR
+cd "$GAMEDIR" || exit 1
 
-$ESUDO chmod a+x ./bin/*
+source "$controlfolder/runtimes/love_11.5/love.txt"
+$ESUDO chmod a+x ./bin/7za.* ./tools/patchscript
 
+GAMEFILE=""
 if [ -f "Balatro.exe" ]; then
-    GAMEFILE="Balatro.exe"
+  GAMEFILE="Balatro.exe"
 elif [ -f "balatro.exe" ]; then
-    GAMEFILE="balatro.exe"
+  GAMEFILE="balatro.exe"
 elif [ -f "Balatro.love" ]; then
-    GAMEFILE="Balatro.love"
+  GAMEFILE="Balatro.love"
 elif [ -f "balatro.love" ]; then
-    GAMEFILE="balatro.love"
+  GAMEFILE="balatro.love"
 fi
 
-if [ -f "$GAMEFILE" ]; then
-  # Extract globals.lua
-  ./bin/7za.${DEVICE_ARCH} x "$GAMEFILE" globals.lua
+FORCE_DISPLAY_SETUP=0
+SETUP_FILE="$GAMEDIR/saves/display-setup.txt"
+export BALATRO_PM_SETUP_FILE="$SETUP_FILE"
 
-  # Modify globals.lua
+read_setting() {
+  local key="$1" fallback="$2" value=""
+  if [ -f "$SETUP_FILE" ]; then
+    value=$(sed -n "s/^[[:space:]]*$key[[:space:]]*=[[:space:]]*\([^[:space:]]*\).*/\1/p" \
+      "$SETUP_FILE" | tail -n 1)
+  fi
+  if [ -n "$value" ]; then echo "$value"; else echo "$fallback"; fi
+}
 
-  # change some default settings
-  sed -i 's/crt = 70,/crt = 0,/g' globals.lua
-  sed -i 's/bloom = 1/bloom = 0/g' globals.lua
-  sed -i 's/s/shadows = 'On'/shadows = 'Off'/g' globals.lua
-  sed -i 's/self.F_HIDE_BG = false/self.F_HIDE_BG = true/g' globals.lua
+PERF_HUD=0
+export BALATRO_PM_PERF_HUD="$PERF_HUD"
 
-  # change controller mapping (swap A/B,X/Y to match the physical buttons) for TSP/BRICK
-  if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ] || [ "${DEVICE_NAME}" = "TrimUI Brick" ]; then
-    sed -i 's/self.F_SWAP_AB_BUTTONS = false/self.F_SWAP_AB_BUTTONS = true/g' globals.lua
-    sed -i 's/self.F_SWAP_XY_BUTTONS = false/self.F_SWAP_XY_BUTTONS = true/g' globals.lua
+FORCE_BUTTON_SETUP=0
+BUTTON_MAP_FILE="$GAMEDIR/saves/controller-map.txt"
+export BALATRO_PM_BUTTON_MAP_FILE="$BUTTON_MAP_FILE"
+
+OUTPUT_GAME="Balatro_pm"
+BUILD_STAMP="$GAMEDIR/.balatro-build.txt"
+
+PATCHSCRIPT="$GAMEDIR/tools/patchscript"
+
+build_signature() {
+  echo "layout=$LAYOUT performance=$PERFORMANCE"
+}
+
+needs_build() {
+  [ -z "$GAMEFILE" ] && return 1
+  [ ! -f "$OUTPUT_GAME" ] && return 0
+  [ ! -f "$BUILD_STAMP" ] && return 0
+  [ "$(cat "$BUILD_STAMP")" != "$(build_signature)" ] && return 0
+  for source in "$LAUNCHER" "$PATCHSCRIPT" "$GAMEDIR/patches/small_screen.lua" \
+                "$GAMEDIR/patches/options.lua" "$GAMEDIR/patches/perf.lua" \
+                "$GAMEDIR/patches/controls.lua" \
+                "$GAMEDIR/resources/fonts/Nunito-Black.ttf" "$GAMEDIR/$GAMEFILE"; do
+    if [ -f "$source" ] && [ "$source" -nt "$OUTPUT_GAME" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+build_if_needed() {
+  if [ -z "$GAMEFILE" ] && [ -f "$OUTPUT_GAME" ] &&
+     [ "$(cat "$BUILD_STAMP" 2>/dev/null)" != "$(build_signature)" ]; then
+    echo "The Balatro game file is missing, so ${OUTPUT_GAME} cannot be rebuilt."
+    echo "It is being launched as it was last built. Copy the game file back to apply the display setup."
+  fi
+  needs_build || return 0
+  echo "Preparing the ${OUTPUT_GAME} handheld build..."
+  rm -f "$BUILD_STAMP"
+  if [ ! -f "$controlfolder/utils/patcher.txt" ]; then
+    echo "PortMaster's patcher is unavailable. Update PortMaster and try again."
+    return 1
   fi
 
-  if [ $DISPLAY_WIDTH -le 1279 ]; then # increase the scale for smaller screens
-    sed -i 's/self.TILE_W = .*/self.TILE_W = 18.25/g' globals.lua
-    sed -i 's/self.TILE_H = .*/self.TILE_H = 18.25/g' globals.lua
+  export GAMEDIR GAMEFILE OUTPUT_GAME BUILD_STAMP LAYOUT PERFORMANCE
+  export PERF_OPTIMIZATIONS DEVICE_ARCH
+  export PATCHER_FILE="$PATCHSCRIPT"
+  export PATCHER_GAME="$(basename "${0%.*}")"
+  export PATCHER_TIME="about a minute"
+  export PATCHER_QUESTIONS=""
+  export controlfolder ESUDO
+  source "$controlfolder/utils/patcher.txt"
+
+  if [ -f "$OUTPUT_GAME" ] &&
+     [ "$(cat "$BUILD_STAMP" 2>/dev/null)" = "$(build_signature)" ]; then
+    for stale in Balatro_4x3 Balatro_1x1; do
+      [ -f "$stale" ] && echo "An older ${stale} build is still here and can be deleted."
+    done
+  else
+    echo "Patch failed; no partial build was installed and the purchased game was not modified."
+    return 1
   fi
+  cd "$GAMEDIR" || exit 1
+}
 
-  if [ $DISPLAY_WIDTH -le 720 ]; then # switch out the font if the screen is too small; helping with readability
-    cp resources/fonts/Nunito-Black.ttf resources/fonts/m6x11plus.ttf # change Nunito-Black to the in-game font file
-    ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" resources/fonts/m6x11plus.ttf
-    rm resources/fonts/m6x11plus.ttf
+apply_button_map() {
+  BUTTON_MAP=""
+  if [ -f "$BUTTON_MAP_FILE" ]; then
+    BUTTON_MAP=$(grep -v '^[[:space:]]*#' "$BUTTON_MAP_FILE" | grep -m 1 '[^[:space:]]')
   fi
-
-  # Update the archive with the modified globals.lua
-  ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" globals.lua
-
-  # CP the file to Patched Balatro location
-  cp $GAMEFILE Balatro
-
-  # RGB30 & Other 1x1 square ratio device specific changes
-  if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
-    mkdir -p ./functions
-    ./bin/7za.${DEVICE_ARCH} x "$GAMEFILE" functions/common_events.lua
-    # move the hands a bit to the right
-    sed -i 's/G.hand.T.x = G.TILE_W - G.hand.T.w - 2.85/G.hand.T.x = G.TILE_W - G.hand.T.w - 1/g' functions/common_events.lua
-    # then move the playing area up
-    sed -i 's/G.play.T.y = G.hand.T.y - 3.6/G.play.T.y = G.hand.T.y - 4.5/g' functions/common_events.lua
-    # move the decks to the right
-    sed -i 's/G.deck.T.x = G.TILE_W - G.deck.T.w - 0.5/G.deck.T.x = G.TILE_W - G.deck.T.w + 0.85/g' functions/common_events.lua
-    # move the jokers to the left
-    sed -i 's/G.jokers.T.x = G.hand.T.x - 0.1/G.jokers.T.x = G.hand.T.x - 0.2/g' functions/common_events.lua
-
-    # Update the archive with the modified common_events.lua
-    ./bin/7za.${DEVICE_ARCH} u -aoa "$GAMEFILE" functions/common_events.lua
-    rm functions/common_events.lua
-    cp $GAMEFILE Balatro_1x1
+  [ -z "$BUTTON_MAP" ] && return 0
+  if [ -n "$SDL_GAMECONTROLLERCONFIG" ]; then
+    export SDL_GAMECONTROLLERCONFIG="${SDL_GAMECONTROLLERCONFIG}
+${BUTTON_MAP}"
+  else
+    export SDL_GAMECONTROLLERCONFIG="$BUTTON_MAP"
   fi
+}
 
-  rm $GAMEFILE
-  rm globals.lua
+if [ -z "$GAMEFILE" ] && [ ! -f "$OUTPUT_GAME" ] && [ ! -f "Balatro" ]; then
+  echo "Balatro game file not found. Copy Balatro.exe or Balatro.love into the balatro folder, then launch again."
+  pm_message "Balatro game file not found. Copy Balatro.exe or Balatro.love into the balatro folder, then launch again."
+  pm_finish
+  exit 0
 fi
 
-if [ "${DEVICE_NAME}" = "TrimUI Smart Pro" ] || [ "${DEVICE_NAME}" = "TrimUI Brick" ]; then
-  # These libs are no good.
-  LIBDIR="$GAMEDIR/libs.${DEVICE_ARCH}"
+pm_platform_helper "$LOVE_BINARY"
 
-  if [ -f "$LIBDIR/libfontconfig.so.1" ]; then
-    $ESUDO rm -f "$LIBDIR/libfontconfig.so.1"
-  fi
+apply_button_map
 
-  if [ -f "$LIBDIR/libtheoradec.so.1" ]; then
-    $ESUDO rm -f "$LIBDIR/libtheoradec.so.1"
+if [ "$FORCE_DISPLAY_SETUP" -eq 1 ] || [ ! -f "$SETUP_FILE" ] ||
+   grep -q '^[[:space:]]*ask[[:space:]]*=[[:space:]]*1' "$SETUP_FILE" 2>/dev/null; then
+  if [ -f "$SETUP_FILE" ]; then
+    sed -i '/^[[:space:]]*ask[[:space:]]*=[[:space:]]*1[[:space:]]*$/d' "$SETUP_FILE"
   fi
+  echo "Asking about the layout and performance..."
+  BALATRO_PM_SETUP_FONT="$GAMEDIR/resources/fonts/Nunito-Black.ttf" \
+    $LOVE_RUN "$GAMEDIR/displaysetup"
 fi
 
-LAUNCH_GAME="Balatro"
+LAYOUT=$(read_setting layout small)
+PERFORMANCE=$(read_setting performance on)
+[ "$LAYOUT" = "original" ] || LAYOUT="small"
+[ "$PERFORMANCE" = "off" ] || PERFORMANCE="on"
 
-if [ $DISPLAY_HEIGHT -eq $DISPLAY_WIDTH ]; then
-  LAUNCH_GAME="Balatro_1x1"
+if [ "$PERFORMANCE" = "off" ]; then PERF_OPTIMIZATIONS=0; else PERF_OPTIMIZATIONS=1; fi
+export BALATRO_PM_PERF_OPTIMIZATIONS="$PERF_OPTIMIZATIONS"
+
+build_if_needed
+
+LAUNCH_GAME="$OUTPUT_GAME"
+
+if [ ! -f "$LAUNCH_GAME" ] && [ -f "Balatro" ]; then
+  LAUNCH_GAME="Balatro"
 fi
 
 if [ -f "$LAUNCH_GAME" ]; then
-  $GPTOKEYB "love.${DEVICE_ARCH}" &
-	pm_platform_helper "./bin/love.${DEVICE_ARCH}"
-  ./bin/love.${DEVICE_ARCH} "$LAUNCH_GAME"
+  if [ "$FORCE_BUTTON_SETUP" -eq 1 ] || [ ! -f "$BUTTON_MAP_FILE" ]; then
+    echo "Checking which button is which..."
+    BALATRO_PM_BUTTON_FONT="$GAMEDIR/resources/fonts/Nunito-Black.ttf" \
+      $LOVE_RUN "$GAMEDIR/buttonsetup"
+    apply_button_map
+  fi
+
+  $GPTOKEYB "$LOVE_GPTK" &
+  $LOVE_RUN "$LAUNCH_GAME"
 else
-  echo "Balatro game file not found. Please drop in Balatro.exe or Balatro.love into the Balatro folder prior to starting the game."
+  echo "The handheld build could not be made, so there is nothing to launch."
 fi
 
 pm_finish
