@@ -1,15 +1,6 @@
 #!/bin/bash
 
-# ======================
-# PortMaster Universal Launcher
-# (ArkOS & Rocknix compatible)
-# ======================
 
-
-
-# ======================
-# Detect PortMaster control folder
-# ======================
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
@@ -24,21 +15,15 @@ fi
 
 source "$controlfolder/control.txt"
 
-# ======================
-# PortMaster helpers
-# ======================
+
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
-# ======================
-# Directory Setup
-# ======================
+
 GAMEDIR="/$directory/ports/cylindrix"
 CONFDIR="$GAMEDIR/conf/"
 
-# ======================
-# Library Paths
-# ======================
+
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
@@ -46,13 +31,11 @@ if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
 else
   source "${controlfolder}/libgl_default.txt"
 fi
-# Avoid unintended GLX
+
 export SDL_HINT_VIDEO_X11_FORCE_EGL=1
-# ======================
-# Prepare Execution
-# ======================
+
 mkdir -p "$CONFDIR"
-cd "$GAMEDIR" || exit
+cd "$GAMEDIR"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
@@ -60,21 +43,14 @@ export XDG_DATA_HOME="$CONFDIR"
 bind_directories ~/.cylindrix "$GAMEDIR/conf/.cylindrix"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# ======================
-# Optional fixes for missing platform helpers
-# ======================
+
 pm_platform_helper "$GAMEDIR/cylindrix.${DEVICE_ARCH}"
 
 
-# ======================
-# Launch port
-# ======================
 $GPTOKEYB "cylindrix.${DEVICE_ARCH}" -c "./cylindrix.gptk" &
 
 ./cylindrix.${DEVICE_ARCH}
 
-# ======================
-# Cleanup
-# ======================
+
 pm_finish
 
