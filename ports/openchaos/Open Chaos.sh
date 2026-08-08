@@ -48,6 +48,8 @@ if [ -d "$ASSETS_DIR/clumps" ] || [ -d "$ASSETS_DIR/data" ] || [ -d "$ASSETS_DIR
 fi
 echo "Open Chaos working directory: $RUN_DIR"
 
+chmod +x "$BIN"
+
 $GPTOKEYB "OpenChaos.${DEVICE_ARCH}" -c "$GAMEDIR/openchaos.gptk" &
 
 pm_platform_helper "$BIN"
