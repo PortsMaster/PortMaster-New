@@ -1,4 +1,6 @@
 
+Play Store version is NOT supported!
+
 ## Controls
 
 | Button | Action |
