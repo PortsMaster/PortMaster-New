@@ -9,6 +9,17 @@
 |Start|Pause Menu|
 |Touchscreen|Touch in menu|
 
+## Details 
+| Detail | Value |
+|---|---|
+| Ready to Run | No |
+| Engine/Framework | Playdead's in-house engine |
+| Architectures | 64 Bit |
+| Aspect ratio | Adaptive 4:3 or 16:9|
+| Rumble support | No |
+| Tested versions | 1.20 Epic Games Mobile |
+| Controls | Native |
+| Joysticks required | None |
 
 ```shell
 **Folder Structure**
