@@ -4,7 +4,7 @@ Special thanks to [a327ex](https://store.steampowered.com/developer/a327ex) for 
 
 Source: https://a327ex.itch.io/emoji-merge
 
-The game code is modified by Troidem for better scaling on small handhelds.
+The game code is modified by mxmgorin for better scaling on small handhelds.
 
 ## Controls
 
