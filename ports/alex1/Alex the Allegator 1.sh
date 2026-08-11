@@ -50,7 +50,7 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${weston_runtime}.squashfs" "${weston_dir}"
 
-$GPTOKEYB "$BINARY" -c "./$BINARY.gptk" &
+$GPTOKEYB "$BINARY" -c "./alex1.gptk" &
 pm_platform_helper "$GAMEDIR/$BINARY"
 
 $ESUDO env WRAPPED_LIBRARY_PATH=$game_libs \
