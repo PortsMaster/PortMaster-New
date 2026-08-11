@@ -4,7 +4,7 @@ Special thanks to [a327ex](https://store.steampowered.com/developer/a327ex) for 
 
 Source: https://store.steampowered.com/app/915310/SNKRX/
 
-The game code is modified by Troidem for better performance on low-powered devices.
+The game code is modified by mxmgorin for better performance on low-powered devices.
 
 ## Controls
 

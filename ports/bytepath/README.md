@@ -5,7 +5,7 @@ If you like the game, consider supporting the developer by purchasing it from ht
 
 Source: https://store.steampowered.com/app/760330/BYTEPATH
 
-The game code is modified by Troidem to allow running via portmaster.
+The game code is modified by mxmgorin to allow running via portmaster.
 
 ## Controls
 
