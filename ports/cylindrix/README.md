@@ -32,11 +32,6 @@ If you want to remap anything, edit `cylindrix.gptk` next to the binary — no r
 - **2001** — John R. McCawley III obtains permission to release the game and its source code under the **LGPL**, together with an updated Windows build.
 - **~2018** — Anthony Thibault (*hyperlogic*) refactors the codebase to be cross-platform on top of **SDL2, OpenGL and OpenAL**, hosted at [github.com/hyperlogic/cylindrix](https://github.com/hyperlogic/cylindrix).
 
-### System dependencies
-
-- `libopenal-dev`
-- `libglm-dev`
-- A driver with OpenGL ES 2.0 support (Mali, VideoCore VI, Adreno, etc.)
 
 
 
