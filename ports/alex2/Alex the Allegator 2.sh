@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Captured before westonwrap.sh runs, which overrides XDG_RUNTIME_DIR to its
-# own /tmp path for Weston's own Wayland socket. The system audio daemon
-# (PipeWire/PulseAudio) needs the *real* XDG_RUNTIME_DIR to find its own
-# socket, so this gets passed through explicitly to the game process only,
-# below, without touching what Weston itself uses.
-REAL_XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -35,6 +28,11 @@ cd $GAMEDIR
 export XDG_DATA_HOME="$CONFDIR"
 export game_libs="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# (PipeWire/PulseAudio) needs the *real* XDG_RUNTIME_DIR to find its own
+# socket, so this gets passed through explicitly to the game process only,
+# below, without touching what Weston itself uses.
+REAL_XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 
 # Alex the Allegator 2 is a plain Allegro 4 software-2D game (no OpenGL), which
 # renders through Allegro's X11/Xlib driver on Linux - runs via Westonpack's
