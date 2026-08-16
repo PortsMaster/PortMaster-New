@@ -40,8 +40,8 @@ $GPTOKEYB "python3" -c "$GAMEDIR/runnerprotocol.gptk" &
 
 # the receiver listens on :8788 for the OPTIONAL PC companion pusher; it
 # exits cleanly on its own if something else already owns the port
-$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/runnerprotocol/receiver.py" > /dev/null 2>&1 &
+$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/receiver.py" > /dev/null 2>&1 &
 
-$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/runnerprotocol/runner.py"
+$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/runner.py"
 
 pm_finish
