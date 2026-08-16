@@ -27,7 +27,6 @@ end
 
 if PERF_OPTIMIZATIONS then
 G.F_HIDE_BG = true
-G.FPS_CAP = 60
 
 local function use_smooth_filtering()
     love.graphics.setDefaultFilter('linear', 'linear', 1)
@@ -99,49 +98,6 @@ function UIElement:update_object(...)
        getmetatable(object) == DynaText then
         object.config.refresh_movement = false
     end
-    return result
-end
-
-local original_card_update = Card.update
-function Card:update(dt)
-    if G.SETTINGS.reduced_motion and self.area == G.deck and
-       not G.VIEWING_DECK and self.facing == 'back' and
-       self.sprite_facing == 'back' and not self.pinch.x and
-       not self.states.focus.is and not self.children.focused_ui then
-        if self.ability and self.ability.perma_debuff then self.debuff = true end
-        return
-    end
-    return original_card_update(self, dt)
-end
-
-local original_cardarea_align_cards = CardArea.align_cards
-function CardArea:align_cards(...)
-    if not (G.SETTINGS.reduced_motion and self == G.deck and
-            not G.VIEWING_DECK and (self.shuffle_amt or 0) == 0) then
-        return original_cardarea_align_cards(self, ...)
-    end
-
-    local cache = self.pm_perf_deck_alignment
-    local stable = cache and cache.count == #self.cards and
-        cache.x == self.T.x and cache.y == self.T.y and
-        cache.w == self.T.w and cache.h == self.T.h
-    if stable then
-        for i = 1, #self.cards do
-            local card = self.cards[i]
-            if card.states.drag.is or card.facing == 'front' or
-               not card.STATIONARY then
-                stable = false
-                break
-            end
-        end
-    end
-    if stable then return end
-
-    local result = original_cardarea_align_cards(self, ...)
-    self.pm_perf_deck_alignment = cache or {}
-    cache = self.pm_perf_deck_alignment
-    cache.count, cache.x, cache.y = #self.cards, self.T.x, self.T.y
-    cache.w, cache.h = self.T.w, self.T.h
     return result
 end
 
@@ -350,32 +306,6 @@ function Sprite:draw(overlay)
         remember_background_values(width, height)
     end
     return draw_cached_background(self)
-end
-end
-
-if PERF_OPTIMIZATIONS then
-local GC_MIN_STEP_KB = 16
-local GC_MAX_STEP_KB = 1024
-local GC_SOFT_CEILING_KB = 128*1024
-local GC_HARD_CEILING_KB = 224*1024
-
-local gc_previous_heap = collectgarbage('count')
-
-function nuGC(_, memory_ceiling, disable_otherwise)
-    local heap = collectgarbage('count')
-
-    local allocated = heap - gc_previous_heap
-    local step = allocated > GC_MIN_STEP_KB and allocated or GC_MIN_STEP_KB
-    if heap > GC_SOFT_CEILING_KB then step = step*3 end
-    if step > GC_MAX_STEP_KB then step = GC_MAX_STEP_KB end
-    collectgarbage('step', step)
-
-    if heap > (memory_ceiling and memory_ceiling*1024 or GC_HARD_CEILING_KB) then
-        collectgarbage('collect')
-    end
-    if disable_otherwise then collectgarbage('stop') end
-
-    gc_previous_heap = collectgarbage('count')
 end
 end
 

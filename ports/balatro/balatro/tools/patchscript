@@ -10,7 +10,9 @@ cleanup_patch_work() {
   rm -f "$PATCHDIR/cardarea.lua" "$PATCHDIR/engine/text.lua"
   rm -f "$PATCHDIR/portmaster/small_screen.lua"
   rm -f "$PATCHDIR/portmaster/options.lua" "$PATCHDIR/portmaster/perf.lua"
-  rm -f "$PATCHDIR/portmaster/controls.lua"
+  rm -f "$PATCHDIR/portmaster/controls.lua" "$PATCHDIR/portmaster/particle_cleanup.lua"
+  rm -f "$PATCHDIR/portmaster/cpu_opt.lua" "$PATCHDIR/portmaster/rumble.lua"
+  rm -f "$PATCHDIR/portmaster/achievements.lua"
   rm -f "$PATCHDIR/resources/fonts/m6x11plus.ttf"
   rm -f "$PATCHDIR/resources/shaders/CRT.fs"
   rm -f "$PATCHDIR/resources/shaders/background.fs"
@@ -33,7 +35,7 @@ build_patched_game() {
     "$SEVENZIP" u -aoa "$WORKFILE" globals.lua >/dev/null || return 1
   fi
 
-  MODULES="portmaster/options.lua portmaster/controls.lua portmaster/perf.lua"
+  MODULES="portmaster/options.lua portmaster/controls.lua portmaster/perf.lua portmaster/particle_cleanup.lua portmaster/cpu_opt.lua portmaster/rumble.lua portmaster/achievements.lua"
   [ "$LAYOUT" = "small" ] && MODULES="$MODULES portmaster/small_screen.lua"
 
   SOURCES="main.lua"
@@ -48,7 +50,8 @@ build_patched_game() {
     cp "$GAMEDIR/patches/${module#portmaster/}" "$module" || return 1
   done
   for module in portmaster/perf portmaster/small_screen portmaster/controls \
-                portmaster/options; do
+                portmaster/options portmaster/particle_cleanup portmaster/cpu_opt \
+                portmaster/rumble portmaster/achievements; do
     case " $MODULES " in *" $module.lua "*) ;; *) continue ;; esac
     grep -q "$module" main.lua && continue
     sed -i "/require \"challenges\"/a require \"$module\"" main.lua || return 1
@@ -115,11 +118,13 @@ build_patched_game() {
       resources/shaders/background.fs >/dev/null || return 1
   fi
 
-  if [ "$LAYOUT" = "small" ]; then
-    echo "Installing the handheld font..."
+  if [ "${FONT:-nunito}" != "original" ]; then
+    echo "Installing the Nunito font..."
     mkdir -p resources/fonts || return 1
     cp "$GAMEDIR/resources/fonts/Nunito-Black.ttf" resources/fonts/m6x11plus.ttf || return 1
     "$SEVENZIP" u -aoa "$WORKFILE" resources/fonts/m6x11plus.ttf >/dev/null || return 1
+  else
+    echo "Keeping the original Balatro font..."
   fi
 
   echo "Verifying the patched game archive..."
@@ -145,7 +150,10 @@ patch_failed() {
 echo "Checking the patch files..."
 for required in "$GAMEDIR" "$GAMEDIR/$GAMEFILE" "$SEVENZIP" \
                 "$GAMEDIR/patches/options.lua" "$GAMEDIR/patches/controls.lua" \
-                "$GAMEDIR/patches/perf.lua" "$GAMEDIR/resources/fonts/Nunito-Black.ttf"; do
+                "$GAMEDIR/patches/perf.lua" "$GAMEDIR/patches/particle_cleanup.lua" \
+                "$GAMEDIR/patches/cpu_opt.lua" "$GAMEDIR/patches/rumble.lua" \
+                "$GAMEDIR/patches/achievements.lua" \
+                "$GAMEDIR/resources/fonts/Nunito-Black.ttf"; do
   [ -e "$required" ] || patch_failed
 done
 if [ "$LAYOUT" = "small" ]; then
@@ -154,7 +162,7 @@ fi
 
 cleanup_patch_work
 if build_patched_game; then
-  echo "layout=$LAYOUT performance=$PERFORMANCE" > "$BUILD_STAMP"
+  echo "layout=$LAYOUT performance=$PERFORMANCE font=${FONT:-nunito}" > "$BUILD_STAMP"
   cleanup_patch_work
   echo "Handheld build ready."
   exit 0
