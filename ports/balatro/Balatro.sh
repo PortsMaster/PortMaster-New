@@ -105,6 +105,8 @@ needs_build() {
                 "$GAMEDIR/patches/cpu_opt.lua" \
                 "$GAMEDIR/patches/rumble.lua" \
                 "$GAMEDIR/patches/achievements.lua" \
+                "$GAMEDIR/patches/loc_fix.lua" \
+                "$GAMEDIR/patches/text_cleanup.lua" \
                 "$GAMEDIR/resources/fonts/Nunito-Black.ttf" "$GAMEDIR/$GAMEFILE"; do
     if [ -f "$source" ] && [ "$source" -nt "$OUTPUT_GAME" ]; then
       return 0

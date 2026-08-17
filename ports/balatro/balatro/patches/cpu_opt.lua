@@ -58,6 +58,58 @@ end
 
 apply_fps_cap(os.getenv('BALATRO_PM_FPS_CAP'))
 
+local gc_previous_heap = collectgarbage('count')
+
+-- Stock Card creates children.shadow as a Moveable that is never read for
+-- drawing (shadows use G.shared_shadow from center/back). Each one still sits
+-- in G.MOVEABLES and gets move/update every frame — ~1 dead entry per card.
+local function drop_unused_card_shadow(card)
+    local shadow = card and card.children and card.children.shadow
+    if not shadow then return end
+    pcall(function() shadow:remove() end)
+    card.children.shadow = nil
+end
+
+local original_card_init = Card.init
+function Card:init(...)
+    original_card_init(self, ...)
+    drop_unused_card_shadow(self)
+end
+
+local original_card_load = Card.load
+function Card:load(...)
+    local result = original_card_load(self, ...)
+    drop_unused_card_shadow(self)
+    return result
+end
+
+-- Recreating a legendary floating_sprite without removing the old Sprite
+-- leaves the previous one in G.MOVEABLES forever.
+local original_card_set_sprites = Card.set_sprites
+function Card:set_sprites(_center, _front, ...)
+    if _center and _center.soul_pos and self.children and self.children.floating_sprite then
+        pcall(function() self.children.floating_sprite:remove() end)
+        self.children.floating_sprite = nil
+    end
+    return original_card_set_sprites(self, _center, _front, ...)
+end
+
+-- Periodic full GC: stock nuGC stops the collector every frame after a small
+-- step, so native Text leaks / Lua garbage can pile up across a long run.
+local FULL_GC_INTERVAL = 30
+local next_full_gc_at = 0
+local original_game_update_gc = Game.update
+function Game:update(dt, ...)
+    local result = original_game_update_gc(self, dt, ...)
+    local now = (G.TIMERS and G.TIMERS.REAL) or 0
+    if now >= next_full_gc_at then
+        next_full_gc_at = now + FULL_GC_INTERVAL
+        collectgarbage('collect')
+        gc_previous_heap = collectgarbage('count')
+    end
+    return result
+end
+
 G.FUNCS.pm_change_fps_cap = function(args)
     local cap = apply_fps_cap(args and args.to_val)
     upsert_setup_key('fps', tostring(cap))
@@ -149,8 +201,6 @@ local GC_MIN_STEP_KB = 16
 local GC_MAX_STEP_KB = 1024
 local GC_SOFT_CEILING_KB = 128*1024
 local GC_HARD_CEILING_KB = 224*1024
-
-local gc_previous_heap = collectgarbage('count')
 
 function nuGC(_, memory_ceiling, disable_otherwise)
     local heap = collectgarbage('count')

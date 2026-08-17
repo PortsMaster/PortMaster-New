@@ -56,21 +56,24 @@ function Game:draw(...)
     if fps_hud.elapsed >= 0.25 then
         fps_hud.fps = fps_hud.frames / fps_hud.elapsed
         fps_hud.frames, fps_hud.elapsed = 0, 0
-        local moveables = (G.MOVEABLES and #G.MOVEABLES) or 0
-        -- pairs-based MOVEABLES can be sparse; count manually if needed
-        if moveables == 0 and G.MOVEABLES then
-            for _ in pairs(G.MOVEABLES) do moveables = moveables + 1 end
-        end
-        local particles = 0
+        local moveables, particles, cards, dead, dots = 0, 0, 0, 0, 0
         if G.MOVEABLES then
             for _, obj in pairs(G.MOVEABLES) do
-                if obj and getmetatable(obj) == Particles then
+                moveables = moveables + 1
+                if not obj or obj.REMOVED then
+                    dead = dead + 1
+                elseif getmetatable(obj) == Particles then
                     particles = particles + 1
+                    if obj.particles then dots = dots + #obj.particles end
+                elseif getmetatable(obj) == Card then
+                    cards = cards + 1
                 end
             end
         end
-        fps_hud.line = string.format('%.0f FPS  mv %d  pt %d',
-            fps_hud.fps, moveables, particles)
+        local heap_mb = collectgarbage('count') / 1024
+        fps_hud.line = string.format(
+            '%.0f FPS  mv %d  c %d  pt %d/%d  %.0fMB',
+            fps_hud.fps, moveables, cards, particles, dots, heap_mb)
     end
     if fps_hud.line == '' then return result end
 

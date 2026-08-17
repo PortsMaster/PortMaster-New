@@ -1,8 +1,10 @@
--- Always-on fix for particle emitters left in G.MOVEABLES.
+-- Always-on fix for particle emitters / dead Moveables left in G.MOVEABLES.
 -- Disable with BALATRO_PM_SKIP_PARTICLE_CLEANUP=1 (or G.BALATRO_PM_SKIP_PARTICLE_CLEANUP).
 --
 -- 1) Blind:defeat creates Particles and only sets max=0 — never :remove()'s them.
 -- 2) Other max=0 emitters can finish pulsing and sit empty forever in MOVEABLES.
+-- 3) Faded emitters (fade_alpha >= 1) often keep spawning until explicitly removed.
+-- 4) REMOVED objects can linger in G.MOVEABLES if remove paths race.
 --
 -- Attention-text cover emitters use max=0 + pulse_max on purpose while pulsing;
 -- we only reap when pulsing is done and no particles remain.
@@ -13,11 +15,11 @@ if SKIP == nil then
 end
 if SKIP then return end
 
-local REAP_INTERVAL = 2.0
+local REAP_INTERVAL = 1.5
 local next_reap_at = 0
 
 local function is_particles(obj)
-    return obj and not obj.REMOVED and getmetatable(obj) == Particles
+    return obj and getmetatable(obj) == Particles
 end
 
 local function remove_particles_from(node)
@@ -25,7 +27,7 @@ local function remove_particles_from(node)
 
     local found = {}
     for _, child in pairs(node.children) do
-        if is_particles(child) then
+        if is_particles(child) and not child.REMOVED then
             found[#found + 1] = child
         end
     end
@@ -35,26 +37,72 @@ local function remove_particles_from(node)
     node.children.particles = nil
 end
 
--- Empty emitters that have stopped spawning (max=0) and finished any pulse burst.
+-- Empty emitters that have stopped spawning and finished any pulse/fade burst.
+-- Note: booster sparkles start at fade_alpha=1 and fade *in* to 0 — do not
+-- treat fade_alpha alone as spent.
 local function is_spent_emitter(obj)
-    if not is_particles(obj) then return false end
+    if not is_particles(obj) or obj.REMOVED then return false end
     if obj.max ~= 0 then return false end
     if (obj.pulsed or 0) < (obj.pulse_max or 0) then return false end
     if obj.particles and #obj.particles > 0 then return false end
     return true
 end
 
-local function reap_spent_particle_emitters()
+local function is_orphan_emitter(obj)
+    if not is_particles(obj) or obj.REMOVED then return false end
+    local major = obj.role and obj.role.major
+    if major and major.REMOVED then return true end
+    return false
+end
+
+local function strip_from_list(list, obj)
+    if type(list) ~= 'table' then return end
+    for k, v in pairs(list) do
+        if v == obj then
+            if type(k) == 'number' then
+                table.remove(list, k)
+            else
+                list[k] = nil
+            end
+            return
+        end
+    end
+end
+
+local function reap_moveable_garbage()
     if type(G.MOVEABLES) ~= 'table' then return end
     local doomed = {}
     for _, obj in pairs(G.MOVEABLES) do
-        if is_spent_emitter(obj) then
+        if not obj then
+            -- skip
+        elseif obj.REMOVED then
+            doomed[#doomed + 1] = obj
+        elseif is_spent_emitter(obj) or is_orphan_emitter(obj) then
             doomed[#doomed + 1] = obj
         end
     end
     for i = 1, #doomed do
-        pcall(function() doomed[i]:remove() end)
+        local obj = doomed[i]
+        if obj.REMOVED then
+            -- Already torn down; only drop list membership.
+            strip_from_list(G.MOVEABLES, obj)
+            strip_from_list(G.I and G.I.MOVEABLE, obj)
+            strip_from_list(G.I and G.I.SPRITE, obj)
+            strip_from_list(G.I and G.I.CARD, obj)
+        else
+            pcall(function() obj:remove() end)
+        end
     end
+end
+
+-- Fading out should stop spawning; otherwise emitters attached to ROOM/cards
+-- keep allocating particle tables until something finally :remove()'s them.
+local original_particles_fade = Particles.fade
+function Particles:fade(delay, to)
+    if (to or 1) >= 1 then
+        self.max = 0
+    end
+    return original_particles_fade(self, delay, to)
 end
 
 local original_set_blind = Blind.set_blind
@@ -90,7 +138,7 @@ function Game:update(dt, ...)
     local now = (G.TIMERS and G.TIMERS.REAL) or 0
     if now >= next_reap_at then
         next_reap_at = now + REAP_INTERVAL
-        pcall(reap_spent_particle_emitters)
+        pcall(reap_moveable_garbage)
     end
     return result
 end
