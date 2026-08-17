@@ -54,6 +54,12 @@ if SIM:
     DATA = os.path.join(_base, "sim_usage.json")
     HIST = os.path.join(_base, "sim_hist.jsonl")
 
+# Extractions survive relaunch: a tiny ledger beside the history file (or
+# wherever RUNNER_SAVE points), keyed by window start. The drill never
+# touches it - synthetic runs must not leave real records.
+SAVE = os.environ.get("RUNNER_SAVE") or os.path.join(
+    os.path.dirname(HIST), "extracts.json")
+
 DEBUG = bool(os.environ.get("RUNNER_DEBUG"))
 
 # PROTOCOL DRILL: an on-device demo that swaps the data source for a synthetic
@@ -868,21 +874,52 @@ def score_window(win):
 def auto_bank(r):
     """What a window banks with no player in the loop.
 
-    Closed windows predate this session - with no save file there is no record
-    of an extraction - so they resolve as though extracted at whatever band
-    they ended in. That puts historical ranks on the same scale as the live
-    one instead of ranking raw salvage against banked salvage."""
+    Closed windows without a recorded extraction resolve as though extracted
+    at whatever band they ended in. That puts historical ranks on the same
+    scale as the live one instead of ranking raw salvage against banked
+    salvage."""
     return r["salvage"] * EXTRACT_BONUS.get(band_of(r["end"])[0], 1.0)
 
 
-def resolve_runs(wins):
+def read_save():
+    """{window_t0: {"banked", "at", "band", "rank"}} - the extraction ledger."""
+    try:
+        with open(SAVE) as f:
+            raw = json.load(f)
+        return {int(k): v for k, v in raw.items()
+                if isinstance(v, dict) and "banked" in v}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {}
+
+
+def write_save(saves):
+    """Newest 64 windows, written whole then swapped in - a half-written
+    ledger must never eat an extraction."""
+    keep = {str(k): saves[k] for k in sorted(saves)[-64:]}
+    tmp = SAVE + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(keep, f)
+        os.replace(tmp, SAVE)
+    except OSError:
+        pass
+
+
+def resolve_runs(wins, saves=None):
     """Score every closed window. Callers pass only closed ones - the live
-    window is still being played."""
+    window is still being played. A window the player actually extracted
+    keeps that extraction's pay and rank; blackout after banking cannot
+    claw back what was banked."""
     out = []
     for w in wins:
         r = score_window(w)
-        r["banked"] = auto_bank(r)
-        r["rank"] = rank_of(r["banked"], r["blackout"])
+        rec = (saves or {}).get(r["t0"])
+        if rec:
+            r["banked"] = float(rec["banked"])
+            r["rank"] = rec.get("rank") or rank_of(r["banked"], r["blackout"])
+        else:
+            r["banked"] = auto_bank(r)
+            r["rank"] = rank_of(r["banked"], r["blackout"])
         out.append(r)
     return out
 
@@ -972,8 +1009,8 @@ def contracts_of(runs, live, pts, sd, sd_reset_at, now):
 class Run:
     """The live window, plus the one thing the player actually does.
 
-    EXTRACT is in-memory only: with no save file it cannot outlive the session.
-    That is a known, deliberate limit of the session-only design, not a bug."""
+    EXTRACT persists: the ledger in SAVE restores it on relaunch, so quitting
+    mid-window no longer voids the bank."""
 
     def __init__(self):
         self.banked = 0.0
@@ -988,6 +1025,13 @@ class Run:
             self.banked = 0.0
             self.banked_at = None
             self.extracted = False
+
+    def restore(self, rec):
+        """Rehydrate a saved extraction for the still-open window."""
+        self.banked = float(rec["banked"])
+        self.banked_at = (rec.get("at", 0), rec.get("band", "NOMINAL"),
+                          rec.get("rank", "C"))
+        self.extracted = True
 
     def extract(self, live, load, now):
         if self.extracted:
@@ -1118,6 +1162,7 @@ class App:
         self.demo = DEMO_START
         self.demo_t0 = time.time()
         self.demo_pts = None
+        self.saves = read_save()
 
     # -- data ---------------------------------------------------------------
     def poll(self, t, force=False):
@@ -1166,15 +1211,19 @@ class App:
     def rebuild(self, t):
         self.pts = self.demo_feed(t) if self.demo else read_hist()
         wins = segment(self.pts)
+        saves = None if self.demo else self.saves
         if wins:
             self.live_win = wins[-1]
-            self.runs = resolve_runs(wins[:-1])
+            self.runs = resolve_runs(wins[:-1], saves)
             self.live = score_window(self.live_win)
         else:
             self.live_win = []
             self.runs = []
             self.live = score_window([])
         self.run.sync(self.live["t0"] if self.live_win else None)
+        if (saves and self.live_win and not self.run.extracted
+                and self.live["t0"] in saves):
+            self.run.restore(saves[self.live["t0"]])
         self.rebuild_log()
 
     def rebuild_log(self):
@@ -2150,6 +2199,11 @@ def do_extract(app, t):
         app.say("BLACKOUT - THE PACK IS GONE")
         return
     rank = app.run.extract(app.live, load, t)
+    if not app.demo and app.run.window_t0 is not None:
+        app.saves[app.run.window_t0] = {
+            "banked": app.run.banked, "at": int(t),
+            "band": app.run.banked_at[1], "rank": rank}
+        write_save(app.saves)
     app.stamp_rank = rank
     app.stamp_until = t + 1.4
     app.wipe_until = t + 0.12
