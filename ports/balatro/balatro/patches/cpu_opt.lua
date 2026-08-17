@@ -199,10 +199,14 @@ end
 
 local GC_MIN_STEP_KB = 16
 local GC_MAX_STEP_KB = 1024
-local GC_SOFT_CEILING_KB = 128*1024
-local GC_HARD_CEILING_KB = 224*1024
+local GC_SOFT_CEILING_KB = 48*1024
+local GC_HARD_CEILING_KB = 96*1024
 
+-- Stock nuGC stops the collector every frame. Unreleased Love Text objects
+-- then sit until a rare full collect, and FPS sags with a flat mv count.
+-- Keep incremental GC running and full-collect sooner.
 function nuGC(_, memory_ceiling, disable_otherwise)
+    collectgarbage('restart')
     local heap = collectgarbage('count')
 
     local allocated = heap - gc_previous_heap
@@ -214,7 +218,6 @@ function nuGC(_, memory_ceiling, disable_otherwise)
     if heap > (memory_ceiling and memory_ceiling*1024 or GC_HARD_CEILING_KB) then
         collectgarbage('collect')
     end
-    if disable_otherwise then collectgarbage('stop') end
 
     gc_previous_heap = collectgarbage('count')
 end

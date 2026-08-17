@@ -69,6 +69,37 @@ local function strip_from_list(list, obj)
     end
 end
 
+local PARTICLE_CAP = 48
+
+local function trim_emitter_particles(obj)
+    if not is_particles(obj) or obj.REMOVED then return end
+    local particles = obj.particles
+    if type(particles) ~= 'table' then return end
+    local extra = #particles - PARTICLE_CAP
+    if extra <= 0 then return end
+    for i = 1, PARTICLE_CAP do
+        particles[i] = particles[i + extra]
+    end
+    for i = PARTICLE_CAP + 1, #particles do
+        particles[i] = nil
+    end
+end
+
+local function compact_removed(list)
+    if type(list) ~= 'table' then return end
+    for i = #list, 1, -1 do
+        local obj = list[i]
+        if not obj or obj.REMOVED then
+            table.remove(list, i)
+        end
+    end
+    for k, obj in pairs(list) do
+        if type(k) ~= 'number' and (not obj or obj.REMOVED) then
+            list[k] = nil
+        end
+    end
+end
+
 local function reap_moveable_garbage()
     if type(G.MOVEABLES) ~= 'table' then return end
     local doomed = {}
@@ -79,6 +110,8 @@ local function reap_moveable_garbage()
             doomed[#doomed + 1] = obj
         elseif is_spent_emitter(obj) or is_orphan_emitter(obj) then
             doomed[#doomed + 1] = obj
+        else
+            trim_emitter_particles(obj)
         end
     end
     for i = 1, #doomed do
@@ -92,6 +125,16 @@ local function reap_moveable_garbage()
         else
             pcall(function() obj:remove() end)
         end
+    end
+    if G.I then
+        compact_removed(G.I.MOVEABLE)
+        compact_removed(G.I.SPRITE)
+        compact_removed(G.I.CARD)
+        compact_removed(G.I.UIBOX)
+        compact_removed(G.I.NODE)
+    end
+    if G.STAGE_OBJECTS and G.STAGE then
+        compact_removed(G.STAGE_OBJECTS[G.STAGE])
     end
 end
 

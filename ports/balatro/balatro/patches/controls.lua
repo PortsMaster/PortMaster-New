@@ -70,10 +70,16 @@ function Game:draw(...)
                 end
             end
         end
+        local events = 0
+        if G.E_MANAGER and G.E_MANAGER.queues then
+            for _, q in pairs(G.E_MANAGER.queues) do
+                events = events + #q
+            end
+        end
         local heap_mb = collectgarbage('count') / 1024
         fps_hud.line = string.format(
-            '%.0f FPS  mv %d  c %d  pt %d/%d  %.0fMB',
-            fps_hud.fps, moveables, cards, particles, dots, heap_mb)
+            '%.0f FPS  mv %d  ev %d  pt %d/%d  %.0fMB',
+            fps_hud.fps, moveables, events, particles, dots, heap_mb)
     end
     if fps_hud.line == '' then return result end
 
