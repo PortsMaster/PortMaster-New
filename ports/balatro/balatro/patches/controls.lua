@@ -56,7 +56,21 @@ function Game:draw(...)
     if fps_hud.elapsed >= 0.25 then
         fps_hud.fps = fps_hud.frames / fps_hud.elapsed
         fps_hud.frames, fps_hud.elapsed = 0, 0
-        fps_hud.line = string.format('%.0f FPS', fps_hud.fps)
+        local moveables = (G.MOVEABLES and #G.MOVEABLES) or 0
+        -- pairs-based MOVEABLES can be sparse; count manually if needed
+        if moveables == 0 and G.MOVEABLES then
+            for _ in pairs(G.MOVEABLES) do moveables = moveables + 1 end
+        end
+        local particles = 0
+        if G.MOVEABLES then
+            for _, obj in pairs(G.MOVEABLES) do
+                if obj and getmetatable(obj) == Particles then
+                    particles = particles + 1
+                end
+            end
+        end
+        fps_hud.line = string.format('%.0f FPS  mv %d  pt %d',
+            fps_hud.fps, moveables, particles)
     end
     if fps_hud.line == '' then return result end
 
