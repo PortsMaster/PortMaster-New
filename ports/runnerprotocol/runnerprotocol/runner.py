@@ -2048,8 +2048,13 @@ def kill_siblings():
             continue
         try:
             with open("/proc/%s/cmdline" % pid, "rb") as f:
-                if my_path in f.read():
-                    os.kill(int(pid), 9)
+                cmd = f.read()
+            # only ever kill an actual python interpreter running this file -
+            # a sudo/env/timeout PARENT also carries the path in its cmdline,
+            # and killing it makes launch wrappers think the game died
+            exe = os.path.basename(cmd.split(b"\0", 1)[0])
+            if my_path in cmd and exe.startswith(b"python"):
+                os.kill(int(pid), 9)
         except (OSError, ValueError, ProcessLookupError):
             pass
 

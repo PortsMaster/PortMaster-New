@@ -39,9 +39,12 @@ $ESUDO chmod 666 /dev/uinput 2>/dev/null
 $GPTOKEYB "python3" -c "$GAMEDIR/runnerprotocol.gptk" &
 
 # the receiver listens on :8788 for the OPTIONAL PC companion pusher; it
-# exits cleanly on its own if something else already owns the port
-$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/receiver.py" > /dev/null 2>&1 &
+# exits cleanly on its own if something else already owns the port.
+# NOTE: relative paths on purpose (we already cd'd into GAMEDIR) - the game's
+# stale-instance cleanup matches its absolute path in /proc cmdlines, and an
+# absolute path here would make the sudo/env parents match too.
+$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 receiver.py > /dev/null 2>&1 &
 
-$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 "$GAMEDIR/runner.py"
+$ESUDO env RUNNER_HIST="$RUNNER_HIST" python3 runner.py
 
 pm_finish
