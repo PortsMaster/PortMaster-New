@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: amphetamine.zip, Amphetamine.sh
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
