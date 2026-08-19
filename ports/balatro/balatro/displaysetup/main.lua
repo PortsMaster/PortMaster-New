@@ -36,6 +36,25 @@ local PAGES = {
         },
     },
     {
+        key = 'font',
+        title = 'Game font',
+        default = 'nunito',
+        options = {
+            {
+                value = 'nunito',
+                label = 'Nunito',
+                description = 'The clearer handheld font. Default with the small ' ..
+                    'screen layout; also works with the original layout.',
+            },
+            {
+                value = 'original',
+                label = 'Original Balatro',
+                description = 'Keep m6x11, the pixel font the game ships with. ' ..
+                    'Default with the original layout; also works with small screen.',
+            },
+        },
+    },
+    {
         key = 'performance',
         title = 'Performance improvements',
         default = 'on',
@@ -53,6 +72,31 @@ local PAGES = {
                 description = 'Every effect on and the background animating, ' ..
                     'exactly as on a desktop. On a weaker device the frame rate ' ..
                     'will show it.',
+            },
+        },
+    },
+    {
+        key = 'fps',
+        title = 'Frame rate',
+        default = '60',
+        options = {
+            {
+                value = '60',
+                label = '60 FPS',
+                description = 'Smooth default. Uses a little more power and heat ' ..
+                    'on weaker handhelds.',
+            },
+            {
+                value = '40',
+                label = '40 FPS',
+                description = 'A middle ground: still comfortable to play, with ' ..
+                    'less load than 60.',
+            },
+            {
+                value = '30',
+                label = '30 FPS',
+                description = 'Lightest option for battery and heat. Best on ' ..
+                    'weaker devices or when docked to a heavy HDMI output.',
             },
         },
     },
@@ -168,6 +212,27 @@ local function build_fonts()
     fonts = {option = font_at(h*0.058), body = font_at(h*0.042)}
 end
 
+local function option_index(page, value)
+    for index, option in ipairs(page.options) do
+        if option.value == value then return index end
+    end
+    return 1
+end
+
+local function default_font_for_layout(layout)
+    if layout == 'original' then return 'original' end
+    return 'nunito'
+end
+
+local function set_font_for_layout(layout)
+    local font_page
+    for _, page in ipairs(PAGES) do
+        if page.key == 'font' then font_page = page break end
+    end
+    if not font_page then return end
+    chosen.font = option_index(font_page, default_font_for_layout(layout))
+end
+
 function love.load()
     if FONT_PATH then
         local file = io.open(FONT_PATH, 'rb')
@@ -181,13 +246,12 @@ function love.load()
     build_fonts()
 
     local saved = read_existing()
+    local layout_value = saved.layout or 'small'
+    local font_fallback = default_font_for_layout(layout_value)
     for _, page in ipairs(PAGES) do
-        chosen[page.key] = 1
-        for index, option in ipairs(page.options) do
-            if option.value == (saved[page.key] or page.default) then
-                chosen[page.key] = index
-            end
-        end
+        local fallback = page.default
+        if page.key == 'font' then fallback = font_fallback end
+        chosen[page.key] = option_index(page, saved[page.key] or fallback)
         previous[page.key] = page.options[chosen[page.key]].value
     end
 end
@@ -224,6 +288,9 @@ local function move(delta)
     if index < 1 then index = 1 end
     if index > #page.options then index = #page.options end
     chosen[page.key] = index
+    if page.key == 'layout' then
+        set_font_for_layout(page.options[index].value)
+    end
     cooldown = INPUT_COOLDOWN
 end
 

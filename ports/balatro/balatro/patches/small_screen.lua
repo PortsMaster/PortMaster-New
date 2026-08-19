@@ -123,10 +123,27 @@ end
 
 retune_fonts()
 
+local function owned_joker_dims(card)
+    local w = G.CARD_W*OWNED_JOKER_SCALE
+    local h = G.CARD_H*OWNED_JOKER_SCALE
+    local name = card.config and card.config.center and card.config.center.name
+    -- Stock Card:set_ability / Card:load shrink these; do not force full CARD_H.
+    if name == 'Half Joker' then
+        h = h/1.7
+    elseif name == 'Photograph' then
+        h = h/1.2
+    elseif name == 'Square Joker' then
+        h = w
+    elseif name == 'Wee Joker' then
+        w = w*0.7
+        h = h*0.7
+    end
+    return w, h
+end
+
 local function resize_owned_joker(card)
     if not card then return end
-    local target_w = G.CARD_W*OWNED_JOKER_SCALE
-    local target_h = G.CARD_H*OWNED_JOKER_SCALE
+    local target_w, target_h = owned_joker_dims(card)
     if math.abs(card.T.w-target_w) > 0.001 or
        math.abs(card.T.h-target_h) > 0.001 then
         card:hard_set_T(nil, nil, target_w, target_h)

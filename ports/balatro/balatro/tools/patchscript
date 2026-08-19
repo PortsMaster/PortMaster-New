@@ -8,14 +8,29 @@ cleanup_patch_work() {
   rm -f "$WORKFILE"
   rm -f "$PATCHDIR/globals.lua" "$PATCHDIR/main.lua" "$PATCHDIR/game.lua"
   rm -f "$PATCHDIR/cardarea.lua" "$PATCHDIR/engine/text.lua"
+  rm -f "$PATCHDIR/localization/es_419.lua"
   rm -f "$PATCHDIR/portmaster/small_screen.lua"
   rm -f "$PATCHDIR/portmaster/options.lua" "$PATCHDIR/portmaster/perf.lua"
-  rm -f "$PATCHDIR/portmaster/controls.lua"
+  rm -f "$PATCHDIR/portmaster/controls.lua" "$PATCHDIR/portmaster/particle_cleanup.lua"
+  rm -f "$PATCHDIR/portmaster/cpu_opt.lua" "$PATCHDIR/portmaster/rumble.lua"
+  rm -f "$PATCHDIR/portmaster/achievements.lua"
+  rm -f "$PATCHDIR/portmaster/loc_fix.lua"
+  rm -f "$PATCHDIR/portmaster/text_cleanup.lua"
   rm -f "$PATCHDIR/resources/fonts/m6x11plus.ttf"
   rm -f "$PATCHDIR/resources/shaders/CRT.fs"
   rm -f "$PATCHDIR/resources/shaders/background.fs"
-  rmdir "$PATCHDIR/engine" "$PATCHDIR/portmaster" "$PATCHDIR/resources/fonts" \
-    "$PATCHDIR/resources/shaders" "$PATCHDIR/resources" "$PATCHDIR" 2>/dev/null
+  rmdir "$PATCHDIR/engine" "$PATCHDIR/portmaster" "$PATCHDIR/localization" \
+    "$PATCHDIR/resources/fonts" "$PATCHDIR/resources/shaders" "$PATCHDIR/resources" \
+    "$PATCHDIR" 2>/dev/null
+}
+
+expect_occurrences() {
+  local expected="$1" file="$2" needle="$3" actual
+  actual=$(grep -F -o "$needle" "$file" | wc -l)
+  if [ "$actual" -ne "$expected" ]; then
+    echo "Patch mismatch in $file: expected $expected occurrences of $needle, found $actual."
+    return 1
+  fi
 }
 
 build_patched_game() {
@@ -33,7 +48,7 @@ build_patched_game() {
     "$SEVENZIP" u -aoa "$WORKFILE" globals.lua >/dev/null || return 1
   fi
 
-  MODULES="portmaster/options.lua portmaster/controls.lua portmaster/perf.lua"
+  MODULES="portmaster/options.lua portmaster/controls.lua portmaster/perf.lua portmaster/particle_cleanup.lua portmaster/cpu_opt.lua portmaster/rumble.lua portmaster/achievements.lua portmaster/loc_fix.lua portmaster/text_cleanup.lua"
   [ "$LAYOUT" = "small" ] && MODULES="$MODULES portmaster/small_screen.lua"
 
   SOURCES="main.lua"
@@ -48,20 +63,27 @@ build_patched_game() {
     cp "$GAMEDIR/patches/${module#portmaster/}" "$module" || return 1
   done
   for module in portmaster/perf portmaster/small_screen portmaster/controls \
-                portmaster/options; do
+                portmaster/options portmaster/particle_cleanup portmaster/cpu_opt \
+                portmaster/rumble portmaster/achievements portmaster/loc_fix \
+                portmaster/text_cleanup; do
     case " $MODULES " in *" $module.lua "*) ;; *) continue ;; esac
     grep -q "$module" main.lua && continue
     sed -i "/require \"challenges\"/a require \"$module\"" main.lua || return 1
   done
 
-  expect_occurrences() {
-    local expected="$1" file="$2" needle="$3" actual
-    actual=$(grep -F -o "$needle" "$file" | wc -l)
-    if [ "$actual" -ne "$expected" ]; then
-      echo "Patch mismatch in $file: expected $expected occurrences of $needle, found $actual."
-      return 1
-    fi
-  }
+  # Stock es_419 copies Russian "множ." into a_mult; replace with Español (España).
+  echo "Fixing Español (México) joker score mult string..."
+  mkdir -p localization || return 1
+  "$SEVENZIP" x -aoa "$WORKFILE" localization/es_419.lua >/dev/null || return 1
+  awk '
+    /^[[:space:]]*a_mult="/ {
+      print "            a_mult=\"+#1# Multi.\","
+      next
+    }
+    { print }
+  ' localization/es_419.lua > localization/es_419.lua.tmp || return 1
+  mv localization/es_419.lua.tmp localization/es_419.lua || return 1
+  grep -F 'a_mult="+#1# Multi."' localization/es_419.lua >/dev/null || return 1
 
   if [ "$PERF_OPTIMIZATIONS" -eq 1 ]; then
     echo "Applying the performance patches..."
@@ -96,7 +118,7 @@ build_patched_game() {
     expect_occurrences 1 engine/text.lua 'if self.config.bump then letter.offset.y = (G.SETTINGS.reduced_motion and 0 or self.bump_amount' || return 1
   fi
 
-  "$SEVENZIP" u -aoa "$WORKFILE" $SOURCES $MODULES >/dev/null || return 1
+  "$SEVENZIP" u -aoa "$WORKFILE" $SOURCES $MODULES localization/es_419.lua >/dev/null || return 1
 
   if [ "$PERF_OPTIMIZATIONS" -eq 1 ]; then
     echo "Optimizing the shaders..."
@@ -115,11 +137,13 @@ build_patched_game() {
       resources/shaders/background.fs >/dev/null || return 1
   fi
 
-  if [ "$LAYOUT" = "small" ]; then
-    echo "Installing the handheld font..."
+  if [ "${FONT:-nunito}" != "original" ]; then
+    echo "Installing the Nunito font..."
     mkdir -p resources/fonts || return 1
     cp "$GAMEDIR/resources/fonts/Nunito-Black.ttf" resources/fonts/m6x11plus.ttf || return 1
     "$SEVENZIP" u -aoa "$WORKFILE" resources/fonts/m6x11plus.ttf >/dev/null || return 1
+  else
+    echo "Keeping the original Balatro font..."
   fi
 
   echo "Verifying the patched game archive..."
@@ -127,6 +151,8 @@ build_patched_game() {
   for module in $MODULES; do
     "$SEVENZIP" l "$WORKFILE" | grep -q "$module" || return 1
   done
+  "$SEVENZIP" x -so "$WORKFILE" localization/es_419.lua 2>/dev/null \
+    | grep -F 'a_mult="+#1# Multi."' >/dev/null || return 1
 
   cd "$GAMEDIR" || return 1
   echo "Installing the patched game..."
@@ -145,7 +171,12 @@ patch_failed() {
 echo "Checking the patch files..."
 for required in "$GAMEDIR" "$GAMEDIR/$GAMEFILE" "$SEVENZIP" \
                 "$GAMEDIR/patches/options.lua" "$GAMEDIR/patches/controls.lua" \
-                "$GAMEDIR/patches/perf.lua" "$GAMEDIR/resources/fonts/Nunito-Black.ttf"; do
+                "$GAMEDIR/patches/perf.lua" "$GAMEDIR/patches/particle_cleanup.lua" \
+                "$GAMEDIR/patches/cpu_opt.lua" "$GAMEDIR/patches/rumble.lua" \
+                "$GAMEDIR/patches/achievements.lua" \
+                "$GAMEDIR/patches/loc_fix.lua" \
+                "$GAMEDIR/patches/text_cleanup.lua" \
+                "$GAMEDIR/resources/fonts/Nunito-Black.ttf"; do
   [ -e "$required" ] || patch_failed
 done
 if [ "$LAYOUT" = "small" ]; then
@@ -154,7 +185,7 @@ fi
 
 cleanup_patch_work
 if build_patched_game; then
-  echo "layout=$LAYOUT performance=$PERFORMANCE" > "$BUILD_STAMP"
+  echo "layout=$LAYOUT performance=$PERFORMANCE font=${FONT:-nunito}" > "$BUILD_STAMP"
   cleanup_patch_work
   echo "Handheld build ready."
   exit 0

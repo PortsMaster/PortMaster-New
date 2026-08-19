@@ -62,6 +62,24 @@ read_setting() {
 PERF_HUD=0
 export BALATRO_PM_PERF_HUD="$PERF_HUD"
 
+# Particle leak cleanup is always applied in the patched build. Set to 1 to
+# keep stock Blind:defeat particle behaviour (orphaned emitters stay alive).
+# export BALATRO_PM_SKIP_PARTICLE_CLEANUP=1
+
+# CPU opts that do not change desktop visuals (idle deck/discard updates,
+# pile align cache, aggressive GC, FPS cap). Set to 1 for stock behaviour.
+# export BALATRO_PM_SKIP_CPU_OPT=1
+# Frame rate is chosen in display setup / Settings → Video (60, 40, or 30).
+# export BALATRO_PM_FPS_CAP=60
+
+# Controller rumble (Settings → Game → Controller Vibration). Needs a pad/CFW
+# that exposes SDL vibration. Set to 1 to leave rumble disabled like stock Linux.
+# export BALATRO_PM_SKIP_RUMBLE=1
+# Optional intensity (Switch uses 0.7): export BALATRO_PM_RUMBLE=0.7
+
+# In-game achievements menu (Options / Stats). Set to 1 to hide it.
+# export BALATRO_PM_SKIP_ACHIEVEMENTS_MENU=1
+
 FORCE_BUTTON_SETUP=0
 BUTTON_MAP_FILE="$GAMEDIR/saves/controller-map.txt"
 export BALATRO_PM_BUTTON_MAP_FILE="$BUTTON_MAP_FILE"
@@ -72,7 +90,7 @@ BUILD_STAMP="$GAMEDIR/.balatro-build.txt"
 PATCHSCRIPT="$GAMEDIR/tools/patchscript"
 
 build_signature() {
-  echo "layout=$LAYOUT performance=$PERFORMANCE"
+  echo "layout=$LAYOUT performance=$PERFORMANCE font=$FONT"
 }
 
 needs_build() {
@@ -83,6 +101,12 @@ needs_build() {
   for source in "$LAUNCHER" "$PATCHSCRIPT" "$GAMEDIR/patches/small_screen.lua" \
                 "$GAMEDIR/patches/options.lua" "$GAMEDIR/patches/perf.lua" \
                 "$GAMEDIR/patches/controls.lua" \
+                "$GAMEDIR/patches/particle_cleanup.lua" \
+                "$GAMEDIR/patches/cpu_opt.lua" \
+                "$GAMEDIR/patches/rumble.lua" \
+                "$GAMEDIR/patches/achievements.lua" \
+                "$GAMEDIR/patches/loc_fix.lua" \
+                "$GAMEDIR/patches/text_cleanup.lua" \
                 "$GAMEDIR/resources/fonts/Nunito-Black.ttf" "$GAMEDIR/$GAMEFILE"; do
     if [ -f "$source" ] && [ "$source" -nt "$OUTPUT_GAME" ]; then
       return 0
@@ -105,7 +129,7 @@ build_if_needed() {
     return 1
   fi
 
-  export GAMEDIR GAMEFILE OUTPUT_GAME BUILD_STAMP LAYOUT PERFORMANCE
+  export GAMEDIR GAMEFILE OUTPUT_GAME BUILD_STAMP LAYOUT PERFORMANCE FONT
   export PERF_OPTIMIZATIONS DEVICE_ARCH
   export PATCHER_FILE="$PATCHSCRIPT"
   export PATCHER_GAME="$(basename "${0%.*}")"
@@ -156,18 +180,27 @@ if [ "$FORCE_DISPLAY_SETUP" -eq 1 ] || [ ! -f "$SETUP_FILE" ] ||
   if [ -f "$SETUP_FILE" ]; then
     sed -i '/^[[:space:]]*ask[[:space:]]*=[[:space:]]*1[[:space:]]*$/d' "$SETUP_FILE"
   fi
-  echo "Asking about the layout and performance..."
+  echo "Asking about the layout, font, performance and frame rate..."
   BALATRO_PM_SETUP_FONT="$GAMEDIR/resources/fonts/Nunito-Black.ttf" \
     $LOVE_RUN "$GAMEDIR/displaysetup"
 fi
 
 LAYOUT=$(read_setting layout small)
 PERFORMANCE=$(read_setting performance on)
+FPS_CAP=$(read_setting fps 60)
 [ "$LAYOUT" = "original" ] || LAYOUT="small"
+if [ "$LAYOUT" = "original" ]; then
+  FONT=$(read_setting font original)
+else
+  FONT=$(read_setting font nunito)
+fi
+[ "$FONT" = "original" ] || FONT="nunito"
 [ "$PERFORMANCE" = "off" ] || PERFORMANCE="on"
+case "$FPS_CAP" in 30|40|60) ;; *) FPS_CAP=60 ;; esac
 
 if [ "$PERFORMANCE" = "off" ]; then PERF_OPTIMIZATIONS=0; else PERF_OPTIMIZATIONS=1; fi
 export BALATRO_PM_PERF_OPTIMIZATIONS="$PERF_OPTIMIZATIONS"
+export BALATRO_PM_FPS_CAP="$FPS_CAP"
 
 build_if_needed
 

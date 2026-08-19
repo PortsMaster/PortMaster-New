@@ -15,7 +15,7 @@ If you want the full experience with all DLCs, purchase the game from GOG.
 
 ## Installation
 ### Gog Instructions
-Place the **LINUX** version installer (eg: `dead_cells_1_26_0_75679.sh`) in the port's `gamedata` folder.
+Place the **LINUX** version installer (eg: `dead_cells_1_25_3_91669.sh`) in the port's `gamedata` folder.
 If you have installed the **linux** version already, you can copy the `res.pak`
 and `hlboot.dat` files from the installations `game` folder into the port's `gamedata` folder.
 ### GOG DLC
