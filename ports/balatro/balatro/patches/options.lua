@@ -45,18 +45,18 @@ local BUTTON = 'pm_port_setup'
 local LABEL = 'Initialize Port Settings'
 local PENDING_LABEL = 'Port Settings: On Restart'
 local EXPLANATION = IS_ANDROID and {
-    'Sets the screen layout and performance',
+    'Sets layout, font, performance and frame rate',
     'again on the next launch.',
 } or {
-    'Sets the screen layout, performance and',
+    'Sets layout, font, performance, frame rate and',
     'your buttons again on the next launch.',
 }
 local PENDING_EXPLANATION = IS_ANDROID and {
-    'Restart the app to set the layout and',
-    'performance again.',
+    'Restart the app to set layout, font,',
+    'performance and frame rate again.',
 } or {
-    'Restart the port to set the layout,',
-    'performance and buttons again.',
+    'Restart the port to set layout, font,',
+    'performance, frame rate and buttons again.',
 }
 
 local function is_active()
@@ -132,6 +132,15 @@ local function shaped_like(sibling, node)
         nodes = {node}}
 end
 
+-- Stock options contents uses `or nil` slots; #/ipairs stop at the first hole.
+local function append_content(contents, node)
+    local max = 0
+    for i in pairs(contents) do
+        if type(i) == 'number' and i > max then max = i end
+    end
+    contents[max + 1] = node
+end
+
 local function append_to_button_list(definition)
     local best = find_button_list(definition, nil)
     if not best then return end
@@ -139,10 +148,17 @@ local function append_to_button_list(definition)
     for _, child in pairs(best.list) do
         if node_holds_button(child) then sibling = child end
     end
-    local ok, node = pcall(entry_node)
-    if ok and node then
-        best.list[#best.list+1] = shaped_like(sibling, node)
+    local function push(node)
+        if not node then return end
+        append_content(best.list, shaped_like(sibling, node))
     end
+    local hook = G.BALATRO_PM_options_before_port_setup
+    if type(hook) == 'function' then
+        local ok, ach = pcall(hook)
+        if ok then push(ach) end
+    end
+    local ok, node = pcall(entry_node)
+    if ok then push(node) end
 end
 
 local building_options, added_to_contents = false, false
@@ -152,9 +168,14 @@ if type(create_UIBox_generic_options) == 'function' then
     function create_UIBox_generic_options(args, ...)
         if building_options and type(args) == 'table' and
            type(args.contents) == 'table' then
+            local hook = G.BALATRO_PM_options_before_port_setup
+            if type(hook) == 'function' then
+                local ok, ach = pcall(hook)
+                if ok and ach then append_content(args.contents, ach) end
+            end
             local ok, node = pcall(entry_node)
             if ok and node then
-                args.contents[#args.contents+1] = node
+                append_content(args.contents, node)
                 added_to_contents = true
             end
         end
