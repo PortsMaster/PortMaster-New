@@ -3,9 +3,9 @@
 _G.timer = require("timer")
 
 local sem_ver = {
-    major = 5,
+    major = 6,
     minor = 0,
-    patch = 3,
+    patch = 0,
     extra = ""
 }
 
@@ -54,6 +54,7 @@ _G.screen_transitions = true
 _G.undo_mode = "classic"
 _G.time_attack_time = 60
 _G.vibration = true
+_G.merge_fx = "default"
 
 -- Achievements and Unlockables
 _G.achievements = {
@@ -97,9 +98,32 @@ _G.achievements = {
     ach_hardcore_2048 = false,   -- Hardcore Gamer -> unlocks 'spectrum'
     ach_tactician = false,       -- Tactician -> unlocks 'steel'
 
+    -- Store & Jukebox
+    ach_melody_maker = false,    -- Melody Maker -> unlocks 'lofi'
+    ach_big_spender = false,     -- Big Spender -> unlocks 'platinum'
+    ach_first_shield = false,    -- Second Chance -> unlocks 'guardian'
+
+    -- Companions & Economy
+    ach_coin_hoarder = false,     -- Coin Hoarder -> unlocks 'pastel'
+    ach_best_friend = false,      -- Best Friend -> unlocks 'pawprint'
+    ach_purrfect_run = false,     -- Purrfect Run -> unlocks 'neko_night'
+
     -- Hidden tracking stats
     bombs_used = 0,
     powerups_used_this_run = 0
 }
 
 _G.unlocked_themes = {"light", "dark"}
+
+_G.DOG_BREEDS = {
+    { id = "roxy",  name = "Roxy",  breed = "Pomeranian" },
+    { id = "milo",  name = "Milo",  breed = "Corgi" },
+    { id = "bruno", name = "Bruno", breed = "French Bulldog" },
+    { id = "coco",  name = "Coco",  breed = "Poodle" },
+}
+_G.active_dog_breed = "roxy"
+
+-- Store Filter & Sort Mode (0: Default, 1: Unpurchased First, 2: Repeatable, 3: Permanent, 4: Price Low-High, 5: Price High-Low)
+_G.store_sort_mode = 0
+
+

@@ -37,10 +37,14 @@ function Grid:getAvailableCells()
     return available
 end
 
-function Grid:randomAvailableCell()
+function Grid:randomAvailableCell(rng)
     local cells = self:getAvailableCells()
     if #cells > 0 then
-        return cells[love.math.random(#cells)]
+        if rng and rng.random then
+            return cells[rng:random(#cells)]
+        else
+            return cells[love.math.random(#cells)]
+        end
     end
     return nil
 end

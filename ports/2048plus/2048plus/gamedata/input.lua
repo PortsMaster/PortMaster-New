@@ -20,20 +20,23 @@ local event_queue = {}
 
 local is_web = love.system.getOS() == "Web"
 
+local is_pc = love.system.getOS() == "Windows" or love.system.getOS() == "Linux" or love.system.getOS() == "OS X"
+local use_fallback = is_web or is_pc
+
 input.events = {
     LEFT   = "left",
     RIGHT  = "right",
     UP     = "up",
     DOWN   = "down",
-    CONFIRM = "return",               -- A button
-    BACK   = is_web and "escape" or "backspace", -- B button
-    SELECT = is_web and "tab" or "rshift",    -- Select button
-    START  = is_web and "return" or "space",  -- Start button
+    CONFIRM = "return",               -- A button (Enter key)
+    BACK   = "backspace",             -- B button
+    SELECT = use_fallback and "tab" or "rshift",    -- Select button
+    START  = use_fallback and "p" or "space",  -- Start button (P key or Space)
     MENU   = "escape",                -- Physical Menu/Function button
     X      = is_web and "space" or "x", -- X button
     Y      = is_web and "c" or "y",     -- Y button
-    L1     = is_web and "z" or "l1",    -- Left shoulder
-    R1     = is_web and "x" or "r1",    -- Right shoulder
+    L1     = is_web and "z" or (is_pc and "q" or "l1"),    -- Left shoulder
+    R1     = is_web and "x" or (is_pc and "e" or "r1"),    -- Right shoulder
 }
 
 input.state = {}
@@ -114,10 +117,47 @@ local function is_directional(event)
 end
 
 function love.keypressed(key)
+    local triggered = false
     for event_name, k in pairs(input.events) do
-        if key == k or (is_web and key == "backspace" and k == "escape") then
+        if key == k then
             input.state[key] = true
+            input.state[k] = true
             emit(k, false)
+            triggered = true
+        end
+    end
+
+    -- Support Backspace (and 'b') for B / BACK on PC & Web
+    if not triggered and use_fallback then
+        if key == "backspace" or key == "b" then
+            local k = input.events.BACK
+            input.state["backspace"] = true
+            input.state["b"] = true
+            input.state[k] = true
+            emit(k, false)
+            triggered = true
+        end
+    end
+
+    -- Support fallback keys for SELECT on PC & Web (Tab, Shift, V, S)
+    if not triggered and use_fallback then
+        if key == "tab" or key == "rshift" or key == "lshift" or key == "v" or key == "s" then
+            local k = input.events.SELECT
+            input.state[key] = true
+            input.state[k] = true
+            emit(k, false)
+            triggered = true
+        end
+    end
+
+    -- Support fallback keys for START on PC & Web (P, Space)
+    if not triggered and use_fallback then
+        if key == "p" or key == "space" then
+            local k = input.events.START
+            input.state[key] = true
+            input.state[k] = true
+            emit(k, false)
+            triggered = true
         end
     end
 
@@ -133,6 +173,15 @@ function love.keyreleased(key)
     for _, k in pairs(input.events) do
         if key == k then
             input.state[key] = false
+        end
+    end
+
+    if use_fallback then
+        if key == "backspace" or key == "b" then
+            local k = input.events.BACK
+            input.state["backspace"] = false
+            input.state["b"] = false
+            input.state[k] = false
         end
     end
 
@@ -210,6 +259,16 @@ function love.touchreleased(id, x, y, dx, dy, pressure)
         end
     elseif abs_x < tap_threshold and abs_y < tap_threshold then
         -- It's a tap
+        if _G.appState == "STORE" and _G.store_sort_btn_bounds then
+            local b = _G.store_sort_btn_bounds
+            if x >= b.x and x <= (b.x + b.w) and y >= b.y and y <= (b.y + b.h) then
+                if _G.cycleStoreSortMode then
+                    _G.cycleStoreSortMode()
+                    return
+                end
+            end
+        end
+
         local w, h = love.graphics.getDimensions()
         if y < h * 0.2 then
             -- Top 20% of screen

@@ -100,6 +100,128 @@ function save.saveTextSize(size)
     end
 end
 
+local MERGE_FX_FILE = "merge_fx.dat"
+
+function save.saveMergeFX(fx)
+    local path = getFilePath(MERGE_FX_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(fx or "default")
+        file:close()
+    end
+end
+
+function save.loadMergeFX()
+    local path = getFilePath(MERGE_FX_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return "default"
+end
+
+local BOARD_SKIN_FILE = "board_skin.dat"
+
+function save.saveBoardSkin(skin)
+    local path = getFilePath(BOARD_SKIN_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(skin or "default")
+        file:close()
+    end
+end
+
+function save.loadBoardSkin()
+    local path = getFilePath(BOARD_SKIN_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return "default"
+end
+
+local COMPANION_FILE = "companion.dat"
+
+function save.saveCompanion(companion)
+    local path = getFilePath(COMPANION_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(companion or "none")
+        file:close()
+    end
+end
+
+function save.loadCompanion()
+    local path = getFilePath(COMPANION_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return "none"
+end
+
+local DOG_BREED_FILE = "dog_breed.dat"
+
+function save.saveDogBreed(breed)
+    local path = getFilePath(DOG_BREED_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(breed or "roxy")
+        file:close()
+    end
+end
+
+function save.loadDogBreed()
+    local path = getFilePath(DOG_BREED_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return "roxy"
+end
+
+
+local DOG_BREED_FILE = "dog_breed.dat"
+
+function save.saveDogBreed(breed)
+    local path = getFilePath(DOG_BREED_FILE)
+    local file = io.open(path, "w")
+    if file then
+        file:write(breed or "roxy")
+        file:close()
+    end
+end
+
+function save.loadDogBreed()
+    local path = getFilePath(DOG_BREED_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        if content and content ~= "" then
+            return content
+        end
+    end
+    return "roxy"
+end
+
+
 function save.loadTextSize()
     local path = getFilePath(TEXT_SIZE_FILE)
     local file = io.open(path, "r")
@@ -179,6 +301,48 @@ function save.loadCheats()
         return content == "1"
     end
     return false
+end
+
+local CHEAT_OPTIONS_FILE = "cheat_options.dat"
+
+function save.saveCheatOptions(opts)
+    local path = getFilePath(CHEAT_OPTIONS_FILE)
+    local file = io.open(path, "w")
+    if file then
+        local function serialize(o)
+            if type(o) == "number" then return tostring(o)
+            elseif type(o) == "string" then return string.format("%q", o)
+            elseif type(o) == "boolean" then return tostring(o)
+            elseif type(o) == "table" then
+                local s = "{"
+                for k, v in pairs(o) do
+                    local key = type(k) == "string" and string.format("[%q]", k) or "[" .. tostring(k) .. "]"
+                    s = s .. key .. "=" .. serialize(v) .. ","
+                end
+                return s .. "}"
+            end
+            return "nil"
+        end
+        file:write("return " .. serialize(opts or {}))
+        file:close()
+    end
+end
+
+function save.loadCheatOptions()
+    local path = getFilePath(CHEAT_OPTIONS_FILE)
+    local file = io.open(path, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        local chunk = (loadstring or load)(content)
+        if chunk then
+            local success, result = pcall(chunk)
+            if success and type(result) == "table" then
+                return result
+            end
+        end
+    end
+    return {}
 end
 
 function save.loadHighScore(mode)

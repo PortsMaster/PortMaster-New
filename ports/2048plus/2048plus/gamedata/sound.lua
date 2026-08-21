@@ -15,9 +15,10 @@ local bgmEnabled = true
 local bgmPlaylist = {}
 local currentBgmIdx = 0
 local currentBgmSource = nil
-local bgmStartDelay = 1.2
+local bgmStartDelay = 0
 local duckTimer = 0
-
+local bgmStoppedBySystem = false
+local bgmPausedByUser = false
 
 local activeJoystick = nil
 local joystickInitialized = false
@@ -271,16 +272,87 @@ function sound.initPlaylist()
         end
     end
 
-    if #bgmPlaylist > 1 then
-        for i = #bgmPlaylist, 2, -1 do
-            local j = love.math.random(1, i)
-            bgmPlaylist[i], bgmPlaylist[j] = bgmPlaylist[j], bgmPlaylist[i]
-        end
+    -- Sort A-Z by title
+    table.sort(bgmPlaylist, function(a, b)
+        return a.title:lower() < b.title:lower()
+    end)
+
+    -- Default to track 0 so playing begins at track 1 (first A-Z track)
+    currentBgmIdx = 0
+end
+
+function sound.stopBgm()
+    if currentBgmSource then
+        currentBgmSource:stop()
+        currentBgmSource = nil
+    end
+    currentBgmIdx = 0
+    bgmStartDelay = 0
+    bgmStoppedBySystem = false
+    bgmPausedByUser = false
+end
+
+function sound.enterJukebox()
+    sound.stopBgm()
+    _G.jukebox_prev_track = nil
+    _G.jukebox_eq_states = {}
+    _G.jukebox_energies = {}
+    _G.jukebox_peaks = {}
+    _G.jukebox_disc_angle = 0
+    _G.jukebox_viz_level = 0
+    _G.jukebox_viz_stop_time = love.timer.getTime() - 10
+    _G.jukebox_card_change_time = 0
+    _G.jukebox_selection = 1
+    _G.jukebox_scroll_offset = 0
+    _G.jukebox_anim_sel_idx = 1
+    _G.jukebox_target_scroll = 0
+    _G.jukebox_just_opened = true
+end
+
+function sound.exitJukebox()
+    sound.stopBgm()
+    _G.jukebox_prev_track = nil
+    _G.jukebox_eq_states = {}
+    _G.jukebox_energies = {}
+    _G.jukebox_peaks = {}
+    _G.jukebox_disc_angle = 0
+    _G.jukebox_viz_level = 0
+    _G.jukebox_card_change_time = 0
+end
+
+function sound.startFreshGameBgm()
+    if #bgmPlaylist == 0 then return end
+    sound.stopBgm()
+
+    local new_idx = love.math.random(1, #bgmPlaylist)
+    if #bgmPlaylist > 1 and new_idx == currentBgmIdx then
+        new_idx = (new_idx % #bgmPlaylist) + 1
+    end
+    currentBgmIdx = new_idx
+
+    local track = bgmPlaylist[currentBgmIdx]
+
+    local success, source = pcall(love.audio.newSource, track.path, "stream")
+    if success and source then
+        currentBgmSource = source
+        currentBgmSource:setVolume(0.55)
+        bgmStartDelay = 2.0
+        bgmStoppedBySystem = false
+        bgmPausedByUser = false
+    else
+        print("Failed to load music track: " .. tostring(track.path))
     end
 end
 
 function sound.playNextBgm()
     if #bgmPlaylist == 0 then return end
+
+    bgmStoppedBySystem = false
+    bgmPausedByUser = false
+
+    if currentBgmIdx > 0 and currentBgmIdx <= #bgmPlaylist then
+        _G.jukebox_prev_track = bgmPlaylist[currentBgmIdx]
+    end
 
     if currentBgmSource then
         currentBgmSource:stop()
@@ -298,24 +370,51 @@ function sound.playNextBgm()
         currentBgmSource = source
         currentBgmSource:setVolume(0.55)
         currentBgmSource:play()
+        bgmStartDelay = 0
+        _G.jukebox_card_change_time = love.timer.getTime()
+
+        if _G.appState == "JUKEBOX" and _G.stats then
+            _G.stats.played_bgm_ids = _G.stats.played_bgm_ids or {}
+            local key = track.title or track.path or tostring(currentBgmIdx)
+            if not _G.stats.played_bgm_ids[key] then
+                _G.stats.played_bgm_ids[key] = true
+                local count = 0
+                for _ in pairs(_G.stats.played_bgm_ids) do count = count + 1 end
+                if count >= 5 and _G.unlockAchievement then
+                    _G.unlockAchievement("ach_melody_maker")
+                end
+                local save = require("save")
+                if save and save.saveStats then save.saveStats(_G.stats) end
+            end
+        end
     else
         print("Failed to load music track: " .. tostring(track.path))
     end
 end
 
 function sound.update(dt)
-    if not sound.isBgmEnabled() or _G.appState ~= "GAME" then
-        if currentBgmSource and currentBgmSource:isPlaying() then
+    local in_game    = _G.appState == "GAME"
+    local in_jukebox = _G.appState == "JUKEBOX"
+    local allowed    = sound.isBgmEnabled() and (in_game or in_jukebox)
+
+    -- ── Leaving an allowed state (e.g., in menu, settings, store) ───────────
+    if not allowed then
+        if currentBgmSource then
             currentBgmSource:stop()
+            currentBgmSource = nil
+            currentBgmIdx = 0
+            bgmPausedByUser = false
         end
-        bgmStartDelay = 1.2
-        duckTimer = 0
         return
     end
 
+    -- Handle start delay
     if bgmStartDelay > 0 then
-        bgmStartDelay = bgmStartDelay - dt
-        return
+        bgmStartDelay = math.max(0, bgmStartDelay - dt)
+        if bgmStartDelay == 0 and currentBgmSource and not bgmPausedByUser and not bgmStoppedBySystem then
+            currentBgmSource:play()
+            _G.jukebox_card_change_time = love.timer.getTime()
+        end
     end
 
     -- Update ducking timer
@@ -328,10 +427,10 @@ function sound.update(dt)
         local currentVol = currentBgmSource:getVolume()
         local targetVol = 0.55
         if duckTimer > 0 then
-            targetVol = 0.12 -- Ducked BGM volume during SFX chimes
+            targetVol = 0.12
         end
         if math.abs(currentVol - targetVol) > 0.01 then
-            local speed = (targetVol < currentVol) and 4 or 2 -- Fade out faster than fade in
+            local speed = (targetVol < currentVol) and 4 or 2
             local newVol = currentVol + (targetVol - currentVol) * math.min(1.0, speed * dt)
             currentBgmSource:setVolume(newVol)
         else
@@ -341,8 +440,15 @@ function sound.update(dt)
 
     if #bgmPlaylist == 0 then return end
 
-    if not currentBgmSource or not currentBgmSource:isPlaying() then
-        sound.playNextBgm()
+    if currentBgmSource then
+        if not currentBgmSource:isPlaying() and bgmStartDelay == 0 and not bgmPausedByUser and not bgmStoppedBySystem then
+            sound.playNextBgm()
+            if in_jukebox then
+                _G.jukebox_selection = currentBgmIdx
+            end
+        end
+    elseif in_game and bgmStartDelay == 0 and not bgmPausedByUser and not bgmStoppedBySystem then
+        sound.startFreshGameBgm()
     end
 end
 
@@ -355,7 +461,7 @@ function sound.toggleBgm()
     save.saveMusic(bgmEnabled)
     if not bgmEnabled then
         if currentBgmSource then
-            currentBgmSource:stop()
+            currentBgmSource:pause()
         end
     else
         -- Only start playing immediately if we are currently in the gameplay screen
@@ -368,10 +474,64 @@ function sound.toggleBgm()
 end
 
 function sound.getCurrentTrack()
-    if not bgmEnabled or #bgmPlaylist == 0 or currentBgmIdx == 0 then
+    if not bgmEnabled or #bgmPlaylist == 0 or currentBgmIdx == 0 or bgmStartDelay > 0 then
         return nil
     end
     return bgmPlaylist[currentBgmIdx]
+end
+
+function sound.getBgmPlaylist()
+    return bgmPlaylist
+end
+
+function sound.getCurrentBgmIndex()
+    return currentBgmIdx
+end
+
+function sound.playBgmIndex(idx)
+    if #bgmPlaylist == 0 then return end
+    idx = math.max(1, math.min(#bgmPlaylist, idx))
+    currentBgmIdx = idx - 1
+    bgmEnabled = true
+    save.saveMusic(true)
+    _G.jukebox_card_change_time = love.timer.getTime()
+    sound.playNextBgm()
+end
+
+function sound.getBgmProgress()
+    if not currentBgmSource then return 0, 0 end
+    local ok_pos, pos = pcall(function() return currentBgmSource:tell("seconds") end)
+    local ok_dur, dur = pcall(function() return currentBgmSource:getDuration("seconds") end)
+    pos = (ok_pos and type(pos) == "number") and pos or 0
+    dur = (ok_dur and type(dur) == "number" and dur > 0) and dur or 0
+    return pos, dur
+end
+
+function sound.isBgmPlaying()
+    return currentBgmSource ~= nil and currentBgmSource:isPlaying()
+end
+
+function sound.seekBgm(offsetSeconds)
+    if not currentBgmSource then return false end
+    local ok_pos, pos = pcall(function() return currentBgmSource:tell("seconds") end)
+    local ok_dur, dur = pcall(function() return currentBgmSource:getDuration("seconds") end)
+    if ok_pos and ok_dur and type(pos) == "number" and type(dur) == "number" and dur > 0 then
+        local new_pos = math.max(0, math.min(dur - 0.5, pos + offsetSeconds))
+        local ok_seek = pcall(function() currentBgmSource:seek(new_pos, "seconds") end)
+        return ok_seek
+    end
+    return false
+end
+
+function sound.toggleBgmPause()
+    if not currentBgmSource then return end
+    if currentBgmSource:isPlaying() then
+        currentBgmSource:pause()
+        bgmPausedByUser = true
+    else
+        currentBgmSource:play()
+        bgmPausedByUser = false
+    end
 end
 
 function sound.isEnabled()

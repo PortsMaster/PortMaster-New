@@ -101,7 +101,7 @@ function splash.load()
     end
 
     -- Load assets
-    logo = love.graphics.newImage("assets/logo_2048.png")
+    logo = love.graphics.newImage("assets/logo/logo_2048.png")
     logo:setFilter("linear", "linear")
 
     -- Reset state
