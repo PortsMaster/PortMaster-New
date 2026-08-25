@@ -44,7 +44,7 @@ fi
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-#In the event that the user places their PAK1.PAK into the id1 directory and launches this Insomnia mod first.
+to_lower_case "$GAMEDIR/mg3"
 to_lower_case "$GAMEDIR/id1"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
@@ -78,8 +78,13 @@ SSCALE=1.2
 [ "${DISPLAY_WIDTH}" == "1680" ] && SSCALE=3.8
 [ "${DISPLAY_WIDTH}" == "1920" ] && SSCALE=4.5
 
+if [ ! -f "$GAMEDIR/mg3/pak0.pak" ]; then
+    ./text_viewer.${DEVICE_ARCH} -f 25 -w -t "Missing gamedata" -m "Please place your pak0.pak into the ports/quakespasm/mg3 directory and, optionally, the music tracks as track##.ogg in ports/quakespasm/mg3/music.  Press 'Select' to exit this text viewer."
+    exit 1
+fi
+
 if [ ! -f "$GAMEDIR/id1/pak1.pak" ] && [ "$(stat -c %s "$GAMEDIR/id1/pak0.pak")" -lt 70000000 ]; then
-    ./text_viewer.${DEVICE_ARCH} -f 25 -w -t "Missing gamedata" -m "Please place your registered pak1.pak or Nightdive pak0.pak into the ports/quakespasm/id1 directory (Insomnia requires the full registered copy of Quake to run) and, optionally, the music tracks as track##.ogg in ports/quakespasm/id1/music.  Press 'Select' to exit this text viewer."
+    ./text_viewer.${DEVICE_ARCH} -f 25 -w -t "Missing gamedata" -m "Please place your registered pak1.pak or Nightdive pak0.pak into the ports/quakespasm/id1 directory (Dawn of the Machine requires the full registered copy of Quake to run).  Press 'Select' to exit this text viewer."
     exit 1
 fi
 
@@ -93,7 +98,7 @@ if [[ "${CFW_NAME^^}" == *"ARKOS"* ]]; then
 fi
 
 # Load directly into an expansion, a map, or a mod
-RUNMOD="-game insomnia"
+RUNMOD="-game mg3 +map start"
 
 $GPTOKEYB "quakespasm.${DEVICE_ARCH}" -c "$GPTOKEYB_CONFIG" &
 pm_platform_helper "$GAMEDIR/quakespasm.${DEVICE_ARCH}"
