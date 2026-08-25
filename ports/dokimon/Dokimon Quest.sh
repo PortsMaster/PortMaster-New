@@ -18,6 +18,7 @@ get_controls
 
 # Variables
 GAMEDIR="/$directory/ports/dokimon"
+GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
 # CD and set permissions
 cd $GAMEDIR
@@ -29,17 +30,22 @@ export PATCHER_FILE="$GAMEDIR/tools/patchscript"
 export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
 export PATCHER_TIME="2 to 5 minutes"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
 
 # Check if we need to patch the game
-if [ ! -f patchlog.txt ] || [ -f $GAMEDIR/assets/data.win ]; then
+if [ -f $GAMEDIR/assets/data.win ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
+        export PATCHER_TIME="2 to 5 minutes"
+        export ESUDO
+        export controlfolder
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb)
     else
         echo "This port requires the latest version of PortMaster."
     fi
-else
-    echo "Patching process already completed. Skipping."
 fi
 
 # Display loading splash
@@ -51,7 +57,7 @@ fi
 # Assign gptokeyb and load the game
 $GPTOKEYB "gmloadernext.aarch64" -c "dokimon.gptk" &
 pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
-./gmloadernext.aarch64 -c gmloader.json
+./gmloadernext.aarch64 -c "$GMLOADER_JSON"
 
 # Cleanup
 pm_finish
