@@ -44,7 +44,7 @@ fi
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-$GPTOKEYB2 "$BINARY" -c "$GAMEDIR/bullethell.ini" &
+$GPTOKEYB2 "bullethell" -c "$GAMEDIR/bullethell.ini" &
 
 pm_platform_helper "$GAMEDIR/$BINARY"
 
