@@ -18,7 +18,7 @@ get_controls
 GAMEDIR=/$directory/ports/superstartrek/
 
 # Exports
-export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 
@@ -56,6 +56,7 @@ if [ ! -f "$GAMEDIR/.initial_config_done" ]; then
   touch "$GAMEDIR/.initial_config_done"
 fi
 
+# Fix mouse resetting under Rocknix
 if [ "$CFW_NAME" = "ROCKNIX" ]; then
   export SDL_TOUCH_MOUSE_EVENTS=0
   swaymsg input type:touch events disabled 2>/dev/null
