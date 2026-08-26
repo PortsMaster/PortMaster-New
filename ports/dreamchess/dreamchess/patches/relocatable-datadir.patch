@@ -1,0 +1,53 @@
+diff --git a/dreamchess/src/dir.c b/dreamchess/src/dir.c
+index 4f32644..a6a6232 100644
+--- a/dreamchess/src/dir.c
++++ b/dreamchess/src/dir.c
+@@ -150,14 +150,47 @@ void init_i18n(void) {
+
+ #define USERDIR ".dreamchess"
+
++#include <limits.h>
++#include <stdio.h>
+ #include <stdlib.h>
++#include <string.h>
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <unistd.h>
+ #include <locale.h>
+
++static const char *get_exe_dir(void) {
++	static char exe_dir[PATH_MAX];
++	static int have_exe_dir = 0;
++
++	if (!have_exe_dir) {
++		ssize_t len = readlink("/proc/self/exe", exe_dir, sizeof(exe_dir) - 1);
++		char *slash;
++
++		if (len == -1)
++			return NULL;
++
++		exe_dir[len] = '\0';
++		slash = strrchr(exe_dir, '/');
++
++		if (slash)
++			*slash = '\0';
++
++		have_exe_dir = 1;
++	}
++
++	return exe_dir;
++}
++
+ int ch_datadir(void) {
+-	return chdir(DATADIR);
++	const char *exe_dir = get_exe_dir();
++	char data_dir[PATH_MAX];
++
++	if (!exe_dir)
++		return chdir(DATADIR);
++
++	snprintf(data_dir, sizeof(data_dir), "%s/data", exe_dir);
++	return chdir(data_dir);
+ }
+
+ int ch_userdir(void) {
