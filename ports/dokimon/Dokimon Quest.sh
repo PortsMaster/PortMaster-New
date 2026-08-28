@@ -38,7 +38,7 @@ if [ -f $GAMEDIR/assets/data.win ]; then
         export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
         export PATCHER_FILE="$GAMEDIR/tools/patchscript"
         export PATCHER_GAME="$(basename "${0%.*}")" # This gets the current script filename without the extension
-        export PATCHER_TIME="2 to 5 minutes"
+        export PATCHER_TIME="about a minute"
         export ESUDO
         export controlfolder
         source "$controlfolder/utils/patcher.txt"
