@@ -60,7 +60,6 @@ prepare_files() {
 	
     # Delete excess files
 	rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/.gitkeep \
-		   $DATADIR/GMLive
 
     if [ -d "$SAVEDIR/textures" ]; then
         rm -rf "$SAVEDIR/textures"
@@ -68,6 +67,12 @@ prepare_files() {
 }
 
 patch_datafile() {
+    # Skip patching if GMLive directory is not found
+    if [ ! -d "$DATADIR/GMLive" ]; then
+        echo "GMLive folder not found. Skipping patch."
+        return 0
+    fi
+
     if ! "$GAMEDIR/tools/gmtoolkit.${DEVICE_ARCH}" --config "$GAMEDIR/tools/dokimon.json" $THREADS_FLAG "$DATADIR/data.win"; then
         emit_fail_msg "gmtoolkit patch failed."
         return 1
@@ -76,7 +81,11 @@ patch_datafile() {
 
 # Zip it all into the .port file
 zip_archive() {
-    [ -f "$DATADIR/data.win" ] && mv "$DATADIR/data.win" "$DATADIR/game.droid"
+	if [ -d "$DATADIR/GMLive" ]; then
+	rm -rf $DATADIR/GMLive
+	fi
+	
+	[ -f "$DATADIR/data.win" ] && mv "$DATADIR/data.win" "$DATADIR/game.droid"
     local zip_out
     if zip_out=$("$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR" 2>&1); then
         rm -rf "$DATADIR"/*
