@@ -21,6 +21,7 @@ get_controls
 export ESUDO=$ESUDO
 export gameassembly="TMNT.exe"
 export gamedir="/$directory/ports/tmntsr"
+find "$gamedir/gamedata" -type f -name '.DS_Store' -exec rm -f {} \;
 cd "$gamedir/gamedata"
 
 # Grab text output...
