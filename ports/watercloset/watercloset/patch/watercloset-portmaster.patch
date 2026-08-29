@@ -1,0 +1,113 @@
+diff --git a/README.md b/README.md
+index 4eaad60..5a8a828 100644
+--- a/README.md
++++ b/README.md
+@@ -71,7 +71,7 @@ Graphics (gfx) and data (data) are licensed under Creative Commons BY-NC-SA 3.0,
+ * tip.ogg - Created with https://bfxr.net (CC-0)
+ 
+ ### Font
+-* EnterCommand.ttf, by jeti - https://www.dafont.com/enter-command.font (CC-BY 4.0)
++* Ubuntu Condensed, by Canonical Ltd / Dalton Maag - https://design.ubuntu.com/font (Ubuntu Font Licence 1.0)
+ 
+ ### About
+ This game was made by Parallel Realities. You can find out more at https://www.parallelrealities.co.uk
+diff --git a/data/config/config.json b/data/config/config.json
+index 56337fc..b29944c 100644
+--- a/data/config/config.json
++++ b/data/config/config.json
+@@ -3,7 +3,7 @@
+ 	"musicVolume" : 100,
+ 	"winWidth" : 1280,
+ 	"winHeight" : 720,
+-	"fullscreen" : 0,
++	"fullscreen" : 1,
+ 	"tips" : 1,
+ 	"deadzone" : 64,
+ 	"keyControls" : {
+diff --git a/data/misc/credits.txt b/data/misc/credits.txt
+index 7e54936..9e7ceb6 100644
+--- a/data/misc/credits.txt
++++ b/data/misc/credits.txt
+@@ -119,9 +119,9 @@
+ 
+ 2 FONTS
+ 
+-1 EnterCommand.ttf
+-1 by jeti
+-1 https://www.dafont.com/enter-command.font (CC-BY 4.0)
++1 Ubuntu Condensed
++1 by Canonical Ltd / Dalton Maag
++1 https://design.ubuntu.com/font (Ubuntu Font Licence 1.0)
+ 
+ 2 DEVELOPMENT SOFTWARE
+ 
+diff --git a/src/system/init.c b/src/system/init.c
+index b1970ed..0760fbb 100644
+--- a/src/system/init.c
++++ b/src/system/init.c
+@@ -43,13 +43,14 @@ static void showLoadingStep(float step, float maxSteps);
+ 
+ void initSDL(void)
+ {
+-	int rendererFlags, windowFlags;
++	int rendererFlags, windowFlags, winWidth, winHeight;
++	SDL_DisplayMode dm;
+ 
+ 	rendererFlags = SDL_RENDERER_ACCELERATED;
+ 
+ 	windowFlags = 0;
+ 
+-	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_JOYSTICK) < 0)
++	if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0)
+ 	{
+ 		printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+ 		exit(1);
+@@ -65,9 +66,18 @@ void initSDL(void)
+ 
+ 	loadConfig();
+ 
++	winWidth = app.config.winWidth;
++	winHeight = app.config.winHeight;
++
+ 	if (app.config.fullscreen)
+ 	{
+-		windowFlags |= SDL_WINDOW_FULLSCREEN;
++		windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
++
++		if (SDL_GetDesktopDisplayMode(0, &dm) == 0)
++		{
++			winWidth = dm.w;
++			winHeight = dm.h;
++		}
+ 	}
+ 
+ 	Mix_Volume(-1, app.config.soundVolume * 1.28);
+@@ -75,12 +85,14 @@ void initSDL(void)
+ 
+ 	Mix_AllocateChannels(CH_MAX);
+ 
+-	app.window = SDL_CreateWindow("Water Closet", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, app.config.winWidth, app.config.winHeight, windowFlags);
++	app.window = SDL_CreateWindow("Water Closet", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, winWidth, winHeight, windowFlags);
+ 
+ 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+ 
+ 	app.renderer = SDL_CreateRenderer(app.window, -1, rendererFlags);
+ 
++	SDL_RenderSetLogicalSize(app.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
++
+ 	IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
+ 
+ 	if (TTF_Init() < 0)
+diff --git a/src/system/text.c b/src/system/text.c
+index 83a0fe8..6be6ac2 100644
+--- a/src/system/text.c
++++ b/src/system/text.c
+@@ -45,7 +45,7 @@ static SDL_Texture *fontTexture;
+ 
+ void initFonts(void)
+ {
+-	initFont(getFileLocation("fonts/EnterCommand.ttf"));
++	initFont(getFileLocation("fonts/ubuntu.condensed.ttf"));
+ }
+ 
+ static void initFont(const char *filename)
