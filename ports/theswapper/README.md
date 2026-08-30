@@ -4,7 +4,7 @@ Thanks to Facepalm Games for creating The Swapper.
 
 ## Installation
 
-Install the port with PortMaster, then copy the Windows game files into `ports/theswapper/gamedata`.
+Install the port with PortMaster, then copy the Windows Steam game files into `ports/theswapper/gamedata`.
 
 The folder should contain:
 
@@ -14,19 +14,12 @@ mainSettings.ini
 data/
 ```
 
-On first launch, the PortMaster setup screen validates the files, prepares the local configuration, and optimizes selected texture assets in your local `gamedata` copy.
+On first launch, the PortMaster setup screen validates the files, prepares the local configuration, and builds a compressed texture cache without modifying your `gamedata` files.
 
 ### Steam Instructions
 
 * [Open Steam console](steam://open/console)
 * Copy and paste command: `download_depot 231160 231161 5334393392610826601`
-* Copy the downloaded files into `ports/theswapper/gamedata`
-
-### GOG Instructions
-
-* Download the Windows installer from [GOG](https://www.gog.com/en/game/the_swapper)
-* Install or extract the game files
-* Copy them into `ports/theswapper/gamedata`
 
 ## Controls
 

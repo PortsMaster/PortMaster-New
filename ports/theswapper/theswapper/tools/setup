@@ -13,10 +13,7 @@ ASTC_JOBS="$ASTC_CACHE_DIR/jobs.tsv"
 ASTC_MANIFEST="$ASTC_CACHE_DIR/manifest.tsv"
 ASTC_ENCODER="${PATCHER_ASTC_ENCODER:-}"
 ASTC_MANIFEST_TOOL="$GAMEDIR/tools/texture-astc-manifest"
-TEXTURE_DOWNSCALE_TOOL="$GAMEDIR/tools/texture-downscale"
 SETUP_MARKER="$GAMEDIR/.setup_complete"
-NORMAL_MAP_MAX_DIMENSION=512
-ATLAS_MAX_DIMENSION=0
 
 mkdir -p "$GAMEDATA" "$PROFILE_DIR"
 : >"$SETUP_LOG"
@@ -45,14 +42,6 @@ clear_astc_cache() {
   find "$ASTC_CACHE_DIR" -mindepth 1 -depth -exec rm -rf {} + || fail "Failed to clear old ASTC texture cache."
 }
 
-apply_texture_patches() {
-  require_file "$TEXTURE_DOWNSCALE_TOOL" "Port install is incomplete: missing texture downscale tool."
-  require_executable "$TEXTURE_DOWNSCALE_TOOL" "Port install is incomplete: texture downscale tool is not executable."
-
-  "$TEXTURE_DOWNSCALE_TOOL" "$GAMEDATA" "$NORMAL_MAP_MAX_DIMENSION" "$ATLAS_MAX_DIMENSION" ||
-    fail "Failed to optimize texture assets."
-}
-
 prepare_astc_cache() {
   require_dir "$GAMEDATA/data/textures" "Missing texture data. Copy the full Steam Windows install into ports/theswapper/gamedata."
   [ -n "$ASTC_ENCODER" ] || fail "Missing PortMaster ASTC encoder. Update PortMaster and launch the port again."
@@ -77,11 +66,11 @@ prepare_astc_cache() {
     guide_path="$ASTC_GUIDE_DIR/$relative_path.guide"
     mkdir -p "${guide_path%/*}"
     if [ -f "$guide_path" ]; then
-      "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -guide-in "$guide_path" ||
+      "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -silent -guide-in "$guide_path" ||
         rm -f "$astc_path" "$guide_path"
     fi
     if [ ! -f "$astc_path" ] &&
-      ! "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -guide-out "$guide_path"; then
+      ! "$ASTC_ENCODER" "$profile" "$source_path" "$astc_path" "$block" -fast -silent -guide-out "$guide_path"; then
       rm -f "$astc_path"
       fail "ASTC compression failed for $relative_path."
     fi
@@ -93,6 +82,9 @@ prepare_astc_cache() {
     [ -n "$astc_path" ] || continue
     [ -f "$astc_path" ] || fail "ASTC texture cache is incomplete: missing $relative_path."
   done < "$ASTC_JOBS"
+
+  find "$ASTC_CACHE_DIR/.generated-mips" "$ASTC_CACHE_DIR/.generated-slices" \
+    -type f -name "*.png" -delete 2>/dev/null || true
 }
 
 require_file "$GAMEDATA/TheSwapper.exe" "Missing TheSwapper.exe. Copy the Steam Windows files into ports/theswapper/gamedata."
@@ -101,7 +93,6 @@ require_dir "$GAMEDATA/data" "Missing data directory. Copy the full Steam Window
 require_file "$GAMEDIR/config/TheSwapper.exe.config" "Port install is incomplete: missing TheSwapper.exe.config."
 
 cp "$GAMEDIR/config/TheSwapper.exe.config" "$GAMEDATA/TheSwapper.exe.config"
-apply_texture_patches
 prepare_astc_cache
 
 if ! find "$PROFILE_DIR" -maxdepth 1 -type f -name "*.pro" | grep -q .; then

@@ -13,7 +13,7 @@ else
 fi
 
 source "$controlfolder/control.txt"
-source "$controlfolder/tasksetter"
+[ -f "$controlfolder/tasksetter" ] && source "$controlfolder/tasksetter"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 
 get_controls
@@ -37,7 +37,7 @@ run_setup() {
   fi
 
   chmod +x "$GAMEDIR/tools/setup" "$GAMEDIR/tools/texture-astc-manifest" \
-    "$GAMEDIR/tools/texture-downscale" "$GAMEDIR/tools/xdg-open"
+    "$GAMEDIR/tools/xdg-open"
 
   export PATCHER_FILE="$GAMEDIR/tools/setup"
   export PATCHER_GAME="The Swapper"
@@ -75,7 +75,7 @@ else
   source "${controlfolder}/libgl_default.txt"
 fi
 
-if [[ "${DEVICE_ARCH}" != "x86_64" && (-n "${LIBGL_FB:-}" || -n "${LIBGL_ES:-}") ]]; then
+if [ -n "${LIBGL_FB:-}" ] || [ -n "${LIBGL_ES:-}" ]; then
   export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libGL.so.1"
   export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
 fi
