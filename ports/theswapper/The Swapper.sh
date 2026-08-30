@@ -27,8 +27,7 @@ MONO_FILE="$controlfolder/libs/mono-6.12.0.122-aarch64.squashfs"
 mkdir -p "$GAMEDATA" "$SAVEDIR"
 cd "$GAMEDIR" || exit 1
 
-: >"$GAMEDIR/log.txt"
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 run_setup() {
   if [ ! -f "$controlfolder/utils/patcher.txt" ] || [ ! -x "$controlfolder/astcenc.aarch64" ]; then
