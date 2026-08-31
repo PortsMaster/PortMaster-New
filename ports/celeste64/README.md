@@ -37,10 +37,9 @@ This PortMaster version builds upon their work with further platform-specific op
 
 
 ## Compile
-
-```shell
 Crosscompilation setup on Linux X86_64:
-```git clone https://github.com/JanTrueno/Celeste64.git
+```shell
+git clone https://github.com/JanTrueno/Celeste64.git
 cd Celeste64
 sudo dpkg --add-architecture arm64
 sudo tee /etc/apt/sources.list.d/arm64-ports.list <<'EOF'
@@ -50,5 +49,5 @@ deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main restri
 EOF
 sudo apt update
 sudo apt install cmake gcc-aarch64-linux-gnu libsdl2-dev:arm64
-./build-arm64.sh```
+./build-arm64.sh
 ```
