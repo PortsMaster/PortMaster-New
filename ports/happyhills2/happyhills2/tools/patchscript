@@ -1,0 +1,94 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="$GAMEDIR/patchlog.txt"
+LOGERR="$GAMEDIR/patch_error.txt"
+
+# Redirect output and error to the log file
+rm -rf $LOGFILE $LOGERR
+exec > >(tee -a "$LOGFILE") 2>&1
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/assets"
+export DATAFILE="happyhills2.port"
+export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$GAMEDIR/tools/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export TOOLDIR="$GAMEDIR/tools"
+export TMPDIR="$GAMEDIR/tmp"
+export PATH="$GAMEDIR/tools:$PATH"
+
+# Permissions
+chmod 666 /dev/uinput
+
+cd "$GAMEDIR"
+
+extract_files() {
+	# Extract the Steam version
+		if [ -f "$DATADIR/TheHappyHillsHomicide2.exe" ]; then
+			# Use 7zip to extract the TheHappyHillsHomicide2.exe to the destination directory
+			"$controlfolder/7zzs.$DEVICE_ARCH" -aoa e "$DATADIR/TheHappyHillsHomicide2.exe" -o"$DATADIR"
+		
+	# Extract the Gamejolt version
+		elif [ -f "$DATADIR/thehappyhillshomicide2-outforblood.zip" ]; then
+		# Unzip the thehappyhillshomicide2-outforblood.zip to the destination directory
+		unzip -o "$DATADIR/thehappyhillshomicide2-outforblood.zip" -d "$DATADIR"
+	 else
+		echo "No game files found in $DATADIR"
+	 fi
+}
+
+apply_xdelta() {
+    if [ -f "$DATADIR/data.win" ]; then
+        # Get data.win checksum
+        checksum=$(md5sum "$DATADIR/data.win" | awk '{ print $1 }')
+
+        # Checksum for Steam version
+        if [ "$checksum" == "d57178d599db79c740ba7d99c3342c4a" ]; then
+            "$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "$TOOLDIR/patches/steampatch.xdelta" "$DATADIR/game.droid" 2>&1
+            echo "Data.win file from Steam has been patched"
+
+        # Checksum for Gamejolt version
+        elif [ "$checksum" == "3b854e4b45f8eb414f6d28b978f67e13" ]; then
+            "$controlfolder/xdelta3" -d -s "$DATADIR/data.win" -f "$TOOLDIR/patches/gamejoltpatch.xdelta" "$DATADIR/game.droid" 2>&1
+            echo "Data.win file from Gamejolt version has been patched"
+        else
+            echo "data.win file found, but checksum is not recognized."
+        fi
+    else
+        echo "No data.win file found in $DATADIR"
+    fi
+}
+copy_splash() {
+	# splash.png lives at the port root (untouched by patching) - copy it into
+	# assets/ before zipping, since the runtime reads assets/splash.png from
+	# inside the .port container, not the loose assets folder
+	[ -f "$GAMEDIR/splash.png" ] && cp -f "$GAMEDIR/splash.png" "$DATADIR/splash.png"
+}
+
+remove_files() {
+    # Delete unnecessary files
+    rm -rf $DATADIR/*.exe $DATADIR/*.dll $DATADIR/*.win $DATADIR/*.zip $DATADIR/.gitkeep
+    echo "Removed unnecessary files"
+    sleep 1
+}
+
+
+zip_archive() {
+        echo "Finishing up..."
+        zip -r -0 $DATAFILE ./assets/
+        mkdir -p saves
+        rm -r $DATADIR
+        sleep 1
+}
+
+process_game() {
+	extract_files
+    apply_xdelta
+	remove_files
+    zip_archive
+	# Final completion message
+    echo "Patching process complete!"
+}
+
+process_game
