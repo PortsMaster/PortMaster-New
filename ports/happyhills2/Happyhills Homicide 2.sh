@@ -20,8 +20,8 @@ get_controls
 GAMEDIR="/$directory/ports/happyhills2"
 
 # Set permissions
-$ESUDO chmod +x -R $GAMEDIR/gmloadernext.aarch64
-$ESUDO chmod +x -R $GAMEDIR/tools/patchscript
+$ESUDO chmod +x $GAMEDIR/gmloadernext.aarch64
+$ESUDO chmod +x $GAMEDIR/tools/patchscript
 
 # CD and set log
 cd $GAMEDIR
