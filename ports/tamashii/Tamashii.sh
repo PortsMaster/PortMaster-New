@@ -27,12 +27,15 @@ export GMLOADER_PLATFORM="os_linux"
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-if [ -f "./gamedata/game.exe" ]; then
+# Steam ships "game.exe", itch.io ships "tamashii.exe"
+gameexe=$(ls ./gamedata/*.exe 2>/dev/null | head -n1)
+
+if [ -f "$gameexe" ]; then
     # Extract its contents in place using 7zzs
-    ./libs/7zzs x "./gamedata/game.exe" -o"./gamedata/"
+    ./libs/7zzs x "$gameexe" -o"./gamedata/"
 fi
 
- files_to_remove=("./gamedata/game.exe"
+ files_to_remove=("$gameexe"
 "./gamedata/D3DX9_43.dll"
 "./gamedata/options.ini")
  
