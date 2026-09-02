@@ -9,6 +9,8 @@ Get Quake, Scourge of Armagon, Dissolution of Eternity, Dimension of the Past, a
 OR
 [GOG](https://www.gog.com/en/game/quake_the_offering)
 
+NOTE: As of August 2026, Dawn of the Machine can only be obtained through the Steam release.
+
 Get Arcane Dimensions for free from moddb [simonoc](https://www.moddb.com/mods/arcane-dimensions)
 
 It is recommended to use an RK3566 or faster CPU to run Arcane Dimensions, Dimension of the Machine, or Dawn of the Machine.
@@ -22,7 +24,7 @@ Game files needed:
 
 Quake:
 - quakespasm/id1/pak0.pak
-- quakespasm/id1/pak1.pak
+- quakespasm/id1/pak1.pak &nbsp; (Not needed if using pak0.pak from the Nightdive re-release)
 - quakespasm/id1/music/track02.ogg
 - quakespasm/id1/music/track03.ogg
 - quakespasm/id1/music/track04.ogg
@@ -69,20 +71,20 @@ Dimension of the Machine:
 - quakespasm/mg1/pak0.pak
 
 Dawn of the Machine:
-quakespasm/QuakeEX.kpf
-quakespasm/mg3/pak0.pak
-quakespasm/mg3/music/track02.ogg
-quakespasm/mg3/music/track03.ogg
-quakespasm/mg3/music/track04.ogg
-quakespasm/mg3/music/track05.ogg
-quakespasm/mg3/music/track06.ogg
-quakespasm/mg3/music/track07.ogg
-quakespasm/mg3/music/track08.ogg
-quakespasm/mg3/music/track09.ogg
-quakespasm/mg3/music/track10.ogg
-quakespasm/mg3/music/track11.ogg
-quakespasm/mg3/music/track12.ogg
-quakespasm/mg3/music/track13.ogg
+- quakespasm/QuakeEX.kpf
+- quakespasm/mg3/pak0.pak
+- quakespasm/mg3/music/track02.ogg
+- quakespasm/mg3/music/track03.ogg
+- quakespasm/mg3/music/track04.ogg
+- quakespasm/mg3/music/track05.ogg
+- quakespasm/mg3/music/track06.ogg
+- quakespasm/mg3/music/track07.ogg
+- quakespasm/mg3/music/track08.ogg
+- quakespasm/mg3/music/track09.ogg
+- quakespasm/mg3/music/track10.ogg
+- quakespasm/mg3/music/track11.ogg
+- quakespasm/mg3/music/track12.ogg
+- quakespasm/mg3/music/track13.ogg
 
 ## Controls
 
