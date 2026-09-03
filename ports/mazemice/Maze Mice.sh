@@ -79,6 +79,7 @@ if [ ! -f "$CONFDIR/godot/app_userdata/Maze Mice/firstlaunch.no" ]; then
         $ESUDO touch "$CONFDIR/godot/app_userdata/Maze Mice/firstlaunch.no"
         cd $GAMEDIR
     else
+        $ESUDO cp ./Settings.default ./Settings.ini
         $ESUDO touch "$CONFDIR/godot/app_userdata/Maze Mice/firstlaunch.no"
         cd $GAMEDIR
     fi
