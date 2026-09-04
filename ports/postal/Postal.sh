@@ -39,10 +39,20 @@ fi
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 
+LEVELS="$GAMEDIR/res/levels"
+if [ -d "$LEVELS" ] && [ ! -f "$LEVELS/postal_plus_realms.ini" ]; then
+  WIN_INI=$(find "$LEVELS" -maxdepth 1 -type f -iname 'postal*realms.ini' -print -quit)
+  if [ -n "$WIN_INI" ]; then
+    mv "$WIN_INI" "$LEVELS/postal_plus_realms.ini"
+  fi
+fi
+
 if [ -f "$GAMEDIR/POSTAL.INI" ]; then
   sed -i 's/^UseNewMouse = 1/UseNewMouse = 0/' "$GAMEDIR/POSTAL.INI"
   sed -i 's/^UseMouse = 1/UseMouse = 0/' "$GAMEDIR/POSTAL.INI"
   sed -i 's/\r$//' "$GAMEDIR/POSTAL.INI"
+  sed -i 's/\r$//' "$GAMEDIR/res/levels/postal_plus_realms.ini"
+  sed -i 's|^File *=.*res/levels/.*|File = res/levels/postal_plus_realms.ini|' "$GAMEDIR/POSTAL.INI"
 fi
 
 $GPTOKEYB "${BINARYNAME}.${DEVICE_ARCH}" xbox360 &
