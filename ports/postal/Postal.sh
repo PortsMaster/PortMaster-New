@@ -42,6 +42,7 @@ export TEXTINPUTINTERACTIVE="Y"
 if [ -f "$GAMEDIR/POSTAL.INI" ]; then
   sed -i 's/^UseNewMouse = 1/UseNewMouse = 0/' "$GAMEDIR/POSTAL.INI"
   sed -i 's/^UseMouse = 1/UseMouse = 0/' "$GAMEDIR/POSTAL.INI"
+  sed -i 's/\r$//' "$GAMEDIR/POSTAL.INI"
 fi
 
 $GPTOKEYB "${BINARYNAME}.${DEVICE_ARCH}" xbox360 &
