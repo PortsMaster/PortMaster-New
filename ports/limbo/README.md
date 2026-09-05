@@ -1,5 +1,3 @@
-# Limbo - PortMaster
-
 Play Store version is **NOT** supported!
 
 ## Controls
