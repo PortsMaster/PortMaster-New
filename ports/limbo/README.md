@@ -1,32 +1,34 @@
+# Limbo - PortMaster
 
-Play Store version is NOT supported!
+Play Store version is **NOT** supported!
 
 ## Controls
 
 | Button | Action |
-|--|--| 
-|D-pad/L-stick|Move|
-|A|Interact|
-|X|Grab|
-|Start|Pause Menu|
-|Touchscreen|Touch in menu|
+|--|--|
+| D-pad / L-stick | Move |
+| A | Interact |
+| X | Grab |
+| Start | Pause Menu |
+| Touchscreen | Touch in menu |
 
-## Details 
+## Details
+
 | Detail | Value |
 |---|---|
 | Ready to Run | No |
 | Engine/Framework | Playdead's in-house engine |
 | Architectures | 64 Bit |
-| Aspect ratio | Adaptive 4:3 or 16:9|
+| Aspect ratio | Adaptive 4:3 or 16:9 |
 | Rumble support | No |
 | Tested versions | 1.20 Epic Games Mobile |
 | Controls | Native |
 | Joysticks required | None |
 
-```shell
-**Folder Structure**
+## Folder Structure
+
 ```
-- ports/
+ports/
   - Limbo.sh
   - limbo/
     - limboloader
@@ -44,12 +46,12 @@ Play Store version is NOT supported!
         - libc++_shared.so
 ```
 
-**Patched-in Features:**
+## Patched-in Features
+
 - Fullscreen at the panel's native resolution (patches out the engine's hardcoded 1024px backbuffer-width cap)
 
-**Thanks to:**
+## Thanks to
+
 * [Playdead](https://playdead.com/) for creating this stunning game! Check out the game's Epic Games Store page [here](https://store.epicgames.com/p/limbo-mobile-android-300111?lang=en-US).
 * binarycounter for [Bogodroid](https://github.com/binarycounter/Bogodroid), the Android loader this port is built on.
 * JanTrueno for porting: Limbo.
-
-```
