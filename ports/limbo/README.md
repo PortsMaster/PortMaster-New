@@ -17,7 +17,7 @@ Play Store version is **NOT** supported!
 | Ready to Run | No |
 | Engine/Framework | Playdead's in-house engine |
 | Architectures | 64 Bit |
-| Aspect ratio | Adaptive 4:3 or 16:9 |
+| Aspect ratio | 16:9 Forced|
 | Rumble support | No |
 | Tested versions | 1.20 Epic Games Mobile |
 | Controls | Native |
