@@ -20,26 +20,19 @@ GAMEDIR=/$directory/ports/ut99
 DATADIR="$GAMEDIR/gamedata"
 RUNDIR="$DATADIR/SystemARM64"
 CONFDIR="$GAMEDIR/conf"
-GAME_WIDTH=${DISPLAY_WIDTH:-1280}
-GAME_HEIGHT=${DISPLAY_HEIGHT:-720}
 
-if [ "$GAME_WIDTH" -ge 1200 ]; then
+if [ "$DISPLAY_WIDTH" -ge 1200 ]; then
   GUI_SCALE=2.000000
-elif [ "$GAME_WIDTH" -ge 960 ]; then
+elif [ "$DISPLAY_WIDTH" -ge 960 ]; then
   GUI_SCALE=1.500000
-elif [ "$GAME_WIDTH" -ge 800 ]; then
+elif [ "$DISPLAY_WIDTH" -ge 800 ]; then
   GUI_SCALE=1.250000
 else
   GUI_SCALE=1.000000
 fi
 
-cd "$GAMEDIR" || exit 1
+cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
-if [ "${DEVICE_HAS_AARCH64:-N}" != "Y" ] && [ "$DEVICE_ARCH" != "aarch64" ]; then
-  pm_message "Unreal Tournament 99 requires a 64-bit ARM device."
-  exit 1
-fi
 
 if [ -z "$(find "$DATADIR/Maps" -maxdepth 1 -type f -iname '*.unr' -print -quit 2>/dev/null)" ]; then
   pm_message "Game data is missing. Copy Maps, Music, and Sounds from a legal UT99 installation into ports/ut99/gamedata, then merge its Textures folder without replacing the included patch fonts. Do not copy the original System folder."
@@ -51,8 +44,8 @@ mkdir -p "$CONFDIR"
 [ -f "$CONFDIR/User.ini" ] || cp "$GAMEDIR/config/User.ini" "$CONFDIR/User.ini"
 
 sed -i -E \
-  -e "s/^(WindowedViewportX|FullscreenViewportX)=.*/\1=${GAME_WIDTH}/" \
-  -e "s/^(WindowedViewportY|FullscreenViewportY)=.*/\1=${GAME_HEIGHT}/" \
+  -e "s/^(WindowedViewportX|FullscreenViewportX)=.*/\1=${DISPLAY_WIDTH}/" \
+  -e "s/^(WindowedViewportY|FullscreenViewportY)=.*/\1=${DISPLAY_HEIGHT}/" \
   -e 's/^(WindowedColorBits|FullscreenColorBits)=.*/\1=32/' \
   -e 's/^(GameRenderDevice|WindowedRenderDevice|RenderDevice)=.*/\1=NOpenGLESDrv.NOpenGLESRenderDevice/' \
   -e 's/^ViewportManager=.*/ViewportManager=SDLDrv.SDLClient/' \
@@ -95,12 +88,11 @@ export SDL_MOUSE_RELATIVE_MODE_WARP=1
 export SDL_MOUSE_RELATIVE_MODE_CENTER=1
 
 chmod +x "$RUNDIR/ut-bin-arm64"
-cd "$RUNDIR" || exit 1
+cd "$RUNDIR"
 
 $GPTOKEYB2 "ut-bin-arm64" -c "$GAMEDIR/ut99.gptk" &
 pm_platform_helper "$RUNDIR/ut-bin-arm64" >/dev/null
 
-echo "UT99 PortMaster build=gconv-all-v3: device=${DEVICE_NAME:-unknown} cfw=${CFW_NAME:-unknown} cpu=${DEVICE_CPU:-unknown} display=${GAME_WIDTH}x${GAME_HEIGHT} gui=${GUI_SCALE}"
 ./ut-bin-arm64
 
 pm_finish
