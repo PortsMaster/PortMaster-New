@@ -22,7 +22,6 @@ export GAMEDIR="/$directory/ports/blossomtales"
 cd "$GAMEDIR/gamedata"
 
 # Grab text output...
-printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
 # Log the execution of the script, the script overwrites itself on each launch
