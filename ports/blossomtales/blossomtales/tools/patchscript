@@ -1,0 +1,52 @@
+#!/bin/bash
+# Blossom Tales ships as a single Enigma Virtual Box bundle: BlossomTales.exe contains the
+# real managed executable plus Content/ and Maps/ in an appended virtual filesystem. Rather
+# than making players unpack it on a PC first, EVBUnpack.exe does it here on-device.
+
+# Nothing to do if the real executable is already extracted.
+if [ -f "Blossom Tales.exe" ]; then
+    exit 0
+fi
+
+if [ ! -f "BlossomTales.exe" ]; then
+    echo "BlossomTales.exe not found in gamedata -- copy it there and relaunch."
+    exit 1
+fi
+
+# This script runs inside PortMaster's love2d patcher, not the launcher's shell, and that
+# process prepends love's own library directory to LD_LIBRARY_PATH. So resolve mono from
+# MONODIR (exported by the launcher) and put its libraries first, rather than trusting an
+# inherited PATH and library order.
+MONO_BIN="mono"
+if [ -n "$MONODIR" ] && [ -x "$MONODIR/bin/mono" ]; then
+    MONO_BIN="$MONODIR/bin/mono"
+    export LD_LIBRARY_PATH="$MONODIR/lib:$LD_LIBRARY_PATH"
+elif ! command -v mono >/dev/null 2>&1; then
+    echo "mono runtime not found -- cannot unpack the game."
+    exit 1
+fi
+
+echo "Extracting BlossomTales.exe, this only happens once..."
+"$MONO_BIN" "$GAMEDIR/tools/EVBUnpack.exe" "BlossomTales.exe" . --legacy-fs || exit 1
+
+if [ ! -f "Blossom Tales.exe" ]; then
+    echo "Extraction did not produce \"Blossom Tales.exe\"."
+    exit 1
+fi
+
+# The bundle is no longer needed and is ~600MB.
+rm -f "BlossomTales.exe"
+
+# Drop the two managed assemblies we substitute. Deleting rather than overwriting matters:
+# assemblies next to the game win over MONO_PATH, so leaving these here would shadow the
+# replacements in dlls/.
+#   SlimDX.DirectInput.dll - the real one is C++/CLI and cannot load under Mono
+#   Steamworks.NET.dll     - avoids the native steam_api dependency; the game guards every
+#                            Steam call behind IsSteamInitialized, so it runs fine without
+rm -f "SlimDX.DirectInput.dll" "Steamworks.NET.dll"
+
+# Not used on Linux, and steam_appid.txt would make the real Steamworks try to init.
+rm -f "steam_api.dll" "CSteamworks.dll" "steam_appid.txt"
+
+echo "Extraction complete."
+exit 0
