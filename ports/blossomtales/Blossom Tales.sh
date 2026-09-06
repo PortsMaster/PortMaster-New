@@ -22,7 +22,6 @@ export GAMEDIR="/$directory/ports/blossomtales"
 cd "$GAMEDIR/gamedata"
 
 # Grab text output...
-$ESUDO chmod 666 /dev/tty0
 printf "\033c" > /dev/tty0
 echo "Loading... Please Wait." > /dev/tty0
 
