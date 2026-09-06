@@ -1,0 +1,515 @@
+diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/CMakeLists.txt b/third_party/ut99dc/Source/NOpenGLESDrv/CMakeLists.txt
+index 7c7d7ca..aa923f3 100644
+--- a/third_party/ut99dc/Source/NOpenGLESDrv/CMakeLists.txt
++++ b/third_party/ut99dc/Source/NOpenGLESDrv/CMakeLists.txt
+@@ -10,6 +10,10 @@ if(ANDROID)
+   set(SRC_FILES "NOpenGLESDrv.cpp" "${ANDROID_GLAD_COMPAT_DIR}/glad.c")
+   set(NOPENGLES_GLAD_INCLUDE_DIRS "${ANDROID_GLAD_COMPAT_DIR}")
+   set(NOPENGLES_GLM_INCLUDE_DIRS "${ANDROID_GLM_COMPAT_DIR}")
++elseif(DEFINED NOPENGLES_COMPAT_DIR)
++  set(SRC_FILES "NOpenGLESDrv.cpp" "${NOPENGLES_COMPAT_DIR}/android_glad_compat/glad.c")
++  set(NOPENGLES_GLAD_INCLUDE_DIRS "${NOPENGLES_COMPAT_DIR}/android_glad_compat")
++  set(NOPENGLES_GLM_INCLUDE_DIRS "${NOPENGLES_COMPAT_DIR}/android_glm_compat")
+ else()
+   set(SRC_FILES "NOpenGLESDrv.cpp" "${CMAKE_SOURCE_DIR}/../Thirdparty/glad_es/glad.c")
+   set(NOPENGLES_GLAD_INCLUDE_DIRS
+diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
+index d2dc871..6c520fe 100644
+--- a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
++++ b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
+@@ -7,6 +7,15 @@
+ 
+ #include "NOpenGLESDrvPrivate.h"
+ 
++#ifdef NOPENGLES_469_COMPAT
++#include <cstdlib>
++#include <cstdio>
++#include <string>
++#include "SDLDrv.h"
++#undef DLL_EXPORT
++#define DLL_EXPORT extern "C"
++#endif
++
+ #ifdef PLATFORM_ANDROID
+ #include <android/log.h>
+ #define UT99_ANDROID_GLES_FORCEFULL_V28 1
+@@ -78,6 +87,157 @@ static constexpr DWORD AttribSizes[AT_Count] = {
+ // max vertices in a single draw call
+ #define MAX_VERTS 32768
+ 
++#ifdef NOPENGLES_469_COMPAT
++static FLOAT* UT99PortMasterFindFloatProperty469( UObject* Object, const TCHAR* PropertyName )
++{
++	if( !Object )
++		return NULL;
++	const FName WantedName( PropertyName );
++	for( TFieldIterator<UProperty> It(Object->GetClass()); It; ++It )
++	{
++		if( It->GetFName() == WantedName && It->IsA(UFloatProperty::StaticClass()) )
++			return (FLOAT*)((BYTE*)Object + It->Offset);
++	}
++	return NULL;
++}
++
++static UObject* UT99PortMasterFindObjectProperty469( UObject* Object, const TCHAR* PropertyName )
++{
++	if( !Object )
++		return NULL;
++	const FName WantedName( PropertyName );
++	for( TFieldIterator<UProperty> It(Object->GetClass()); It; ++It )
++	{
++		if( It->GetFName() == WantedName && It->IsA(UObjectProperty::StaticClass()) )
++			return *(UObject**)((BYTE*)Object + It->Offset);
++	}
++	return NULL;
++}
++
++static void UT99PortMasterSetFloatProperty469( UObject* Object, const TCHAR* PropertyName, FLOAT Value )
++{
++	FLOAT* Property = UT99PortMasterFindFloatProperty469( Object, PropertyName );
++	if( Property )
++		*Property = Value;
++}
++
++static void UT99PortMasterSyncMenuMouse469( UViewport* Viewport )
++{
++	if( !Viewport || !Viewport->GetWindow() )
++		return;
++
++	SDL_Window* Window = (SDL_Window*)Viewport->GetWindow();
++	INT WindowW = 0;
++	INT WindowH = 0;
++	INT DrawableW = 0;
++	INT DrawableH = 0;
++	SDL_GetWindowSize( Window, &WindowW, &WindowH );
++	SDL_GL_GetDrawableSize( Window, &DrawableW, &DrawableH );
++	if( WindowW <= 0 || WindowH <= 0 || DrawableW <= 0 || DrawableH <= 0 )
++		return;
++
++	USDLViewport* SDLViewport = static_cast<USDLViewport*>( Viewport );
++	UBOOL ShowMenuMouse = Viewport->bShowWindowsMouse ? 1 : 0;
++	const TCHAR* ConsoleStateName = TEXT("<none>");
++	if( Viewport->Console )
++	{
++		FStateFrame* ConsoleState = Viewport->Console->GetStateFrame();
++		if( ConsoleState && ConsoleState->StateNode )
++		{
++			ConsoleStateName = ConsoleState->StateNode->GetName();
++			static FName NAME_UT99PortMasterUWindow( TEXT("UWindow") );
++			ShowMenuMouse |= ConsoleState->StateNode->GetFName() == NAME_UT99PortMasterUWindow;
++		}
++	}
++	static UBOOL WasShowingMenuMouse = 0;
++	static UObject* CenteredRoot = NULL;
++	FLOAT GUIScale = 1.f;
++	const char* GUIScaleEnv = SDL_getenv( "UT99_GUI_SCALE" );
++	if( GUIScaleEnv )
++		GUIScale = Max<FLOAT>( (FLOAT)std::atof(GUIScaleEnv), 1.f );
++	const FLOAT CenterX = Viewport->SizeX / (2.f * GUIScale);
++	const FLOAT CenterY = Viewport->SizeY / (2.f * GUIScale);
++	UObject* Root = UT99PortMasterFindObjectProperty469( Viewport->Console, TEXT("Root") );
++
++	if( ShowMenuMouse )
++	{
++		// UWindow requests the operating-system cursor each frame. PortMaster's
++		// controller mouse is relative, so immediately restore relative capture
++		// and hide SDL's cursor if the engine released or exposed either one.
++		// This also prevents SDL from switching to its bounded absolute position
++		// after gameplay, which caused the cursor to need edge "recalibration".
++		Viewport->bWindowsMouseAvailable = 0;
++		if( !SDLViewport->MouseIsGrabbed || SDL_GetRelativeMouseMode() != SDL_TRUE )
++			SDLViewport->UpdateMouseGrabState( 1 );
++		SDL_ShowCursor( SDL_DISABLE );
++		SDL_SetWindowGrab( Window, SDL_TRUE );
++
++		if( !WasShowingMenuMouse || (Root && Root != CenteredRoot) )
++		{
++			UT99PortMasterSetFloatProperty469( Viewport->Console, TEXT("MouseX"), CenterX );
++			UT99PortMasterSetFloatProperty469( Viewport->Console, TEXT("MouseY"), CenterY );
++			UT99PortMasterSetFloatProperty469( Root, TEXT("MouseX"), CenterX );
++			UT99PortMasterSetFloatProperty469( Root, TEXT("MouseY"), CenterY );
++			UT99PortMasterSetFloatProperty469( Root, TEXT("OldMouseX"), CenterX );
++			UT99PortMasterSetFloatProperty469( Root, TEXT("OldMouseY"), CenterY );
++			Viewport->WindowsMouseX = Viewport->SizeX * 0.5f;
++			Viewport->WindowsMouseY = Viewport->SizeY * 0.5f;
++			INT DiscardX = 0;
++			INT DiscardY = 0;
++			SDL_GetRelativeMouseState( &DiscardX, &DiscardY );
++			CenteredRoot = Root;
++			std::fprintf( stderr,
++				"UT99_SOFTWARE_MENU_CURSOR scale=%.2f center=%.1f,%.1f root=%d discarded=%d,%d\n",
++				GUIScale, CenterX, CenterY, Root ? 1 : 0, DiscardX, DiscardY );
++			std::fflush( stderr );
++		}
++	}
++
++	if( ShowMenuMouse != WasShowingMenuMouse )
++	{
++		if( !ShowMenuMouse )
++		{
++			Viewport->bWindowsMouseAvailable = 1;
++			SDLViewport->UpdateMouseGrabState( 1 );
++			CenteredRoot = NULL;
++		}
++		std::fprintf( stderr,
++			"UT99_MOUSE_CAPTURE menu=%d state=%s grabbed=%d cursor=%.1f,%.1f\n",
++			ShowMenuMouse, appToAnsi(ConsoleStateName), SDLViewport->MouseIsGrabbed ? 1 : 0,
++			Viewport->WindowsMouseX, Viewport->WindowsMouseY );
++		std::fflush( stderr );
++		WasShowingMenuMouse = ShowMenuMouse;
++	}
++
++	static INT LastWindowW = -1;
++	static INT LastWindowH = -1;
++	static INT LastDrawableW = -1;
++	static INT LastDrawableH = -1;
++	static INT LastViewportW = -1;
++	static INT LastViewportH = -1;
++	if( WindowW != LastWindowW || WindowH != LastWindowH ||
++		DrawableW != LastDrawableW || DrawableH != LastDrawableH ||
++		Viewport->SizeX != LastViewportW || Viewport->SizeY != LastViewportH )
++	{
++		std::fprintf( stderr,
++			"UT99_COORDS point=%dx%d drawable=%dx%d viewport=%dx%d mouseScale=%.3fx%.3f menu=%d state=%s grabbed=%d windowsMouse=%d cursor=%.1f,%.1f\n",
++			WindowW, WindowH, DrawableW, DrawableH, Viewport->SizeX, Viewport->SizeY,
++			SDLViewport->MouseScaleX, SDLViewport->MouseScaleY,
++			ShowMenuMouse, appToAnsi(ConsoleStateName),
++			SDLViewport->MouseIsGrabbed ? 1 : 0,
++			Viewport->bWindowsMouseAvailable ? 1 : 0,
++			Viewport->WindowsMouseX, Viewport->WindowsMouseY );
++		std::fflush( stderr );
++		LastWindowW = WindowW;
++		LastWindowH = WindowH;
++		LastDrawableW = DrawableW;
++		LastDrawableH = DrawableH;
++		LastViewportW = Viewport->SizeX;
++		LastViewportH = Viewport->SizeY;
++	}
++}
++#endif
++
+ 
+ #ifdef PLATFORM_ANDROID
+ static FLOAT UT99AndroidCalcWidescreenFOVV159( FLOAT BaseFOV, FLOAT FrameX, FLOAT FrameY )
+@@ -281,12 +441,12 @@ static void UT99AndroidApplyFullViewport( UViewport* Viewport, INT FallbackX, IN
+ void UNOpenGLESRenderDevice::InternalClassInitializer( UClass* Class )
+ {
+ 	guardSlow(UNOpenGLESRenderDevice::InternalClassInitializer);
+-	new(Class, "NoFiltering",    RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),    "Options", CPF_Config );
+-	new(Class, "Overbright",     RF_Public)UBoolProperty( CPP_PROPERTY(Overbright),     "Options", CPF_Config );
+-	new(Class, "DetailTextures", RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures), "Options", CPF_Config );
+-	new(Class, "UseVAO",         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         "Options", CPF_Config );
+-	new(Class, "UseBGRA",        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        "Options", CPF_Config );
+-	new(Class, "WidescreenFOV",  RF_Public)UBoolProperty( CPP_PROPERTY(WidescreenFOV),  "Options", CPF_Config );
++	new(Class, TEXT("NoFiltering"),    RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),    TEXT("Options"), CPF_Config );
++	new(Class, TEXT("Overbright"),     RF_Public)UBoolProperty( CPP_PROPERTY(Overbright),     TEXT("Options"), CPF_Config );
++	new(Class, TEXT("DetailTextures"), RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures), TEXT("Options"), CPF_Config );
++	new(Class, TEXT("UseVAO"),         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         TEXT("Options"), CPF_Config );
++	new(Class, TEXT("UseBGRA"),        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        TEXT("Options"), CPF_Config );
++	new(Class, TEXT("WidescreenFOV"),  RF_Public)UBoolProperty( CPP_PROPERTY(WidescreenFOV),  TEXT("Options"), CPF_Config );
+ 	unguardSlow;
+ }
+ 
+@@ -318,6 +478,12 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
+ 	NoFiltering = false;
+ 	UseVAO = false;
+ 	UseBGRA = true;
++#ifdef NOPENGLES_469_COMPAT
++	// Conservative defaults shared by the PowerVR, Mali, and Mesa GLES2 paths.
++	DetailTextures = false;
++	UseVAO = false;
++	UseBGRA = false;
++#endif
+ 	WidescreenFOV = false;
+ 	CurrentBrightness = -1.f;
+ }
+@@ -327,30 +493,47 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport, INT NewX, INT NewY, I
+ 	guard(UNOpenGLESRenderDevice::Init)
+ 
+ 	debugf( NAME_Log, TEXT("NOpenGLESDrv::Init: NewX=%d, NewY=%d, ColorBytes=%d, Fullscreen=%d"), NewX, NewY, NewColorBytes, Fullscreen );
++	Viewport = InViewport;
++
++#ifdef NOPENGLES_469_COMPAT
++	// Android's NSDLDrv creates the GLES surface before the renderer is
++	// initialized. OldUnreal 469e's SDLDrv expects the renderer to request it.
++	SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES );
++	SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 2 );
++	SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 0 );
++	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
++	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
++	SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, 0 );
++	if( !Viewport->ResizeViewport( Fullscreen ? (BLIT_Fullscreen | BLIT_OpenGL) : (BLIT_HardwarePaint | BLIT_OpenGL), NewX, NewY, NewColorBytes ) )
++	{
++		debugf( NAME_Warning, TEXT("Could not create the SDL GLES2 viewport: %s"), appFromAnsi(SDL_GetError()) );
++		return false;
++	}
++#endif
+ 
+ 	if( !gladLoadGLES2Loader( &SDL_GL_GetProcAddress ) )
+ 	{
+-		debugf( NAME_Warning, "Could not load GLES2: %s", SDL_GetError() );
++		debugf( NAME_Warning, TEXT("Could not load GLES2: %s"), appFromAnsi(SDL_GetError()) );
+ 		return false;
+ 	}
+ 
+-	debugf( NAME_Log, "Got OpenGL %s", glGetString( GL_VERSION ) );
++	debugf( NAME_Log, TEXT("Got OpenGL %s"), appFromAnsi((const ANSICHAR*)glGetString( GL_VERSION )) );
+ 
+ 	SupportsFogMaps = true;
+ 	SupportsDistanceFog = true;
+ 
+ 	ComposeSize = 256 * 256 * 4;
+-	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
++	Compose = (BYTE*)appMalloc( ComposeSize, TEXT("GLComposeBuf") );
+ 	verify( Compose );
+ 
+ 	VtxDataSize = 18 * MAX_VERTS; // should be enough for all attributes
+-	VtxData = (FLOAT*)appMalloc( VtxDataSize * sizeof(FLOAT), "GLVtxDataBuf" );
++	VtxData = (FLOAT*)appMalloc( VtxDataSize * sizeof(FLOAT), TEXT("GLVtxDataBuf") );
+ 	verify( VtxData );
+ 	VtxDataEnd = VtxData + VtxDataSize;
+ 	VtxDataPtr = VtxData;
+ 
+ 	IdxDataSize = MAX_VERTS;
+-	IdxData = (GLushort*)appMalloc( IdxDataSize * sizeof(GLushort), "GLIdxDataBuf" );
++	IdxData = (GLushort*)appMalloc( IdxDataSize * sizeof(GLushort), TEXT("GLIdxDataBuf") );
+ 	verify( IdxData );
+ 	IdxDataEnd = IdxData + IdxDataSize;
+ 	IdxDataPtr = IdxData;
+@@ -363,21 +546,23 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport, INT NewX, INT NewY, I
+ 		glBufferData( GL_ARRAY_BUFFER, VtxDataSize, (void*)VtxData, GL_DYNAMIC_DRAW );
+ 	}
+ 
++	#ifdef PLATFORM_ANDROID
+ 	WidescreenFOV = UT99AndroidReadWidescreenFOVConfigV159( WidescreenFOV );
++	#endif
+ 	UT99_ANDROID_GLES_LOGI_V28("UT99_ANDROID_V159_WIDESCREEN_FOV_INIT config=%d", WidescreenFOV ? 1 : 0);
+-	debugf( NAME_Log, "UT99_ANDROID_V159_WIDESCREEN_FOV_INIT config=%d", WidescreenFOV ? 1 : 0 );
++	debugf( NAME_Log, TEXT("UT99_ANDROID_V159_WIDESCREEN_FOV_INIT config=%d"), WidescreenFOV ? 1 : 0 );
+ 
+ 	if( UseBGRA )
+ 	{
+ 		// check if BGRA is actually supported
+ 		if( !( GLAD_GL_APPLE_texture_format_BGRA8888 || GLAD_GL_EXT_texture_format_BGRA8888 || GLAD_GL_MESA_bgra ) )
+ 		{
+-			debugf( "GLES2: BGRA8888 enabled, but not supported; disabling" );
++			debugf( TEXT("GLES2: BGRA8888 enabled, but not supported; disabling") );
+ 			UseBGRA = false;
+ 		}
+ 		else
+ 		{
+-			debugf( "GLES2: BGRA8888 supported" );
++			debugf( TEXT("GLES2: BGRA8888 supported") );
+ 		}
+ 	}
+ 
+@@ -413,8 +598,6 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport, INT NewX, INT NewY, I
+ 	CurrentPolyFlags = PF_Occlude;
+ 	CurrentShaderFlags = 0;
+ 	CurrentBrightness = -1.f;
+-	Viewport = InViewport;
+-
+ 	// Set initial viewport size
+ 	#ifdef PLATFORM_ANDROID
+     UT99AndroidForceDrawableViewportV28( Viewport, "InitSetRes", NewX, NewY );
+@@ -431,6 +614,13 @@ UBOOL UNOpenGLESRenderDevice::SetRes( INT NewX, INT NewY, INT NewColorBytes, UBO
+ {
+ 	guard(UNOpenGLESRenderDevice::SetRes);
+ 	debugf( NAME_Log, TEXT("NOpenGLESDrv::SetRes: NewX=%d, NewY=%d"), NewX, NewY );
++#ifdef NOPENGLES_469_COMPAT
++	if( NewX != INDEX_NONE && NewY != INDEX_NONE )
++	{
++		if( !Viewport->ResizeViewport( Fullscreen ? (BLIT_Fullscreen | BLIT_OpenGL) : (BLIT_HardwarePaint | BLIT_OpenGL), NewX, NewY, NewColorBytes ) )
++			return false;
++	}
++#endif
+ 	// Update GL viewport when resolution changes
+ 	#ifdef PLATFORM_ANDROID
+     UT99AndroidForceDrawableViewportV28( Viewport, "InitSetRes", NewX, NewY );
+@@ -445,7 +635,7 @@ void UNOpenGLESRenderDevice::Exit()
+ {
+ 	guard(UNOpenGLESRenderDevice::Exit);
+ 
+-	debugf( NAME_Log, "Shutting down OpenGL ES2 renderer" );
++	debugf( NAME_Log, TEXT("Shutting down OpenGL ES2 renderer") );
+ 
+ 	Flush( 0 );
+ 
+@@ -474,7 +664,7 @@ void UNOpenGLESRenderDevice::Flush( UBOOL AllowPrecache )
+ 
+ 	if( TexAlloc.Num() )
+ 	{
+-		debugf( NAME_Log, "Flushing %d textures", TexAlloc.Num() );
++		debugf( NAME_Log, TEXT("Flushing %d textures"), TexAlloc.Num() );
+ 		ResetTexture( 0 );
+ 		ResetTexture( 1 );
+ 		ResetTexture( 2 );
+@@ -525,7 +715,7 @@ UBOOL UNOpenGLESRenderDevice::Exec( const TCHAR* Cmd, FOutputDevice& Ar )
+ 			GConfig->Flush(0);
+ 		}
+ 		SaveConfig();
+-		debugf( NAME_Log, "UT99_ANDROID_V159_WIDESCREEN_FOV_RUNTIME live=%d", WidescreenFOV ? 1 : 0 );
++		debugf( NAME_Log, TEXT("UT99_ANDROID_V159_WIDESCREEN_FOV_RUNTIME live=%d"), WidescreenFOV ? 1 : 0 );
+ 		Ar.Logf( TEXT("%i"), WidescreenFOV ? 1 : 0 );
+ 		return 1;
+ 	}
+@@ -539,6 +729,9 @@ UBOOL UNOpenGLESRenderDevice::Exec( const TCHAR* Cmd, FOutputDevice& Ar )
+ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane ScreenClear, DWORD RenderLockFlags, BYTE* InHitData, INT* InHitSize )
+ {
+     guard(UNOpenGLESRenderDevice::Lock);
++#ifdef NOPENGLES_469_COMPAT
++	UT99PortMasterSyncMenuMouse469( Viewport );
++#endif
+ #ifdef PLATFORM_ANDROID
+     UT99AndroidForceDrawableViewportV28( Viewport, "Lock", Viewport ? Viewport->SizeX : 0, Viewport ? Viewport->SizeY : 0 );
+ #endif
+@@ -595,6 +788,11 @@ void UNOpenGLESRenderDevice::Unlock( UBOOL Blit )
+ 
+ 	glFlush();
+ 
++#ifdef NOPENGLES_469_COMPAT
++	if( Blit && Viewport && Viewport->GetWindow() )
++		SDL_GL_SwapWindow( (SDL_Window*)Viewport->GetWindow() );
++#endif
++
+ 	unguard;
+ }
+ 
+@@ -706,6 +904,15 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
+ {
+ 	guard(UNOpenGLESRenderDevice::DrawTile);
+ 
++#ifdef NOPENGLES_469_COMPAT
++	// 469e identifies Canvas font draws with PF_RenderHint. Force the masked
++	// cache/upload variant even if a menu style or package omitted PF_Masked.
++	// For P8 fonts this makes palette index 0 transparent; for RGBA font pages
++	// it enables the shader's alpha discard.
++	if( PolyFlags & PF_RenderHint )
++		PolyFlags |= PF_Masked;
++#endif
++
+ 	#ifdef PLATFORM_ANDROID
+     /* UT99_ANDROID_DISABLE_LEGACY_2D_SCALE_V37: v29 native viewport makes old tile scaling harmful. */
+ #endif
+@@ -952,7 +1159,9 @@ GLuint UNOpenGLESRenderDevice::CompileShader( GLenum Type, const char* Text )
+ 	{
+ 		char Tmp[2048];
+ 		glGetShaderInfoLog( Id, sizeof(Tmp), NULL, Tmp );
+-		appErrorf( "%s shader compilation failed:\n%s", ( Type == GL_FRAGMENT_SHADER ) ? "Fragment" : "Vertex", Tmp );
++		appErrorf( TEXT("%s shader compilation failed:\n%s"),
++			appFromAnsi(( Type == GL_FRAGMENT_SHADER ) ? "Fragment" : "Vertex"),
++			appFromAnsi(Tmp) );
+ 	}
+ 
+ 	return Id;
+@@ -990,8 +1199,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+ 	FCachedShader& NewShaderRef = ShaderMap.Set( ShaderFlags, NewShaderValue );
+ 	FCachedShader* NewShader = &NewShaderRef;
+ 
++#ifdef NOPENGLES_469_COMPAT
++	std::string VSText;
++	std::string FSText;
++#else
+ 	FString VSText;
+ 	FString FSText;
++#endif
+ 
+ 	VSText += ShaderVersion;
+ 	FSText += ShaderVersion;
+@@ -1000,8 +1214,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+ 	{
+ 		if( ShaderFlags & Flag )
+ 		{
++#ifdef NOPENGLES_469_COMPAT
++			char Buf[256];
++			std::snprintf( Buf, sizeof(Buf), "#define %s %u\n", FlagNames[FlagNum], Flag );
++#else
+ 			TCHAR Buf[256];
+ 			appSprintf( Buf, TEXT("#define %s %u\n"), FlagNames[FlagNum], Flag );
++#endif
+ 			VSText += Buf;
+ 			FSText += Buf;
+ 		}
+@@ -1009,16 +1228,26 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+ 
+ 	if( Overbright )
+ 	{
++#ifdef NOPENGLES_469_COMPAT
++		char Buf[256];
++		std::snprintf( Buf, sizeof(Buf), "#define LIGHTMAP_OVERBRIGHT %f\n", LIGHTMAP_OVERBRIGHT );
++#else
+ 		TCHAR Buf[256];
+ 		appSprintf( Buf, TEXT("#define LIGHTMAP_OVERBRIGHT %f\n"), LIGHTMAP_OVERBRIGHT );
++#endif
+ 		FSText += Buf;
+ 	}
+ 
+ 	VSText += VertShaderGLSL;
+ 	FSText += FragShaderGLSL;
+ 
++#ifdef NOPENGLES_469_COMPAT
++	GLuint VS = CompileShader( GL_VERTEX_SHADER, VSText.c_str() );
++	GLuint FS = CompileShader( GL_FRAGMENT_SHADER, FSText.c_str() );
++#else
+ 	GLuint VS = CompileShader( GL_VERTEX_SHADER, *VSText );
+ 	GLuint FS = CompileShader( GL_FRAGMENT_SHADER, *FSText );
++#endif
+ 
+ 	GLuint Prog = glCreateProgram();
+ 	glAttachShader( Prog, VS );
+@@ -1047,7 +1276,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+ 	{
+ 		char Tmp[2048];
+ 		glGetProgramInfoLog( Prog, sizeof(Tmp), NULL, Tmp );
+-		appErrorf( "Failed to link shader %08x:\n%s", ShaderFlags, Tmp );
++		appErrorf( TEXT("Failed to link shader %08x:\n%s"), ShaderFlags, appFromAnsi(Tmp) );
+ 	}
+ 
+ 	glDeleteShader( VS );
+@@ -1241,7 +1470,7 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
+ 		PolyFlags |= PF_Occlude;
+ 	else if( PolyFlags & PF_Translucent )
+ 	{
+-#ifdef PLATFORM_ANDROID
++#if defined(PLATFORM_ANDROID) || defined(NOPENGLES_469_COMPAT)
+ 		// UT99_ANDROID_V167U_TRANSLUCENT_MASKED_SMOKE_ALPHA:
+ 		// UT's thrown-rocket/grenade smoke path can arrive as a translucent
+ 		// sprite while the smoke texture itself still relies on PF_Masked/index-0
+@@ -1417,7 +1646,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
+ 
+ 	if( !Info.Mips[0] )
+ 	{
+-		debugf( NAME_Warning, "Encountered texture with invalid mips!" );
++		debugf( NAME_Warning, TEXT("Encountered texture with invalid mips!") );
+ 		return;
+ 	}
+ 
+@@ -1425,7 +1654,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
+ 	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
+ 	if( NewComposeSize > ComposeSize )
+ 	{
+-		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
++		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, TEXT("GLComposeBuf") );
+ 		verify( Compose );
+ 	}
+ 
+diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h
+index 20104ff..1af6378 100644
+--- a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h
++++ b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h
+@@ -53,9 +53,15 @@ enum EShaderAttribs
+ //
+ // GLES2 renderer based on NOpenGLDrv.
+ //
++#if UNREAL_TOURNAMENT_OLDUNREAL
++class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDeviceOldUnreal469
++{
++	DECLARE_CLASS(UNOpenGLESRenderDevice, URenderDeviceOldUnreal469, CLASS_Config)
++#else
+ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
+ {
+ 	DECLARE_CLASS(UNOpenGLESRenderDevice, URenderDevice, CLASS_Config)
++#endif
+ 
+ 	static constexpr INT MaxTexUnits = 4;
+ 
