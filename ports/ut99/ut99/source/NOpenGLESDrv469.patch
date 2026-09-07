@@ -13,8 +13,41 @@ index 7c7d7ca..aa923f3 100644
  else()
    set(SRC_FILES "NOpenGLESDrv.cpp" "${CMAKE_SOURCE_DIR}/../Thirdparty/glad_es/glad.c")
    set(NOPENGLES_GLAD_INCLUDE_DIRS
+diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/FragmentShader.glsl.inc b/third_party/ut99dc/Source/NOpenGLESDrv/FragmentShader.glsl.inc
+index 36959d5..d6051f0 100644
+--- a/third_party/ut99dc/Source/NOpenGLESDrv/FragmentShader.glsl.inc
++++ b/third_party/ut99dc/Source/NOpenGLESDrv/FragmentShader.glsl.inc
+@@ -1,17 +1,23 @@
+ R""(
+ 
+-varying mediump vec3 vPosition;
++#ifdef GL_FRAGMENT_PRECISION_HIGH
++#define UT99_WORLD_PRECISION highp
++#else
++#define UT99_WORLD_PRECISION mediump
++#endif
++
++varying UT99_WORLD_PRECISION vec3 vPosition;
+ #ifdef SF_Texture0
+-varying mediump vec2 vTexCoord0;
++varying UT99_WORLD_PRECISION vec2 vTexCoord0;
+ #endif
+ #ifdef SF_Texture1
+-varying mediump vec2 vTexCoord1;
++varying UT99_WORLD_PRECISION vec2 vTexCoord1;
+ #endif
+ #ifdef SF_Texture2
+-varying mediump vec2 vTexCoord2;
++varying UT99_WORLD_PRECISION vec2 vTexCoord2;
+ #endif
+ #ifdef SF_Texture3
+-varying mediump vec2 vTexCoord3;
++varying UT99_WORLD_PRECISION vec2 vTexCoord3;
+ #endif
+ #ifdef SF_VtxColor
+ varying lowp vec4 vVtxColor;
 diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
-index d2dc871..6c520fe 100644
+index d2dc871..8a07f9e 100644
 --- a/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
 +++ b/third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp
 @@ -7,6 +7,15 @@
@@ -375,11 +408,39 @@ index d2dc871..6c520fe 100644
  	unguard;
  }
  
-@@ -706,6 +904,15 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
+@@ -661,13 +859,17 @@ void UNOpenGLESRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo
+ 
+ 	const UBOOL IsFog = ( ( PolyFlags & ( PF_RenderFog|PF_Translucent|PF_Modulated ) ) == PF_RenderFog );
+ 	const UBOOL IsModulated = ( PolyFlags & PF_Modulated );
+-#ifdef PLATFORM_ANDROID
++#if defined(PLATFORM_ANDROID) || defined(NOPENGLES_469_COMPAT)
+ 	// UT99_ANDROID_V166G_MODULATED_DECAL_MASK:
+ 	// Keep the original UE1 modulated blob-shadow/decal blend, but discard the
+ 	// light grey no-op border around paletted decal textures. This mirrors the
+ 	// Unreal1 Android path: do not redraw the shadow; only alpha-test the bright
+ 	// quad background so Show Decals can stay enabled without square borders.
+-	const UBOOL AndroidModulatedDecalMask = ( SpanBuffer != NULL ) && ( PolyFlags & PF_Modulated ) && ( PolyFlags & PF_Masked );
++	// OldUnreal 469e sends these projected P8 decals as PF_Modulated only, so use
++	// the span buffer and palette as the decal/cutout indicators instead of
++	// requiring PF_Masked.
++	const UBOOL AndroidModulatedDecalMask =
++		( SpanBuffer != NULL ) && ( PolyFlags & PF_Modulated ) && Texture.Palette;
+ 	if( AndroidModulatedDecalMask )
+ 		CurrentShaderFlags |= SF_ModulatedDecalMask;
+ #else
+@@ -706,6 +908,23 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
  {
  	guard(UNOpenGLESRenderDevice::DrawTile);
  
 +#ifdef NOPENGLES_469_COMPAT
++	// UT_Grenade emits UT_BlackSmoke sprites from UnrealShare.SmokeBlack.
++	// Their legacy modulated palette renders as an opaque square on GLES2.
++	// Suppress only that texture package; leave rocket trails, explosions, fog,
++	// and every other translucent effect untouched.
++	if( Span != NULL && Texture.Texture &&
++		appStrstr( Texture.Texture->GetPathName(), TEXT("SmokeBlack.") ) )
++		return;
++
 +	// 469e identifies Canvas font draws with PF_RenderHint. Force the masked
 +	// cache/upload variant even if a menu style or package omitted PF_Masked.
 +	// For P8 fonts this makes palette index 0 transparent; for RGBA font pages
@@ -391,7 +452,7 @@ index d2dc871..6c520fe 100644
  	#ifdef PLATFORM_ANDROID
      /* UT99_ANDROID_DISABLE_LEGACY_2D_SCALE_V37: v29 native viewport makes old tile scaling harmful. */
  #endif
-@@ -952,7 +1159,9 @@ GLuint UNOpenGLESRenderDevice::CompileShader( GLenum Type, const char* Text )
+@@ -952,7 +1171,9 @@ GLuint UNOpenGLESRenderDevice::CompileShader( GLenum Type, const char* Text )
  	{
  		char Tmp[2048];
  		glGetShaderInfoLog( Id, sizeof(Tmp), NULL, Tmp );
@@ -402,7 +463,7 @@ index d2dc871..6c520fe 100644
  	}
  
  	return Id;
-@@ -990,8 +1199,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+@@ -990,8 +1211,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
  	FCachedShader& NewShaderRef = ShaderMap.Set( ShaderFlags, NewShaderValue );
  	FCachedShader* NewShader = &NewShaderRef;
  
@@ -416,7 +477,7 @@ index d2dc871..6c520fe 100644
  
  	VSText += ShaderVersion;
  	FSText += ShaderVersion;
-@@ -1000,8 +1214,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+@@ -1000,8 +1226,13 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
  	{
  		if( ShaderFlags & Flag )
  		{
@@ -430,7 +491,7 @@ index d2dc871..6c520fe 100644
  			VSText += Buf;
  			FSText += Buf;
  		}
-@@ -1009,16 +1228,26 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+@@ -1009,16 +1240,26 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
  
  	if( Overbright )
  	{
@@ -457,7 +518,7 @@ index d2dc871..6c520fe 100644
  
  	GLuint Prog = glCreateProgram();
  	glAttachShader( Prog, VS );
-@@ -1047,7 +1276,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
+@@ -1047,7 +1288,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
  	{
  		char Tmp[2048];
  		glGetProgramInfoLog( Prog, sizeof(Tmp), NULL, Tmp );
@@ -466,7 +527,7 @@ index d2dc871..6c520fe 100644
  	}
  
  	glDeleteShader( VS );
-@@ -1241,7 +1470,7 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
+@@ -1241,7 +1482,7 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
  		PolyFlags |= PF_Occlude;
  	else if( PolyFlags & PF_Translucent )
  	{
@@ -475,7 +536,7 @@ index d2dc871..6c520fe 100644
  		// UT99_ANDROID_V167U_TRANSLUCENT_MASKED_SMOKE_ALPHA:
  		// UT's thrown-rocket/grenade smoke path can arrive as a translucent
  		// sprite while the smoke texture itself still relies on PF_Masked/index-0
-@@ -1417,7 +1646,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
+@@ -1417,7 +1658,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
  
  	if( !Info.Mips[0] )
  	{
@@ -484,7 +545,7 @@ index d2dc871..6c520fe 100644
  		return;
  	}
  
-@@ -1425,7 +1654,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
+@@ -1425,7 +1666,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
  	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
  	if( NewComposeSize > ComposeSize )
  	{
@@ -513,3 +574,46 @@ index 20104ff..1af6378 100644
  
  	static constexpr INT MaxTexUnits = 4;
  
+diff --git a/third_party/ut99dc/Source/NOpenGLESDrv/VertexShader.glsl.inc b/third_party/ut99dc/Source/NOpenGLESDrv/VertexShader.glsl.inc
+index ce33a96..9d1eb3e 100644
+--- a/third_party/ut99dc/Source/NOpenGLESDrv/VertexShader.glsl.inc
++++ b/third_party/ut99dc/Source/NOpenGLESDrv/VertexShader.glsl.inc
+@@ -1,22 +1,28 @@
+ R""(
+ 
+-attribute mediump vec3 aPosition;
+-varying mediump vec3 vPosition;
++#ifdef GL_FRAGMENT_PRECISION_HIGH
++#define UT99_WORLD_PRECISION highp
++#else
++#define UT99_WORLD_PRECISION mediump
++#endif
++
++attribute highp vec3 aPosition;
++varying UT99_WORLD_PRECISION vec3 vPosition;
+ #ifdef SF_Texture0
+-attribute mediump vec2 aTexCoord0;
+-varying mediump vec2 vTexCoord0;
++attribute UT99_WORLD_PRECISION vec2 aTexCoord0;
++varying UT99_WORLD_PRECISION vec2 vTexCoord0;
+ #endif
+ #ifdef SF_Texture1
+-attribute mediump vec2 aTexCoord1;
+-varying mediump vec2 vTexCoord1;
++attribute UT99_WORLD_PRECISION vec2 aTexCoord1;
++varying UT99_WORLD_PRECISION vec2 vTexCoord1;
+ #endif
+ #ifdef SF_Texture2
+-attribute mediump vec2 aTexCoord2;
+-varying mediump vec2 vTexCoord2;
++attribute UT99_WORLD_PRECISION vec2 aTexCoord2;
++varying UT99_WORLD_PRECISION vec2 vTexCoord2;
+ #endif
+ #ifdef SF_Texture3
+-attribute mediump vec2 aTexCoord3;
+-varying mediump vec2 vTexCoord3;
++attribute UT99_WORLD_PRECISION vec2 aTexCoord3;
++varying UT99_WORLD_PRECISION vec2 vTexCoord3;
+ #endif
+ #ifdef SF_VtxColor
+ attribute lowp vec4 aVtxColor;

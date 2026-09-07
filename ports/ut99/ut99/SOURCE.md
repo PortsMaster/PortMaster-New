@@ -21,8 +21,10 @@
   SDK headers. The local compatibility changes use 469e's render-device base
   class and SDL window lifecycle, force masked font uploads for 469e Canvas
   text, use UWindow's software cursor for consistent handheld pointer bounds,
-  and retain the Android renderer's GLES2 texture and shader path.
-  - Packaged binary SHA-256: `c6d8411e94fe8a279eb5664174243de5a2986a425e365604a113fb8dcf8bd161`
+  retain the Android renderer's GLES2 texture and shader path, mask neutral P8
+  projected-decal backgrounds, suppress the broken legacy SmokeBlack grenade
+  sprites, and use high-precision world/texture coordinates when supported.
+  - Packaged binary SHA-256: `eb059d484c147e832a853c59c06a1d7068093fb2fea587d642a17ae692fd6594`
   - Exact compatibility patch: `source/NOpenGLESDrv469.patch`
   - Reproducible build project and instructions: `source/CMakeLists.txt`,
     `source/aarch64-linux.cmake`, `source/RenderPrivate.h`, and `source/BUILD.md`

@@ -33,8 +33,10 @@ git apply /path/to/source/NOpenGLESDrv469.patch
 Only these upstream renderer files are changed:
 
 - `third_party/ut99dc/Source/NOpenGLESDrv/CMakeLists.txt`
+- `third_party/ut99dc/Source/NOpenGLESDrv/FragmentShader.glsl.inc`
 - `third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrv.cpp`
 - `third_party/ut99dc/Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h`
+- `third_party/ut99dc/Source/NOpenGLESDrv/VertexShader.glsl.inc`
 
 ## Configure and build
 
@@ -72,7 +74,7 @@ SDL2, and firmware GLESv2. Install it beside the other 469e ARM64 engine modules
 The binary bundled with this port has SHA-256:
 
 ```text
-c6d8411e94fe8a279eb5664174243de5a2986a425e365604a113fb8dcf8bd161  NOpenGLESDrv.so
+eb059d484c147e832a853c59c06a1d7068093fb2fea587d642a17ae692fd6594  NOpenGLESDrv.so
 ```
 
 This hash records the tested release artifact; compiler and linker differences
