@@ -1,0 +1,96 @@
+diff --git a/FNA.csproj b/FNA.csproj
+index 6e14c00..a945566 100644
+--- a/FNA.csproj
++++ b/FNA.csproj
+@@ -249,6 +249,7 @@
+     <Compile Include="src\Graphics\Effect\StockEffects\SkinnedEffect.cs" />
+     <Compile Include="src\Graphics\Effect\StockEffects\SpriteEffect.cs" />
+     <Compile Include="src\Graphics\FNA3D.cs" />
++    <Compile Include="src\Graphics\IGLDevice.cs" />
+     <Compile Include="src\Graphics\GraphicsAdapter.cs" />
+     <Compile Include="src\Graphics\GraphicsDevice.cs" />
+     <Compile Include="src\Graphics\GraphicsDeviceStatus.cs" />
+@@ -406,6 +407,7 @@
+     <Compile Include="src\Vector2.cs" />
+     <Compile Include="src\Vector3.cs" />
+     <Compile Include="src\Vector4.cs" />
++    <Compile Include="lib\Vorbisfile-CS\Vorbisfile.cs" />
+     <Compile Include="lib\SDL2-CS\src\SDL2.cs" />
+     <Compile Include="lib\FAudio\csharp\FAudio.cs" />
+     <Compile Include="lib\Theorafile\csharp\Theorafile.cs" />
+diff --git a/src/Game.cs b/src/Game.cs
+index e61dc5c..4c33438 100644
+--- a/src/Game.cs
++++ b/src/Game.cs
+@@ -11,6 +11,7 @@
+ using System;
+ using System.Collections.Generic;
+ using System.Diagnostics;
++using System.Reflection;
+ 
+ using Microsoft.Xna.Framework.Audio;
+ using Microsoft.Xna.Framework.Input;
+@@ -21,6 +22,14 @@ using Microsoft.Xna.Framework.Input.Touch;
+ 
+ namespace Microsoft.Xna.Framework
+ {
++	/* Marks the entry point of an FNA_PATCH assembly. Same convention as
++	 * JohnnyonFlame's FNAHacks, so patch assemblies are interchangeable.
++	 */
++	[AttributeUsage(AttributeTargets.Class)]
++	public class ModEntryPointAttribute : Attribute
++	{
++	}
++
+ 	public class Game : IDisposable
+ 	{
+ 		#region Public Properties
+@@ -776,6 +785,35 @@ namespace Microsoft.Xna.Framework
+ 				graphicsDeviceManager.CreateDevice();
+ 			}
+ 
++			/* Load the game-specific patch assembly, if one was named. The
++			 * device exists by now, so patches can inspect graphics state.
++			 */
++			try
++			{
++				string patchFile = Environment.GetEnvironmentVariable("FNA_PATCH");
++				if (!string.IsNullOrEmpty(patchFile))
++				{
++					Assembly patch = Assembly.LoadFrom(patchFile);
++					foreach (Type type in patch.GetTypes())
++					{
++						if (!Attribute.IsDefined(type, typeof(ModEntryPointAttribute)))
++						{
++							continue;
++						}
++						MethodInfo main = type.GetMethod("Main");
++						if (main != null)
++						{
++							FNALoggerEXT.LogInfo("FNA_PATCH: " + type.FullName);
++							main.Invoke(null, null);
++						}
++					}
++				}
++			}
++			catch (Exception e)
++			{
++				FNALoggerEXT.LogError("FNA_PATCH failed: " + e.Message);
++			}
++
+ 			Initialize();
+ 
+ 			/* We need to do this after virtual Initialize(...) is called.
+diff --git a/src/Graphics/GraphicsDevice.cs b/src/Graphics/GraphicsDevice.cs
+index 9aee0b4..af7b5e7 100644
+--- a/src/Graphics/GraphicsDevice.cs
++++ b/src/Graphics/GraphicsDevice.cs
+@@ -249,7 +249,7 @@ namespace Microsoft.Xna.Framework.Graphics
+ 
+ 		#region Internal FNA3D_Device
+ 
+-		internal readonly IntPtr GLDevice;
++		internal readonly GLDeviceHandle GLDevice;
+ 
+ 		#endregion
+ 
