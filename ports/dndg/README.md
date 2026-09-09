@@ -8,9 +8,9 @@ Thanks to Purple Moss Collectors for creating this game.
 
 Thanks to NotYerAveragePaladin and Ganimoth for assisting in making this game playable and providng patches in regards to controller issues.
 
-"To obtain the files verified to work with this port, open Steam Console and type or paste the command 
-'download_depot 2400510 2400512 8521945860051414369' 
-into the command line. The files location will be shown after complete. Copy the PCK file from here to the dndg/gamedata folder."
+To obtain the game files for this port, open Steam Console and type or paste the command 
+download_depot 2400510 2400512 8521945860051414369
+into the command line. The files location will be shown after complete. Copy the PCK file from here to the dndg/gamedata folder.
 
 ## Controls
 
