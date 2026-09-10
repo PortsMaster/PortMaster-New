@@ -15,6 +15,15 @@ Keep the extracted asset paths and case unchanged. `libc++_shared.so` is the
 vendored Android NDK runtime used by the loader. `Adjustable.cfg` is included
 for the console-style HUD layout. The package is AArch64-only.
 
+`libSDL3.so.0` is intentionally bundled in `gtasa/libs.aarch64/`: standard
+PortMaster runtimes provide SDL2, but this port requires SDL3 and cannot use an
+SDL2 ABI. Only SDL3 itself is bundled. EGL/GLES, DRM/GBM, PipeWire/ALSA,
+OpenAL, and GPU drivers remain platform-provided so each CFW can supply its own
+patched stack.
+
+`libc++_shared.so` is a separate Android NDK runtime loaded by the port's
+custom ELF loader and is also included in the port directory.
+
 ## Controls
 
 The port uses native SDL3 gamepad input; it does not emulate a keyboard.
