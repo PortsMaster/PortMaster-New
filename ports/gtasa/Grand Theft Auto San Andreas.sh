@@ -19,12 +19,12 @@ get_controls
 GAMEDIR="/$directory/ports/gtasa"
 CONFDIR="$GAMEDIR/conf"
 mkdir -p "$CONFDIR"
-cd "$GAMEDIR/gtasa" || exit 1
+cd "$GAMEDIR" || exit 1
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export XDG_DATA_HOME="$CONFDIR"
-export LD_LIBRARY_PATH="$GAMEDIR/gtasa/libs.${DEVICE_ARCH}:$GAMEDIR/gtasa:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$GAMEDIR:${LD_LIBRARY_PATH:-}"
 export SDL_GAMECONTROLLERCONFIG="${sdl_controllerconfig:-${SDL_GAMECONTROLLERCONFIG:-}}"
 
 if [ "${DEVICE_ARCH:-}" != "aarch64" ]; then
@@ -33,15 +33,15 @@ if [ "${DEVICE_ARCH:-}" != "aarch64" ]; then
     exit 1
 fi
 
-if [ ! -f "$GAMEDIR/gtasa/libGame.so" ]; then
-    pm_message "Copy the official arm64-v8a libGame.so into $GAMEDIR/gtasa/."
+if [ ! -f "$GAMEDIR/libGame.so" ]; then
+    pm_message "Copy the official arm64-v8a libGame.so into $GAMEDIR/."
     pm_finish
     exit 1
 fi
 
-chmod +x "$GAMEDIR/gtasa/gtasa_linux" 2>/dev/null || true
-pm_platform_helper "$GAMEDIR/gtasa/gtasa_linux"
-"$GAMEDIR/gtasa/gtasa_linux"
+chmod +x "$GAMEDIR/gtasa_linux" 2>/dev/null || true
+pm_platform_helper "$GAMEDIR/gtasa_linux"
+"$GAMEDIR/gtasa_linux"
 status=$?
 pm_finish
 exit "$status"
