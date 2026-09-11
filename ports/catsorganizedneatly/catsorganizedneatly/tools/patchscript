@@ -1,0 +1,118 @@
+#!/bin/bash
+# Set GAMEDIR to the current directory and set logfile
+GAMEDIR="$PWD"
+LOGFILE="patchlog.txt"
+LOGERR="patcherr.txt"
+
+# Redirect output and error to the log file
+rm -f "$GAMEDIR/$LOGERR"
+# Save the patcher pipe (original stdout) on fd 3 before redirecting stdout
+# through tee. This lets emit_fail_msg send dialog overrides straight to the
+# patcher GUI without them appearing in patchlog.txt.
+exec 3>&1
+> "$GAMEDIR/$LOGFILE" && exec > >(tee "$GAMEDIR/$LOGFILE") 2>&1
+
+emit_fail_msg() {
+    echo "PATCH_FAIL_MSG:$1" >&3
+    echo "$1"
+    FAIL_MSG_SET=1
+}
+
+echo "GAMEDIR is set to: $GAMEDIR"
+
+# Exports
+export DATADIR="$GAMEDIR/assets"
+export SAVEDIR="$GAMEDIR/saves"
+export TOOLDIR="$GAMEDIR/tools"
+export DATAFILE="catsorganizedneatly.port"
+
+# Tight-RAM devices can't sustain a parallel astcenc / vorbis workload.
+THREADS_FLAG=""
+if [ "${DEVICE_RAM:-0}" -le 2 ]; then
+    THREADS_FLAG="--threads 3"
+fi
+
+# Pick ASTC block/quality based on display size. Smaller screens don't need 4x4 medium.
+SCREEN_PIXELS=$(( ${DISPLAY_WIDTH:-640} * ${DISPLAY_HEIGHT:-480} ))
+if [ "$SCREEN_PIXELS" -le 480000 ]; then
+    BLOCK_FLAGS="--block 6x6 --quality fastest"
+elif [ "$SCREEN_PIXELS" -le 1000000 ]; then
+    BLOCK_FLAGS="--block 5x5 --quality fast"
+else
+    BLOCK_FLAGS=""
+fi
+
+ORIG_MAX_FREQS=""
+thermal_setup() {
+    for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+        [ -d "$policy" ] && [ -f "$policy/scaling_max_freq" ] || continue
+        orig=$(cat "$policy/scaling_max_freq") || continue
+        target=$((orig * 8 / 10))
+        $ESUDO sh -c "echo $target > '$policy/scaling_max_freq'" 2>/dev/null || true
+        ORIG_MAX_FREQS="$ORIG_MAX_FREQS|$policy=$orig"
+    done
+}
+
+thermal_restore() {
+    OLDIFS=$IFS
+    IFS='|'
+    for entry in $ORIG_MAX_FREQS; do
+        [ -z "$entry" ] && continue
+        policy="${entry%=*}"
+        orig="${entry#*=}"
+        $ESUDO sh -c "echo $orig > '$policy/scaling_max_freq'" 2>/dev/null || true
+    done
+    IFS=$OLDIFS
+}
+
+prepare_files() {
+    mkdir -p "$SAVEDIR"
+    cp -R "$DATADIR/languages" "$SAVEDIR"
+    cp -R "$DATADIR/levels" "$SAVEDIR"
+    # Delete excess files
+    find "$DATADIR" -type f \( \
+        -name "*.gitkeep" -o -name "*.exe" -o -name "*.dll" -o -name "*.hashdb" -o \
+        -name "*.ico" -o -name "*.lnk" -o -name "*.msg" -o -name "*.zip" \
+    \) -exec rm -f {} \;
+}
+
+patch_datafile() {
+    if ! "$GAMEDIR/tools/gmtoolkit.${DEVICE_ARCH}" --config "$GAMEDIR/tools/catsorganizedneatly.json" $THREADS_FLAG $BLOCK_FLAGS "$DATADIR/data.win"; then
+        emit_fail_msg "gmtoolkit patch failed."
+        return 1
+    fi
+}
+
+# Zip it all into the .port file
+zip_archive() {
+    [ -f "$DATADIR/data.win" ] && mv "$DATADIR/data.win" "$DATADIR/game.droid"
+    local zip_out
+    if zip_out=$("$controlfolder/7zzs.${DEVICE_ARCH}" a -tzip -aoa -mx=0 "$GAMEDIR/$DATAFILE" "$DATADIR" 2>&1); then
+        rm -rf "$DATADIR"/*
+    else
+        echo "$zip_out"
+        emit_fail_msg "Failed to create $DATAFILE."
+        return 1
+    fi
+}
+
+process_game() {
+    echo "Preparing game..."
+    prepare_files || return 1
+    thermal_setup
+    echo "Applying patches..."
+    patch_datafile
+    rc=$?
+    thermal_restore
+    [ "$rc" -ne 0 ] && return 1
+    echo "Finishing up..."
+    zip_archive || return 1
+}
+
+if ! process_game; then
+    [ -z "$FAIL_MSG_SET" ] && emit_fail_msg "Patching failed."
+    echo "Patching process failed!"
+    mv "$LOGFILE" "$LOGERR"
+    exit 1
+fi
+echo "Patching process complete!"
