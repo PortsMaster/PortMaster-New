@@ -18,9 +18,23 @@ for the console-style HUD layout. The package is AArch64-only.
 ## Getting the game files
 
 The port does not include Rockstar's game library or assets. You need an
-existing, purchased Google Play installation of GTA: San Andreas and ADB.
-Google Play normally installs it as split APKs and may download additional
-Play Asset Delivery packs.
+existing, purchased Google Play installation of GTA: San Andreas.
+
+The recommended extraction method is the
+[GTAExtractor helper app](https://github.com/RyouVC/GTAExtractor/):
+
+1. Launch GTA: San Andreas at least once and wait for its additional data to
+   finish downloading.
+2. Download and open GTAExtractor on the Android device.
+3. Optionally enable audio extraction, select the output folder, and start the
+   extraction. Audio extraction requires root access to read the game's private
+   asset-pack directory.
+4. Copy the generated files into `/roms/ports/gtasa/gtasa/`, preserving paths
+   and case.
+
+For users who prefer to extract manually, the ADB procedure below remains
+available. Google Play normally installs the game as split APKs and may download
+additional Play Asset Delivery packs.
 
 1. Install the game and wait until its additional data has finished downloading.
 
