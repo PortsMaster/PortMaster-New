@@ -44,8 +44,6 @@ if [ "$sdl3_system" = 1 ]; then
     pm_message "Using system SDL3. Set GTASA_SDL3=bundled to use the SDL2 shim."
     if [ -n "${GTASA_SDL_VIDEO_DRIVER:-}" ]; then
         export SDL_VIDEODRIVER="$GTASA_SDL_VIDEO_DRIVER"
-    else
-        unset SDL_VIDEODRIVER
     fi
     export LD_LIBRARY_PATH="$GAMEDIR:${LD_LIBRARY_PATH:-}"
 else
