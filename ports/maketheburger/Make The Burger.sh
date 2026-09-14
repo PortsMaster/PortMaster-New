@@ -45,7 +45,7 @@ if [ ! -f "$GAMEDIR/gamedata/.patched_complete" ] || [ "$(cat "$GAMEDIR/gamedata
     fi
 
     if [ ! -f "$GAMEDIR/gamedata/.patched_complete" ]; then
-        echo "Patching failed"
+        pm_message "Patching failed"
         sleep 5
         exit 1
     fi
