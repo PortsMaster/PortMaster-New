@@ -39,7 +39,7 @@ if [ ! -f "$GAMEDIR/gamedata/.patched_complete" ] || [ "$(cat "$GAMEDIR/gamedata
         source "$controlfolder/utils/patcher.txt"
         $ESUDO kill -9 $(pidof gptokeyb2) 2>/dev/null
     else
-        echo "This port requires the latest version of PortMaster."
+        pm_message "This port requires the latest version of PortMaster."
         sleep 5
         exit 1
     fi
