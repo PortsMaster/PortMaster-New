@@ -30,6 +30,8 @@ bind_directories ~/.config/$BINARY $GAMEDIR/conf
 export XDG_DATA_HOME="$CONFDIR"
 
 # Exports
+export LC_ALL=C
+unset SDL_NOMOUSE
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
