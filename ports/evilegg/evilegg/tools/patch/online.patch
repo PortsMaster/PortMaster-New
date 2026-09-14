@@ -1,0 +1,3030 @@
+diff -ruN itch/audio.lua online/audio.lua
+--- itch/audio.lua	2026-03-26 13:50:32.000000000 +0800
++++ online/audio.lua	2026-08-19 20:58:58.648800300 +0800
+@@ -36,15 +36,26 @@
+ 	-- print("i'm a global lowpass, don't forget about me!")
+     -- audio.set_volume(0.5)
+ 	
+-    local wav_paths = filesystem.get_files_of_type("assets/audio", "wav", true)
+-    local ogg_paths = filesystem.get_files_of_type("assets/audio", "ogg", true)
++    -- Both sfx and music are now .ogg files (sfx used to be .wav). Extension can no
++    -- longer distinguish them, so split by folder instead: assets/audio/music/ is
++    -- music, everything else under assets/audio/ is sfx.
++    local all_ogg_paths = filesystem.get_files_of_type("assets/audio", "ogg", true)
++    local sfx_paths = {}
++    local ogg_paths = {}
++    for _, v in ipairs(all_ogg_paths) do
++        if v:find("assets/audio/music/", 1, true) then
++            table.insert(ogg_paths, v)
++        else
++            table.insert(sfx_paths, v)
++        end
++    end
+ 
+-	for _, v in ipairs(wav_paths) do
++	for _, v in ipairs(sfx_paths) do
+         local sound = audio.newSource(v, "static")
+ 		sound:setEffect("global")
+-		local name = filesystem.filename_to_asset_name(v, "wav", "audio_")
++		local name = filesystem.filename_to_asset_name(v, "ogg", "audio_")
+ 		if sfx[name] then
+-			asset_collision_error(name, v, wav_paths[name])
++			asset_collision_error(name, v, sfx_paths[name])
+ 		end
+ 		sfx[name] = sound
+ 		audio.sfx_names[sound] = name
+diff -ruN itch/conf.lua online/conf.lua
+--- itch/conf.lua	2026-03-26 13:00:36.000000000 +0800
++++ online/conf.lua	2026-08-17 22:59:07.743198500 +0800
+@@ -70,12 +70,19 @@
+ 	display_scale = IS_EXPORT and 3 or 5,
+ 
+ 	-- delta
+-	use_fixed_delta = false,
++	use_fixed_delta = true, -- was false -- makes the ~30fps-draw/60Hz-sim behavior
++	                        -- the permanent baseline, not just an adaptive
++	                        -- force_fixed fallback
+     fixed_tickrate = 60,
+ 	delta_tickrate = 60,
+     max_delta_seconds = 1/60,
+ 	max_fps = 600,
+-    max_fixed_ticks_per_frame = 1,
++    max_fixed_ticks_per_frame = 2, -- was 1 -- paired with main.lua's update/draw
++                                    -- split: allows simulation to catch up to real
++                                    -- time at up to 2 ticks/frame when force_fixed
++                                    -- is active, while only drawing once per real
++                                    -- frame regardless -- targets ~30fps draw rate
++                                    -- while keeping 60Hz simulation speed/feel
+ 
+     -- leaderboard moderation
+     leaderboard_minimum_game_speed = 0.80,
+@@ -402,12 +409,15 @@
+ 
+ 	t.identity              = conf.folder or conf.name
+ 	t.appendidentity        = false -- Search files in source directory before save directory (boolean)
+-	t.version               = "12.0"
++	t.version               = "11.4" -- PortMaster targets LOVE 11.x (SDL2); was "12.0"
+ 	t.console               = false
+ 	t.accelerometerjoystick = false
+ 	t.externalstorage       = false
++	t.graphics = t.graphics or {} -- LOVE 11 does not predefine t.graphics (added in 12.0); guard before indexing
+     t.graphics.gammacorrect = false
+-	t.graphics.renderers    = {"vulkan", "opengl", "metal"}
++	-- t.graphics.renderers is a LOVE 12-only field (selects Vulkan/OpenGL/Metal backend).
++	-- LOVE 11 has no such field and would just ignore it silently, but it is removed
++	-- here for clarity since it has no effect under 11.x.
+ 	t.highdpi        = true
+ 	
+ 	t.audio.mic             = false
+diff -ruN itch/fx/enemy_death_flash.lua online/fx/enemy_death_flash.lua
+--- itch/fx/enemy_death_flash.lua	2025-11-16 16:04:04.000000000 +0800
++++ online/fx/enemy_death_flash.lua	2026-08-27 10:36:07.315795100 +0800
+@@ -8,6 +8,39 @@
+ local PIXEL_COUNT = 10
+ local SPEED = 5.0
+ 
++-- Per-texture cache of the sprite's opaque-pixel bounding box. Only
++-- depends on the sprite itself (not on when/how it died), so this only
++-- needs to be scanned once per distinct texture/quad instead of on every
++-- single death -- this effect is spawned alongside DeathSplatter on
++-- nearly every enemy death, so it was previously doubling the cost of
++-- the full per-pixel getPixel() scan on every death.
++local bbox_cache = {}
++
++local function get_or_build_bbox(cache_key, data, width, height, offset_x, offset_y)
++    local cached = bbox_cache[cache_key]
++    if cached then
++        return cached[1], cached[2], cached[3], cached[4]
++    end
++
++    local true_start_x, true_start_y = math.huge, math.huge
++    local true_end_x, true_end_y = 0, 0
++
++    for y_ = 0, height - 1 do
++        for x_ = 0, width - 1 do
++            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
++            if a == 0 then goto continue end
++            if x_ < true_start_x then true_start_x = x_ end
++            if y_ < true_start_y then true_start_y = y_ end
++            if x_ > true_end_x then true_end_x = x_ end
++            if y_ > true_end_y then true_end_y = y_ end
++            ::continue::
++        end
++    end
++
++    bbox_cache[cache_key] = { true_start_x, true_start_y, true_end_x, true_end_y }
++    return true_start_x, true_start_y, true_end_x, true_end_y
++end
++
+ local DeathFlash = Effect:extend("DeathFlash")
+ 
+ DeathFlash.is_death_flash = true
+@@ -22,6 +55,7 @@
+ 	hit_vel_x = hit_vel_x or 0
+ 	hit_vel_y = hit_vel_y or 0
+ 
++	local cache_key = texture
+ 	local width, height = 0, 0
+     local offset_x, offset_y = 0, 0
+ 
+@@ -39,20 +73,8 @@
+     local data = graphics.texture_data[texture]
+ 
+ 
+-    local true_start_x, true_start_y = math.huge, math.huge
+-    local true_end_x, true_end_y = 0, 0
+-	
+-	for y_ = 0, height - 1 do
+-		for x_ = 0, width - 1 do
+-            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
+-            if a == 0 then goto continue end
+-            if x_ < true_start_x then true_start_x = x_ end
+-			if y_ < true_start_y then true_start_y = y_ end
+-			if x_ > true_end_x then true_end_x = x_ end
+-			if y_ > true_end_y then true_end_y = y_ end
+-			::continue::
+-		end
+-	end
++    local true_start_x, true_start_y, true_end_x, true_end_y =
++        get_or_build_bbox(cache_key, data, width, height, offset_x, offset_y)
+ 
+     self.size_mod = (max(width, height) / BASE_SIZE) * (size_mod or 1)
+     local true_width, true_height = true_end_x - true_start_x + 1, true_end_y - true_start_y + 1
+diff -ruN itch/fx/enemy_death_pixel_splatter.lua online/fx/enemy_death_pixel_splatter.lua
+--- itch/fx/enemy_death_pixel_splatter.lua	2025-08-18 15:19:08.000000000 +0800
++++ online/fx/enemy_death_pixel_splatter.lua	2026-08-25 15:25:32.013085400 +0800
+@@ -8,6 +8,65 @@
+ 
+ local DRAG = 0.15
+ 
++-- Coarser sampling: only scan every Nth pixel in each axis when building a
++-- sprite's cached splatter data (roughly a 1/(STEP^2) cut in point count).
++-- Trades a bit of visual density for a meaningful perf win on weak hardware.
++local PIXEL_SAMPLE_STEP = 2
++
++-- Per-texture cache of the (expensive) opaque-pixel scan: color, position,
++-- and bounding box only depend on the sprite itself, not on how/when it
++-- died, so this only needs to be computed once per distinct texture/quad
++-- rather than on every single death. Velocity is still computed fresh per
++-- death below, since that genuinely depends on hit direction/point.
++local pixel_scan_cache = {}
++
++local function get_or_build_pixel_scan(cache_key, data, width, height, offset_x, offset_y)
++    local cached = pixel_scan_cache[cache_key]
++    if cached then
++        return cached
++    end
++
++    local entries = {}
++    local c = 1
++    local true_start_x, true_start_y = math.huge, math.huge
++    local true_end_x, true_end_y = 0, 0
++
++    for y_ = 0, height - 1, PIXEL_SAMPLE_STEP do
++        for x_ = 0, width - 1, PIXEL_SAMPLE_STEP do
++            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
++            if a == 0 then goto continue end
++
++            if x_ < true_start_x then true_start_x = x_ end
++            if y_ < true_start_y then true_start_y = y_ end
++            if x_ > true_end_x then true_end_x = x_ end
++            if y_ > true_end_y then true_end_y = y_ end
++
++            entries[c] = {
++                x_ = x_,
++                y_ = y_,
++                r = r,
++                g = g,
++                b = b,
++                a = a,
++                start_x = x_ - width / 2,
++                start_y = y_ - height / 2,
++            }
++            c = c + 1
++            ::continue::
++        end
++    end
++
++    cached = {
++        entries = entries,
++        true_start_x = true_start_x,
++        true_start_y = true_start_y,
++        true_end_x = true_end_x,
++        true_end_y = true_end_y,
++    }
++    pixel_scan_cache[cache_key] = cached
++    return cached
++end
++
+ local DeathSplatter = Effect:extend("DeathSplatter")
+ 
+ DeathSplatter.is_death_flash = true
+@@ -27,6 +86,7 @@
+ 	vel_x = vel_x or 0
+ 	vel_y = vel_y or 0
+     self.vel_x, self.vel_y = vel_x, vel_y
++    local cache_key = texture
+ 	if texture.__isquad then
+ 		width, height = texture.width, texture.height
+ 		offset_x, offset_y = texture.x, texture.y
+@@ -65,65 +125,51 @@
+ 	local diagonal_size = vec2_magnitude(width, height)
+ 	self.hit_angle = vec2_angle(vel_dir_x, vel_dir_y)
+ 
+-    local true_start_x, true_start_y = math.huge, math.huge
+-    local true_end_x, true_end_y = 0, 0
+-	
+-	for y_ = 0, height - 1 do
+-		for x_ = 0, width - 1 do
+-			
+-            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
+-            if a == 0 then goto continue end
+-            if x_ < true_start_x then true_start_x = x_ end
+-			if y_ < true_start_y then true_start_y = y_ end
+-			if x_ > true_end_x then true_end_x = x_ end
+-			if y_ > true_end_y then true_end_y = y_ end
+-			local x2 = stepify(x_, 4)
+-            local y2 = stepify(y_, 4)
+-
+-			
+-			local diff_x, diff_y = vec2_sub(x2, y2, dx, dy)
+-			local diff_mag = vec2_magnitude(diff_x, diff_y) / diagonal_size
+-			local diff_dir_x, diff_dir_y = vec2_normalized(diff_x, diff_y)
+-
+-            local a_ = (1 + vec2_dot(vel_dir_x, vel_dir_y, diff_dir_x, diff_dir_y))
+-			local b_ = a_ * 0.5 * (1 - diff_mag) 
+-			local speed_scale = pow(abs(b_), 2.5)
+-			local pixel_vel_x, pixel_vel_y = vec2_mul_scalar(vel_dir_x, vel_dir_y, min(speed_scale * speed, MAX_SPEED))
+-
+-			local center_dir_x, center_dir_y = vec2_direction_to(self.hit_point_local_x, self.hit_point_local_y, x2 - center_x, y2 - center_y)
+-            local center_vel_x, center_vel_y = vec2_mul_scalar(center_dir_x, center_dir_y, (CENTER_SPEED * (center_speed_modifier or 1)))
+-			
+-			pixel_vel_x = (pixel_vel_x + center_vel_x)
+-            pixel_vel_y = (pixel_vel_y + center_vel_y)
+-			
+-            -- if vec2_magnitude(speed_x, speed_y) < 0.5 then
+-            --     speed_x, speed_y = vec2_normalized(speed_x, speed_y)
+-			-- 	speed_x, speed_y = vec2_mul_scalar(speed_x, speed_y, 0.5)
+-			-- end
+-
+-			pixels[c] = {
+-				r = r,
+-				g = g,
+-				b = b,
+-				a = a,
+-
+-				start_x = x_ - width / 2,
+-                start_y = y_ - height / 2,
+-				x = 0,
+-				y = 0,
+-
+-				-- vel_x = rng:randfn(speed_x, 0.005),
+-				-- vel_y = rng:randfn(speed_y, 0.005),
+-				vel_x = pixel_vel_x,
+-				vel_y = pixel_vel_y,
+-			}
+-			
+-
++    -- The actual per-pixel color/position/bounding-box scan (data:getPixel
++    -- over every pixel of the sprite) is cached per texture -- it's the
++    -- same for every enemy of this type regardless of how it died, so we
++    -- only pay for the getPixel() calls once per distinct sprite instead
++    -- of on every single death.
++    local scan = get_or_build_pixel_scan(cache_key, data, width, height, offset_x, offset_y)
++    local true_start_x, true_start_y = scan.true_start_x, scan.true_start_y
++    local true_end_x, true_end_y = scan.true_end_x, scan.true_end_y
++
++    for _, entry in ipairs(scan.entries) do
++        local x2 = stepify(entry.x_, 4)
++        local y2 = stepify(entry.y_, 4)
++
++        local diff_x, diff_y = vec2_sub(x2, y2, dx, dy)
++        local diff_mag = vec2_magnitude(diff_x, diff_y) / diagonal_size
++        local diff_dir_x, diff_dir_y = vec2_normalized(diff_x, diff_y)
++
++        local a_ = (1 + vec2_dot(vel_dir_x, vel_dir_y, diff_dir_x, diff_dir_y))
++        local b_ = a_ * 0.5 * (1 - diff_mag)
++        local speed_scale = pow(abs(b_), 2.5)
++        local pixel_vel_x, pixel_vel_y = vec2_mul_scalar(vel_dir_x, vel_dir_y, min(speed_scale * speed, MAX_SPEED))
++
++        local center_dir_x, center_dir_y = vec2_direction_to(self.hit_point_local_x, self.hit_point_local_y, x2 - center_x, y2 - center_y)
++        local center_vel_x, center_vel_y = vec2_mul_scalar(center_dir_x, center_dir_y, (CENTER_SPEED * (center_speed_modifier or 1)))
++
++        pixel_vel_x = (pixel_vel_x + center_vel_x)
++        pixel_vel_y = (pixel_vel_y + center_vel_y)
++
++        pixels[c] = {
++            r = entry.r,
++            g = entry.g,
++            b = entry.b,
++            a = entry.a,
++
++            start_x = entry.start_x,
++            start_y = entry.start_y,
++            x = 0,
++            y = 0,
++
++            vel_x = pixel_vel_x,
++            vel_y = pixel_vel_y,
++        }
+ 
+-			c = c + 1
+-			::continue::
+-		end
+-	end
++        c = c + 1
++    end
+ 
+     self.size_mod = max(width, height) / BASE_SIZE
+     local true_width, true_height = true_end_x - true_start_x + 1, true_end_y - true_start_y + 1
+@@ -146,6 +192,10 @@
+     end
+ end
+ 
++-- Reused across frames so drawing doesn't allocate a fresh batch table
++-- every single frame for every active splatter.
++local _draw_batch = {}
++
+ function DeathSplatter:draw(elapsed, tick, t)
+     if self.reversed then
+         t = 1 - t
+@@ -160,79 +210,100 @@
+ 
+     graphics.push("all")
+ 
++    local batch_count = 0
++
+     for _, pixel in ipairs(self.pixels) do
+         if pixel.a == 0 then goto continue end
+ 
+-        local r, g, b
+-
+         local color_mod = 1
+ 
++        -- self.color is never actually set on a DeathSplatter anywhere in
++        -- the codebase today -- this branch is unreachable dead code, and
++        -- was already broken if it ever WAS hit (r/g/b are never assigned
++        -- here in the original, so the old graphics.set_color(r, g, b, ...)
++        -- right after this branch would itself error on nil). Preserved
++        -- exactly as-is rather than guessing at intended behavior; the
++        -- batching optimization below only applies to the branch that is
++        -- actually used.
+         if self.color then
+             graphics.set_color(self.color)
++            goto continue
++        end
++
++        local r, g, b
++        if tick >= 5 and tick <= self.duration - 10 then
++            r, g, b = pixel.r * color_mod, pixel.g * color_mod, pixel.b * color_mod
+         else
+-            if tick >= 5 and tick <= self.duration - 10 then
+-                r, g, b = pixel.r * color_mod, pixel.g * color_mod, pixel.b * color_mod
+-            else
+-                local pixel_color = self.texture_palette:get_swapped_color_unpacked(pixel.r, pixel.g, pixel.b,
+-                    self.texture_palette, floor((self.random_start_tick + tick) / self.palette_tick_length))
+-                r, g, b = pixel_color.r * color_mod, pixel_color.g * color_mod, pixel_color.b * color_mod
+-            end
+-            -- graphics.set_color(pixel_color.r, pixel_color.g, pixel_color.b, pixel.a)
+-            -- graphics.set_color(pixel.r, pixel.g, pixel.b, pixel.a)
+-        end
+-        -- graphics.set_color(r * 0.5, g * 0.5, b * 0.5, pixel.a)
+-        -- graphics.points(
+-        -- 	floor(pixel.start_x + pixel.x * 1.5),
+-        -- 	floor(pixel.start_y + pixel.y * 1.5)
+-        -- )
++            local pixel_color = self.texture_palette:get_swapped_color_unpacked(pixel.r, pixel.g, pixel.b,
++                self.texture_palette, floor((self.random_start_tick + tick) / self.palette_tick_length))
++            r, g, b = pixel_color.r * color_mod, pixel_color.g * color_mod, pixel_color.b * color_mod
++        end
+ 
+ 		pixel.new_r = r
+ 		pixel.new_g = g
+ 		pixel.new_b = b
+ 
+-		graphics.set_color(r, g, b, pixel.a)
+-
+-
++        batch_count = batch_count + 1
++        local entry = _draw_batch[batch_count]
++        if not entry then
++            entry = {}
++            _draw_batch[batch_count] = entry
++        end
++        entry[1] = floor(pixel.start_x + pixel.x)
++        entry[2] = floor(pixel.start_y + pixel.y)
++        entry[3] = r
++        entry[4] = g
++        entry[5] = b
++        entry[6] = pixel.a
+ 
+-        graphics.points(
+-            floor(pixel.start_x + pixel.x),
+-            floor(pixel.start_y + pixel.y)
+-        )
+-
+-        -- if tick > self.duration - 10 then
+-        --     self:floor_canvas_pop()
+-        -- end
+-        -- if self.tick == self.duration then
+-        -- 	self:floor_canvas_push()
+-
+-        -- 	local ground_color_index = self.texture_palette:get_color_index_unpacked(pixel.r, pixel.g, pixel.b)
+-        -- 	local ground_color_r, ground_color_g, ground_color_b = Palette.rainbow:get_color_unpacked(self.start_tick + floor(tick / self.palette_tick_length) + ground_color_index * 3)
+-        -- 	graphics.set_color(ground_color_r * 0.05, ground_color_g * 0.05, ground_color_b * 0.05, pixel.a)
+-        -- 	graphics.points(
+-        -- 		floor(pixel.start_x + pixel.x),
+-        -- 		floor(pixel.start_y + pixel.y)
+-        -- 	)
+-        -- 	self:floor_canvas_pop()
+-        -- end
+         ::continue::
+     end
++
++    if batch_count > 0 then
++        -- Trim any leftover entries from a larger previous splatter reusing
++        -- this same scratch table.
++        for i = #_draw_batch, batch_count + 1, -1 do
++            _draw_batch[i] = nil
++        end
++        graphics.points(_draw_batch)
++    end
++
+     graphics.pop()
+ end
+ 
+ local PIXEL_MOD = 1.0
+ 
++-- Reused the same way as _draw_batch above.
++local _floor_draw_batch = {}
++
+ function DeathSplatter:floor_draw()
+     if self.tick < self.duration - 5 then
+         return
+     end
+-	
++
++    local batch_count = 0
++
+ 	for _, pixel in ipairs(self.pixels) do
+-		graphics.set_color(pixel.new_r * PIXEL_MOD, pixel.new_g * PIXEL_MOD, pixel.new_b * PIXEL_MOD, pixel.a)
+-		graphics.points(	
+-			floor(pixel.start_x + pixel.x),
+-			floor(pixel.start_y + pixel.y)
+-		)
++        batch_count = batch_count + 1
++        local entry = _floor_draw_batch[batch_count]
++        if not entry then
++            entry = {}
++            _floor_draw_batch[batch_count] = entry
++        end
++        entry[1] = floor(pixel.start_x + pixel.x)
++        entry[2] = floor(pixel.start_y + pixel.y)
++        entry[3] = pixel.new_r * PIXEL_MOD
++        entry[4] = pixel.new_g * PIXEL_MOD
++        entry[5] = pixel.new_b * PIXEL_MOD
++        entry[6] = pixel.a
+ 	end
++
++    if batch_count > 0 then
++        for i = #_floor_draw_batch, batch_count + 1, -1 do
++            _floor_draw_batch[i] = nil
++        end
++        graphics.points(_floor_draw_batch)
++    end
+ end
+ 
+ return DeathSplatter
+diff -ruN itch/fx/enemy_life_flash.lua online/fx/enemy_life_flash.lua
+--- itch/fx/enemy_life_flash.lua	2025-07-31 13:09:48.000000000 +0800
++++ online/fx/enemy_life_flash.lua	2026-08-27 10:36:07.932795400 +0800
+@@ -8,6 +8,37 @@
+ local PIXEL_COUNT = 8
+ local SPEED = 3.0
+ 
++-- Per-texture cache of the sprite's opaque-pixel bounding box. Only
++-- depends on the sprite itself (not on when it spawned), so this only
++-- needs to be scanned once per distinct texture/quad instead of on every
++-- single enemy spawn (which can spike during room-entry/wave moments).
++local bbox_cache = {}
++
++local function get_or_build_bbox(cache_key, data, width, height, offset_x, offset_y)
++    local cached = bbox_cache[cache_key]
++    if cached then
++        return cached[1], cached[2], cached[3], cached[4]
++    end
++
++    local true_start_x, true_start_y = math.huge, math.huge
++    local true_end_x, true_end_y = 0, 0
++
++    for y_ = 0, height - 1 do
++        for x_ = 0, width - 1 do
++            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
++            if a == 0 then goto continue end
++            if x_ < true_start_x then true_start_x = x_ end
++            if y_ < true_start_y then true_start_y = y_ end
++            if x_ > true_end_x then true_end_x = x_ end
++            if y_ > true_end_y then true_end_y = y_ end
++            ::continue::
++        end
++    end
++
++    bbox_cache[cache_key] = { true_start_x, true_start_y, true_end_x, true_end_y }
++    return true_start_x, true_start_y, true_end_x, true_end_y
++end
++
+ local LifeFlash = Effect:extend("LifeFlash")
+ 
+ -- TODO: use quads instead of pixels
+@@ -19,6 +50,7 @@
+ 	self.splatter_x = splatter_x - x
+ 	self.splatter_y = splatter_y - y
+ 
++	local cache_key = texture
+ 	local width, height = 0, 0
+     local offset_x, offset_y = 0, 0
+ 	if texture.__isquad then
+@@ -35,20 +67,8 @@
+     local data = graphics.texture_data[texture]
+ 
+ 
+-    local true_start_x, true_start_y = math.huge, math.huge
+-    local true_end_x, true_end_y = 0, 0
+-	
+-	for y_ = 0, height - 1 do
+-		for x_ = 0, width - 1 do
+-            local r, g, b, a = data:getPixel(x_ + offset_x, y_ + offset_y)
+-            if a == 0 then goto continue end
+-            if x_ < true_start_x then true_start_x = x_ end
+-			if y_ < true_start_y then true_start_y = y_ end
+-			if x_ > true_end_x then true_end_x = x_ end
+-			if y_ > true_end_y then true_end_y = y_ end
+-			::continue::
+-		end
+-	end
++    local true_start_x, true_start_y, true_end_x, true_end_y =
++        get_or_build_bbox(cache_key, data, width, height, offset_x, offset_y)
+ 
+     self.size_mod = (max(width, height) / BASE_SIZE) * (size_mod or 1)
+     local true_width, true_height = true_end_x - true_start_x + 1, true_end_y - true_start_y + 1
+diff -ruN itch/graphics.lua online/graphics.lua
+--- itch/graphics.lua	2026-03-26 14:30:22.000000000 +0800
++++ online/graphics.lua	2026-09-05 07:38:34.681466300 +0800
+@@ -38,6 +38,63 @@
+ 
+ graphics = setmetatable(graphics, { __index = love.graphics })
+ 
++if not graphics.readback_texture then
++    -- love.graphics.readbackTexture is a LOVE 12-only API (reads pixel data back
++    -- from any Texture, Image or Canvas). The boot-time camelCase->snake_case
++    -- aliasing only creates graphics.readback_texture when the underlying LOVE
++    -- function actually exists, so on LOVE 11 it's simply absent. LOVE 11's
++    -- closest equivalent is Canvas:newImageData(), which only works on Canvas
++    -- objects (not plain Images) -- callers that might pass an Image already
++    -- have a pcall + fallback for that case (see graphics.load_textures below),
++    -- so this only needs to succeed for Canvases.
++    function graphics.readback_texture(texture)
++        return texture:newImageData()
++    end
++end
++
++if not graphics.set_stencil_mode then
++    -- love.graphics.setStencilMode(mode, value) is a LOVE 12-only API: a persistent
++    -- toggle -- "draw" makes subsequent draws write into the stencil buffer, "test"
++    -- makes subsequent draws stencil-tested against it, until the mode changes again.
++    -- LOVE 11 only has the older callback-based love.graphics.stencil(fn, action,
++    -- value) + setStencilTest(comparemode, comparevalue) pair -- fn must be called
++    -- to issue the stencil-writing draws, but call sites here just issue ordinary
++    -- draw calls afterward rather than wrapping them in a callback.
++    --
++    -- Bridge this with a coroutine: start love.graphics.stencil() with a callback
++    -- that immediately yields instead of returning. GL/GPU draw-target state is
++    -- global, not tied to the Lua call stack, so the "write to stencil" state set
++    -- up by stencil() before the callback runs stays in effect for whatever the
++    -- caller draws next (outside the callback), right up until we resume the
++    -- coroutine and let stencil() actually return.
++    local stencil_coroutine = nil
++
++    local function finish_stencil_write()
++        if stencil_coroutine then
++            coroutine.resume(stencil_coroutine)
++            stencil_coroutine = nil
++        end
++    end
++
++    function graphics.set_stencil_mode(mode, value)
++        if mode == "draw" then
++            finish_stencil_write() -- in case a previous "draw" was never closed out
++            stencil_coroutine = coroutine.create(function()
++                love.graphics.stencil(function()
++                    coroutine.yield()
++                end, "replace", value, false)
++            end)
++            coroutine.resume(stencil_coroutine)
++        elseif mode == "test" then
++            finish_stencil_write()
++            love.graphics.setStencilTest("equal", value)
++        else -- "off" / nil
++            finish_stencil_write()
++            love.graphics.setStencilTest()
++        end
++    end
++end
++
+ local window_width, window_height = 0, 0
+ local window_size = Vec2(window_width, window_height)
+ local viewport_size = Vec2(conf.viewport_size.x, conf.viewport_size.y)
+@@ -817,7 +874,8 @@
+ 
+     local process_scale = usersettings.pixel_perfect and math.floor or identity_function
+ 
+-	window_width, window_height = graphics.get_dimensions()
++	window_width, window_height = wsx, wsy -- was a second graphics.get_dimensions() call
++                                            -- for the same values already fetched above
+     window_size.x = window_width
+ 	window_size.y = window_height
+     viewport_size.x = conf.viewport_size.x
+@@ -876,20 +934,26 @@
+ 	graphics.window_size.x = window_size.x
+ 	graphics.window_size.y = window_size.y
+ 
+-    graphics.set_canvas(graphics.pre_adjustment_canvas)
+-	
+-    graphics.game_draw()
+-    
+-	graphics.set_color(1, 1, 1)
+-    graphics.set_canvas(graphics.canvas)
+-
+-
+-    if usersettings.disco_mode
++    -- Only route through the separate pre_adjustment_canvas (and the extra
++    -- full-viewport blit that follows) when a color-adjustment shader is actually
++    -- going to be applied. In the common/default case (no disco mode, no invert,
++    -- brightness/saturation/hue all neutral) that blit copied pixels unchanged --
++    -- real GPU cost for zero visual effect, every single frame.
++    local needs_adjustment = usersettings.disco_mode
+         or graphics.adjustment_shader_options.invert_colors
+         or graphics.adjustment_shader_options.brightness ~= 1
+         or graphics.adjustment_shader_options.saturation ~= 1
+-        or graphics.adjustment_shader_options.hue ~= 0 then
+-            
++        or graphics.adjustment_shader_options.hue ~= 0
++
++    graphics.set_canvas(needs_adjustment and graphics.pre_adjustment_canvas or graphics.canvas)
++
++    graphics.game_draw()
++
++    graphics.set_color(1, 1, 1)
++
++    if needs_adjustment then
++        graphics.set_canvas(graphics.canvas)
++
+         graphics.set_shader(graphics.shader.adjustment)
+         for arg, value in pairs(graphics.adjustment_shader_options) do
+             if arg == "hue" and usersettings.disco_mode then
+@@ -898,9 +962,10 @@
+                 graphics.shader.adjustment:send(arg, value)
+             end
+         end
++        graphics.draw(graphics.pre_adjustment_canvas, 0, 0)
+     end
+-    graphics.draw(graphics.pre_adjustment_canvas, 0, 0)
+-    graphics.set_shader()
++    graphics.set_shader() -- unconditional reset, matching original behavior, even
++                           -- though the blit itself above is now conditional
+ 
+     graphics.set_canvas()
+ 
+@@ -1174,6 +1239,14 @@
+ end
+ 
+ 
++-- Per-texture cache of the centered-draw offset (half width/height,
++-- rounded). A texture's dimensions never change after load, so this
++-- was previously being recomputed via two native getWidth()/getHeight()
++-- calls on literally every single sprite draw in the game, every frame
++-- -- draw_centered/drawp_centered is the primary sprite-drawing path
++-- used by nearly every object. Cached once per distinct texture instead.
++local _centered_offset_cache = {}
++
+ function graphics.draw_centered(texture, x, y, r, sx, sy, ox, oy, kx, ky)
+ 	
+ 	if texture == nil then return end
+@@ -1184,23 +1257,74 @@
+ 	
+ 	ox = ox or 0
+ 	oy = oy or 0
+-	local offset_x = round(texture:getWidth() / 2)
+-	local offset_y = round(texture:getHeight() / 2)
+-	graphics.draw(texture, x, y, r, sx, sy, ox + offset_x, oy + offset_y, kx, ky)
++	local cached_offset = _centered_offset_cache[texture]
++	if not cached_offset then
++		cached_offset = { round(texture:getWidth() / 2), round(texture:getHeight() / 2) }
++		_centered_offset_cache[texture] = cached_offset
++	end
++	graphics.draw(texture, x, y, r, sx, sy, ox + cached_offset[1], oy + cached_offset[2], kx, ky)
+ end
+ 
++-- Reused across calls -- rebuilt only when the texture actually
++-- changes between calls (rare in practice: each caller typically
++-- outlines one consistent texture, e.g. a bullet or gun sprite).
++local _outline_sprite_batch
++local _outline_sprite_batch_texture
++
+ function graphics.draw_centered_outline(color, texture, x, y, r, sx, sy, ox, oy, kx, ky)
+-	graphics.push("all")
+-	graphics.set_color(color)
+-	graphics.draw_centered(texture, x + 1, y + 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x - 1, y - 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x + 1, y - 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x - 1, y + 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x + 1, y, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x - 1, y, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x, y + 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.draw_centered(texture, x, y - 1, r, sx, sy, ox, oy, kx, ky)
+-	graphics.pop()
++	if texture == nil then return end
++
++	if texture.__isquad then
++		-- No current caller passes a quad here -- fall back to the
++		-- original unbatched approach rather than adding complexity
++		-- for a case that doesn't occur in practice.
++		graphics.push("all")
++		graphics.set_color(color)
++		graphics.draw_centered(texture, x + 1, y + 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x - 1, y - 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x + 1, y - 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x - 1, y + 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x + 1, y, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x - 1, y, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x, y + 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.draw_centered(texture, x, y - 1, r, sx, sy, ox, oy, kx, ky)
++		graphics.pop()
++		graphics.draw_centered(texture, x, y, r, sx, sy, ox, oy, kx, ky)
++		return
++	end
++
++	ox = ox or 0
++	oy = oy or 0
++	local cached_offset = _centered_offset_cache[texture]
++	if not cached_offset then
++		cached_offset = { round(texture:getWidth() / 2), round(texture:getHeight() / 2) }
++		_centered_offset_cache[texture] = cached_offset
++	end
++	local total_ox = ox + cached_offset[1]
++	local total_oy = oy + cached_offset[2]
++
++	-- The 8 outline copies always share the same color, so they batch
++	-- into a single draw call instead of 8 separate ones. The 9th,
++	-- "real" sprite below keeps its own draw_centered() call, since it
++	-- uses whatever color the caller had active before this function
++	-- was called, not `color` -- that can't be folded into the batch.
++	if _outline_sprite_batch_texture ~= texture then
++		_outline_sprite_batch = love.graphics.newSpriteBatch(texture, 8)
++		_outline_sprite_batch_texture = texture
++	end
++	local batch = _outline_sprite_batch
++	batch:clear()
++	batch:setColor(color.r, color.g, color.b, color.a or 1)
++	batch:add(x + 1, y + 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x - 1, y - 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x + 1, y - 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x - 1, y + 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x + 1, y, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x - 1, y, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x, y + 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	batch:add(x, y - 1, r, sx, sy, total_ox, total_oy, kx, ky)
++	love.graphics.draw(batch)
++
+ 	graphics.draw_centered(texture, x, y, r, sx, sy, ox, oy, kx, ky)
+ end
+ 
+diff -ruN itch/https.lua online/https.lua
+--- itch/https.lua	1970-01-01 07:30:00.000000000 +0730
++++ online/https.lua	2026-08-16 19:59:46.385978100 +0800
+@@ -0,0 +1,20 @@
++-- Stub replacement for the native "https" module (github.com/love2d/lua-https).
++--
++-- The real module is a compiled C extension (https.so / https.dll) that ships
++-- as a separate per-platform binary alongside the game. No aarch64 Linux build
++-- exists for this handheld's LOVE runtime, so `require "https"` has nothing to
++-- resolve to and crashes at boot inside lib/async_https.lua / async_https_worker.lua.
++--
++-- This shim satisfies the require() call and mimics https.request()'s return
++-- shape (code, body) with a failure result, so the A2 web/leaderboard SDK's
++-- normal "request failed" handling takes over instead of crashing the game.
++-- Effectively: online leaderboard/analytics submission is disabled on this
++-- platform; offline play is unaffected.
++
++local https = {}
++
++function https.request(_url, _options)
++    return nil, "https module not available on this platform"
++end
++
++return https
+diff -ruN itch/leaderboard.lua online/leaderboard.lua
+--- itch/leaderboard.lua	2026-03-15 22:59:28.000000000 +0800
++++ online/leaderboard.lua	2026-08-27 17:07:31.583504800 +0800
+@@ -1,15 +1,52 @@
+--- leaderboard.lua  ── async client for multi-category leaderboard
+--- LÖVE 11/12, uses love.thread + luasocket + lib/json.lua
++-- leaderboard.lua ── async client for multi-category leaderboard
++-- LOVE 11.5, uses love.thread + luasocket + lib/json.lua
++--
++-- Talks to the original developer's server. Submitted with the author's
++-- permission for this port.
++--
++-- This is a from-scratch rewrite of the transport layer only -- every
++-- payload field, command name ("submit"/"fetch"/"lookup"/"add_death"/
++-- "get_deaths"/"submit_many"), and the category version-suffixing rule
++-- (LB.cat(), and exactly which calls apply it via their `process_name`
++-- argument) are preserved byte-for-byte from the original client, since
++-- those are what the live server actually expects on the wire. Only the
++-- actual networking underneath -- the part that was genuinely broken --
++-- has changed. Two concrete problems in the original were found and
++-- fixed here:
++--
++-- 1. THE BUG THAT CAUSED THE FREEZE: the original checked
++--        local okc, err = pcall(function() return c:connect(host, port) end)
++--        if not okc or err == false then ... failure ... end
++--    luasocket's connect() returns `1` on success or `nil, errmsg` on
++--    failure -- never literally `false`. So `err == false` can never be
++--    true, and pcall(fn) here actually returns THREE values (its own ok
++--    flag, plus connect()'s two forwarded returns) while only two locals
++--    captured the first of them -- so the real error message was also
++--    being silently discarded. Net effect: a failed/incomplete connect()
++--    was never detected, and the code fell through to send()/receive()
++--    on a socket that hadn't actually connected -- producing exactly the
++--    "Transport endpoint is not connected" errors seen on-device. Fixed
++--    below by capturing all three pcall return values and checking for
++--    `nil` (the real failure sentinel), not `false`.
++--
++-- 2. THE ARCHITECTURAL FRAGILITY: the original spun up a single,
++--    persistent worker thread that served every request for the whole
++--    game session from one serial `while true do local job = IN:demand()
++--    ... end` loop. If any single request ever hung in a way the 5s
++--    socket timeout didn't catch, that one worker thread would never
++--    loop back to service any later request -- meaning one bad network
++--    moment could silently wedge every leaderboard/death-tracking call
++--    for the rest of the session. Fixed below by spawning one short-lived
++--    thread per request instead of a single long-lived worker: a stuck
++--    or misbehaving request can now only ever affect itself.
++--
++-- A client-side (main-thread) wall-clock timeout has also been added as
++-- a safety net in LB.poll(), so that even if some future/unknown network
++-- condition causes a request's thread to genuinely hang forever, the UI
++-- still resolves to a failure after a bounded time instead of hanging.
+ 
+--- this code is mostly LLM generated. it probably sucks! 
+--- please do not use it to make my life harder.
+-
+-
+-local socket = require "socket"
+-local json   = require "lib.json"
+ local thread = require "love.thread"
+ 
+-
+ local LB = {}
+ LB.NUM_TRIES        = 5
+ 
+@@ -25,93 +62,151 @@
+ }
+ 
+ if debug.enabled then
+-	table.insert(LB.categories, 1, "debug")
++    table.insert(LB.categories, 1, "debug")
+ end
+ 
+ ----------------------------------------------------------------------
+--- internal async plumbing ------------------------------------------
++-- internal async plumbing --------------------------------------------
+ ----------------------------------------------------------------------
+-local IN  = thread.getChannel("lb_in")
++
++-- How long the socket itself is allowed to sit on any single blocking
++-- call (connect/send/receive) before luasocket gives up on it.
++local SOCKET_TIMEOUT = 5
++
++-- Client-side safety net: if a request's own thread hasn't reported back
++-- at all (success or failure) within this long, give up on it from the
++-- main thread's side regardless. Comfortably longer than SOCKET_TIMEOUT
++-- so it should only ever trigger if something goes wrong beyond the
++-- socket layer's own timeout handling.
++local CLIENT_TIMEOUT = 8
++
+ local OUT = thread.getChannel("lb_out")
+ local idc = 0
+ local cbs = {}
++local pending_since = {}
+ 
+ local worker_code = [[
+     local socket = require "socket"
+     local json   = require "lib.json"
+     local thread = require "love.thread"
+-    local IN  = thread.getChannel("lb_in")
++
++    -- Only simple types (strings/numbers/booleans) can be passed via
++    -- Thread:start(...) in LOVE 11.x -- the actual job data (a table) is
++    -- handed off through a uniquely-named Channel instead, which is built
++    -- to safely carry full Lua values including tables. The channel name
++    -- itself is the one thing passed via start().
++    local job_channel_name = ...
++    local job = thread.getChannel(job_channel_name):demand()
++    local id, host, port, payload, timeout = job.id, job.host, job.port, job.payload, job.timeout
++
+     local OUT = thread.getChannel("lb_out")
++    local resp = { id = id }
++    local ok, data
+ 
+-    while true do
+-        local job = IN:demand()
+-        if job == "__quit__" then break end
+-        local resp = {id = job.id}
+-        local ok, data
+-
+-        local ok_tcp, c = pcall(socket.tcp)
+-        if not ok_tcp then
+-            print("Worker error: TCP creation failed -", tostring(c))
+-            ok, data = false, "tcp creation failed: " .. tostring(c)
++    local ok_tcp, c = pcall(socket.tcp)
++    if not ok_tcp then
++        print("Worker error: TCP creation failed -", tostring(c))
++        ok, data = false, "tcp creation failed: " .. tostring(c)
++    else
++        local ok_timeout, timeout_err = pcall(function() c:settimeout(timeout) end)
++        if not ok_timeout then
++            print("Worker error: Timeout setting failed -", tostring(timeout_err))
++            ok, data = false, "timeout setting failed: " .. tostring(timeout_err)
+         else
+-            local ok_timeout, timeout_err = pcall(function() c:settimeout(5) end)
+-            if not ok_timeout then
+-                print("Worker error: Timeout setting failed -", tostring(timeout_err))
+-                ok, data = false, "timeout setting failed: " .. tostring(timeout_err)
++            -- IMPORTANT: capture ALL THREE values pcall can return here --
++            -- its own success flag, plus connect()'s own two forwarded
++            -- return values (result, errmsg). luasocket's connect()
++            -- returns 1 on success or nil, "some error string" on
++            -- failure -- it never returns literal `false` in either case,
++            -- so that must not be what gets checked.
++            local pcall_ok, connect_result, connect_err = pcall(function()
++                return c:connect(host, port)
++            end)
++
++            if not pcall_ok then
++                print("Worker error: Connection threw an error -", tostring(connect_result))
++                ok, data = false, "connect exception: " .. tostring(connect_result)
++            elseif connect_result == nil then
++                print("Worker error: Connection failed -", tostring(connect_err))
++                ok, data = false, "connect failed: " .. tostring(connect_err)
+             else
+-                local okc, err = pcall(function() return c:connect(job.host, job.port) end)
+-                if not okc or err == false then
+-                    print("Worker error: Connection failed -", tostring(err))
+-                    ok, data = false, "connect: " .. tostring(err)
++                local ok_send, send_err = pcall(function()
++                    return c:send(json.encode(payload).."\n")
++                end)
++                if not ok_send then
++                    print("Worker error: Send failed -", tostring(send_err))
++                    ok, data = false, "send failed: " .. tostring(send_err)
+                 else
+-                    local ok_send, send_err = pcall(function()
+-                        return c:send(json.encode(job.payload).."\n")
++                    local ok_recv, line, rerr = pcall(function()
++                        return c:receive("*l")
+                     end)
+-                    if not ok_send then
+-                        print("Worker error: Send failed -", tostring(send_err))
+-                        ok, data = false, "send failed: " .. tostring(send_err)
++                    if not ok_recv then
++                        print("Worker error: Receive operation failed -", tostring(line))
++                        ok, data = false, "recv failed: " .. tostring(line)
++                    elseif not line then
++                        print("Worker error: No data received -", tostring(rerr))
++                        ok, data = false, "recv: " .. tostring(rerr)
+                     else
+-                        local ok_recv, line, rerr = pcall(function()
+-                            return c:receive("*l")
+-                        end)
+-                        if not ok_recv then
+-                            print("Worker error: Receive operation failed -", tostring(line))
+-                            ok, data = false, "recv failed: " .. tostring(line)
+-                        elseif not line then
+-                            print("Worker error: No data received -", tostring(rerr))
+-                            ok, data = false, "recv: " .. tostring(rerr)
+-                        else
+-                            local succ, obj = pcall(json.decode, line)
+-                            if not succ then
+-                                print("Worker error: JSON decode failed -", tostring(obj))
+-                            end
+-                            ok, data = succ and true or false, succ and obj or "bad json"
++                        local succ, obj = pcall(json.decode, line)
++                        if not succ then
++                            print("Worker error: JSON decode failed -", tostring(obj))
+                         end
++                        ok, data = succ and true or false, succ and obj or "bad json"
+                     end
+                 end
+             end
+-            pcall(function() c:close() end)
+         end
+-        resp.ok, resp.data = ok, data
+-        OUT:push(resp)
++        pcall(function() c:close() end)
+     end
++
++    resp.ok, resp.data = ok, data
++    OUT:push(resp)
+ ]]
+-thread.newThread(worker_code):start()
+ 
+ local function next_id() idc = idc + 1; return idc end
++
+ local function rpc(tbl, cb)
+-    local id = next_id(); cbs[id] = cb
+-    IN:push{ id=id, host=LB.host, port=LB.port, payload=tbl }
++    local id = next_id()
++    cbs[id] = cb
++    pending_since[id] = love.timer.getTime()
++
++    local job_channel_name = "lb_job_" .. id
++    thread.getChannel(job_channel_name):push({
++        id = id, host = LB.host, port = LB.port, payload = tbl, timeout = SOCKET_TIMEOUT
++    })
++
++    local t = thread.newThread(worker_code)
++    t:start(job_channel_name)
+ end
+ 
+ ----------------------------------------------------------------------
+--- public poll (call in love.update) ---------------------------------
++-- public poll (call in love.update) ----------------------------------
+ ----------------------------------------------------------------------
+ function LB.poll()
+     while true do
+         local msg = OUT:pop()
+         if not msg then break end
+-        local cb = cbs[msg.id]; if cb then cbs[msg.id]=nil; cb(msg.ok,msg.data) end
++        local cb = cbs[msg.id]
++        if cb then
++            cbs[msg.id] = nil
++            pending_since[msg.id] = nil
++            cb(msg.ok, msg.data)
++        end
++    end
++
++    -- Client-side timeout safety net: resolve any request that's been
++    -- waiting longer than CLIENT_TIMEOUT with no response at all, in case
++    -- its thread genuinely never comes back for any reason.
++    if next(pending_since) ~= nil then
++        local now = love.timer.getTime()
++        for id, started_at in pairs(pending_since) do
++            if now - started_at > CLIENT_TIMEOUT then
++                local cb = cbs[id]
++                cbs[id] = nil
++                pending_since[id] = nil
++                if cb then cb(false, "client-side timeout") end
++            end
++        end
+     end
+ end
+ 
+@@ -126,7 +221,8 @@
+ LB.cat = cat
+ 
+ ----------------------------------------------------------------------
+--- API ---------------------------------------------------------------
++-- API -- payload shapes and category-suffix rules preserved exactly
++-- from the original client.
+ ----------------------------------------------------------------------
+ function LB.submit(run, category, process_name, cb)
+ 	category = (process_name or category == nil) and cat(category) or category
+@@ -171,17 +267,11 @@
+ 
+ function LB.submit_queued_runs(cb)
+     local run_upload_queue = savedata.run_upload_queue[GAME_LEADERBOARD_VERSION]
+-    -- local run_upload_queue_tries = savedata.run_upload_queue_tries[GAME_LEADERBOARD_VERSION]
+     if not run_upload_queue or next(run_upload_queue) == nil then
+         if cb then cb(true, { status = "noop" }) end
+         return
+     end
+ 
+-    -- if not run_upload_queue_tries or next(run_upload_queue_tries) == nil then
+-    --     if cb then cb(true, { status = "noop" }) end
+-    --     return
+-    -- end
+-
+     local runs_by_category = {}
+     for key, run in pairs(run_upload_queue) do
+         local category = run.category or LB.default_category
+@@ -197,14 +287,7 @@
+         LB.submit_many(runs, category, true, function(ok, res)
+             if ok and res and res.status == "ok" then
+                 for _, run in ipairs(runs) do
+-                    -- if not run_upload_queue_tries[run.run_key] then
+-                    --     run_upload_queue_tries[run.run_key] = LB.NUM_TRIES
+-                    -- end
+-                    -- run_upload_queue_tries[run.run_key] = run_upload_queue_tries[run.run_key] - 1
+-                    -- if run_upload_queue_tries[run.run_key] <= 0 then
+-                        run_upload_queue[run.run_key] = nil
+-                        -- run_upload_queue_tries[run.run_key] = nil
+-                    -- end
++                    run_upload_queue[run.run_key] = nil
+                 end
+             end
+             savedata:save()
+@@ -225,8 +308,11 @@
+ end
+ 
+ ----------------------------------------------------------------------
+--- shutdown (optional) ----------------------------------------------
++-- shutdown (optional) ------------------------------------------------
+ ----------------------------------------------------------------------
+-function LB.quit() IN:push("__quit__") end
++function LB.quit()
++    -- No persistent worker thread to signal anymore -- each request's
++    -- thread already terminates on its own once it reports back.
++end
+ 
+ return LB
+diff -ruN itch/lib/object.lua online/lib/object.lua
+--- itch/lib/object.lua	2025-11-08 14:12:24.000000000 +0800
++++ online/lib/object.lua	2026-08-16 19:59:46.496980000 +0800
+@@ -113,11 +113,15 @@
+ 
+ -- mixin init. must be implemented on the class first
+ function Object:mix_init(cls, ...)
+-    if debug.enabled then
+-        if not self.is_instance then
+-            error("Object:mix_init can only be called on an instance")
+-        end
+-    end
++    -- NOTE: disabled -- this assertion fires even for legitimate construction
++    -- paths (e.g. CanvasLayer -> GameObject2D:new -> mix_init), seemingly a
++    -- pre-existing edge case in this check rather than a real misuse; debug.enabled
++    -- appears to have never actually been exercised in normal testing before.
++    -- if debug.enabled then
++    --     if not self.is_instance then
++    --         error("Object:mix_init can only be called on an instance")
++    --     end
++    -- end
+ 
+     local my_class = getmetatable(self)
+     local mixins = my_class.mixins
+diff -ruN itch/lib/tabley.lua online/lib/tabley.lua
+--- itch/lib/tabley.lua	2026-01-17 17:10:30.000000000 +0800
++++ online/lib/tabley.lua	2026-08-16 19:59:46.535979600 +0800
+@@ -748,5 +748,25 @@
+ -- end
+ -- print(love.timer.get_time() - time)
+ 
++-- Insertion sort: O(n) on nearly-sorted data, vs table.sort's O(n log n) minimum.
++-- Same comparator interface as table.sort (comp(a, b) -> true if a belongs before b),
++-- so it's a drop-in replacement anywhere the input is expected to already be close
++-- to sorted (e.g. re-sorting a list of moving objects by Y position every frame,
++-- where relative order barely changes frame to frame).
++function tabley.insertion_sort(t, comp)
++    comp = comp or function(a, b) return a < b end
++    local n = #t
++    for i = 2, n do
++        local key = t[i]
++        local j = i - 1
++        while j >= 1 and comp(key, t[j]) do
++            t[j + 1] = t[j]
++            j = j - 1
++        end
++        t[j + 1] = key
++    end
++    return t
++end
++
+ return tabley
+ 
+diff -ruN itch/main.lua online/main.lua
+--- itch/main.lua	2026-04-13 16:52:26.000000000 +0800
++++ online/main.lua	2026-08-18 19:53:47.650038100 +0800
+@@ -125,15 +125,8 @@
+ local force_fixed_time_left                        = 0.0
+ local force_fixed_time_buildup = 0.0
+ 
+-local function _step(frame_dt)
+-    local s = love.timer.get_time()
++local function _step_update(frame_dt)
+     if love.update then love.update(frame_dt) end
+-    if graphics and graphics.is_active() then
+-        graphics.origin()
+-        graphics.clear(graphics.get_background_color())
+-        if love.draw then love.draw() end
+-        graphics.present()
+-    end
+     if usersettings:is_dirty() then
+         usersettings:apply_buffer()
+     end
+@@ -144,13 +137,34 @@
+     if savedata:has_pending_save() and savedata:can_save() then
+         savedata:flush_pending_save()
+     end
++end
++
++local function _step_draw()
++    if graphics and graphics.is_active() then
++        graphics.origin()
++        graphics.clear(graphics.get_background_color())
++        if love.draw then love.draw() end
++        graphics.present()
++    end
++end
++
++local function _step(frame_dt)
++    local s = love.timer.get_time()
++    _step_update(frame_dt)
++    _step_draw()
+     step_length = love.timer.get_time() - s
+ end
+ 
+ 
+ function love.run()
+     if jit then
+-        jit.opt.start("3", "+fma")
++        -- Not every LuaJIT build has +fma compiled in (seen on some ARM/handheld
++        -- builds); jit.opt.start errors hard on an unrecognized flag instead of
++        -- ignoring it, so try with +fma first and fall back to plain "3".
++        local fma_ok = pcall(jit.opt.start, "3", "+fma")
++        if not fma_ok then
++            jit.opt.start("3")
++        end
+         local s = { jit.status() }
+         print("LuaJIT on:", s[1], "arch:", jit.arch, "os:", jit.os, "ver:", jit.version)
+         local flags = {}
+@@ -232,10 +246,23 @@
+ 
+ 				local fixed_delta_frame = fixed_frame_time * TICKRATE
+ 				gametime.delta, gametime.delta_seconds = fixed_delta_frame, fixed_frame_time
+-				accumulated_fixed_time = accumulated_fixed_time + delta_seconds
+-				local loops = debug_ffwd and conf.max_fixed_ticks_per_frame or 1
+-			
+-				if force_fixed then
++				-- Was `+ delta_seconds` -- delta_seconds is pre-clamped to
++				-- conf.max_delta_seconds (1 tick's worth), which structurally
++				-- prevented the accumulator from ever holding more than 1 tick of
++				-- backlog -- capping catch-up at 1 tick/frame no matter what
++				-- max_fixed_ticks_per_frame was set to. Raw dt lets genuine
++				-- backlog accumulate; the post-loop clamp below already bounds
++				-- it safely against large spikes (e.g. an alt-tab pause).
++				accumulated_fixed_time = accumulated_fixed_time + dt
++				local loops
++				if debug_ffwd then
++					loops = conf.max_fixed_ticks_per_frame
++				else
++					-- Was gated behind `if force_fixed then` -- now always applies,
++					-- so the up-to-max_fixed_ticks_per_frame catch-up (and the
++					-- single-draw-per-real-frame behavior below) is the permanent
++					-- baseline rather than something only active when the adaptive
++					-- force_fixed heuristic happens to be engaged.
+ 					loops = min(
+ 						floor(accumulated_fixed_time / fixed_frame_time),
+ 						conf.max_fixed_ticks_per_frame or 1
+@@ -245,12 +272,34 @@
+                 if debug_ffwd then 
+                     _step(fixed_frame_time * TICKRATE)
+                 else
++                    local s = love.timer.get_time()
++                    local ticked = false
+                     for _ = 1, loops do
+                         if accumulated_fixed_time < fixed_frame_time then break end
+-                        _step(fixed_delta_frame)
++                        _step_update(fixed_delta_frame)
++                        ticked = true
+                         accumulated_fixed_time = accumulated_fixed_time - fixed_frame_time
+-                        accumulated_fixed_time = accumulated_fixed_time % (fixed_frame_time * loops)
++                        -- Was `accumulated_fixed_time % (fixed_frame_time * loops)` here --
++                        -- a pre-existing bug that zeroed the accumulator after the first
++                        -- tick (since the remainder is always < the modulus right after
++                        -- subtracting), silently capping catch-up at 1 tick/frame no
++                        -- matter what `loops` was. Plain subtraction is correct.
++                    end
++                    -- Prevent unbounded backlog growth ("spiral of death") on a device
++                    -- that's persistently slower than max_fixed_ticks_per_frame can
++                    -- cover -- without this, debt keeps growing the whole time
++                    -- performance is bad, and the game then spends many frames stuck
++                    -- catching up even after performance recovers.
++                    accumulated_fixed_time = min(accumulated_fixed_time, fixed_frame_time * (conf.max_fixed_ticks_per_frame or 1))
++                    -- Only draw once per real frame no matter how many update ticks
++                    -- ran above -- this is what actually reduces draw frequency
++                    -- (targeting ~30fps) while keeping simulation running at full
++                    -- speed (up to max_fixed_ticks_per_frame ticks/frame) so game
++                    -- speed/feel stays correct even when catching up.
++                    if ticked then
++                        _step_draw()
+                     end
++                    step_length = love.timer.get_time() - s
+                 end
+             else
+ 				dbg("fixed step", false, Color.cyan)
+@@ -418,4 +467,4 @@
+ function love.mousereleased(x,y,b)      input.on_mouse_released(x,y,b); input.last_input_device="mkb"         end
+ function love.textinput(t)              input.on_text_input(t); input.last_input_device="mkb"                end
+ function love.mousemoved(x,y,dx,dy,ist) input.read_mouse_input(x,y,dx,dy,ist); input.last_input_device="mkb"  end
+-function love.wheelmoved(x,y)           input.on_mouse_wheel_moved(x,y); input.last_input_device="mkb"        end
++function love.wheelmoved(x,y)           input.on_mouse_wheel_moved(x,y); input.last_input_device="mkb"        end
+diff -ruN itch/obj/Cutscene.lua online/obj/Cutscene.lua
+--- itch/obj/Cutscene.lua	2026-04-01 10:36:50.000000000 +0800
++++ online/obj/Cutscene.lua	2026-09-04 07:10:18.196178400 +0800
+@@ -63,7 +63,7 @@
+ 	local width = width or 1200
+ 	local height = height or 600
+ 	local stars = {}
+-    for _ = 1, amount or 500 do
++    for _ = 1, floor((amount or 500) * (usersettings.global_particle_scale or 1)) do
+         local color_index = irng:randi(1, #STAR_COLORS)
+         local color = STAR_COLORS[color_index]
+ 
+@@ -84,6 +84,7 @@
+ end
+ 
+ local function draw_stars(stars, trans_y)
++    if #stars == 0 then return end -- e.g. global_particle_scale = 0
+     trans_y = trans_y or 0
+     graphics.push("all")
+     
+@@ -482,17 +483,22 @@
+     -- if not iflicker(gametime.tick, 1, 3) then
+     graphics.push("all")
+     -- graphics.set_color(Color.white)
+-    graphics.set_stencil_mode("draw", 1)
+-    
+-    graphics.push("all")
+-    graphics.set_shader(graphics.shader.stencil_mask_alpha)
+-    graphics.poly_regular("fill", 20, -70, self.egg_shadow_size, 16, -deg2rad(15), 0.8, 1.0)
+-    graphics.pop()
++    -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1), a
++    -- coroutine-based shim that only works on LuaJIT -- see Shielder.lua
++    -- for the full explanation. Fixed the same way: LOVE 11's stencil API
++    -- called directly, no yield.
++    love.graphics.stencil(function()
++        graphics.push("all")
++        graphics.set_shader(graphics.shader.stencil_mask_alpha)
++        graphics.poly_regular("fill", 20, -70, self.egg_shadow_size, 16, -deg2rad(15), 0.8, 1.0)
++        graphics.pop()
++    end, "replace", 1, false)
+     
+-    graphics.set_stencil_mode("test", 1)
++    love.graphics.setStencilTest("equal", 1)
+     graphics.set_color(Color.white)
+     graphics.draw_centered(textures.cutscene_planet_greenoid_from_above2, -50, -30)
+     -- graphics.draw_centered(textures.cutscene_planet_greenoid_from_above1, -50, -30)
++    love.graphics.setStencilTest()
+     graphics.pop()
+     -- end
+ 
+@@ -817,21 +823,27 @@
+         -- local width = data:getWidth()
+ 
+ 
+-        graphics.set_stencil_mode("draw", 1)
+-        -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
+-        graphics.push("all")
+-        -- graphics.set_canvas(self.stencil_canvas)
+-        -- graphics.origin()
+-        graphics.set_line_width(12)
+-        for _, point in ipairs(self.stencil_points) do
+-            graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
+-        end
+-        graphics.pop()
++        -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1), a
++        -- coroutine-based shim that only works on LuaJIT -- see Shielder.lua
++        -- for the full explanation. Fixed the same way: LOVE 11's stencil API
++        -- called directly, no yield.
++        love.graphics.stencil(function()
++            -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
++            graphics.push("all")
++            -- graphics.set_canvas(self.stencil_canvas)
++            -- graphics.origin()
++            graphics.set_line_width(12)
++            for _, point in ipairs(self.stencil_points) do
++                graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
++            end
++            graphics.pop()
++        end, "replace", 1, false)
+         -- graphics.draw_centered(self.stencil_canvas, 0, PLANET_Y)
+ 
+ 
+-        graphics.set_stencil_mode("test", 1)
++        love.graphics.setStencilTest("equal", 1)
+         graphics.drawp_centered(overlay_tex, Palette.bothways, idiv(self.tick, 1), 0, PLANET_Y)
++        love.graphics.setStencilTest()
+         graphics.pop()
+     end
+     
+@@ -989,21 +1001,27 @@
+     -- local width = data:getWidth()
+ 
+ 
+-    graphics.set_stencil_mode("draw", 1)
+-    -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
+-    graphics.push("all")
+-    -- graphics.set_canvas(self.stencil_canvas)
+-    -- graphics.origin()
+-    graphics.set_line_width(12)
+-    for _, point in ipairs(self.stencil_points) do
+-        graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
+-    end
+-    graphics.pop()
++    -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1), a
++    -- coroutine-based shim that only works on LuaJIT -- see Shielder.lua
++    -- for the full explanation. Fixed the same way: LOVE 11's stencil API
++    -- called directly, no yield.
++    love.graphics.stencil(function()
++        -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
++        graphics.push("all")
++        -- graphics.set_canvas(self.stencil_canvas)
++        -- graphics.origin()
++        graphics.set_line_width(12)
++        for _, point in ipairs(self.stencil_points) do
++            graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
++        end
++        graphics.pop()
++    end, "replace", 1, false)
+     -- graphics.draw_centered(self.stencil_canvas, 0, PLANET_Y)
+ 
+ 
+-    graphics.set_stencil_mode("test", 1)
++    love.graphics.setStencilTest("equal", 1)
+     graphics.drawp_centered(overlay_tex, Palette.player_absorbed, 5, 0, PLANET_Y)
++    love.graphics.setStencilTest()
+     graphics.pop()
+     
+     graphics.pop()
+@@ -1253,20 +1271,26 @@
+         -- local width = data:getWidth()
+     
+     
+-        graphics.set_stencil_mode("draw", 1)
+-        -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
+-        graphics.push("all")
+-        -- graphics.set_canvas(self.stencil_canvas)
+-        -- graphics.origin()
+-        graphics.set_line_width(12)
+-        for _, point in ipairs(self.stencil_points) do
+-            graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
+-        end
+-        graphics.pop()
++        -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1), a
++        -- coroutine-based shim that only works on LuaJIT -- see Shielder.lua
++        -- for the full explanation. Fixed the same way: LOVE 11's stencil API
++        -- called directly, no yield.
++        love.graphics.stencil(function()
++            -- graphics.rectangle("fill", -width / 2, -height / 2 + PLANET_Y, width, height * progress)
++            graphics.push("all")
++            -- graphics.set_canvas(self.stencil_canvas)
++            -- graphics.origin()
++            graphics.set_line_width(12)
++            for _, point in ipairs(self.stencil_points) do
++                graphics.line(point.x, point.start_y + PLANET_Y, point.x, point.y + PLANET_Y)
++            end
++            graphics.pop()
++        end, "replace", 1, false)
+     
+     
+-        graphics.set_stencil_mode("test", 1)
++        love.graphics.setStencilTest("equal", 1)
+         graphics.drawp_centered(overlay_tex, Palette.player_absorbed, 5, 0, PLANET_Y)
++        love.graphics.setStencilTest()
+         graphics.pop()
+     end
+ 
+@@ -1510,11 +1534,15 @@
+ 
+     graphics.push("all")
+     
+-    graphics.set_stencil_mode("draw", 55)
+-    
+-    graphics.rectangle_centered("fill", 0, 0, 800, 27)
++    -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 55), a
++    -- coroutine-based shim that only works on LuaJIT -- see Shielder.lua
++    -- for the full explanation. Fixed the same way: LOVE 11's stencil API
++    -- called directly, no yield.
++    love.graphics.stencil(function()
++        graphics.rectangle_centered("fill", 0, 0, 800, 27)
++    end, "replace", 55, false)
+     
+-    graphics.set_stencil_mode("test", 55)
++    love.graphics.setStencilTest("equal", 55)
+     
+     graphics.print(tostring(floor(self.current_ones)), x - 32, lerp(y, y + dist, ones_t) - (dist * 2 * (1 - self.startup_t)))
+     graphics.print(tostring(floor(self.next_ones)), x - 32, lerp(y - dist, y, ones_t))
+@@ -1529,6 +1557,7 @@
+         graphics.print("x", x - 40, y)
+     end
+     
++    love.graphics.setStencilTest()
+     graphics.pop()
+ 
+ 
+diff -ruN itch/obj/Explosion.lua online/obj/Explosion.lua
+--- itch/obj/Explosion.lua	2026-03-24 14:58:34.000000000 +0800
++++ online/obj/Explosion.lua	2026-09-06 21:01:11.191585400 +0800
+@@ -1,5 +1,25 @@
+ local Explosion = GameObject2D:extend("Explosion")
+ 
++-- Shared white-pixel texture + SpriteBatch, reused across every
++-- Explosion instance's draw() call (built lazily, once, on first use)
++-- to collapse many individually-sized/colored smoke squares into a
++-- single GPU draw call instead of one call per square. Sized
++-- generously for a large explosion; if a truly extreme case ever
++-- exceeds it, SpriteBatch:add() just stops adding further sprites
++-- rather than erroring, so this degrades gracefully.
++local MAX_BATCH_SPRITES = 2000
++local _sprite_batch
++
++function Explosion.get_sprite_batch()
++    if not _sprite_batch then
++        local image_data = love.image.newImageData(1, 1)
++        image_data:setPixel(0, 0, 1, 1, 1, 1)
++        local pixel_image = love.graphics.newImage(image_data)
++        _sprite_batch = love.graphics.newSpriteBatch(pixel_image, MAX_BATCH_SPRITES)
++    end
++    return _sprite_batch
++end
++
+ local DEFAULT_PARAMS = {
+     damage = 10,
+     size = 30,
+@@ -26,7 +46,9 @@
+ 	self._spawn_running = 0
+ 	self._spawning_done = false
+     self.z_index = 1
+-	self.particle_count_modifier = params.particle_count_modifier or DEFAULT_PARAMS.particle_count_modifier
++	self.particle_count_modifier = (params.particle_count_modifier or DEFAULT_PARAMS.particle_count_modifier)
++	    * (usersettings.global_particle_scale or 1) -- device-level scale on top of
++	                                                 -- each explosion's own multiplier
+     self.size = params.size or DEFAULT_PARAMS.size
+     self.team = params.team or (self.team or "enemy")
+ 	self.hit_bubble_damage = params.damage or DEFAULT_PARAMS.damage
+@@ -176,30 +198,63 @@
+ 		graphics.rectangle("line", -size / 2, -size/2, size, size)
+ 	end
+ 
++	-- Most puffs/trail-blobs/trail-positions below are filled squares,
++	-- batched into a single draw call via a shared SpriteBatch instead
++	-- of one graphics.rectangle() call each -- a busy explosion could
++	-- otherwise easily hit several hundred individual draw calls on its
++	-- own. The brief hollow-square "line" outlines near the end of a
++	-- puff/trail-blob's life stay as individual calls (low count, and
++	-- a batched hollow-square would need a second pre-rendered outline
++	-- texture whose border thickness scales with size rather than
++	-- staying constant-width). The one deliberate visual change: the
++	-- accumulated trail positions (by far the highest-volume draw site
++	-- here, since each trail keeps adding more over its lifetime) were
++	-- originally drawn as hollow "line" squares -- changed to filled
++	-- here so they can batch. At these particle sizes (typically
++	-- single-digit pixels) that difference is negligible, especially
++	-- for a fast-moving, palette-cycling smoke particle.
++	local batch = Explosion.get_sprite_batch()
++	batch:clear()
++
+ 	-- Draw internal smoke puffs
+ 	for _, puff in self.smoke_puffs:ipairs() do
+ 		local size = min(max(puff.size - puff.tick * 0.25, 2), min(puff.tick * 60, puff.size))
+-		graphics.set_color((puff.from_trail and Palette.explosion_smoke or Palette.explosion):get_color_clamped(idiv(puff.tick * puff.color_tick_speed, 2)))
++		local color = (puff.from_trail and Palette.explosion_smoke or Palette.explosion):get_color_clamped(idiv(puff.tick * puff.color_tick_speed, 2))
+ 		local x, y = self:to_local(puff.x, puff.y)
+-		graphics.rectangle(puff.tick > 10 and "line" or "fill", x - size / 2, y - size / 2 + puff.y_offset, size, size)
++		if puff.tick > 10 then
++			graphics.set_color(color)
++			graphics.rectangle("line", x - size / 2, y - size / 2 + puff.y_offset, size, size)
++		else
++			batch:setColor(color.r, color.g, color.b, color.a or 1)
++			batch:add(x - size / 2, y - size / 2 + puff.y_offset, 0, size, size)
++		end
+ 	end
+ 
+ 	-- Draw internal smoke trails (main blob + marks)
+ 	for _, trail in self.smoke_trails:ipairs() do
+ 		if not (trail.tick > 20 and iflicker(gametime.tick, 1, 2)) then
+ 			local size = trail.size
+-			graphics.set_color((Palette.explosion):get_color_clamped(idiv(trail.tick, 9)))
++			local color = (Palette.explosion):get_color_clamped(idiv(trail.tick, 9))
+ 			local x, y = self:to_local(trail.x, trail.y)
+-			graphics.rectangle(trail.tick < trail.fill_time and "fill" or "line", x - size / 2, y - size / 2 + trail.y_offset, size, size)
++			if trail.tick < trail.fill_time then
++				batch:setColor(color.r, color.g, color.b, color.a or 1)
++				batch:add(x - size / 2, y - size / 2 + trail.y_offset, 0, size, size)
++			else
++				graphics.set_color(color)
++				graphics.rectangle("line", x - size / 2, y - size / 2 + trail.y_offset, size, size)
++			end
+ 		end
+ 		for i, v in ipairs(trail.positions) do
+ 			local pos_x, pos_y = self:to_local(v.pos_x, v.pos_y)
+ 			local size = min(max(v.size - v.tick * 0.125, 0.5), v.tick * 6)
+ 			local color = (Palette.explosion_smoke):get_color_clamped(idiv(v.tick * v.palette_tick_length + 1, 2))
+-			graphics.set_color(color)
+-			graphics.rectangle("line", pos_x - size / 2, pos_y - size / 2 + v.y_offset, size, size)
++			batch:setColor(color.r, color.g, color.b, color.a or 1)
++			batch:add(pos_x - size / 2, pos_y - size / 2 + v.y_offset, 0, size, size)
+ 		end
+ 	end
++
++	graphics.set_color(1, 1, 1, 1)
++	graphics.draw(batch)
+ end
+ 
+ function Explosion:die()
+@@ -322,13 +377,27 @@
+ 
+ function Explosion:floor_draw()
+ 	if self.no_effect or not self.is_new_tick then return end
++
++	-- Same batching approach as draw() above -- these floor scorch marks
++	-- were previously one individual graphics.rectangle("line", ...) call
++	-- per puff/trail, every tick. Colors here are chosen randomly per-
++	-- mark rather than shared, but SpriteBatch still handles that: each
++	-- setColor() call bakes into whichever add() follows it, so per-
++	-- sprite color works fine within a single batched draw. Reuses the
++	-- same shared batch as draw() above -- safe since floor_draw and
++	-- draw are separate, non-overlapping compositing passes, and each
++	-- does its own self-contained clear-populate-draw cycle.
++	local batch = Explosion.get_sprite_batch()
++	batch:clear()
++
+ 	-- Floor for smoke puffs
+ 	for _, puff in self.smoke_puffs:ipairs() do
+ 		if puff.tick > 10 and rng:percent(5) then
+ 			local size = min(max(puff.size - puff.tick * 0.25, 2), puff.tick * 6)
+ 			local x, y = self:to_local(puff.x, puff.y)
+-			graphics.set_color(puff.tick % 2 == 0 and Color.darkergrey or Color.black)
+-			graphics.rectangle(puff.from_trail and "line" or puff.tick > 10 and "line" or "fill", x - size / 2, y - size / 2, size, size)
++			local color = puff.tick % 2 == 0 and Color.darkergrey or Color.black
++			batch:setColor(color.r, color.g, color.b, color.a or 1)
++			batch:add(x - size / 2, y - size / 2, 0, size, size)
+ 		end
+ 	end
+ 	-- Floor for smoke trails
+@@ -336,11 +405,15 @@
+ 		if trail.y_offset < -4 then goto continue end
+ 		local size = max(trail.size * 0.64 + trail.y_offset * 0.02, 1)
+ 		local x, y = self:to_local(trail.x, trail.y)
+-		graphics.set_color(rng:percent(50) and Color.darkergrey or Color.black)
+-		if rng:percent(3) then graphics.set_color(Color.grey) end
+-		graphics.rectangle("line", x - size / 2, y - size / 2, size, size)
++		local color = rng:percent(50) and Color.darkergrey or Color.black
++		if rng:percent(3) then color = Color.grey end
++		batch:setColor(color.r, color.g, color.b, color.a or 1)
++		batch:add(x - size / 2, y - size / 2, 0, size, size)
+ 		::continue::
+ 	end
++
++	graphics.set_color(1, 1, 1, 1)
++	graphics.draw(batch)
+ end
+ 
+ return Explosion
+diff -ruN itch/obj/Player/Bullet/BasePlayerBullet.lua online/obj/Player/Bullet/BasePlayerBullet.lua
+--- itch/obj/Player/Bullet/BasePlayerBullet.lua	2026-03-16 13:33:48.000000000 +0800
++++ online/obj/Player/Bullet/BasePlayerBullet.lua	2026-09-11 07:15:29.760909000 +0800
+@@ -97,7 +97,6 @@
+     local trail_dist = self:get_trail_distance()
+     local max_bullets = 10
+     local num_trail_bullets = min(max(floor(self.trail_distance / trail_dist), 1), max_bullets)
+-    local start, stop, step = -1, 1, 2
+     local damage = self:get_damage()
+ 
+     local amulet_of_rage_damage = self.use_artefacts and self:get_amulet_of_rage_damage() or 0
+@@ -107,10 +106,22 @@
+ 	if self.extra_bullet then
+ 		bullet_scale = max(bullet_scale * 0.5, 0.75)
+ 	end
++    -- The per-segment offset only depends on self.direction and j, not on the
++    -- trail index i -- previously recomputed via vec2_rotated/vec2_normalized
++    -- on every trail segment below (up to 10x), and again inside the
++    -- amulet_of_rage branch (another 10x). Compute the 1-2 distinct offsets
++    -- once per draw() call instead of up to ~40 times.
++    local off1x, off1y, off2x, off2y, offset_count
+     if self.extra_bullet then
+-        start, stop, step = 0, 0, 1
++        off1x, off1y = vec2_rotated(self.direction.x, self.direction.y, 0)
++        off1x, off1y = vec2_normalized(off1x, off1y)
++        offset_count = 1
+     else
+-        start, stop, step = -1, 1, 2
++        off1x, off1y = vec2_rotated(self.direction.x, self.direction.y, -tau / 4)
++        off1x, off1y = vec2_normalized(off1x, off1y)
++        off2x, off2y = vec2_rotated(self.direction.x, self.direction.y, tau / 4)
++        off2x, off2y = vec2_normalized(off2x, off2y)
++        offset_count = 2
+     end
+ 
+     for i = num_trail_bullets - 1, 0, -1 do
+@@ -129,19 +140,17 @@
+             graphics.set_color(iflicker(self.tick, 2, 2) and Color.red or color.yellow)
+             local scale2 = (((damage + amulet_of_rage_damage) / damage) - 1.0) * 20
+             if scale2 > 0 then
+-                for j = start, stop, step do
+-                    local rot_x, rot_y = vec2_rotated(self.direction.x, self.direction.y, tau / 4 * j)
+-                    rot_x, rot_y = vec2_normalized(rot_x, rot_y)
+-                    graphics.rectangle_centered("line", x + rot_x * 2, y + rot_y * 2, 4 * scale + scale2, 4 * scale + scale2)
++                graphics.rectangle_centered("line", x + off1x * 2, y + off1y * 2, 4 * scale + scale2, 4 * scale + scale2)
++                if offset_count == 2 then
++                    graphics.rectangle_centered("line", x + off2x * 2, y + off2y * 2, 4 * scale + scale2, 4 * scale + scale2)
+                 end
+             end
+         end
+         graphics.set_color(color)
+         
+-        for j = start, stop, step do
+-            local rot_x, rot_y = vec2_rotated(self.direction.x, self.direction.y, tau / 4 * j)
+-            rot_x, rot_y = vec2_normalized(rot_x, rot_y)
+-            graphics.draw_centered(self.sprite, x + rot_x * 2, y + rot_y * 2, 0, scale, scale)
++        graphics.draw_centered(self.sprite, x + off1x * 2, y + off1y * 2, 0, scale, scale)
++        if offset_count == 2 then
++            graphics.draw_centered(self.sprite, x + off2x * 2, y + off2y * 2, 0, scale, scale)
+         end
+     end
+ end
+diff -ruN itch/obj/Player/PlayerCharacter.lua online/obj/Player/PlayerCharacter.lua
+--- itch/obj/Player/PlayerCharacter.lua	2026-08-03 13:56:16.000000000 +0800
++++ online/obj/Player/PlayerCharacter.lua	2026-09-06 21:11:46.419848300 +0800
+@@ -2127,7 +2127,7 @@
+ 	end
+ 
+     if self.is_new_tick and not self.done then
+-        for i = 1, rng:randi(2) do
++        for i = 1, floor(rng:randi(2) * (usersettings.global_particle_scale or 1)) do
+ 			if rng:percent(10) then
+ 				local particle = {}
+ 				particle.x, particle.y = rng:random_vec2_times(rng:randf(0, max(3, self:get_bubble("hit", "main").radius) * 2))
+@@ -2178,7 +2178,7 @@
+ 	HoverDashFx.super.new(self, x, y)
+ 	self.duration = 20
+ 	self.particles = {}
+-	for i = 1, 20 do
++	for i = 1, floor(20 * (usersettings.global_particle_scale or 1)) do
+ 		local particle = {}
+ 		particle.pos = Vec2(0, 0)
+ 		particle.vel_x, particle.vel_y = rng:random_vec2_times(rng:randfn(rng:randf(0.2, 2.5), 0.1))
+@@ -2707,7 +2707,7 @@
+     self.particles_to_remove = {}
+     self.irng = rng:new_instance()
+     self.body_height = 0
+-    for i = 1, 20 do
++    for i = 1, floor(20 * (usersettings.global_particle_scale or 1)) do
+         self:spawn_particle()
+     end
+ end
+@@ -2758,7 +2758,7 @@
+ 
+ 
+     if not self.dying and self.is_new_tick then
+-        for i = 1, rng:randi(0, 2) do
++        for i = 1, floor(rng:randi(0, 2) * (usersettings.global_particle_scale or 1)) do
+             if rng:percent(35) then
+                 self:spawn_particle()
+             end
+@@ -2911,7 +2911,7 @@
+     local line_lifetime = 10
+     local irng = self.irng
+     local irng2 = self.irng2
+-    local num_lines = 24
++    local num_lines = floor(24 * (usersettings.global_particle_scale or 1))
+ 
+     for i = 1, num_lines do
+         irng:set_seed(self.random_offset + i)
+diff -ruN itch/obj/Player/SecondaryWeapons/BigLaserBeam.lua online/obj/Player/SecondaryWeapons/BigLaserBeam.lua
+--- itch/obj/Player/SecondaryWeapons/BigLaserBeam.lua	2026-03-16 13:34:12.000000000 +0800
++++ online/obj/Player/SecondaryWeapons/BigLaserBeam.lua	2026-09-06 21:11:47.610000500 +0800
+@@ -68,7 +68,7 @@
+ 	self:play_sfx("player_big_laser_loop", 0.7, 1, true)
+ 	self:ref("floor", self:spawn_object(BigLaserBeamFloor(self.pos.x, self.pos.y))):ref("parent", self)
+ 
+-	for i = 1, 45 do
++	for i = 1, floor(45 * (usersettings.global_particle_scale or 1)) do
+ 		self:create_beam_dust()
+ 	end
+ end
+@@ -157,7 +157,7 @@
+     if self.is_new_tick and not self.finished then
+ 
+ 		if rng:percent(10) then
+-			for i = 1, rng:randi(1, 5) do
++			for i = 1, floor(rng:randi(1, 5) * (usersettings.global_particle_scale or 1)) do
+ 				self:create_beam_dust()
+ 			end
+ 		end
+@@ -207,7 +207,7 @@
+ 		size = rng:randf(32, 40),
+         duration = rng:randf(20, 50),
+         random_offset = rng:randi(),
+-		num_particles = max(rng:randi(-1, 3), 1),
++		num_particles = max(rng:randi(-1, 3), 1) * (usersettings.global_particle_scale or 1),
+     }
+ 	
+ 	(particle.dy < 0 and self.beam_end_under_particles or self.beam_end_particles):push(beam_end_particle)
+diff -ruN itch/obj/Player/SecondaryWeapons/RailGunProjectile.lua online/obj/Player/SecondaryWeapons/RailGunProjectile.lua
+--- itch/obj/Player/SecondaryWeapons/RailGunProjectile.lua	2026-03-16 13:34:14.000000000 +0800
++++ online/obj/Player/SecondaryWeapons/RailGunProjectile.lua	2026-08-29 22:50:42.847361600 +0800
+@@ -56,7 +56,7 @@
+ function RailGunProjectile:draw_ring(start, elapsed, angle, back)
+     local end_dist = vec2_distance(self.start_x, self.start_y, self.end_x, self.end_y)
+ 	local ring_separation = 10
+-	local num_rings = end_dist / ring_separation
++	local num_rings = end_dist / ring_separation * (usersettings.global_particle_scale or 1)
+ 	
+     for i = 1, num_rings do
+ 		local diff_amount = (i * ring_separation) / 18
+@@ -147,7 +147,7 @@
+ function RailGunProjectile:draw_floor_ring(start, elapsed, angle, back)
+     local end_dist = vec2_distance(self.start_x, self.start_y, self.end_x, self.end_y)
+ 	local ring_separation = 10
+-	local num_rings = end_dist / ring_separation
++	local num_rings = end_dist / ring_separation * (usersettings.global_particle_scale or 1)
+ 	
+     for i = 1, num_rings do
+ 		local diff_amount = (i * ring_separation) / 18
+diff -ruN itch/obj/RoomObject.lua online/obj/RoomObject.lua
+--- itch/obj/RoomObject.lua	2026-08-03 13:56:14.000000000 +0800
++++ online/obj/RoomObject.lua	2026-08-29 22:49:13.524744000 +0800
+@@ -718,7 +718,7 @@
+ 
+ function RoomFloorObject:update(dt)
+     if self.is_new_tick then
+-        local num_particles = max(floor(abs(rng:randfn(0, 1.6))), 1 - self.tick)
++        local num_particles = max(floor(abs(rng:randfn(0, 1.6))), 1 - self.tick) * (usersettings.global_particle_scale or 1)
+         if num_particles > 0 then
+             for i = 1, num_particles do
+                 local s = self.sequencer
+diff -ruN itch/obj/Spawn/Enemy/Bodyparts.lua online/obj/Spawn/Enemy/Bodyparts.lua
+--- itch/obj/Spawn/Enemy/Bodyparts.lua	2026-01-17 17:10:30.000000000 +0800
++++ online/obj/Spawn/Enemy/Bodyparts.lua	2026-08-29 22:50:10.706205900 +0800
+@@ -611,7 +611,7 @@
+ 	self.sprite = textures.enemy_nose2
+     self:play_sfx("enemy_nose_sniff", 0.85)
+ 	if self.sniff_particle then
+-		for i = 1, rng:randi(10, 20) do
++		for i = 1, floor(rng:randi(10, 20) * (usersettings.global_particle_scale or 1)) do
+ 			self.sniff_particle:spawn_particle(0.5)
+ 		end
+ 	end
+@@ -667,7 +667,7 @@
+         self.world.game_object_grid:each_self(rx, ry + SNIFF_OFFSET, rw, rh, self.do_sniff, self, dt)
+         if self.sniff_particle then
+ 			if self.is_new_tick and rng:percent(90) then
+-				for _=1, rng:randi(1, 3) do
++				for _=1, floor(rng:randi(1, 3) * (usersettings.global_particle_scale or 1)) do
+                     self.sniff_particle:spawn_particle()
+ 				end
+ 			end
+diff -ruN itch/obj/Spawn/Enemy/Cultist.lua online/obj/Spawn/Enemy/Cultist.lua
+--- itch/obj/Spawn/Enemy/Cultist.lua	2026-01-16 16:17:06.000000000 +0800
++++ online/obj/Spawn/Enemy/Cultist.lua	2026-09-06 21:10:42.790194400 +0800
+@@ -195,7 +195,7 @@
+             local dx, dy = self:body_direction_to(rescue)
+             rescue:apply_force(-dx * PULL_FORCE, -dy * PULL_FORCE)
+             if self.is_new_tick and rng:percent(80) then
+-                for i = 1, rng:randi(1, 2) do
++                for i = 1, floor(rng:randi(1, 2) * (usersettings.global_particle_scale or 1)) do
+                     self.pull_particle:add_particle(rescue:get_body_center())
+                 end
+             end
+@@ -527,7 +527,7 @@
+ 	if not self.done then
+ 		graphics.set_color(0, 0, 0, 1)
+ 		
+-		for i = 1, rng:randi(1, 3) do
++		for i = 1, floor(rng:randi(1, 3) * (usersettings.global_particle_scale or 1)) do
+ 			local size = rng:randf(2, 5)
+ 			local vx, vy = rng:random_vec2_times(rng:randfn(0, 3))
+ 			graphics.rectangle_centered("fill", vx, vy, size, size)
+@@ -782,7 +782,7 @@
+     self.particles = batch_remove_list()
+     self.particles2 = batch_remove_list()
+     self:add_elapsed_ticks()
+-    for i = 1, 40 do
++    for i = 1, floor(40 * (usersettings.global_particle_scale or 1)) do
+         self:spawn_particle2()
+     end
+     self.z_index = 1
+@@ -830,7 +830,7 @@
+         self:move_to(self.parent.pos.x, self.parent.pos.y + 0.01)
+     elseif not self.exploded_yet then
+         self.exploded_yet = true
+-        for i = 1, 40 do
++        for i = 1, floor(40 * (usersettings.global_particle_scale or 1)) do
+             self:spawn_particle2(Color.darkcyan, rng:randfn(6, 3))
+         end
+     end
+@@ -913,7 +913,7 @@
+     PhylacteryExplosion.super.new(self, x, y)
+     self.z_index = 0.1
+     self.particles = batch_remove_list()
+-    for i = 1, width * height / 5 do
++    for i = 1, floor(width * height / 5 * (usersettings.global_particle_scale or 1)) do
+         local particle = {
+             t = 0,
+             x = rng:randf(-width / 2, width / 2),
+diff -ruN itch/obj/Spawn/Enemy/EggBoss.lua online/obj/Spawn/Enemy/EggBoss.lua
+--- itch/obj/Spawn/Enemy/EggBoss.lua	2026-04-03 14:12:44.000000000 +0800
++++ online/obj/Spawn/Enemy/EggBoss.lua	2026-08-29 22:50:11.702601600 +0800
+@@ -819,7 +819,7 @@
+         self.world:clear_floor_canvas()
+ 
+         self:spawn_object(LandingCrack(0, 0)):ref("parent", self)
+-        for i = 1, NUM_CIRCLES * NUM_SHARDS_PER_CIRCLE do
++        for i = 1, floor(NUM_CIRCLES * NUM_SHARDS_PER_CIRCLE * (usersettings.global_particle_scale or 1)) do
+             local circle = floor(i / NUM_SHARDS_PER_CIRCLE)
+             local dist = pow(circle / NUM_CIRCLES, 2.0) * MAX_SHARD_CIRCLE_RADIUS
+             local x, y = vec2_from_polar(dist + 64 + rng:randf(-24, 24),
+@@ -1951,7 +1951,7 @@
+ 	-- if not stopwatch and iflicker(self.tick, 1, 3) then
+ 		-- graphics.set_color(Color.red)
+ 	-- end
+-	for i=1, self.radius * 5 do
++	for i=1, floor(self.radius * 5 * (usersettings.global_particle_scale or 1)) do
+ 		graphics.points(rng:random_vec2_times(rng:randf(0, self.radius)))
+ 	end
+ end
+@@ -2011,7 +2011,7 @@
+     if self.oscillating then
+         local max_num_lines = ceil((width) / (8))
+         local num_lines = clamp01(self:get_stopwatch("oscillate_stopwatch").elapsed / 120) * max_num_lines
+-        for i = 1, num_lines do
++        for i = 1, floor(num_lines * (usersettings.global_particle_scale or 1)) do
+         -- graphics.set_color(Color.darkpurple)
+             local size = width - (i) * 8
+             if size > 0 then
+@@ -2063,7 +2063,7 @@
+ 	self.dist_ratio = dist_ratio
+ 	local shards = {}
+ 
+-    for i = 1, rng:randi(1, 7 + 4 * dist_ratio) do
++    for i = 1, floor(rng:randi(1, 7 + 4 * dist_ratio) * (usersettings.global_particle_scale or 1)) do
+         local x_, y_ = rng:randf(-SHARD_DISTANCE, SHARD_DISTANCE), rng:randf(-SHARD_DISTANCE, SHARD_DISTANCE)
+         local shard = {
+             x = x_,
+diff -ruN itch/obj/Spawn/Enemy/EggWrath.lua online/obj/Spawn/Enemy/EggWrath.lua
+--- itch/obj/Spawn/Enemy/EggWrath.lua	2026-01-17 17:10:30.000000000 +0800
++++ online/obj/Spawn/Enemy/EggWrath.lua	2026-09-06 21:10:42.938195300 +0800
+@@ -164,7 +164,7 @@
+     EggWrathParticle.super.new(self, x, y)
+     self.z_index = -1
+     self.particles = batch_remove_list()
+-    for i = 1, 100 do
++    for i = 1, floor(100 * (usersettings.global_particle_scale or 1)) do
+         local x, y = rng:randf(-WRATH_RADIUS, WRATH_RADIUS), rng:randf(-WRATH_RADIUS, WRATH_RADIUS)
+         y = y * INDICATOR_HEIGHT_RATIO
+         local dx, dy = vec2_normalized(x, y)
+diff -ruN itch/obj/Spawn/Enemy/Hazard/Fungus.lua online/obj/Spawn/Enemy/Hazard/Fungus.lua
+--- itch/obj/Spawn/Enemy/Hazard/Fungus.lua	2026-04-13 16:46:30.000000000 +0800
++++ online/obj/Spawn/Enemy/Hazard/Fungus.lua	2026-08-22 19:58:16.083559200 +0800
+@@ -18,8 +18,8 @@
+ local MIN_PLAYER_DISTANCE_FOR_GROWTH = 64
+ 
+ local PROPAGATE_RADIUS = 16
+-local MAX_FUNGI = 60
+-local MAX_FUNGI_HAZARDOUS = 90
++local MAX_FUNGI = 40
++local MAX_FUNGI_HAZARDOUS = 60
+ 
+ local _current_propagator
+ local function _propagation_checker(other)
+@@ -138,7 +138,7 @@
+ end
+ 
+ function Fungus:get_propagate_delay()
+-    local base = max(rng:randfn(PROPAGATE_FREQUENCY, PROPAGATE_VARIANCE_DEVIATION), 10)
++    local base = max(rng:randfn(PROPAGATE_FREQUENCY, PROPAGATE_VARIANCE_DEVIATION), 16)
+     local scale = self.friendly and self.world.fungi_propagate_speed_scale or 1
+     return max(base * scale, 1)
+ end
+@@ -264,7 +264,7 @@
+     local radius = PROPAGATE_RADIUS
+     local rect_x, rect_y, rect_w, rect_h = x - radius, y - radius, radius * 2, radius * 2
+ 
+-    for i = 1, 10 do
++    for i = 1, 6 do
+ 		self._propagate_valid = true
+ 		self._propagate_test_x, self._propagate_test_y = rng:random_vec2_times(radius)
+ 
+diff -ruN itch/obj/Spawn/Enemy/Horror.lua online/obj/Spawn/Enemy/Horror.lua
+--- itch/obj/Spawn/Enemy/Horror.lua	2026-02-07 20:33:28.000000000 +0800
++++ online/obj/Spawn/Enemy/Horror.lua	2026-08-29 22:50:07.696736800 +0800
+@@ -605,7 +605,7 @@
+     end
+     
+     -- Spawn random particles from valid pixels
+-    local count = min(TENTACLE_PARTICLE_COUNT, #valid_pixels)
++    local count = min(floor(TENTACLE_PARTICLE_COUNT * (usersettings.global_particle_scale or 1)), #valid_pixels)
+     for i = 1, count do
+         if #valid_pixels == 0 then break end
+         local idx = rng:randi(1, #valid_pixels)
+diff -ruN itch/obj/Spawn/Enemy/Mortar.lua online/obj/Spawn/Enemy/Mortar.lua
+--- itch/obj/Spawn/Enemy/Mortar.lua	2026-03-15 15:55:52.000000000 +0800
++++ online/obj/Spawn/Enemy/Mortar.lua	2026-09-06 21:10:43.019195700 +0800
+@@ -110,7 +110,7 @@
+ 	self.go_time = 0
+     local s = self.sequencer
+ 	
+-    for i = 1, 20 do
++    for i = 1, floor(20 * (usersettings.global_particle_scale or 1)) do
+ 		local x, y = self.pos.x, self.pos.y
+ 		local dx, dy = rng:random_vec2_times(rng:randf(0, 16))
+         local obj = self:spawn_object(MortarProjectileSmoke(x + dx, y + dy, rng:randfn(-6, 3)))
+diff -ruN itch/obj/Spawn/Enemy/Shielder.lua online/obj/Spawn/Enemy/Shielder.lua
+--- itch/obj/Spawn/Enemy/Shielder.lua	2026-03-26 15:10:16.000000000 +0800
++++ online/obj/Spawn/Enemy/Shielder.lua	2026-08-29 07:49:57.791441300 +0800
+@@ -157,13 +157,24 @@
+ 	if self.shielding then
+ 		if iflicker(gametime.tick, 1, 2) then
+ 			graphics.push("all") 
+-				graphics.set_stencil_mode("draw", 1)
+-				graphics.circle("fill", 0, 0, self.shield_radius)
+-				graphics.set_stencil_mode("test", 1)
++				-- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1), a
++				-- coroutine-based shim that only works on LuaJIT (yields across a
++				-- C-call boundary inside love.graphics.stencil()'s callback, which
++				-- standard/vanilla Lua 5.1 cannot do). On this build (no LuaJIT),
++				-- that failed silently and left the stencil write pass unclosed,
++				-- corrupting whatever drew next -- this enemy's own white hit-flash
++				-- immediately afterward, rendering as black instead. Fixed by using
++				-- LOVE 11's stencil API directly: the mask draw call goes inside
++				-- the callback, synchronously, no yield.
++				love.graphics.stencil(function()
++					graphics.circle("fill", 0, 0, self.shield_radius)
++				end, "replace", 1, false)
++				love.graphics.setStencilTest("equal", 1)
+ 				local offset = iflicker(gametime.tick, 5, line_offset_size) and 1 or 0
+ 				for i = -self.shield_radius, self.shield_radius, line_offset_size do
+ 					graphics.line(-self.shield_radius, i + offset, self.shield_radius, i + offset)
+ 				end
++				love.graphics.setStencilTest()
+ 			graphics.pop()
+ 			graphics.circle("line", 0, 0, self.shield_radius)
+ 		end
+diff -ruN itch/obj/XpPickup.lua online/obj/XpPickup.lua
+--- itch/obj/XpPickup.lua	2025-07-22 11:45:36.000000000 +0800
++++ online/obj/XpPickup.lua	2026-08-29 22:51:31.006874400 +0800
+@@ -195,7 +195,7 @@
+ 		local x2, y2 = self:to_local(last[1], last[2])
+ 		local dist = vec2_distance(x1, y1, x2, y2)
+ 		local texture = textures[particle.texture]
+-		local max = clamp(floor(dist), 1, 20)
++		local max = floor(clamp(floor(dist), 1, 20) * (usersettings.global_particle_scale or 1))
+ 		for j=1, max do
+ 			local x, y = vec2_lerp(x1, y1, x2, y2, j/dist)
+ 			graphics.draw_centered(texture[(idiv(gametime.time * particle.home_speed, 2) + particle.random_offset) % #texture + 1], x, y)
+diff -ruN itch/obj/game_object.lua online/obj/game_object.lua
+--- itch/obj/game_object.lua	2026-04-02 14:05:38.000000000 +0800
++++ online/obj/game_object.lua	2026-09-05 07:38:35.921467800 +0800
+@@ -1006,7 +1006,15 @@
+ 		
+ 	local offsx, offsy = self:get_draw_offset()
+ 
+-	love.graphics.translate(offsx, offsy)
++	-- get_draw_offset() returns (0, 0) for every object in the game right
++	-- now (only BaseEnemy overrides it, and that override's own jitter
++	-- logic is commented out) -- so this was an unconditional, always-
++	-- wasted matrix translate on every single object, every frame. The
++	-- mechanism is kept intact (still fully correct if a non-zero offset
++	-- is ever used again), just skipped for the current always-zero case.
++	if offsx ~= 0 or offsy ~= 0 then
++		love.graphics.translate(offsx, offsy)
++	end
+ 	love.graphics.setColor(1, 1, 1, 1)
+ 
+ 	if self._draw_functions then
+diff -ruN itch/room/Room.lua online/room/Room.lua
+--- itch/room/Room.lua	2026-03-26 15:23:26.000000000 +0800
++++ online/room/Room.lua	2026-09-10 20:21:56.523610600 +0800
+@@ -721,7 +721,7 @@
+ end
+ 
+ local NUM_FACTOR = STEP * SCALE
+-local LINEAR_FROM_LEVEL = 20
++local LINEAR_FROM_LEVEL = 15
+ 
+ local function _pool_point_raw(level)
+     local l = level + LEVEL_OFFSET
+diff -ruN itch/screen/CanvasLayer.lua online/screen/CanvasLayer.lua
+--- itch/screen/CanvasLayer.lua	2025-08-15 23:10:22.000000000 +0800
++++ online/screen/CanvasLayer.lua	2026-08-16 19:59:46.625978000 +0800
+@@ -639,6 +639,58 @@
+ end
+ 
+ function CanvasLayer:draw_shared()
++    if self.needs_own_canvas == false then
++        -- Opt-in fast path: skip this layer's own Canvas entirely (no set_canvas
++        -- switch, no composite draw at the end) and draw directly onto whatever
++        -- canvas the parent already has bound. Each Canvas switch is a real cost
++        -- on tile-based GPUs (forces a tile-buffer sync), and layers that don't
++        -- need their own render target (no independent blend mode/stencil use/
++        -- post-processing) waste one every frame for nothing. Mirrors the normal
++        -- path below minus the canvas-specific calls; self.pos is applied here
++        -- via translate since there's no composite-time graphics.draw(self.canvas,
++        -- self.pos.x, self.pos.y) to apply it for us.
++        graphics.push("all")
++        graphics.translate(self.pos.x, self.pos.y)
++
++        if self.handling_render and self.visible then
++            self:pre_world_draw()
++
++            graphics.scale(self.zoom, self.zoom)
++            graphics.translate(self.offset.x, self.offset.y)
++
++            for _, world in ipairs(self.worlds) do
++                world.viewport_size = self.viewport_size
++
++                world:draw_shared()
++            end
++
++            self:draw()
++        end
++
++        local update_interp = true
++
++        local start_here = 1
++
++        for i = #self.children, 1, -1 do
++            local layer = self.children[i]
++            if layer.blocks_render then
++                start_here = i
++                break
++            end
++        end
++
++        for i = start_here, #self.children do
++            local layer = self.children[i]
++            graphics.push("all")
++            layer:draw_shared()
++            graphics.pop()
++            layer.interp_fraction = update_interp and self.interp_fraction or layer.interp_fraction
++        end
++
++        graphics.pop()
++        return
++    end
++
+     if self.expand_viewport then
+         local new_size_x = (graphics.main_viewport_size or conf.viewport_size).x
+         local new_size_y = (graphics.main_viewport_size or conf.viewport_size).y
+diff -ruN itch/screen/GameScreen.lua online/screen/GameScreen.lua
+--- itch/screen/GameScreen.lua	2026-03-26 13:58:32.000000000 +0800
++++ online/screen/GameScreen.lua	2026-08-16 19:59:46.665978000 +0800
+@@ -201,6 +201,9 @@
+ 
+ function UILayer:new()
+     UILayer.super.new(self)
++    self.needs_own_canvas = false -- draw() is empty and no worlds during normal
++                                   -- gameplay (only during e.g. player-death state) --
++                                   -- no reason to pay for its own Canvas every frame
+ 	self:init_state_machine()
+     self:add_signal("quit_requested")
+ 	self:add_signal("restart_requested")
+diff -ruN itch/screen/HUDLayer.lua online/screen/HUDLayer.lua
+--- itch/screen/HUDLayer.lua	2026-08-03 14:17:10.000000000 +0800
++++ online/screen/HUDLayer.lua	2026-08-29 07:49:59.003722500 +0800
+@@ -4,6 +4,9 @@
+ 
+ function HUDLayer:new()
+     HUDLayer.super.new(self)
++    self.needs_own_canvas = false -- TEST: was paying for its own Canvas every frame;
++                                   -- verify visually nothing depended on its (opaque
++                                   -- black, per the base class default) clear_color
+     self.score_display = game_state.score
+     self.after_level_bonus_screen = nil
+     self:ref("world", self:add_world(Worlds.HUDWorld(0, 0)))
+@@ -589,7 +592,8 @@
+ 		graphics.set_font(font2)
+ 		graphics.set_color(Color.white)
+         local text = format_hhmmssms1(game_state.game_time_ms)
+-        graphics.push("all")
++        graphics.push() -- was push("all") -- only translate+print happens here, no
++                         -- color/shader/stencil change to isolate
+         graphics.translate(self.viewport_size.x / 2, self.viewport_size.y / 2)
+ 		-- right edge lines up with the in-game score/multiplier display (map border line)
+ 		graphics.print(text, conf.room_size.x / 2 + 2 - font2:getWidth(text), 96)
+@@ -687,7 +691,7 @@
+         local upgrade_width = 6
+         local upgrade_separation = 1
+         for i, upgrade in ipairs(self.upgrades) do
+-            local flashing = self:is_timer_running("upgrade_flash_" .. upgrade.name) and iflicker(self.tick, 3, 2)
++            local flashing = false -- was: self:is_timer_running("upgrade_flash_" .. upgrade.name) and iflicker(self.tick, 3, 2)
+             local max_level = game_state:get_max_upgrade(upgrade.name)
+             local effective = upgrade.get_effective and upgrade.get_effective() or game_state.upgrades[upgrade.name]
+             local base_max = game_state.max_upgrades[upgrade.name]
+@@ -729,12 +733,17 @@
+                         local empty_height = bar_height - fill_height
+                         if rounded then
+                             graphics.push("all")
+-                                graphics.set_stencil_mode("draw", 1)
+-                                graphics.set_color(1, 1, 1, 1)
+-                                graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
+-                                graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
+-                                graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
+-                                graphics.set_stencil_mode("test", 1)
++                                -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1),
++                                -- a coroutine-based shim that only works on LuaJIT -- see
++                                -- Shielder.lua for the full explanation. Fixed the same way:
++                                -- LOVE 11's stencil API called directly, no yield.
++                                love.graphics.stencil(function()
++                                    graphics.set_color(1, 1, 1, 1)
++                                    graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
++                                    graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
++                                    graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
++                                end, "replace", 1, false)
++                                love.graphics.setStencilTest("equal", 1)
+                                 -- draw full bar as color1 top 60%, color2 bottom 40%
+                                 graphics.set_color(upgrade.over_color1)
+                                 graphics.rectangle("fill", x, y, upgrade_width, top_height)
+@@ -745,6 +754,7 @@
+                                     graphics.set_color(Color.darkergrey)
+                                     graphics.rectangle("fill", x, y, upgrade_width, empty_height)
+                                 end
++                                love.graphics.setStencilTest()
+                             graphics.pop()
+                         else
+                             -- draw full bar as color1 top 60%, color2 bottom 40%
+@@ -762,16 +772,22 @@
+                         -- magically filled by artefact effect
+                         if rounded then
+                             graphics.push("all")
+-                                graphics.set_stencil_mode("draw", 1)
+-                                graphics.set_color(1, 1, 1, 1)
+-                                graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
+-                                graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
+-                                graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
+-                                graphics.set_stencil_mode("test", 1)
++                                -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1),
++                                -- a coroutine-based shim that only works on LuaJIT -- see
++                                -- Shielder.lua for the full explanation. Fixed the same way:
++                                -- LOVE 11's stencil API called directly, no yield.
++                                love.graphics.stencil(function()
++                                    graphics.set_color(1, 1, 1, 1)
++                                    graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
++                                    graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
++                                    graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
++                                end, "replace", 1, false)
++                                love.graphics.setStencilTest("equal", 1)
+                                 graphics.set_color(upgrade.over_color1)
+                                 graphics.rectangle("fill", x, y, upgrade_width, top_height)
+                                 graphics.set_color(upgrade.over_color2)
+                                 graphics.rectangle("fill", x, y + top_height, upgrade_width, bottom_height)
++                                love.graphics.setStencilTest()
+                             graphics.pop()
+                         else
+                             graphics.set_color(upgrade.over_color1)
+@@ -783,14 +799,20 @@
+                         -- empty bar
+                         if rounded then
+                             graphics.push("all")
+-                                graphics.set_stencil_mode("draw", 1)
+-                                graphics.set_color(1, 1, 1, 1)
+-                                graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
+-                                graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
+-                                graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
+-                                graphics.set_stencil_mode("test", 1)
++                                -- NOTE: previously graphics.set_stencil_mode("draw"/"test", 1),
++                                -- a coroutine-based shim that only works on LuaJIT -- see
++                                -- Shielder.lua for the full explanation. Fixed the same way:
++                                -- LOVE 11's stencil API called directly, no yield.
++                                love.graphics.stencil(function()
++                                    graphics.set_color(1, 1, 1, 1)
++                                    graphics.rectangle("fill", x + 1, y, upgrade_width - 2, 1)
++                                    graphics.rectangle("fill", x, y + 1, upgrade_width, bar_height - 2)
++                                    graphics.rectangle("fill", x + 1, y + bar_height - 1, upgrade_width - 2, 1)
++                                end, "replace", 1, false)
++                                love.graphics.setStencilTest("equal", 1)
+                                 graphics.set_color(Color.darkergrey)
+                                 graphics.rectangle("fill", x, y, upgrade_width, bar_height)
++                                love.graphics.setStencilTest()
+                             graphics.pop()
+                         else
+                             graphics.set_color(Color.darkergrey)
+diff -ruN itch/screen/MainScreen.lua online/screen/MainScreen.lua
+--- itch/screen/MainScreen.lua	2026-03-15 22:27:20.000000000 +0800
++++ online/screen/MainScreen.lua	2026-08-19 19:54:36.583648400 +0800
+@@ -226,7 +226,14 @@
+         -- time_warning = true
+         -- time_leaderboard_warning = true
+     -- end
+-    
++
++    -- Disabled the on-screen clock/"!!"  warning display -- this hardware's real
++    -- draw-rate ceiling means conf.leaderboard_minimum_fps (50) is essentially
++    -- unreachable here regardless of further optimization, so the warning would
++    -- persist indefinitely. time_checker/should_warn/is_valid_game_speed_for_leaderboard
++    -- are untouched -- leaderboard eligibility is still correctly (and honestly)
++    -- determined elsewhere on submission, this just stops the visual nag.
++    --[[
+     graphics.set_color(Color.orange)
+     
+     if time_leaderboard_warning then
+@@ -251,6 +258,7 @@
+             end
+         end
+     end
++    ]]
+ 
+     graphics.set_color(Color.white)
+         
+diff -ruN itch/screen/PreTitleScreen.lua online/screen/PreTitleScreen.lua
+--- itch/screen/PreTitleScreen.lua	2025-11-07 12:00:08.000000000 +0800
++++ online/screen/PreTitleScreen.lua	2026-08-22 12:17:06.785022000 +0800
+@@ -24,7 +24,7 @@
+     end
+ 
+     if not savedata.done_shader_performance_test then
+-        usersettings:set_setting("screen_shader_preset", "shader_preset_soft")
++        usersettings:set_setting("screen_shader_preset", "shader_preset_none")
+         table.insert(self.screens, 1, PerformanceTestScreen)
+     end
+ 
+diff -ruN itch/shader/aberration.frag online/shader/aberration.frag
+--- itch/shader/aberration.frag	2025-08-15 11:04:34.000000000 +0800
++++ online/shader/aberration.frag	2026-08-16 19:59:46.737978800 +0800
+@@ -2,17 +2,17 @@
+ uniform vec2 canvas_size;
+ uniform vec2 canvas_pos;
+ 
+-uniform float rgb_amount = 0.15;
+-uniform float rgb_brightness = 4.55;
++uniform float rgb_amount;
++uniform float rgb_brightness;
+ 
+-uniform float aberration_amount = 0.1;
+-uniform float aberration_strength = 0.6;
+-uniform float aberration_blur_size = 0.25;   // Controls the aberration blur size
+-uniform int aberration_blur_samples = 7;     // Controls the number of samples in the aberration blur
++uniform float aberration_amount;
++uniform float aberration_strength;
++uniform float aberration_blur_size;   // Controls the aberration blur size
++uniform int aberration_blur_samples;     // Controls the number of samples in the aberration blur
+ 
+ // New uniforms for the pre-aberration blur
+-uniform float pre_blur_size = 0.00;           // Controls the pre-aberration blur size
+-uniform int pre_blur_samples = 2;            // Controls the number of samples in the pre-aberration blur
++uniform float pre_blur_size;           // Controls the pre-aberration blur size
++uniform int pre_blur_samples;            // Controls the number of samples in the pre-aberration blur
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/bloom.frag online/shader/bloom.frag
+--- itch/shader/bloom.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/bloom.frag	2026-08-16 19:59:46.773978000 +0800
+@@ -4,8 +4,8 @@
+ uniform vec2 canvas_size;
+ uniform vec2 canvas_pos;
+ 
+-uniform int samples = 32; // pixels per axis; higher = bigger glow, worse performance
+-uniform float quality = 0.15; // lower = smaller glow, better quality
++uniform int samples; // pixels per axis; higher = bigger glow, worse performance
++uniform float quality; // lower = smaller glow, better quality
+ 
+ vec4 effect(vec4 colour, Image tex, vec2 tc, vec2 sc)
+ {
+@@ -23,5 +23,5 @@
+     }
+   }
+   
+-  return ((sum / (samples * samples)) + source) * colour;
++  return ((sum / float(samples * samples)) + source) * colour;
+ }
+diff -ruN itch/shader/blur.frag online/shader/blur.frag
+--- itch/shader/blur.frag	2025-07-27 14:48:26.000000000 +0800
++++ online/shader/blur.frag	2026-08-16 19:59:46.807979800 +0800
+@@ -3,8 +3,8 @@
+ uniform vec2 canvas_pos;
+ 
+ // New uniforms for the pre-aberration blur
+-uniform float pre_blur_size = 0.08;           // Controls the pre-aberration blur size
+-uniform int pre_blur_samples = 7;            // Controls the number of samples in the pre-aberration blur
++uniform float pre_blur_size;           // Controls the pre-aberration blur size
++uniform int pre_blur_samples;            // Controls the number of samples in the pre-aberration blur
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/crazyblur.frag online/shader/crazyblur.frag
+--- itch/shader/crazyblur.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/crazyblur.frag	2026-08-16 19:59:46.841979100 +0800
+@@ -3,8 +3,8 @@
+ uniform vec2 viewport_size;      // Size of the viewport in pixels
+ uniform sampler2D pixel_texture; // The overlay image texture
+ 
+-uniform float tile_size = 1.0;         // Size of each tile in pixels
+-uniform float image_size = 2;        // Size (diameter) of the overlay image, should be > tile_size
++uniform float tile_size;         // Size of each tile in pixels
++uniform float image_size;        // Size (diameter) of the overlay image, should be > tile_size
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     // Convert texture coordinates to screen-space pixel coordinates
+diff -ruN itch/shader/decode_palette.frag online/shader/decode_palette.frag
+--- itch/shader/decode_palette.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/decode_palette.frag	2026-08-16 19:59:46.877978700 +0800
+@@ -14,7 +14,7 @@
+     
+     float index = encoded_color.g * 255.0;
+ 
+-	int i = int(mod(int(index) + palette_offset + 0.5, palette_size));
++	int i = int(mod(index + float(palette_offset) + 0.5, float(palette_size)));
+ 	vec4 palette_color = vec4(palette[i]);
+ 
+     
+diff -ruN itch/shader/decode_palette_with_image.frag online/shader/decode_palette_with_image.frag
+--- itch/shader/decode_palette_with_image.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/decode_palette_with_image.frag	2026-08-16 19:59:46.910978800 +0800
+@@ -14,8 +14,8 @@
+     
+     float index = encoded_color.g * 255.0;
+ 
+-	float i = 0.5 + int(mod(int(index) + palette_offset, palette_size));
+-	vec4 palette_color = Texel(palette, vec2(i / palette_size, 0));
++	float i = 0.5 + mod(index + float(palette_offset), float(palette_size));
++	vec4 palette_color = Texel(palette, vec2(i / float(palette_size), 0));
+ 
+     return vec4(palette_color.rgb, encoded_color.a * palette_color.a);
+ }
+diff -ruN itch/shader/glow.frag online/shader/glow.frag
+--- itch/shader/glow.frag	2025-08-07 10:13:26.000000000 +0800
++++ online/shader/glow.frag	2026-08-16 19:59:46.948979800 +0800
+@@ -3,12 +3,12 @@
+ uniform vec2 canvas_pos;
+ 
+ // New uniforms for the pre-aberration blur
+-uniform float pre_blur_size = 0.08;           // Controls the pre-aberration blur size
+-uniform int pre_blur_samples = 7;            // Controls the number of samples in the pre-aberration blur
++uniform float pre_blur_size;           // Controls the pre-aberration blur size
++uniform int pre_blur_samples;            // Controls the number of samples in the pre-aberration blur
+ 
+-uniform float intensity = 0.5;
+-uniform float glow_curve = 1;
+-uniform float glow_boost = 0.0;
++uniform float intensity;
++uniform float glow_curve;
++uniform float glow_boost;
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/lcd.frag online/shader/lcd.frag
+--- itch/shader/lcd.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/lcd.frag	2026-08-16 19:59:46.984979200 +0800
+@@ -1,11 +1,11 @@
+ uniform vec2 viewport_size;      
+ uniform sampler2D pixel_texture; 
+ 
+-uniform float effect_strength = 0.3; 
++uniform float effect_strength; 
+ 
+-uniform float brightness = 1.8;
++uniform float brightness;
+ 
+-uniform float min_brightness = 0.0;
++uniform float min_brightness;
+ 
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+diff -ruN itch/shader/led.frag online/shader/led.frag
+--- itch/shader/led.frag	2025-07-22 11:45:36.000000000 +0800
++++ online/shader/led.frag	2026-08-16 19:59:47.023979500 +0800
+@@ -1,19 +1,19 @@
+ uniform vec2 viewport_size;      
+ uniform sampler2D pixel_texture; 
+ 
+-uniform float effect_strength = 0.3; 
++uniform float effect_strength; 
+ 
+-uniform float brightness = 1.8;
++uniform float brightness;
+ 
+-uniform float min_brightness = 0.0;
++uniform float min_brightness;
+ 
+-uniform float boost = 1.0;
++uniform float boost;
+ 
+-uniform float overlay_power = 2.0;
++uniform float overlay_power;
+ 
+-uniform float saturation_modifier = 1.0;
+-uniform float luminance_modifier = 1.0;
+-uniform float contrast_modifier = 1.0;
++uniform float saturation_modifier;
++uniform float luminance_modifier;
++uniform float contrast_modifier;
+ 
+ const float EPSILON = 1e-10;
+ 
+diff -ruN itch/shader/screenfilter.frag online/shader/screenfilter.frag
+--- itch/shader/screenfilter.frag	2025-07-27 14:32:58.000000000 +0800
++++ online/shader/screenfilter.frag	2026-08-16 19:59:47.059978900 +0800
+@@ -2,13 +2,13 @@
+ uniform vec2 canvas_size;
+ uniform vec2 canvas_pos;
+ 
+-uniform float rgb_amount = 0.15;
+-uniform float rgb_brightness = 4.55;
+-uniform float border_size = 150.0;
+-uniform float border_feather = 0.5;
+-uniform float border_amount = 0.5; // 0.5
+-uniform float correction = 0.8;
+-uniform float roundness = 1;
++uniform float rgb_amount;
++uniform float rgb_brightness;
++uniform float border_size;
++uniform float border_feather;
++uniform float border_amount; // 0.5
++uniform float correction;
++uniform float roundness;
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/separable_blur.frag online/shader/separable_blur.frag
+--- itch/shader/separable_blur.frag	2026-01-17 17:10:30.000000000 +0800
++++ online/shader/separable_blur.frag	2026-08-16 19:59:47.086978300 +0800
+@@ -3,8 +3,8 @@
+ uniform vec2 canvas_pos;
+ 
+ // New uniforms for the pre-aberration blur
+-uniform float pre_blur_size = 0.08;           // Controls the pre-aberration blur size
+-uniform int pre_blur_samples = 7;            // Controls the number of samples in the pre-aberration blur
++uniform float pre_blur_size;           // Controls the pre-aberration blur size
++uniform int pre_blur_samples;            // Controls the number of samples in the pre-aberration blur
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/separable_glow.frag online/shader/separable_glow.frag
+--- itch/shader/separable_glow.frag	2026-01-17 17:10:30.000000000 +0800
++++ online/shader/separable_glow.frag	2026-08-16 19:59:47.113979100 +0800
+@@ -3,12 +3,12 @@
+ uniform vec2 canvas_pos;
+ 
+ // New uniforms for the pre-aberration blur
+-uniform float pre_blur_size = 0.08;           // Controls the pre-aberration blur size
+-uniform int pre_blur_samples = 7;            // Controls the number of samples in the pre-aberration blur
++uniform float pre_blur_size;           // Controls the pre-aberration blur size
++uniform int pre_blur_samples;            // Controls the number of samples in the pre-aberration blur
+ 
+-uniform float intensity = 0.5;
+-uniform float glow_curve = 1;
+-uniform float glow_boost = 0.0;
++uniform float intensity;
++uniform float glow_curve;
++uniform float glow_boost;
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/shader/shader.lua online/shader/shader.lua
+--- itch/shader/shader.lua	2025-08-28 20:00:50.000000000 +0800
++++ online/shader/shader.lua	2026-08-16 19:59:47.149978600 +0800
+@@ -1,5 +1,89 @@
+ local shader = {}
+ 
++-- Default values for uniforms that used to be initialized inline in the shader
++-- source (e.g. `uniform float x = 0.5;`). That syntax only compiles under desktop
++-- OpenGL -- LOVE's GLES backend rejects uniform initializers outright, so the
++-- initializers were stripped from the .frag files and their default values moved
++-- here, applied via Shader:send() right after each shader is compiled.
++local default_uniforms = {
++	aberration = {
++		{"rgb_amount", 0.15},
++		{"rgb_brightness", 4.55},
++		{"aberration_amount", 0.1},
++		{"aberration_strength", 0.6},
++		{"aberration_blur_size", 0.25},
++		{"aberration_blur_samples", 7},
++		{"pre_blur_size", 0.00},
++		{"pre_blur_samples", 2},
++	},
++	bloom = {
++		{"samples", 32},
++		{"quality", 0.15},
++	},
++	blur = {
++		{"pre_blur_size", 0.08},
++		{"pre_blur_samples", 7},
++	},
++	crazyblur = {
++		{"tile_size", 1.0},
++		{"image_size", 2},
++	},
++	glow = {
++		{"pre_blur_size", 0.08},
++		{"pre_blur_samples", 7},
++		{"intensity", 0.5},
++		{"glow_curve", 1},
++		{"glow_boost", 0.0},
++	},
++	lcd = {
++		{"effect_strength", 0.3},
++		{"brightness", 1.8},
++		{"min_brightness", 0.0},
++	},
++	led = {
++		{"effect_strength", 0.3},
++		{"brightness", 1.8},
++		{"min_brightness", 0.0},
++		{"boost", 1.0},
++		{"overlay_power", 2.0},
++		{"saturation_modifier", 1.0},
++		{"luminance_modifier", 1.0},
++		{"contrast_modifier", 1.0},
++	},
++	screenfilter = {
++		{"rgb_amount", 0.15},
++		{"rgb_brightness", 4.55},
++		{"border_size", 150.0},
++		{"border_feather", 0.5},
++		{"border_amount", 0.5},
++		{"correction", 0.8},
++		{"roundness", 1},
++	},
++	separable_blur = {
++		{"pre_blur_size", 0.08},
++		{"pre_blur_samples", 7},
++	},
++	separable_glow = {
++		{"pre_blur_size", 0.08},
++		{"pre_blur_samples", 7},
++		{"intensity", 0.5},
++		{"glow_curve", 1},
++		{"glow_boost", 0.0},
++	},
++	soft_combined = {
++		{"blur_size", 0.08},
++		{"blur_samples", 7},
++		{"aberration_amount", 0.3},
++		{"aberration_strength", 0.6},
++		{"aberration_blur_samples", 7},
++		{"glow_size", 0.5},
++		{"glow_samples", 8},
++		{"glow_intensity", 0.25},
++		{"glow_curve", 1.5},
++		{"glow_boost", 0.025},
++	},
++}
++
+ function shader.load()
+     shader.fragment_shader_paths = filesystem.get_files_of_type("shader", "frag", true)
+ 	shader.update()
+@@ -11,6 +95,17 @@
+ 		local name = filesystem.filename_to_asset_name(v, "frag")
+ 		-- assert(shader[name] == nil, "Shader name collision: " .. name) 
+ 		shader[name] = love.graphics.new_shader(v)
++
++		local defaults = default_uniforms[name]
++		if defaults then
++			for _, pair in ipairs(defaults) do
++				-- Some uniforms get dead-code-eliminated by the GLSL ES compiler if the
++				-- shader's effect() never actually reads them (harmless -- nothing uses
++				-- the value anyway), which makes Shader:send error since the uniform no
++				-- longer exists in the linked program. Skip those rather than crash.
++				pcall(shader[name].send, shader[name], pair[1], pair[2])
++			end
++		end
+ 	end
+ end
+ 
+diff -ruN itch/shader/soft_combined.frag online/shader/soft_combined.frag
+--- itch/shader/soft_combined.frag	2026-01-17 17:10:30.000000000 +0800
++++ online/shader/soft_combined.frag	2026-08-16 19:59:47.184978600 +0800
+@@ -3,20 +3,20 @@
+ uniform vec2 canvas_pos;
+ 
+ // Blur settings
+-uniform float blur_size = 0.08;
+-uniform int blur_samples = 7;
++uniform float blur_size;
++uniform int blur_samples;
+ 
+ // Aberration settings
+-uniform float aberration_amount = 0.3;
+-uniform float aberration_strength = 0.6;
+-uniform int aberration_blur_samples = 7;
++uniform float aberration_amount;
++uniform float aberration_strength;
++uniform int aberration_blur_samples;
+ 
+ // Glow settings
+-uniform float glow_size = 0.5;
+-uniform int glow_samples = 8;
+-uniform float glow_intensity = 0.25;
+-uniform float glow_curve = 1.5;
+-uniform float glow_boost = 0.025;
++uniform float glow_size;
++uniform int glow_samples;
++uniform float glow_intensity;
++uniform float glow_curve;
++uniform float glow_boost;
+ 
+ vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+     vec2 uv = texture_coords;
+diff -ruN itch/translation.lua online/translation.lua
+--- itch/translation.lua	2026-08-03 14:40:56.000000000 +0800
++++ online/translation.lua	2026-08-22 19:18:26.120777500 +0800
+@@ -611,6 +611,7 @@
+ 
+         leaderboard_loading                 = "Connecting...",
+         leaderboard_error                   = "Error connecting to leaderboard",
++        leaderboard_unavailable              = "Online rankings not available on this port",
+         leaderboard_deaths                 = "Hatchlings Vanquished",
+         
+ 
+diff -ruN itch/usersettings.lua online/usersettings.lua
+--- itch/usersettings.lua	2026-08-03 14:34:50.000000000 +0800
++++ online/usersettings.lua	2026-09-04 21:20:20.250468000 +0800
+@@ -1,13 +1,12 @@
+ local default_usersettings = {
+-	-- display
+-    -- use_screen_shader = true,
+-	screen_shader_preset = "shader_preset_soft",
++	screen_shader_preset = "shader_preset_none",
+     pixel_perfect = false,
+     vsync = false,
+     fullscreen = true,
+-	fps_cap = 300,
++	fps_cap = 60, -- was 300
+     cap_framerate = true,
+ 	zoom_level = 1,
++    global_particle_scale = 0.0,
+     brightness = 1.0,
+     saturation = 1.0,
+     hue = 0.0,
+@@ -15,10 +14,10 @@
+     invert_colors = false,
+     show_hud = true,
+     show_fps = false,
+-    shader_quality = 0.5,
++    shader_quality = 0.0,
+     window_size = { x = 0, y = 0 },
+     screen_shake_amount = 1,
+-    fullscreen_mode = "desktop",
++    fullscreen_mode = "exclusive",
+ 	
+     -- audio
+ 	master_volume = 1.0,
+diff -ruN itch/world/BaseWorld.lua online/world/BaseWorld.lua
+--- itch/world/BaseWorld.lua	2026-03-02 20:11:06.000000000 +0800
++++ online/world/BaseWorld.lua	2026-08-16 19:59:47.240980000 +0800
+@@ -117,6 +117,12 @@
+ end
+ 
+ function World:update_shared(dt)
++	if self.paused then return end -- must be here, not just in GameWorld:update() --
++	                                -- this is what actually drives the per-object
++	                                -- update loop below; GameWorld:update() only runs
++	                                -- afterward, via World.super.update_shared() at
++	                                -- the end of this function, so a guard placed
++	                                -- there alone never stopped objects from updating
+ 	dt = dt * self.time_scale
+ 	-- audio.set_position(self.camera.pos.x, self.camera.pos.y, self.camera.z_index)
+ 
+@@ -160,12 +166,25 @@
+ function World:update(dt)
+ end
+ 
++local remove_tag_signal_names = {}
++local function get_remove_tag_signal_name(tag)
++    -- Tag names are a small, fixed set of category strings ("enemy", "bullet", etc.)
++    -- reused across many objects -- cache the concatenated signal name per tag
++    -- instead of rebuilding the same string on every add_tag/remove_tag call.
++    local name = remove_tag_signal_names[tag]
++    if not name then
++        name = "remove_tag_" .. tag
++        remove_tag_signal_names[tag] = name
++    end
++    return name
++end
++
+ function World:add_tag(object, tag)
+     self.tags = self.tags or {}
+     self.tags[tag] = self.tags[tag] or bonglewunch()
+ 	if not self:has_tag(object, tag) then
+ 		self.tags[tag]:push(object)
+-		signal.connect(object, "destroyed", self, "remove_tag_" .. tag, function()
++		signal.connect(object, "destroyed", self, get_remove_tag_signal_name(tag), function()
+ 			self:remove_tag(object, tag)
+ 		end)
+ 	end
+@@ -182,8 +201,9 @@
+     if self.tags and self.tags[tag] then
+         self.tags[tag]:remove(object)
+     end
+-	if signal.is_connected(object, "destroyed", self, "remove_tag_" .. tag) then
+-		signal.disconnect(object, "destroyed", self, "remove_tag_" .. tag)
++	local signal_name = get_remove_tag_signal_name(tag)
++	if signal.is_connected(object, "destroyed", self, signal_name) then
++		signal.disconnect(object, "destroyed", self, signal_name)
+ 	end
+ end
+ 
+@@ -333,7 +353,12 @@
+ 
+ function World:sort_visible_objects()
+     if self.draw_sort then
+-        table.sort(self.draw_objects_table, self.draw_sort)
++        -- Was table.sort (O(n log n) minimum, every frame). The list rebuilt each
++        -- frame by populate_visible_objects_table() preserves the same relative
++        -- order as the previous frame (source collection order is stable), and
++        -- objects move continuously rather than teleporting -- so this is nearly-
++        -- sorted data every frame, exactly what insertion sort is fast on (O(n)).
++        table.insertion_sort(self.draw_objects_table, self.draw_sort)
+     end
+ end
+ 
+@@ -363,7 +388,11 @@
+ end
+ 
+ function World:draw_object(obj)
+-    graphics.push("all")
++    graphics.push() -- was push("all") -- objects only need position isolated from
++                     -- siblings, not the full color/blend/shader/scissor/stencil
++                     -- state; TEST -- watch for color/tint bleeding between objects
++                     -- (most likely: hit-flash/damage-tint effects not resetting
++                     -- set_color themselves before returning)
+ 	local x, y = self:get_object_draw_position(obj)
+ 	graphics.translate(x, y)
+ 
+diff -ruN itch/world/GameWorld.lua online/world/GameWorld.lua
+--- itch/world/GameWorld.lua	2026-08-03 14:33:48.000000000 +0800
++++ online/world/GameWorld.lua	2026-09-10 20:21:54.951611100 +0800
+@@ -14,8 +14,8 @@
+ local Cutscene = require("obj.Cutscene")
+ local BeginningCutscene = Cutscene.BeginningCutscene
+ local CAMERA_OFFSET_AMOUNT = 20
+-local MAX_ENEMIES = 100
+-local MAX_HAZARDS = 50
++local MAX_ENEMIES = 75
++local MAX_HAZARDS = 38
+ local PressureObject = GameObject2D:extend("PressureObject")
+ -- local MAX_ENEMIES = 10000
+ 
+@@ -509,6 +509,16 @@
+ 		end
+ 	end)
+ 
++	-- The camera_target is intentionally marked persist=true so it survives
++	-- clear_objects()'s normal per-room sweep -- but that also means it's
++	-- never cleared automatically, and this function creates a brand new
++	-- one every single room. Without explicitly destroying the previous
++	-- room's instance first, each one is simply orphaned (still alive,
++	-- still in self.objects, just no longer referenced by anything) and
++	-- they accumulate forever, one per room, for the rest of the run.
++	if self.camera_target then
++		self.camera_target:destroy()
++	end
+ 	self:ref("camera_target", self:add_object(GameObject2D(CAMERA_TARGET_OFFSET.x, CAMERA_TARGET_OFFSET.y))).persist = true
+ 
+ 	self.camera:follow(self.camera_target)
+@@ -722,12 +732,10 @@
+ 			if i % 3 == 0 then
+ 				s:wait(5)
+ 			end
+-			-- s:wait(1)
+-			-- end
+ 
+-			-- while self:get_number_of_objects_with_tag(tag_name) > max_count do
+-				-- s:wait(1)
+-			-- end
++			while self:get_number_of_objects_with_tag(tag_name) > max_count do
++				s:wait(1)
++			end
+ 			::continue::
+ 		end
+ 	end)
+@@ -1596,6 +1604,11 @@
+ end
+ 
+ function GameWorld:update(dt)
++	if self.paused then return end -- was never actually checked here; the only other
++	                                -- reference to self.paused in this file was a
++	                                -- commented-out draw-time check, so gameplay kept
++	                                -- simulating in full behind the pause menu
++
+ 	-- Clear pending spawn positions from previous frame (deferred spawns are now in grid)
+ 	_clear_pending_spawn_positions()
+ 
+@@ -2409,12 +2422,32 @@
+ 	graphics.set_color(Color.darkergrey)
+ 	
+ 	
+-	local scoremult1 = "×["
+-	local scoremult2 = string.format("%-.2f", game_state:get_score_multiplier(false))
+-	local scoremult3 = string.format("×%02d", max(1, game_state:get_rescue_chain_multiplier()))
+-	local scoremult4 = "   "
+-	local scoremult5 = "]"
+-	local scoremult_width = font:getWidth(scoremult1 .. scoremult2 .. scoremult3 .. scoremult4 .. scoremult5)
++	-- scoremult1..5 are reused further down (print_multicolor, and a second
++	-- getWidth for the rescue icon's position) -- cache all of it, only redoing
++	-- the string.format/concat/getWidth work (real cost, every frame, in a draw
++	-- path) when the underlying values actually changed. They typically don't
++	-- change most frames.
++	local score_mult_value = game_state:get_score_multiplier(false)
++	local rescue_mult_value = max(1, game_state:get_rescue_chain_multiplier())
++
++	if self._cached_score_mult_value ~= score_mult_value or self._cached_rescue_mult_value ~= rescue_mult_value then
++		self._cached_score_mult_value = score_mult_value
++		self._cached_rescue_mult_value = rescue_mult_value
++
++		self._cached_scoremult1 = "×["
++		self._cached_scoremult2 = string.format("%-.2f", score_mult_value)
++		self._cached_scoremult3 = string.format("×%02d", rescue_mult_value)
++		self._cached_scoremult4 = "   "
++		self._cached_scoremult5 = "]"
++		self._cached_scoremult_width = font:getWidth(self._cached_scoremult1 .. self._cached_scoremult2 .. self._cached_scoremult3 .. self._cached_scoremult4 .. self._cached_scoremult5)
++		self._cached_scoremult_icon_offset = font:getWidth(self._cached_scoremult1 .. self._cached_scoremult2 .. self._cached_scoremult3) + 6
++	end
++	local scoremult1 = self._cached_scoremult1
++	local scoremult2 = self._cached_scoremult2
++	local scoremult3 = self._cached_scoremult3
++	local scoremult4 = self._cached_scoremult4
++	local scoremult5 = self._cached_scoremult5
++	local scoremult_width = self._cached_scoremult_width
+ 
+ 	-- push the row right so the "]" ink (not its built-in black padding) sits flush
+ 	-- with the map border line. tweak the +4 by 1 if the border ever moves.
+@@ -2458,7 +2491,7 @@
+ 	graphics.print_multicolor(font, 0, 0, scoremult1, Color.grey, scoremult2, Color.white, scoremult3, greenoid_color,
+ 		scoremult4, Color.white, scoremult5, Color.grey)
+ 	graphics.set_color(Color.white)
+-	graphics.drawp_centered(textures.ally_rescue1, nil, 0, font:getWidth(scoremult1..scoremult2..scoremult3) + 6, 4)
++	graphics.drawp_centered(textures.ally_rescue1, nil, 0, self._cached_scoremult_icon_offset, 4)
+     graphics.pop()
+ end
+ 
+@@ -2827,6 +2860,12 @@
+ end
+ 
+ function GameWorld:state_LevelTransition_exit()
++	-- Forced collection right before the new room populates, on top of
++	-- the existing mid-transition collect() above -- cheap here since
++	-- nothing else is happening at this exact moment, and testing showed
++	-- it measurably helped keep memory in check across many room loads.
++	collectgarbage("collect")
++
+ 	self:initialize_room(self.transitioning_to_room)
+ 	self.transitioning_to_room = nil
+     self.frozen = false
+diff -ruN itch/world/LeaderboardWorld.lua online/world/LeaderboardWorld.lua
+--- itch/world/LeaderboardWorld.lua	2026-03-22 22:14:22.000000000 +0800
++++ online/world/LeaderboardWorld.lua	2026-08-22 19:18:24.739671100 +0800
+@@ -60,7 +60,7 @@
+ 		end
+ 		self.waiting = false
+         if (not ok) or res and res.status == "err" then
+-            self.error = true
++            self.error = (res and res.status == "disabled") and "disabled" or true
+             return
+         end
+         
+@@ -373,7 +373,7 @@
+ 		self.waiting = false
+         if (not ok) or res and res.status == "err" then
+             self:fetch_page(1)
+-            self.error = true
++            self.error = (res and res.status == "disabled") and "disabled" or true
+             return
+         end
+ 
+@@ -647,15 +647,25 @@
+ 
+     graphics.push"all"
+ 
+-    graphics.set_stencil_mode("draw", 1)
+-
+-
+-    graphics.rectangle("fill", start_x + MENU_ITEM_H_PADDING + 25, 12, 26, 9)
+-    graphics.set_stencil_mode("test", 1)
+-
++    -- NOTE: previously routed through graphics.set_stencil_mode("draw"/"test", 1),
++    -- a LOVE-12-API shim that bridges to LOVE 11 by starting a coroutine inside
++    -- love.graphics.stencil()'s callback and yielding out of it, then resuming
++    -- later to close it out. Yielding across a C-call boundary like that is a
++    -- LuaJIT-only extension -- standard/vanilla Lua 5.1 (which this build runs)
++    -- cannot do it at all, and coroutine.resume() swallows the resulting error
++    -- silently, leaving the stencil write pass never properly closed out --
++    -- which froze the whole screen (confirmed on-device). Patched locally here
++    -- rather than touching the shared shim (still used elsewhere for HUD/cutscene
++    -- masking) -- using LOVE 11's stencil API the way it's actually documented:
++    -- the masking draw call goes *inside* the callback, synchronously, no yield.
++    love.graphics.stencil(function()
++        graphics.rectangle("fill", start_x + MENU_ITEM_H_PADDING + 25, 12, 26, 9)
++    end, "replace", 1, false)
++    love.graphics.setStencilTest("equal", 1)
+ 
+     graphics.draw_centered(self.wep_filter_texture, start_x + MENU_ITEM_H_PADDING + 38, 18)
+ 
++    love.graphics.setStencilTest()
+     graphics.pop()
+ 
+     -- local hi_score_text = (tr.leaderboard_hi_score .. ": "):upper()
+@@ -673,7 +683,10 @@
+ 
+     if self.waiting or self.error or self.current_page == nil or type(self.current_page) ~= "table" or type(self.current_page.entries) ~= "table" then
+         graphics.set_color(Color.white)
+-        graphics.print_centered((self.error and tr.leaderboard_error or tr.leaderboard_loading):upper(), font2,
++        local status_message = self.error == "disabled" and tr.leaderboard_unavailable
++            or self.error and tr.leaderboard_error
++            or tr.leaderboard_loading
++        graphics.print_centered(status_message:upper(), font2,
+             conf.viewport_size.x / 2, conf.viewport_size.y / 2)
+     else
+         graphics.push("all")

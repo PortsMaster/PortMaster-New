@@ -1,0 +1,208 @@
+#!/bin/bash
+
+GAMEDIR="$PWD"
+OUTDIR="$GAMEDIR/evilegg"
+GAME_FILE="Evil Egg.exe"
+LAUNCH_FILE="evilegg.love"
+LOGFILE="$GAMEDIR/patchlog.txt"
+START_TIME=$(date +%s)
+JOBS=4  # OGG compression threads
+export PATH="$controlfolder:$PATH"
+
+# Setup logging
+> "$LOGFILE" && exec > >(tee "$LOGFILE") 2>&1
+echo "=== START $(date) ==="
+echo "Working directory: $GAMEDIR"
+
+cd "$GAMEDIR"
+
+echo ""
+echo "Patching Evil Egg..."
+echo ""
+
+# ============================================================================
+# EXTRACTION
+# ============================================================================
+DATAFILE_ACTUAL=""
+
+echo "Looking for game file..."
+for f in "$GAMEDIR"/*;
+do
+    filename=$(basename "$f")
+    if [ "$(echo "$filename" | tr '[:upper:]' '[:lower:]')" = "evil egg.exe" ];
+    then
+        DATAFILE_ACTUAL="$filename"
+        break
+    fi
+done
+
+if [ -z "$DATAFILE_ACTUAL" ];
+then
+    echo "[ERROR] ERROR: Evil Egg.exe not found in $GAMEDIR"
+    ls -la "$GAMEDIR"
+    exit 1
+fi
+
+echo "Found: $DATAFILE_ACTUAL"
+
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
+
+EXTRACT_TOOL="$controlfolder/7zzs.${DEVICE_ARCH}"
+
+if [ ! -f "$EXTRACT_TOOL" ]; then
+    echo "[ERROR] ERROR: 7zzs tool not found at $EXTRACT_TOOL"
+    ls -la "$controlfolder" | grep 7z
+    exit 1
+fi
+
+echo "Extracting $DATAFILE_ACTUAL..."
+if "$EXTRACT_TOOL" x "$GAMEDIR/$DATAFILE_ACTUAL" -o"$OUTDIR" -y 2>&1;
+then
+    echo "[OK] Extraction complete"
+else
+    echo "[ERROR] ERROR: Extraction failed"
+    exit 1
+fi
+
+echo ""
+echo "Applying patches..."
+echo ""
+
+# ============================================================================
+# PATCH 1/3: Apply evilegg.patch or online.patch (all .lua file changes)
+# ============================================================================
+PATCH_TOOL="$GAMEDIR/tools/patch/patch"
+
+if [ "$ONLINE_MODE" = "true" ]; then
+    PATCH_FILE="$GAMEDIR/tools/patch/online.patch"
+else
+    PATCH_FILE="$GAMEDIR/tools/patch/evilegg.patch"
+fi
+PATCH_NAME=$(basename "$PATCH_FILE")
+
+if [ ! -f "$PATCH_TOOL" ]; then
+    echo "[ERROR] ERROR: patch tool not found at $PATCH_TOOL"
+    exit 1
+fi
+
+if [ ! -f "$PATCH_FILE" ]; then
+    echo "[ERROR] ERROR: $PATCH_NAME not found at $PATCH_FILE"
+    exit 1
+fi
+
+echo "Patch 1/3: Applying $PATCH_NAME..."
+pushd "$OUTDIR" > /dev/null
+if "$PATCH_TOOL" -p1 < "$PATCH_FILE";
+then
+    echo "[OK] $PATCH_NAME applied successfully"
+else
+    echo "[ERROR] ERROR: $PATCH_NAME failed to apply"
+    popd > /dev/null
+    exit 1
+fi
+popd > /dev/null
+
+# ============================================================================
+# PATCH 2/3: Parallel recompression of audio assets.
+# Music (.ogg, assets/audio/music) -> aggressively recompressed .ogg
+# SFX   (.wav, everywhere else)     -> converted to .ogg at a saner bitrate
+# ============================================================================
+echo "Recompressing audio using $JOBS threads..."
+export GAMEDIR OUTDIR
+ 
+# --- Music: recompress existing .ogg (aggressive; background/looping, loss is masked) ---
+find "$OUTDIR/assets/audio/music" -type f -iname "*.ogg" -print0 | \
+xargs -0 -n1 -P "$JOBS" bash -c '
+    oggfile="$0"
+    filename=$(basename "$oggfile")
+    echo "  [MUSIC] $filename"
+    tmpfile="${oggfile%.ogg}_tmp.ogg"
+    "$GAMEDIR/tools/oggdec" -o - "$oggfile" 2>/dev/null | \
+    "$GAMEDIR/tools/oggenc" - -o "$tmpfile" \
+        --downmix \
+        --resample 22050 \
+        -q 2 \
+        --managed -b 16 \
+        --discard-comments >/dev/null 2>&1
+    if [ -s "$tmpfile" ]; then
+        mv -f "$tmpfile" "$oggfile"
+    else
+        echo "    ERROR: Failed to recompress $filename"
+        rm -f "$tmpfile"
+    fi
+'
+ 
+# --- SFX: convert .wav -> .ogg (milder; short/transient, artifacts are more audible) ---
+find "$OUTDIR/assets/audio" -type f -iname "*.wav" -not -path "*/assets/audio/music/*" -print0 | \
+xargs -0 -n1 -P "$JOBS" bash -c '
+    wavfile="$0"
+    filename=$(basename "$wavfile")
+    echo "  [SFX] $filename"
+    oggfile="${wavfile%.wav}.ogg"
+    "$GAMEDIR/tools/oggenc" "$wavfile" -o "$oggfile" \
+        --downmix \
+		--resample 22050 \
+        -q 2 \
+        --discard-comments >/dev/null 2>&1
+    if [ -s "$oggfile" ]; then
+        rm -f "$wavfile"
+    else
+        echo "    ERROR: Failed to convert $filename"
+        rm -f "$oggfile"
+    fi
+'
+echo "Audio compression complete."
+
+# ============================================================================
+# PATCH 3/3: Apply Nintendo Layout Fix (if selected)
+# ============================================================================
+
+if [ "$NINTENDO_LAYOUT" = "false" ]; then
+    echo "Applying face buttons Nintendo configuration..."
+
+    # Xbox (default): up=y  down=a  left=x  right=b
+    # Nintendo:        up=x  down=b  left=y  right=a
+    sed -i '/aim_up_digital = {/,+2    s/joystick = { "y" }/joystick = { "x" }/' "$OUTDIR/conf/input_presets.lua"
+    sed -i '/aim_down_digital = {/,+2  s/joystick = { "a" }/joystick = { "b" }/' "$OUTDIR/conf/input_presets.lua"
+    sed -i '/aim_left_digital = {/,+2  s/joystick = { "x" }/joystick = { "y" }/' "$OUTDIR/conf/input_presets.lua"
+    sed -i '/aim_right_digital = {/,+2 s/joystick = { "b" }/joystick = { "a" }/' "$OUTDIR/conf/input_presets.lua"
+
+else
+    echo "Default face buttons Xbox configuration..."
+fi
+
+
+# ============================================================================
+# REPACK AND CLEANUP
+# ============================================================================
+echo ""
+echo "Repacking game as $LAUNCH_FILE..."
+if "$EXTRACT_TOOL" a -tzip "$GAMEDIR/$LAUNCH_FILE" "$OUTDIR"/* > /dev/null 2>&1;
+then
+    echo "[OK] Repacking successful"
+else
+    echo "[ERROR] ERROR: Repacking failed"
+    exit 1
+fi
+
+echo "Cleaning up..."
+cd "$GAMEDIR"
+rm -rf temp_patch
+rm -f "$DATAFILE_ACTUAL"
+rm -f "$GAMEDIR/Place Evil Egg.exe here.txt"
+rm -rf "$OUTDIR"
+echo "[OK] Cleanup complete"
+
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+echo ""
+echo "========================================="
+echo "Patching complete! ($DURATION seconds)"
+echo "========================================="
+echo "1.  $PATCH_NAME (.lua changes):      [OK]"
+echo "2.  audio assets compression:          [OK]"
+echo "3.  face buttons patch:                [OK]"
+echo "========================================="
+echo "=== END $(date) ==="
