@@ -51,7 +51,7 @@ if [ ! -f "$GAMEDIR/gamedata/.patched_complete" ] || [ "$(cat "$GAMEDIR/gamedata
     fi
 fi
 
-[ -f "$GAMEDIR/maketheburger.port" ] || { echo "maketheburger.port missing after patching"; sleep 5; exit 1; }
+[ -f "$GAMEDIR/maketheburger.port" ] || { pm_message "maketheburger.port missing after patching"; sleep 5; exit 1; }
 
 cd "$GAMEDIR"
 
