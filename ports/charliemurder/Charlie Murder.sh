@@ -23,9 +23,8 @@ export gamedir="/$directory/ports/charliemurder"
 export gameassembly="CharlieMurder.exe"
 cd "$gamedir/gamedata"
 
-echo "Cleaning macOS artifact files..."
-find "$gamedir" -name "._*" -type f -delete 2>/dev/null
-find "$gamedir" -name ".DS_Store" -type f -delete 2>/dev/null
+# All script output from here on is captured to log.txt as well as shown live.
+> "$gamedir/log.txt" && exec > >(tee "$gamedir/log.txt") 2>&1
 
 # Sanity checks
 if [ ! -f "$gamedir/gamedata/${gameassembly}" ]; then
@@ -40,15 +39,9 @@ if [ ! -f "$gamedir/gamedata/Content/sfx/music.xsb" ] || [ ! -f "$gamedir/gameda
     exit 1
 fi
 
-# Grab text output...
-$ESUDO chmod 666 /dev/tty0
-printf "\033c" > /dev/tty0
-echo "Loitering... Please Wait." > /dev/tty0
-
 export MONO_GC_PARAMS="nursery-size=128m,major=marksweep"
-> "$gamedir/log.txt"
 > "$gamedir/monomod_error.txt"
-echo "RAM: $(free -m | awk 'NR==2{print $4}') MB frei" >> "$gamedir/log.txt"
+echo "RAM: $(free -m | awk 'NR==2{print $4}') MB free"
 
 export FNA3D_OPENGL_FORCE_ES3=1
 export SDL_VIDEO_GL_DRIVER=libGLESv2.so
@@ -73,7 +66,7 @@ $ESUDO mount "$monofile" "$monodir"
 mkdir -p "$gamedir/savedata"
 mkdir -p ~/.local/share ~/.config
 
-# Control mapping
+# Control mapping — ships corrected default once, never overwrite a player's own settings
 if [ ! -f "$gamedir/savedata/controls.ini" ]; then
     cp "$gamedir/patches/controls.ini" "$gamedir/savedata/controls.ini"
 fi
@@ -97,7 +90,7 @@ cp "$gamedir/dlls/FNA.dll.config" "$gamedir/gamedata/"
 export MONO_PATH="$gamedir/dlls"
 export LD_LIBRARY_PATH="$gamedir/libs.aarch64":"$monodir/lib":/usr/config/emuelec/lib32:/usr/lib32:$LD_LIBRARY_PATH
 export PATH="$monodir/bin":"$PATH"
-echo "Active Mono: $(which mono) - Version: $(mono --version | head -1)" >> "$gamedir/log.txt"
+echo "Active Mono: $(which mono) - Version: $(mono --version | head -1)"
 
 # Force GLES3 and VBO Discard hack
 export FNA3D_OPENGL_FORCE_VBO_DISCARD=1
@@ -114,7 +107,7 @@ if sha1sum -c "${gamedir}/gamedata/.ver_checksum" > /dev/null 2>&1 && \
    [[ -f "${gamedir}/gamedata/.astc_done" ]] && [[ -f "${gamedir}/gamedata/.patch_done" ]]; then
     : # already patched, skip
 else
-        export PATCHER_FILE="$gamedir/patches/first_setup.bash"
+    export PATCHER_FILE="$gamedir/patches/first_setup.bash"
     export PATCHER_GAME="Charlie Murder"
     export PATCHER_TIME="about 40 minutes"
     export PATCHER_QUESTIONS="$gamedir/patches/patcher_questions.lua"
@@ -138,7 +131,7 @@ fi
 
 # FIX: Install dmix asoundrc so ES and Charlie Murder can share ALSA simultaneously (dArkOS only!)
 cfw_lower=$(echo "$CFW_NAME" | tr '[:upper:]' '[:lower:]')
-echo "Detected CFW_NAME: '$CFW_NAME' (normalized: '$cfw_lower')" >> "$gamedir/log.txt"
+echo "Detected CFW_NAME: '$CFW_NAME' (normalized: '$cfw_lower')"
 
 CM_ASOUNDRC_APPLIED=0
 case "$cfw_lower" in
@@ -146,30 +139,31 @@ case "$cfw_lower" in
         [ -f "$HOME/.asoundrc" ] && cp "$HOME/.asoundrc" "$HOME/.asoundrc.cm_bak"
         cp "$gamedir/asoundrc" "$HOME/.asoundrc"
         CM_ASOUNDRC_APPLIED=1
-        echo "Applied custom asoundrc for dArkOS" >> "$gamedir/log.txt"
+        echo "Applied custom asoundrc for dArkOS"
         ;;
     *)
-        echo "Skipping custom asoundrc for CFW '$CFW_NAME' - using system default ALSA config" >> "$gamedir/log.txt"
+        echo "Skipping custom asoundrc for CFW '$CFW_NAME' - using system default ALSA config"
         ;;
 esac
 
 # Run MonoMod to create MONOMODDED_CharlieMurder.exe (only if not already present)
 cp "$gamedir/dlls/FNA.Steamworks.dll" "$gamedir/gamedata/FNA.Steamworks.dll"
 if [ ! -f "$gamedir/gamedata/MONOMODDED_${gameassembly}" ]; then
-    echo "Running MonoMod patcher..." >> "$gamedir/log.txt"
+    echo "Running MonoMod patcher..."
     # Copy patch dll to gamedata so MonoMod finds it alongside the assembly
     cp "$gamedir/patches/CharlieMurder.CharlieMurderPatches.mm.dll" "$gamedir/gamedata/"
     MONOMOD_DEPDIRS="${MONO_PATH}":"${gamedir}/monomod":"${gamedir}/dlls" \
     $TASKSET mono --ffast-math -O=all "$gamedir/monomod/MonoMod.exe" \
-        "$gamedir/gamedata/${gameassembly}" >> "$gamedir/log.txt" 2>> "$gamedir/monomod_error.txt"
-    echo "MonoMod exit code: $?" >> "$gamedir/log.txt"
+        "$gamedir/gamedata/${gameassembly}" 2>> "$gamedir/monomod_error.txt"
+    echo "MonoMod exit code: $?"
 
     # Cleanup: remove patch dll from gamedata
     rm -f "$gamedir/gamedata/CharlieMurder.CharlieMurderPatches.mm.dll"
 fi
 
 $GPTOKEYB2 "mono" &
-$TASKSET mono --ffast-math -O=all ../MMLoader.exe "MONOMODDED_${gameassembly}" >> "$gamedir/log.txt" 2>> "$gamedir/monomod_error.txt"
+command -v pm_platform_helper >/dev/null 2>&1 && pm_platform_helper "$monodir/bin/mono"
+$TASKSET mono --ffast-math -O=all ../MMLoader.exe "MONOMODDED_${gameassembly}" 2>> "$gamedir/monomod_error.txt"
 if [ -f ~/.local/share/CharlieMurder/crash.txt ]; then
     cp ~/.local/share/CharlieMurder/crash.txt "$gamedir/savedata/crash.txt"
 fi
@@ -187,8 +181,10 @@ if [ "$CM_ASOUNDRC_APPLIED" = "1" ]; then
 fi
 
 $ESUDO umount ~/.config/CharlieMurder 2>/dev/null || true
-$ESUDO systemctl restart oga_events &
 $ESUDO umount "$monodir"
 
-# Disable console
-printf "\033c" >> /dev/tty1
+if command -v pm_finish >/dev/null 2>&1; then
+  pm_finish
+else
+  $ESUDO systemctl restart oga_events &
+fi
