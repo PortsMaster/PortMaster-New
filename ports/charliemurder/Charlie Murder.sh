@@ -23,6 +23,9 @@ export gamedir="/$directory/ports/charliemurder"
 export gameassembly="CharlieMurder.exe"
 cd "$gamedir/gamedata"
 
+find "$gamedir" -name "._*" -type f -delete 2>/dev/null
+find "$gamedir" -name ".DS_Store" -type f -delete 2>/dev/null
+
 # All script output from here on is captured to log.txt as well as shown live.
 > "$gamedir/log.txt" && exec > >(tee "$gamedir/log.txt") 2>&1
 
@@ -64,20 +67,13 @@ $ESUDO mount "$monofile" "$monodir"
 
 # Setup savedir
 mkdir -p "$gamedir/savedata"
-mkdir -p ~/.local/share ~/.config
+bind_directories ~/.local/share/CharlieMurder "$gamedir/savedata"
+bind_directories ~/.config/CharlieMurder "$gamedir/savedata"
 
 # Control mapping — ships corrected default once, never overwrite a player's own settings
 if [ ! -f "$gamedir/savedata/controls.ini" ]; then
     cp "$gamedir/patches/controls.ini" "$gamedir/savedata/controls.ini"
 fi
-
-$ESUDO rm -rf ~/.local/share/CharlieMurder
-$ESUDO rm -f ~/.local/share/CharlieMurder
-$ESUDO ln -sfn "$gamedir/savedata" ~/.local/share/CharlieMurder
-$ESUDO rm -rf ~/.config/CharlieMurder
-$ESUDO rm -f ~/.config/CharlieMurder
-$ESUDO mkdir -p ~/.config/CharlieMurder
-$ESUDO mount --bind "$gamedir/savedata" ~/.config/CharlieMurder
 
 # Remove Windows-only DLLs in favour of system/port libs
 rm -f System*.dll Mono.*.dll mscorlib.dll FNA.dll
@@ -115,7 +111,6 @@ else
     if [ -f "$controlfolder/utils/patcher.txt" ]; then
         $ESUDO chmod a+x "$gamedir/patches/first_setup.bash"
         source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb2)
     else
         echo "This port requires the latest version of PortMaster."
         sleep 5
@@ -169,7 +164,6 @@ if [ -f ~/.local/share/CharlieMurder/crash.txt ]; then
 fi
 $ESUDO kill -9 $(pidof mono) 2>/dev/null || true
 cat "$gamedir/monomod_error.txt" >> "$gamedir/log.txt"
-$ESUDO kill -9 $(pidof gptokeyb2)
 
 # Restore original ~/.asoundrc
 if [ "$CM_ASOUNDRC_APPLIED" = "1" ]; then
@@ -180,11 +174,6 @@ if [ "$CM_ASOUNDRC_APPLIED" = "1" ]; then
     fi
 fi
 
-$ESUDO umount ~/.config/CharlieMurder 2>/dev/null || true
 $ESUDO umount "$monodir"
 
-if command -v pm_finish >/dev/null 2>&1; then
-  pm_finish
-else
-  $ESUDO systemctl restart oga_events &
-fi
+pm_finish
