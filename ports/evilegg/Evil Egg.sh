@@ -23,6 +23,9 @@ GAMEDIR="/$directory/ports/evilegg"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+# Make patchscript executable
+chmod +x "$GAMEDIR/tools/patchscript"
+
 # Exports
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export LD_LIBRARY_PATH="$GAMEDIR/tools/lib:$LD_LIBRARY_PATH"
