@@ -1,0 +1,11 @@
+global.noise_enabled = 0;
+global.composite_enabled = 0;
+global.television_enabled = 1;
+global.chromatic_enabled = 1;
+global.scanline_enabled = 0;
+global.tube_enabled = 1;
+auto_config = 0;
+timer = 0;
+phase = 0;
+active = 0;
+ret = 10;
