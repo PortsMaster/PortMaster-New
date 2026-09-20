@@ -1,0 +1,240 @@
+--- a/src/ssg/ssg.cxx
++++ b/src/ssg/ssg.cxx
+@@ -46,7 +46,7 @@
+ #elif defined(UL_MAC_OSX)
+   return ( CGLGetCurrentContext () != NULL ) ;
+ #else
+-  return ( glXGetCurrentContext () != NULL ) ;
++  return true ; /* patched: no real X11/GLX on this target - context validity is guaranteed by our own SDL2/EGL setup before this is ever called */
+ #endif
+ }
+ 
+--- a/src/pui/pu.cxx
++++ b/src/pui/pu.cxx
+@@ -108,7 +108,7 @@
+ #elif defined(UL_CGL)
+   return ( CGLGetCurrentContext () != NULL ) ;
+ #elif defined(UL_GLX)
+-  return ( glXGetCurrentContext () != NULL ) ;
++  return true ; /* patched: no real X11/GLX on this target - context validity is guaranteed by our own SDL2/EGL setup before this is ever called */
+ #else
+   return true ;
+ #endif
+--- a/src/fnt/fntTXF.cxx
++++ b/src/fnt/fntTXF.cxx
+@@ -45,7 +45,7 @@
+ #elif defined(UL_MAC_OSX)
+   return ( CGLGetCurrentContext () != NULL ) ;
+ #else
+-  return ( glXGetCurrentContext () != NULL ) ;
++  return true ; /* patched: no real X11/GLX on this target - context validity is guaranteed by our own SDL2/EGL setup before this is ever called */
+ #endif
+ }
+ 
+--- a/src/sl/slPortability.h
++++ b/src/sl/slPortability.h
+@@ -51,10 +51,14 @@
+ #include <limits.h>
+ #include <math.h>
+ 
+-#if (defined(UL_LINUX) || defined(UL_BSD) || defined(UL_GNU)) && !defined(__NetBSD__)
++#if (defined(UL_LINUX) || defined(UL_BSD) || defined(UL_GNU)) && !defined(__NetBSD__) && !defined(SL_USING_SDL_AUDIO)
+ #define SL_USING_OSS_AUDIO 1
+ #endif
+ 
++#ifdef SL_USING_SDL_AUDIO
++#include <SDL2/SDL.h>
++#endif
++
+ #ifdef SL_USING_OSS_AUDIO
+ #  if defined(UL_LINUX)
+ #    include <linux/soundcard.h>
+--- a/src/sl/sl.h
++++ b/src/sl/sl.h
+@@ -28,7 +28,9 @@
+ #include <stdio.h>
+ #include "slPortability.h"
+ 
+-#ifdef SL_USING_OSS_AUDIO
++#ifdef SL_USING_SDL_AUDIO
++#define SLDSP_DEFAULT_DEVICE "sdl"
++#elif defined(SL_USING_OSS_AUDIO)
+ #define SLDSP_DEFAULT_DEVICE "/dev/dsp"
+ #elif defined(UL_WIN32)
+ #define SLDSP_DEFAULT_DEVICE "dsp"	
+@@ -76,7 +78,9 @@
+   int error ;
+   int fd ;
+ 
+-#if defined(SL_USING_OSS_AUDIO)
++#if defined(SL_USING_SDL_AUDIO)
++  SDL_AudioDeviceID sdlDevice ;
++#elif defined(SL_USING_OSS_AUDIO)
+   audio_buf_info buff_info ;
+ #elif defined(UL_BSD)
+   audio_info_t    ainfo;        // ioctl structure
+@@ -120,7 +124,7 @@
+ #endif
+ 
+ 
+-#if !defined(UL_WIN32) && !defined(UL_MACINTOSH) && !defined(UL_MAC_OSX)
++#if !defined(UL_WIN32) && !defined(UL_MACINTOSH) && !defined(UL_MAC_OSX) && !defined(SL_USING_SDL_AUDIO)
+   int ioctl ( int cmd, int param = 0 )
+   {
+     if ( error ) return param ;
+--- a/src/sl/slDSP.cxx
++++ b/src/sl/slDSP.cxx
+@@ -27,7 +27,125 @@
+ 
+ static int init_bytes ;
+ 
+-#ifdef SL_USING_OSS_AUDIO
++#ifdef SL_USING_SDL_AUDIO
++
++/* ------------------------------------------------------------ */
++/* SDL2 - portable across every device/driver SDL2 itself        */
++/* already supports, no OSS/ALSA/PulseAudio device naming at all */
++/* ------------------------------------------------------------ */
++
++void slDSP::open ( const char *, int _rate, int _stereo, int _bps )
++{
++  (void) _bps ;
++
++  SDL_InitSubSystem ( SDL_INIT_AUDIO ) ;
++
++  SDL_AudioSpec want, have ;
++
++  SDL_zero ( want ) ;
++  want.freq     = _rate ;
++  want.format   = AUDIO_U8 ;
++  want.channels = _stereo ? 2 : 1 ;
++  want.samples  = 1024 ;
++  want.callback = NULL ;
++
++  sdlDevice = SDL_OpenAudioDevice ( NULL, 0, &want, &have, 0 ) ;
++
++  if ( sdlDevice == 0 )
++  {
++    fprintf ( stderr, "slDSP: SDL_OpenAudioDevice: %s\n", SDL_GetError () ) ;
++    error  = SL_TRUE ;
++    stereo = SL_FALSE ;
++    bps    = 1 ;
++    rate   = 8000 ;
++    init_bytes = 0 ;
++    return ;
++  }
++
++  error  = SL_FALSE ;
++  stereo = ( have.channels >= 2 ) ;
++  bps    = 8 ;
++  rate   = have.freq ;
++  init_bytes = 0 ;
++
++  SDL_PauseAudioDevice ( sdlDevice, 0 ) ;
++}
++
++void slDSP::close ()
++{
++  if ( ! error )
++    SDL_CloseAudioDevice ( sdlDevice ) ;
++}
++
++int slDSP::getDriverBufferSize ()
++{
++  if ( error )
++    return 0 ;
++
++  return 2048 ;
++}
++
++void slDSP::getBufferInfo ()
++{
++}
++
++void slDSP::write ( void *buffer, size_t length )
++{
++  if ( error || (int)length <= 0 )
++    return ;
++
++  /* Don't let the queue grow unbounded if the game falls behind. */
++  while ( SDL_GetQueuedAudioSize ( sdlDevice ) > (Uint32)( length * 4 ) )
++    SDL_Delay ( 1 ) ;
++
++  SDL_QueueAudio ( sdlDevice, buffer, (Uint32) length ) ;
++}
++
++void slDSP::stop ()
++{
++  if ( ! error )
++    SDL_ClearQueuedAudio ( sdlDevice ) ;
++}
++
++void slDSP::sync ()
++{
++  if ( ! error )
++    while ( SDL_GetQueuedAudioSize ( sdlDevice ) > 0 )
++      SDL_Delay ( 1 ) ;
++}
++
++float slDSP::secondsUsed ()
++{
++  if ( error )
++    return 0.0f ;
++
++  int samples_used = (int) SDL_GetQueuedAudioSize ( sdlDevice ) ;
++
++  if ( stereo )
++    samples_used /= 2 ;
++
++  return (float) samples_used / (float) rate ;
++}
++
++float slDSP::secondsRemaining ()
++{
++  if ( error )
++    return 0.0f ;
++
++  const int target_buffer_bytes = 8192 ;
++
++  int samples_left = target_buffer_bytes - (int) SDL_GetQueuedAudioSize ( sdlDevice ) ;
++
++  if ( samples_left < 0 )
++    samples_left = 0 ;
++
++  if ( stereo )
++    samples_left /= 2 ;
++
++  return (float) samples_left / (float) rate ;
++}
++
++#elif defined(SL_USING_OSS_AUDIO)
+ 
+ /* ------------------------------------------------------------ */
+ /* OSSAUDIO - Linux, FreeBSD, etc                               */
+@@ -51,14 +169,21 @@
+   {
+     error = SL_FALSE ;
+ 
+-    /* Set up a driver fragment size of 1024 (ie 2^10) */
++    /*
++      Set format/channels/rate before the fragment size - each of these
++      ioctls independently renegotiates ALSA hw_params under alsa-oss, so
++      setting the fragment size first negotiates against a still-default,
++      unset format and can fail outright on real hardware.
++    */
+ 
+ errno = 0 ;
+-    ioctl ( SNDCTL_DSP_SETFRAGMENT, 0x7FFF000A ) ;
++    stereo = ioctl ( SOUND_PCM_WRITE_CHANNELS, _stereo ? 2 : 1 ) >= 2 ;
++    bps    = ioctl ( SOUND_PCM_WRITE_BITS, _bps ) ;
++    rate   = ioctl ( SOUND_PCM_WRITE_RATE, _rate ) ;
+ 
+-    stereo = ioctl ( SOUND_PCM_WRITE_CHANNELS, _stereo ? 2 : 1 ) >= 2 ; 
+-    bps    = ioctl ( SOUND_PCM_WRITE_BITS, _bps ) ; 
+-    rate   = ioctl ( SOUND_PCM_WRITE_RATE, _rate ) ; 
++    /* Set up a driver fragment size of 1024 (ie 2^10) */
++
++    ioctl ( SNDCTL_DSP_SETFRAGMENT, 0x7FFF000A ) ;
+ 
+ if ( errno != 0 ) perror ( "slDSP: ioctl" ) ;
+ 
