@@ -3,7 +3,7 @@
 set -e
 
 GAMEDIR="$(cd "$(dirname "$0")/.." && pwd)"
-RUNTIME="$GAMEDIR/chowdren-runtime"
+RUNTIME="$GAMEDIR/runtime"
 BUILD="$GAMEDIR/build"
 GAMEDATA="$GAMEDIR/gamedata"
 STATE="$BUILD/.patch_state"
@@ -97,7 +97,6 @@ echo "=== Step 2/2: Cleaning up directory ==="
 mv "$BUILD/Chowdren" "$GAMEDIR/Chowdren" || $ESUDO mv "$BUILD/Chowdren" "$GAMEDIR/Chowdren" || fail "Failed to move Chowdren binary"
 mv "$BUILD/Assets.dat" "$GAMEDIR/Assets.dat" || $ESUDO mv "$BUILD/Assets.dat" "$GAMEDIR/Assets.dat" || fail "Failed to move Assets.dat"
 $ESUDO rm -rf "$BUILD"
-$ESUDO rm -rf "$RUNTIME"
 $ESUDO rm -f "$GAME_EXE"
 touch "$GAMEDATA/.patched_complete"
 echo "Cleanup complete. OK"

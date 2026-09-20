@@ -17,7 +17,8 @@ source $controlfolder/control.txt
 get_controls
 
 GAMEDIR=/$directory/ports/fnaf1
-RUNTIME="$GAMEDIR/chowdren-runtime"
+RUNTIME_SQUASHFS="$GAMEDIR/libs/chowdren_runtime.squashfs"
+RUNTIME="$GAMEDIR/runtime"
 BUILD="$GAMEDIR/build"
 BIN="$GAMEDIR/Chowdren"
 GAME_EXE="$GAMEDIR/gamedata/FiveNightsatFreddys.exe"
@@ -33,6 +34,23 @@ fi
 if [ "$NEEDS_BUILD" -eq 1 ]; then
     if [ ! -f "$GAME_EXE" ]; then
         pm_message "Game files not found. Copy FiveNightsatFreddys.exe into fnaf1/gamedata."
+        sleep 15
+        exit 1
+    fi
+
+    if [ ! -f "$RUNTIME_SQUASHFS" ]; then
+        pm_message "Runtime files missing. Reinstall the port so libs/chowdren_runtime.squashfs is present."
+        sleep 15
+        exit 1
+    fi
+
+    $ESUDO mkdir -p "$RUNTIME"
+    if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+        $ESUDO umount "$RUNTIME" 2>/dev/null
+    fi
+    $ESUDO mount "$RUNTIME_SQUASHFS" "$RUNTIME" || fail_mount=1
+    if [ "$fail_mount" = "1" ] || ! mountpoint -q "$RUNTIME" 2>/dev/null; then
+        pm_message "Failed to mount build runtime. Your device/CFW may not support squashfs loop mounts."
         sleep 15
         exit 1
     fi
@@ -57,6 +75,11 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
         sleep 15
         exit 1
     fi
+
+    if [[ "$PM_CAN_MOUNT" != "N" ]]; then
+        $ESUDO umount "$RUNTIME" 2>/dev/null
+    fi
+    $ESUDO rmdir "$RUNTIME" 2>/dev/null
 
     if [ ! -f "$PATCHED_FLAG" ] || [ ! -x "$BIN" ]; then
         echo "Build failed"
