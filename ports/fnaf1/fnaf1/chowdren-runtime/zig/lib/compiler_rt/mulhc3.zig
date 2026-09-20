@@ -1,0 +1,13 @@
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+const mulc3 = @import("./mulc3.zig");
+
+comptime {
+    if (@import("builtin").zig_backend != .stage2_c) {
+        symbol(&__mulhc3, "__mulhc3");
+    }
+}
+
+pub fn __mulhc3(a: f16, b: f16, c: f16, d: f16) callconv(.c) mulc3.Complex(f16) {
+    return mulc3.mulc3(f16, a, b, c, d);
+}

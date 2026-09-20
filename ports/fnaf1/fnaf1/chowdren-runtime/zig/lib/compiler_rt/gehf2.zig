@@ -1,0 +1,21 @@
+///! The quoted behavior definitions are from
+///! https://gcc.gnu.org/onlinedocs/gcc-12.1.0/gccint/Soft-float-library-routines.html#Soft-float-library-routines
+const symbol = @import("../compiler_rt.zig").symbol;
+const comparef = @import("./comparef.zig");
+
+comptime {
+    symbol(&__gehf2, "__gehf2");
+    symbol(&__gthf2, "__gthf2");
+}
+
+/// "These functions return a value greater than or equal to zero if neither
+/// argument is NaN, and a is greater than or equal to b."
+pub fn __gehf2(a: f16, b: f16) callconv(.c) i32 {
+    return @intFromEnum(comparef.cmpf2(f16, comparef.GE, a, b));
+}
+
+/// "These functions return a value greater than zero if neither argument is NaN,
+/// and a is strictly greater than b."
+pub fn __gthf2(a: f16, b: f16) callconv(.c) i32 {
+    return __gehf2(a, b);
+}
