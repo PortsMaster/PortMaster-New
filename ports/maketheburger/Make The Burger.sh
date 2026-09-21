@@ -60,9 +60,6 @@ fi
 [ -f "$GAMEDIR/maketheburger.port" ] || { pm_message "maketheburger.port missing after patching"; sleep 5; exit 1; }
 
 cd "$GAMEDIR"
-
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
-
 export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
