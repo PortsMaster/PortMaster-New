@@ -72,8 +72,6 @@ GITHUB_RUN    = (ROOT_DIR / '.github_check').is_file()
 
 LARGEST_FILE  = (1024 * 1024 * 90)
 
-BUILD_CRITICAL_ATTR_KEYS = {"runtime", "arch"}
-
 #############################################################################
 """
 We have ports like:
@@ -130,6 +128,48 @@ fall back to downloading the larger file.
 JSON_IMAGES_ZIP_IMAGES is builds up a list of images that belong to each zip.
 """
 JSON_IMAGES_ZIP_IMAGES = {}
+
+
+"""
+As PortMaster grows we are running into issues with updating large numbers of
+metadata in ports. Many ports have older port.json files or are missing some
+of the newer data.
+
+This change adds a new "<port_name>/port.json:v2" key to the manifest file.
+
+This change is so that if the port.json doesn't match with the raw hash, we
+see if the metadata hash matches what is stored in `:v2` entry, if it does
+refer to the original stored hash. 
+
+There is an associated script `update_manifest.py` to add all the `:v2`
+entries, this will be run manually and the updated manifest.json will be added
+to the last release before the new version of this script is used. We can
+check this by looking for the new "0000.version" entry in `manifest.json`.
+"""
+
+METADATA_CRITICAL_ATTR_KEYS = {"runtime", "arch", "reqs"}
+
+def get_port_metadata_hash(port_json_data: dict) -> str:
+    """
+    Computes a deterministic hash based only on keys in port.json that affect packaging/runtime.
+    Metadata-only changes (description, genres, porter, title, etc.) will produce the same build hash.
+    """
+    if not isinstance(port_json_data, dict):
+        return ""
+
+    filtered = {
+        "name": port_json_data.get("name"),
+        "items": sorted(port_json_data.get("items", []) or []),
+        "items_opt": sorted(port_json_data.get("items_opt", []) or []),
+        "attr": {
+            k: port_json_data.get("attr", {}).get(k)
+            for k in METADATA_CRITICAL_ATTR_KEYS
+            if k in port_json_data.get("attr", {})
+            },
+        }
+
+    serialized = json.dumps(filtered, sort_keys=True, separators=(",", ":"))
+    return hashlib.md5(serialized.encode("utf-8")).hexdigest()
 
 
 #############################################################################
@@ -209,28 +249,6 @@ def get_historial_added_date(port_name, default=None):
 
     print(f"- {port_name} --> {default} (DEFAULT)")
     return default
-
-
-def get_port_build_hash(port_json_data: dict) -> str:
-    """
-    Computes a deterministic hash based only on keys in port.json that affect packaging/runtime.
-    Metadata-only changes (description, genres, porter, title, etc.) will produce the same build hash.
-    """
-    if not isinstance(port_json_data, dict):
-        return ""
-
-    filtered = {
-        "name": port_json_data.get("name"),
-        "items": sorted(port_json_data.get("items", []) or []),
-        "items_opt": sorted(port_json_data.get("items_opt", []) or []),
-        "attr": {
-            k: port_json_data.get("attr", {}).get(k)
-            for k in BUILD_CRITICAL_ATTR_KEYS
-            if k in port_json_data.get("attr", {})
-        },
-    }
-    serialized = json.dumps(filtered, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def current_release_url(release_id):
@@ -457,27 +475,27 @@ def load_port(port_dir, manifest, registered, port_status, old_manifest=None, qu
 
                 # Special handling for port.json semantic build hashing
                 if file_type(file_name) == PORT_JSON and port_data.get('port_json') is not None:
-                    build_hash = get_port_build_hash(port_data['port_json'])
+                    metadata_hash = get_port_metadata_hash(port_data['port_json'])
                     manifest_hash_for_dir = file_hash
 
                     if old_manifest is not None:
                         old_v2 = old_manifest.get(f"{port_file_name}:v2")
                         if old_v2 is not None:
                             if ':' in old_v2:
-                                old_build_hash, base_raw_hash = old_v2.split(':', 1)
+                                old_metadata_hash, base_raw_hash = old_v2.split(':', 1)
                             else:
-                                old_build_hash, base_raw_hash = old_v2, old_manifest.get(port_file_name, file_hash)
+                                old_metadata_hash, base_raw_hash = old_v2, old_manifest.get(port_file_name, file_hash)
 
-                            if build_hash == old_build_hash:
+                            if metadata_hash == old_metadata_hash:
                                 # Build-critical contents are unchanged. Reuse base raw hash so directory hash doesn't change!
                                 manifest_hash_for_dir = base_raw_hash
-                                manifest[f"{port_file_name}:v2"] = f"{build_hash}:{base_raw_hash}"
+                                manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{base_raw_hash}"
                             else:
-                                manifest[f"{port_file_name}:v2"] = f"{build_hash}:{file_hash}"
+                                manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
                         else:
-                            manifest[f"{port_file_name}:v2"] = f"{build_hash}:{file_hash}"
+                            manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
                     else:
-                        manifest[f"{port_file_name}:v2"] = f"{build_hash}:{file_hash}"
+                        manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
 
                     manifest[port_file_name] = file_hash
                     port_manifest.append((port_file_name, manifest_hash_for_dir))
@@ -581,9 +599,9 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
     # If the port was built/rebuilt, update its :v2 base hash to current
     port_json_file = f"{port_dir.name}/port.json"
     if port_json_file in new_manifest and port_data.get('port_json') is not None:
-        build_hash = get_port_build_hash(port_data['port_json'])
+        metadata_hash = get_port_metadata_hash(port_data['port_json'])
         raw_hash = new_manifest[port_json_file]
-        new_manifest[f"{port_json_file}:v2"] = f"{build_hash}:{raw_hash}"
+        new_manifest[f"{port_json_file}:v2"] = f"{metadata_hash}:{raw_hash}"
 
 
 def build_gameinfo_zip(old_manifest, new_manifest):
@@ -1165,6 +1183,20 @@ def main(argv):
     # Load global manifest
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
+
+        if "0000.version" not in old_manifest:
+            if Path('.github_check').is_file():
+                print("::error file=tools/build_release.py::Old manifest.json file, aborting.")
+                return 255
+            else:
+                print("Old manifest.json file, run `tools/update_manifest.py` first.")
+                return 255
+
+        # Copy across the version information.
+        new_manifest["0000.version"] = old_manifest["0000.version"]
+
+    else:
+        new_manifest["0000.version"] = "2"
 
     # Copy across runtimes.zip files to the new_manifest structure
     for manifest_item, manifest_value in old_manifest.items():
