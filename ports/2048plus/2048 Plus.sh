@@ -35,7 +35,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 ARCHIVE_FILE="gamedata.tar.gz"
 if [[ -f "$ARCHIVE_FILE" ]]; then
     pm_message "Extracting game data, this can take a few minutes..."
-    if gunzip -c "$ARCHIVE_FILE" | tar xf -; then
+    if gunzip -c "$ARCHIVE_FILE" | tar --no-same-owner -xf -; then
         pm_message "Extraction successful."
         $ESUDO rm -f "$ARCHIVE_FILE"
     else
