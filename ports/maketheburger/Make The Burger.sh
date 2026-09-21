@@ -19,6 +19,8 @@ get_controls
 GAMEDIR="/$directory/ports/maketheburger"
 GMLOADER_JSON="$GAMEDIR/gmloader.json"
 
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+
 if [ ! -f "$GAMEDIR/gamedata/data.win" ] && [ ! -f "$GAMEDIR/data.win" ] && [ ! -f "$GAMEDIR/assets/data.win" ]; then
     pm_message "Game file not found. Place your own legitimate data.win (from Steam, depot 1358612) into maketheburger/gamedata/"
     sleep 15
