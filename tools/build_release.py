@@ -130,6 +130,48 @@ JSON_IMAGES_ZIP_IMAGES is builds up a list of images that belong to each zip.
 JSON_IMAGES_ZIP_IMAGES = {}
 
 
+"""
+As PortMaster grows we are running into issues with updating large numbers of
+metadata in ports. Many ports have older port.json files or are missing some
+of the newer data.
+
+This change adds a new "<port_name>/port.json:v2" key to the manifest file.
+
+This change is so that if the port.json doesn't match with the raw hash, we
+see if the metadata hash matches what is stored in `:v2` entry, if it does
+refer to the original stored hash. 
+
+There is an associated script `update_manifest.py` to add all the `:v2`
+entries, this will be run manually and the updated manifest.json will be added
+to the last release before the new version of this script is used. We can
+check this by looking for the new "0000.version" entry in `manifest.json`.
+"""
+
+METADATA_CRITICAL_ATTR_KEYS = {"runtime", "arch", "reqs"}
+
+def get_port_metadata_hash(port_json_data: dict) -> str:
+    """
+    Computes a deterministic hash based only on keys in port.json that affect packaging/runtime.
+    Metadata-only changes (description, genres, porter, title, etc.) will produce the same build hash.
+    """
+    if not isinstance(port_json_data, dict):
+        return ""
+
+    filtered = {
+        "name": port_json_data.get("name"),
+        "items": sorted(port_json_data.get("items", []) or []),
+        "items_opt": sorted(port_json_data.get("items_opt", []) or []),
+        "attr": {
+            k: port_json_data.get("attr", {}).get(k)
+            for k in METADATA_CRITICAL_ATTR_KEYS
+            if k in port_json_data.get("attr", {})
+            },
+        }
+
+    serialized = json.dumps(filtered, sort_keys=True, separators=(",", ":"))
+    return hashlib.md5(serialized.encode("utf-8")).hexdigest()
+
+
 #############################################################################
 ## Read CONFIG file.
 REPO_CONFIG = {
@@ -169,7 +211,6 @@ else:
     CURRENT_RELEASE_ID = "latest"
 
 #############################################################################
-
 
 PORT_STAT_RAW_DATA = None
 def get_historial_added_date(port_name, default=None):
@@ -231,10 +272,9 @@ def file_type(port_file):
     return UNKNOWN_FILE
 
 
-def load_port(port_dir, manifest, registered, port_status, quick_build=False, hash_cache=None):
+def load_port(port_dir, manifest, registered, port_status, old_manifest=None, quick_build=False, hash_cache=None):
     if hash_cache is not None:
         hash_func = hash_cache.get_file_hash
-
     else:
         hash_func = hash_file
 
@@ -321,7 +361,6 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
     ## Check if the port is an older port, newer ports have stricter name requirements.
     if port_date > '2024-01-26':
         ## Check for weird names.
-
         port_data['name'] = name_cleaner(port_dir.name) + '.zip'
         if port_data['port_json'] is not None:
             if port_data['name'] != port_data['port_json']['name']:
@@ -429,14 +468,41 @@ def load_port(port_dir, manifest, registered, port_status, quick_build=False, ha
                 continue
 
             port_file_name = '/'.join(file_name.parts[1:])
-
             large_files[str(file_name)] = True
 
             if not quick_build:
                 file_hash = hash_func(file_name)
 
-                manifest[port_file_name] = file_hash
-                port_manifest.append((port_file_name, file_hash))
+                # Special handling for port.json semantic build hashing
+                if file_type(file_name) == PORT_JSON and port_data.get('port_json') is not None:
+                    metadata_hash = get_port_metadata_hash(port_data['port_json'])
+                    manifest_hash_for_dir = file_hash
+
+                    if old_manifest is not None:
+                        old_v2 = old_manifest.get(f"{port_file_name}:v2")
+                        if old_v2 is not None:
+                            if ':' in old_v2:
+                                old_metadata_hash, base_raw_hash = old_v2.split(':', 1)
+                            else:
+                                old_metadata_hash, base_raw_hash = old_v2, old_manifest.get(port_file_name, file_hash)
+
+                            if metadata_hash == old_metadata_hash:
+                                # Build-critical contents are unchanged. Reuse base raw hash so directory hash doesn't change!
+                                manifest_hash_for_dir = base_raw_hash
+                                manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{base_raw_hash}"
+                            else:
+                                manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
+                        else:
+                            manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
+                    else:
+                        manifest[f"{port_file_name}:v2"] = f"{metadata_hash}:{file_hash}"
+
+                    manifest[port_file_name] = file_hash
+                    port_manifest.append((port_file_name, manifest_hash_for_dir))
+
+                else:
+                    manifest[port_file_name] = file_hash
+                    port_manifest.append((port_file_name, file_hash))
 
     for large_file, large_file_status in large_files.items():
         if not large_file_status:
@@ -522,9 +588,6 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
 
     zip_files.sort(key=lambda x: x[1].lower())
 
-    # from pprint import pprint
-    # pprint(zip_files)
-
     with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_triplet in zip_files:
             if file_triplet[2] == None:
@@ -533,33 +596,25 @@ def build_port_zip(root_dir, port_dir, port_data, new_manifest, port_status):
             else:
                 zf.writestr(file_triplet[1], file_triplet[2])
 
-    # port_name = port_data['name']
-    # port_hash = hash_file(zip_name)
-
-    # if port_name in port_status:
-    #     port_status[port_name]['date_updated'] = TODAY
-    #     port_status[port_name]['md5'] = port_hash
-    #     port_status[port_name]
-    # else:
-    #     port_status[port_name] = {
-    #         'date_added': TODAY,
-    #         'date_updated': TODAY,
-    #         'release_id': CURRENT_RELEASE_ID,
-    #         'md5': port_hash,
-    #         }
+    # If the port was built/rebuilt, update its :v2 base hash to current
+    port_json_file = f"{port_dir.name}/port.json"
+    if port_json_file in new_manifest and port_data.get('port_json') is not None:
+        metadata_hash = get_port_metadata_hash(port_data['port_json'])
+        raw_hash = new_manifest[port_json_file]
+        new_manifest[f"{port_json_file}:v2"] = f"{metadata_hash}:{raw_hash}"
 
 
 def build_gameinfo_zip(old_manifest, new_manifest):
     new_files = [
         f"{file}:{digest}"
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and (
+        if file.count('/') == 1 and not file.endswith(':v2') and (
             file_type(Path(file)) in (COVER_FILE, SCREENSHOT_FILE, GAMEINFO_XML))]
 
     old_files = [
         f"{file}:{digest}"
         for file, digest in old_manifest.items()
-        if file.count('/') == 1 and (
+        if file.count('/') == 1 and not file.endswith(':v2') and (
             file_type(Path(file)) in (COVER_FILE, SCREENSHOT_FILE, GAMEINFO_XML))]
 
     new_files.sort()
@@ -591,7 +646,7 @@ def build_gameinfo_zip(old_manifest, new_manifest):
     zip_files = [
         ((PORTS_DIR / file), THIS_IS_ANNOYING[str(file)])
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and (
+        if file.count('/') == 1 and not file.endswith(':v2') and (
             file_type(Path(file)) in (COVER_FILE, SCREENSHOT_FILE, GAMEINFO_XML))]
 
     with zipfile.ZipFile(RELEASE_DIR / 'gameinfo.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
@@ -642,8 +697,6 @@ def port_info_id(port_status, max_info_count=100):
 
         last_date = current_date
 
-    # print(json.dumps(port_info_id_map, indent=2, sort_keys=True))
-
     return port_info_id_map
 
 
@@ -651,30 +704,28 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
     global JSON_IMAGES_ZIP_IMAGES
 
     port_info_id_map = port_info_id(port_status)
-
     max_info_id = max(port_info_id_map.values()) + 1
 
     for info_id in range(max_info_id):
         new_files = [
             f"{file.replace('/', '.')}:{digest}"
             for file, digest in new_manifest.items()
-            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
+            if file.count('/') == 1 and not file.endswith(':v2') and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
 
         old_files = [
             f"{file.replace('/', '.')}:{digest}"
             for file, digest in old_manifest.items()
-            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
+            if file.count('/') == 1 and not file.endswith(':v2') and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
 
         new_files.sort()
         old_files.sort()
 
         zip_name = f'images.{info_id:03d}.zip'
 
-        # This is used to add the images in each images.xxx.zip file.
         JSON_IMAGES_ZIP_IMAGES[zip_name] = [
             f"{file.replace('/', '.')}"
             for file, digest in new_manifest.items()
-            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
+            if file.count('/') == 1 and not file.endswith(':v2') and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(Path(file)) == SCREENSHOT_FILE]
 
         new_manifest[zip_name] = hash_items(new_files)
         if old_manifest.get(zip_name) == new_manifest[zip_name]:
@@ -684,25 +735,18 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
         differ = Differ()
 
         for line in differ.compare(old_files, new_files):
-            # line = "  <FILENAME>:<md5SUM>"
             mode = line[:2]
             name = line[2:].split(":", 1)[0]
             if mode == '- ':
-                # File is removed.
                 changes[name] = 'Removed'
-
             elif mode == '+ ':
                 if name in changes:
-                    # If the file was already seen, its been removed, and readded, which means modified.
                     changes[name] = 'Modified'
-
                 else:
-                    # File is just added.
                     changes[name] = 'Added'
 
         if zip_name in old_manifest:
             print(f"\nAdding {zip_name}")
-
         else:
             print(f"\nUpdating {zip_name}")
 
@@ -712,7 +756,7 @@ def build_new_images_zip(old_manifest, new_manifest, port_status):
         zip_files = [
             ((PORTS_DIR / file), f"{file.replace('/', '.')}")
             for file, digest in new_manifest.items()
-            if file.count('/') == 1 and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
+            if file.count('/') == 1 and not file.endswith(':v2') and port_info_id_map[file.split('/', 1)[0]] == info_id and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
 
         with zipfile.ZipFile(RELEASE_DIR / zip_name, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
             for file_pair in zip_files:
@@ -723,21 +767,15 @@ def build_images_zip(old_manifest, new_manifest):
     new_files = [
         f"{file.replace('/', '.')}:{digest}"
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == SCREENSHOT_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(Path(file)) == SCREENSHOT_FILE]
 
     old_files = [
         f"{file.replace('/', '.')}:{digest}"
         for file, digest in old_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == SCREENSHOT_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(Path(file)) == SCREENSHOT_FILE]
 
     new_files.sort()
     old_files.sort()
-
-    ## Only needed for the images.xxx.zip
-    # JSON_IMAGES_ZIP_IMAGES['images.zip'] = [
-    #     f"{file.replace('/', '.')}"
-    #     for file, digest in new_manifest.items()
-    #     if file.count('/') == 1 and file_type(Path(file)) == SCREENSHOT_FILE]
 
     new_manifest['images.zip'] = hash_items(new_files)
     if old_manifest.get('images.zip') == new_manifest['images.zip']:
@@ -747,25 +785,18 @@ def build_images_zip(old_manifest, new_manifest):
     differ = Differ()
 
     for line in differ.compare(old_files, new_files):
-        # line = "  <FILENAME>:<md5SUM>"
         mode = line[:2]
         name = line[2:].split(":", 1)[0]
         if mode == '- ':
-            # File is removed.
             changes[name] = 'Removed'
-
         elif mode == '+ ':
             if name in changes:
-                # If the file was already seen, its been removed, and readded, which means modified.
                 changes[name] = 'Modified'
-
             else:
-                # File is just added.
                 changes[name] = 'Added'
 
     if 'images.zip' in old_manifest:
         print("\nAdding images.zip")
-
     else:
         print("\nUpdating images.zip")
 
@@ -775,7 +806,7 @@ def build_images_zip(old_manifest, new_manifest):
     zip_files = [
         ((PORTS_DIR / file), f"{file.replace('/', '.')}")
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(PORTS_DIR / file) == SCREENSHOT_FILE]
 
     with zipfile.ZipFile(RELEASE_DIR / 'images.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_pair in zip_files:
@@ -786,12 +817,12 @@ def build_markdown_zip(old_manifest, new_manifest):
     new_files = [
         f"{file.split('/', 1)[0]}.md:{digest}"
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == README_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(Path(file)) == README_FILE]
 
     old_files = [
         f"{file.split('/', 1)[0]}.md:{digest}"
         for file, digest in old_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == README_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(Path(file)) == README_FILE]
 
     new_files.sort()
     old_files.sort()
@@ -804,18 +835,14 @@ def build_markdown_zip(old_manifest, new_manifest):
     differ = Differ()
 
     for line in differ.compare(old_files, new_files):
-        # line = "  <FILENAME>:<md5SUM>"
         mode = line[:2]
         name = line[2:].split(":", 1)[0]
         if mode == '- ':
-            # File is removed.
             changes[name] = 'Removed'
         elif mode == '+ ':
             if name in changes:
-                # If the file was already seen, its been removed, and readded, which means modified.
                 changes[name] = 'Modified'
             else:
-                # File is just added.
                 changes[name] = 'Added'
 
     if 'markdown.zip' in old_manifest:
@@ -829,7 +856,7 @@ def build_markdown_zip(old_manifest, new_manifest):
     zip_files = [
         (Path(file), f"{file.split('/', 1)[0]}.md")
         for file, digest in new_manifest.items()
-        if file.count('/') == 1 and file_type(Path(file)) == README_FILE]
+        if file.count('/') == 1 and not file.endswith(':v2') and file_type(Path(file)) == README_FILE]
 
     with zipfile.ZipFile('markdown.zip', 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for file_pair in zip_files:
@@ -844,7 +871,6 @@ def port_info(file_name, ports_json, ports_status):
         file_size = file_name.stat().st_size
     else:
         if clean_name not in ports_status:
-            # HRMMmmmmm o_o;;;;
             return
 
         file_md5  = ports_status[clean_name]['md5']
@@ -897,7 +923,6 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
 
         if clean_name not in ports_status:
             ports_status[clean_name] = default_status
-
             shutil.copy(file_name, RELEASE_DIR / export_name)
 
         elif ports_status[clean_name]['md5'] != file_md5:
@@ -905,7 +930,6 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
             ports_status[clean_name]['size'] = file_size
             ports_status[clean_name]['release_id'] = CURRENT_RELEASE_ID
             ports_status[clean_name]['date_updated'] = TODAY
-
             shutil.copy(file_name, RELEASE_DIR / export_name)
 
         url = current_release_url(ports_status[clean_name]['release_id']) + (export_name.replace(" ", ".").replace("..", "."))
@@ -923,10 +947,8 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
         if file_name.is_file():
             file_md5 = hash_file(file_name)
             file_size = file_name.stat().st_size
-
         else:
             if clean_name not in ports_status:
-                # HRMMmmmmm o_o;;;;
                 return
 
             file_md5 = ports_status[clean_name]['md5']
@@ -966,7 +988,6 @@ def util_info(file_name, util_json, ports_status, runtimes_map):
 def port_diff(port_name, old_manifest, new_manifest):
     """
     Print file changes
-    TODO: detect file renames
     """
     changes = {}
     differ = Differ()
@@ -974,12 +995,12 @@ def port_diff(port_name, old_manifest, new_manifest):
     new_files = {
         file.split('/', 1)[-1]: digest
         for file, digest in new_manifest.items()
-        if file.startswith(port_name + '/')}
+        if file.startswith(port_name + '/') and not file.endswith(':v2')}
 
     old_files = {
         file.split('/', 1)[-1]: digest
         for file, digest in old_manifest.items()
-        if file.startswith(port_name + '/')}
+        if file.startswith(port_name + '/') and not file.endswith(':v2')}
 
     removed_files = set(old_files) - set(new_files) 
     same_files = set(old_files) & set(new_files)
@@ -1055,12 +1076,8 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
 
     if RUNTIMES_DIR.is_dir():
         if (RUNTIMES_DIR / 'runtimes.json').is_file():
-            # print(f"Loading runtimes.json")
-
             with open((RUNTIMES_DIR / 'runtimes.json'), 'r') as fh:
                 runtimes_json = json.load(fh)
-
-            # print(json.dumps(runtimes_json, indent=4))
 
             for runtime_name, runtime_data in runtimes_json.items():
                 runtime_nice_name = runtime_data['name']
@@ -1083,8 +1100,6 @@ def generate_ports_json(all_ports, port_status, old_manifest, new_manifest):
                         }
 
                     utils.append(RUNTIMES_DIR / runtime_file_name)
-
-            # print(json.dumps(runtimes_map, indent=4))
 
     for file_name in sorted(utils, key=lambda x: str(x).casefold()):
         util_info(
@@ -1109,7 +1124,7 @@ def load_manifest(manifest_file, registered=None):
             }
 
     for port_file in manifest:
-        if '/' not in port_file:
+        if '/' not in port_file or port_file.endswith(':v2'):
             continue
 
         port_parts = port_file.split('/')
@@ -1127,8 +1142,6 @@ def load_manifest(manifest_file, registered=None):
                 continue
 
             registered['dirs'][port_parts[1]] = port_parts[0]
-
-    # print(json.dumps(registered, indent=4))
 
     return manifest
 
@@ -1171,6 +1184,20 @@ def main(argv):
     if MANIFEST_FILE.is_file():
         old_manifest = load_manifest(MANIFEST_FILE, registered)
 
+        if "0000.version" not in old_manifest:
+            if Path('.github_check').is_file():
+                print("::error file=tools/build_release.py::Old manifest.json file, aborting.")
+                return 255
+            else:
+                print("Old manifest.json file, run `tools/update_manifest.py` first.")
+                return 255
+
+        # Copy across the version information.
+        new_manifest["0000.version"] = old_manifest["0000.version"]
+
+    else:
+        new_manifest["0000.version"] = "2"
+
     # Copy across runtimes.zip files to the new_manifest structure
     for manifest_item, manifest_value in old_manifest.items():
         if not (manifest_item.startswith('runtimes.') and manifest_item.endswith('.zip')):
@@ -1197,7 +1224,7 @@ def main(argv):
                 print(f"Unknown port {name!r}.zip")
                 continue
 
-            port_data = load_port(port_dir, new_manifest, registered, port_status, quick_build=True)
+            port_data = load_port(port_dir, new_manifest, registered, port_status, old_manifest=old_manifest, quick_build=True)
             if port_data is None:
                 continue
 
@@ -1225,7 +1252,7 @@ def main(argv):
         if not port_dir.is_dir():
             continue
 
-        port_data = load_port(port_dir, new_manifest, registered, port_status, hash_cache=file_cache)
+        port_data = load_port(port_dir, new_manifest, registered, port_status, old_manifest=old_manifest, hash_cache=file_cache)
 
         if port_data is None:
             status['broken'] += 1
@@ -1247,9 +1274,6 @@ def main(argv):
         status['total'] += 1
         all_ports[port_dir.name] = port_data
 
-    # with open('annoying.json', 'w') as fh:
-    #     json.dump(THIS_IS_ANNOYING, fh, indent=4)
-
     for port_dir in updated_ports:
         port_data = all_ports[port_dir.name]
 
@@ -1263,9 +1287,7 @@ def main(argv):
 
     if '--do-check' not in argv:
         build_images_zip(old_manifest, new_manifest)
-
         build_gameinfo_zip(old_manifest, new_manifest)
-
         generate_ports_json(all_ports, port_status, old_manifest, new_manifest)
 
     errors = 0
@@ -1331,9 +1353,12 @@ def main(argv):
 
     if '--do-check' not in argv and len(argv) > 0:
         if status['unchanged'] == status['total']:
-            if Path('.github_check').is_file():
-                print("::error file=tools/build_release.py::No new ports, aborting.")
-                return 255
+            if old_manifest == new_manifest:
+                if Path('.github_check').is_file():
+                    print("::error file=tools/build_release.py::No new ports, aborting.")
+                    return 255
+            else:
+                print("Metadata changes detected; updated manifest.json and ports.json without rebuilding port archives.")
 
     return 0
 
