@@ -1,0 +1,208 @@
+diff --git a/src/display.h b/src/display.h
+index 30689e1..4144e82 100644
+--- a/src/display.h
++++ b/src/display.h
+@@ -32,7 +32,7 @@ extern "C"
+ {
+ #endif
+ 
+-#if defined(POWERMANGA_SDL)  && !defined(_WIN32_WCE)
++#if defined(POWERMANGA_SDL) && !defined(POWERMANGA_SDL2) && !defined(_WIN32_WCE)
+ #define USE_SDL_JOYSTICK
+ #endif
+ 
+diff --git a/src/display_sdl2.c b/src/display_sdl2.c
+index 184d06e..2ea31bd 100644
+--- a/src/display_sdl2.c
++++ b/src/display_sdl2.c
+@@ -108,6 +108,8 @@ bool psp_buttons[PSP_NUM_BUTTONS];
+ static SDL_Window *main_window = NULL;
+ /* SDL2 renderer */
+ static SDL_Renderer *main_renderer = NULL;
++/* SDL2 texture the public surface is uploaded to */
++static SDL_Texture *main_texture = NULL;
+ 
+ /* SDL surfaces */
+ #define MAX_OF_SURFACES 100
+@@ -247,6 +249,20 @@ display_init (void)
+   return TRUE;
+ }
+ 
++/**
++ * Upload the offscreen public surface to the streaming texture
++ * and let the renderer scale it to the window
++ */
++static void
++display_present (void)
++{
++  SDL_UpdateTexture (main_texture, NULL, public_surface->pixels,
++                     public_surface->pitch);
++  SDL_RenderClear (main_renderer);
++  SDL_RenderCopy (main_renderer, main_texture, NULL, NULL);
++  SDL_RenderPresent (main_renderer);
++}
++
+ /**
+  * Initialize video mode
+  * @return TRUE if it completed successfully or FALSE otherwise
+@@ -259,6 +275,17 @@ init_video_mode (void)
+   Uint32 width, height;
+ #endif
+   Uint32 flag = 0;
++  Uint32 rmask, gmask, bmask;
++
++  /* switch between full screen and windowed mode */
++  if (main_window != NULL)
++    {
++      SDL_SetWindowFullscreen (main_window, power_conf->fullscreen > 0 ?
++                               SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
++      SDL_ShowCursor (power_conf->fullscreen > 0 ? SDL_DISABLE : SDL_ENABLE);
++      update_all = TRUE;
++      return TRUE;
++    }
+ 
+   /* 640x480 instead of 640x400 on win32 only */
+   if ((vmode) && (vmode2) && power_conf->scale_x == 2)
+@@ -290,7 +317,7 @@ init_video_mode (void)
+ 	
+ 	if (power_conf->fullscreen > 0)
+     {
+-      flag = flag | SDL_WINDOW_FULLSCREEN;
++      flag = flag | SDL_WINDOW_FULLSCREEN_DESKTOP;
+     }
+ 		
+   width = window_width;
+@@ -326,33 +353,39 @@ init_video_mode (void)
+ 	  return FALSE;
+     }
+       
+-  public_surface = SDL_GetWindowSurface(main_window);
+-  if (public_surface == NULL)
++  main_renderer = SDL_CreateRenderer(main_window, -1, 0);
++  if (main_renderer == NULL)
+     {
+-      LOG_ERR ("SDL_GetWindowSurface() return %s", SDL_GetError ());
+-      return FALSE;
++	  LOG_ERR("SDL_CreateRenderer() return %s", SDL_GetError());
++	  return FALSE;
+     }
+-	
+-  main_renderer = SDL_CreateSoftwareRenderer(public_surface);
+-  if (main_renderer == NULL) 
++
++  /* the game is drawn in a 32-bit offscreen, then scaled to 4:3 by
++   * the renderer, whatever the size of the display */
++  bytes_per_pixel = 4;
++  bits_per_pixel = 32;
++  get_rgb_mask (&rmask, &gmask, &bmask);
++  public_surface = SDL_CreateRGBSurface (0, width, height, bits_per_pixel,
++                                         rmask, gmask, bmask, 0);
++  if (public_surface == NULL)
+     {
+-	  LOG_ERR("SDL_CreateSoftwareRenderer() return %s", SDL_GetError());
+-	  return FALSE;
++      LOG_ERR ("SDL_CreateRGBSurface() return %s", SDL_GetError ());
++      return FALSE;
+     }
+-	
+-  SDL_DisplayMode dm;
+-  int r = SDL_GetWindowDisplayMode(main_window, &dm);
+-  if (r != 0)
++
++  main_texture = SDL_CreateTexture (main_renderer,
++                                    SDL_MasksToPixelFormatEnum (bits_per_pixel,
++                                                                rmask, gmask,
++                                                                bmask, 0),
++                                    SDL_TEXTUREACCESS_STREAMING, width,
++                                    height);
++  if (main_texture == NULL)
+     {
+-      LOG_ERR ("SDL_GetWindowDisplayMode() return %s", SDL_GetError ());
++      LOG_ERR ("SDL_CreateTexture() return %s", SDL_GetError ());
+       return FALSE;
+     }
+-  
+-  bytes_per_pixel = SDL_BYTESPERPIXEL(dm.format); 
+-  /* note: SDL_BITSPERPIXEL can return 24 for 4 bytes per pixels if
+-     alpha is ignored in video mode */
+-  bits_per_pixel = bytes_per_pixel * 8;
+-  
++  SDL_RenderSetLogicalSize (main_renderer, width, width * 3 / 4);
++
+   LOG_INF ("depth of screen: %i; bytes per pixel: %i;",
+            bits_per_pixel, bytes_per_pixel);
+   	
+@@ -362,7 +395,7 @@ init_video_mode (void)
+ 
+   /* clear screen */  
+   SDL_FillRect(public_surface, NULL, 0);
+-  SDL_UpdateWindowSurface(main_window);
++  display_present ();
+ 
+ #ifdef POWERMANGA_GP2X
+   /* The native resolution is 320x200, so we scale up to 320x240
+@@ -1432,7 +1465,7 @@ display_movie (void)
+           {
+             LOG_ERR ("SDL_BlitSurface() return %s", SDL_GetError ());
+           }
+-		  SDL_UpdateWindowSurface(main_window);
++		  display_present ();
+       }
+       break;
+ 
+@@ -1471,7 +1504,7 @@ display_movie (void)
+           }
+       }
+ 
+-	  SDL_UpdateWindowSurface(main_window);
++	  display_present ();
+       break;
+ 
+       /* scale 2x, 3x or 4x mode */
+@@ -1488,7 +1521,7 @@ display_movie (void)
+ #ifdef __EMSCRIPTEN__
+       SDL_UnlockSurface (public_surface);
+ #endif
+-	  SDL_UpdateWindowSurface(main_window);
++	  display_present ();
+       break;
+     }
+ }
+@@ -1643,7 +1676,7 @@ display_320x200 (void)
+           is_player_score_displayed = FALSE;
+         }
+     }
+-  SDL_UpdateWindowSurface(main_window);
++  display_present ();
+ }
+ 
+ /**
+@@ -1762,7 +1795,7 @@ display_scale_x (void)
+   SDL_UnlockSurface (public_surface);
+ #endif
+ 
+-  SDL_UpdateWindowSurface(main_window);
++  display_present ();
+ }
+ #endif
+ 
+@@ -2034,7 +2067,7 @@ display_640x400 (void)
+   SDL_UnlockSurface (scalex_surface);
+ #endif
+ 
+- SDL_UpdateWindowSurface(main_window);
++ display_present ();
+ }
+ 
+ #ifdef USE_SDL_JOYSTICK
+@@ -2126,6 +2159,10 @@ display_free (void)
+ #ifdef USE_SDL_JOYSTICK
+   display_close_joysticks ();
+ #endif
++  SDL_DestroyTexture(main_texture);
++  main_texture = NULL;
++  SDL_FreeSurface(public_surface);
++  public_surface = NULL;
+   SDL_DestroyRenderer(main_renderer);
+   main_renderer = NULL;
+   SDL_DestroyWindow(main_window);
