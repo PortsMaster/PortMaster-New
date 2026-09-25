@@ -1,6 +1,7 @@
 ## Notes
 
 Thanks to [TLK Games](https://github.com/brunonymous/Powermanga) for Powermanga, a fast, colorful arcade shoot-em-up packed with power-up gems and over 200 hand-made sprites.
+Also thanks to wark91 for trying to port this game in the first place.
 
 ## Controls
 
