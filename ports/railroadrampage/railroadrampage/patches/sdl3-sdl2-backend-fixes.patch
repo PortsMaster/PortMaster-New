@@ -1,0 +1,87 @@
+diff --git a/src/video/sdl2/SDL_sdl2events.c b/src/video/sdl2/SDL_sdl2events.c
+index 046c52662..1bcf06365 100644
+--- a/src/video/sdl2/SDL_sdl2events.c
++++ b/src/video/sdl2/SDL_sdl2events.c
+@@ -13,6 +13,7 @@
+ #include "../../events/SDL_windowevents_c.h"
+ #include "SDL_sdl2video.h"
+ #include "SDL_sdl2events.h"
++#include "SDL_sdl2mouse.h"
+ 
+ /* Find SDL3 window by SDL2 window ID */
+ static SDL_Window *FindWindowBySDL2ID(Uint32 sdl2_id)
+@@ -113,10 +114,15 @@ void SDL2_PumpEvents_Impl(SDL_VideoDevice *_this)
+         case SDL2_MOUSEMOTION: {
+             SDL_Window *win = FindWindowBySDL2ID(e.motion.windowID);
+             if (win) {
+-                bool relative = (e.motion.which != 0); /* rough check */
+-                SDL_SendMouseMotion(timestamp, win, SDL_GLOBAL_MOUSE_ID,
+-                                    relative,
+-                                    (float)e.motion.x, (float)e.motion.y);
++                if (SDL2_relative_mouse_mode) {
++                    SDL_SendMouseMotion(timestamp, win, SDL_GLOBAL_MOUSE_ID,
++                                        true,
++                                        (float)e.motion.xrel, (float)e.motion.yrel);
++                } else {
++                    SDL_SendMouseMotion(timestamp, win, SDL_GLOBAL_MOUSE_ID,
++                                        false,
++                                        (float)e.motion.x, (float)e.motion.y);
++                }
+             }
+             break;
+         }
+diff --git a/src/video/sdl2/SDL_sdl2mouse.c b/src/video/sdl2/SDL_sdl2mouse.c
+index edd8e47c4..75c74f500 100644
+--- a/src/video/sdl2/SDL_sdl2mouse.c
++++ b/src/video/sdl2/SDL_sdl2mouse.c
+@@ -233,10 +233,16 @@ static bool SDL2Mouse_WarpMouseGlobal(float x, float y)
+     return p_SDL2_WarpMouseGlobal((int)x, (int)y) == 0;
+ }
+ 
++bool SDL2_relative_mouse_mode = false;
++
+ static bool SDL2Mouse_SetRelativeMouseMode(bool enabled)
+ {
+     if (!p_SDL2_SetRelativeMouseMode) return false;
+-    return p_SDL2_SetRelativeMouseMode(enabled ? 1 : 0) == 0;
++    bool ok = p_SDL2_SetRelativeMouseMode(enabled ? 1 : 0) == 0;
++    if (ok) {
++        SDL2_relative_mouse_mode = enabled;
++    }
++    return ok;
+ }
+ 
+ static SDL_MouseButtonFlags SDL2Mouse_GetGlobalMouseState(float *x, float *y)
+diff --git a/src/video/sdl2/SDL_sdl2mouse.h b/src/video/sdl2/SDL_sdl2mouse.h
+index 4db6c7d8b..b20eb8ee6 100644
+--- a/src/video/sdl2/SDL_sdl2mouse.h
++++ b/src/video/sdl2/SDL_sdl2mouse.h
+@@ -27,6 +27,11 @@
+ extern bool SDL2_InitMouse(SDL_VideoDevice *_this);
+ extern void SDL2_QuitMouse(SDL_VideoDevice *_this);
+ 
++/* True once SDL_SetRelativeMouseMode(true) has been forwarded to SDL2.
++   SDL2_MOUSEMOTION translation (SDL_sdl2events.c) reads this to decide
++   whether to forward xrel/yrel (relative) or x/y (absolute) motion. */
++extern bool SDL2_relative_mouse_mode;
++
+ #endif /* SDL_VIDEO_DRIVER_SDL2 */
+ 
+ #endif /* SDL_sdl2mouse_h */
+diff --git a/src/video/sdl2/SDL_sdl2video.c b/src/video/sdl2/SDL_sdl2video.c
+index 5afbdd6d5..acc231052 100644
+--- a/src/video/sdl2/SDL_sdl2video.c
++++ b/src/video/sdl2/SDL_sdl2video.c
+@@ -163,10 +163,8 @@ bool SDL2_LoadLibrary(void)
+ 
+ void SDL2_UnloadLibrary(void)
+ {
+-    if (sdl2_handle) {
+-        dlclose(sdl2_handle);
+-        sdl2_handle = NULL;
+-    }
++    /* Don't dlclose: the audio driver shares these SDL2 symbols and its
++     * playback thread may still be running if video quits before audio. */
+ }
+ 
+ /* === Video driver lifecycle === */

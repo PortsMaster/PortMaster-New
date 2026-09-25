@@ -1,0 +1,58 @@
+diff --git a/modules/libmouse/libmouse.c b/modules/libmouse/libmouse.c
+index dde0369..7595dd2 100644
+--- a/modules/libmouse/libmouse.c
++++ b/modules/libmouse/libmouse.c
+@@ -124,6 +124,23 @@ DLVARFIXUP __bgdexport( libmouse, globals_fixup )[] =
+  *      None
+  */
+ 
++/* Window-to-screen ratio for the unscaled path: gr_video_present() stretches
++ * the screen surface to the whole window (e.g. fullscreen at native res). */
++static void mouse_window_ratio( double * rx, double * ry )
++{
++    int ww = 0, wh = 0 ;
++
++    *rx = 1.0 ;
++    *ry = 1.0 ;
++    if ( !window || !screen ) return ;
++    SDL_GetWindowSize( window, &ww, &wh ) ;
++    if ( ww > 0 && wh > 0 && screen->w > 0 && screen->h > 0 )
++    {
++        *rx = ( double ) screen->w / ( double ) ww ;
++        *ry = ( double ) screen->h / ( double ) wh ;
++    }
++}
++
+ static void do_mouse_events()
+ {
+ #ifdef TARGET_PS2
+@@ -132,6 +149,9 @@ static void do_mouse_events()
+ #endif
+     SDL_Event e ;
+     static int last_mouse_x = -1, last_mouse_y = -1 ;
++    double ratio_x, ratio_y ;
++
++    mouse_window_ratio( &ratio_x, &ratio_y ) ;
+ 
+     /* Actualizar eventos */
+ 
+@@ -151,7 +171,7 @@ static void do_mouse_events()
+         }
+         else
+         {
+-            SDL_WarpMouseInWindow( window,  GLOINT32( libmouse, MOUSEX ), GLOINT32( libmouse, MOUSEY ) ) ;
++            SDL_WarpMouseInWindow( window,  GLOINT32( libmouse, MOUSEX ) / ratio_x, GLOINT32( libmouse, MOUSEY ) / ratio_y ) ;
+         }
+     }
+ 
+@@ -257,8 +277,8 @@ static void do_mouse_events()
+                 }
+                 else
+                 {
+-                    GLOINT32( libmouse, MOUSEX ) = mx ;
+-                    GLOINT32( libmouse, MOUSEY ) = my ;
++                    GLOINT32( libmouse, MOUSEX ) = ( int )( e.motion.x * ratio_x ) ;
++                    GLOINT32( libmouse, MOUSEY ) = ( int )( e.motion.y * ratio_y ) ;
+                 }
+                 break ;
+             }
