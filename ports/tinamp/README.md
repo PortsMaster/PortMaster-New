@@ -91,6 +91,12 @@ Everything of the following is build inside ./build directory:
 ```make portmaster``` (to create a distributable portmaster .zip)
 
 ## Version history
+v00.00.0A (September 2026)  
+
+- updated FFmpeg libraries to 9.0.2 and VLC to 3.0.24 to fix CVEs
+- adjusted Debian repository to mitigate Debian bug: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1147093 for compiling
+- successfully retested application with Portmaster 2026.09.13-0343 and: Rocknix (ROCKNIX-H700.aarch64-20260901), ArkOS (ArkOS_RGB30_v2.0_02092025), dArkOS (dArkOS_RGB30_trixie_08282026), AmberElEC(AmberELEC-RG351MP.aarch64-prerelease-20260924_1847), uOS (UnofficialOS-RK3326.aarch64-20260624), muOS (MustardOS_RG35XX-H_2601.1_FUNKY_JACARANDA-bc38efa0), Knulli (knulli-h700-rg35xx-h-scarab-20260511)
+
 v00.00.09 (June 2026)  
 
 - updated FFmpeg libraries to 8.1.2 to fix critical CVEs
