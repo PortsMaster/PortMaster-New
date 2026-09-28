@@ -1,0 +1,303 @@
+diff --git a/src/globals.lisp b/src/globals.lisp
+index 1d6aabc..d1ad5cd 100644
+--- a/src/globals.lisp
++++ b/src/globals.lisp
+@@ -23,6 +23,9 @@
+    (setf *dungeon-cell-size* (vector *dungeon-cell-width* *dungeon-cell-height*))))
+ 
+ 
++(defvar *portmaster-p* nil
++  "True when running as the standalone PortMaster binary (fullscreen, scaled output).")
++
+ (defparameter *window-width*  1280)
+ (defparameter *window-height* 720)
+ (defparameter *window-size* (list *window-width* *window-height*))
+diff --git a/src/main.lisp b/src/main.lisp
+index 893f617..f2569fc 100644
+--- a/src/main.lisp
++++ b/src/main.lisp
+@@ -12,29 +12,169 @@
+ ;;;-----------------------------------------------------------------------------
+ (defparameter *should-stop* nil)
+ 
++(defun draw-frame ()
++  (clear-background +black+)
++  (unless (null *mode*)
++    (mode-draw *mode*))
++  (when *show-fps* (draw-fps 20 20)))
++
+ (defun blit ()
+   (with-drawing
+-    (clear-background +black+)
+-    (unless (null *mode*)
+-      (mode-draw *mode*))
+-    (when *show-fps* (draw-fps 20 20))))
++    (draw-frame)))
++
++(defun blit-scaled (target)
++  "Draw the frame into the 1280x720 TARGET, then letterbox it onto the real screen."
++  (with-texture-mode (target)
++    (draw-frame))
++  (let* ((sw (get-screen-width))
++         (sh (get-screen-height))
++         (scale (min (/ sw *window-width*) (/ sh *window-height*)))
++         (w (* scale *window-width*))
++         (h (* scale *window-height*)))
++    (with-drawing
++      (clear-background +black+)
++      (draw-texture-pro (render-texture-texture target)
++                        (make-rectangle :x 0 :y 0 :width *window-width* :height (- *window-height*))
++                        (make-rectangle :x (/ (- sw w) 2) :y (/ (- sh h) 2) :width w :height h)
++                        (vec2 0 0)
++                        0.0
++                        +white+))))
++
++(defun run-loop ()
++  (if *portmaster-p*
++      (let ((target (load-render-texture *window-width* *window-height*)))
++        (set-texture-filter (render-texture-texture target) raylib::+texture-filter-bilinear+)
++        (unwind-protect
++             (loop until *should-stop* do
++               (act)
++               (blit-scaled target))
++          (unload-render-texture target)))
++      (loop until *should-stop* do
++        (act)
++        (blit))))
+ 
+ (defun main ()
+   (reset-modes)
+-  (with-window (1280 720 "DMOMD - Decent Magician Of the Moldy Dungeon (raylib)")
+-    ;; 4 --> resizable, 40 --> GPU vsync, 100 --> always on top
+-    (set-window-state (logior 40 100))
+-    (with-audio-device
+-      (set-target-fps 60) ; Set our game to run at 60 FPS
+-      ;; (switch-mode 'loading-mode)
+-      (load-resources)
+-      (switch-mode 'title-mode)
+-      (unwind-protect
+-           (loop until *should-stop* do
+-             (act)
+-             (blit))
+-        ;; (unload-resources)
+-        ))))
++  (when *portmaster-p*
++    (set-config-flags raylib::+flag-vsync-hint+))
++  (if *portmaster-p*
++      (init-window-preserving-signals 1280 720 "DMOMD - Decent Magician Of the Moldy Dungeon (raylib)")
++      (init-window 1280 720 "DMOMD - Decent Magician Of the Moldy Dungeon (raylib)"))
++  (unwind-protect
++       (progn
++         ;; 4 --> resizable, 40 --> GPU vsync, 100 --> always on top
++         (unless *portmaster-p*
++           (set-window-state (logior 40 100)))
++         (if *portmaster-p*
++             (call-preserving-signals "InitAudioDevice" #'init-audio-device)
++             (init-audio-device))
++         (unwind-protect
++              (progn
++                (set-target-fps 60) ; Set our game to run at 60 FPS
++                ;; (switch-mode 'loading-mode)
++                (load-resources)
++                (switch-mode 'title-mode)
++                (unwind-protect
++                     (run-loop)
++                  ;; (unload-resources)
++                  ))
++           (close-audio-device)))
++    (close-window)))
++
++;;; SBCL's GC write barrier relies on its own SIGSEGV handler; native init code
++;;; (GPU driver / SDL) must not be allowed to replace it.
++;;;-----------------------------------------------------------------------------
++#+sbcl
++(defparameter *sbcl-owned-signals*
++  '((4 . "SIGILL") (5 . "SIGTRAP") (7 . "SIGBUS") (8 . "SIGFPE") (11 . "SIGSEGV") (12 . "SIGUSR2")))
++
++#+sbcl
++(defconstant +sigaction-slot-size+ 256)
++
++#+sbcl
++(defun %sigaction (sig new old)
++  (sb-alien:alien-funcall
++   (sb-alien:extern-alien "sigaction" (function sb-alien:int sb-alien:int
++                                                sb-sys:system-area-pointer
++                                                sb-sys:system-area-pointer))
++   sig new old))
++
++#+sbcl
++(defun mapping-containing (address)
++  "The /proc/self/maps line whose range contains ADDRESS, or NIL."
++  (with-open-file (in "/proc/self/maps" :if-does-not-exist nil)
++    (when in
++      (loop for line = (read-line in nil)
++            while line
++            do (let* ((dash (position #\- line))
++                      (space (position #\Space line))
++                      (start (parse-integer line :end dash :radix 16))
++                      (end (parse-integer line :start (1+ dash) :end space :radix 16)))
++                 (when (and (<= start address) (< address end))
++                   (return line)))))))
++
++#+sbcl
++(defun call-preserving-signals (label thunk)
++  "Call THUNK, then restore any SBCL-owned signal handler it replaced.
++Nothing may write to the Lisp heap between THUNK returning and the restore."
++  (let* ((n (length *sbcl-owned-signals*))
++         (before (sb-alien:alien-sap (sb-alien:make-alien (sb-alien:unsigned 8) (* n +sigaction-slot-size+))))
++         (after (sb-alien:alien-sap (sb-alien:make-alien (sb-alien:unsigned 8) (* n +sigaction-slot-size+))))
++         (null (sb-sys:int-sap 0)))
++    (loop for (sig . nil) in *sbcl-owned-signals*
++          for off from 0 by +sigaction-slot-size+
++          do (%sigaction sig null (sb-sys:sap+ before off)))
++    (funcall thunk)
++    (loop for (sig . nil) in *sbcl-owned-signals*
++          for off from 0 by +sigaction-slot-size+
++          do (%sigaction sig null (sb-sys:sap+ after off))
++             (unless (= (sb-sys:sap-ref-64 before off) (sb-sys:sap-ref-64 after off))
++               (%sigaction sig (sb-sys:sap+ before off) null)))
++    (loop for (nil . name) in *sbcl-owned-signals*
++          for off from 0 by +sigaction-slot-size+
++          for old = (sb-sys:sap-ref-64 before off)
++          for new = (sb-sys:sap-ref-64 after off)
++          unless (= old new)
++            do (format t "~&SIGNALS: ~A replaced ~A handler #x~X with #x~X (~A), restored SBCL's~%"
++                       label name old new (or (mapping-containing new) "unknown mapping")))
++    (finish-output)))
++
++#+sbcl
++(defconstant +flag-borderless-windowed-mode+ #x00008000)
++
++#+sbcl
++(defun init-window-preserving-signals (width height title)
++  "InitWindow, then go borderless desktop fullscreen: exclusive fullscreen gets an
++emulated, compositor-stretched mode on Wayland instead of the output's real size."
++  (let ((c-title (sb-alien:alien-sap (sb-alien:make-alien-string title))))
++    (call-preserving-signals
++     "InitWindow"
++     (lambda ()
++       (sb-alien:alien-funcall
++        (sb-alien:extern-alien "InitWindow" (function sb-alien:void sb-alien:int sb-alien:int
++                                                      sb-sys:system-area-pointer))
++        width height c-title)
++       (sb-alien:alien-funcall
++        (sb-alien:extern-alien "SetWindowState" (function sb-alien:void sb-alien:unsigned-int))
++        +flag-borderless-windowed-mode+)))))
++
++;;; standalone binary entry point (PortMaster)
++;;;-----------------------------------------------------------------------------
++#+sbcl
++(defun portmaster-main ()
++  (sb-int:set-floating-point-modes :traps nil)
++  (setf *portmaster-p* t)
++  (handler-bind ((error (lambda (e)
++                          (format *error-output* "~&Fatal error: ~A~%" e)
++                          (sb-debug:print-backtrace :stream *error-output* :count 40)
++                          (finish-output *error-output*)
++                          (sb-ext:exit :code 1 :abort t))))
++    (set-asset-path (merge-pathnames "assets/"
++                                     (uiop:pathname-directory-pathname
++                                      (sb-ext:native-pathname sb-ext:*runtime-pathname*))))
++    (main))
++  (finish-output)
++  (sb-ext:exit :code 0))
+ 
+ ;;;----------------------------------------------------------------------------
+ ;;; exported functions
+diff --git a/src/modes/mode.lisp b/src/modes/mode.lisp
+index f22c7d4..1dd9f0e 100644
+--- a/src/modes/mode.lisp
++++ b/src/modes/mode.lisp
+@@ -128,7 +128,7 @@
+       (enable-mode-music  m)))
+ 
+ (defmethod mode-handle-input ((m mode))
+-  (when (is-key-pressed +key-f11+)
++  (when (and (is-key-pressed +key-f11+) (not *portmaster-p*))
+       (toggle-fullscreen))
+   (when (is-key-pressed +key-f12+)
+     (toggle-show-fps))
+diff --git a/src/modes/rogue-mode-utils.lisp b/src/modes/rogue-mode-utils.lisp
+index c67a427..81b6026 100644
+--- a/src/modes/rogue-mode-utils.lisp
++++ b/src/modes/rogue-mode-utils.lisp
+@@ -284,7 +284,7 @@ Returns a list of cells"
+          (menu-color (alpha-color .7 (hexcolor "#1C1411")))
+          (w 200)
+          (h 300)
+-         (menu-pos (v+ *window-top-left-corner* (vec2 20 (- (get-screen-height) h 20))))
++         (menu-pos (v+ *window-top-left-corner* (vec2 20 (- *window-height* h 20))))
+          (potion-message-pos (vec2 (- (vx *window-center*) 590)
+                                    (- (vy *window-center*) 100 ))))
+     (let ((inventory-menu
+@@ -422,8 +422,8 @@ The opacity value in `color' doesn't change this functions behavior."
+ 
+ (defmethod draw-fade ((f fade))
+   (draw-rectangle 0 0
+-                  (get-screen-width)
+-                  (get-screen-height)
++                  *window-width*
++                  *window-height*
+                   (alpha-color (a:clamp (alpha f) 0 1) (color f)))
+   )
+ 
+diff --git a/src/modes/title-mode.lisp b/src/modes/title-mode.lisp
+index 7ad70fe..cbe2129 100644
+--- a/src/modes/title-mode.lisp
++++ b/src/modes/title-mode.lisp
+@@ -127,8 +127,8 @@
+   (draw-texture-pro (get-resource '(:IMG :TITLE-MODE :SPLASH-ALT-1280X720))
+                     (make-rectangle :x 0 :y 0 :width 1280 :height 720)
+                     (make-rectangle :x 0 :y 0
+-                                    :width  (get-screen-width)
+-                                    :height (get-screen-height))
++                                    :width  *window-width*
++                                    :height *window-height*)
+                     (vec2 0 0)
+                     0.0
+                     +white+)
+diff --git a/src/resources.lisp b/src/resources.lisp
+index 503359b..586916a 100644
+--- a/src/resources.lisp
++++ b/src/resources.lisp
+@@ -56,6 +56,13 @@
+ 
+ (defparameter *fnt-names* (all-files-in-asset-subdir "fnt/"))
+ 
++(defun set-asset-path (path)
++  "Point asset loading at PATH (a directory named assets/) and rescan its files."
++  (setf *asset-path* (uiop:native-namestring (uiop:ensure-directory-pathname path))
++        *snd-names*  (all-files-in-asset-subdir "snd/")
++        *img-names*  (all-files-in-asset-subdir "img/")
++        *fnt-names*  (all-files-in-asset-subdir "fnt/")))
++
+ (defun load-resources ()
+   (load-assets-from-filename-list *snd-names*)
+   (load-assets-from-filename-list *img-names*)
+diff --git a/build-port.lisp b/build-port.lisp
+new file mode 100644
+index 0000000..b3c6958
+--- /dev/null
++++ b/build-port.lisp
+@@ -0,0 +1,21 @@
++;;;; build-port.lisp - build the standalone PortMaster binary
++;;;; sbcl --dynamic-space-size 512MB --non-interactive --load build-port.lisp
++
++(load (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))
++
++(defparameter *root* (uiop:pathname-directory-pathname *load-truename*))
++
++(push *root* asdf:*central-registry*)
++(dolist (dir (uiop:subdirectories (merge-pathnames "third-party/" *root*)))
++  (push dir asdf:*central-registry*))
++
++(ql:quickload '(:bordeaux-threads :rl-dmomd))
++
++(format t "~&Shared objects in image:~%~{  ~A~%~}"
++        (mapcar #'sb-alien::shared-object-namestring sb-sys:*shared-objects*))
++
++(sb-ext:save-lisp-and-die (merge-pathnames "dmomd.aarch64" *root*)
++                          :executable t
++                          :toplevel (intern "PORTMASTER-MAIN" "RL-DMOMD")
++                          :save-runtime-options t
++                          :compression (and (member :sb-core-compression *features*) t))
