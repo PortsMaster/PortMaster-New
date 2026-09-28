@@ -71,15 +71,15 @@ if [ ! -f "${GAMEDIR}/gamedata/queue-it/main.py" ]; then
     # Extract game files from the pyxapp file
     unzip "queue-it.pyxapp"
 
-    # Delete pyxapp
-    rm "queue-it.pyxapp"
-
     if [ $? -ne 0 ]; then
         echo "Error while extracting the pyxel app file"
         echo "Cannot continue"
         exit 1
     fi
 
+    # Delete pyxapp
+    rm "queue-it.pyxapp"
+    
     cd "queue-it"
     chmod a+rx "${GAMEDIR}/tools/patch"
     export PATH="$PATH:${GAMEDIR}/tools"
