@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to **Stepford, Andyland** and **milkypossum** for developing this game. Buy in on [Steam](store.steampowered.com/app/2088840/Picayune_Dreams/).
+Thanks to **Stepford, Andyland** and **milkypossum** for developing this game. Buy in on [Steam](https://store.steampowered.com/app/2088840/Picayune_Dreams/).
 
 
 
