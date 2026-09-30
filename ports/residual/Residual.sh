@@ -28,7 +28,10 @@ CACHEDIR="$GAMEDIR/cache/"
 
 $ESUDO mkdir -p "$GAMEDATADIR" "$SAVEDIR" "$CACHEDIR" || { pm_message "Residual: Cannot create game data and save folders. See residual/log.txt."; sleep 5; exit 1; }
 [ "$DEVICE_ARCH" = aarch64 ] || { pm_message "Residual: 64-bit ARM firmware is required. See residual/log.txt."; sleep 5; exit 1; }
-[ "$(getconf LONG_BIT)" = 64 ] || { pm_message "Residual: 64-bit userland is required. See residual/log.txt."; sleep 5; exit 1; }
+if command -v getconf >/dev/null 2>&1; then
+  userland_bits=$(getconf LONG_BIT 2>/dev/null || true)
+  [ -z "$userland_bits" ] || [ "$userland_bits" = 64 ] || { pm_message "Residual: 64-bit userland is required. See residual/log.txt."; sleep 5; exit 1; }
+fi
 [ -f "$GAMEDATADIR/$jar_filename" ] || { pm_message "Residual: Copy your owned Residual.jar to residual/gamedata/Residual.jar. See residual/log.txt."; sleep 5; exit 1; }
 [ -n "$GPTOKEYB2" ] || { pm_message "Residual: Update PortMaster for controller support. See residual/log.txt."; sleep 5; exit 1; }
 
@@ -75,7 +78,7 @@ export HOTKEY=back
 $GPTOKEYB2 java -x &
 pm_platform_helper "$JAVA_HOME/bin/java"
 
-$ESUDO env "${display_env[@]}" "CRUSTY_BLOCK_INPUT=1" "$weston_dir/westonwrap.sh" headless noop kiosk crusty_glx_gl4es \
+$ESUDO env "${display_env[@]}" "CRUSTY_BLOCK_INPUT=1" "LD_LIBRARY_PATH=$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH" "$weston_dir/westonwrap.sh" headless noop kiosk crusty_glx_gl4es \
   "PATH=$JAVA_HOME/bin:$PATH" "JAVA_HOME=$JAVA_HOME" "HOME=$SAVEDIR" \
   "XDG_DATA_HOME=$SAVEDIR" "XDG_CONFIG_HOME=$SAVEDIR/config" \
   "XDG_CACHE_HOME=$CACHEDIR" "WAYLAND_DISPLAY=" \
