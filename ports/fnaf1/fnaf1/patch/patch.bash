@@ -3,10 +3,10 @@
 set -e
 
 GAMEDIR="$(cd "$(dirname "$0")/.." && pwd)"
-RUNTIME="$GAMEDIR/decompiler-cache"                      
-RUNTIME_7Z="$GAMEDIR/patch/decompiler.7z"                  
-GUIDES_DIR="$GAMEDIR/patch/guides"                 
-GUIDES_7Z="$GAMEDIR/patch/guides.7z"                        
+RUNTIME="$GAMEDIR/decompiler-cache"
+RUNTIME_7Z="$GAMEDIR/patch/decompiler.7z"
+GUIDES_DIR="$GAMEDIR/patch/guides"
+GUIDES_7Z="$GAMEDIR/patch/guides.7z"
 BUILD="$GAMEDIR/build"
 GAMEDATA="$GAMEDIR/gamedata"
 STATE="$BUILD/.patch_state"
@@ -72,7 +72,7 @@ if step_done "runtime_extract" "$RUNTIME_STAMP"; then
     echo "Runtime already extracted. OK"
 else
     echo "Extracting decompiler..."
-    rm -rf "$RUNTIME"
+    rm -rf "$GAMEDIR/decompiler-cache"
     mkdir -p "$RUNTIME"
     "$SEVENZIP" x "$RUNTIME_7Z" -o"$RUNTIME" -y >> "$PATCHLOG" 2>&1 \
         || fail "Could not extract decompiler.7z"
@@ -87,7 +87,7 @@ if [ -f "$GUIDES_7Z" ]; then
         echo "Guides already extracted. OK"
     else
         echo "Extracting ASTC guides..."
-        rm -rf "$GUIDES_DIR"
+        rm -rf "$GAMEDIR/patch/guides"
         mkdir -p "$GUIDES_DIR"
         "$SEVENZIP" x "$GUIDES_7Z" -o"$GAMEDIR/patch" -y >> "$PATCHLOG" 2>&1 \
             || fail "Could not extract guides.7z"
@@ -132,22 +132,22 @@ else
     mark_done "build" "$BUILD_KEY"
 fi
 
-if [ ! -x "$BUILD/Chowdren" ]; then
-    fail "Build finished but binary not found at $BUILD/Chowdren"
+if [ ! -x "$GAMEDIR/build/Chowdren" ]; then
+    fail "Build finished but binary not found at $GAMEDIR/build/Chowdren"
 fi
 
 echo ""
 echo "=== Step 2/2: Cleaning up directory ==="
 
-mv "$BUILD/Chowdren" "$GAMEDIR/Chowdren" || $ESUDO mv "$BUILD/Chowdren" "$GAMEDIR/Chowdren" || fail "Failed to move Chowdren binary"
-mv "$BUILD/Assets.dat" "$GAMEDIR/Assets.dat" || $ESUDO mv "$BUILD/Assets.dat" "$GAMEDIR/Assets.dat" || fail "Failed to move Assets.dat"
-$ESUDO rm -rf "$BUILD"
-$ESUDO rm -rf "$RUNTIME"
-$ESUDO rm -f "$RUNTIME_7Z"
-$ESUDO rm -rf "$GUIDES_DIR"
-$ESUDO rm -f "$GUIDES_7Z"
-$ESUDO rm -f "$GAME_EXE"
-touch "$GAMEDATA/.patched_complete"
+mv "$GAMEDIR/build/Chowdren" "$GAMEDIR/Chowdren" || $ESUDO mv "$GAMEDIR/build/Chowdren" "$GAMEDIR/Chowdren" || fail "Failed to move Chowdren binary"
+mv "$GAMEDIR/build/Assets.dat" "$GAMEDIR/Assets.dat" || $ESUDO mv "$GAMEDIR/build/Assets.dat" "$GAMEDIR/Assets.dat" || fail "Failed to move Assets.dat"
+rm -rf "$GAMEDIR/build"
+rm -rf "$GAMEDIR/decompiler-cache"
+rm -f "$GAMEDIR/patch/decompiler.7z"
+rm -rf "$GAMEDIR/patch/guides"
+rm -f "$GAMEDIR/patch/guides.7z"
+rm -f "$GAMEDIR/gamedata/FiveNightsatFreddys.exe"
+touch "$GAMEDIR/gamedata/.patched_complete"
 echo "Cleanup complete. OK"
 echo ""
 echo "Build complete. OK"
