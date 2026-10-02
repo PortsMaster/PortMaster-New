@@ -18,7 +18,7 @@ get_controls
 GAMEDIR="/${directory#/}/ports/residual"
 GAMEDATADIR="$GAMEDIR/gamedata"
 java_runtime="zulu17.54.21-ca-jre17.0.13-linux"
-jar_filename="Residual.jar"
+jar_filename="residual.jar"
 
 cd "$GAMEDIR"
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
