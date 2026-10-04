@@ -1,6 +1,6 @@
 ## Notes
 
-A fan remake of Google DIno in Love2D
+A fan remake of Google Dino in Love2D
 
 The dino, obstacle, cloud and ground sprites are from the
 Chrome offline "T-Rex Runner" game, © The Chromium Authors, used under the
