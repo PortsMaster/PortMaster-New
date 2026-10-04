@@ -21,6 +21,8 @@ GAMEDIR="/$directory/ports/dinolove2d"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
 source $controlfolder/runtimes/"love_11.5"/love.txt
 
 $GPTOKEYB "$LOVE_GPTK" -c "$GAMEDIR/controls.gptk" &
