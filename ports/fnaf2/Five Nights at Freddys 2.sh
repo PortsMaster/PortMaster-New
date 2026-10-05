@@ -31,7 +31,7 @@ if [ ! -f "$PATCHED_FLAG" ] || [ ! -x "$BIN" ]; then
 fi
 
 if [ "$NEEDS_BUILD" -eq 1 ]; then
-    if [ ! -f "$GAME_EXE" ]; then
+    if [[ ! -n "$GAME_EXE" ]; then
         pm_message "Game files not found. Copy FiveNightsatFreddys2.exe into fnaf2/gamedata."
         sleep 15
         exit 1
