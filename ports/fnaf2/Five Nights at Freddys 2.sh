@@ -87,6 +87,4 @@ pm_platform_helper "$BIN"
 
 $TASKSET "$BIN"
 
-$ESUDO kill -9 $(pidof gptokeyb2) 2>/dev/null
-
 pm_finish
