@@ -5,7 +5,7 @@ Thanks to [Tri Hua Minh](https://tri2510.itch.io/) for creating this game and ma
 The Prologue is free: https://tri2510.itch.io/the-last-summer-prologue
 <br/>
 
-## The Last Summer: Prologue 1.2.6
+## The Last Summer: Prologue 1.4.0
 
 The free Prologue (Chapters 1 to 3) of a cozy isometric story game about a seaside hotel
 closed for twenty years. The full game is on itch.io (https://tri2510.itch.io/the-last-summer); a
