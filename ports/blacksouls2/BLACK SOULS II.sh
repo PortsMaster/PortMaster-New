@@ -34,9 +34,7 @@ if [ ! -d "$GAMEDIR/stdlib" ]; then
 fi
 
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}:$LD_LIBRARY_PATH"
-if [ -z "${SDL_GAMECONTROLLERCONFIG_FILE:-}" ] && [ "${#sdl_controllerconfig}" -lt 100000 ]; then
-  export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-fi
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $GPTOKEYB2 "$BINARY" -c "$GAMEDIR/blacksouls2.ini" &
 
