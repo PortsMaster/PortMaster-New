@@ -19,7 +19,8 @@ get_controls
 GAMEDIR=/$directory/ports/fnaf2
 BUILD="$GAMEDIR/build"
 BIN="$GAMEDIR/Chowdren"
-GAME_EXE="$GAMEDIR/gamedata/FiveNightsatFreddys2.exe"
+# Look for an exe file in gamedir (first found)
+GAME_EXE=$(find "${GAMEDIR}" -type f -iname "*.exe" -print -quit)
 PATCHED_FLAG="$GAMEDIR/gamedata/.patched_complete"
 
 mkdir -p "$GAMEDIR/conf" "$GAMEDIR/gamedata"
