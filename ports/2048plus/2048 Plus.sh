@@ -34,9 +34,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 ARCHIVE_FILE="gamedata.tar.gz"
 if [[ -f "$ARCHIVE_FILE" ]]; then
-    pm_message "Extracting game data, this can take a few minutes..."
     if gunzip -c "$ARCHIVE_FILE" | tar --no-same-owner -xf -; then
-        pm_message "Extraction successful."
         $ESUDO rm -f "$ARCHIVE_FILE"
     else
         pm_message "Error: Extraction failed."
@@ -47,6 +45,19 @@ elif [ ! -f 'gamedata/main.lua' ]; then
     pm_message "Error: No game data present and Archive file $ARCHIVE_FILE not found."
     sleep 5
     exit 1
+fi
+
+# Ensure any PortMaster message dialog or pugwash background process is closed
+if [ -e "$PM_PIPE" ]; then
+    PortMasterDialogExit
+fi
+$ESUDO pkill -9 -f pugwash 2>/dev/null || true
+$ESUDO pkill -9 -f text_viewer 2>/dev/null || true
+$ESUDO rm -f /dev/shm/portmaster/pm_* /dev/shm/portmaster/pg_* 2>/dev/null || true
+
+if [ ! -z "$(echo "$CUR_TTY" | grep -e '^/dev/tty')" ]; then
+    printf "\033c" > "$CUR_TTY"
+    printf "\033[?25l" > "$CUR_TTY"
 fi
 
 source $controlfolder/runtimes/"love_11.5"/love.txt

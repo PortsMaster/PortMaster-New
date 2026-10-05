@@ -7,6 +7,7 @@ Source Code: [GitHub Repository](https://github.com/saitamasahil/2048plus)
 - **Game Modes**: Classic, Plus Mode with Bomb, Swap, and Undo powerups, and 4 Arcade Modes — Time Attack, 5x5 Huge, No Mercy, and Goose.
 - **Store & Customization**: In-game Store with Coins currency, Cat & Dog pet companions, board skins, unlockable themes, and more.
 - **Achievements & Stats**: Many unlockable achievements and comprehensive stats tracking.
+- **Jukebox & Wireless Music Manager**: In-game music player with audio visualizer, seeking, shuffle, and a built-in wireless web server to manage, upload, and stream custom music tracks directly from your Phone or PC over Wi-Fi.
 - **Quality of Life**: Auto-save & resume after every move, interactive pause menu with active perks HUD, and instant theme switching.
 
 *Note: Perhaps a well-known secret sequence of buttons might reveal something special...?*
@@ -33,6 +34,7 @@ Source Code: [GitHub Repository](https://github.com/saitamasahil/2048plus)
 - Original Concept By: [Gabriele Cirulli](https://github.com/gabrielecirulli/2048)
 - Android Port Reference: [tpcstld - 2048](https://github.com/tpcstld/2048)
 - Built using the [LÖVE Framework](https://love2d.org/)
+- Easter Egg mini-game by: [SLAYKIN6_TTV](https://github.com/justaporter)
 - Adorable Animal Sprites by: [Elthen](https://elthen.itch.io/) and [Pixelcave](https://pixelcave.itch.io/)
 - Animated Button Prompts by: [greenpixels_](https://greenpixels.itch.io/)
 - Icons provided by [Flaticon](https://www.flaticon.com/)
