@@ -16,15 +16,27 @@ source "$controlfolder/control.txt"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
 
+if printf '%s\n' "$sdl_controllerconfig" | grep -qx '# nintendo layout'; then
+  sdl_controllerconfig=$(printf '%s\n' "$sdl_controllerconfig" | sed \
+    -e 's/,a:/,A:/g; s/,b:/,B:/g; s/,x:/,X:/g; s/,y:/,Y:/g' \
+    -e 's/,A:/,b:/g; s/,B:/,a:/g; s/,X:/,y:/g; s/,Y:/,x:/g')
+fi
+
 GAMEDIR="/$directory/ports/glitchscope"
-mkdir -p "$GAMEDIR/music"
+CONFDIR="$GAMEDIR/conf"
+mkdir -p "$CONFDIR" "$GAMEDIR/music"
 cd "$GAMEDIR" || exit 1
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
+export XDG_DATA_HOME="$CONFDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/libs.${DEVICE_ARCH}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-pm_message "Loading GlitchScope... (Compiling shaders)"
+if [ -n "$sdl_controllerconfig" ]; then
+  mkdir -p "$GAMEDIR/.cache"
+  export SDL_GAMECONTROLLERCONFIG_FILE="$GAMEDIR/.cache/gamecontrollerdb.txt"
+  printf '%s\n' "$sdl_controllerconfig" > "$SDL_GAMECONTROLLERCONFIG_FILE" || exit 1
+fi
 
 $GPTOKEYB "glitchscope.${DEVICE_ARCH}" &
 

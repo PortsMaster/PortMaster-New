@@ -47,14 +47,20 @@ This file contains license information for all third-party libraries used in gli
 **Source:** https://github.com/tildearrow/foo-input-hvl
 
 ## Go-SDL2 and SDL2
-**License:** BSD-3-Clause (binding); SDL2 is supplied by the firmware
+**License:** BSD-3-Clause (binding), zlib (SDL2)
 **Source:** https://github.com/veandco/go-sdl2 and https://libsdl.org/
+
+## gptokeyb (PortMaster)
+**License:** GPL-2.0
+**Source:** https://github.com/PortsMaster/gptokeyb
+Provided by PortMaster for the exit hotkey; the PortMaster package includes
+`LICENSE.gptokeyb.txt`.
 
 ## golang.org/x/image and golang.org/x/text
 **License:** BSD-3-Clause
 **Source:** https://pkg.go.dev/golang.org/x/image and https://pkg.go.dev/golang.org/x/text
 
-## libogg and libvorbis
+## libogg, libvorbis and libFLAC
 **License:** BSD-3-Clause
 **Source:** https://xiph.org/
 
@@ -82,6 +88,11 @@ This file contains license information for all third-party libraries used in gli
 ---
 
 ## Distribution notices
+
+PortMaster bundles only Vorbis, Ogg, mpg123 and zlib shared libraries. FLAC and
+the C/C++ system runtimes and their notices are excluded from that package;
+desktop releases retain their own runtime libraries and notices. PortMaster
+uses SDL2 and GPU drivers supplied by the firmware.
 
 GlitchScope code is GPL-2.0-or-later; see the root LICENSE. Dependencies retain
 their own licenses and copyright notices. The Linux builder collects source
@@ -132,7 +143,3 @@ https://github.com/jberg/butterchurn-presets . Installation retains the original
 MilkDrop texture pack as above. The upstream repository uses the MIT license:
 https://github.com/jberg/butterchurn-presets/blob/master/LICENSE .
 The collection is not bundled in release packages.
-
-## gptokeyb
-Provided by PortMaster for the exit hotkey. GPL-2.0; see LICENSE.gptokeyb.txt.
-Source: https://github.com/PortsMaster/gptokeyb
