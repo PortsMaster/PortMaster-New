@@ -56,7 +56,44 @@ $ESUDO mount "$controlfolder/libs/${java_runtime}.squashfs" "$JAVA_HOME" \
   || { pm_message "Gunslugs: Cannot mount Java. See gunslugs/log.txt."; sleep 5; exit 1; }
 export PATH="$JAVA_HOME/bin:$PATH"
 
-bash "$GAMEDIR/extracted.sh" "$GAMEDIR" "$JAVA_HOME" || { pm_message "Game data preparation failed. See log.txt."; sleep 5; exit 1; }
+prepare_game_data() (
+  set -eo pipefail
+  if [[ ! -x "$JAVA_HOME/bin/java" ]]; then
+      echo "Launch Gunslugs from Ports to load its Java runtime first."
+      exit 1
+  fi
+  prepare_cp="$GAMEDIR/runtime/prepare/*"
+  if "$JAVA_HOME/bin/java" -Xmx128m -cp "$prepare_cp" PrepareDevice --check "$GAMEDIR/gamedata"; then
+      echo "Prepared Gunslugs game data found."
+      exit 0
+  fi
+  echo "Preparing Gunslugs game data. Please wait and do not power off."
+  if [[ -n "${controlfolder:-}" && -f "$controlfolder/PortMasterDialog.txt" ]]; then
+      source "$controlfolder/PortMasterDialog.txt"
+      PortMasterDialogInit "no-harbour"
+      PortMasterDialog "messages_begin"
+      PortMasterDialog "message" "Preparing Gunslugs. Please do not power off."
+      PortMasterDialog "progress" "Preparing game data" 0 100
+  fi
+
+  status=0
+  "$JAVA_HOME/bin/java" -Xmx128m -XX:+UseSerialGC \
+      "-Djava.io.tmpdir=$GAMEDIR/cache" -cp "$prepare_cp" PrepareDevice "$GAMEDIR" 2>&1 |
+      while IFS= read -r line; do
+          printf '%s\n' "$line"
+          if [[ "$line" == $'GUNSLUGS_PROGRESS\t'* ]] && declare -F PortMasterDialog >/dev/null; then
+              IFS=$'\t' read -r marker percent message <<< "$line"
+              PortMasterDialog "progress" "$message" "$percent" 100
+          fi
+      done || status=$?
+
+  if declare -F PortMasterDialogExit >/dev/null; then
+      PortMasterDialog "progress_clear"
+      PortMasterDialogExit
+  fi
+  exit "$status"
+)
+prepare_game_data || { pm_message "Game data preparation failed. See log.txt."; sleep 5; exit 1; }
 game_build=$("$JAVA_HOME/bin/java" -Xmx32m -cp "$GAMEDIR/runtime/prepare/*" PrepareDevice --mode "$GAMEDATADIR") || exit 1
 game_main=org.portmaster.gunslugs.Main
 game_controls="$GAMEDIR/gunslugs.ini"
