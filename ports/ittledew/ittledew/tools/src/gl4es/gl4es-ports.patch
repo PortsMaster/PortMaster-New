@@ -1,0 +1,447 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 388a90f9..b2a66610 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -146,6 +146,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND NOT NO_LOADER)
+         ${CMAKE_CURRENT_SOURCE_DIR}/glx/gbm.c
+ 	    ${CMAKE_CURRENT_SOURCE_DIR}/glx/glx.c
+ 	    ${CMAKE_CURRENT_SOURCE_DIR}/glx/glx_stubs.c
++	    ${CMAKE_CURRENT_SOURCE_DIR}/glx/glxpass.c
+ 	    ${CMAKE_CURRENT_SOURCE_DIR}/glx/lookup.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/glx/rpi.c
+ 	    ${CMAKE_CURRENT_SOURCE_DIR}/glx/streaming.c
+diff --git a/src/config.h b/src/config.h
+index 2243472d..a9f86f3f 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -17,7 +17,7 @@
+ #define MAX_VTX_PROG_ENV_PARAMS 96
+ #define MAX_VTX_PROG_LOC_PARAMS 96
+ #define MAX_FRG_PROG_ENV_PARAMS 24
+-#define MAX_FRG_PROG_LOC_PARAMS 24
++#define MAX_FRG_PROG_LOC_PARAMS 64
+ #define MAX_DRAW_BUFFERS    16
+ 
+ #endif // _GL4ES_MAIN_CONFIG_H
+diff --git a/src/gl/arbgenerator.c b/src/gl/arbgenerator.c
+index 229bdad8..f974340e 100644
+--- a/src/gl/arbgenerator.c
++++ b/src/gl/arbgenerator.c
+@@ -872,7 +872,7 @@ void generateInstruction(sCurStatus *curStatusPtr, int vertex, char **error_msg,
+ 		APPEND_OUTPUT(" = ", 3)
+ 		PUSH_PRE_SAT(0)
+ 		PUSH_DESTLEN(0)
+-		APPEND_OUTPUT("sin(", 9)
++		APPEND_OUTPUT("sin(", 4)
+ 		PUSH_SCALSRC(1, 0)
+ 		APPEND_OUTPUT("))", 2)
+ 		PUSH_POSTSAT(0)
+diff --git a/src/gl/arbhelper.c b/src/gl/arbhelper.c
+index bf79c0e8..6f12710d 100644
+--- a/src/gl/arbhelper.c
++++ b/src/gl/arbhelper.c
+@@ -14,7 +14,7 @@ void *resize(void** obj, size_t* cap, size_t esize) {
+ 	void *reloc = realloc(*obj, newSize);
+ 	if (reloc) {
+ 		*obj = reloc;
+-		*cap = newSize;
++		*cap = newSize / esize;
+ 	}
+ 	return reloc;
+ }
+@@ -344,9 +344,9 @@ int appendString(sCurStatus *curStatusPtr, const char *str, size_t strLen) {
+ 		strLen = strlen(str);
+ 	}
+ 	
+-	if (curStatusPtr->outLeft < strLen) {
++	if (curStatusPtr->outLeft < strLen + 1) {
+ 		char *oldOut = curStatusPtr->outputString;
+-		while (curStatusPtr->outLeft < strLen) {
++		while (curStatusPtr->outLeft < strLen + 1) {
+ 			if (curStatusPtr->outCap >= SIZE_THRESHOLD) {
+ 				curStatusPtr->outLeft += SIZE_THRESHOLD * sizeof(char);
+ 			} else {
+@@ -374,7 +374,8 @@ int appendString(sCurStatus *curStatusPtr, const char *str, size_t strLen) {
+ 		return 1;
+ 	})
+ 	
+-	strcpy(curStatusPtr->outputEnd, str);
++	memcpy(curStatusPtr->outputEnd, str, strLen);
++	curStatusPtr->outputEnd[strLen] = '\0';
+ 	curStatusPtr->outLen += strLen;
+ 	curStatusPtr->outLeft -= strLen;
+ 	curStatusPtr->outputEnd += strLen;
+diff --git a/src/gl/arbparser.c b/src/gl/arbparser.c
+index d43bc1b1..35cdaa4f 100644
+--- a/src/gl/arbparser.c
++++ b/src/gl/arbparser.c
+@@ -502,6 +502,7 @@ int resolveOutput(sCurStatus_NewVar *newVar, int vertex, struct sSpecialCases *s
+ 					// result.color.front => gl_FrontColor
+ 					pushArray((sArray*)&newVar->var->init, strdup("gl_FrontColor"));
+ 					newVar->var->init.strings_total_len = 13;
++					return 0;
+ 				}
+ 				
+ 				tok = popFIFO((sArray*)newVar);
+@@ -527,6 +528,7 @@ int resolveOutput(sCurStatus_NewVar *newVar, int vertex, struct sSpecialCases *s
+ 					// result.color.back => gl_BackColor
+ 					pushArray((sArray*)&newVar->var->init, strdup("gl_BackColor"));
+ 					newVar->var->init.strings_total_len = 12;
++					return 0;
+ 				}
+ 				
+ 				tok = popFIFO((sArray*)newVar);
+@@ -807,7 +809,7 @@ char **resolveParam(sCurStatus_NewVar *newVar, int vertex, int type) {
+ 						return NULL;
+ 					}
+ 					
+-					matrixNameMallocd = (char*)malloc((mtxNameLen + strlen(sln) + 8) * sizeof(char));
++					matrixNameMallocd = (char*)malloc((strlen(matrixName) + strlen(sln) + 18) * sizeof(char));
+ 					sprintf(matrixNameMallocd, "gl_LightSource[%s].%s", sln, matrixName);
+ 					free(sln);
+ 					char **r = (char**)calloc(2, sizeof(char*));
+diff --git a/src/gl/fpe.c b/src/gl/fpe.c
+index 3da18756..84bb54ca 100644
+--- a/src/gl/fpe.c
++++ b/src/gl/fpe.c
+@@ -2069,7 +2069,7 @@ int builtin_CheckUniform(program_t *glprogram, char* name, GLint id, int size) {
+         if(name[l+1]>='0' && name[l+1]<='9')
+             n = n*10 + name[l+1]-'0';
+         glprogram->has_vtx_progloc = 1;
+-        for (int i=0; i<n; ++i)
++        for (int i=0; i<n && i<MAX_VTX_PROG_LOC_PARAMS; ++i)
+             glprogram->vtx_progloc[i] = id+i;
+         return 1;
+     }
+@@ -2107,7 +2107,7 @@ int builtin_CheckUniform(program_t *glprogram, char* name, GLint id, int size) {
+         if(name[l+1]>='0' && name[l+1]<='9')
+             n = n*10 + name[l+1]-'0';
+         glprogram->has_frg_progloc = 1;
+-        for (int i=0; i<n; ++i)
++        for (int i=0; i<n && i<MAX_FRG_PROG_LOC_PARAMS; ++i)
+             glprogram->frg_progloc[i] = id+i;
+         return 1;
+     }
+diff --git a/src/gl/fpe_shader.c b/src/gl/fpe_shader.c
+index 542c0e35..f853fe93 100644
+--- a/src/gl/fpe_shader.c
++++ b/src/gl/fpe_shader.c
+@@ -1640,7 +1640,7 @@ const char* const* fpe_CustomVertexShader(const char* initial, fpe_state_t* stat
+     ShadAppend(initial);
+ 
+     int color = default_fragment?(strstr(initial, "_gl4es_Color")?0:1):0;   // need to add a simple color variant?
+-if(default_fragment) printf("fpe_CustomVertexShader(%p, %p, %d)\n%s\ncolor=%d\n", initial, state, default_fragment, initial, color);
++//if(default_fragment) printf("fpe_CustomVertexShader(%p, %p, %d)\n%s\ncolor=%d\n", initial, state, default_fragment, initial, color);
+     // add some uniform and varying
+     if(planes) {
+         for (int i=0; i<hardext.maxplanes; i++) {
+diff --git a/src/gl/framebuffers.c b/src/gl/framebuffers.c
+index 93194fcf..16cc88c6 100644
+--- a/src/gl/framebuffers.c
++++ b/src/gl/framebuffers.c
+@@ -1262,7 +1262,7 @@ void createMainFBO(int width, int height) {
+         gles_glGenRenderbuffers(1, &glstate->fbo.mainfbo_ste);
+     }
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.mainfbo_ste);
+-    gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, width, height);
++    gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
+     gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, 0);
+@@ -1273,7 +1273,7 @@ void createMainFBO(int width, int height) {
+     
+     // re-attach, even if not creating the fbo...
+     gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_ste);
+-    gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
++    gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_ste);
+     
+     gles_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glstate->fbo.mainfbo_tex, 0);
+ 
+diff --git a/src/gl/gl4es.c b/src/gl/gl4es.c
+index 674eaa5e..80dbdf41 100644
+--- a/src/gl/gl4es.c
++++ b/src/gl/gl4es.c
+@@ -461,7 +461,7 @@ void APIENTRY_GL4ES gl4es_glTexCoord4f(GLfloat s, GLfloat t, GLfloat r, GLfloat
+             gl4es_flush();
+         else {
+             // test if called between glBegin / glEnd but Texture is not active and not using a program. In that case, ignore the call
+-            if(hardext.esversion==1 || glstate->glsl->program || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[0])))
++            if(hardext.esversion==1 || glstate->glsl->program || glstate->enable.vertex_arb || glstate->enable.fragment_arb || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[0])))
+                 rlMultiTexCoord4f(glstate->list.active, GL_TEXTURE0, s, t, r, q);
+         }
+     }
+@@ -478,7 +478,7 @@ void APIENTRY_GL4ES gl4es_glMultiTexCoord4f(GLenum target, GLfloat s, GLfloat t,
+             gl4es_flush();
+         else {
+             // test if called between glBegin / glEnd but Texture is not active. In that case, ignore the call
+-            if(hardext.esversion==1 || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
++            if(hardext.esversion==1 || glstate->glsl->program || glstate->enable.vertex_arb || glstate->enable.fragment_arb || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
+                 rlMultiTexCoord4f(glstate->list.active, target, s, t, r, q);
+         }
+     }
+@@ -496,7 +496,7 @@ void APIENTRY_GL4ES gl4es_glMultiTexCoord2fv(GLenum target, GLfloat* v) {
+             gl4es_flush();
+         else {
+             // test if called between glBegin / glEnd but Texture is not active. In that case, ignore the call
+-            if(hardext.esversion==1 || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
++            if(hardext.esversion==1 || glstate->glsl->program || glstate->enable.vertex_arb || glstate->enable.fragment_arb || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
+                 rlMultiTexCoord2fv(glstate->list.active, target, v);
+         }
+     }
+@@ -514,7 +514,7 @@ void APIENTRY_GL4ES gl4es_glMultiTexCoord4fv(GLenum target, GLfloat* v) {
+             gl4es_flush();
+         else {
+             // test if called between glBegin / glEnd but Texture is not active. In that case, ignore the call
+-            if(hardext.esversion==1 || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
++            if(hardext.esversion==1 || glstate->glsl->program || glstate->enable.vertex_arb || glstate->enable.fragment_arb || (glstate->list.begin && (glstate->list.compiling || glstate->enable.texture[target-GL_TEXTURE0])))
+                 rlMultiTexCoord4fv(glstate->list.active, target, v);
+         }
+     }
+diff --git a/src/gl/oldprogram.c b/src/gl/oldprogram.c
+index 39aa58a8..2f74a3d7 100644
+--- a/src/gl/oldprogram.c
++++ b/src/gl/oldprogram.c
+@@ -62,7 +62,7 @@ void FreeOldProgramMap(glstate_t* glstate)
+ GLuint getUniqueProgramID(GLuint last) {
+     // avoid recycling prog id (that may messup FPE Cache)
+     static GLuint upper = 0;
+-    if(last>upper) last = upper;
++    if(last<upper) last = upper;
+     khint_t k;
+     do {
+         ++last;
+@@ -199,6 +199,7 @@ void APIENTRY_GL4ES gl4es_glProgramStringARB(GLenum target, GLenum format, GLsiz
+ }
+ 
+ void APIENTRY_GL4ES gl4es_glBindProgramARB(GLenum target, GLuint program) {
++    FLUSH_BEGINEND;
+     DBG(printf("glBindProgramARB(%s, %d)\n", PrintEnum(target), program);)
+     khint_t k;
+     oldprogram_t* old = NULL; 
+@@ -320,6 +321,7 @@ void APIENTRY_GL4ES gl4es_glGenProgramsARB(GLsizei n, GLuint *programs) {
+ }
+ 
+ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4dARB(GLenum target, GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramEnvParameter4dARB(%s, %u, %f, %f, %f, %f)\n", PrintEnum(target), index, x, y, z, w);)
+     float *f = NULL;
+     switch(target) {
+@@ -349,6 +351,7 @@ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4dARB(GLenum target, GLuint index
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4dvARB(GLenum target, GLuint index, const GLdouble *params) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramEnvParameter4dvARB(%s, %u, %p[%f/%f/%f/%f])\n", PrintEnum(target), index, params, params[0], params[1], params[2], params[3]);)
+     float *f = NULL;
+     switch(target) {
+@@ -377,6 +380,7 @@ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4dvARB(GLenum target, GLuint inde
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4fARB(GLenum target, GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramEnvParameter4fARB(%s, %u, %f, %f, %f, %f)\n", PrintEnum(target), index, x, y, z, w);)
+     float *f = NULL;
+     switch(target) {
+@@ -404,6 +408,7 @@ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4fARB(GLenum target, GLuint index
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4fvARB(GLenum target, GLuint index, const GLfloat *params)  {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramEnvParameter4fvARB(%s, %u, %p[%f/%f/%f/%f])\n", PrintEnum(target), index, params, params[0], params[1], params[2], params[3]);)
+     float *f = NULL;
+     switch(target) {
+@@ -428,6 +433,7 @@ void APIENTRY_GL4ES gl4es_glProgramEnvParameter4fvARB(GLenum target, GLuint inde
+ }
+ 
+ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4dARB(GLenum target, GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramLocalParameter4dARB(%s, %u, %f, %f, %f, %f)\n", PrintEnum(target), index, x, y, z, w);)
+     oldprogram_t *old = NULL;
+     switch(target) {
+@@ -456,6 +462,7 @@ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4dARB(GLenum target, GLuint ind
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4dvARB(GLenum target, GLuint index, const GLdouble *params) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramLocalParameter4dvARB(%s, %u, %p[%f/%f/%f/%f])\n", PrintEnum(target), index, params, params[0], params[1], params[2], params[3]);)
+     oldprogram_t *old = NULL;
+     switch(target) {
+@@ -484,6 +491,7 @@ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4dvARB(GLenum target, GLuint in
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4fARB(GLenum target, GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramLocalParameter4fARB(%s, %u, %f, %f, %f, %f)\n", PrintEnum(target), index, x, y, z, w);)
+     oldprogram_t *old = NULL;
+     switch(target) {
+@@ -512,6 +520,7 @@ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4fARB(GLenum target, GLuint ind
+         errorShim(GL_INVALID_VALUE);
+ }
+ void APIENTRY_GL4ES gl4es_glProgramLocalParameter4fvARB(GLenum target, GLuint index, const GLfloat *params) {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramLocalParameter4fvARB(%s, %u, %p[%f/%f/%f/%f])\n", PrintEnum(target), index, params, params[0], params[1], params[2], params[3]);)
+     oldprogram_t *old = NULL;
+     switch(target) {
+@@ -786,6 +795,7 @@ GLboolean APIENTRY_GL4ES gl4es_glIsProgramARB(GLuint program) {
+ 
+ void APIENTRY_GL4ES gl4es_glProgramEnvParameters4fvEXT(GLenum target, GLuint index, GLsizei count, const GLfloat *params)
+ {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramEnvParameters4fvEXT(%s, %u, %i, %p)\n", PrintEnum(target), index, count, params);)
+     float *f = NULL;
+     int nmax = 0;
+@@ -810,6 +820,7 @@ void APIENTRY_GL4ES gl4es_glProgramEnvParameters4fvEXT(GLenum target, GLuint ind
+ 
+ void APIENTRY_GL4ES gl4es_glProgramLocalParameters4fvEXT(GLenum target, GLuint index, GLsizei count, const GLfloat *params)
+ {
++    FLUSH_BEGINEND;
+     DBG(printf("glProgramLocalParameters4fvEXT(%s, %u, %i, %p)\n", PrintEnum(target), index, count, params);)
+     float *f = NULL;
+     oldprogram_t *old = NULL;
+diff --git a/src/gl/pixel.c b/src/gl/pixel.c
+index 34f00db6..1baa86e8 100644
+--- a/src/gl/pixel.c
++++ b/src/gl/pixel.c
+@@ -156,7 +156,7 @@ bool remap_pixel(const GLvoid *src, GLvoid *dst,
+         type_case(GL_BYTE, GLbyte, read_each(, / 128.0f,))
+         case GL_INT8_REV:
+         type_case(GL_UNSIGNED_BYTE, GLubyte, read_each(, / 255.0f,))
+-        type_case(GL_UNSIGNED_SHORT, GLubyte, read_each(, / 65535.0f,))
++        type_case(GL_UNSIGNED_SHORT, GLushort, read_each(, / 65535.0f,))
+         type_case(GL_INT8, GLubyte, read_each(max_a - , / 255.0f,))
+         type_case(GL_UNSIGNED_SHORT_5_6_5_REV, GLushort,
+             s = (const GLushort[]) {
+diff --git a/src/gl/texture.c b/src/gl/texture.c
+index c0d479a8..d284b498 100644
+--- a/src/gl/texture.c
++++ b/src/gl/texture.c
+@@ -1119,13 +1119,15 @@ void APIENTRY_GL4ES gl4es_glTexImage2D(GLenum target, GLint level, GLint interna
+             int imgWidth, pixelSize, dstWidth;
+             pixelSize = pixel_sizeof(format, type);
+             imgWidth = ((glstate->texture.unpack_row_length)? glstate->texture.unpack_row_length:width) * pixelSize;
+-            GLubyte *dst = (GLubyte *)malloc(width * height * pixelSize);
++            imgWidth = (imgWidth + glstate->texture.unpack_align - 1) / glstate->texture.unpack_align * glstate->texture.unpack_align;
++            dstWidth = (width * pixelSize + glstate->texture.unpack_align - 1) / glstate->texture.unpack_align * glstate->texture.unpack_align;
++            GLubyte *dst = (GLubyte *)malloc(dstWidth * height);
+             pixels = (GLvoid *)dst;
+-            dstWidth = width * pixelSize;
++            // dstWidth: aligned rows, see above
+             const GLubyte *src = (GLubyte *)datab;
+             src += glstate->texture.unpack_skip_pixels * pixelSize + glstate->texture.unpack_skip_rows * imgWidth;
+             for (int y = height; y; --y) {
+-                memcpy(dst, src, dstWidth);
++                memcpy(dst, src, width * pixelSize);
+                 src += imgWidth;
+                 dst += dstWidth;
+             }
+@@ -1586,13 +1588,15 @@ void APIENTRY_GL4ES gl4es_glTexSubImage2D(GLenum target, GLint level, GLint xoff
+         int imgWidth, pixelSize, dstWidth;
+         pixelSize = pixel_sizeof(format, type);
+         imgWidth = ((glstate->texture.unpack_row_length)? glstate->texture.unpack_row_length:width) * pixelSize;
+-        GLubyte *dst = (GLubyte *)malloc(width * height * pixelSize);
++        imgWidth = (imgWidth + glstate->texture.unpack_align - 1) / glstate->texture.unpack_align * glstate->texture.unpack_align;
++        dstWidth = (width * pixelSize + glstate->texture.unpack_align - 1) / glstate->texture.unpack_align * glstate->texture.unpack_align;
++        GLubyte *dst = (GLubyte *)malloc(dstWidth * height);
+         pixels = (GLvoid *)dst;
+-        dstWidth = width * pixelSize;
++        // dstWidth: aligned rows, see above
+         const GLubyte *src = (GLubyte *)datab;
+         src += glstate->texture.unpack_skip_pixels * pixelSize + glstate->texture.unpack_skip_rows * imgWidth;
+         for (int y = height; y; --y) {
+-            memcpy(dst, src, dstWidth);
++            memcpy(dst, src, width * pixelSize);
+             src += imgWidth;
+             dst += dstWidth;
+         }
+diff --git a/src/glx/glx.c b/src/glx/glx.c
+index 06dce281..8c00acbb 100644
+--- a/src/glx/glx.c
++++ b/src/glx/glx.c
+@@ -3024,6 +3024,7 @@ AliasExport(void,glXDestroyPixmap,,(Display *display, void *pixmap));
+ AliasExport(GLXContext,glXCreateContextAttribs,,(Display *dpy, GLXFBConfig config, GLXContext share_context, Bool direct, const int *attrib_list));
+ #endif
+ 
++#ifndef NOX11   /* ports: glxpass.c */
+ AliasExport(const char*,glXQueryExtensionsString,,(Display *display, int screen));
+ AliasExport(const char*,glXQueryServerString,,(Display *display, int screen, int name));
+ AliasExport(Bool,glXQueryExtension,,(Display *display, int *errorBase, int *eventBase));
+@@ -3037,3 +3038,4 @@ AliasExport(void,glXSwapInterval,SGI,(int interval));
+ AliasExport(void,glXWaitGL,,());
+ AliasExport(void,glXWaitX,,());
+ AliasExport(void,glXReleaseBuffersMESA,,());
++#endif
+diff --git a/src/glx/glxpass.c b/src/glx/glxpass.c
+new file mode 100755
+index 00000000..66714e04
+--- /dev/null
++++ b/src/glx/glxpass.c
+@@ -0,0 +1,55 @@
++// GLX pass-through for a gl4es built with NOX11: every glX* entry point forwards to crusty_glX*, which the
++// ports' glxsdl (GLX on the firmware's SDL2) provides. Same exports as Westonpack's gl4es_glxpass build
++// (40 glX functions, 39 forwarded; glXGetProcAddress goes through glXGetProcAddressARB like there).
++#include <X11/Xlib.h>
++#include <X11/Xutil.h>
++#include <GL/glx.h>
++
++#define EXPORT __attribute__((visibility("default")))
++#define FWD(ret, name, params, args) \
++    extern ret crusty_##name params; \
++    EXPORT ret name params { return crusty_##name args; }
++#define FWDV(name, params, args) \
++    extern void crusty_##name params; \
++    EXPORT void name params { crusty_##name args; }
++
++FWD(GLXFBConfig *, glXChooseFBConfig, (Display *d, int s, const int *a, int *n), (d, s, a, n))
++FWD(XVisualInfo *, glXChooseVisual, (Display *d, int s, int *a), (d, s, a))
++FWDV(glXCopyContext, (Display *d, GLXContext a, GLXContext b, unsigned long m), (d, a, b, m))
++FWD(GLXContext, glXCreateContext, (Display *d, XVisualInfo *v, GLXContext s, Bool r), (d, v, s, r))
++FWD(GLXPixmap, glXCreateGLXPixmap, (Display *d, XVisualInfo *v, Pixmap p), (d, v, p))
++FWD(GLXContext, glXCreateNewContext, (Display *d, GLXFBConfig c, int t, GLXContext s, Bool r), (d, c, t, s, r))
++FWD(GLXPbuffer, glXCreatePbuffer, (Display *d, GLXFBConfig c, const int *a), (d, c, a))
++FWD(GLXPixmap, glXCreatePixmap, (Display *d, GLXFBConfig c, Pixmap p, const int *a), (d, c, p, a))
++FWD(GLXWindow, glXCreateWindow, (Display *d, GLXFBConfig c, Window w, const int *a), (d, c, w, a))
++FWDV(glXDestroyContext, (Display *d, GLXContext c), (d, c))
++FWDV(glXDestroyGLXPixmap, (Display *d, GLXPixmap p), (d, p))
++FWDV(glXDestroyPbuffer, (Display *d, GLXPbuffer p), (d, p))
++FWDV(glXDestroyPixmap, (Display *d, GLXPixmap p), (d, p))
++FWDV(glXDestroyWindow, (Display *d, GLXWindow w), (d, w))
++FWD(const char *, glXGetClientString, (Display *d, int n), (d, n))
++FWD(int, glXGetConfig, (Display *d, XVisualInfo *v, int a, int *val), (d, v, a, val))
++FWD(GLXContext, glXGetCurrentContext, (void), ())
++FWD(Display *, glXGetCurrentDisplay, (void), ())
++FWD(GLXDrawable, glXGetCurrentDrawable, (void), ())
++FWD(GLXDrawable, glXGetCurrentReadDrawable, (void), ())
++FWD(int, glXGetFBConfigAttrib, (Display *d, GLXFBConfig c, int a, int *v), (d, c, a, v))
++FWD(GLXFBConfig *, glXGetFBConfigs, (Display *d, int s, int *n), (d, s, n))
++FWD(__GLXextFuncPtr, glXGetProcAddressARB, (const GLubyte *n), (n))
++FWDV(glXGetSelectedEvent, (Display *d, GLXDrawable w, unsigned long *m), (d, w, m))
++FWD(XVisualInfo *, glXGetVisualFromFBConfig, (Display *d, GLXFBConfig c), (d, c))
++FWD(Bool, glXIsDirect, (Display *d, GLXContext c), (d, c))
++FWD(Bool, glXMakeContextCurrent, (Display *d, GLXDrawable w, GLXDrawable r, GLXContext c), (d, w, r, c))
++FWD(Bool, glXMakeCurrent, (Display *d, GLXDrawable w, GLXContext c), (d, w, c))
++FWD(int, glXQueryContext, (Display *d, GLXContext c, int a, int *v), (d, c, a, v))
++FWDV(glXQueryDrawable, (Display *d, GLXDrawable w, int a, unsigned int *v), (d, w, a, v))
++FWD(Bool, glXQueryExtension, (Display *d, int *e, int *v), (d, e, v))
++FWD(const char *, glXQueryExtensionsString, (Display *d, int s), (d, s))
++FWD(const char *, glXQueryServerString, (Display *d, int s, int n), (d, s, n))
++FWD(Bool, glXQueryVersion, (Display *d, int *ma, int *mi), (d, ma, mi))
++FWDV(glXSelectEvent, (Display *d, GLXDrawable w, unsigned long m), (d, w, m))
++FWDV(glXSwapBuffers, (Display *d, GLXDrawable w), (d, w))
++FWDV(glXUseXFont, (Font f, int a, int b, int c), (f, a, b, c))
++FWDV(glXWaitGL, (void), ())
++FWDV(glXWaitX, (void), ())
++EXPORT __GLXextFuncPtr glXGetProcAddress(const GLubyte *n) { return glXGetProcAddressARB(n); }
+diff --git a/src/glx/lookup.c b/src/glx/lookup.c
+index e558439e..218bdc0b 100644
+--- a/src/glx/lookup.c
++++ b/src/glx/lookup.c
+@@ -75,6 +75,8 @@ void *gl4es_glXGetProcAddress(const char *name) {
+ #ifdef AMIGAOS4
+ //AliasExport(void*,aglGetProcAddress,,(const char* name));
+ #else
++#ifndef NOX11   /* ports: glxpass.c */
+ AliasExport(void*,glXGetProcAddress,,(const char* name));
+ AliasExport(void*,glXGetProcAddress,ARB,(const char* name));
++#endif
+ #endif
+\ No newline at end of file
