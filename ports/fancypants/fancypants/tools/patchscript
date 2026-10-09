@@ -1,0 +1,149 @@
+#!/bin/bash
+# First-run preparation for the Fancy Pants Adventures: Classic Pack port.
+#  1. checks the copied Steam files
+#  2. applies the Ruffle patches with xdelta3 (no Steam/AIR, local saves, 4:3 support,
+#     PNG texture loading). The originals are kept as *.orig, so this can safely run again.
+#  3. converts World 4's ATF textures to half-resolution PNGs (Ruffle/Mali can't use ATF/DXT)
+
+GAMEDIR="${GAMEDIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+DATADIR="$GAMEDIR/gamedata"
+PATCHDIR="$GAMEDIR/tools/patch"
+PREP="$GAMEDIR/tools/fpa-prep"
+XDELTA="${controlfolder:+$controlfolder/}xdelta3"
+[ -x "$XDELTA" ] || XDELTA="xdelta3"
+SCALE="0.5"   # must match the scale baked into FPAWorld4.xdelta
+
+exec > >(tee "$GAMEDIR/patchlog.txt") 2>&1
+echo "=== Fancy Pants Adventures: preparing game files $(date) ==="
+
+# PortMaster's patcher screen shows our output; these two lines make it report a failure
+fail() {
+  echo "ERROR: $*"
+  echo "PATCH_FAIL_MSG:Setup failed: $*"
+  echo "Patching process failed!"
+  exit 1
+}
+
+# progress shown on the patcher screen as "[step/total] ..."
+STEP=0
+TOTAL=5
+step() { STEP=$((STEP + 1)); echo "[$STEP/$TOTAL] $*"; }
+
+check_md5() { # file expected
+  [ -f "$1" ] || fail "missing $1. Copy the whole Classic Pack folder into ports/fancypants/gamedata/"
+  local sum
+  sum=$(md5sum "$1" | awk '{print $1}')
+  [ "$sum" = "$2" ] || fail "$1 has an unexpected checksum ($sum). Only the Steam Classic Pack release is supported."
+}
+
+# patch_swf <original> <md5> <xdelta> <output>
+# The patches are made against the uncompressed SWF, so inflate it first.
+patch_swf() {
+  check_md5 "$1" "$2"
+  step "Patching ${1%.orig}"
+  "$PREP" inflate "$1" "$4.tmp" || fail "could not decompress $1"
+  "$XDELTA" -d -f -s "$4.tmp" "$PATCHDIR/$3" "$4.new" || fail "xdelta3 failed on $1"
+  rm -f "$4.tmp"
+  mv -f "$4.new" "$4"
+}
+
+cd "$DATADIR" || fail "gamedata folder not found"
+
+for d in World1 World2 World3 World4/Levels World4/assets; do
+  [ -d "$d" ] || fail "missing folder $d. Copy the whole Classic Pack folder into ports/fancypants/gamedata/"
+done
+
+# World 4's files as tools/patch/world4_files.txt lists them: the level SWFs here, the atlas XMLs
+# once their kept originals are sorted out, and a texture only when its PNG has to be made (the
+# game loads the PNGs, so a texture deleted after the conversion does not matter)
+while read -r sum f; do
+  case $f in *.swf) check_md5 "$f" "$sum" ;; esac
+done < "$PATCHDIR/world4_files.txt"
+
+# World 4 textures still to convert: all of them the first time, later only a PNG gone missing
+# (fpa-prep writes each PNG under a temporary name, so one that exists is complete). The embedded
+# atlases come out of FPAWorld4.swf as these two images.
+EMBEDDED_PNGS="World4/assets/_embedded/StarlingAssetAtlas.png World4/assets/_embedded/StarlingAssetAtlas_n.png"
+converted=0
+[ -f World4/assets/.textures_converted ] && converted=1
+todo_atf=()
+while read -r sum f; do
+  case $f in *.atf) ;; *) continue ;; esac
+  [ "$converted" = 1 ] && [ -f "${f%.atf}.png" ] && continue
+  check_md5 "$f" "$sum"
+  todo_atf+=("$f")
+done < "$PATCHDIR/world4_files.txt"
+todo_embedded=0
+for png in $EMBEDDED_PNGS; do
+  [ "$converted" = 1 ] && [ -f "$png" ] || todo_embedded=1
+done
+TOTAL=$((TOTAL + todo_embedded + ${#todo_atf[@]}))
+
+# 1+2: the shell becomes ClassicPack-port.swf, the worlds are patched in place (original kept as .orig)
+patch_swf ClassicPack.swf 499ece31db0c8158f1749b51a87f318c ClassicPack.xdelta ClassicPack-port.swf
+while read -r n sum; do
+  f="World$n/FPAWorld$n.swf"
+  # Steam's files are compressed SWFs ("CWS"), the patched ones are not ("FWS"): a compressed
+  # file here is a fresh copy of the game, which replaces the kept original
+  if [ ! -f "$f.orig" ] || [ "$(head -c 3 "$f" 2>/dev/null)" = "CWS" ]; then
+    check_md5 "$f" "$sum"
+    mv -f "$f" "$f.orig"
+  fi
+  patch_swf "$f.orig" "$sum" "FPAWorld$n.xdelta" "$f"
+done <<EOF
+1 ed23ca34bb477fda2c63683004301709
+2 11288816abe8507da4afb25252939e30
+3 a7e6976dbe405908482e162d910d7f5e
+4 668885cc8a645f3e56ba21821369f4d8
+EOF
+
+# World 3 loads "OtherStuff/..." relative to the root movie in Ruffle (AIR resolved it next to
+# FPAWorld3.swf), so move that folder to where Ruffle looks
+# (a fresh copy of the game brings it back, and replaces the one moved before)
+if [ -d World3/OtherStuff ]; then
+  echo "Moving World3/OtherStuff..."
+  rm -rf OtherStuff && mv World3/OtherStuff OtherStuff || fail "could not move World3/OtherStuff"
+fi
+
+# Level atlas XMLs are in pixels of the original textures; scale them to the converted ones
+# (always from the untouched .orig copy)
+# (always from the untouched .orig copy; a file that is neither the kept original nor its scaled
+# version is a fresh copy of the game and becomes the original)
+for xml in World4/assets/*/*.xml; do
+  [ -f "$xml" ] || continue
+  if [ -f "$xml.orig" ] && ! cmp -s "$xml" "$xml.orig"; then
+    "$PREP" atlasxml "$SCALE" "$xml.orig" "$xml.tmp" || fail "could not scale $xml"
+    cmp -s "$xml" "$xml.tmp" || rm -f "$xml.orig"
+    rm -f "$xml.tmp"
+  fi
+  if [ ! -f "$xml.orig" ]; then
+    cp "$xml" "$xml.tmp" && mv -f "$xml.tmp" "$xml.orig" || fail "could not back up $xml"
+  fi
+  "$PREP" atlasxml "$SCALE" "$xml.orig" "$xml" || fail "could not scale $xml"
+done
+while read -r sum f; do
+  case $f in *.xml) check_md5 "$f.orig" "$sum" ;; esac
+done < "$PATCHDIR/world4_files.txt"
+
+# 3: textures (they don't change between port versions)
+if [ "$todo_embedded" = 1 ]; then
+  step "Converting World 4 textures: embedded atlases"
+  "$PREP" swf "$SCALE" World4/assets/_embedded World4/FPAWorld4.swf.orig > /dev/null || fail "texture conversion failed (embedded atlases)"
+  for png in $EMBEDDED_PNGS; do
+    [ -f "$png" ] || fail "texture conversion did not produce $png"
+  done
+fi
+for atf in "${todo_atf[@]}"; do
+  dir=$(dirname "$atf")
+  step "Converting World 4 textures: $(basename "$dir")/$(basename "$atf" .atf)"
+  "$PREP" atf "$SCALE" "$dir" "$atf" > /dev/null || fail "texture conversion failed: $atf"
+  [ -f "${atf%.atf}.png" ] || fail "texture conversion did not produce ${atf%.atf}.png"
+done
+touch World4/assets/.textures_converted
+
+# Windows/AIR/Steam runtime files are not used by the port
+rm -rf "Adobe AIR" META-INF ./*.exe ./*.dll mimetype 2>/dev/null
+
+cat "$PATCHDIR/version" > .port_patched
+echo "=== Done. Enjoy! ==="
+exit 0
