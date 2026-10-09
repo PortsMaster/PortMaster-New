@@ -36,7 +36,6 @@ The prequel is available [free on Portmaster](https://portmaster.games/detail.ht
 |--|--| 
 |A / L1|Action|
 |B / R1|Revert|
-|X / Start|Party Menu|
-|Y|Field Menu|
+|Start|Party Menu|
 
 
