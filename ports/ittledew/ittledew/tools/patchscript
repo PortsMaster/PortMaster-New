@@ -1,0 +1,160 @@
+#!/bin/bash
+GAMEFILES="$GAMEDIR/gamedata"
+DATADIR="$GAMEFILES/IttleDew_Data"
+EXE="IttleDew.x86_64"
+U4S="$GAMEDIR/tools/unity4shrink"
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+echo "=== $(date) Ittle Dew setup ==="
+
+fail() {
+  echo "PATCH_FAIL_MSG:$1"
+  echo "Patching process failed!"
+  exit 1
+}
+
+INSTALLER=$(ls "$GAMEFILES"/gog_ittle_dew_*.sh 2>/dev/null | head -1)
+if [ ! -f "$GAMEFILES/$EXE" ] && [ -n "$INSTALLER" ]; then
+  echo "Unpacking $(basename "$INSTALLER")..."
+  SRC="$GAMEFILES/.unpack/data/noarch/game"
+  "$controlfolder/7zzs.$DEVICE_ARCH" x -tzip -aoa "$INSTALLER" "data/noarch/game/*" -o"$GAMEFILES/.unpack" >/dev/null
+  [ -d "$SRC/IttleDew_Data" ] && mv "$SRC/$EXE" "$SRC/IttleDew_Data" "$GAMEFILES/" || { rm -rf "$GAMEFILES/.unpack"; fail "Could not unpack the installer (see patchlog.txt)."; }
+  rm -rf "$GAMEFILES/.unpack" "$INSTALLER"
+  echo "Installer unpacked and removed."
+fi
+
+# GOG Mac installer (.dmg, 7-Zip reads it): keep the game's app from inside GOG's wrapper app
+DMG=$(ls "$GAMEFILES"/ittle_dew_*.dmg 2>/dev/null | head -1)
+if [ ! -f "$GAMEFILES/$EXE" ] && [ -n "$DMG" ]; then
+  echo "Unpacking $(basename "$DMG")..."
+  A="Ittle Dew/Ittle Dew.app/Contents/Resources/game/IttleDew.app"
+  "$controlfolder/7zzs.$DEVICE_ARCH" x -aoa "$DMG" "$A/*" -o"$GAMEFILES/.unpack" >/dev/null
+  [ -d "$GAMEFILES/.unpack/$A" ] && mv "$GAMEFILES/.unpack/$A" "$GAMEFILES/" || { rm -rf "$GAMEFILES/.unpack"; fail "Could not unpack the .dmg (see patchlog.txt)."; }
+  rm -rf "$GAMEFILES/.unpack" "$DMG"
+fi
+# GOG Windows installer (Inno Setup): innoextract unpacks its game folder (app/)
+EXEI=$(ls "$GAMEFILES"/setup_ittle_dew_*.exe 2>/dev/null | head -1)
+if [ ! -d "$DATADIR" ] && [ -n "$EXEI" ]; then
+  echo "Unpacking $(basename "$EXEI")..."
+  chmod +x "$GAMEDIR/tools/innoextract"
+  "$GAMEDIR/tools/innoextract" -s -g -I app -d "$GAMEFILES/.unpack" "$EXEI" \
+    && [ -d "$GAMEFILES/.unpack/app/IttleDew_Data" ] && mv "$GAMEFILES/.unpack/app"/* "$GAMEFILES/" \
+    || { rm -rf "$GAMEFILES/.unpack"; fail "Could not unpack the installer (see patchlog.txt)."; }
+  rm -rf "$GAMEFILES/.unpack" "$EXEI"
+fi
+
+# Windows (Steam: dew.exe + dew_Data, GOG: IttleDew.exe + IttleDew_Data), also inside the game's folder: Linux names
+for W in "$GAMEFILES"/dew_Data "$GAMEFILES"/*/dew_Data "$GAMEFILES"/*/IttleDew_Data; do
+  [ ! -f "$GAMEFILES/$EXE" ] && [ -f "$W/mainData" ] && [ -f "${W%_Data}.exe" ] || continue
+  [ "${W%/*}" != "$GAMEFILES" ] && { mv "${W%/*}"/* "$GAMEFILES/" && rm -rf "${W%/*}" || fail "Could not move the game's folder (see patchlog.txt)."; }
+  [ -d "$GAMEFILES/dew_Data" ] && { mv "$GAMEFILES/dew_Data" "$DATADIR" && mv "$GAMEFILES/dew.exe" "$GAMEFILES/IttleDew.exe" || fail "Could not rename dew_Data (see patchlog.txt)."; }
+  break
+done
+# Mac (IttleDew.app, also inside the game's folder): keep only its data folder
+MACAPP=$(ls -d "$GAMEFILES"/IttleDew.app "$GAMEFILES"/*/IttleDew.app 2>/dev/null | head -1)
+if [ ! -f "$GAMEFILES/$EXE" ] && [ -f "$MACAPP/Contents/Data/mainData" ]; then
+  mv "$MACAPP/Contents/Data" "$DATADIR" && rm -rf "$MACAPP" || fail "Could not move IttleDew.app's data (see patchlog.txt)."
+  [ "${MACAPP%/*}" != "$GAMEFILES" ] && rm -rf "${MACAPP%/*}"
+  MAC=1
+fi
+
+xd() { "$controlfolder/xdelta3" -d -f -s "$1" "$GAMEDIR/tools/patch/$2" "$1.new" && mv -f "$1.new" "$1" || { rm -f "$1.new"; fail "Patching ${1##*/} ($V) failed (see patchlog.txt)."; }; }
+
+# Korean as a 16th language next to Japanese: the translation provided by MrGiKILL, its flag, and Droid Sans Fallback
+# as the Japanese/Korean font; tools/patch/korean.7z holds korean-<version>.xdelta for each version's sharedassets0.assets
+korean() {
+  K="$GAMEDIR/tools/patch/korean.7z"
+  [ -f "$K" ] || return 0
+  rm -rf "$GAMEFILES/.korean"
+  "$controlfolder/7zzs.$DEVICE_ARCH" x -aoa "$K" "korean-$1.xdelta" -o"$GAMEFILES/.korean" >/dev/null
+  F="$DATADIR/sharedassets0.assets"
+  "$controlfolder/xdelta3" -d -f -s "$F" "$GAMEFILES/.korean/korean-$1.xdelta" "$F.new" && mv -f "$F.new" "$F" \
+    || { rm -rf "$F.new" "$GAMEFILES/.korean"; fail "Adding Korean failed (see patchlog.txt)."; }
+  rm -rf "$GAMEFILES/.korean"
+  echo "Korean added to the game's languages."
+}
+
+if [ -f "$GAMEFILES/$EXE" ]; then
+  # GOG Linux (Unity 4.7.1, 64-bit): runs on its own player, the donor is not needed
+  rm -rf "$DATADIR/Plugins/x86_64/ScreenSelector.so" "$DATADIR/Plugins/x86" "$DATADIR/Mono/x86" "$GAMEFILES/IttleDew.x86"
+  V="GOG Linux"
+  echo "$V version. Removed the resolution dialog and 32-bit files."
+
+  # player: VRAM floor 64 -> 128 MB (striped portraits); mainData: d-pad on Linux's Xbox axes; level3: lighting effect
+  # through a render texture instead of a screen copy; Assembly-CSharp: world at the screen's size; resources: tile
+  # UVs 1 texel inside their edges (PowerVR showed seams)
+  xd "$GAMEFILES/$EXE" player.xdelta
+  xd "$DATADIR/mainData" mainData.xdelta
+  xd "$DATADIR/level3" level3.xdelta
+  xd "$DATADIR/Managed/Assembly-CSharp.dll" Assembly-CSharp.xdelta
+  xd "$DATADIR/resources.assets" resources.xdelta
+  echo "Game files patched."
+  korean gog
+
+  # the render texture's size = the 16:9 area the game gets (as XSTUB_SCREEN in the launcher)
+  put_bytes() { printf "$(echo $3 | sed 's/../\\x&/g')" | dd of="$1" bs=1 seek=$2 conv=notrunc status=none; }
+  le() { printf %08x $1 | sed 's/\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/'; }
+  RW=$DISPLAY_WIDTH; RH=$((RW * 9 / 16)); [ $RH -gt $DISPLAY_HEIGHT ] && RH=$DISPLAY_HEIGHT && RW=$((RH * 16 / 9))
+  put_bytes "$DATADIR/level3" 116728 $(le $RW)$(le $RH)
+  echo "World render texture: ${RW}x${RH}."
+
+elif [ -f "$DATADIR/mainData" ] && { [ -f "$GAMEFILES/IttleDew.x86" ] || [ -f "$GAMEFILES/IttleDew.exe" ] || [ -n "$MAC" ]; }; then
+  # Steam (Unity 4.3.4: Linux 32-bit, Windows, Mac) or GOG Windows/Mac (4.7.1): the data moves onto the donor's Unity
+  # 4.7.2 64-bit player; each build has its own patches in tools/patch/<steam|gog>[-windows|-mac]
+  case "$(head -c 64 "$DATADIR/mainData" | tr -c '[:print:]' ' ')" in *4.7.1f1*) S=GOG; P=gog;; *) S=Steam; P=steam;; esac
+  if [ -n "$MAC" ]; then V="$S Mac"; PD=$P-mac
+  elif [ -f "$GAMEFILES/IttleDew.exe" ]; then V="$S Windows"; PD=$P-windows
+  else V="$S Linux"; PD=$P; fi
+  [ -d "$GAMEDIR/tools/patch/$PD" ] || fail "$V files are not supported (see README)."
+  echo "$V version."
+  # local save files instead of Steam, world at the screen's size, d-pad axes, tile UVs (as for GOG)
+  xd "$DATADIR/Managed/Assembly-CSharp.dll" $PD/Assembly-CSharp.xdelta
+  xd "$DATADIR/mainData" $PD/mainData.xdelta
+  xd "$DATADIR/resources.assets" $PD/resources.xdelta
+  echo "Game files patched."
+  korean $PD
+  [ -f "$GAMEDIR/donor.7z" ] || fail "donor.7z is missing: reinstall the port."
+  "$controlfolder/7zzs.$DEVICE_ARCH" x -aoa "$GAMEDIR/donor.7z" -o"$GAMEDIR/donor" >/dev/null \
+    || { rm -rf "$GAMEDIR/donor"; fail "Unpacking donor.7z failed (see patchlog.txt)."; }
+  BINARY=$EXE TOOLS="$GAMEDIR/tools"
+  source "$TOOLS/donor"
+  # the donor player's joystick reader back on (the game reads gptokeyb2's virtual pad)
+  xd "$GAMEFILES/$EXE" steam/player.xdelta
+  rm -rf "$GAMEDIR/donor" "$GAMEFILES"/libsteam_api.so "$GAMEFILES"/libSteamworksNative.so "$DATADIR/output_log.txt" \
+    "$GAMEFILES"/goggame-* "$GAMEFILES"/webcache.zip
+  echo "Removed the unpacked donor and the store's leftover files."
+
+else
+  fail "No GOG or Steam game files in ports/ittledew/gamedata (see README)."
+fi
+
+# Textures: LowRam (under 1.5 GB) halves the large ones, HighRam keeps full size with mipmaps; then DXT5 -> ASTC 4x4
+# under the DXT5 label, which glxsdl uploads as ASTC (dxt5_astc in glxsdl.ini)
+chmod +x "$U4S"
+TEX=HighRam; [ "$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)" -lt 1572864 ] && TEX=LowRam
+if [ $TEX = LowRam ]; then
+  echo "Textures: LowRam (less than 1.5 GB of RAM): half size"
+  "$U4S" -q -l 1 "$DATADIR"/sharedassets*.assets || fail "Shrinking the textures failed (see patchlog.txt)."
+  touch "$GAMEFILES/.shrink_done"
+  MIPS=
+else
+  echo "Textures: HighRam: full size with mipmaps"
+  MIPS=-M
+fi
+echo "Re-encoding the textures as ASTC..."
+"$U4S" -q -a $MIPS "$DATADIR"/sharedassets*.assets "$DATADIR/resources.assets" || fail "Re-encoding the textures failed (see patchlog.txt)."
+echo "Textures done."
+
+# Unity's one-time hardware statistics run lsb_release in a forked copy of the game (3-5 s on the first launch);
+# this setting tells Unity they are done
+mkdir -p "$GAMEDIR/conf/.config/unity3d"
+[ -f "$GAMEDIR/conf/.config/unity3d/global.prefs" ] || printf '<unity_prefs version_major="1" version_minor="1">\n\t<pref name="StandaloneStatsDone" type="string">eWVz</pref>\n</unity_prefs>\n' > "$GAMEDIR/conf/.config/unity3d/global.prefs"
+
+# set up: what only setup needed goes (a new setup needs the port reinstalled through PortMaster)
+rm -rf "$GAMEDIR/tools/patch" "$GAMEDIR/donor.7z" "$U4S" "$GAMEDIR/tools/unity4convert" "$GAMEDIR/tools/innoextract" \
+  "$GAMEDIR/tools/donor" "$DATADIR/ScreenSelector.png" "$GAMEFILES/PUT_GAME_FILES_HERE.txt"
+echo "Removed the setup tools and patch files."
+
+sync
+touch "$GAMEFILES/.patched_complete"
+echo "Setup finished."
