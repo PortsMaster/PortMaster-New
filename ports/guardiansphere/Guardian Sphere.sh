@@ -47,15 +47,6 @@ if [ ! -f "./$pck_filename" ] && [ -f "./Guardian Sphere Linux.pck" ]; then
   fi
 fi
 
-# check for rocknix running libmali driver
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-  if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-  fi
-fi
-
 # setup godot
 godot_dir="$HOME/godot"
 godot_file="$controlfolder/libs/${runtime}.squashfs"

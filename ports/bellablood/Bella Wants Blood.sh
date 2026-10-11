@@ -29,14 +29,6 @@ gptk_filename="controls.ini"
 CONFDIR="$GAMEDIR/conf/"
 $ESUDO mkdir -p "${CONFDIR}"
 
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-    fi
-fi
-
 # Apply a patch to fix controls
   if [ -f "$GAMEDIR/gamedata/BellaWantsBlood.pck" ]; then
      echo "Applying patch, please wait."
