@@ -22,15 +22,6 @@ godot_executable="godot422.$DEVICE_ARCH"
 pck_filename="SFT.pck"
 gptk_filename="SFT.gptk"
 
-# Check for ROCKNIX running with libMali driver.
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-    fi
-fi
-
 # Logging
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 

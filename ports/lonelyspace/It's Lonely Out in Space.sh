@@ -20,14 +20,6 @@ get_controls
 GAMEDIR=/$directory/ports/lonelyspace/
 CONFDIR="$GAMEDIR/conf/"
 
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-    fi
-fi
-
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 # Ensure the conf directory exists
 mkdir -p "$GAMEDIR/conf"

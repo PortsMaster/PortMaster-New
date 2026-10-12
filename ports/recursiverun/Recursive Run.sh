@@ -62,16 +62,6 @@ if [[ "$PM_CAN_MOUNT" != "N" ]]; then
 fi
 $ESUDO mount "$controlfolder/libs/${godot_runtime}.squashfs" "${godot_dir}"
 
-
-# Check for ROCKNIX running with libMali driver.
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-    if ! glxinfo | grep "OpenGL version string"; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-    fi
-fi
-
 #export USE_GPTK=1
 
 cd $GAMEDIR

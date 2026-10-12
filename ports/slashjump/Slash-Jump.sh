@@ -72,16 +72,6 @@ if [ ! -f "./$pck_filename" ] && [ -f "./SlashJump.pck" ]; then
   fi
 fi
 
-# check for rocknix ...
-if [[ "$CFW_NAME" = "ROCKNIX" ]]; then
-  # display message and exit if libmali
-  if ! glxinfo | grep "OpenGL version string" >/dev/null; then
-    pm_message "This Port does not support the libMali graphics driver. Switch to Panfrost to continue."
-    sleep 5
-    exit 1
-  fi
-fi
-
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
 # start westonpack and godot
 # put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
