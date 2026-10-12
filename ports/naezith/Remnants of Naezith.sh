@@ -24,7 +24,6 @@ BINARY="naezith"
 
 cd "$GAMEDIR"
 
-# tee gets a relative path: gptokeyb's exit hotkey runs pkill -f naezith, which matches every
 # command line containing the word, and a tee writing to .../naezith/log.txt died with the game,
 # ending the log and then the launcher (AmberELEC reports that exit as an error)
 > "$GAMEDIR/log.txt" && exec > >(tee log.txt) 2>&1
