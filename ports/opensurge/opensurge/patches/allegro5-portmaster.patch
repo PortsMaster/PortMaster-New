@@ -1,0 +1,31 @@
+diff --git a/addons/audio/sdl_audio.c b/addons/audio/sdl_audio.c
+index 7773242..f97062c 100644
+--- a/addons/audio/sdl_audio.c
++++ b/addons/audio/sdl_audio.c
+@@ -76,8 +76,10 @@ static int sdl_allocate_voice(ALLEGRO_VOICE *voice)
+    want.freq = voice->frequency;
+    want.format = allegro_format_to_sdl(voice->depth);
+    want.channels = al_get_channel_count(voice->chan_conf);
+-   // TODO: Should make this configurable somehow
+    want.samples = 4096;
++   const char *buffer_size = al_get_config_value(al_get_system_config(), "sdl", "buffer_size");
++   if (buffer_size && atoi(buffer_size) > 0)
++      want.samples = atoi(buffer_size);
+    want.callback = audio_callback;
+    want.userdata = sv;
+ 
+diff --git a/src/sdl/sdl_display.c b/src/sdl/sdl_display.c
+index db3c51f..718970b 100644
+--- a/src/sdl/sdl_display.c
++++ b/src/sdl/sdl_display.c
+@@ -407,6 +407,10 @@ static bool sdl_acknowledge_resize(ALLEGRO_DISPLAY *display)
+    ALLEGRO_DISPLAY_SDL *sdl = (void *)display;
+    SDL_GL_GetDrawableSize(sdl->window, &display->w, &display->h);
+ 
++   /* recreate_textures() restores bitmaps from their memory copies, which are
++    * only refreshed on flip; bring them up to date first */
++   al_backup_dirty_bitmaps(display);
++
+    _al_ogl_setup_gl(display);
+ 
+    if (display->flags & ALLEGRO_PROGRAMMABLE_PIPELINE) {

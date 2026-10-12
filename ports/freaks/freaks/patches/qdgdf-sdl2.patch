@@ -1,0 +1,792 @@
+diff -ruN -x '*.o' -x '*.a' -x Makefile -x config.h -x config.cflags -x config.ldflags -x makefile.opts -x .config.log -x '.tmp*' -x qdgdf_i -x filp_i -x test fr2002-orig/qdgdf/config.sh fr2002-19.10.29/qdgdf/config.sh
+--- fr2002-orig/qdgdf/config.sh	2026-09-22 12:14:44.000000000 +0000
++++ fr2002-19.10.29/qdgdf/config.sh	2026-10-07 05:42:48.462648072 +0000
+@@ -36,6 +36,7 @@
+                         ;;
+ 
+     --without-opengl)   WITHOUT_OPENGL=1 ;;
++    --with-sdl2)        WITH_SDL2=1 ;;
+     --prefix)           PREFIX=$2 ; shift ;;
+     --prefix=*)         PREFIX=`echo $1 | sed -e 's/--prefix=//'` ;;
+     esac
+@@ -48,6 +49,7 @@
+     echo "Available options:"
+     echo "--prefix=PREFIX       Installation prefix ($PREFIX)."
+     echo "--without-opengl      Disable OpenGL detection."
++    echo "--with-sdl2           Use only the SDL2 video and audio drivers."
+     echo "--mingw32             Build using the mingw32 compiler."
+ 
+     echo
+@@ -118,6 +120,32 @@
+ 
+ # configuration directives
+ 
++# test for SDL2
++if [ "$WITH_SDL2" = "1" ] ; then
++    echo -n "Testing for SDL2..."
++    echo "#include <SDL.h>" > .tmp.c
++    echo "int main(int argc, char *argv[]) { SDL_Init(0); return 0; }" >> .tmp.c
++
++    TMP_CFLAGS="`pkg-config --cflags sdl2`"
++    TMP_LDFLAGS="`pkg-config --libs sdl2` -lm"
++    $CC $TMP_CFLAGS .tmp.c $TMP_LDFLAGS -o .tmp.o 2> .config.log
++    if [ $? = 0 ] ; then
++        echo "#define CONFOPT_SDL2 1" >> config.h
++        echo $TMP_CFLAGS >> config.cflags
++        echo $TMP_LDFLAGS >> config.ldflags
++        echo "OK"
++        VIDEO_DRIVERS="sdl2v"
++        VIDEO_DRV_OBJS="qdgdf_video_sdl2.o"
++        AUDIO_DRIVERS="sdl2a"
++        AUDIO_DRV_OBJS="qdgdf_audio_sdl2.o"
++    else
++        echo "No"
++        exit 1
++    fi
++fi
++
++if [ "$WITH_SDL2" != "1" ] ; then
++
+ # test for x11
+ echo -n "Testing for X11..."
+ echo "#include <stdio.h>" > .tmp.c
+@@ -196,6 +224,8 @@
+     echo "No"
+ fi
+ 
++fi
++
+ # test for win32
+ echo -n "Testing for win32... "
+ echo "#include <windows.h>" > .tmp.c
+diff -ruN -x '*.o' -x '*.a' -x Makefile -x config.h -x config.cflags -x config.ldflags -x makefile.opts -x .config.log -x '.tmp*' -x qdgdf_i -x filp_i -x test fr2002-orig/qdgdf/qdgdf_audio_sdl2.c fr2002-19.10.29/qdgdf/qdgdf_audio_sdl2.c
+--- fr2002-orig/qdgdf/qdgdf_audio_sdl2.c	1970-01-01 00:00:00.000000000 +0000
++++ fr2002-19.10.29/qdgdf/qdgdf_audio_sdl2.c	2026-10-07 05:42:48.536996162 +0000
+@@ -0,0 +1,390 @@
++/*
++
++    Quick and Dirty Game Development Framework (QDGDF)
++
++    Angel Ortega <angel@triptico.com> et al.
++
++    This software is released into the public domain.
++    NO WARRANTY. See file LICENSE for details.
++
++*/
++
++/* SDL2 audio driver */
++
++#include "config.h"
++#include <stdio.h>
++#include "qdgdf_audio.h"
++
++#ifdef CONFOPT_SDL2
++
++#include <string.h>
++#include <stdlib.h>
++
++#include <SDL.h>
++
++/** data **/
++
++#define MIX_FREQUENCY       11025
++#define MIX_SAMPLES         512
++
++#define MAX_ORIGINAL_SOUNDS 64
++#define MAX_RESPAWN_SOUNDS  16
++#define MAX_SOUNDS          (MAX_ORIGINAL_SOUNDS + MAX_RESPAWN_SOUNDS)
++
++struct sound {
++    Sint16 *data;               /* stereo frames, MIX_FREQUENCY */
++    int frames;                 /* number of frames */
++    int offset;                 /* current playing frame */
++    int playing;                /* playing flag (0=off,1=on,2=loop) */
++    int pan;                    /* 1, 0, -1 */
++    int att;                    /* 63, full; 0, none */
++    int duped;                  /* sound-is-a-duplicate flag */
++};
++
++static struct sound _sounds[MAX_SOUNDS];
++
++static SDL_AudioDeviceID _audio_dev = 0;
++
++/* sequential sound handle */
++static int _program_seq = -1;
++
++
++/** code **/
++
++static void _audio_callback(void *userdata, Uint8 *stream, int len)
++{
++    Sint16 *out = (Sint16 *) stream;
++    int frames = len / (2 * sizeof(Sint16));
++    int n, m;
++
++    for (n = 0; n < frames; n++) {
++        int ls = 0, rs = 0;
++
++        for (m = 0; m < MAX_SOUNDS; m++) {
++            struct sound *ss = &_sounds[m];
++
++            if (ss->data && ss->playing) {
++                Sint16 *s = &ss->data[ss->offset * 2];
++
++                if (ss->pan != 1)
++                    ls += (s[0] * ss->att) / 63;
++                if (ss->pan != -1)
++                    rs += (s[1] * ss->att) / 63;
++
++                if (++ss->offset >= ss->frames) {
++                    ss->offset = 0;
++
++                    /* if not in loop, stop */
++                    if (ss->playing == 1)
++                        ss->playing = 0;
++                }
++            }
++        }
++
++        if (ls < -32768)
++            ls = -32768;
++        if (ls > 32767)
++            ls = 32767;
++        if (rs < -32768)
++            rs = -32768;
++        if (rs > 32767)
++            rs = 32767;
++
++        out[n * 2] = (Sint16) ls;
++        out[n * 2 + 1] = (Sint16) rs;
++    }
++}
++
++
++static Sint16 *_load_wav_frames(char *wavfile, int *frames)
++/* loads a .wav into memory, converted to the mixing format */
++{
++    FILE *f;
++    long size;
++    unsigned char *file_data;
++    SDL_AudioSpec spec;
++    Uint8 *wav_data;
++    Uint32 wav_len;
++    SDL_AudioCVT cvt;
++    Sint16 *ret = NULL;
++
++    if ((f = _qdgdfa_fopen(wavfile, "rb")) == NULL)
++        return NULL;
++
++    fseek(f, 0, SEEK_END);
++    size = ftell(f);
++    fseek(f, 0, SEEK_SET);
++
++    file_data = malloc(size);
++
++    if (file_data == NULL || fread(file_data, 1, size, f) != (size_t) size) {
++        free(file_data);
++        fclose(f);
++        return NULL;
++    }
++
++    fclose(f);
++
++    if (SDL_LoadWAV_RW(SDL_RWFromConstMem(file_data, size), 1,
++                       &spec, &wav_data, &wav_len) == NULL) {
++        free(file_data);
++        return NULL;
++    }
++
++    free(file_data);
++
++    if (SDL_BuildAudioCVT(&cvt, spec.format, spec.channels, spec.freq,
++                          AUDIO_S16SYS, 2, MIX_FREQUENCY) < 0) {
++        SDL_FreeWAV(wav_data);
++        return NULL;
++    }
++
++    cvt.len = wav_len;
++    cvt.buf = malloc(wav_len * cvt.len_mult);
++
++    if (cvt.buf != NULL) {
++        memcpy(cvt.buf, wav_data, wav_len);
++
++        if (SDL_ConvertAudio(&cvt) == 0 && cvt.len_cvt >= 4) {
++            ret = (Sint16 *) cvt.buf;
++            *frames = cvt.len_cvt / (2 * sizeof(Sint16));
++        }
++        else
++            free(cvt.buf);
++    }
++
++    SDL_FreeWAV(wav_data);
++
++    return ret;
++}
++
++
++static int _valid(int snd)
++{
++    return snd >= 0 && snd < MAX_SOUNDS && snd <= _program_seq;
++}
++
++
++static int _qdgdfa_load_sound(char *wavfile)
++{
++    Sint16 *data;
++    int frames = 0;
++    struct sound *ss;
++
++    if (_program_seq == MAX_ORIGINAL_SOUNDS - 1)
++        return -1;
++
++    _program_seq++;
++
++    data = _load_wav_frames(wavfile, &frames);
++
++    SDL_LockAudioDevice(_audio_dev);
++
++    ss = &_sounds[_program_seq];
++    memset(ss, '\0', sizeof(*ss));
++    ss->data = data;
++    ss->frames = frames;
++    ss->att = 63;
++
++    SDL_UnlockAudioDevice(_audio_dev);
++
++    return _program_seq;
++}
++
++
++static int _qdgdfa_dup_sound(int snd)
++{
++    if (!_valid(snd) || _program_seq == MAX_ORIGINAL_SOUNDS - 1)
++        return -1;
++
++    _program_seq++;
++
++    SDL_LockAudioDevice(_audio_dev);
++
++    _sounds[_program_seq] = _sounds[snd];
++    _sounds[_program_seq].playing = 0;
++    _sounds[_program_seq].offset = 0;
++    _sounds[_program_seq].duped = 1;
++
++    SDL_UnlockAudioDevice(_audio_dev);
++
++    return _program_seq;
++}
++
++
++static void _qdgdfa_play_sound(int snd, int loop)
++{
++    if (!_valid(snd))
++        return;
++
++    SDL_LockAudioDevice(_audio_dev);
++
++    if (_sounds[snd].data && !_sounds[snd].playing)
++        _sounds[snd].playing = loop ? 2 : 1;
++
++    SDL_UnlockAudioDevice(_audio_dev);
++}
++
++
++static void _qdgdfa_respawn_sound(int snd)
++{
++    int n;
++
++    if (!_valid(snd))
++        return;
++
++    SDL_LockAudioDevice(_audio_dev);
++
++    /* find a usable slot */
++    for (n = MAX_ORIGINAL_SOUNDS; n < MAX_SOUNDS; n++) {
++        if (!_sounds[n].playing)
++            break;
++    }
++
++    if (n < MAX_SOUNDS && _sounds[snd].data) {
++        _sounds[n] = _sounds[snd];
++        _sounds[n].duped = 1;
++        _sounds[n].offset = 0;
++        _sounds[n].playing = 1;
++    }
++
++    SDL_UnlockAudioDevice(_audio_dev);
++}
++
++
++static void _qdgdfa_stop_sound(int snd)
++{
++    if (!_valid(snd))
++        return;
++
++    SDL_LockAudioDevice(_audio_dev);
++    _sounds[snd].playing = 0;
++    SDL_UnlockAudioDevice(_audio_dev);
++}
++
++
++static void _qdgdfa_set_pan(int snd, int pan)
++{
++    if (!_valid(snd))
++        return;
++
++    SDL_LockAudioDevice(_audio_dev);
++    _sounds[snd].pan = pan;
++    SDL_UnlockAudioDevice(_audio_dev);
++}
++
++
++static void _qdgdfa_set_attenuation(int snd, int att)
++{
++    if (!_valid(snd))
++        return;
++
++    SDL_LockAudioDevice(_audio_dev);
++    _sounds[snd].att = 63 - att;
++    SDL_UnlockAudioDevice(_audio_dev);
++}
++
++
++static void _qdgdfa_reset(void)
++{
++    int n;
++
++    SDL_LockAudioDevice(_audio_dev);
++
++    for (n = 0; n < MAX_SOUNDS; n++) {
++        if (_sounds[n].data != NULL && !_sounds[n].duped)
++            free(_sounds[n].data);
++    }
++
++    memset(_sounds, '\0', sizeof(_sounds));
++
++    SDL_UnlockAudioDevice(_audio_dev);
++
++    _program_seq = -1;
++}
++
++
++static void _qdgdfa_pause(int p)
++{
++    SDL_PauseAudioDevice(_audio_dev, p ? 1 : 0);
++}
++
++
++static int _qdgdfa_startup(void)
++{
++    SDL_AudioSpec want, have;
++
++    if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
++        fprintf(stderr, "qdgdfa: SDL_InitSubSystem: %s\n", SDL_GetError());
++        return 0;
++    }
++
++    memset(&want, '\0', sizeof(want));
++    want.freq = MIX_FREQUENCY;
++    want.format = AUDIO_S16SYS;
++    want.channels = 2;
++    want.samples = MIX_SAMPLES;
++    want.callback = _audio_callback;
++
++    /* SDL converts to whatever the device really wants */
++    _audio_dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
++
++    if (_audio_dev == 0) {
++        fprintf(stderr, "qdgdfa: SDL_OpenAudioDevice: %s\n", SDL_GetError());
++        SDL_QuitSubSystem(SDL_INIT_AUDIO);
++        return 0;
++    }
++
++    memset(_sounds, '\0', sizeof(_sounds));
++    _program_seq = -1;
++
++    SDL_PauseAudioDevice(_audio_dev, 0);
++
++    return 1;
++}
++
++
++static void _qdgdfa_shutdown(void)
++{
++    if (_audio_dev == 0)
++        return;
++
++    SDL_CloseAudioDevice(_audio_dev);
++    _audio_dev = 0;
++
++    _qdgdfa_reset();
++
++    SDL_QuitSubSystem(SDL_INIT_AUDIO);
++}
++
++
++/* driver information */
++
++static struct _qdgdfa_driver drv = {
++    "sdl2",
++
++    _qdgdfa_load_sound,
++    _qdgdfa_dup_sound,
++    _qdgdfa_play_sound,
++    _qdgdfa_respawn_sound,
++    _qdgdfa_stop_sound,
++
++    _qdgdfa_set_pan,
++    _qdgdfa_set_attenuation,
++    _qdgdfa_reset,
++    _qdgdfa_pause,
++    _qdgdfa_startup,
++    _qdgdfa_shutdown
++};
++
++
++struct _qdgdfa_driver *sdl2a_drv_detect(void)
++/* detection function */
++{
++    if (_qdgdfa_startup())
++        return &drv;
++
++    return NULL;
++}
++
++#endif                          /* CONFOPT_SDL2 */
+diff -ruN -x '*.o' -x '*.a' -x Makefile -x config.h -x config.cflags -x config.ldflags -x makefile.opts -x .config.log -x '.tmp*' -x qdgdf_i -x filp_i -x test fr2002-orig/qdgdf/qdgdf_path.c fr2002-19.10.29/qdgdf/qdgdf_path.c
+--- fr2002-orig/qdgdf/qdgdf_path.c	2026-09-22 12:14:44.000000000 +0000
++++ fr2002-19.10.29/qdgdf/qdgdf_path.c	2026-10-06 22:30:24.024898860 +0000
+@@ -122,6 +122,16 @@
+     char *ptr;
+     static char tmp[2048] = "";
+ 
++    /* explicit override */
++    if ((ptr = getenv("QDGDF_HOME")) != NULL && *ptr != '\0') {
++        strcpy(tmp, ptr);
++
++        if (tmp[strlen(tmp) - 1] != '/')
++            strcat(tmp, "/");
++
++        return tmp;
++    }
++
+ #ifdef CONFOPT_WIN32
+ 
+     LPITEMIDLIST pidl;
+@@ -138,7 +148,7 @@
+     struct passwd *p;
+ 
+     /* get home dir from /etc/passwd entry */
+-    if (tmp[0] == '\0' && (p = getpwuid(getpid())) != NULL) {
++    if (tmp[0] == '\0' && (p = getpwuid(getuid())) != NULL) {
+         strcpy(tmp, p->pw_dir);
+         strcat(tmp, "/");
+     }
+diff -ruN -x '*.o' -x '*.a' -x Makefile -x config.h -x config.cflags -x config.ldflags -x makefile.opts -x .config.log -x '.tmp*' -x qdgdf_i -x filp_i -x test fr2002-orig/qdgdf/qdgdf_video_sdl2.c fr2002-19.10.29/qdgdf/qdgdf_video_sdl2.c
+--- fr2002-orig/qdgdf/qdgdf_video_sdl2.c	1970-01-01 00:00:00.000000000 +0000
++++ fr2002-19.10.29/qdgdf/qdgdf_video_sdl2.c	2026-10-07 05:42:48.500703825 +0000
+@@ -0,0 +1,304 @@
++/*
++
++    Quick and Dirty Game Development Framework (QDGDF)
++
++    Angel Ortega <angel@triptico.com> et al.
++
++    This software is released into the public domain.
++    NO WARRANTY. See file LICENSE for details.
++
++*/
++
++/* SDL2 video driver */
++
++#include "config.h"
++#include <stdio.h>
++#include "qdgdf_video.h"
++
++#ifdef CONFOPT_SDL2
++
++#include <SDL.h>
++
++/** data **/
++
++static SDL_Window *_sdl_window = NULL;
++static SDL_Renderer *_sdl_renderer = NULL;
++static SDL_Texture *_sdl_texture = NULL;
++
++/* the ARGB screen sent to the texture */
++static unsigned char *_double_screen = NULL;
++
++/* last key pressed, for the release-on-next-poll logic */
++static SDL_Keycode _last_key = 0;
++
++
++/** code **/
++
++static void _qdgdfv_set_palette(void)
++{
++    /* the generic code fills _qdgdfv_extended_palette using the masks */
++}
++
++
++static void put_image(void)
++{
++    SDL_UpdateTexture(_sdl_texture, NULL, _double_screen,
++                      _qdgdfv_screen_x_size * sizeof(int));
++    SDL_RenderClear(_sdl_renderer);
++    SDL_RenderCopy(_sdl_renderer, _sdl_texture, NULL, NULL);
++    SDL_RenderPresent(_sdl_renderer);
++}
++
++
++static void _qdgdfv_dump_virtual_screen(void)
++{
++    _qdgdfv_scale_virtual_screen(_double_screen);
++    put_image();
++}
++
++
++static void _qdgdfv_dump_argb_screen(void)
++{
++    _qdgdfv_scale_argb_screen((int *) _double_screen);
++    put_image();
++}
++
++
++static void zero_2s_keys(void)
++{
++    int *keys[] = {
++        &_qdgdfv_key_up, &_qdgdfv_key_down, &_qdgdfv_key_left,
++        &_qdgdfv_key_right, &_qdgdfv_key_escape, &_qdgdfv_key_space,
++        &_qdgdfv_key_enter, &_qdgdfv_key_control, &_qdgdfv_key_shift_l,
++        &_qdgdfv_key_shift_r, &_qdgdfv_key_alnum, &_qdgdfv_key_pgup,
++        &_qdgdfv_key_pgdn, &_qdgdfv_key_home, &_qdgdfv_key_end,
++        &_qdgdfv_key_alt_l, &_qdgdfv_key_alt_r,
++        &_qdgdfv_key_f1, &_qdgdfv_key_f2, &_qdgdfv_key_f3,
++        &_qdgdfv_key_f4, &_qdgdfv_key_f5, &_qdgdfv_key_f6,
++        &_qdgdfv_key_f7, &_qdgdfv_key_f8, &_qdgdfv_key_f9,
++        &_qdgdfv_key_f10, NULL
++    };
++    int n;
++
++    for (n = 0; keys[n] != NULL; n++) {
++        if (*keys[n] == 2)
++            *keys[n] = 0;
++    }
++}
++
++
++static void key_set(SDL_Keycode k, int s)
++{
++    switch (k) {
++    case SDLK_UP:       _qdgdfv_key_up = s; break;
++    case SDLK_DOWN:     _qdgdfv_key_down = s; break;
++    case SDLK_LEFT:     _qdgdfv_key_left = s; break;
++    case SDLK_RIGHT:    _qdgdfv_key_right = s; break;
++    case SDLK_ESCAPE:   _qdgdfv_key_escape = s; break;
++    case SDLK_SPACE:    _qdgdfv_key_space = s; break;
++    case SDLK_RETURN:
++    case SDLK_KP_ENTER: _qdgdfv_key_enter = s; break;
++    case SDLK_PAGEUP:   _qdgdfv_key_pgup = s; break;
++    case SDLK_PAGEDOWN: _qdgdfv_key_pgdn = s; break;
++    case SDLK_HOME:     _qdgdfv_key_home = s; break;
++    case SDLK_END:      _qdgdfv_key_end = s; break;
++    case SDLK_F1:       _qdgdfv_key_f1 = s; break;
++    case SDLK_F2:       _qdgdfv_key_f2 = s; break;
++    case SDLK_F3:       _qdgdfv_key_f3 = s; break;
++    case SDLK_F4:       _qdgdfv_key_f4 = s; break;
++    case SDLK_F5:       _qdgdfv_key_f5 = s; break;
++    case SDLK_F6:       _qdgdfv_key_f6 = s; break;
++    case SDLK_F7:       _qdgdfv_key_f7 = s; break;
++    case SDLK_F8:       _qdgdfv_key_f8 = s; break;
++    case SDLK_F9:       _qdgdfv_key_f9 = s; break;
++    case SDLK_F10:      _qdgdfv_key_f10 = s; break;
++    case SDLK_LALT:     _qdgdfv_key_alt_l = s; break;
++    case SDLK_RALT:     _qdgdfv_key_alt_r = s; break;
++    case SDLK_LCTRL:
++    case SDLK_RCTRL:    _qdgdfv_key_control = s; break;
++    case SDLK_LSHIFT:   _qdgdfv_key_shift_l = s; break;
++    case SDLK_RSHIFT:   _qdgdfv_key_shift_r = s; break;
++    default:
++        if ((k >= SDLK_0 && k <= SDLK_9) || (k >= SDLK_a && k <= SDLK_z)) {
++            _qdgdfv_key_alnum = s;
++            _qdgdfv_alnum = (char) k;
++        }
++        break;
++    }
++}
++
++
++static void _qdgdfv_input_poll(void)
++{
++    SDL_Event e;
++
++    zero_2s_keys();
++
++    while (SDL_PollEvent(&e)) {
++        switch (e.type) {
++        case SDL_KEYDOWN:
++            if (!e.key.repeat) {
++                _last_key = e.key.keysym.sym;
++                key_set(e.key.keysym.sym, 1);
++            }
++            break;
++
++        case SDL_KEYUP:
++            /* 2 indicates that the press will be removed next call */
++            key_set(e.key.keysym.sym, e.key.keysym.sym == _last_key ? 2 : 0);
++            break;
++
++        case SDL_QUIT:
++            _qdgdfv_key_escape = 1;
++            break;
++        }
++    }
++}
++
++
++static int _qdgdfv_timer(int reset)
++{
++    static Uint32 prev = 0;
++    Uint32 c;
++    int r;
++
++    c = SDL_GetTicks();
++    r = (int) (c - prev);
++
++    if (r < 0)
++        r = 0;
++
++    if (reset)
++        prev = c;
++
++    return r;
++}
++
++
++static int _qdgdfv_opengl(int onoff)
++{
++    return 0;
++}
++
++
++static int _qdgdfv_startup(void)
++{
++    if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
++        qdgdfv_logger("qdgdfv_startup",
++                      qdgdfv_sprintf("SDL_Init: %s", SDL_GetError()));
++        return 0;
++    }
++
++    /* the scaling is done by the renderer */
++    _qdgdfv_scale = 1;
++    _qdgdfv_pixel_size = 4;
++
++    /* ARGB8888, in the mask/shift format fill_extended_palette() expects */
++    _qdgdfv_red_mask = _qdgdfv_green_mask = _qdgdfv_blue_mask = 0xff000000;
++    _qdgdfv_red_shift = 8;
++    _qdgdfv_green_shift = 16;
++    _qdgdfv_blue_shift = 24;
++
++    _sdl_window = SDL_CreateWindow(_qdgdfv_window_title,
++                                   SDL_WINDOWPOS_UNDEFINED,
++                                   SDL_WINDOWPOS_UNDEFINED,
++                                   _qdgdfv_screen_x_size,
++                                   _qdgdfv_screen_y_size,
++                                   SDL_WINDOW_FULLSCREEN_DESKTOP);
++
++    if (_sdl_window == NULL) {
++        qdgdfv_logger("qdgdfv_startup",
++                      qdgdfv_sprintf("SDL_CreateWindow: %s", SDL_GetError()));
++        return 0;
++    }
++
++    _sdl_renderer = SDL_CreateRenderer(_sdl_window, -1, 0);
++
++    if (_sdl_renderer == NULL) {
++        qdgdfv_logger("qdgdfv_startup",
++                      qdgdfv_sprintf("SDL_CreateRenderer: %s", SDL_GetError()));
++        return 0;
++    }
++
++    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
++    SDL_RenderSetLogicalSize(_sdl_renderer, _qdgdfv_screen_x_size,
++                             _qdgdfv_screen_y_size);
++
++    _sdl_texture = SDL_CreateTexture(_sdl_renderer, SDL_PIXELFORMAT_ARGB8888,
++                                     SDL_TEXTUREACCESS_STREAMING,
++                                     _qdgdfv_screen_x_size,
++                                     _qdgdfv_screen_y_size);
++
++    if (_sdl_texture == NULL) {
++        qdgdfv_logger("qdgdfv_startup",
++                      qdgdfv_sprintf("SDL_CreateTexture: %s", SDL_GetError()));
++        return 0;
++    }
++
++    SDL_SetTextureBlendMode(_sdl_texture, SDL_BLENDMODE_NONE);
++    SDL_SetRenderDrawColor(_sdl_renderer, 0, 0, 0, 255);
++    SDL_ShowCursor(SDL_DISABLE);
++
++    _qdgdfv_virtual_screen = (unsigned char *)
++        qdgdfv_malloc(_qdgdfv_screen_x_size * _qdgdfv_screen_y_size);
++
++    _double_screen = (unsigned char *)
++        qdgdfv_malloc(_qdgdfv_screen_x_size * _qdgdfv_screen_y_size * sizeof(int));
++
++    _qdgdfv_argb_screen = (int *) _double_screen;
++
++    _qdgdfv_set_palette();
++
++    qdgdfv_clear_virtual_screen();
++
++    _qdgdfv_full_screen = 1;
++
++    qdgdfv_logger("qdgdfv_startup", "SDL2 Driver startup");
++    return 1;
++}
++
++
++static void _qdgdfv_shutdown(void)
++{
++    if (_sdl_texture != NULL)
++        SDL_DestroyTexture(_sdl_texture);
++    if (_sdl_renderer != NULL)
++        SDL_DestroyRenderer(_sdl_renderer);
++    if (_sdl_window != NULL)
++        SDL_DestroyWindow(_sdl_window);
++
++    _sdl_texture = NULL;
++    _sdl_renderer = NULL;
++    _sdl_window = NULL;
++
++    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_TIMER);
++
++    qdgdfv_logger("qdgdfv_shutdown", "SDL2 Driver shutdown");
++}
++
++
++/* driver information */
++
++static struct _qdgdfv_driver drv = {
++    "sdl2",
++    _qdgdfv_set_palette,
++    _qdgdfv_dump_virtual_screen,
++    _qdgdfv_dump_argb_screen,
++    _qdgdfv_input_poll,
++    _qdgdfv_timer,
++    _qdgdfv_opengl,
++    _qdgdfv_startup,
++    _qdgdfv_shutdown
++};
++
++
++struct _qdgdfv_driver *sdl2v_drv_detect(void)
++/* detection function */
++{
++    if (_qdgdfv_startup())
++        return &drv;
++
++    return NULL;
++}
++
++#endif                          /* CONFOPT_SDL2 */

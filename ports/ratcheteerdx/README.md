@@ -2,7 +2,7 @@
 
 | Button | Action |
 |--|--| 
-|D-pad / Move / Navigate menus|
+|D-pad|Move / Navigate menus|
 |A|Jump|
 |B|Block|
 |X|Slash|
@@ -43,7 +43,7 @@ Buy the game. Download `ratcheteer-dx-mac.zip` file (optionally unzip it) and pl
 
 Thanks to [Shaun Inman](https://store.steampowered.com/search/?developer=Shaun%20Inman) for this updated version of his Playdate action adventure game.
 
-Thanks to ptitSeb for [box64](https://github.com/ptitSeb/box64) and binarycounter for [Westonpack](https://github.com/binarycounter/Westonpack/wiki), without all of which the linux port would not be possible to run.
+Thanks to ptitSeb for [box64](https://github.com/ptitSeb/box64), without which the linux port would not be possible to run.
 
 Thanks to bmdhacks for [machismo](https://github.com/bmdhacks/machismo) for the macOS versions of the game.
 

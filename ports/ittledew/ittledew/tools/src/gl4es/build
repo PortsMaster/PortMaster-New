@@ -1,0 +1,18 @@
+#!/bin/bash
+# Builds this port's gl4es (gl4es.aarch64/libGL.so.1): upstream gl4es a744af14 + gl4es-ports.patch, configured like
+# Westonpack's gl4es_glxpass build (no X11/EGL linking, no automatic init: glxsdl creates the GLES context through
+# SDL2 and calls initialize_gl4es; glX* calls are forwarded to glxsdl's crusty_glX*).
+# Run on aarch64 Debian bullseye (or its chroot, glibc 2.31): apt install git build-essential cmake
+set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
+[ -d gl4es ] || git clone https://github.com/ptitSeb/gl4es.git
+cd gl4es
+git checkout -q a744af14
+git apply "$HERE/gl4es-ports.patch"
+mkdir -p build && cd build
+cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DNOX11=ON -DNOEGL=ON -DNO_INIT_CONSTRUCTOR=ON -DGLX_STUBS=OFF \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+make -j"$(nproc)"
+# debug info out, symbol table kept: glxsdl finds createMainFBO / blitMainFBO / ... by name in it
+strip --strip-debug -o "$HERE/libGL.so.1" ../lib/libGL.so.1
+echo "built $HERE/libGL.so.1"

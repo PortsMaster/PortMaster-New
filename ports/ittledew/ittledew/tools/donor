@@ -1,0 +1,61 @@
+# Donor setup, sourced by tools/patchscript when gamedata has no Linux 64-bit player. The game's Unity 4 data from a
+# Windows, Mac or 32-bit Linux build becomes a Linux 64-bit game on the teapot donor's Unity 4.7.2 player (donor/):
+#   1. the data folder (X_Data, or X.app/Contents/Data) moves to ${BINARY%.x86_64}_Data; the other platform's
+#      program files and native plugins are removed (the plugins are listed: a game that needs one needs a stub);
+#   2. the donor's Linux engine files go in: Mono, Managed/UnityEngine.dll, Resources/unity default resources;
+#   3. tools/unity4convert rewrites the data to Unity 4.7.2's format (any Unity 4.x, seconds);
+#   4. the donor's player becomes $BINARY.
+# Uses from patchscript: GAMEDIR GAMEFILES BINARY DATADIR TOOLS controlfolder ESUDO fail().
+DONOR="$GAMEDIR/donor"
+DDATA="$DONOR/Placeholder_Data"
+echo "No Linux 64-bit program: setting the game up on the donor player (Unity 4.7.2)."
+
+# 1. the game's data folder
+SRC=
+if [ -f "$DATADIR/mainData" ]; then
+  SRC=$DATADIR
+else
+  for d in "$GAMEFILES"/*_Data "$GAMEFILES"/*.app/Contents/Data "$GAMEFILES"/*/*_Data "$GAMEFILES"/*/*.app/Contents/Data; do
+    [ -f "$d/mainData" ] && { SRC=$d; break; }
+  done
+fi
+[ -n "$SRC" ] || fail "No Unity game data in gamedata: copy the game's folder (Windows, Mac or Linux) into gamedata (see README)."
+case $SRC in
+  *.app/Contents/Data) KIND=Mac;;
+  *) KIND=$(ls "${SRC%_Data}".exe >/dev/null 2>&1 && echo Windows || echo Linux);;
+esac
+[ -n "$V" ] && KIND=$V   # the patchscript knows the version (its Mac step has already taken the data out of the .app)
+echo "Found the game's data ($KIND build): ${SRC#$GAMEFILES/}"
+if [ "$SRC" != "$DATADIR" ]; then
+  rm -rf "$DATADIR"
+  mv "$SRC" "$DATADIR" || fail "Could not move ${SRC#$GAMEFILES/} (see patchlog.txt)."
+  case $SRC in */Contents/Data) rm -rf "${SRC%/Contents/Data}";; esac      # the rest of the Mac .app
+fi
+P32=${SRC%_Data}                                     # a 32-bit Linux player without .x86 (Thomas Was Alone: "thomasWasAlone")
+[ -f "$P32" ] && [ "$(head -c 4 "$P32" | tail -c 3)" = ELF ] && rm -f "$P32"
+# other platforms' program files (the Linux 64-bit pieces come from the donor)
+for f in "$GAMEFILES"/*.exe "$GAMEFILES"/*.dll "$GAMEFILES"/*.pdb "$GAMEFILES"/*.x86 "$GAMEFILES"/*.dylib; do
+  [ -e "$f" ] && rm -rf "$f"
+done
+rm -rf "$DATADIR/Managed/etc"                                                  # Mac: Mono's config lives here
+GONE=
+for p in "$DATADIR"/Plugins/*; do                                             # busybox find has no -printf
+  [ -e "$p" ] && [ "${p##*/}" != x86_64 ] && { GONE="$GONE ${p##*/}"; rm -rf "$p"; }
+done
+[ -n "$GONE" ] && echo "Native plugins of the $KIND build left out:$GONE (a game that needs one needs a Linux stub)."
+
+# 2. the donor's Linux engine files
+rm -rf "$DATADIR/Mono"
+cp -r "$DDATA/Mono" "$DATADIR/Mono" || fail "Copying the donor's Mono failed (see patchlog.txt)."
+cp "$DDATA/Managed/UnityEngine.dll" "$DATADIR/Managed/UnityEngine.dll" || fail "Copying UnityEngine.dll failed."
+mkdir -p "$DATADIR/Resources"
+cp "$DDATA/Resources/unity default resources" "$DATADIR/Resources/" || fail "Copying unity default resources failed."
+
+# 3. Unity 4.x data -> 4.7.2
+echo "Converting the game's data for Unity 4.7.2..."
+chmod +x "$TOOLS/unity4convert"
+"$TOOLS/unity4convert" --donor "$DDATA/mainData" "$DATADIR" || fail "Converting the game's data failed (see patchlog.txt)."
+
+# 4. the donor's player
+cp "$DONOR/Placeholder.x86_64" "$GAMEFILES/$BINARY" && chmod +x "$GAMEFILES/$BINARY" || fail "Copying the donor player failed."
+echo "The game now runs on the donor player."

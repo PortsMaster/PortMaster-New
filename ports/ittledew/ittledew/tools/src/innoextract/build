@@ -1,0 +1,25 @@
+#!/bin/bash
+# innoextract 1.9 (https://constexpr.org/innoextract/, zlib license) for the port's setup: it unpacks the GOG Windows
+# installer (Inno Setup) on the device. Built in a Debian bullseye arm64 chroot with
+#   apt-get install -y build-essential cmake git libboost-iostreams-dev libboost-filesystem-dev \
+#     libboost-date-time-dev libboost-system-dev libboost-program-options-dev liblzma-dev zlib1g-dev libbz2-dev
+# Boost, liblzma, zlib and bzip2 are linked statically; glibc, libstdc++ and libgcc stay dynamic (PortMaster's rule);
+# optimised for size, unused sections dropped, stripped; glibc 2.28 at most (the port's min_glibc).
+set -e
+cd "$(dirname "$0")"
+[ -d innoextract-src ] || git clone --depth 1 --branch 1.9 https://github.com/dscharrer/innoextract.git innoextract-src
+# CMake 4 refuses innoextract 1.9's cmake_minimum_required < 3.5 (also in its version script): allow it
+export CMAKE_POLICY_VERSION_MINIMUM=3.5
+rm -rf build && mkdir -p build out && cd build
+# bullseye's log() is versioned GLIBC_2.29: use the older one
+printf '__asm__(".symver log,log@GLIBC_2.17");\n' > glibc228.h
+# static libraries one by one: USE_STATIC_LIBS=ON would also add -static-libstdc++ -static-libgcc; static
+# Boost.Iostreams needs zlib and bzip2 after it on the link line
+cmake ../innoextract-src -DCMAKE_BUILD_TYPE=MinSizeRel -DUSE_LZMA=ON -DUSE_STATIC_LIBS=OFF \
+  -DBoost_USE_STATIC_LIBS=ON -DLZMA_USE_STATIC_LIBS=ON -DZLIB_USE_STATIC_LIBS=ON -DBZip2_USE_STATIC_LIBS=ON \
+  -DCMAKE_CXX_FLAGS="-include $PWD/glibc228.h -ffunction-sections -fdata-sections" \
+  -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -s" \
+  -DCMAKE_CXX_STANDARD_LIBRARIES="-Wl,-Bstatic -lz -lbz2 -Wl,-Bdynamic"
+make -j"$(nproc)" innoextract   # the program only (the man page target fails here and is not needed)
+cp innoextract ../out/innoextract
+ls -l ../out/innoextract

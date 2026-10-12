@@ -1,0 +1,213 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 264c9ece..aeeb38bd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -96,6 +96,14 @@ if(WANT_FASTDRAW)
+   list(APPEND DEFS "WANT_FASTDRAW=1")
+ endif()
+ 
++# Native dialogs
++option(WANT_NATIVE_DIALOG "Use Allegro's native dialog addon (message boxes and file choosers)" ON)
++if(WANT_NATIVE_DIALOG)
++  list(APPEND DEFS "WANT_NATIVE_DIALOG=1")
++else()
++  list(APPEND DEFS "WANT_NATIVE_DIALOG=0")
++endif()
++
+ # Improved Gamepad support
+ option(WANT_BETTER_GAMEPAD "Autodetect gamepad layouts for consistent cross-platform behavior" ON)
+ if(WANT_BETTER_GAMEPAD)
+diff --git a/src/core/engine.c b/src/core/engine.c
+index bea04d16..2e4918a0 100644
+--- a/src/core/engine.c
++++ b/src/core/engine.c
+@@ -62,7 +62,7 @@
+ 
+ #include <allegro5/allegro.h>
+ #include <allegro5/allegro_audio.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "../util/nativedialog.h"
+ 
+ /* minimum Allegro version */
+ #if AL_ID(ALLEGRO_VERSION, ALLEGRO_SUB_VERSION, ALLEGRO_WIP_VERSION, 0) < AL_ID(ALLEGRO_MIN_SUP, ALLEGRO_MIN_SUB, ALLEGRO_MIN_WIP, 0)
+diff --git a/src/core/import.c b/src/core/import.c
+index 70badf70..42734f82 100644
+--- a/src/core/import.c
++++ b/src/core/import.c
+@@ -19,7 +19,7 @@
+  */
+ 
+ #include <allegro5/allegro.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "../util/nativedialog.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <stdarg.h>
+diff --git a/src/misc/cmake/libs.cmake b/src/misc/cmake/libs.cmake
+index f39d7c6f..e141a8fb 100644
+--- a/src/misc/cmake/libs.cmake
++++ b/src/misc/cmake/libs.cmake
+@@ -8,11 +8,14 @@ set(ALLEGRO_LIBS
+   allegro_ttf
+   allegro_acodec
+   allegro_audio
+-  allegro_dialog
+   allegro_memfile
+   allegro_physfs
+ )
+ 
++if(WANT_NATIVE_DIALOG)
++  list(APPEND ALLEGRO_LIBS allegro_dialog)
++endif()
++
+ if(ALLEGRO_MONOLITH)
+   set(ALLEGRO_LIBS allegro_monolith)
+ endif()
+diff --git a/src/misc/cmake/srcs.cmake b/src/misc/cmake/srcs.cmake
+index 9b6b41ca..066cf771 100644
+--- a/src/misc/cmake/srcs.cmake
++++ b/src/misc/cmake/srcs.cmake
+@@ -187,6 +187,7 @@ set(GAME_HEADERS
+   src/util/point2d.h
+   src/util/rect.h
+   src/util/stringutil.h
++  src/util/nativedialog.h
+   src/util/util.h
+   src/util/v2d.h
+   src/util/transform.h
+diff --git a/src/scenes/settings.c b/src/scenes/settings.c
+index 353d46b3..f5cbb2e0 100644
+--- a/src/scenes/settings.c
++++ b/src/scenes/settings.c
+@@ -20,11 +20,11 @@
+ 
+ #if !defined(__ANDROID__)
+ #include <allegro5/allegro.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "../util/nativedialog.h"
+ #else
+ #define ALLEGRO_UNSTABLE
+ #include <allegro5/allegro.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "../util/nativedialog.h"
+ #include <allegro5/allegro_android.h>
+ #endif
+ 
+diff --git a/src/util/nativedialog.h b/src/util/nativedialog.h
+new file mode 100644
+index 00000000..2e04f64d
+--- /dev/null
++++ b/src/util/nativedialog.h
+@@ -0,0 +1,93 @@
++/*
++ * Open Surge Engine
++ * nativedialog.h - Allegro's native dialog addon, or stubs when it's unavailable
++ * Copyright 2008-2026 Alexandre Martins <alemartf(at)gmail.com>
++ * http://opensurge2d.org
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#ifndef _NATIVEDIALOG_H
++#define _NATIVEDIALOG_H
++
++#ifndef WANT_NATIVE_DIALOG
++#define WANT_NATIVE_DIALOG 1
++#endif
++
++#if WANT_NATIVE_DIALOG
++
++#include <allegro5/allegro_native_dialog.h>
++
++#else
++
++/* No native dialogs (e.g., Allegro's SDL backend): message boxes behave as if
++   closed right away and file choosers can't be created. Errors are still logged. */
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <allegro5/allegro.h>
++
++typedef struct ALLEGRO_FILECHOOSER ALLEGRO_FILECHOOSER;
++
++enum {
++    ALLEGRO_FILECHOOSER_FILE_MUST_EXIST = 1,
++    ALLEGRO_FILECHOOSER_SAVE = 2,
++    ALLEGRO_FILECHOOSER_FOLDER = 4,
++    ALLEGRO_FILECHOOSER_PICTURES = 8,
++    ALLEGRO_FILECHOOSER_SHOW_HIDDEN = 16,
++    ALLEGRO_FILECHOOSER_MULTIPLE = 32
++};
++
++enum {
++    ALLEGRO_MESSAGEBOX_WARN = 1<<0,
++    ALLEGRO_MESSAGEBOX_ERROR = 1<<1,
++    ALLEGRO_MESSAGEBOX_OK_CANCEL = 1<<2,
++    ALLEGRO_MESSAGEBOX_YES_NO = 1<<3,
++    ALLEGRO_MESSAGEBOX_QUESTION = 1<<4
++};
++
++static inline bool al_init_native_dialog_addon(void) { return true; }
++static inline bool al_is_native_dialog_addon_initialized(void) { return true; }
++
++static inline int al_show_native_message_box(ALLEGRO_DISPLAY* display, const char* title, const char* heading, const char* text, const char* buttons, int flags)
++{
++    (void)display; (void)title; (void)heading; (void)text; (void)buttons; (void)flags;
++    return 0;
++}
++
++static inline ALLEGRO_FILECHOOSER* al_create_native_file_dialog(const char* initial_path, const char* title, const char* patterns, int mode)
++{
++    (void)initial_path; (void)title; (void)patterns; (void)mode;
++    return NULL;
++}
++
++static inline bool al_show_native_file_dialog(ALLEGRO_DISPLAY* display, ALLEGRO_FILECHOOSER* dialog) { (void)display; (void)dialog; return false; }
++static inline int al_get_native_file_dialog_count(const ALLEGRO_FILECHOOSER* dialog) { (void)dialog; return 0; }
++static inline const char* al_get_native_file_dialog_path(const ALLEGRO_FILECHOOSER* dialog, size_t index) { (void)dialog; (void)index; return NULL; }
++static inline void al_destroy_native_file_dialog(ALLEGRO_FILECHOOSER* dialog) { (void)dialog; }
++
++typedef struct ALLEGRO_TEXTLOG ALLEGRO_TEXTLOG;
++
++enum {
++    ALLEGRO_TEXTLOG_NO_CLOSE = 1<<0,
++    ALLEGRO_TEXTLOG_MONOSPACE = 1<<1
++};
++
++static inline ALLEGRO_TEXTLOG* al_open_native_text_log(const char* title, int flags) { (void)title; (void)flags; return NULL; }
++static inline void al_close_native_text_log(ALLEGRO_TEXTLOG* textlog) { (void)textlog; }
++static inline void al_append_native_text_log(ALLEGRO_TEXTLOG* textlog, const char* format, ...) { (void)textlog; (void)format; }
++
++#endif
++
++#endif
+diff --git a/src/util/util.c b/src/util/util.c
+index 9d8b89d8..616fba9f 100644
+--- a/src/util/util.c
++++ b/src/util/util.c
+@@ -40,12 +40,12 @@
+ #define ALLEGRO_UNSTABLE /* required for al_android_get_jni_env(), al_android_get_activity() */
+ #include <allegro5/allegro.h>
+ #include <allegro5/allegro_android.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "nativedialog.h"
+ #include <android/log.h>
+ #include <setjmp.h>
+ #else
+ #include <allegro5/allegro.h>
+-#include <allegro5/allegro_native_dialog.h>
++#include "nativedialog.h"
+ #endif
+ 
+ #if defined(_WIN32)
