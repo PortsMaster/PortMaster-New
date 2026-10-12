@@ -24,8 +24,6 @@ BINARY="naezith"
 
 cd "$GAMEDIR"
 
-# command line containing the word, and a tee writing to .../naezith/log.txt died with the game,
-# ending the log and then the launcher (AmberELEC reports that exit as an error)
 > "$GAMEDIR/log.txt" && exec > >(tee log.txt) 2>&1
 
 if [ ! -f "$DATADIR/$BINARY" ]; then
