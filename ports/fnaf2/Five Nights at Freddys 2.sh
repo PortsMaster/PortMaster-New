@@ -19,8 +19,7 @@ get_controls
 GAMEDIR=/$directory/ports/fnaf2
 BUILD="$GAMEDIR/build"
 BIN="$GAMEDIR/Chowdren"
-# Look for an exe file in gamedir (first found)
-GAME_EXE=$(find "${GAMEDIR}" -type f -iname "*.exe" -print -quit)
+GAME_EXE="$GAMEDIR/gamedata/FiveNightsatFreddys2.exe"
 PATCHED_FLAG="$GAMEDIR/gamedata/.patched_complete"
 
 mkdir -p "$GAMEDIR/conf" "$GAMEDIR/gamedata"
@@ -31,7 +30,7 @@ if [ ! -f "$PATCHED_FLAG" ] || [ ! -x "$BIN" ]; then
 fi
 
 if [ "$NEEDS_BUILD" -eq 1 ]; then
-    if [[ ! -n "$GAME_EXE" ]; then
+    if [ ! -f "$GAME_EXE" ]; then
         pm_message "Game files not found. Copy FiveNightsatFreddys2.exe into fnaf2/gamedata."
         sleep 15
         exit 1
@@ -86,5 +85,7 @@ $GPTOKEYB2 "Chowdren" -c "$GAMEDIR/controls.ini" &
 pm_platform_helper "$BIN"
 
 $TASKSET "$BIN"
+
+$ESUDO kill -9 $(pidof gptokeyb2) 2>/dev/null
 
 pm_finish
