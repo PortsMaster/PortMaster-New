@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: naezith.zip, Remnants of Naezith.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
