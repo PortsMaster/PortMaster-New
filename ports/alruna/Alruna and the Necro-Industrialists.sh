@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: alruna.zip, Alruna and the Necro-Industrialists.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
