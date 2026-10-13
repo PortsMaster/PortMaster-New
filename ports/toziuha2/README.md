@@ -4,8 +4,6 @@ Thanks to Danny Garay for developing the game and also doing the initial porting
 
 ---
 
-Note: the demo version suffers from graphical glitches on libmali driver under Rocknix for RK3326/3566 units, use Panfrost driver there. Full version is not affected. 
-
 ## Controls
 
 | Button | Action |
