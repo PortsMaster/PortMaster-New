@@ -1,14 +1,20 @@
 ## Notes
 
-**Controls**
-* Right analog stick for camera control
-* left analog stick (towards left or right) face rotations
-* L1 R1 L2 R2 triggers for left and right face rotations
-* left analog stick (toward up or down) middle layer rotations
-* dpad(right or left) changes cubes
-* dpad(up or down) changes size of the cube on screen
-
-also checkout Cubes at my itch.io page
+Thanks to cubiq(Shubham gupta) for making Cubes, a free game with lots of twisty puzzles
 [https://cubiq.itch.io/cubes](https://)
+
+## Controls
+
+| Button | Action |
+|--|--| 
+|R-Stick|Camera|
+|L-Stick Left Right| Turn selected face|
+|L-Stick Up Down| Turn selected middle face|
+| D-Pad Up | Zoom in |
+| D-Pad Down | Zoom out |
+| D-Pad Left | Change cube |
+| D-Pad Right | Change cube |
+|L1/L2|Turn left face|
+|R1/R2|Turn right face|
 
 
