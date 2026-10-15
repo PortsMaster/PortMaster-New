@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: bitfall.zip, BITFALL.sh
 
 # PortMaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
