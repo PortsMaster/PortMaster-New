@@ -1,0 +1,285 @@
+/////////////
+//Script Locals
+int IceNote = 0;
+
+
+///////////////
+//START HATCH//
+//Messages for finding hatch
+void FoundHatchAreaEnter01(string asParent, string asChild)
+{
+	AddSubTitleTrans("01_01_outside", "FoundHatch", 6.2f);
+	
+	if (IceNote == 0)
+	{
+		AddNotebookTask("HatchTask", "01_01_outside", "TaskHatch");
+		IceNote = 1;
+	}
+	
+	RemoveNotebookTask("FindHatchTask");
+	
+	RemoveEntityCollideCallback("Enter","Player","foundhatcharea");
+}
+void Stone0XEnterHatchArea(string asParent, string asChild)
+{
+	AddSubTitle(
+		Translate("01_01_outside", "UseStone01")
+	 	+ GetActionKeyString("InteractMode")
+		+ Translate("01_01_outside", "UseStone02")
+		, 5
+	);
+	
+	if (IceNote == 0)
+	{
+		AddNotebookTask("HatchTask", "01_01_outside", "TaskHatch");
+		RemoveNotebookTask("FindHatchTask");
+		
+		IceNote = 1;
+	}
+			 		
+	SetGameEntityActive("foundhatcharea",false);
+}
+//---- Breaking Ice ----
+void IceBreak01(string asEntity)
+{
+	AddSubTitle(Translate(
+		"01_01_outside", "BrokeIce01")
+		+ GetActionKeyString("InteractMode")
+		+ Translate("01_01_outside", "BrokeIce02")
+		, 6
+	);
+	
+	SetGameEntityDescriptionOnceTrans("hatch", "", "");
+	RemoveNotebookTask("HatchTask");
+}
+
+//---- Valve turning ----
+void Joint1OnMin(string asJoint)
+{	
+	//float fX = GetJointProperty("hatch_joint1","Angle");
+	//Print("---- Min Angle: "+FloatToString(fX)+"\n");
+	
+	//Change mass so the hatch can be opened.
+	SetBodyProperty("hatch_hatchShape","mass",5);
+	SetBodyProperty("hatch_wheelShape","mass",1);
+	
+	SetJointProperty("hatch_joint1","MinLimit",-155);
+	SetJointProperty("hatch_joint1","MaxLimit",-135);
+	
+	//to delay the unlock sound slightly
+	RunAfter(0.25f, "SoundDelay01");
+	
+	//Clear callback
+	SetJointCallback("hatch_joint1", "OnMin","");
+	
+	SetGameEntityActive("exitarea",true);
+}
+void SoundDelay01(string asTimer)
+{
+	PlaySoundEntity("hatchunlock1",false);
+}
+//---- End Area ----
+//Can either interact or jump into the hole to end level
+void ExitAreaInteract01(string asEntity)
+{
+	ChangeMap(	"level01_02_mine_entrance.dae", //New map
+			"link01", //Positon on new map
+			"","", //Stop and end sound.
+			0.5f , 0.5f,//Fade out and in time (seconds).
+			"",""); //Load text (cat and entry)
+}
+void ExitAreaEnter01(string asParent, string asChild)
+{
+	ChangeMap(	"level01_02_mine_entrance.dae", //New map
+			"link01", //Positon on new map
+			"","", //Stop and end sound.
+			0.5f , 0.5f,//Fade out and in time (seconds).
+			"",""); //Load text (cat and entry)
+}
+//END HATCH//
+/////////////
+
+
+//////////////
+//START COLD//
+//---- Intro message & fade ----
+void ColdEvent01(string asTimer)
+{
+	SetPlayerActive(false);
+	SetWideScreenActive(true);
+	
+	RunAfter(3.2f, "ColdMessage01");
+}
+//Preventing player to click away message during white fade
+void ColdMessage01(string asTimer)
+{
+	SetWideScreenActive(false);
+	
+	AddMessageTrans("01_01_outside", "Cold01");
+	AddNotebookTask("FindHatchTask", "01_01_outside", "TaskFindHatch");
+	
+	SetMessagesOverCallback("ColdEvent02");	
+}
+void ColdEvent02()
+{
+	SetPlayerActive(true);
+
+	//Timer for pain loop
+	RunAfter(3.5f, "ColdPainEvent01");
+	//Timer for howl message
+	RunAfter(4.8f, "HowlEvent01");
+	
+	AutoSave();
+}
+//---- Pain Loop ---
+void ColdPainEvent01(string asTimer)
+{
+	GivePlayerDamage(5, "Ice");
+	PlayGuiSound("player_cold_pain", 0.3);
+	
+	//Timer for pain loop
+	RunAfter(7.2f, "ColdPainEvent02");
+}
+void ColdPainEvent02(string asTimer)
+{
+	GivePlayerDamage(3, "Ice");
+	PlayGuiSound("player_cold_pain", 0.2);
+
+	//Timer for pain loop
+	RunAfter(5.6f, "ColdPainEvent01");
+}
+//END COLD//
+////////////
+
+
+//////////////////////
+//HOWL MESSAGE START//
+void HowlEvent01(string asTimer)
+{	
+	AddSubTitleTrans("01_01_outside", "Howl01", 5.5f);
+}
+//HOWL MESSAGE END//
+////////////////////
+
+
+//////////////////////
+//FOUND STONES START//
+void FoundStonesArea01(string asParent, string asChild)
+{	
+	AddSubTitle(
+		Translate("01_01_outside", "FoundStone01")
+		+ GetActionKeyString("Interact")
+		+ Translate("01_01_outside", "FoundStone02")
+		+ GetActionKeyString("Examine")
+		+ Translate("01_01_outside", "FoundStone03")
+		, 10.2f
+	);
+	
+	SetGameEntityActive("foundstonesarea",false);
+}
+//FOUND STONES END//
+////////////////////
+
+
+//////////////////////////////////////////////////////////
+/*This function is run the FIRST time the map is loaded */
+void OnStart()
+{
+	//---- MAP INIT ------------
+	SetMapGameNameTrans("SaveNames", "level01_01_outside");
+		
+	
+	//---- AREA INIT --------------------
+	SetGameEntityActive("exitarea",false);
+	
+	SetAreaCustomIcon("exitarea", "DoorLink");
+	
+	AddEntityCollideCallback("Enter","Player","exitarea","ExitAreaEnter01");
+	AddEntityCollideCallback("Enter","Player","foundhatcharea","FoundHatchAreaEnter01");
+	AddEntityCollideCallback("Enter","Player","foundstonesarea","FoundStonesArea01");
+	
+	AddEntityCollideCallback("Enter","stone01","foundhatcharea","Stone0XEnterHatchArea");
+	AddEntityCollideCallback("Enter","stone02","foundhatcharea","Stone0XEnterHatchArea");
+	AddEntityCollideCallback("Enter","stone03","foundhatcharea","Stone0XEnterHatchArea");
+	
+	
+	//---- AUDIO INIT --------------------
+	StopSoundEntity("hatchunlock1",false);
+	StopSoundEntity("ambwind1",false);
+	
+	//---- INTERACT INIT ------------------
+	//For enabling opening of hatch
+	SetJointCallback("hatch_joint1", "OnMin","Joint1OnMin");
+	
+	AddEntityCallback("PlayerInteract","exitarea","ExitAreaInteract01");
+	
+	AddEntityCallback("OnBreak","ice01","IceBreak01");
+	
+	SetGameEntityMaxInteractDist("exitarea",3);
+	
+		
+	//---- INTRO FADE EFFECT ------------------
+	StartFlash(0.001, 1.5, 3);
+	
+	
+	//---- SKY BOX, FOG AND LEVEL PARTICLE INIT --------------------
+	SetSkyboxActive(true);
+	SetSkyboxColor(	0.6, 	//Red 
+			0.6, 	//Green
+			0.6, 	//Blue
+			1); 	//Alpha, always set this to 1.
+	
+	//Snow particles
+	CreateParticleSystemOnCamera("player_ps","particle_snow");
+	
+	SetFogActive(true);
+	SetFogCulling(true);
+	SetFogProperties(1, 		//The distance at which fog start
+			40,  		//The distance at which fog has reach max intensity
+			0.6,0.6,0.6   	//Color of fog (r,g,b)
+					//Setting this to color of the skybox
+			);
+	PlayGameMusic("outside_wind_loop1", 0.8f,1,true, 0);
+	
+			
+	
+	//---- TEXT INIT---------------------
+	SetGameEntityDescriptionOnceTrans("hatch","01_01_outside","DescHatch");
+	SetGameEntityDescriptionOnceTrans("exitarea","01_01_outside","DescExitArea");
+	SetGameEntityDescriptionOnceTrans("stone01","01_01_outside","DescStone");
+	SetGameEntityDescriptionOnceTrans("stone02","01_01_outside","DescStone");
+	SetGameEntityDescriptionOnceTrans("stone03","01_01_outside","DescStone");
+	
+	
+	//---- TIMER INIT-------------------
+	//First message about how cold it is
+	RunAfter(0.5f, "ColdEvent01");
+}	
+
+
+/////////////////////////////////////////////////////
+/*This function is run everytime the map is loaded */
+void OnLoad()
+{
+	SetAmbientColor(0.22,0.24,0.3);
+	
+	SetFlashlightDisabled(true);
+}
+
+
+///////////////////////////////////////
+/*This function is run 60 times a sec*/
+void OnUpdate()
+{	
+	//float fX = GetJointProperty("hatch_joint1","Angle");
+	//Print("Angle: "+FloatToString(fX)+"\n");
+}
+
+void OnExit()
+{	
+	SetFlashlightDisabled(false);
+	
+	SetFogActive(false);
+	
+	SetSkyboxActive(false);
+}

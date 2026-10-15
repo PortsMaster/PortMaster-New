@@ -1,0 +1,704 @@
+
+/////////////////////////////////////////
+// BEGIN MOVE PISTONS
+
+/*void PistonLever1_Max(string asJoint){ PistonLeverEnd(0,1); }
+void PistonLever1_Min(string asJoint){ PistonLeverEnd(1,1); }
+
+void PistonLever2_Max(string asJoint){ PistonLeverEnd(0,2); }
+void PistonLever2_Min(string asJoint){ PistonLeverEnd(1,2); }
+
+void PistonLever3_Max(string asJoint){ PistonLeverEnd(0,3); }
+void PistonLever3_Min(string asJoint){ PistonLeverEnd(1,3); }
+
+void PistonLever4_Max(string asJoint){ PistonLeverEnd(0,4); }
+void PistonLever4_Min(string asJoint){ PistonLeverEnd(1,4); }*/
+
+void PressSmallButton1(string asEntity){ PistonLeverEnd(1,1); }
+void PressSmallButton2(string asEntity){ PistonLeverEnd(1,2); }
+void PressSmallButton3(string asEntity){ PistonLeverEnd(1,3); }
+void PressSmallButton4(string asEntity){ PistonLeverEnd(1,4); }
+
+void PressSmallButton5(string asEntity){ PistonLeverEnd(0,1); }
+void PressSmallButton6(string asEntity){ PistonLeverEnd(0,3); }
+void PressSmallButton7(string asEntity){ PistonLeverEnd(0,4); }
+
+
+void PistonLeverEnd(int alDir, int alNum)
+{
+	if(alNum ==1)
+	{
+		if(alDir==1)
+		{
+			TogglePistonState(1);
+			TogglePistonState(3);	
+		}
+		else
+		{
+			SetPistonState(1,0);
+		}
+	}
+	else if(alNum ==2)
+	{
+		if(alDir==1)
+		{
+			TogglePistonState(2);
+			TogglePistonState(3);	
+		}
+	}
+	else if(alNum ==3)
+	{
+		if(alDir==1)
+		{
+			TogglePistonState(1);
+			TogglePistonState(3);
+			TogglePistonState(4);
+		}
+		else
+		{
+			SetPistonState(3,0);
+		}
+	}
+	else if(alNum ==4)
+	{
+		if(alDir==1)
+		{
+			TogglePistonState(2);
+			TogglePistonState(3);
+			TogglePistonState(4);
+		}
+		else
+		{
+			SetPistonState(4,0);
+		}
+	}
+}
+
+void TogglePistonState(int alPiston)
+{
+	int lState = GetPistonState(alPiston);
+	if(lState==0) 	lState = 1;
+	else 		lState =0;
+	
+	SetPistonState(alPiston, lState);
+}
+
+void SetPistonState(int alPiston, int alState)
+{
+	SetLocalVar("piston"+alPiston, alState);	
+	
+	string sJoint = "piston0"+alPiston+"_joint1";
+	
+	if(alState ==0) ChangeJointController(sJoint, "Down");
+	if(alState ==1) ChangeJointController(sJoint, "Up");
+	
+	PlaySoundEntity("squish1",false);
+}
+
+int GetPistonState(int alPiston)
+{
+	return GetLocalVar("piston"+alPiston);
+}
+
+// END MOVE PISTONS
+/////////////////////////////////////////
+
+
+/////////////////////////////////////////
+// BEGIN FELL DOWN LADDER
+
+void LadderDown(string asParent, string asChild)
+{
+	SetBodyProperty(asParent+"_ladderShape", "Mass",0);
+	SetBodyProperty(asParent+"_ladderShape", "CollideCharacter",1);
+	
+	SetGameEntityActive("ladderarea01",true);
+	
+	SetGameEntityDescription("ladder01","");	
+	
+	RemoveNotebookTask("01_14_ladder_up");
+	
+	RemoveEntityCallback("PlayerExamine","ladder01");
+	
+	RemoveEntityCollideCallback("Enter","ladder01","ladderdown");
+}
+
+// END FELL DOWN LADDER
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN BREAK FAN
+
+void DestroyFan()
+{
+	SetJointControllerActive("fan01_joint1","Rotate",false);
+		
+	SetGameEntityActive("fandamage",false);
+	
+	FadeOutSoundEntity("fan1", 10);
+	CreateParticleSystem("fansmoke1", "particle_fan_break", "fansmoke1",1,1,1);
+	CreateSoundEntityAt("Entity","fansmoke1","FanBreak","break_impact_metal");
+	
+	SetObjectInteractMode("fan01","Move");
+	
+	SetLocalVar("fanrunning",0);
+	
+	SetGameEntityDescriptionOnceTrans("fan01","01_14_refinery", "DescFanOff");
+		
+	for(int i=1; i<=3; ++i)
+		RemoveEntityCollideCallback("During","fanbreak","canister"+i);
+	
+	RemoveEntityCollideCallback("Enter","Player","fan01");
+}
+
+void BreakFan(string asParent, string asChild)
+{
+	AddLocalVar("breakfancount", 1);
+	
+	if(GetLocalVar("breakfancount") == 60)
+	{
+		DestroyFan();
+	}
+}
+
+void DeathInFan(string asParent, string asChild)
+{
+	PlayGuiSound("refinery_fan_gib", 1);
+	
+	RemoveEntityCollideCallback("Enter","Player","fan01");
+}
+
+// END BREAK FAN
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN OPEN GATE 01
+
+void PressGateButton01(bool abActive)
+{
+	if(abActive)
+	{
+		ChangeEntityAnimation("gate01","Opening",false);
+		
+		PlaySoundEntity("door1",false);	
+		
+		SetGameEntityDescriptionOnceTrans("descgate01","01_14_refinery", "DescGateOpen");
+		SetGameEntityDescriptionOnceTrans("gate01","01_14_refinery", "DescGateOpen");
+	}
+	else
+	{
+		ChangeEntityAnimation("gate01","Closing",false);
+		
+		PlaySoundEntity("door1",false);
+		
+		SetGameEntityDescriptionOnceTrans("descgate01","01_14_refinery", "DescGateClosed");
+		SetGameEntityDescriptionOnceTrans("gate01","01_14_refinery", "DescGateClosed");
+	}	
+}
+
+
+// END OPEN GATE 01
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN OPEN GATE 02
+
+void PressGateButton02(bool abActive)
+{
+	if(GetLocalVar("engineattached")==1)
+	{
+		if(abActive)
+		{
+			ChangeEntityAnimation("gate02","Opening",false);
+			
+			PlaySoundEntity("door2",false);	
+		}
+		else
+		{
+			ChangeEntityAnimation("gate02","Closing",false);
+			
+			PlaySoundEntity("door2",false);
+		}
+	}
+	else
+	{
+		if(abActive) SetLampLit("button02",false,false);
+		
+		if(GetLocalVar("firstpress") == 0)
+		{
+			AddNotebookTask("01_14_gateclosed", "PersonalNotes", "01_14_gateclosed");
+			SetLocalVar("firstpress", 1);
+		}
+	}	
+}
+
+
+// END OPEN GATE 02
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN ENGINE AT PLACE
+
+void EngineAtPlace(string asArea, string asBody)
+{
+	if(StringContains(asBody, "engine"))
+	{
+		AllowAttachment();
+		
+		SetLocalVar("engineattached", 1);
+		SetGameEntityDescription("emptyengine","");
+		
+		PlayGuiSound("refinery_engine_place", 0.7f);
+		
+		FadeInSoundEntity("engine1", 0.8f);
+		
+		SetGameEntityDescriptionOnceTrans("engine","01_14_refinery", "DescEngineRunning");	
+		
+		RemoveNotebookTask("01_14_gateclosed");
+	}
+}
+
+
+// END ENGINE AT PLACE
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN GRATE STEAM
+
+int glSteamStates = 5;
+int[][] gvSteamActive = {	{0,1,1,0,  1,1,0,1,  1,1,0,1,  1,1,1,  0,1,1,1, 0,0,0,0 },
+				{1,1,1,1,  0,1,1,1,  1,1,0,1,  0,0,1,  1,1,1,1, 1,1,0,0 },
+				{1,1,1,1,  1,0,1,1,  1,1,1,1,  0,1,0,  1,0,0,1, 1,1,1,1 }, 
+				{1,0,0,1,  1,0,1,1,  1,1,1,1,  1,1,1,  1,1,0,1, 1,0,0,1 }, 
+				{1,1,0,1,  1,1,1,1,  0,1,1,1,  1,1,1,  1,1,1,1, 1,1,0,0 } 
+				};
+
+void InsideSteam(string asParent, string asChild)
+{
+	if(GetGameEntityVar(asChild,"Active")==1)
+	{
+		GivePlayerDamage(20,"BloodSplash");
+	}	
+}
+
+void GrateSteam(string asTimer)
+{
+	int lCurrent = GetLocalVar("currentsteam");
+	
+	for(int i=1; i<=23; ++i)
+	{
+		if(gvSteamActive[lCurrent][i-1] == 1)
+		{
+			CreateParticleSystem("steam"+i, "particle_refinery_steam", "steam"+i,1,1,1);
+			
+			SetGameEntityVar("steam"+i,"Active",1);
+		}
+	}
+	
+	CreateSoundEntityAt("Entity","steamsound1","steamsound1","refinery_steam.snt");
+	
+	CreateTimer("gratetimer01",2.4f,"GrateSteam",false);
+	CreateTimer("gratetimer02",1,"GrateSteamOff",false);
+	
+	AddLocalVar("currentsteam",1);
+	if(GetLocalVar("currentsteam") >= glSteamStates) SetLocalVar("currentsteam",0);
+}
+
+void GrateSteamOff(string asTimer)
+{
+	for(int i=1; i<=23; ++i)
+		SetGameEntityVar("steam"+i,"Active",0);
+}
+
+
+
+// END GRATE STEAM
+/////////////////////////////////////////
+
+
+
+/////////////////////////////////////////
+// BEGIN JAMMED DOOR
+
+void DoorJammed(string asEntity)
+{
+	AddMessageTrans("01_14_refinery", "JammedDoor");
+	
+	PlayGuiSound("interact_locked_metal_door", 0.8f);
+}
+
+void DoorJammed2(string asEntity)
+{
+	AddMessageTrans("01_14_refinery", "JammedDoor2");
+	
+	PlayGuiSound("interact_locked_metal_door", 0.8f);
+}
+	
+// END JAMMED DOOR
+/////////////////////////////////////////
+
+/////////////////////////////////////////
+// BEGIN AUTOSAVE
+
+void EnterAutoSave(string asParent, string asChild)
+{
+	RemoveEntityCollideCallback("Enter",asParent,asChild);	
+	
+	if(GetLocalVar("radioplay") == 0)
+	{
+		CreateTimer("radiodelay1",2.4f,"RadioDelay1",false);
+		SetLocalVar("radioplay",1);	
+	}
+	
+	AutoSave();
+}
+
+
+// BEGIN END
+/////////////////////////////////////////
+
+//BEGIN RADIO//
+void RadioDelay1(string asTimer)
+{
+	AddRadioMessage("Radio","Red 10.01","voice_red_10_part1.ogg");
+	AddRadioMessage("Radio","Red 10.02","voice_red_10_part2.ogg");
+	
+	DestroyTimer("radiodelay1");
+}
+void SecondRadioMessage(string asParent, string asChild)
+{
+	CreateTimer("radiodelay2",3.3f,"RadioDelay2",false);
+	
+	SetGameEntityActive("radio2", false);
+}
+void RadioDelay2(string asTimer)
+{
+	PlayGuiSound("item_radio_noise", 0.9f);
+	
+	AddSubTitleTrans("Radio", "Start", 1.15f);
+	
+	CreateTimer("radiodelay3",1.15f,"RadioDelay3",false);
+	
+	DestroyTimer("radiodelay2");
+}
+void RadioDelay3(string asTimer)
+{
+	AddRadioMessage("Radio","Red 11.01","voice_red_11_part1.ogg");
+	AddRadioMessage("Radio","Red 11.02","voice_red_11_part2.ogg");
+	
+	DestroyTimer("radiodelay3");
+}
+//END RADIO//
+
+
+//START EXAMINE LADDER//
+void ExamineLadder(string asEntity)
+{
+	AddNotebookTask("01_14_ladder_up", "PersonalNotes", "01_14_ladder_up");
+	
+	RemoveEntityCallback("PlayerExamine","ladder01");
+}
+
+void LadderSwing(string asParent, string asChild)
+{
+	CreateSoundEntityAt("Entity","convend","SwingLadder","refinery_ladder");
+	
+	RemoveEntityCollideCallback("Leave","ladder01","convend");
+}
+
+//STOP EXAMINE LADDER//
+
+////////////////////////////////
+//START LIGHT AND DARK EFFECTS//
+float ambsetd = 0.28f;
+float ambsetl = 0.08f;
+void MakeDark(string asParent, string asChild)
+{
+	if(GetLocalVar("FadeDone") == 0)
+	{
+		CreateTimer("dark1",0.04f,"Dark01",false);
+		
+		for(int i=1;i<=3;i++)
+		{
+			SetGameEntityActive("light"+i, true);
+			SetGameEntityActive("dark"+i, false);
+		}
+		if(asChild == "dark1" || asChild == "dark2")
+		{
+			FadeInSoundEntity("horror1", 0.5f);
+			FadeInSoundEntity("horror2", 0.5f);
+			FadeInSoundEntity("horror3", 0.5f);
+		}
+		if(asChild == "dark3")
+		{
+
+			FadeInSoundEntity("horror4", 0.5f);
+			FadeInSoundEntity("horror5", 0.5f);
+			FadeInSoundEntity("horror6", 0.5f);
+		}
+	}
+}
+void MakeLight(string asParent, string asChild)
+{
+	if(GetLocalVar("FadeDone") == 1)
+	{
+		CreateTimer("light1",0.04f,"Light01",false);
+		
+		for(int i=1;i<=3;i++)
+		{
+			SetGameEntityActive("light"+i, false);
+			SetGameEntityActive("dark"+i, true);
+		}
+		if(asChild == "light1" || asChild == "light2")
+		{
+			FadeOutSoundEntity("horror1", 0.5f);
+			FadeOutSoundEntity("horror2", 0.5f);
+			FadeOutSoundEntity("horror3", 0.5f);
+		}
+		if(asChild == "light3")
+		{
+			FadeOutSoundEntity("horror4", 0.5f);
+			FadeOutSoundEntity("horror5", 0.5f);
+			FadeOutSoundEntity("horror6", 0.5f);
+		}
+	}
+}
+void Dark01(string asTimer)
+{
+	SetAmbientColor(ambsetd,
+			ambsetd,
+			ambsetd);
+			
+	ambsetd = ambsetd-0.01f;
+	
+	DestroyTimer("dark1");
+
+	if(ambsetd<=0.08f)
+	{
+		ambsetd = 0.28f;
+		
+		SetLocalVar("FadeDone", 1);
+	}
+		
+	if(ambsetd>0.08f && GetLocalVar("FadeDone") == 0)
+		CreateTimer("dark1",0.04f,"Dark01",false);
+}
+void Light01(string asTimer)
+{
+	SetAmbientColor(ambsetl,
+			ambsetl,
+			ambsetl);
+			
+	ambsetl = ambsetl+0.01f;
+	
+	DestroyTimer("light1");
+
+	if(ambsetl>=0.28f)
+	{
+		ambsetl = 0.08f;
+		
+		SetLocalVar("FadeDone", 0);
+		
+		for(int i=1;i<=6;i++)
+			StopSoundEntity("horror"+i,false);
+	}
+	
+	if(ambsetl<0.28f && GetLocalVar("FadeDone") == 1)
+		CreateTimer("light1",0.04f,"Light01",false);	
+}
+//STOP LIGHT AND DARK EFFECTS//
+///////////////////////////////
+
+
+//////////////////////////////////////////////////////////
+/*This function is run the FIRST time the map is loaded */
+void OnStart()
+{
+	SetMapGameNameTrans("SaveNames", "level01_14_refinery");
+	
+	
+	//---- AUDIO INIT ------------
+	StopSoundEntity("door1",false);
+	StopSoundEntity("door2",false);
+	StopSoundEntity("squish1",false);
+	StopSoundEntity("engine1",false);
+	for(int i=1;i<=6;i++)
+		StopSoundEntity("horror"+i,false);
+	
+	//---- SCENE INIT ------------
+	
+	SetAmbientColor(0.28,0.28,0.28);
+
+	SetSkyboxActive(false);
+	SetSkybox("");
+	SetSkyboxColor(0.7,0.7,0.7,1);
+	
+	SetFogActive(false);
+	SetFogProperties(1, //The distance at which fog start
+			90,  //The distance at which fog has reach max intensity
+			0.1,0.15,0.23 //Color of fog (r,g,b)
+			);
+	
+	//---- ENTITY INIT ------------
+	
+	SetLampLit("button01",false,false);
+	SetLampLit("button02",false,false);
+	
+	SetLampLitChangeCallback("button01", "PressGateButton01");
+	SetLampLitChangeCallback("button02", "PressGateButton02");
+	
+	SetGameEntityDescriptionOnceTrans("ladder01","01_14_refinery", "ladder01");
+	SetGameEntityDescriptionOnceTrans("engine","01_14_refinery", "engine");
+	
+	AddEntityCallback("PlayerExamine","ladder01","ExamineLadder");
+		
+				
+	//---- FORCE AREA INIT ------------
+	
+	for(int i=1; i<=7; ++i)
+	{
+		AddEntityCallback("PlayerInteract","sbutton0"+i,"PressSmallButton"+i);
+	}
+	
+	for(int i=1; i<=4; ++i)
+		SetupForceArea("forcearea"+i,
+			15, 15,		//MaxForce, Constant
+			0.9f, 0,		//DestSpeed, MaxMass
+			true, false, 	//MulWithMass, ForceAtPoint (still not stable)
+			true , true); 	//Affect bodies, Affect Characters	
+	
+	for(int i=5; i<=7; ++i)
+		SetupForceArea("forcearea"+i,
+			15, 15,		//MaxForce, Constant
+			2, 0,		//DestSpeed, MaxMass
+			true, false, 	//MulWithMass, ForceAtPoint (still not stable)
+			true , true); 	//Affect bodies, Affect Characters	
+	
+	for(int i=8; i<=13; ++i)
+		SetupForceArea("forcearea"+i,
+			15, 15,		//MaxForce, Constant
+			0.9f, 0,		//DestSpeed, MaxMass
+			true, false, 	//MulWithMass, ForceAtPoint (still not stable)
+			true , true); 	//Affect bodies, Affect Characters	
+		
+	
+	//---- VAR INIT ------------
+	for(int i=1; i<=4; ++i)
+	{
+		CreateLocalVar("piston"+i, 0);
+	}
+	
+	CreateLocalVar("breakfancount", 0);
+	CreateLocalVar("engineattached", 0);
+	CreateLocalVar("currentsteam", 0);
+	CreateLocalVar("fanrunning", 1);
+	CreateLocalVar("radioplay",0);
+	CreateLocalVar("firstpress", 0);
+	CreateLocalVar("FadeDone", 0);
+	
+	
+	//---- AREA INIT ------------
+	SetGameEntityActive("ladderarea01",false);
+	
+	SetGameEntityDescriptionOnceTrans("emptyengine","01_14_refinery", "EngineArea");
+	SetGameEntityDescriptionOnceTrans("convstart","01_14_refinery", "convstart");
+	SetGameEntityDescriptionOnceTrans("convend","01_14_refinery", "convend");
+	SetGameEntityDescriptionOnceTrans("desccontrol","01_14_refinery", "DescControl");
+	SetGameEntityDescriptionOnceTrans("descmachine","01_14_refinery", "DescMachine");
+	SetGameEntityDescriptionOnceTrans("descloading","01_14_refinery", "DescLoading");
+	SetGameEntityDescriptionOnceTrans("desccable1","01_14_refinery", "DescCable");
+	SetGameEntityDescriptionOnceTrans("desccable2","01_14_refinery", "DescCable");
+	SetGameEntityDescriptionOnceTrans("descgate01","01_14_refinery", "DescGateClosed");
+	SetGameEntityDescriptionOnceTrans("gate01","01_14_refinery", "DescGateClosed");
+	SetGameEntityDescriptionOnceTrans("descholes","01_14_refinery", "DescHoles");
+	SetGameEntityDescriptionOnceTrans("button01","01_14_refinery", "DescGateButton");
+	SetGameEntityDescriptionOnceTrans("fan01","01_14_refinery", "DescFan");
+	
+	SetAreaCustomIcon("jammeddoor","DoorLink");
+	SetAreaCustomIcon("link01","DoorLink");
+	
+	SetupDamageArea("fandamage",200,4,1,false,false);
+	
+	AddEntityCollideCallback("Leave","ladder01","convend","LadderSwing");
+	AddEntityCollideCallback("Enter","Player","fan01","DeathInFan");
+	AddEntityCollideCallback("Enter","Player","radio2","SecondRadioMessage");
+	AddEntityCollideCallback("Enter","ladder01","ladderdown","LadderDown");
+	AddEntityCollideCallback("Enter","Player","autosave1","EnterAutoSave");
+	AddEntityCollideCallback("Enter","Player","autosave2","EnterAutoSave");
+	
+	for(int i=1;i<=3;i++)
+	{
+		AddEntityCollideCallback("Enter","Player","dark"+i,"MakeDark");
+		AddEntityCollideCallback("Enter","Player","light"+i,"MakeLight");
+	}
+	
+	for(int i=1; i<=23; ++i)
+	{
+		AddEntityCollideCallback("During","Player","steam"+i,"InsideSteam");
+		CreateGameEntityVar("steam"+i,"Active",0);
+	}
+	
+	for(int i=1; i<=3; ++i)
+		AddEntityCollideCallback("During","fanbreak","canister"+i,"BreakFan");
+		
+	SetupStickArea("enginearea", 		//Name of the area
+			false, 			//If it is possible to detach the object
+			true, true,		//If the body should 1) moved 2)rotated into place.
+			true,			//If the centre must be in the area
+			0.5,			//Time for setting pose, 0 = instant.
+			"imp_metal_heavy_high",
+			"imp_metal_heavy_high",	//Attach and Detach Sound
+			"particle_spark_burst",
+			"particle_spark_burst", //Attach and Detach particle system
+			"EngineAtPlace",
+			"");		//Attach and Detach callback function
+			
+	//---- LINK INIT ------------
+	AddEntityCallback("PlayerInteract","jammeddoor","DoorJammed");
+	AddEntityCallback("PlayerInteract","link01","DoorJammed2");
+	
+	
+	SetupLink(	"link02", //Link name
+			"level01_18_mining_room.dae", //New map
+			"link02", //Positon on new map
+			"door_metal_pulllock_open","door_metal_pulllock_close", //Stop and end sound.
+			0.5f , 0.5f);//Fade out and in time (seconds).
+		
+		
+	
+	//---- START GRATE STEAM ------------
+	CreateTimer("gratetimer01",2,"GrateSteam",false);
+	
+	
+	//---- DEBUG ------------
+	//for(int i=1; i<=4; ++i)	SetPistonState(i,1);	
+	
+}	
+
+
+/////////////////////////////////////////////////////
+/*This function is run everytime the map is loaded */
+void OnLoad()
+{	
+	//PlayGameMusic("penumbra_music_E1_A6", 0.6f,0.4f,true, 0);
+	
+	StopGameMusic(0.3f, 0);	
+}
+
+
+///////////////////////////////////////
+/*This function is run 60 times a sec*/
+void OnUpdate()
+{	
+	//Check fan speed
+	if(GetLocalVar("fanrunning") == 1)
+	{
+		float fSpeed = GetJointProperty("fan01_joint1","AngularSpeed");	
+		
+		
+		if(fSpeed < 0.1f)
+		{
+			DestroyFan();
+		}		
+	}
+}
