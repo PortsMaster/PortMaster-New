@@ -58,7 +58,12 @@ fi
 
 # Run the game
 pm_message "Starting game."
-$GPTOKEYB "openrct2" -c openrct2.gptk &
+GPTK_FILE="openrct2.gptk"
+if [ "$ANALOG_STICKS" = "0" ]; then
+  GPTK_FILE="openrct2.gptk.0"
+  sed -i "s/^dpad_mouse_step = .*/dpad_mouse_step = $((DISPLAY_HEIGHT / 64))/" "$GPTK_FILE"
+fi
+$GPTOKEYB "openrct2" -c "$GPTK_FILE" &
 pm_platform_helper "$GAMEDIR/openrct2"
 $TASKSET ./openrct2 $ARGS
 
