@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to BredFrown for making this awesome game. Download it from \[Itch.io](https://bredfrown.itch.io/crystal-story).
+Thanks to BredFrown for making this awesome game. Download it from [Itch.io](https://bredfrown.itch.io/crystal-story).
 
 ## Controls
 
