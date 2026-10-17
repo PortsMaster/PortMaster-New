@@ -1,0 +1,167 @@
+diff --git a/tsc/src/core/editor/editor.cpp b/tsc/src/core/editor/editor.cpp
+index 19491832..4d7af62c 100644
+--- a/tsc/src/core/editor/editor.cpp
++++ b/tsc/src/core/editor/editor.cpp
+@@ -42,6 +42,7 @@ cEditor::cEditor()
+     m_menu_filename = boost::filesystem::path(path_to_utf8("Needs to be set by subclasses"));
+     m_editor_item_tag = "Must be set by subclass";
+     m_help_window_visible = false;
++    m_items_loaded = false;
+     m_object_config_pane_shown = false;
+     mp_edited_sprite_manager = NULL;
+ }
+@@ -103,13 +104,9 @@ void cEditor::Init(void)
+     parse_menu_file();
+     populate_menu();
+ 
+-    /* Fill in the creatable objects for each menu entry; first the
+-     * image items (= static sprites with a .settings file), then the
+-     * special items (= everything else, such as enemies).  The
+-     * function menu entries are handled in the
+-     * on_menu_selection_changed() event handler function. */
+-    load_image_items();
+-    load_special_items();
++    /* The creatable objects for each menu entry are filled in by Enable()
++     * the first time the editor opens: every item's image becomes a CEGUI
++     * texture, several hundred MB that only the editor ever shows. */
+ 
+     mp_editor_tabpane->subscribeEvent(CEGUI::Window::EventMouseEntersArea, CEGUI::Event::Subscriber(&cEditor::on_mouse_enter, this));
+     mp_editor_tabpane->subscribeEvent(CEGUI::Window::EventMouseLeavesArea, CEGUI::Event::Subscriber(&cEditor::on_mouse_leave, this));
+@@ -129,6 +126,7 @@ void cEditor::Unload(void)
+     std::vector<cEditor_Menu_Entry*>::iterator iter;
+     for(iter=m_menu_entries.begin(); iter != m_menu_entries.end(); iter++)
+         delete *iter;
++    m_items_loaded = false;
+ 
+     if (mp_editor_root) {
+         CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow()->removeChild(mp_editor_root);
+@@ -157,6 +155,17 @@ void cEditor::Enable(cSprite_Manager* p_edited_sprite_manager)
+     // TRANS: displayed to the user when opening the editor
+     Draw_Static_Text(_("Loading"), &orange, NULL, 0);
+ 
++    /* Fill in the creatable objects for each menu entry; first the
++     * image items (= static sprites with a .settings file), then the
++     * special items (= everything else, such as enemies).  The
++     * function menu entries are handled in the
++     * on_menu_selection_changed() event handler function. */
++    if (!m_items_loaded) {
++        load_image_items();
++        load_special_items();
++        m_items_loaded = true;
++    }
++
+     pAudio->Play_Sound("editor/enter.ogg");
+     pMouseCursor->Set_Active(true);
+ 
+diff --git a/tsc/src/core/editor/editor.hpp b/tsc/src/core/editor/editor.hpp
+index 66b698fe..e3d25a8d 100644
+--- a/tsc/src/core/editor/editor.hpp
++++ b/tsc/src/core/editor/editor.hpp
+@@ -143,6 +143,7 @@ namespace TSC {
+         std::vector<CEGUI::Window*> m_editor_items;
+         std::vector<cEditor_Menu_Entry*> m_menu_entries;
+         bool m_help_window_visible;
++        bool m_items_loaded;
+         const int CAMERA_SPEED = 35;
+ 
+         void parse_menu_file();
+diff --git a/tsc/src/level/level_editor.cpp b/tsc/src/level/level_editor.cpp
+index 56515a8b..909f5aaf 100644
+--- a/tsc/src/level/level_editor.cpp
++++ b/tsc/src/level/level_editor.cpp
+@@ -38,7 +38,6 @@ cEditor_Level::cEditor_Level()
+     mp_level = NULL;
+     m_editor_item_tag = "level";
+     m_menu_filename = pResource_Manager->Get_Game_Editor("level_menu.xml");
+-    load_background_images_into_cegui();
+     m_focused_exit = 0;
+ }
+ 
+@@ -46,33 +45,6 @@ cEditor_Level::~cEditor_Level()
+ {
+ }
+ 
+-/* This function adds the files in pixmaps/game/background into
+- * CEGUI's image manager, as one-image imagesets (cf. cEditor.load_cegui_images()
+- * and cHud.load_images_into_cegui()). These images use the specifically
+- * assigned resource group "backgrounds" (see cVideo.Init_CEGUI()).
+- * They are used in the background preview in the editor's level background
+- * tab. */
+-void cEditor_Level::load_background_images_into_cegui()
+-{
+-    namespace fs                      = boost::filesystem;
+-    CEGUI::ImageManager& imgmanager   = CEGUI::ImageManager::getSingleton();
+-    std::vector<fs::path> backgrounds = Get_Directory_Files(pResource_Manager->Get_Game_Pixmaps_Directory() / utf8_to_path("game") / utf8_to_path("background"), ".png");
+-
+-    for(fs::path bgfile: backgrounds) {
+-        // Strip leading directory components (CEGUI wants relative path to resource group)
+-        // Subdirectories are not supported.
+-        bgfile = bgfile.filename();
+-
+-        // Strip trailing .png for background name (looks nicer on referencing)
+-        std::string bgname = path_to_utf8(bgfile);
+-        size_t pos = bgname.find(".png");
+-        bgname.replace(pos, 4, "");
+-
+-        // Add image into CEGUI
+-        imgmanager.addFromImageFile(bgname, path_to_utf8(bgfile), "backgrounds");
+-    }
+-}
+-
+ void cEditor_Level::Enable(cSprite_Manager* p_sprite_manager)
+ {
+     if (m_enabled)
+diff --git a/tsc/src/level/level_editor.hpp b/tsc/src/level/level_editor.hpp
+index a242ef6b..a26c286a 100644
+--- a/tsc/src/level/level_editor.hpp
++++ b/tsc/src/level/level_editor.hpp
+@@ -31,7 +31,6 @@ namespace TSC {
+ 
+     private:
+         static std::vector<cSprite*> items_loader_callback(const std::string& name, XmlAttributes& attributes, int engine_version, cSprite_Manager* p_sprite_manager, void* p_data);
+-        void load_background_images_into_cegui();
+         bool cycle_object_massive_type(cSprite* obj) const;
+         cLevel* mp_level;
+         size_t m_focused_exit;
+diff --git a/tsc/src/level/level_settings.cpp b/tsc/src/level/level_settings.cpp
+index 125cc0e7..8226f526 100644
+--- a/tsc/src/level/level_settings.cpp
++++ b/tsc/src/level/level_settings.cpp
+@@ -554,11 +554,22 @@ void cLevel_Settings::Load_BG_Image_List(void)
+ 
+         // Add bgname-Z pair for this background
+         if (!background->m_image_1_filename.empty()) {
+-            // Replicate CEGUI background name as set in cEditor_Level::load_background_images_into_cegui().
+-            std::string cegui_bg_image = path_to_utf8(background->m_image_1_filename.filename());
++            // Preview image from the "backgrounds" resource group (see cVideo::Init_CEGUI()),
++            // loaded when first shown: all 33 at startup are 392 MB of textures.
++            fs::path bg_file = background->m_image_1_filename.filename();
++            std::string cegui_bg_image = path_to_utf8(bg_file);
+             size_t pos = cegui_bg_image.find(".png");
+             cegui_bg_image.replace(pos, 4, "");
+ 
++            CEGUI::ImageManager& imgmanager = CEGUI::ImageManager::getSingleton();
++            if (!imgmanager.isDefined(cegui_bg_image)) {
++                fs::path bg_path = pResource_Manager->Get_Game_Pixmaps_Directory() / utf8_to_path("game") / utf8_to_path("background") / bg_file;
++                if (!File_Exists(bg_path)) {
++                    continue;
++                }
++                imgmanager.addFromImageFile(cegui_bg_image, path_to_utf8(bg_file), "backgrounds");
++            }
++
+             backgrounds.push_back(std::make_pair(cegui_bg_image, background->m_pos_z));
+         }
+     }
+diff --git a/tsc/src/video/video.cpp b/tsc/src/video/video.cpp
+index c609212a..7de2b164 100644
+--- a/tsc/src/video/video.cpp
++++ b/tsc/src/video/video.cpp
+@@ -103,6 +103,8 @@ void cVideo::Init_CEGUI(void)
+ 
+     // create CEGUI renderer and system objects
+     mp_cegui_renderer = &CEGUI::OpenGLRenderer::create();
++    // The game leaves GL_DEPTH_TEST on; where the context has a depth buffer the GUI fails it and is invisible.
++    mp_cegui_renderer->enableExtraStateSettings(true);
+ #ifdef CEGUI_USE_EXPAT
+     mp_cegui_xmlparser = new CEGUI::ExpatParser();
+ #else
