@@ -1,11 +1,11 @@
 ## Notes
 <br/>
 
-Thanks to [Tri Hua Minh](https://tri2510.itch.io/) for creating this game and making it for handhelds.
+Thanks to [Tri Hua Minh](https://trihua.com) for creating this game and making it for handhelds.
 The Prologue is free: https://tri2510.itch.io/the-last-summer-prologue
 <br/>
 
-## The Last Summer: Prologue 1.4.0
+## The Last Summer: Prologue 1.6.0
 
 The free Prologue (Chapters 1 to 3) of a cozy isometric story game about a seaside hotel
 closed for twenty years. The full game is on itch.io (https://tri2510.itch.io/the-last-summer); a
@@ -22,7 +22,12 @@ Prologue save carries over. Freeware: share unmodified copies free of charge
 | B | Back, stop fishing, stand up |
 | X or R1 (hold) | Run |
 | Select (or Y, until Nell has a camera) | Notebook |
+| L1 / R1 | Turn the notebook's pages |
 | Y (with the camera) | Look through the camera; A takes the photo |
 | Start | Pause menu |
+
+Languages: English, Tiếng Việt, 简体中文, 日本語, Deutsch, Français, Español, Português (Brasil).
+Settings: Language, Zoom (Auto, 1x, 1.5x, 2x, 2.5x, 3x; Auto draws the world larger on small screens) and
+Text size.
 
 Needs a screen of at least 640x480. Saves are kept in thelastsummerprologue/saves/.
