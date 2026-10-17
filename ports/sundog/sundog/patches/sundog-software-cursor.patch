@@ -1,0 +1,418 @@
+diff --git a/src/game/game_screen.c b/src/game/game_screen.c
+index 6e99a0d..65334d9 100644
+--- a/src/game/game_screen.c
++++ b/src/game/game_screen.c
+@@ -697,6 +697,32 @@ void game_sdlscreen_update_cursor(struct game_screen *screen_, void **cursor)
+     SDL_UnlockMutex(screen->mutex);
+ }
+ 
++bool game_sdlscreen_get_cursor_image(struct game_screen *screen_, uint8_t *rgba, int *hot_x, int *hot_y)
++{
++    struct sdl_screen *screen = sdl_screen(screen_);
++    bool cursor_set           = false;
++    int i;
++    SDL_LockMutex(screen->mutex);
++    for (i = 0; i < CURSOR_WIDTH * CURSOR_WIDTH; ++i) {
++        int bit    = 7 - (i & 7);
++        int data   = (screen->cursor_data[i >> 3] >> bit) & 1;
++        int mask   = (screen->cursor_mask[i >> 3] >> bit) & 1;
++        /* Same meaning as SDL_CreateCursor: data+mask black, mask only white, data only inverted (black). */
++        uint8_t v  = (data || !mask) ? 0 : 255;
++        rgba[i * 4 + 0] = v;
++        rgba[i * 4 + 1] = v;
++        rgba[i * 4 + 2] = v;
++        rgba[i * 4 + 3] = (data || mask) ? 255 : 0;
++        if (data || mask) {
++            cursor_set = true;
++        }
++    }
++    *hot_x = screen->cursor_hot_x;
++    *hot_y = screen->cursor_hot_y;
++    SDL_UnlockMutex(screen->mutex);
++    return cursor_set;
++}
++
+ int game_sdlscreen_save_state(struct game_screen *screen_, FILE *fd)
+ {
+     /* Must be called without the interpreter thread running,
+diff --git a/src/game/game_screen.h b/src/game/game_screen.h
+index 1b48110..7217db6 100644
+--- a/src/game/game_screen.h
++++ b/src/game/game_screen.h
+@@ -118,6 +118,14 @@ typedef void(update_palette_func)(void *data, const uint16_t *palette);
+ bool game_sdlscreen_update_textures(struct game_screen *screen, void *data, update_texture_func *update_texture, update_palette_func *update_palette);
+ void game_sdlscreen_update_cursor(struct game_screen *screen, void **cursor);
+ 
++/** Size in pixels of the cursor image returned by game_sdlscreen_get_cursor_image (square). */
++#define GAME_CURSOR_IMAGE_SIZE 32
++
++/** Render the current cursor shape as RGBA8888 (transparent where unmasked).
++ * Returns false if no cursor shape is set. Hotspot is in image pixels.
++ */
++bool game_sdlscreen_get_cursor_image(struct game_screen *screen, uint8_t *rgba, int *hot_x, int *hot_y);
++
+ /** Save screen state to fd (return 0 on success) */
+ extern int game_sdlscreen_save_state(struct game_screen *b, FILE *fd);
+ 
+diff --git a/src/meson.build b/src/meson.build
+index ca51a0b..238054c 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -57,6 +57,7 @@ sundog_sources = files(
+     'sundog.c',
+     'sundog_resources.c',
+     'swoosh.c',
++    'swcursor.c',
+     'glutil.c',
+     'renderer_basic.c',
+     'renderer_hq4x.c',
+diff --git a/src/sundog.c b/src/sundog.c
+index d40f96f..b96ca8c 100644
+--- a/src/sundog.c
++++ b/src/sundog.c
+@@ -32,6 +32,7 @@
+ #include "debugui/debugui.h"
+ #endif
+ #include "sundog_resources.h"
++#include "swcursor.h"
+ #include "swoosh.h"
+ 
+ #include <SDL.h>
+@@ -492,6 +493,15 @@ static void draw(struct game_state *gs)
+         tint[3] = 0.5f;
+     }
+     gs->renderer->draw(gs->renderer, tint);
++
++    if (gs->swcursor) {
++        int sx, sy;
++        SDL_GetMouseState(&sx, &sy);
++        float x = (float)(sx - gs->mouse_viewport[0]) * SCREEN_WIDTH / imax(gs->mouse_viewport[2], 1);
++        float y = (float)(sy - gs->mouse_viewport[1]) * SCREEN_HEIGHT / imax(gs->mouse_viewport[3], 1);
++        /* the cursor image is the 16x16 ST mouse form doubled to 32x32 */
++        swcursor_draw(gs->swcursor, x, y, SCREEN_WIDTH, SCREEN_HEIGHT, 0.5f);
++    }
+ }
+ 
+ /** Window was resized */
+@@ -661,6 +671,9 @@ static void event_loop(struct game_state *gs)
+         case SDL_MOUSEBUTTONUP:
+         case SDL_MOUSEBUTTONDOWN:
+             update_mouse_state(gs);
++            if (gs->swcursor) {
++                gs->force_redraw = true;
++            }
+             break;
+         case SDL_WINDOWEVENT:
+             switch (event.window.event) {
+@@ -700,7 +713,30 @@ static void event_loop(struct game_state *gs)
+                 /* Trigger vblank interrupt in interpreter thread */
+                 SDL_AtomicSet(&gs->vblank_trigger, 1);
+                 /* Change cursor (if needed) */
+-                game_sdlscreen_update_cursor(gs->screen, (void **)&gs->cursor);
++                if (gs->swcursor) {
++                    static uint8_t rgba[GAME_CURSOR_IMAGE_SIZE * GAME_CURSOR_IMAGE_SIZE * 4];
++                    static uint8_t last_rgba[sizeof(rgba)];
++                    static int last_hot_x = -1, last_hot_y = -1;
++                    int hot_x, hot_y;
++                    bool cursor_set = game_sdlscreen_get_cursor_image(gs->screen, rgba, &hot_x, &hot_y);
++                    if (!cursor_set) { /* no mouse form set: default arrow */
++                        memset(rgba, 0, sizeof(rgba));
++                        hot_x = hot_y = -2;
++                    }
++                    if (memcmp(rgba, last_rgba, sizeof(rgba)) || hot_x != last_hot_x || hot_y != last_hot_y) {
++                        if (cursor_set) {
++                            swcursor_set_image(gs->swcursor, rgba, GAME_CURSOR_IMAGE_SIZE, hot_x, hot_y);
++                        } else {
++                            swcursor_set_default(gs->swcursor);
++                        }
++                        memcpy(last_rgba, rgba, sizeof(rgba));
++                        last_hot_x       = hot_x;
++                        last_hot_y       = hot_y;
++                        gs->force_redraw = true;
++                    }
++                } else {
++                    game_sdlscreen_update_cursor(gs->screen, (void **)&gs->cursor);
++                }
+                 /* Congestion control */
+                 SDL_AtomicSet(&gs->timer_queued, 0);
+                 break;
+@@ -762,6 +798,7 @@ int main(int argc, char **argv)
+     const struct renderer_desc *renderer_type = &renderer_names[0];
+     bool print_usage                          = false;
+     bool fullscreen                           = false;
++    bool software_cursor                      = false;
+ 
+ #ifdef __APPLE__
+ #include <TargetConditionals.h>
+@@ -785,6 +822,8 @@ int main(int argc, char **argv)
+                 break;
+             } else if (strcmp(arg, "--fullscreen") == 0) {
+                 fullscreen = true;
++            } else if (strcmp(arg, "--software-cursor") == 0) {
++                software_cursor = true;
+             } else if (strcmp(arg, "--renderer") == 0) {
+                 argidx += 1;
+                 if (argidx == argc) {
+@@ -841,6 +880,7 @@ int main(int argc, char **argv)
+         fprintf(stderr, "Usage: %s [--renderer (basic|hq4x|hqish)] [<image.st>]\n", argv[0]);
+         fprintf(stderr, "\n");
+         fprintf(stderr, "      --fullscreen                 Make window initially fullscreen.\n");
++        fprintf(stderr, "      --software-cursor            Draw the mouse cursor with GL instead of the system cursor.\n");
+         fprintf(stderr, "      --renderer                   Set renderer to use (\"basic\" or \"hq4x\" or \"hqish\"), default is \"basic\". Renderers other than \"basic\" require OpenGL ES 3.\n");
+         fprintf(stderr, "      --right-click-emulation      Dedicate the top right corner of the screen to right-click emulation (e.g. for tablets)\n");
+         fprintf(stderr, "      --no-right-click-emulation   Disable right-click emulation in the top right corner\n");
+@@ -890,6 +930,11 @@ int main(int argc, char **argv)
+ 
+     swoosh(gs->window, gs->renderer);
+ 
++    if (software_cursor) {
++        gs->swcursor = swcursor_new();
++        SDL_ShowCursor(SDL_DISABLE);
++    }
++
+     /* Set up "vblank" timer */
+     gs->vblank_count = 0;
+     gs->time_offset  = get_60hz_time();
+@@ -925,6 +970,9 @@ int main(int argc, char **argv)
+ #ifdef ENABLE_DEBUGUI
+     debugui_shutdown();
+ #endif
++    if (gs->swcursor) {
++        swcursor_destroy(gs->swcursor);
++    }
+     SDL_GL_DeleteContext(gs->context);
+     gs->screen->destroy(gs->screen);
+     gs->sound->destroy(gs->sound);
+diff --git a/src/sundog.h b/src/sundog.h
+index 97f8a1f..fd72e53 100644
+--- a/src/sundog.h
++++ b/src/sundog.h
+@@ -9,6 +9,7 @@ struct psys_state;
+ struct psys_binding;
+ struct game_screen;
+ struct game_renderer;
++struct swcursor;
+ 
+ struct game_state {
+     bool running;
+@@ -52,6 +53,8 @@ struct game_state {
+     bool force_redraw;
+     /** If set, bypass/ignore SDL input to game. */
+     bool input_bypass;
++    /** Software cursor drawn with GL, or NULL to use the SDL (hardware) cursor. */
++    struct swcursor *swcursor;
+ };
+ 
+ #endif
+diff --git a/src/swcursor.c b/src/swcursor.c
+new file mode 100644
+index 0000000..8536de4
+--- /dev/null
++++ b/src/swcursor.c
+@@ -0,0 +1,167 @@
++/*
++ * Copyright (c) 2026 Cebion
++ * Distributed under the MIT software license, see the accompanying
++ * file COPYING or http://www.opensource.org/licenses/mit-license.php.
++ */
++#include "swcursor.h"
++
++#include "glutil.h"
++#include "util/memutil.h"
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++struct swcursor {
++    GLuint program;
++    GLint rect_loc;
++    GLuint tex;
++    GLuint vtx_buf;
++    int size;
++    int hot_x, hot_y;
++    bool has_image;
++};
++
++static const char *vs_src = "attribute vec2 pos;\n"
++                            "uniform vec4 rect;\n"
++                            "varying vec2 uv;\n"
++                            "void main() {\n"
++                            "    uv = pos;\n"
++                            "    gl_Position = vec4(mix(rect.xy, rect.zw, pos), 0.0, 1.0);\n"
++                            "}\n";
++
++static const char *fs_src = "precision mediump float;\n"
++                            "uniform sampler2D tex;\n"
++                            "varying vec2 uv;\n"
++                            "void main() {\n"
++                            "    gl_FragColor = texture2D(tex, uv);\n"
++                            "}\n";
++
++static GLuint compile(GLenum type, const char *src)
++{
++    GLuint shader = glCreateShader(type);
++    GLint ok;
++    glShaderSource(shader, 1, &src, NULL);
++    glCompileShader(shader);
++    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
++    if (!ok) {
++        char log[512];
++        glGetShaderInfoLog(shader, sizeof(log), NULL, log);
++        printf("Error: software cursor shader compilation failed: %s\n", log);
++    }
++    return shader;
++}
++
++struct swcursor *swcursor_new(void)
++{
++    struct swcursor *cursor = CALLOC_STRUCT(swcursor);
++    static const float quad[] = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
++    GLuint vs = compile(GL_VERTEX_SHADER, vs_src);
++    GLuint fs = compile(GL_FRAGMENT_SHADER, fs_src);
++    GLint ok;
++
++    cursor->program = glCreateProgram();
++    glAttachShader(cursor->program, vs);
++    glAttachShader(cursor->program, fs);
++    glBindAttribLocation(cursor->program, 0, "pos");
++    glLinkProgram(cursor->program);
++    glDeleteShader(vs);
++    glDeleteShader(fs);
++    glGetProgramiv(cursor->program, GL_LINK_STATUS, &ok);
++    if (!ok) {
++        printf("Error: software cursor program link failed\n");
++    }
++    cursor->rect_loc = glGetUniformLocation(cursor->program, "rect");
++    glUseProgram(cursor->program);
++    glUniform1i(glGetUniformLocation(cursor->program, "tex"), 0);
++    glUseProgram(0);
++
++    glGenTextures(1, &cursor->tex);
++    glBindTexture(GL_TEXTURE_2D, cursor->tex);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++
++    glGenBuffers(1, &cursor->vtx_buf);
++    glBindBuffer(GL_ARRAY_BUFFER, cursor->vtx_buf);
++    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++
++    return cursor;
++}
++
++void swcursor_set_image(struct swcursor *cursor, const uint8_t *rgba, int size, int hot_x, int hot_y)
++{
++    glBindTexture(GL_TEXTURE_2D, cursor->tex);
++    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
++    cursor->size      = size;
++    cursor->hot_x     = hot_x;
++    cursor->hot_y     = hot_y;
++    cursor->has_image = true;
++}
++
++void swcursor_set_default(struct swcursor *cursor)
++{
++    /* GEM ARROW mouse form, doubled to 32x32 like the game's own forms */
++    static const uint16_t data[16] = { 0x0000, 0x4000, 0x6000, 0x7000, 0x7800, 0x7C00, 0x7E00, 0x7F00,
++        0x7F80, 0x7C00, 0x6C00, 0x4600, 0x0600, 0x0300, 0x0300, 0x0000 };
++    static const uint16_t mask[16] = { 0xC000, 0xE000, 0xF000, 0xF800, 0xFC00, 0xFE00, 0xFF00, 0xFF80,
++        0xFFC0, 0xFFE0, 0xFE00, 0xEF00, 0xCF00, 0x8780, 0x0780, 0x0380 };
++    static uint8_t rgba[32 * 32 * 4];
++    int x, y;
++    for (y = 0; y < 32; ++y) {
++        for (x = 0; x < 32; ++x) {
++            int bit         = 15 - (x >> 1);
++            int d           = (data[y >> 1] >> bit) & 1;
++            int m           = (mask[y >> 1] >> bit) & 1;
++            uint8_t *p      = &rgba[(y * 32 + x) * 4];
++            p[0] = p[1] = p[2] = d ? 0 : 255;
++            p[3]                = (d || m) ? 255 : 0;
++        }
++    }
++    swcursor_set_image(cursor, rgba, 32, 0, 0);
++}
++
++void swcursor_draw(struct swcursor *cursor, float x, float y, int game_w, int game_h, float image_scale)
++{
++    if (!cursor->has_image) {
++        return;
++    }
++    float x0 = x - cursor->hot_x * image_scale;
++    float y0 = y - cursor->hot_y * image_scale;
++    float x1 = x0 + cursor->size * image_scale;
++    float y1 = y0 + cursor->size * image_scale;
++    /* game pixels to normalized device coordinates, y down */
++    float rect[4] = {
++        x0 / game_w * 2.0f - 1.0f,
++        1.0f - y0 / game_h * 2.0f,
++        x1 / game_w * 2.0f - 1.0f,
++        1.0f - y1 / game_h * 2.0f,
++    };
++
++    glUseProgram(cursor->program);
++    glUniform4fv(cursor->rect_loc, 1, rect);
++    glActiveTexture(GL_TEXTURE0);
++    glBindTexture(GL_TEXTURE_2D, cursor->tex);
++    glEnable(GL_BLEND);
++    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++
++    glBindBuffer(GL_ARRAY_BUFFER, cursor->vtx_buf);
++    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (const GLvoid *)0);
++    glEnableVertexAttribArray(0);
++    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
++    glDisableVertexAttribArray(0);
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++
++    glDisable(GL_BLEND);
++    glUseProgram(0);
++}
++
++void swcursor_destroy(struct swcursor *cursor)
++{
++    glDeleteBuffers(1, &cursor->vtx_buf);
++    glDeleteTextures(1, &cursor->tex);
++    glDeleteProgram(cursor->program);
++    free(cursor);
++}
+diff --git a/src/swcursor.h b/src/swcursor.h
+new file mode 100644
+index 0000000..40eeae6
+--- /dev/null
++++ b/src/swcursor.h
+@@ -0,0 +1,33 @@
++/*
++ * Copyright (c) 2026 Cebion
++ * Distributed under the MIT software license, see the accompanying
++ * file COPYING or http://www.opensource.org/licenses/mit-license.php.
++ */
++/* Software mouse cursor, drawn with GL on top of the game screen.
++ * For platforms without a visible hardware cursor (e.g. KMSDRM without a cursor plane).
++ */
++#ifndef H_SWCURSOR
++#define H_SWCURSOR
++
++#include <stdbool.h>
++#include <stdint.h>
++
++struct swcursor;
++
++struct swcursor *swcursor_new(void);
++
++/** Set cursor image (RGBA8888, size x size pixels) and hotspot in image pixels. */
++void swcursor_set_image(struct swcursor *cursor, const uint8_t *rgba, int size, int hot_x, int hot_y);
++
++/** Set the default arrow image, for when the game has no mouse form set. */
++void swcursor_set_default(struct swcursor *cursor);
++
++/** Draw cursor at game position (x, y) in game pixels, into the current viewport which
++ * covers the game area of game_w x game_h pixels. The image is drawn image_scale game
++ * pixels per image pixel.
++ */
++void swcursor_draw(struct swcursor *cursor, float x, float y, int game_w, int game_h, float image_scale);
++
++void swcursor_destroy(struct swcursor *cursor);
++
++#endif
