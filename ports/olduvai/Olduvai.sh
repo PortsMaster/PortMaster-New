@@ -27,19 +27,14 @@ export XDG_CONFIG_HOME="$GAMEDIR/conf"
 export OLDUVAI_BUG_DIR="$GAMEDIR/bug_reports"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Starting style by panel height: the largest scale that fits (x4 from 800
-# lines, x3 from 600, x2 from 400, a 4:3 panel filled), shorter panels Classic.
-# It is a default: the player's choice in Options - Style wins.
-if [ "$DISPLAY_HEIGHT" -ge 800 ]; then
-  PROFILE=hd-handheld-x4
-elif [ "$DISPLAY_HEIGHT" -ge 600 ]; then
-  PROFILE=hd-handheld
-elif [ "$DISPLAY_HEIGHT" -ge 400 ] && [ $((DISPLAY_WIDTH * 3)) -eq $((DISPLAY_HEIGHT * 4)) ]; then
-  PROFILE=hd-handheld-43
-elif [ "$DISPLAY_HEIGHT" -ge 400 ]; then
-  PROFILE=hd-handheld-x2
-else
+# Classic below 400 lines, else Enhanced, whose scale and aspect the engine
+# fits to the panel (PortMaster's size, the panel as the player holds it).
+# A default: Options - Style wins.
+export OLDUVAI_PANEL="${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
+if [ "$DISPLAY_HEIGHT" -lt 400 ]; then
   PROFILE=dos-handheld
+else
+  PROFILE=hd-handheld
 fi
 
 set -- --game-dir ./game --rom-dir ./mt32-roms --default-profile "$PROFILE"
