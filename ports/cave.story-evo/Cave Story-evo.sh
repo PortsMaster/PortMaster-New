@@ -55,7 +55,9 @@ export LD_LIBRARY_PATH="$GAMEDIR/libs:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 $ESUDO chmod 666 /dev/uinput
-$GPTOKEYB "nxengine-evo" -c nxengine-evo.gptk &
+GPTK_FILE="nxengine-evo.gptk"
+[ "$ANALOG_STICKS" = "0" ] && GPTK_FILE="nxengine-evo.gptk.0"
+$GPTOKEYB "nxengine-evo" -c "$GPTK_FILE" &
 ./nxengine-evo
 
 $ESUDO kill -9 $(pidof gptokeyb) & 
