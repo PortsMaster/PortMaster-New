@@ -1,0 +1,357 @@
+//////////////////////
+// Script Locals
+int lockerhelp = 0;
+int lockerlesshelp = 0;
+int endlevel = 0;
+
+///////////////////
+////INTRO START////
+void FadeEffect01(string asTimer)
+{
+	FadeIn(3.5);
+	
+	SetDepthOfFieldActive(true,0);
+	SetupDepthOfField(0,0.1,0.2);
+}
+void IntroEffect01(string asTimer)
+{
+	StartPlayerLookAt("lookintro2",0.25f, 4);
+}
+void IntroEffect02(string asTimer)
+{
+	//Removes widescreen after moving head at start, but keeps player locked
+	SetWideScreenActive(false);
+	
+	StopPlayerLookAt();
+	
+	SetDepthOfFieldActive(false,4);
+	
+	SetGameEntityActive("lookintro1",false);
+	SetGameEntityActive("lookintro2",false);
+}
+////INTRO STOP////
+//////////////////
+
+
+///////////////////////////////
+////HORN SOUND & TEXT START////
+void HornEvent01(string asTimer)
+{
+  	PlaySoundEntity("boathorn1",false);
+  	
+	PlayGameMusic("penumbra_music_E1_A6",0.7,0.2,true,0);
+	
+	// RunAfter(1, "HornEvent02");
+	RunAfter(0.01, "HornEvent04");
+}
+void HornEvent02(string asTimer)
+{	
+	AddMessage(
+		Translate("00_01_boat_cabin", "BoatHorn01") 
+		+ GetActionKeyString("Interact") 
+		+ Translate("00_01_boat_cabin", "BoatHorn02") 
+		+ GetActionKeyString("Examine") 
+		+ Translate("Misc", "QuoteDot")
+	);
+	
+	SetMessagesOverCallback("HornEvent04");
+}
+void HornEvent04()
+{
+	//Finally the player is unlocked and can move, the intro sequence is over.
+	SetPlayerActive(true);
+}
+////HORN SOUND & TEXT STOP////
+//////////////////////////////
+
+
+///////////////////////////
+////LOCKED LOCKER START////
+//EXAMINE PADLOCK
+void PadLockAreaExamine01(string asEntity)
+{
+	AddMessage(
+		Translate("00_01_boat_cabin", "PadLock01") 
+		+ GetActionKeyString("Inventory") 
+		+ Translate("Misc", "ParentDot")
+	);
+	
+	RemoveEntityCallback("PlayerExamine","padlockarea");
+}
+
+//USE KEY ON LOCK
+//TO MAKE IT EASIER, THE WHOLE LOCKER CAN BE USED TO OPEN WITH THE KEY 
+void Locker01UseKey01(string asItem, string asEntity)
+{	
+	PlayGuiSound("key_unlock", 0.8);
+	
+	GiveItem("padlock","boat_lock.ent",-1);
+	
+	//Partitialy removes help about locked locker, play opened locker but not found map folder
+	lockerlesshelp = 1;
+	
+	RemoveUseCallback("Locker01UseKey01");
+	
+	RemoveItem("padlock_key");
+	
+	SetGameEntityDescriptionOnceTrans("locker1", "", "");
+	
+	SetGameEntityActive("lock1",false);
+	SetGameEntityActive("padlockarea",false);
+}
+
+//TUTORIAL ON FLASHLIGHT
+void FlashlightTutorial01(string asParent, string asChild)
+{
+	if(HasItem("flashlight") == true)
+	{
+		AddSubTitle(
+			Translate("00_01_boat_cabin", "TutorialFlashLight01") 
+			+ GetActionKeyString("Flashlight") 
+			+ Translate("00_01_boat_cabin", "TutorialFlashLight02")
+			, 4
+		);
+	}
+	else if(HasItem("flashlight") == false)
+	{
+		AddSubTitleTrans("00_01_boat_cabin", "TutorialFlashLight03", 5);
+	}
+	
+	SetGameEntityActive("locker1area",false);
+	RemoveEntityCallback("PlayerExamine","locker1");
+}
+
+//LOCKER HELP
+void LockerHelp01(string asTimer)
+{
+	if(lockerlesshelp == 0)
+	{
+		AddMessage(
+			Translate("00_01_boat_cabin", "LockerHelp01") 
+			+ GetActionKeyString("Inventory") 
+			+ Translate("Misc", "ParentDot")
+		);
+	}
+	else if(lockerlesshelp == 1)
+	{
+		AddMessageTrans("00_01_boat_cabin", "LockerHelp02");			
+	}
+}
+////LOCKED LOCKER STOP////
+//////////////////////////
+
+
+//////////////////////
+////PICK UPS START////
+void PickFlashlight01(string asItem)
+{
+	AddMessage(
+		Translate("00_01_boat_cabin", "TutorialFlashLight04") 
+		+ GetActionKeyString("Inventory") 
+		+ Translate("00_01_boat_cabin", "TutorialFlashLight05")
+		+ GetActionKeyString("Flashlight")
+		+ Translate("Misc", "QuoteDot")
+	);
+}
+
+void PickBattery01(string asItem)
+{	
+	AddMessageTrans("00_01_boat_cabin", "TutorialBattery01");
+}
+
+void PickNotebook01(string asItem)
+{
+	AddMessage(
+		Translate("00_01_boat_cabin", "TutorialNotebook01") 
+		+ GetActionKeyString("NoteBook") 
+		+ Translate("00_01_boat_cabin", "TutorialNotebook02")
+		+ GetActionKeyString("PersonalNotes")
+		+ Translate("Misc", "ParentDot")
+	);
+
+	//DRAWER TUTORIAL IF PLAYER HAS NOT ALREADY TAKEN FLASHLIGHT
+	if(HasItem("flashlight") == false)
+	{
+		RunAfter(0.5f, "DrawerTutorial01");
+	}
+}
+
+//TUTORIAL FOR OPENING DRAWERS
+void DrawerTutorial01(string asTimer)
+{
+	AddMessage(
+		Translate("00_01_boat_cabin", "TutorialDrawer01") 
+		+ GetActionKeyString("Interact") 
+		+ Translate("00_01_boat_cabin", "TutorialDrawer02")
+	);
+}
+
+void Mapfolder01(string asItem)
+{
+	AddMessage(
+		Translate("00_01_boat_cabin", "TutorialMapfolder01") 
+		+ GetActionKeyString("GlowStick") 
+		+ Translate("Misc", "QuoteDot")
+	);
+	
+	//Turns off help message for locker, player managed to open the locker and already found the map folder.		
+	lockerhelp = 1;
+}
+////PICK UPS STOP////
+/////////////////////
+
+
+//////////////////////
+////END LEVEL START///
+void EndLevel01(string asTimer)
+{
+	PlaySoundEntity("boathorn1",false);
+	
+	AddSubTitleTrans("00_01_boat_cabin", "EndLevel01", 4);
+	
+	SetGameEntityActive("exitdoor",true);
+	
+	AddEntityCallback("PlayerInteract","exitdoor","ExitDoorInteract01");
+}
+
+void ExitDoorInteract01(string asEntity)
+{
+	ChangeMap(	"level01_01_outside.dae", //New map
+			"link1", //Positon on new map
+			"door_metal_boat_open","", //Stop and end sound.
+			0.5f , 0.5f,//Fade out and in time (seconds).
+			"LoadTexts", "00_01_to_01_01"); //Load text (cat and entry)
+}
+////END LEVEL STOP///
+/////////////////////
+
+
+//////////////////////////////////////////////////////////
+/*This function is run the FIRST time the map is loaded */
+void OnStart()
+{
+	//---- AREA INIT ----------------------
+	AddEntityCollideCallback("Enter","locker1","locker1area","FlashlightTutorial01");
+	
+	SetGameEntityActive("exitdoor",false);
+	
+	SetAreaCustomIcon("exitdoor", "DoorLink");
+	
+	
+	//---- AUDIO INIT -----------------------
+	StopSoundEntity("boathorn1",false);
+	
+	
+	//---- INTERACT INIT ----------------------
+	AddEntityCallback("PlayerExamine","padlockarea","PadLockAreaExamine01");
+	AddEntityCallback("PlayerInteract","exitdoor","ExitDoorInteract01");
+	
+	AddUseCallback("padlock_key", "padlockarea", "Locker01UseKey01");
+	AddUseCallback("padlock_key", "locker1", "Locker01UseKey01");
+	AddUseCallback("padlock_key", "lock1", "Locker01UseKey01");
+	
+	AddPickupCallback("flashlight", "PickFlashlight01");
+	AddPickupCallback("battery1", "PickBattery01");
+	AddPickupCallback("notebook", "PickNotebook01");
+	AddPickupCallback("glowstick", "Mapfolder01");
+	
+	//---- LIGHT INIT -------------------
+	SetLight3DFlicker("parrafinlight_light1",
+			0.73,0.63,0.48,0.5,			
+			3.8,
+			0.4, 0.8, "", "", 
+			0.8, 1.6, "","", 
+			true, 1.5,2); 
+	
+	SetLight3DFlickerActive("parrafinlight_light1",true); 
+	
+	
+	//----TEXT INIT----------------------
+	SetGameEntityDescriptionOnceTrans("exitdoordesc","00_01_boat_cabin","ExitDoorDesc");
+	SetGameEntityDescriptionOnceTrans("mapdesc","00_01_boat_cabin","MapDesc");
+	SetGameEntityDescriptionOnceTrans("beddesc","00_01_boat_cabin","BedDesc");
+	SetGameEntityDescriptionOnceTrans("coffin1","00_01_boat_cabin","Coffin01Desc");
+	SetGameEntityDescriptionOnceTrans("smalltabledesc","00_01_boat_cabin","SmallTableDesc");
+	SetGameEntityDescriptionOnceTrans("windowdesc1","00_01_boat_cabin","Window01Desc");
+	SetGameEntityDescriptionOnceTrans("windowdesc2","00_01_boat_cabin","Window02Desc");
+	SetGameEntityDescriptionOnceTrans("whiskeybottle1","00_01_boat_cabin","WhiskeyBottle01Desc");
+	SetGameEntityDescriptionOnceTrans("locker1", "00_01_boat_cabin", "Locker01");
+	SetGameEntityDescriptionOnceTrans("descwife", "00_01_boat_cabin", "DescPicture");
+	SetGameEntityDescriptionOnceTrans("descpinup", "00_01_boat_cabin", "DescPoster");
+	
+	
+	//For boat horn event
+	RunAfter(0.01, "HornEvent01"); // 5.5
+	
+	bool bIntro = false;
+		
+	//---- INTRO INIT ------------------
+	if(bIntro)
+	{
+		FadeOut(0);
+		
+		SetPlayerActive(false);
+		SetWideScreenActive(true);
+		
+		StartPlayerLookAt("lookintro1",100, 0.001f);
+
+		//For fade from black at start
+		RunAfter(0.5, "FadeEffect01");
+		//For wide screen end and view movement
+		RunAfter(2, "IntroEffect01");
+		RunAfter(6, "IntroEffect02");
+	}
+	
+	//---- PLAYER INIT --------------------	
+	GiveItem("padlock_key", "item_key01.ent", -1);
+}
+
+
+/////////////////////////////////////////////////////
+/*This function is run everytime the map is loaded */
+void OnLoad()
+{
+	SetAmbientColor(0.25,0.25,0.3);
+	
+	SetSkyboxActive(true);
+	SetSkyboxColor(0.5,0.5,1,1);
+	
+	//---- GRAVITY/WAVE EFFECT --------------------
+	SetWaveGravityActive(true);
+	SetupWaveGravity(
+		6, //Max angle
+		8.0f, //Time for each wave
+		9.8, //Gravity size
+		"x" //Axis of wave.
+	);
+}
+
+
+///////////////////////////////////////
+/*This function is run 60 times a sec*/
+void OnUpdate()
+{	
+	//ADD TIMER FOR HELP MESSAGE TO OPEN LOCKER, SEE -> CALLBACKS
+	if(HasItem("flashlight") && HasItem("notebook") && lockerhelp == 0)
+	{
+		RunAfter(0.5f, "LockerHelp01");
+			
+		lockerhelp = 1;
+	}
+	
+	//ADD TIMER TO FINSH LEVEL WHEN PLAYER HAS ALL ITEMS, SEE -> CALLBACKS
+	if(HasItem("flashlight") && HasItem("notebook") && HasItem("glowstick") && endlevel == 0)
+	{
+		RunAfter(6.5f, "EndLevel01");
+		endlevel = 1;
+	}
+}
+
+
+/////////////////////////////////////////////////////
+/*This function is run everytime the map is unloaded */
+void OnExit()
+{
+	SetWaveGravityActive(false);
+	StopGameMusic(0.5,0);
+}
