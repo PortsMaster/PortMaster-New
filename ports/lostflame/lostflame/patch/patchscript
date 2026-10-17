@@ -1,0 +1,84 @@
+#!/bin/bash
+# Rebuilds gamepatch.jar from the player's own jar. The patched classes are the
+# game's code recompiled.
+
+# PATCH_GAMEDIR first: when this script is sourced, $0 names the caller.
+GAMEDIR="${PATCH_GAMEDIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+PATCHDIR="$GAMEDIR/patch"
+GAME_JAR="$GAMEDIR/LostFlame.jar"
+WORK="$GAMEDIR/patchtmp"
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+echo "=== patching $GAMEDIR ==="
+
+XDELTA="$controlfolder/xdelta3"
+[ -x "$XDELTA" ] || XDELTA=$(command -v xdelta3)
+# Tool builds differ per firmware; logged for failure reports.
+echo "tools: xdelta3=$XDELTA unzip=$(command -v unzip) zip=$(command -v zip) md5sum=$(command -v md5sum)"
+
+fail() {
+  echo "patch failed: $1"
+  rm -rf "$WORK"
+  exit 1
+}
+
+[ -f "$GAME_JAR" ] || fail "LostFlame.jar is not in ports/lostflame"
+[ -n "$XDELTA" ] || fail "no xdelta3 found, update PortMaster"
+
+# A hint only: a re-zipped jar with the same classes patches fine, and targets.md5
+# decides, since xdelta3 does not check its source.
+want=$(cat "$PATCHDIR/source.md5" 2>/dev/null)
+have=$(md5sum "$GAME_JAR" | cut -d' ' -f1)
+[ "$want" = "$have" ] || echo "warning: jar is $have, patch was built against $want (1.0.0.7c)"
+
+rm -rf "$WORK"
+mkdir -p "$WORK/orig" "$WORK/out" || fail "cannot write to $GAMEDIR"
+
+classes=$(cd "$PATCHDIR/deltas" && find . -name '*.class.xdelta' | sed -e 's|^\./||' -e 's|\.xdelta$||')
+[ -n "$classes" ] || fail "no deltas in $PATCHDIR/deltas"
+echo "$(echo "$classes" | wc -l) classes to rebuild"
+
+# Payload check first: a copy missing a directory would otherwise fail as a patch bug.
+gone=0
+while read -r _ name; do
+  [ -f "$PATCHDIR/deltas/$name.xdelta" ] || [ -f "$PATCHDIR/whole/$name" ] || {
+    echo "payload missing: $name"; gone=$((gone + 1)); }
+done < "$PATCHDIR/targets.md5"
+[ "$gone" = 0 ] || fail "$gone payload files are not on the card -- unzip the port again"
+
+# One unzip per class: some firmwares' unzip mangles batched path arguments.
+for c in $classes; do
+  if ! (cd "$WORK/orig" && unzip -o -q "$GAME_JAR" "$c"); then
+    echo "asked for: [$c]"
+    unzip -l "$GAME_JAR" "*${c##*/}" 2>&1 | head -5
+    fail "cannot read $c out of the jar"
+  fi
+  [ -f "$WORK/orig/$c" ] || { echo "asked for: [$c]"; fail "$c did not land in the work tree"; }
+  mkdir -p "$(dirname "$WORK/out/$c")"
+  "$XDELTA" -d -f -s "$WORK/orig/$c" "$PATCHDIR/deltas/$c.xdelta" "$WORK/out/$c" \
+    || fail "$c -- is this Lost Flame 1.0.0.7c?"
+done
+
+# Classes the patch adds, which have no original to rebuild from
+[ -d "$PATCHDIR/whole" ] && { cp -r "$PATCHDIR/whole/." "$WORK/out/" || fail "adding new classes"; }
+
+report=$(cd "$WORK/out" && md5sum -c "$PATCHDIR/targets.md5" 2>&1)
+if [ $? -ne 0 ]; then
+  echo "$report" | grep -v ": OK$"
+  fail "rebuilt classes do not match -- is this Lost Flame 1.0.0.7c?"
+fi
+echo "$(echo "$report" | grep -c ": OK$") classes verified"
+
+if command -v zip >/dev/null 2>&1; then
+  (cd "$WORK/out" && zip -q -r "$GAMEDIR/gamepatch.jar.tmp" .) || fail "zip"
+  mv "$GAMEDIR/gamepatch.jar.tmp" "$GAMEDIR/gamepatch.jar" || fail "cannot write gamepatch.jar"
+  echo "gamepatch.jar built"
+else
+  # Without zip, a classpath directory serves as the patch.
+  rm -rf "$GAMEDIR/gamepatch"
+  mv "$WORK/out" "$GAMEDIR/gamepatch" || fail "cannot write gamepatch/"
+  echo "no zip on this firmware, left gamepatch/ as a classpath directory"
+fi
+
+rm -rf "$WORK"
+echo "=== patching complete ==="
