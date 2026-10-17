@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: penumbra.zip, Penumbra Overture.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -24,7 +23,6 @@ cd $GAMEDIR
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-$ESUDO chmod 666 /dev/uinput
 chmod +x "$GAMEDIR/$BINARY"
 
 # Only OpenAL is carried along; SDL2 and GLES come from the system.
