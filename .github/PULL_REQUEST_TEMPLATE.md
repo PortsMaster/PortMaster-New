@@ -1,6 +1,7 @@
 ## Game Information
 - **New Port for**: { Game Title }
 - **URL**: { Link to project page or source control page }
+- Testing Thread URL: 
 
 ## Authorship & Testing
 
@@ -11,19 +12,22 @@
 
 ### CFW Tests
 Ensure your game has been tested on all major CFWs:
-- [ ] ArkOS
+
 - [ ] AmberELEC
-- [ ] ROCKNIX
+- [ ] dArkOS
 - [ ] muOS
 - [ ] Knulli
-- [ ] Crossmix (Optional)
+- ROCKNIX
+-> [ ] Libmali
+-> [ ] Panfrost
+-> [ ] Adreno (Optional)
 - [ ] Other (add here)
 
 ### Resolution Tests
 Test all major resolutions:
 - [ ] 480x320 (Optional)
 - [ ] 640x480
-- [ ] 720x720 (RGB30) (Optional)
+- [ ] 720x720 (Optional)
 - [ ] Higher resolutions (e.g., 1280x720)
 
 ## File Structure
