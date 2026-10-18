@@ -28,6 +28,6 @@ source $controlfolder/runtimes/"love_11.5"/love.txt
 
 $GPTOKEYB "$LOVE_GPTK" -c "$GAMEDIR/gonefishing.gptk" &
 pm_platform_helper "$LOVE_BINARY"
-$LOVE_RUN "$GAMEDIR/gamedata" --fullscreen
+$LOVE_RUN "$GAMEDIR/gonefishing.love" --fullscreen
 
 pm_finish

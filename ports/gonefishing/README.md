@@ -13,7 +13,7 @@ Source: https://github.com/SkyWalker541/Gone-Fishing
 
 License: CC BY-NC-ND 4.0. Free to share, not for sale, no modified versions.
 
-Thanks to the LÖVE team.
+Thanks to the LÖVE team for the framework, and to the PortMaster crew for their testing, feedback and fixes.
 
 ## Controls
 
