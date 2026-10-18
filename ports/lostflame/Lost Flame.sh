@@ -19,7 +19,7 @@ CONFDIR="$GAMEDIR/conf"
 java_runtime="zulu17.54.21-ca-jre17.0.13-linux"
 export DEVICE_ARCH="${DEVICE_ARCH:-aarch64}"
 
-exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 if [ ! -f "$GAMEDIR/LostFlame.jar" ]; then
   pm_message "LostFlame.jar not found. Copy it from your Steam install into ports/lostflame."
