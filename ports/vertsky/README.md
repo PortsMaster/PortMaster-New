@@ -4,7 +4,7 @@ Thanks to FLENT ([foxlinked](https://foxlinked.itch.io/vertsky)) for making Vert
 
 According to the creators, VertSky was made with AI assistance (code, graphics, sounds and text, built with Grok Bot under the direction of foxlinked).
 
-All rights to the game, artwork, and music belong to the original creators. The game is included in this port with the permission of the creators (version `VertSky-1.0.17`).
+All rights to the game, artwork, and music belong to the original creators. The game is included in this port with the permission of the creators (version `VertSky-1.0.19`).
 
 The game supports 1 or 2 players (local co-op). Player 2 needs a second gamepad. The screen layout is picked automatically (16:9, 4:3 or 3:2) and can be changed in the game's options.
 
