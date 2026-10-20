@@ -29,3 +29,11 @@ LILT is freeware, distributed through PortMaster with the author's permission. S
 ## Saves
 
 The pattern and settings are kept in `ports/lilt/conf/lilt.state`.
+
+## Compile
+
+Source: https://github.com/deadquiet42/lilt
+
+    gcc -O2 -s lilt.c -o lilt $(sdl2-config --cflags --libs) -lm -lpthread
+
+Build on an aarch64 device or chroot with the SDL2 development files. The release binary was cross compiled with Zig targeting glibc 2.17; see the repo README for that command.
