@@ -1,0 +1,874 @@
+diff --git a/Data/Base.rte/Shaders/Background.frag b/Data/Base.rte/Shaders/Background.frag
+index 1110efcbb..16000c6df 100644
+--- a/Data/Base.rte/Shaders/Background.frag
++++ b/Data/Base.rte/Shaders/Background.frag
+@@ -11,9 +11,9 @@ layout(blend_support_all_equations) out;
+ out vec4 FragColor;
+ uniform sampler2D rteTexture;
+ uniform sampler2D rtePalette;
+-uniform vec4 rteColor = vec4(1.0);
+-uniform bool rteBlendInvert = false;
+-uniform bool drawMasked = false;
++uniform vec4 rteColor;
++uniform bool rteBlendInvert;
++uniform bool drawMasked;
+ 
+ 
+ vec4 textureAA(sampler2D tex, vec2 uv) {
+@@ -27,7 +27,7 @@ vec4 textureAA(sampler2D tex, vec2 uv) {
+ 
+ void main() {
+ 	float red = texture(rteTexture, textureUV).r;
+-	if (red==0 && drawMasked) {
++	if (red == 0.0 && drawMasked) {
+ 		discard;
+ 	}
+ 	if (!rteBlendInvert) {
+diff --git a/Source/Entities/Scene.cpp b/Source/Entities/Scene.cpp
+index 3c08ece91..bec06cf9a 100644
+--- a/Source/Entities/Scene.cpp
++++ b/Source/Entities/Scene.cpp
+@@ -860,7 +860,7 @@ std::vector<SceneLayerInfo> Scene::GetCopiedSceneLayerBitmaps() const {
+ 	{
+ 	    if (m_apUnseenLayer[team])
+ 	    {
+-			layerInfos.emplace_back(std::format("UST{}", team), m_apUnseenLayer[team]->CopyBitmap());
++			layerInfos.emplace_back("UST" + std::to_string(team), m_apUnseenLayer[team]->CopyBitmap());
+ 	    }
+ 	}
+ 
+diff --git a/Source/Managers/ActivityMan.cpp b/Source/Managers/ActivityMan.cpp
+index 8c6d7b9b9..560634f2f 100644
+--- a/Source/Managers/ActivityMan.cpp
++++ b/Source/Managers/ActivityMan.cpp
+@@ -138,7 +138,7 @@ bool ActivityMan::SaveCurrentGame(const std::string& fileName) {
+ 		SceneLayer* unseenLayer = modifiableScene->GetUnseenLayer(i);
+ 		if (unseenLayer) {
+ 			unseenLayer->GetContentFile().SetIsMemoryFile(true);
+-			unseenLayer->GetContentFile().SetDataPath(g_PresetMan.GetFullModulePath(c_UserScriptedSavesModuleName) + std::format("/Save UST{}.png", i));
++			unseenLayer->GetContentFile().SetDataPath(g_PresetMan.GetFullModulePath(c_UserScriptedSavesModuleName) + "/Save UST" + std::to_string(i) + ".png");
+ 		}
+ 	}
+ 
+@@ -345,8 +345,8 @@ bool ActivityMan::LoadAndLaunchGame(const std::string& fileName) {
+ 	}
+ 
+ 	for (int i = 0; i < Activity::MaxTeamCount; ++i) {
+-		if (unzipFileIntoBuffer(std::format("Save UST{}.png", i))) {
+-			ContentFile::ManuallyLoadDataPNG(g_PresetMan.GetFullModulePath(c_UserScriptedSavesModuleName) + std::format("/Save UST{}.png", i), loadMemPng(buffer, info.uncompressed_size));
++		if (unzipFileIntoBuffer("Save UST" + std::to_string(i) + ".png")) {
++			ContentFile::ManuallyLoadDataPNG(g_PresetMan.GetFullModulePath(c_UserScriptedSavesModuleName) + "/Save UST" + std::to_string(i) + ".png", loadMemPng(buffer, info.uncompressed_size));
+ 		}
+ 	}
+ 
+diff --git a/Source/Managers/AudioMan.cpp b/Source/Managers/AudioMan.cpp
+index 4839b0af5..49660696f 100644
+--- a/Source/Managers/AudioMan.cpp
++++ b/Source/Managers/AudioMan.cpp
+@@ -12,6 +12,94 @@
+ #include <array>
+ #include <cstring>
+ 
++#ifdef __linux__
++#include "fmod/fmod_output.h"
++#include <SDL3/SDL.h>
++#include <vector>
++
++namespace {
++	struct SDLOutputData {
++		SDL_AudioStream* stream = nullptr;
++		std::vector<float> buffer;
++		int rate = 48000;
++	};
++
++	void SDLCALL SDLOutputFeed(void* userdata, SDL_AudioStream* stream, int additionalAmount, int totalAmount) {
++		FMOD_OUTPUT_STATE* outputState = static_cast<FMOD_OUTPUT_STATE*>(userdata);
++		SDLOutputData* data = static_cast<SDLOutputData*>(outputState->plugindata);
++		int frames = static_cast<int>(data->buffer.size() / 2);
++		while (additionalAmount > 0) {
++			FMOD_OUTPUT_READFROMMIXER(outputState, data->buffer.data(), frames);
++			SDL_PutAudioStreamData(stream, data->buffer.data(), frames * 2 * static_cast<int>(sizeof(float)));
++			additionalAmount -= frames * 2 * static_cast<int>(sizeof(float));
++		}
++	}
++
++	FMOD_RESULT F_CALL SDLOutputGetNumDrivers(FMOD_OUTPUT_STATE* outputState, int* numDrivers) {
++		*numDrivers = 1;
++		return FMOD_OK;
++	}
++
++	FMOD_RESULT F_CALL SDLOutputGetDriverInfo(FMOD_OUTPUT_STATE* outputState, int id, char* name, int nameLength, FMOD_GUID* guid, int* systemRate, FMOD_SPEAKERMODE* speakerMode, int* speakerModeChannels) {
++		if (name && nameLength > 0) {
++			SDL_strlcpy(name, "SDL", nameLength);
++		}
++		if (guid) {
++			std::memset(guid, 0, sizeof(FMOD_GUID));
++		}
++		*systemRate = 48000;
++		*speakerMode = FMOD_SPEAKERMODE_STEREO;
++		*speakerModeChannels = 2;
++		return FMOD_OK;
++	}
++
++	FMOD_RESULT F_CALL SDLOutputInit(FMOD_OUTPUT_STATE* outputState, int selectedDriver, FMOD_INITFLAGS flags, int* outputRate, FMOD_SPEAKERMODE* speakerMode, int* speakerModeChannels, FMOD_SOUND_FORMAT* outputFormat, int dspBufferLength, int* dspNumBuffers, int* dspNumAdditionalBuffers, void* extraDriverData) {
++		if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
++			return FMOD_ERR_OUTPUT_INIT;
++		}
++		SDLOutputData* data = new SDLOutputData();
++		data->rate = *outputRate > 0 ? *outputRate : 48000;
++		data->buffer.resize(static_cast<size_t>(dspBufferLength) * 2);
++		outputState->plugindata = data;
++		*outputRate = data->rate;
++		*speakerMode = FMOD_SPEAKERMODE_STEREO;
++		*speakerModeChannels = 2;
++		*outputFormat = FMOD_SOUND_FORMAT_PCMFLOAT;
++		return FMOD_OK;
++	}
++
++	FMOD_RESULT F_CALL SDLOutputStart(FMOD_OUTPUT_STATE* outputState) {
++		SDLOutputData* data = static_cast<SDLOutputData*>(outputState->plugindata);
++		SDL_AudioSpec spec = {SDL_AUDIO_F32, 2, data->rate};
++		data->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, SDLOutputFeed, outputState);
++		if (!data->stream) {
++			return FMOD_ERR_OUTPUT_INIT;
++		}
++		SDL_ResumeAudioStreamDevice(data->stream);
++		return FMOD_OK;
++	}
++
++	FMOD_RESULT F_CALL SDLOutputStop(FMOD_OUTPUT_STATE* outputState) {
++		SDLOutputData* data = static_cast<SDLOutputData*>(outputState->plugindata);
++		if (data && data->stream) {
++			SDL_DestroyAudioStream(data->stream);
++			data->stream = nullptr;
++		}
++		return FMOD_OK;
++	}
++
++	FMOD_RESULT F_CALL SDLOutputClose(FMOD_OUTPUT_STATE* outputState) {
++		SDLOutputStop(outputState);
++		delete static_cast<SDLOutputData*>(outputState->plugindata);
++		outputState->plugindata = nullptr;
++		SDL_QuitSubSystem(SDL_INIT_AUDIO);
++		return FMOD_OK;
++	}
++
++	const FMOD_OUTPUT_DESCRIPTION c_SDLOutputDescription = {FMOD_OUTPUT_PLUGIN_VERSION, "SDL", 1, FMOD_OUTPUT_METHOD_MIX_DIRECT, SDLOutputGetNumDrivers, SDLOutputGetDriverInfo, SDLOutputInit, SDLOutputStart, SDLOutputStop, SDLOutputClose};
++} // namespace
++#endif
++
+ using namespace RTE;
+ 
+ AudioMan::AudioMan() {
+@@ -30,6 +118,7 @@ void AudioMan::Clear() {
+ 	m_MuteMaster = false;
+ 	m_MuteMusic = false;
+ 	m_MuteSounds = false;
++	m_MuteAudioOnFocusLoss = false;
+ 	m_MasterVolume = 0.5F;
+ 	m_MusicVolume = 1.0F;
+ 	m_SoundsVolume = 1.0F;
+@@ -71,6 +160,12 @@ bool AudioMan::Initialize() {
+ #endif
+ 
+ 	audioSystemSetupResult = (audioSystemSetupResult == FMOD_OK) ? m_AudioSystem->init(c_MaxVirtualChannels, flags, 0) : audioSystemSetupResult;
++#ifdef __linux__
++	// Without a PulseAudio server or a free ALSA hardware device (e.g. PipeWire-only systems) FMOD has no output, so hand its mix to SDL audio instead.
++	if (unsigned int sdlOutputHandle = 0; audioSystemSetupResult != FMOD_OK && m_AudioSystem && m_AudioSystem->registerOutput(&c_SDLOutputDescription, &sdlOutputHandle) == FMOD_OK && m_AudioSystem->setOutputByPlugin(sdlOutputHandle) == FMOD_OK) {
++		audioSystemSetupResult = m_AudioSystem->init(c_MaxVirtualChannels, flags, 0);
++	}
++#endif
+ 
+ 	audioSystemSetupResult = (audioSystemSetupResult == FMOD_OK) ? m_AudioSystem->getMasterChannelGroup(&m_MasterChannelGroup) : audioSystemSetupResult;
+ 	audioSystemSetupResult = (audioSystemSetupResult == FMOD_OK) ? m_AudioSystem->createChannelGroup("SFX", &m_SFXChannelGroup) : audioSystemSetupResult;
+diff --git a/Source/Managers/FrameMan.cpp b/Source/Managers/FrameMan.cpp
+index 0799a475c..b6c73e16b 100644
+--- a/Source/Managers/FrameMan.cpp
++++ b/Source/Managers/FrameMan.cpp
+@@ -25,7 +25,7 @@
+ #include "AllegroScreen.h"
+ 
+ #include "GLCheck.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "Draw.h"
+ 
+ #include "tracy/Tracy.hpp"
+@@ -618,9 +618,28 @@ void FrameMan::SaveScreenToBitmap() {
+ 		return;
+ 	}
+ 
++#ifdef CCCP_GLES
++	// GLES has no glGetTexImage, read the screen buffer's framebuffer as RGBA and repack it into the RGB24 dump surface.
++	int width = m_ScreenDumpBuffer->w;
++	int height = m_ScreenDumpBuffer->h;
++	std::vector<unsigned char> rgbaPixels(static_cast<size_t>(width) * height * 4);
++	GLint previousFramebuffer = 0;
++	GL_CHECK(glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer));
++	GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, g_WindowMan.GetScreenBuffer()->GetFramebuffer()));
++	glPixelStorei(GL_PACK_ALIGNMENT, 1);
++	GL_CHECK(glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbaPixels.data()));
++	GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, previousFramebuffer));
++	for (int y = 0; y < height; ++y) {
++		unsigned char* row = static_cast<unsigned char*>(m_ScreenDumpBuffer->pixels) + y * m_ScreenDumpBuffer->pitch;
++		for (int x = 0; x < width; ++x) {
++			std::memcpy(row + x * 3, &rgbaPixels[(static_cast<size_t>(y) * width + x) * 4], 3);
++		}
++	}
++#else
+ 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
+ 	GL_CHECK(glBindTexture(GL_TEXTURE_2D, g_WindowMan.GetScreenBuffer()->GetColorTexture().id));
+ 	GL_CHECK(glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, m_ScreenDumpBuffer->pixels));
++#endif
+ 
+ 	// Flip the pixels
+ 	std::vector<char*> temp(m_ScreenDumpBuffer->pitch);
+diff --git a/Source/Managers/FrameMan.h b/Source/Managers/FrameMan.h
+index 72037a459..6d0a135f0 100644
+--- a/Source/Managers/FrameMan.h
++++ b/Source/Managers/FrameMan.h
+@@ -7,7 +7,7 @@
+ 
+ #include <array>
+ #include <unordered_map>
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ 
+ #define g_FrameMan FrameMan::Instance()
+ 
+diff --git a/Source/Managers/GLResourceMan.h b/Source/Managers/GLResourceMan.h
+index 25d65b846..ed84288f7 100644
+--- a/Source/Managers/GLResourceMan.h
++++ b/Source/Managers/GLResourceMan.h
+@@ -2,7 +2,7 @@
+ 
+ #include "Singleton.h"
+ 
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include <unordered_map>
+ #include <vector>
+ #include <string>
+diff --git a/Source/Managers/PostProcessMan.cpp b/Source/Managers/PostProcessMan.cpp
+index a89a3bd36..4e40b6d71 100644
+--- a/Source/Managers/PostProcessMan.cpp
++++ b/Source/Managers/PostProcessMan.cpp
+@@ -12,7 +12,7 @@
+ #include "RenderTarget.h"
+ 
+ #include "GLCheck.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "glm/glm.hpp"
+ #include "glm/gtc/matrix_transform.hpp"
+ #include "glm/gtc/type_ptr.hpp"
+diff --git a/Source/Managers/PostProcessMan.h b/Source/Managers/PostProcessMan.h
+index b282c3bd2..5511ab911 100644
+--- a/Source/Managers/PostProcessMan.h
++++ b/Source/Managers/PostProcessMan.h
+@@ -2,7 +2,7 @@
+ 
+ #include "Singleton.h"
+ #include "Box.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "glm/fwd.hpp"
+ #include "SceneMan.h"
+ #include "Shader.h"
+diff --git a/Source/Managers/PrimitiveMan.cpp b/Source/Managers/PrimitiveMan.cpp
+index a16bc14be..f05e3f12d 100644
+--- a/Source/Managers/PrimitiveMan.cpp
++++ b/Source/Managers/PrimitiveMan.cpp
+@@ -10,7 +10,7 @@
+ 
+ #include <array>
+ #include "Draw.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "Shader.h"
+ #include "PresetMan.h"
+ 
+diff --git a/Source/Managers/WindowMan.cpp b/Source/Managers/WindowMan.cpp
+index 51c87a161..1e615a6b9 100644
+--- a/Source/Managers/WindowMan.cpp
++++ b/Source/Managers/WindowMan.cpp
+@@ -13,7 +13,7 @@
+ 
+ #include "GLCheck.h"
+ #include <SDL3/SDL.h>
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "raylib/raylib.h"
+ #include "raylib/rlgl.h"
+ #include "Shader.h"
+@@ -32,6 +32,11 @@
+ #include <SDL3_image/SDL_image.h>
+ #endif
+ 
++#ifdef CCCP_GLES
++PFNGLBLENDBARRIERKHRPROC cccp_glBlendBarrierKHR = nullptr;
++bool GLAD_GL_KHR_blend_equation_advanced_coherent = false;
++#endif
++
+ using namespace RTE;
+ 
+ void SDLWindowDeleter::operator()(SDL_Window* window) const { SDL_DestroyWindow(window); }
+@@ -47,6 +52,9 @@ void WindowMan::Clear() {
+ 
+ 	m_PrimaryWindow.reset();
+ 	m_BackBuffer32Texture = 0;
++#ifdef CCCP_GLES
++	m_ScreenBufferCopyTexture = 0;
++#endif
+ 	m_ScreenVAO = 0;
+ 	m_ScreenVBO = 0;
+ 	ClearMultiDisplayData();
+@@ -91,6 +99,9 @@ void WindowMan::Destroy() {
+ 	ImGui_ImplSDL3_Shutdown();
+ 	ImGui::DestroyContext();
+ 	GL_CHECK(glDeleteTextures(1, &m_BackBuffer32Texture));
++#ifdef CCCP_GLES
++	GL_CHECK(glDeleteTextures(1, &m_ScreenBufferCopyTexture));
++#endif
+ 	GL_CHECK(glDeleteBuffers(1, &m_ScreenVBO));
+ 	GL_CHECK(glDeleteVertexArrays(1, &m_ScreenVAO));
+ }
+@@ -122,9 +133,15 @@ void WindowMan::Initialize() {
+ 	ValidateResolution(m_ResX, m_ResY, m_ResMultiplier);
+ 
+ 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
++#ifdef CCCP_GLES
++	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
++	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
++	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
++#else
+ 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+ 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+ 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
++#endif
+ 	CreatePrimaryWindow();
+ 	InitializeOpenGL();
+ 
+@@ -136,7 +153,11 @@ void WindowMan::Initialize() {
+ 
+ 	ImGui::StyleColorsDark();
+ 	ImGui_ImplSDL3_InitForOpenGL(m_PrimaryWindow.get(), m_GLContext.get());
++#ifdef CCCP_GLES
++	ImGui_ImplOpenGL3_Init("#version 300 es");
++#else
+ 	ImGui_ImplOpenGL3_Init("#version 330 core");
++#endif
+ 	ImGui_ImplOpenGL3_NewFrame();
+ 	ImGui_ImplSDL3_NewFrame();
+ 	ImGui::NewFrame();
+@@ -227,9 +248,17 @@ void WindowMan::InitializeOpenGL() {
+ 		RTEAbort("Failed to create OpenGL context because:\n" + std::string(SDL_GetError()));
+ 	}
+ 
++#ifdef CCCP_GLES
++	GLAD_GL_KHR_blend_equation_advanced_coherent = SDL_GL_ExtensionSupported("GL_KHR_blend_equation_advanced_coherent");
++	cccp_glBlendBarrierKHR = reinterpret_cast<PFNGLBLENDBARRIERKHRPROC>(SDL_GL_GetProcAddress("glBlendBarrierKHR"));
++	if (!cccp_glBlendBarrierKHR) {
++		GLAD_GL_KHR_blend_equation_advanced_coherent = false;
++	}
++#else
+ 	if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
+ 		RTEAbort("Failed to load GL functions!");
+ 	}
++#endif
+ 
+ #ifndef _WIN32
+ 	SDL_GL_SetSwapInterval(m_EnableVSync ? 1 : 0);
+@@ -257,6 +286,12 @@ void WindowMan::CreateBackBufferTexture() {
+ 	GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_ResX, m_ResY, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+ 	GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+ 	GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
++#ifdef CCCP_GLES
++	if (m_ScreenBufferCopyTexture != 0) {
++		rlUnloadTexture(m_ScreenBufferCopyTexture);
++	}
++	m_ScreenBufferCopyTexture = rlLoadTexture(nullptr, m_ResX, m_ResY, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
++#endif
+ }
+ 
+ int WindowMan::GetWindowResX() {
+@@ -774,7 +809,14 @@ void WindowMan::UploadFrame() {
+ 	} else {
+ 		Texture2D empty(rlGetTextureIdDefault(), m_ResX, m_ResY, 1, 0);
+ 		//rlSetUniformSampler(m_ScreenBlitShader->GetTextureUniform(), 0);
++#ifdef CCCP_GLES
++		// GLES leaves sampling the texture being rendered to undefined (Panfrost reads the previous frame), so sample a copy instead.
++		GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_ScreenBufferCopyTexture));
++		GL_CHECK(glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_ResX, m_ResY));
++		DrawTextureRec(Texture2D(m_ScreenBufferCopyTexture, m_ResX, m_ResY, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8), {0.0f, 0.0f, static_cast<float>(m_ResX), -static_cast<float>(m_ResY)}, {0, 0}, {255, 255, 255, 255});
++#else
+ 		DrawTextureRec(m_ScreenBuffer->GetColorTexture(), {0.0f, 0.0f, static_cast<float>(m_ResX), -static_cast<float>(m_ResY)}, {0, 0}, {255, 255, 255, 255});
++#endif
+ 	}
+ 	m_ScreenBlitShader->End();
+ 	m_ScreenBuffer->End();
+diff --git a/Source/Managers/WindowMan.h b/Source/Managers/WindowMan.h
+index 53452dbed..d0775e96a 100644
+--- a/Source/Managers/WindowMan.h
++++ b/Source/Managers/WindowMan.h
+@@ -2,7 +2,7 @@
+ 
+ #include "Singleton.h"
+ #include "glm/fwd.hpp"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ 
+ #include <memory>
+ #include <vector>
+@@ -198,6 +198,9 @@ namespace RTE {
+ 
+ 		std::shared_ptr<SDL_Window> m_PrimaryWindow; //!< The main window.
+ 		GLuint m_BackBuffer32Texture; //!< Streaming texture for the software rendered stuff.
++#ifdef CCCP_GLES
++		GLuint m_ScreenBufferCopyTexture; //!< Copy of the screen buffer to sample while compositing into it.
++#endif
+ 		
+ 		std::shared_ptr<RenderTarget> m_ScreenBuffer{};
+ 		std::unique_ptr<SDL_Rect> m_PrimaryWindowViewport; //!< Viewport for the main window.
+diff --git a/Source/Menus/SettingsVideoGUI.cpp b/Source/Menus/SettingsVideoGUI.cpp
+index 0156dbbc2..19782ffbf 100644
+--- a/Source/Menus/SettingsVideoGUI.cpp
++++ b/Source/Menus/SettingsVideoGUI.cpp
+@@ -24,6 +24,12 @@
+ 
+ using namespace RTE;
+ 
++static std::string FormatResolutionMultiplier(float multiplier) {
++	std::array<char, 32> buffer{};
++	std::snprintf(buffer.data(), buffer.size(), "%.3gx", multiplier);
++	return buffer.data();
++}
++
+ std::string SettingsVideoGUI::PresetResolutionRecord::GetDisplayString() const {
+ #if __cpp_lib_format >= 201907L && !(defined(__APPLE__) && defined(__GNUC__)) //FIXME: macOS CI borken without this.
+ 	return std::format("{}x{} ({:.1g}x Fullscreen scale)", Width, Height, Scale);
+@@ -114,7 +120,7 @@ void SettingsVideoGUI::CreateCustomResolutionBox() {
+ 	m_CustomResolutionMultiplierComboBox = dynamic_cast<GUIComboBox*>(m_GUIControlManager->GetControl("ComboboxResolutionMultiplier"));
+ 	PopulateResMultplierComboBox();
+ #if __cpp_lib_format >= 201907L && !(defined(__APPLE__) && defined(__GNUC__))
+-	m_CustomResolutionMultiplierComboBox->SetText(std::format("{:.3g}x", m_NewResMultiplier));
++	m_CustomResolutionMultiplierComboBox->SetText(FormatResolutionMultiplier(m_NewResMultiplier));
+ #else
+ 	m_CustomResolutionMultiplierComboBox->SetText(std::to_string(m_NewResMultiplier));
+ #endif
+@@ -132,7 +138,7 @@ void SettingsVideoGUI::SetEnabled(bool enable) const {
+ 		m_CustomResolutionWidthTextBox->SetText(std::to_string(static_cast<int>(g_WindowMan.GetResX())));
+ 		m_CustomResolutionHeightTextBox->SetText(std::to_string(static_cast<int>(g_WindowMan.GetResY())));
+ #if __cpp_lib_format >= 201907L && !(defined(__APPLE__) && defined(__GNUC__))
+-		m_CustomResolutionMultiplierComboBox->SetText(std::format("{:.3g}x", m_NewResMultiplier));
++		m_CustomResolutionMultiplierComboBox->SetText(FormatResolutionMultiplier(m_NewResMultiplier));
+ #else
+ 		m_CustomResolutionMultiplierComboBox->SetText(std::to_string(m_NewResMultiplier));
+ #endif
+@@ -201,7 +207,7 @@ void SettingsVideoGUI::PopulateResMultplierComboBox() {
+ 
+ 	for (float resMultiplier = 1.0f; resMultiplier <= maximumResMultiplier; resMultiplier += 0.5) {
+ #if __cpp_lib_format >= 201907L && !(defined(__APPLE__) && defined(__GNUC__))
+-		m_CustomResolutionMultiplierComboBox->AddItem(std::format("{:.3g}x", resMultiplier));
++		m_CustomResolutionMultiplierComboBox->AddItem(FormatResolutionMultiplier(resMultiplier));
+ #else
+ 		m_CustomResolutionMultiplierComboBox->AddItem(std::to_string(resMultiplier));
+ #endif
+diff --git a/Source/Renderer/BigTexture.cpp b/Source/Renderer/BigTexture.cpp
+index b4aa5c0c5..8d3c1498f 100644
+--- a/Source/Renderer/BigTexture.cpp
++++ b/Source/Renderer/BigTexture.cpp
+@@ -1,5 +1,5 @@
+ #include "BigTexture.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include <algorithm>
+ #include <cmath>
+ #include "Draw.h"
+diff --git a/Source/Renderer/GLCheck.cpp b/Source/Renderer/GLCheck.cpp
+index 93d7d0bc9..0a3a4f229 100644
+--- a/Source/Renderer/GLCheck.cpp
++++ b/Source/Renderer/GLCheck.cpp
+@@ -1,5 +1,5 @@
+ #include "GLCheck.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ 
+ #include <string>
+ #include <sstream>
+diff --git a/Source/Renderer/RenderTarget.cpp b/Source/Renderer/RenderTarget.cpp
+index eafc09d82..8cfe1c5a7 100644
+--- a/Source/Renderer/RenderTarget.cpp
++++ b/Source/Renderer/RenderTarget.cpp
+@@ -1,6 +1,6 @@
+ #include "RenderTarget.h"
+ #include "RTEError.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "GLCheck.h"
+ #include "raylib/rlgl.h"
+ #include "WindowMan.h"
+diff --git a/Source/Renderer/RenderTarget.h b/Source/Renderer/RenderTarget.h
+index 19c66001b..e1dd80af1 100644
+--- a/Source/Renderer/RenderTarget.h
++++ b/Source/Renderer/RenderTarget.h
+@@ -2,7 +2,7 @@
+ #include <unordered_map>
+ #include <string>
+ #include "Rectangles.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "raylib/raylib.h"
+ namespace RTE {
+ 	class Shader;
+diff --git a/Source/Renderer/Shader.cpp b/Source/Renderer/Shader.cpp
+index 0e6134253..7e66a5bdf 100644
+--- a/Source/Renderer/Shader.cpp
++++ b/Source/Renderer/Shader.cpp
+@@ -1,5 +1,5 @@
+ #include "Shader.h"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "glm/glm.hpp"
+ #include "glm/gtc/type_ptr.hpp"
+ #include "GLCheck.h"
+@@ -153,6 +153,25 @@ bool Shader::CompileShader(GLuint shaderID, const std::string& filename, std::st
+ 
+ 	std::string dataString = dataStream.str();
+ 
++#ifdef CCCP_GLES
++	// Shaders are authored as desktop GLSL 3.30; retarget them to GLSL ES 3.00, which requires #version on the first line. Precision statements must follow any #extension directives.
++	if (size_t versionPos = dataString.find("#version 330 core"); versionPos != std::string::npos) {
++		const std::string esVersion = "#version 300 es\n";
++		dataString.erase(versionPos, std::strlen("#version 330 core"));
++		dataString.insert(0, esVersion);
++		size_t insertPos = dataString.find('\n', versionPos + esVersion.size());
++		for (size_t extensionPos = dataString.find("#extension", insertPos); extensionPos != std::string::npos; extensionPos = dataString.find("#extension", insertPos)) {
++			insertPos = dataString.find('\n', extensionPos);
++		}
++		const std::string precisionStatements = "\nprecision highp float;\nprecision highp int;";
++		if (insertPos == std::string::npos) {
++			dataString += precisionStatements;
++		} else {
++			dataString.insert(insertPos, precisionStatements);
++		}
++	}
++#endif
++
+ 	const char* data = dataString.c_str();
+ 
+ 	GL_CHECK(glShaderSource(shaderID, 1, &data, nullptr));
+diff --git a/Source/Renderer/Shader.h b/Source/Renderer/Shader.h
+index 14e51df99..531fb9336 100644
+--- a/Source/Renderer/Shader.h
++++ b/Source/Renderer/Shader.h
+@@ -2,7 +2,7 @@
+ 
+ #include "Entity.h"
+ #include "glm/fwd.hpp"
+-#include "glad/gl.h"
++#include "GLHeader.h"
+ #include "raylib/raylib.h"
+ #include "raylib/rlgl.h"
+ 
+diff --git a/Source/Renderer/meson.build b/Source/Renderer/meson.build
+index 4a695aaeb..34d29018f 100644
+--- a/Source/Renderer/meson.build
++++ b/Source/Renderer/meson.build
+@@ -2,7 +2,6 @@ sources += files(
+ 'RenderTarget.cpp',
+ 'Shader.cpp',
+ 'BigTexture.cpp',
+-'glad/gl.c',
+ 'raylib/rlgl.c',
+ 'raylib/rshapes.c',
+ 'raylib/rtextures.c',
+@@ -11,3 +10,7 @@ sources += files(
+ 'GraphicalPrimitive.cpp',
+ 'Draw.cpp',
+ )
++
++if not get_option('gles')
++  sources += files('glad/gl.c')
++endif
+diff --git a/Source/Renderer/raylib/rlconfig.h b/Source/Renderer/raylib/rlconfig.h
+index bb5f9ff61..7163ee3fb 100644
+--- a/Source/Renderer/raylib/rlconfig.h
++++ b/Source/Renderer/raylib/rlconfig.h
+@@ -95,7 +95,9 @@
+ //------------------------------------------------------------------------------------
+ 
+ // Enable OpenGL Debug Context (only available on OpenGL 4.3)
++#if !defined(GRAPHICS_API_OPENGL_ES3)
+ #define RLGL_ENABLE_OPENGL_DEBUG_CONTEXT       1
++#endif
+ 
+ // Show OpenGL extensions and capabilities detailed logs on init
+ #define RLGL_SHOW_GL_DETAILS_INFO              1
+diff --git a/Source/Renderer/raylib/rlgl.c b/Source/Renderer/raylib/rlgl.c
+index b83096a36..95f6028cf 100644
+--- a/Source/Renderer/raylib/rlgl.c
++++ b/Source/Renderer/raylib/rlgl.c
+@@ -1076,7 +1076,7 @@ void rlActiveDrawBuffers(int count) {
+ 			};
+ 
+ #if defined(GRAPHICS_API_OPENGL_ES3)
+-			glDrawBuffersEXT(count, buffers);
++			glDrawBuffers(count, buffers);
+ #else
+ 			glDrawBuffers(count, buffers);
+ #endif
+@@ -1685,7 +1685,7 @@ void rlLoadExtensions(void* loader) {
+ 	RLGL.ExtSupported.texFloat32 = true;
+ 	RLGL.ExtSupported.texFloat16 = true;
+ 	RLGL.ExtSupported.texDepth = true;
+-	RLGL.ExtSupported.texDepthWebGL = true;
++	RLGL.ExtSupported.texDepthWebGL = false;
+ 	RLGL.ExtSupported.maxDepthBits = 24;
+ 	RLGL.ExtSupported.texAnisoFilter = true;
+ 	RLGL.ExtSupported.texMirrorClamp = true;
+@@ -1880,8 +1880,10 @@ void rlLoadExtensions(void* loader) {
+ 	TRACELOG(RL_LOG_INFO, "    GL_MAX_TEXTURE_IMAGE_UNITS: %i", capability);
+ 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &capability);
+ 	TRACELOG(RL_LOG_INFO, "    GL_MAX_VERTEX_ATTRIBS: %i", capability);
++#if !defined(GRAPHICS_API_OPENGL_ES2)
+ 	glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &capability);
+ 	TRACELOG(RL_LOG_INFO, "    GL_MAX_UNIFORM_LOCATIONS: %i", capability);
++#endif
+ #if !defined(GRAPHICS_API_OPENGL_ES2)
+ 	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &capability);
+ 	TRACELOG(RL_LOG_INFO, "    GL_MAX_UNIFORM_BLOCK_SIZE: %i", capability);
+@@ -2545,6 +2547,11 @@ unsigned int rlLoadTexture(const void* data, int width, int height, int format,
+ #endif
+ 				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+ 			}
++#elif defined(GRAPHICS_API_OPENGL_ES3)
++			if (format == RL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE) {
++				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
++				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
++			}
+ #endif
+ 		}
+ 
+@@ -2782,8 +2789,13 @@ void rlGetGlTextureFormats(int format, unsigned int* glInternalFormat, unsigned
+ #if defined(GRAPHICS_API_OPENGL_11) || defined(GRAPHICS_API_OPENGL_21) || defined(GRAPHICS_API_OPENGL_ES2)
+ 		// NOTE: on OpenGL ES 2.0 (WebGL), internalFormat must match format and options allowed are: GL_LUMINANCE, GL_RGB, GL_RGBA
+ 		case RL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE:
++#if defined(GRAPHICS_API_OPENGL_ES3)
++			*glInternalFormat = GL_R8;
++			*glFormat = GL_RED;
++#else
+ 			*glInternalFormat = GL_LUMINANCE;
+ 			*glFormat = GL_LUMINANCE;
++#endif
+ 			*glType = GL_UNSIGNED_BYTE;
+ 			break;
+ 		case RL_PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
+@@ -4519,6 +4531,12 @@ static void rlLoadShaderDefault(void) {
+ 		RLGL.State.defaultShaderLocs[RL_SHADER_LOC_MATRIX_MVP] = glGetUniformLocation(RLGL.State.defaultShaderId, RL_DEFAULT_SHADER_UNIFORM_NAME_MVP);
+ 		RLGL.State.defaultShaderLocs[RL_SHADER_LOC_COLOR_DIFFUSE] = glGetUniformLocation(RLGL.State.defaultShaderId, RL_DEFAULT_SHADER_UNIFORM_NAME_COLOR);
+ 		RLGL.State.defaultShaderLocs[RL_SHADER_LOC_MAP_DIFFUSE] = glGetUniformLocation(RLGL.State.defaultShaderId, RL_DEFAULT_SHADER_SAMPLER2D_NAME_TEXTURE0);
++#if defined(GRAPHICS_API_OPENGL_ES3) || defined(GRAPHICS_API_OPENGL_ES2)
++		// GLSL ES has no uniform initializers, so give colDiffuse the same white default the desktop shader declares.
++		glUseProgram(RLGL.State.defaultShaderId);
++		glUniform4f(RLGL.State.defaultShaderLocs[RL_SHADER_LOC_COLOR_DIFFUSE], 1.0f, 1.0f, 1.0f, 1.0f);
++		glUseProgram(0);
++#endif
+ 	} else
+ 		TRACELOG(RL_LOG_WARNING, "SHADER: [ID %i] Failed to load default shader", RLGL.State.defaultShaderId);
+ }
+diff --git a/Source/Renderer/raylib/rlgl.h b/Source/Renderer/raylib/rlgl.h
+index 721d9ed60..78e67f189 100644
+--- a/Source/Renderer/raylib/rlgl.h
++++ b/Source/Renderer/raylib/rlgl.h
+@@ -148,7 +148,9 @@
+ #define RL_FREE(p) free(p)
+ #endif
+ 
++#if !defined(GRAPHICS_API_OPENGL_ES3)
+ #define GRAPHICS_API_OPENGL_33
++#endif
+ 
+ // Security check in case no GRAPHICS_API_OPENGL_* defined
+ #if !defined(GRAPHICS_API_OPENGL_11) && \
+diff --git a/Source/System/Constants.h b/Source/System/Constants.h
+index e1e451b17..cf35b77f6 100644
+--- a/Source/System/Constants.h
++++ b/Source/System/Constants.h
+@@ -164,7 +164,7 @@ namespace RTE {
+ #pragma endregion
+ 
+ #pragma region Audio Constants
+-	static constexpr std::array<const char*, 3> c_SupportedAudioFormats = {".wav", ".ogg", ".flac"};
++	static constexpr std::array<const char*, 4> c_SupportedAudioFormats = {".wav", ".ogg", ".flac", ".mp3"};
+ 
+ 	static constexpr unsigned short c_MaxSoftwareChannels = 128;
+ 	static constexpr unsigned short c_MaxVirtualChannels = 1024;
+diff --git a/Source/System/ContentFile.cpp b/Source/System/ContentFile.cpp
+index 3d7b9b4b8..04848cd24 100644
+--- a/Source/System/ContentFile.cpp
++++ b/Source/System/ContentFile.cpp
+@@ -402,6 +402,10 @@ FMOD::Sound* ContentFile::LoadAndReleaseSound(bool abortGameForInvalidSound, boo
+ 		for (const char* altFileExtension: c_SupportedAudioFormats) {
+ 			const std::string altDataPathToLoad = m_DataPathWithoutExtension + altFileExtension;
+ 			if (System::PathExistsCaseSensitive(altDataPathToLoad)) {
++#ifdef CCCP_GLES
++				// The GLES package ships all audio as .mp3, so the hardcoded .flac/.ogg paths always land here.
++				if (std::string_view(altFileExtension) != ".mp3")
++#endif
+ 				g_ConsoleMan.AddLoadWarningLogExtensionMismatchEntry(m_DataPath, m_FormattedReaderPosition, altFileExtension);
+ 				SetDataPath(altDataPathToLoad);
+ 				foundAltExtension = true;
+@@ -423,7 +427,12 @@ FMOD::Sound* ContentFile::LoadAndReleaseSound(bool abortGameForInvalidSound, boo
+ 	}
+ 	FMOD::Sound* returnSample = nullptr;
+ 
++#ifdef CCCP_GLES
++	// Fully decoding every sound to PCM needs well over 1GB, so keep samples compressed on low-memory devices.
++	FMOD_MODE fmodFlags = FMOD_CREATECOMPRESSEDSAMPLE | FMOD_3D | (asyncLoading ? FMOD_NONBLOCKING : FMOD_DEFAULT);
++#else
+ 	FMOD_MODE fmodFlags = FMOD_CREATESAMPLE | FMOD_3D | (asyncLoading ? FMOD_NONBLOCKING : FMOD_DEFAULT);
++#endif
+ 	FMOD_RESULT result = g_AudioMan.GetAudioSystem()->createSound(m_DataPath.c_str(), fmodFlags, nullptr, &returnSample);
+ 
+ 	if (result != FMOD_OK) {
+diff --git a/Source/System/RTEError.cpp b/Source/System/RTEError.cpp
+index b643bfbf8..2e8cbf912 100644
+--- a/Source/System/RTEError.cpp
++++ b/Source/System/RTEError.cpp
+@@ -21,7 +21,7 @@
+ 
+ #ifdef _MSC_VER
+ #include <intrin.h>
+-#elif defined(__linux__)
++#elif defined(__linux__) && (defined(__x86_64__) || defined(__i386__))
+ #include <cpuid.h>
+ #endif
+ 
+@@ -471,7 +471,7 @@ void RTEError::DumpHardwareInfo() {
+ 	                     "GL Renderer: " + glRenderer + "\n" +
+ 	                     "Available Extensions: \n" + glExtentions + "\n";
+ 
+-#if defined(_MSC_VER) || defined(__linux__)
++#if defined(_MSC_VER) || (defined(__linux__) && (defined(__x86_64__) || defined(__i386__)))
+ 	int vendorRegs[4] = {0};
+ #ifdef _MSC_VER
+ 	__cpuid(vendorRegs, 0);
+@@ -580,13 +580,30 @@ void RTEError::DumpHardwareInfo() {
+ 
+ bool RTEError::DumpAbortScreen() {
+ 	int success = -1;
++#ifdef CCCP_GLES
++	if (true) {
++#else
+ 	if (glReadPixels != nullptr) {
++#endif
+ 		int w, h;
+ 		SDL_GetWindowSizeInPixels(g_WindowMan.GetWindow(), &w, &h);
+ 		if (!(w > 0 && h > 0)) {
+ 			return false;
+ 		}
+ 		BITMAP* readBuffer = create_bitmap_ex(24, w, h);
++#ifdef CCCP_GLES
++		// GLES can't read the front buffer or read GL_RGB, so read the back buffer as RGBA and repack it.
++		std::vector<unsigned char> rgbaPixels(static_cast<size_t>(w) * h * 4);
++		glReadBuffer(GL_BACK);
++		glPixelStorei(GL_PACK_ALIGNMENT, 1);
++		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgbaPixels.data());
++		for (int y = 0; y < h; ++y) {
++			for (int x = 0; x < w; ++x) {
++				const unsigned char* pixel = &rgbaPixels[(static_cast<size_t>(y) * w + x) * 4];
++				putpixel(readBuffer, x, y, makecol24(pixel[0], pixel[1], pixel[2]));
++			}
++		}
++#else
+ 		// Read screen from the front buffer since that is the only framebuffer guaranteed to exist at this point.
+ 		// Read twice because front buffer content is technically undefined, but most drivers still eventually give up the contents correctly.
+ 		glReadBuffer(GL_FRONT);
+@@ -597,6 +614,7 @@ bool RTEError::DumpAbortScreen() {
+ 		glReadBuffer(GL_FRONT);
+ 		glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, readBuffer->line[0]);
+ 		glFinish();
++#endif
+ 
+ 		BITMAP* flipBuffer = create_bitmap_ex(24, w, h);
+ 		draw_sprite_v_flip(flipBuffer, readBuffer, 0, 0);
+diff --git a/external/sources/allegro 4.4.3.1-custom/meson.build b/external/sources/allegro 4.4.3.1-custom/meson.build
+index 5c5a4e645..526c50259 100644
+--- a/external/sources/allegro 4.4.3.1-custom/meson.build	
++++ b/external/sources/allegro 4.4.3.1-custom/meson.build	
+@@ -80,7 +80,7 @@ subdir('addons/loadpng')
+ compiler = meson.get_compiler('c')
+ 
+ if compiler.get_argument_syntax() == 'gcc' 
+-  c_args = ['-Wno-deprecated-declarations', '-DTRACY_ENABLE']
++  c_args = ['-Wno-deprecated-declarations']
+ else
+ endif
+ allegro_args = ['-DALLEGRO_NO_COMPATIBILITY']
+diff --git a/meson.build b/meson.build
+index 4f33be11e..52c00def9 100644
+--- a/meson.build
++++ b/meson.build
+@@ -46,7 +46,7 @@ if compiler.get_argument_syntax()== 'gcc' # used for gcc compatible compilers
+   ]
+ 
+   if host_machine.system() == 'linux'
+-    build_rpath = '$ORIGIN:$ORIGIN/../external/lib/linux/x86_64' # Set RUNPATH so that CCCP can find libfmod.so without needing to set LD_LIBRARY_PATH
++    build_rpath = '$ORIGIN:$ORIGIN/../external/lib/linux/' + (host_machine.cpu_family() == 'aarch64' ? 'arm64' : 'x86_64') # Set RUNPATH so that CCCP can find libfmod.so without needing to set LD_LIBRARY_PATH
+   elif host_machine.system()=='darwin'
+     build_rpath = '@executable_path/../external/lib/macos' # Add a new R_PATH CCCP can find libfmod.dylib on Darwin TODO: Confirm and validate this.
+   endif
+@@ -204,8 +204,11 @@ if host_machine.system() in ['linux','darwin']
+     dependency('liblz4'),
+     dependency('libpng'),
+     dependency('tbb'),
+-    dependency('gl')
++    dependency(get_option('gles') ? 'glesv2' : 'gl')
+   ]
++  if get_option('gles')
++    add_project_arguments(['-DCCCP_GLES', '-DGRAPHICS_API_OPENGL_ES3', '-DIMGUI_IMPL_OPENGL_ES3'], language: ['c', 'cpp'])
++  endif
+   preprocessor_flags+=['-DSYSTEM_MINIZIP']
+   if host_machine.system()=='darwin'
+     deps += dependency('appleframeworks', modules: ['Foundation'])  
+@@ -235,7 +238,7 @@ subdir('external')
+ sdl3_opt = cmake.subproject_options()
+ sdl3_opt.add_cmake_defines({'CMAKE_POSITION_INDEPENDENT_CODE': get_option('b_staticpic'), 'BUILD_SHARED_LIBS':false, 'BUILD_STATIC_LIBS': true})
+ sdl3_opt.append_compile_args('c','-DUSE_XINPUT2_KEYBOARD')
+-if host_machine.system() == 'darwin'
++if host_machine.system() == 'darwin' or get_option('gles')
+   sdl3_dep = dependency('sdl3')
+ else
+   sdl3_proj = cmake.subproject('SDL3-3.2.10', options: sdl3_opt)
+diff --git a/meson_options.txt b/meson_options.txt
+index 13a5a867c..b2d947185 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -16,3 +16,4 @@ option('tracy_enable', type: 'boolean', value: true, description: 'Enable Tracy
+ option('tracy_callstack', type : 'integer', value : 0, description : 'Enfore callstack collection for tracy regions')
+ option('tracy_on_demand', type : 'boolean', value : true, description : 'On-demand profiling')
+ option('tracy_debuginfod', type : 'boolean', value : false, description : 'Enable debuginfod support')
++option('gles', type: 'boolean', value: false, description: 'Render with OpenGL ES 3 instead of desktop OpenGL 3.3 (Linux only, links system SDL3)')
+diff --git a/Source/Renderer/GLHeader.h b/Source/Renderer/GLHeader.h
+new file mode 100644
+index 000000000..045cefb80
+--- /dev/null
++++ b/Source/Renderer/GLHeader.h
+@@ -0,0 +1,16 @@
++#pragma once
++
++#ifdef CCCP_GLES
++#include <GLES3/gl32.h>
++#include <GLES2/gl2ext.h>
++
++/// GLES3 has no glGetTexImage; texture readback goes through a framebuffer instead.
++#define CCCP_NO_GETTEXIMAGE
++
++/// Extension entry points that aren't part of core GLES3, loaded at runtime in WindowMan::InitializeOpenGL.
++extern PFNGLBLENDBARRIERKHRPROC cccp_glBlendBarrierKHR;
++extern bool GLAD_GL_KHR_blend_equation_advanced_coherent;
++#define glBlendBarrierKHR cccp_glBlendBarrierKHR
++#else
++#include "GLHeader.h"
++#endif
