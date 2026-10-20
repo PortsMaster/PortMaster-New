@@ -1,5 +1,4 @@
 #!/bin/bash
-# Jetboard Joust - PortMaster launcher (aarch64, .NET Core 3.1 + MonoGame DesktopGL via gl4es)
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d /opt/system/Tools/PortMaster ]; then
   controlfolder=/opt/system/Tools/PortMaster
