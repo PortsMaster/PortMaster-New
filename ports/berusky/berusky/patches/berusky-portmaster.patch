@@ -1,0 +1,297 @@
+diff --git a/configure.in b/configure.in
+index 32dd414..3e10a84 100644
+--- a/configure.in
++++ b/configure.in
+@@ -26,7 +26,7 @@ AM_GLIB_GNU_GETTEXT
+ 
+ AM_PROG_LIBTOOL
+ 
+-PKG_CHECK_MODULES(PACKAGE, [sdl SDL_image gtk+-2.0 gdk-2.0])
++PKG_CHECK_MODULES(PACKAGE, [sdl SDL_image])
+ AC_SUBST(PACKAGE_CFLAGS)
+ AC_SUBST(PACKAGE_LIBS)
+ 
+diff --git a/src/2d_graph.cpp b/src/2d_graph.cpp
+index 2b7d9b6..5a4b60c 100644
+--- a/src/2d_graph.cpp
++++ b/src/2d_graph.cpp
+@@ -910,6 +910,16 @@ bool graph_2d::screen_regenerate(void)
+     exit(0);
+   }
+    
++#ifdef PORTMASTER
++  SDL_ShowCursor(SDL_DISABLE);
++  SDL_WarpMouse(graphics_width/2, graphics_height/2);
++  if(p_cursor_save) {
++    SDL_FreeSurface(p_cursor_save);
++    p_cursor_save = NULL;
++  }
++  cursor_drawn = FALSE;
++#endif
++
+   p_screen_surface = new SURFACE(p_hwscreen);
+   p_screen = new SPRITE(p_screen_surface, SDL_SPRITE_SEPARATE_SURFACE, NULL);
+ 
+@@ -919,6 +929,99 @@ bool graph_2d::screen_regenerate(void)
+   return(TRUE);
+ }
+ 
++#ifdef PORTMASTER
++static const char *cursor_shape[] = {
++  "X           ",
++  "XX          ",
++  "X.X         ",
++  "X..X        ",
++  "X...X       ",
++  "X....X      ",
++  "X.....X     ",
++  "X......X    ",
++  "X.......X   ",
++  "X........X  ",
++  "X.........X ",
++  "X......XXXXX",
++  "X...X..X    ",
++  "X..XX..X    ",
++  "X.X  X..X   ",
++  "XX   X..X   ",
++  "X     X..X  ",
++  "      X..X  ",
++  "       XX   ",
++};
++
++#define CURSOR_WIDTH   12
++#define CURSOR_HEIGHT  ((int)(sizeof(cursor_shape)/sizeof(cursor_shape[0])))
++
++// Draw the cursor to the screen and add its old and new area to the update list
++bool graph_2d::cursor_begin(void)
++{
++  SDL_Surface *p_surf = p_screen_surface ? p_screen_surface->surf_get() : NULL;
++  if(!p_surf)
++    return(FALSE);
++
++  if(cursor_drawn && !rect_whole && rect_last < RECT_NUM)
++    redraw_add(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
++  cursor_drawn = FALSE;
++
++  if(!cursor_visible)
++    return(FALSE);
++
++  if(!p_cursor_save) {
++    SDL_PixelFormat *p_fmt = p_surf->format;
++    p_cursor_save = SDL_CreateRGBSurface(SDL_SWSURFACE, CURSOR_WIDTH, CURSOR_HEIGHT,
++                                         p_fmt->BitsPerPixel, p_fmt->Rmask,
++                                         p_fmt->Gmask, p_fmt->Bmask, p_fmt->Amask);
++    if(!p_cursor_save)
++      return(FALSE);
++  }
++
++  int mx, my;
++  SDL_GetMouseState(&mx, &my);
++  cursor_x = mx;
++  cursor_y = my;
++
++  SDL_Rect src = { (Sint16)cursor_x, (Sint16)cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT };
++  SDL_BlitSurface(p_surf, &src, p_cursor_save, NULL);
++
++  Uint32 black = SDL_MapRGB(p_surf->format, 0, 0, 0);
++  Uint32 white = SDL_MapRGB(p_surf->format, 255, 255, 255);
++  for(int y = 0; y < CURSOR_HEIGHT; y++) {
++    for(int x = 0; x < CURSOR_WIDTH; x++) {
++      char c = cursor_shape[y][x];
++      if(c == ' ')
++        continue;
++      SDL_Rect r = { (Sint16)(cursor_x+x), (Sint16)(cursor_y+y), 1, 1 };
++      SDL_FillRect(p_surf, &r, c == 'X' ? black : white);
++    }
++  }
++
++  if(!rect_whole && rect_last < RECT_NUM)
++    redraw_add(cursor_x, cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT);
++  cursor_drawn = TRUE;
++  return(TRUE);
++}
++
++// Put the screen content back under the cursor
++void graph_2d::cursor_end(void)
++{
++  SDL_Rect dst = { (Sint16)cursor_x, (Sint16)cursor_y, CURSOR_WIDTH, CURSOR_HEIGHT };
++  SDL_BlitSurface(p_cursor_save, NULL, p_screen_surface->surf_get(), &dst);
++}
++
++// Present the screen again when the cursor moved or was hidden
++void graph_2d::cursor_update(void)
++{
++  int mx, my;
++  SDL_GetMouseState(&mx, &my);
++
++  if(cursor_visible ? (!cursor_drawn || mx != cursor_x || my != cursor_y) : cursor_drawn)
++    flip();
++}
++#endif
++
+ void graph_2d::screen_destroy(void)
+ {
+   if(p_screen) {
+diff --git a/src/2d_graph.h b/src/2d_graph.h
+index 70503d1..4245a9c 100644
+--- a/src/2d_graph.h
++++ b/src/2d_graph.h
+@@ -504,6 +504,17 @@ typedef class graph_2d
+   int          rect_last;
+   bool         rect_whole;
+ 
++#ifdef PORTMASTER
++  // Software mouse cursor, drawn over the screen only while it's presented
++  bool         cursor_visible = TRUE;
++  bool         cursor_drawn = FALSE;
++  tpos         cursor_x = 0, cursor_y = 0;
++  SDL_Surface *p_cursor_save = NULL;
++
++  bool cursor_begin(void);
++  void cursor_end(void);
++#endif
++
+   tpos         graphics_width;
+   tpos         graphics_height;
+   int          graphics_bpp;
+@@ -727,6 +738,9 @@ public:
+ 
+   int flip(void)
+   {
++#ifdef PORTMASTER
++    bool cursor = cursor_begin();
++#endif
+     if(rect_last || rect_whole) {
+       if(rect_last > RECT_NUM_ALERT)
+         bprintf("RECT_NUM_ALERT: %d slots.", rect_last);
+@@ -738,9 +752,22 @@ public:
+         redraw_reset();
+       }
+     }
++#ifdef PORTMASTER
++    if(cursor)
++      cursor_end();
++#endif
+     return (TRUE);
+   }
+ 
++#ifdef PORTMASTER
++  void cursor_show(bool state)
++  {
++    cursor_visible = state;
++  }
++
++  void cursor_update(void);
++#endif
++
+   void screen_create(int flag, int width, int height, int bpp, int fullscreen);
+   void screen_destroy(void);
+   void screen_resize(int width, int height);
+diff --git a/src/berusky.cpp b/src/berusky.cpp
+index f76fa25..d9e5ff5 100644
+--- a/src/berusky.cpp
++++ b/src/berusky.cpp
+@@ -123,6 +123,13 @@ void berusky_config::game_config_load(const char *p_ini_file)
+   else {
+     double_size = get_doublesize(p_ini_file);
+   }
++
++#ifdef PORTMASTER
++  // Handhelds always run fullscreen in the normal resolution
++  fullscreen = TRUE;
++  double_size_question = FALSE;
++  double_size = FALSE;
++#endif
+ }
+ 
+ void berusky_config::user_level_config_load(const char *p_ini_file)
+@@ -132,6 +139,11 @@ void berusky_config::user_level_config_load(const char *p_ini_file)
+   fullscreen = get_fullscreen(p_ini_file);
+   screen_depth = get_colors(p_ini_file, SCREEN_DEPTH_DEFAULT);
+   double_size = get_doublesize(p_ini_file);
++
++#ifdef PORTMASTER
++  fullscreen = TRUE;
++  double_size = FALSE;
++#endif
+ }
+ 
+ void berusky_config::editor_config_load(const char *p_ini_file)
+diff --git a/src/berusky_gui.cpp b/src/berusky_gui.cpp
+index c832b3b..0a2696f 100644
+--- a/src/berusky_gui.cpp
++++ b/src/berusky_gui.cpp
+@@ -269,9 +269,13 @@ void game_gui::menu_main(MENU_STATE state, size_ptr data, size_ptr data1)
+ 
+         menu_item_draw(new_game, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_MENU_NEW_GAME));
+         menu_item_draw(profiles, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_MENU_PROFILES));
++#ifndef PORTMASTER
+         menu_item_draw(settings, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_MENU_SETTINGS));
++#endif
+         menu_item_draw(help, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_MENU_HELP,FALSE));
++#ifndef PORTMASTER
+         menu_item_draw(editor, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_RUN_EDITOR));      
++#endif
+         menu_item_draw(quit, MENU_LEFT, MENU_SAVE_BACK, LEVEL_EVENT(GC_MENU_QUIT));
+       
+         p_font->alignment_set(MENU_CENTER);
+diff --git a/src/input.cpp b/src/input.cpp
+index 23c6734..c916522 100644
+--- a/src/input.cpp
++++ b/src/input.cpp
+@@ -293,6 +293,9 @@ void input::events_loop(LEVEL_EVENT_QUEUE *p_queue)
+     switch (event.type) {
+       case SDL_KEYDOWN:
+         //bprintf("SDL_KEYDOWN, sym = %d, mod = %d",event.key.keysym.sym, event.key.keysym.mod);
++#ifdef PORTMASTER
++        p_grf->cursor_show(FALSE);
++#endif
+         key_input(event.key.keysym.sym, event.key.keysym.mod, TRUE);
+         break;
+       case SDL_KEYUP:
+@@ -300,6 +303,9 @@ void input::events_loop(LEVEL_EVENT_QUEUE *p_queue)
+         key_input(event.key.keysym.sym, event.key.keysym.mod, FALSE);
+         break;
+       case SDL_MOUSEMOTION:
++#ifdef PORTMASTER
++        p_grf->cursor_show(TRUE);
++#endif
+         {
+           bool pressed = FALSE;
+           int  i;
+diff --git a/src/main.cpp b/src/main.cpp
+index 3ea2281..b687a42 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -25,9 +25,6 @@
+  *
+  */
+ #include "portability.h"
+-#ifdef LINUX
+-#include <gtk/gtk.h>
+-#endif
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <time.h>
+@@ -172,6 +169,10 @@ void run_game(GAME_MODE gmode, char *p_garg, DIR_LIST *p_dir)
+         if(!status)
+           break;
+       }
++
++#ifdef PORTMASTER
++      p_grf->cursor_update();
++#endif
+         
+       SDL_Delay(time_left());
+       next_time += TICK_INTERVAL;
+@@ -285,10 +286,6 @@ int main(int argc, char *argv[])
+   setbuf(stderr, NULL);
+   srand(clock());
+ 
+-#ifdef LINUX
+-  gtk_parse_args(&argc, &argv);
+-#endif
+-
+   banner();
+ 
+   int i;
