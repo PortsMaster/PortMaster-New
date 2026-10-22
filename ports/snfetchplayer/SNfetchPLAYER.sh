@@ -51,6 +51,7 @@ pm_platform_helper "${python_dir}/bin/python3"
 
 source "${python_dir}/bin/activate"
 export PYTHONHOME="${python_dir}"
+export PYTHONPATH="${GAMEDIR}/pylib"
 export PYTHONPYCACHEPREFIX="${GAMEDIR}/${runtime}.cache"
 
 "${python_dir}/bin/python3" "${GAMEDIR}/player.py" "$@"

@@ -36,8 +36,7 @@ from typing import List, Dict, Optional, Tuple
 
 APP_DIR = Path(__file__).resolve().parent
 
-# Audio output for ffplay / ALSA
-os.environ["SDL_AUDIODRIVER"] = "alsa"
+# Initialize Pygame with CFW default audio driver
 import pygame
 
 pygame.display.init()
