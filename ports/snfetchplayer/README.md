@@ -26,6 +26,18 @@
 
 ---
 
+## 💡 Design Philosophy: Built for Budget 4:3 Handhelds & Open for All
+
+Station North was born out of love for classic **$30–$50 retro handhelds** (Anbernic RG35XX, Miyoo Mini, R36S, Powkiddy, RG40XX) equipped with 4:3 displays.  
+The core vision: **turn these humble retro gaming devices into dedicated, late-night Cyberdecks** — streaming lofi frequencies, voiced lore comics, and authentic 4:3 CRT video broadcasts directly on your desk or nightstand.
+
+- **Authentic 4:3 CRT Aesthetic**: Video broadcasts, lower-third banners, and UI elements are specifically cropped and framed for 4:3, delivering a nostalgic vintage television broadcast experience.
+- **Hardware-Scaled on Widescreens**: On modern 16:9 handhelds (like the Retroid Pocket 5 or Odin), hardware scaling (`pygame.SCALED`) fills the full vertical height with clean pillarboxing, preserving original 4:3 proportions without distortion.
+- **Multi-Platform Mission**: We are actively expanding SNfetchPLAYER across platforms — from Linux handhelds via PortMaster to Android devices with our native APK.
+- **Fork-Friendly & Open Source**: Love the platform? **Fork it!** You are warmly encouraged to clone the repository, customize your own radio stations, drop in your own local playlists, and adapt the player to your liking.
+
+---
+
 ## 🌟 The Visual Gallery
 
 SNfetchPLAYER transforms your gaming handheld into an authentic, standalone late-night media terminal. Built in Python 3 and SDL2/Pygame with exclusive hardware KMSDRM acceleration, it runs at silky 60 FPS with zero desktop overhead.
