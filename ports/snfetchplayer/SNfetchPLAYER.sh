@@ -44,6 +44,17 @@ fi
 $ESUDO mount "$controlfolder/libs/${runtime}.squashfs" "${python_dir}"
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export SDL_VIDEO_WAYLAND_WMCLASS="python3"
+export SDL_VIDEO_X11_WMCLASS="python3"
+export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
+
+if [ -f "/etc/ssl/certs/ca-certificates.crt" ]; then
+  export SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
+elif [ -f "/etc/pki/tls/certs/ca-bundle.crt" ]; then
+  export SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
+elif [ -f "/etc/ssl/cert.pem" ]; then
+  export SSL_CERT_FILE="/etc/ssl/cert.pem"
+fi
 
 $GPTOKEYB "python3" -c "$GAMEDIR/snfetchplayer.gptk" &
 

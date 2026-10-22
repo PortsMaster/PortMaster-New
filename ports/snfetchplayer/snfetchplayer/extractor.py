@@ -9,10 +9,23 @@ Liefert direkte googlevideo Stream-URLs in unter 0.4 Sekunden.
 
 import json
 import logging
+import ssl
 import urllib.request
 from typing import Optional, Tuple
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s")
+
+_unverified_context = ssl._create_unverified_context()
+
+def _urlopen_safe(req, timeout: int = 8):
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.URLError as e:
+        err_msg = str(e)
+        if "CERTIFICATE_VERIFY_FAILED" in err_msg or "certificate" in err_msg.lower():
+            logging.warning(f"Handheld SSL cert verification failed ({e}). Retrying with unverified context...")
+            return urllib.request.urlopen(req, timeout=timeout, context=_unverified_context)
+        raise
 
 PLAYER_ENDPOINT = "https://www.youtube.com/youtubei/v1/player"
 
@@ -84,7 +97,7 @@ def get_stream(video_id: str, prefer_audio_only: bool = False) -> Tuple[Optional
                 data=json.dumps(payload).encode("utf-8"),
                 headers=headers
             )
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with _urlopen_safe(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
 
             playability = data.get("playabilityStatus", {})
@@ -141,7 +154,7 @@ def get_stream(video_id: str, prefer_audio_only: bool = False) -> Tuple[Optional
                 return url, quality
 
         except Exception as e:
-            logging.debug(f"Fehler mit Client {profile['name']}: {e}")
+            logging.warning(f"Client {profile['name']} error for {video_id}: {type(e).__name__}: {e}")
 
     logging.error(f"Alle Client-Profile fehlgeschlagen für {video_id}")
     return None, None
