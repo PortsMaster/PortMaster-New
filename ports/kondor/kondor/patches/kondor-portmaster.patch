@@ -1,0 +1,70 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b3a0a20..3899601 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,4 +21,8 @@ add_executable(kondor
+ target_include_directories(kondor PRIVATE src)
+ target_link_libraries(kondor PRIVATE SDL2::SDL2)
+ target_compile_options(kondor PRIVATE -Wall -Wextra -Wno-unused-parameter)
++option(KONDOR_PORTMASTER "Build for PortMaster handhelds (fullscreen window)" OFF)
++if(KONDOR_PORTMASTER)
++  target_compile_definitions(kondor PRIVATE PORTMASTER_BUILD)
++endif()
+ install(TARGETS kondor RUNTIME DESTINATION bin)
+diff --git a/src/platform/platform_sdl.cpp b/src/platform/platform_sdl.cpp
+index 197f32b..0a1745b 100644
+--- a/src/platform/platform_sdl.cpp
++++ b/src/platform/platform_sdl.cpp
+@@ -135,13 +135,22 @@ void save_shot(uint64_t n) {
+     std::fclose(f);
+ }
+ 
++// The game polls key state, so a key that changes twice within one pump (an on-screen keyboard's
++// press+release, or gptokeyb's repeat release+press) would look unchanged. The second change is
++// held back until the next pump.
++int deferred_code = 0;
++bool deferred_down = false;
++
+ void pump() {
++    if (deferred_code) { feed(deferred_code, deferred_down); deferred_code = 0; }
++    bool changed[SDL_NUM_SCANCODES] = {};
+     SDL_Event ev;
+     while (SDL_PollEvent(&ev)) {
+         switch (ev.type) {
+         case SDL_QUIT: quit = true; std::exit(0);   // window closed: leave like the DOS version on Ctrl-Break
+         case SDL_KEYDOWN:
+         case SDL_KEYUP:
++#ifndef PORTMASTER_BUILD   // fire (Alt) + use item (Enter) must not toggle the window
+             if (ev.key.keysym.scancode == SDL_SCANCODE_RETURN && (ev.key.keysym.mod & KMOD_ALT)) {
+                 if (ev.type == SDL_KEYDOWN && !ev.key.repeat) {
+                     bool fs = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+@@ -149,6 +158,15 @@ void pump() {
+                 }
+                 break;
+             }
++#endif
++            if (!ev.key.repeat) {
++                if (changed[ev.key.keysym.scancode]) {
++                    deferred_code = xt_code(ev.key.keysym.scancode);
++                    deferred_down = ev.type == SDL_KEYDOWN;
++                    return;
++                }
++                changed[ev.key.keysym.scancode] = true;
++            }
+             feed(xt_code(ev.key.keysym.scancode), ev.type == SDL_KEYDOWN);
+             break;
+         default: break;
+@@ -241,7 +259,12 @@ bool init() {
+             if (scale > 5) scale = 5;
+         }
+         window = SDL_CreateWindow("Kondor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_W * scale,
+-                                  SCREEN_H * scale * 6 / 5, SDL_WINDOW_RESIZABLE);
++                                  SCREEN_H * scale * 6 / 5,
++#ifdef PORTMASTER_BUILD
++                                  SDL_WINDOW_FULLSCREEN_DESKTOP);
++#else
++                                  SDL_WINDOW_RESIZABLE);
++#endif
+         if (!window) { std::fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError()); return false; }
+         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+         if (!renderer) renderer = SDL_CreateRenderer(window, -1, 0);
