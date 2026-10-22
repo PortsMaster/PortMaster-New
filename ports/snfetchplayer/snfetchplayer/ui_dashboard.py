@@ -3103,16 +3103,17 @@ class SNfetchDashboard:
         pygame.draw.line(content_surf, NORD2, (4, gy), (content_w - 4, gy), 1)
         gy += 14
 
-        # Section 3: Android App & Curator
-        c_sec = self._load_font(20, bold=True).render("📱 ANDROID VERSION & CURATOR:", True, NORD14)
+        # Section 3: Native Android APK & Curator
+        c_sec = self._load_font(20, bold=True).render("📱 NATIVE ANDROID APK & CURATOR:", True, NORD14)
         content_surf.blit(c_sec, (4, gy))
         gy += 30
 
         msg2 = [
-            "The Station North Android App features a built-in CURATOR!",
-            "Easily curate and build your playlists on your smartphone,",
-            "then export them as JSON to synchronize directly",
-            "with your dArkOS / PortMaster gaming handheld."
+            "For Android handhelds (Retroid Pocket, Odin, RG556)",
+            "or phones, SNfetchPLAYER is also available as an APK!",
+            "👉 github.com/StationNorthMedia/SNfetchPLAYER",
+            "Includes touch & gamepad controls plus the Curator",
+            "Console to build and export playlists for your handheld."
         ]
         for line in msg2:
             ls = self._load_font(18).render(line, True, NORD4)

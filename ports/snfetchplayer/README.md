@@ -105,7 +105,7 @@ We provide two installation flavors to fit your handheld setup:
 1. Download `snfetchplayer.zip` from [GitHub Releases](https://github.com/StationNorthMedia/SNfetchPLAYER-PortMaster/releases).
 2. Extract the archive directly into your SD card's `ports/` directory:
    ```text
-   ports/
+   /roms/ports/
    ├── SNfetchPLAYER.sh
    └── snfetchplayer/
    ```
@@ -115,7 +115,7 @@ We provide two installation flavors to fit your handheld setup:
 ### Option 2: Full Offline Bundle (`snfetchplayer-full.zip` ~285 MB)
 *Recommended for offline devices or zero-setup plug-and-play.*
 1. Download `snfetchplayer-full.zip` from [GitHub Releases](https://github.com/StationNorthMedia/SNfetchPLAYER-PortMaster/releases).
-2. Extract directly to your device's `ports/` directory on your SD card.
+2. Extract directly to `/roms/ports/` on your SD card.
 3. Plug into your device and play immediately with zero downloads required!
 
 ---
@@ -126,7 +126,7 @@ Want to bring your own personal music library or retro video collection onto you
 SNfetchPLAYER provides dedicated, auto-indexed repositories with pre-configured genre folders and comprehensive English guide files:
 
 ```text
-ports/snfetchplayer/
+/roms/ports/snfetchplayer/
 ├── music/                     # Private Offline Music Deck
 │   ├── HipHop/                # Drop MP3, FLAC, M4A here -> "🎵 Music • HipHop"
 │   ├── Rock/                  # Drop Rock & Alternative audio -> "🎵 Music • Rock"
@@ -162,13 +162,16 @@ ffmpeg -i "video.mp4" -vn -c:a libmp3lame -q:a 2 "Artist - Title.mp3"
  
 ---
  
-## 📱 Mobile Companion: Station North Android App
- 
-Stream The Queen's Frequency on the go or build custom playlists comfortably from your smartphone!  
-Check out the official **Android Companion App**:  
-👉 **[StationNorthMedia/SNfetchPLAYER on GitHub](https://github.com/StationNorthMedia/SNfetchPLAYER)**
- 
-- **Curate on Mobile**: Build and organize your favorite music queues on Android, export them as JSON playlists, and drop them right into your handheld's `/playlists/` directory.
+## 📱 Native Android APK & Mobile Companion: Station North Android App
+
+Have an Android-powered gaming handheld (e.g. **Retroid Pocket 4/5**, **AYN Odin 2**, **Anbernic RG556 / RG406H**) or want to stream on your smartphone?  
+SNfetchPLAYER is also available as a full-featured, hardware-accelerated **native Android APK**!
+
+👉 **[Download Latest Android APK (GitHub Releases)](https://github.com/StationNorthMedia/SNfetchPLAYER/releases/latest)**  
+👉 **[StationNorthMedia/SNfetchPLAYER Source Repository](https://github.com/StationNorthMedia/SNfetchPLAYER)**
+
+- **Handheld & Controller Ready**: Complete physical gamepad and touchscreen navigation out of the box.
+- **Curate on Mobile / Android**: Build and organize your favorite music & video queues, export them as JSON playlists, and drop them right into your Linux handheld's `/playlists/` directory.
 - **Unified Ecosystem**: Features the same InnerTube mobile streaming architecture, custom track catalogs, and late-night aesthetic universe.
  
 ---
