@@ -105,7 +105,7 @@ We provide two installation flavors to fit your handheld setup:
 1. Download `snfetchplayer.zip` from [GitHub Releases](https://github.com/StationNorthMedia/SNfetchPLAYER-PortMaster/releases).
 2. Extract the archive directly into your SD card's `ports/` directory:
    ```text
-   /roms/ports/
+   ports/
    ├── SNfetchPLAYER.sh
    └── snfetchplayer/
    ```
@@ -115,7 +115,7 @@ We provide two installation flavors to fit your handheld setup:
 ### Option 2: Full Offline Bundle (`snfetchplayer-full.zip` ~285 MB)
 *Recommended for offline devices or zero-setup plug-and-play.*
 1. Download `snfetchplayer-full.zip` from [GitHub Releases](https://github.com/StationNorthMedia/SNfetchPLAYER-PortMaster/releases).
-2. Extract directly to `/roms/ports/` on your SD card.
+2. Extract directly to your device's `ports/` directory on your SD card.
 3. Plug into your device and play immediately with zero downloads required!
 
 ---
@@ -126,7 +126,7 @@ Want to bring your own personal music library or retro video collection onto you
 SNfetchPLAYER provides dedicated, auto-indexed repositories with pre-configured genre folders and comprehensive English guide files:
 
 ```text
-/roms/ports/snfetchplayer/
+ports/snfetchplayer/
 ├── music/                     # Private Offline Music Deck
 │   ├── HipHop/                # Drop MP3, FLAC, M4A here -> "🎵 Music • HipHop"
 │   ├── Rock/                  # Drop Rock & Alternative audio -> "🎵 Music • Rock"

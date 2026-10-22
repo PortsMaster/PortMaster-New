@@ -34,6 +34,8 @@ import urllib.parse
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
+APP_DIR = Path(__file__).resolve().parent
+
 # Audio output for ffplay / ALSA
 os.environ["SDL_AUDIODRIVER"] = "alsa"
 import pygame
@@ -122,8 +124,7 @@ STATE_SETTINGS     = 4
 class ShuffleQueueManager:
     """Manages non-repeating shuffle queues across sessions and handles single-track repeat"""
     def __init__(self, state_file: str = "shuffle_state.json"):
-        base_dir = Path("/roms/ports/snfetchplayer") if Path("/roms/ports/snfetchplayer").exists() else Path(".")
-        self.state_file = base_dir / state_file
+        self.state_file = APP_DIR / state_file
         self.is_repeat_mode: bool = False
         self.shuffle_queue: List[int] = []
         self.history: List[int] = []
@@ -426,8 +427,8 @@ class ThumbnailManager:
                 return self.cache[cache_key]
 
         candidate_paths = [
+            APP_DIR / f"thumbnails/{youtube_id}.jpg",
             Path(f"thumbnails/{youtube_id}.jpg"),
-            Path(f"/roms/ports/snfetchplayer/thumbnails/{youtube_id}.jpg"),
             Path(f"/tmp/sn_thumb_{youtube_id}.jpg")
         ]
 
@@ -459,7 +460,7 @@ class ThumbnailManager:
         return self._create_placeholder(title, size=sz)
 
     def _fetch_thumb(self, youtube_id: str):
-        local_path = Path(f"/roms/ports/snfetchplayer/thumbnails/{youtube_id}.jpg")
+        local_path = APP_DIR / f"thumbnails/{youtube_id}.jpg"
         if not local_path.parent.exists():
             local_path = Path(f"/tmp/sn_thumb_{youtube_id}.jpg")
         url = f"https://img.youtube.com/vi/{youtube_id}/hqdefault.jpg"
@@ -503,7 +504,7 @@ class StationContentManager:
         self._scan_station_assets()
 
     def _scan_station_assets(self):
-        base_dirs = [Path("assets"), Path("/roms/ports/snfetchplayer/assets"), Path(".")]
+        base_dirs = [APP_DIR / "assets", Path("assets"), Path(".")]
         for b in base_dirs:
             j_dir = b / "jingles"
             if j_dir.exists():
@@ -672,7 +673,7 @@ class SNfetchDashboard:
         return pygame.font.Font(None, size)
 
     def _load_logo(self) -> Optional[pygame.Surface]:
-        paths = [Path("sn_logo.png"), Path("/roms/ports/snfetchplayer/sn_logo.png")]
+        paths = [APP_DIR / "sn_logo.png", Path("sn_logo.png")]
         for p in paths:
             if p.exists():
                 try:
@@ -686,7 +687,7 @@ class SNfetchDashboard:
         return None
 
     def _load_large_logo(self) -> Optional[pygame.Surface]:
-        paths = [Path("sn_logo.png"), Path("/roms/ports/snfetchplayer/sn_logo.png")]
+        paths = [APP_DIR / "sn_logo.png", Path("sn_logo.png")]
         for p in paths:
             if p.exists():
                 try:
@@ -701,10 +702,10 @@ class SNfetchDashboard:
     def _discover_playlists(self):
         self.available_playlists = []
         dirs_to_check = [
+            APP_DIR / "assets/playlists",
+            APP_DIR / "playlists",
             Path("assets/playlists"),
             Path("playlists"),
-            Path("/roms/ports/snfetchplayer/assets/playlists"),
-            Path("/roms/ports/snfetchplayer/playlists"),
             Path(".")
         ]
         found_paths = {}
@@ -740,12 +741,12 @@ class SNfetchDashboard:
         ALL_MEDIA_EXTS = MEDIA_AUDIO_EXTS | MEDIA_VIDEO_EXTS
 
         local_bases = [
+            APP_DIR / "music",
+            APP_DIR / "videos",
+            APP_DIR / "playlists",
             Path("music"),
-            Path("/roms/ports/snfetchplayer/music"),
             Path("videos"),
-            Path("/roms/ports/snfetchplayer/videos"),
             Path("playlists"),
-            Path("/roms/ports/snfetchplayer/playlists"),
         ]
         seen_dirs = set()
 
@@ -853,7 +854,7 @@ class SNfetchDashboard:
 
     def _load_quotes(self):
         self.quotes = []
-        for q_path in [Path("sprueche.json"), Path("/roms/ports/snfetchplayer/sprueche.json")]:
+        for q_path in [APP_DIR / "sprueche.json", Path("sprueche.json")]:
             if q_path.exists():
                 try:
                     with open(q_path, "r", encoding="utf-8") as f:
@@ -911,8 +912,8 @@ class SNfetchDashboard:
 
     def _load_chronicles(self):
         paths = [
-            Path("assets/comic/chronicles_data.json"),
-            Path("/roms/ports/snfetchplayer/assets/comic/chronicles_data.json")
+            APP_DIR / "assets/comic/chronicles_data.json",
+            Path("assets/comic/chronicles_data.json")
         ]
         for p in paths:
             if p.exists():
@@ -943,11 +944,9 @@ class SNfetchDashboard:
         """Asynchronously downloads missing 480p TV idents, Jingles and Comics from GitHub"""
         try:
             # 1. Base directory detection
-            base_dir = Path("assets")
-            if not base_dir.exists() and Path("/roms/ports/snfetchplayer/assets").exists():
-                base_dir = Path("/roms/ports/snfetchplayer/assets")
+            base_dir = APP_DIR / "assets"
             base_dir.mkdir(parents=True, exist_ok=True)
-            app_dir = base_dir.resolve().parent
+            app_dir = APP_DIR
 
             manifest_path = base_dir / "catalog_manifest.json"
             manifest = None
@@ -1505,9 +1504,8 @@ class SNfetchDashboard:
             # Bauchbinde via nativem ASS-Untertitel (blendet sanft ein und nach 4.8s automatisch aus)
             osd_file = generate_osd_ass(track, show_osd=True, is_repeat=self.shuffle_mgr.is_repeat_mode)
 
-            logo_path = "/roms/ports/snfetchplayer/sn_logo.png"
-            if not Path(logo_path).exists():
-                logo_path = str(Path("sn_logo.png").resolve())
+            logo_file = APP_DIR / "sn_logo.png"
+            logo_path = str(logo_file) if logo_file.exists() else str(Path("sn_logo.png").resolve())
 
             is_audio_only = is_local and Path(stream_url).suffix.lower() in {".mp3", ".flac", ".ogg", ".wav", ".m4a", ".opus", ".aac"}
             if not is_audio_only:
@@ -1714,9 +1712,8 @@ class SNfetchDashboard:
         self.is_playing = False
 
     def _play_tv_station_id_fullscreen(self, clip_path: Path) -> bool:
-        logo_path = "/roms/ports/snfetchplayer/sn_logo.png"
-        if not Path(logo_path).exists():
-            logo_path = str(Path("sn_logo.png").resolve())
+        logo_file = APP_DIR / "sn_logo.png"
+        logo_path = str(logo_file) if logo_file.exists() else str(Path("sn_logo.png").resolve())
 
         # 4:3 Display-Fill + 65% Logo Transparenz unten rechts (Crash-sicheres Scale & Crop)
         vf_filter = (
@@ -1831,8 +1828,8 @@ class SNfetchDashboard:
         panel_id = item.get("id", self.chronicles_idx + 1)
         audio_name = f"p_{panel_id:03d}.mp3"
         audio_paths = [
-            Path("assets/comic/audio") / audio_name,
-            Path("/roms/ports/snfetchplayer/assets/comic/audio") / audio_name
+            APP_DIR / "assets/comic/audio" / audio_name,
+            Path("assets/comic/audio") / audio_name
         ]
         target_path = None
         for ap in audio_paths:
@@ -2781,8 +2778,8 @@ class SNfetchDashboard:
 
         if image_name not in self.chronicles_img_cache:
             img_paths = [
-                Path("assets/comic") / image_name,
-                Path("/roms/ports/snfetchplayer/assets/comic") / image_name
+                APP_DIR / "assets/comic" / image_name,
+                Path("assets/comic") / image_name
             ]
             loaded_surf = None
             for ip in img_paths:
