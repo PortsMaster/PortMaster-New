@@ -7,7 +7,7 @@ RUNTIME="$GAMEDIR/decompiler-cache"
 RUNTIME_7Z="$GAMEDIR/patch/decompiler.7z"
 BUILD="$GAMEDIR/build"
 GAMEDATA="$GAMEDIR/gamedata"
-STATE="$GAMEDIR/.patch_state"   
+STATE="$GAMEDIR/.patch_state"
 PATCHLOG="$GAMEDIR/patchlog.txt"
 
 EXE_STD="FiveNightsatFreddys4.exe"
@@ -57,8 +57,24 @@ fail() {
     exit 1
 }
 
-step_done() { [ -f "$STATE/$1" ] && [ ! "$2" -nt "$STATE/$1" ]; }  
+step_done() { [ -f "$STATE/$1" ] && [ ! "$2" -nt "$STATE/$1" ]; }
 mark_done() { : > "$STATE/$1"; }
+
+remove_guides_dir() {
+    if [ "$1" = std ]; then
+        rm -rf "$GAMEDIR/patch/guides"
+    else
+        rm -rf "$GAMEDIR/patch/guides_he"
+    fi
+}
+
+remove_game_exe() {
+    if [ "$1" = std ]; then
+        rm -f "$GAMEDIR/gamedata/FiveNightsatFreddys4.exe"
+    else
+        rm -f "$GAMEDIR/gamedata/FiveNightsatFreddys4 HalloweenEdition.exe"
+    fi
+}
 
 SEVENZIP="${controlfolder}/7zzs.${DEVICE_ARCH:-aarch64}"
 if [ ! -x "$SEVENZIP" ]; then
@@ -80,7 +96,7 @@ case "${FNAF4_VERSION:-auto}" in
         ;;
     std) if [ "$HAVE_STD" = 1 ]; then WANT="std"; fi ;;
     he)  if [ "$HAVE_HE" = 1 ];  then WANT="he"; fi ;;
-    *)  
+    *)
         if   [ "$HAVE_STD" = 1 ]; then WANT="std"
         elif [ "$HAVE_HE" = 1 ];  then WANT="he"
         fi
@@ -97,7 +113,7 @@ if step_done "runtime_extract" "$RUNTIME_7Z" && [ -x "$RUNTIME/bin/chowdren-buil
     echo "Runtime already extracted. OK"
 else
     echo "Extracting decompiler..."
-    rm -rf "$RUNTIME"
+    rm -rf "$GAMEDIR/decompiler-cache"
     mkdir -p "$RUNTIME"
     "$SEVENZIP" x "$RUNTIME_7Z" -o"$RUNTIME" -y >> "$PATCHLOG" 2>&1 \
         || fail "Could not extract decompiler.7z"
@@ -140,7 +156,7 @@ build_edition() {
             echo "Guides already extracted. OK"
         else
             echo "Extracting ASTC guides..."
-            rm -rf "$guides_dir"
+            remove_guides_dir "$ed"
             "$SEVENZIP" x "$guides_7z" -o"$GAMEDIR/patch" -y >> "$PATCHLOG" 2>&1 \
                 || fail "Could not extract $guides_name.7z"
             mark_done "guides_$ed"
@@ -173,13 +189,13 @@ build_edition() {
     echo "=== [$ed] Step 2/2: Moving output ==="
 
     mkdir -p "$outdir"
-    mv "$BUILD/Chowdren"   "$outdir/Chowdren"   || $ESUDO mv "$BUILD/Chowdren"   "$outdir/Chowdren"   || fail "Failed to move Chowdren binary ($ed)"
-    mv "$BUILD/Assets.dat" "$outdir/Assets.dat" || $ESUDO mv "$BUILD/Assets.dat" "$outdir/Assets.dat" || fail "Failed to move Assets.dat ($ed)"
+    mv "$GAMEDIR/build/Chowdren"   "$outdir/Chowdren"   || $ESUDO mv "$GAMEDIR/build/Chowdren"   "$outdir/Chowdren"   || fail "Failed to move Chowdren binary ($ed)"
+    mv "$GAMEDIR/build/Assets.dat" "$outdir/Assets.dat" || $ESUDO mv "$GAMEDIR/build/Assets.dat" "$outdir/Assets.dat" || fail "Failed to move Assets.dat ($ed)"
 
-    rm -rf "$BUILD"
+    rm -rf "$GAMEDIR/build"
     mkdir -p "$BUILD"
-    rm -rf "$guides_dir"
-    rm -f "$game_exe"
+    remove_guides_dir "$ed"
+    remove_game_exe "$ed"
     : > "$GAMEDATA/.patched_$ed"
 
     log "[$ed] done"
@@ -191,13 +207,15 @@ for ed in $WANT; do
     build_edition "$ed"
 done
 
-rm -rf "$RUNTIME" "$BUILD" "$STATE"
+rm -rf "$GAMEDIR/decompiler-cache"
+rm -rf "$GAMEDIR/build"
+rm -rf "$GAMEDIR/.patch_state"
 
 if [ -f "$GAMEDATA/.patched_std" ] && [ -f "$GAMEDATA/.patched_he" ]; then
 
-    rm -f "$GAMEDIR/patch/decompiler.7z" \
-          "$GAMEDIR/patch/guides.7z" \
-          "$GAMEDIR/patch/guides_he.7z"
+    rm -f "$GAMEDIR/patch/decompiler.7z"
+    rm -f "$GAMEDIR/patch/guides.7z"
+    rm -f "$GAMEDIR/patch/guides_he.7z"
     echo "Both editions built, installer files removed."
 else
 
