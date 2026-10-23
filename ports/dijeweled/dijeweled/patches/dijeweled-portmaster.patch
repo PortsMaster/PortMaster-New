@@ -1,0 +1,1083 @@
+diff -ruN -x .git -x '*.gmx' a/bej_temp_remaster.yyp b/bej_temp_remaster.yyp
+--- a/bej_temp_remaster.yyp	2025-08-24 15:25:11.000000000 +0000
++++ b/bej_temp_remaster.yyp	2026-10-21 16:37:43.139664419 +0000
+@@ -307,7 +307,7 @@
+     {"id":{"name":"Bloom_shader","path":"extensions/Bloom_shader/Bloom_shader.yy",},},
+     {"id":{"name":"DSPrint","path":"extensions/DSPrint/DSPrint.yy",},},
+     {"id":{"name":"Easing_and_Tweening","path":"extensions/Easing_and_Tweening/Easing_and_Tweening.yy",},},
+-    {"id":{"name":"NekoPresence","path":"extensions/NekoPresence/NekoPresence.yy",},},
++    {"id":{"name":"np_stubs","path":"scripts/np_stubs/np_stubs.yy",},},
+     {"id":{"name":"FBIBIG","path":"fonts/FBIBIG/FBIBIG.yy",},},
+     {"id":{"name":"fnt_chat","path":"fonts/fnt_chat/fnt_chat.yy",},},
+     {"id":{"name":"fnt_fruit","path":"fonts/fnt_fruit/fnt_fruit.yy",},},
+@@ -572,6 +572,7 @@
+     {"id":{"name":"obj_powerupcontrol","path":"objects/obj_powerupcontrol/obj_powerupcontrol.yy",},},
+     {"id":{"name":"obj_quest_control","path":"objects/obj_quest_control/obj_quest_control.yy",},},
+     {"id":{"name":"obj_questmusic","path":"objects/obj_questmusic/obj_questmusic.yy",},},
++    {"id":{"name":"obj_autotest","path":"objects/obj_autotest/obj_autotest.yy",},},
+     {"id":{"name":"obj_radio","path":"objects/obj_radio/obj_radio.yy",},},
+     {"id":{"name":"obj_rank","path":"objects/obj_rank/obj_rank.yy",},},
+     {"id":{"name":"obj_replay_dot","path":"objects/obj_replay_dot/obj_replay_dot.yy",},},
+diff -ruN -x .git -x '*.gmx' a/objects/OBJ_GRAPHICS/Create_0.gml b/objects/OBJ_GRAPHICS/Create_0.gml
+--- a/objects/OBJ_GRAPHICS/Create_0.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/objects/OBJ_GRAPHICS/Create_0.gml	2026-10-20 18:04:24.861993250 +0000
+@@ -59,4 +59,18 @@
+ 		window_set_size(w,h)
+ 		break;
+ }
+-ini_close()
+\ No newline at end of file
++ini_close()
++
++//gmloader has no OS cursor, so draw one
++var old_color = draw_get_color()
++var cs = surface_create(24, 36)
++surface_set_target(cs)
++draw_clear_alpha(c_black, 0)
++draw_set_color(c_black)
++draw_triangle(0, 0, 0, 34, 23, 23, false)
++draw_set_color(c_white)
++draw_triangle(2, 5, 2, 29, 17, 21, false)
++surface_reset_target()
++cursor_sprite = sprite_create_from_surface(cs, 0, 0, 24, 36, false, false, 0, 0)
++surface_free(cs)
++draw_set_color(old_color)
+diff -ruN -x .git -x '*.gmx' a/objects/obj_autotest/Create_0.gml b/objects/obj_autotest/Create_0.gml
+--- a/objects/obj_autotest/Create_0.gml	1970-01-01 00:00:00.000000000 +0000
++++ b/objects/obj_autotest/Create_0.gml	2026-10-21 22:27:41.576098874 +0000
+@@ -0,0 +1,170 @@
++/// @description PortMaster on-device test driver, only created when autotest.ini exists
++cases = []
++function add_case(_name, _kind, _data) {
++	_data.name = _name
++	_data.kind = _kind
++	array_push(cases, _data)
++}
++
++//single-player modes, started with the game's own menu buttons
++add_case("arcade", "mode", {button: obj_button_arcade, target: rm_timeattack, play: 40, fresh: "autosave_rm_timeattack"})
++add_case("arcade_continue", "mode", {button: obj_button_arcade, target: rm_timeattack, play: 10, dialog: 1})
++add_case("classic", "mode", {button: obj_button_classic, target: rm_classic, play: 40, fresh: "autosave_rm_classic"})
++add_case("classic_continue", "mode", {button: obj_button_classic, target: rm_classic, play: 10, dialog: 1})
++add_case("classic_new_over_save", "mode", {button: obj_button_classic, target: rm_classic, play: 10, dialog: 0})
++add_case("zen", "mode", {button: obj_button_zen, target: rm_zen, play: 40, fresh: "autosave_rm_zen"})
++add_case("blitz_1min_full", "mode", {button: obj_button_1min, target: rm_blitz, play: -1, twist: false})
++add_case("blitz_3min", "mode", {button: obj_button_3min, target: rm_blitz, play: 20, twist: false})
++add_case("blitz_5min", "mode", {button: obj_button_5min, target: rm_blitz, play: 20, twist: false})
++add_case("blitz_twist_1min_full", "mode", {button: obj_button_1min, target: rm_blitz, play: -1, twist: true})
++add_case("countdown", "mode", {button: obj_button_countdown, target: rm_countdown, play: 40})
++add_case("twist", "mode", {button: obj_button_twist, target: rm_twist, play: 40, fresh: "autosave_rm_twist"})
++add_case("compact", "mode", {button: obj_button_compact, target: rm_compact, play: 40, fresh: "autosave_rm_compact"})
++add_case("swift", "mode", {button: obj_button_swift, target: rm_swift, play: 40, fresh: "autosave_rm_swift"})
++add_case("survivor", "mode", {button: obj_button_survivor, target: rm_survivor, play: 40, fresh: "autosave_rm_survivor"})
++add_case("buyo", "mode", {button: obj_button_buyo, target: rm_buyobuyo, play: 40})
++
++//local multiplayer against the game's own bot
++//LOB_gamemode is 0-1, LOB_gamemode_2 is 0-2
++var lm = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]]
++for (var i = 0; i < array_length(lm); i++) {
++	add_case("local_mode" + string(lm[i][0]) + "_" + string(lm[i][1]), "local", {gamemode: lm[i][0], gamemode2: lm[i][1], twist: false})
++}
++add_case("local_twist", "local", {gamemode: 0, gamemode2: 2, twist: true})
++
++//pause menu: every toggle, the controls screen, return, then main menu
++add_case("pause_all_buttons", "pause", {button: obj_button_classic, target: rm_classic, play: 999, fresh: "autosave_rm_classic"})
++
++//every main-menu button except Quit, from every button group
++//"tfjeweled" is only reachable after obj_button_tfjeweled connects to a server
++var groups = ["initial", "play", "single", "blitz", "secret", "online", "replays"]
++for (var g = 0; g < array_length(groups); g++) {
++	add_case("menu_group_" + groups[g], "menu", {group: groups[g], button: noone})
++}
++var menu_buttons = [obj_button_play, obj_button_options, obj_button_replays, obj_button_help, obj_button_credits,
++	obj_button_singleplayer, obj_button_multiplayer, obj_button_online, obj_button_back,
++	obj_button_secret, obj_button_challenge, obj_button_blitz,
++	obj_button_dedicated, obj_button_join, obj_button_host,
++	obj_button_online_replays, obj_button_search_replays]
++for (var b = 0; b < array_length(menu_buttons); b++) {
++	add_case("menu_" + object_get_name(menu_buttons[b]), "menu", {group: "", button: menu_buttons[b]})
++}
++add_case("stats_screen", "menu", {group: "", button: noone, goto: rm_menu_stats})
++add_case("credits_screen", "menu", {group: "", button: noone, goto: rm_menu_credits})
++add_case("options_screen", "menu", {group: "", button: noone, goto: rm_menu_options})
++
++//all 26 quest categories x 6 quests
++for (var c = 0; c < 26; c++) {
++	for (var q = 0; q < 6; q++) {
++		add_case("quest_" + string(c) + "_" + string(q), "quest", {cat: c, q: q, target: (c == 25 && q == 2) ? rm_quest252 : rm_quest, play: 20})
++	}
++}
++
++//input mapping, driven by tests/input_test.sh injecting real pad events; skipped in a normal run
++add_case("input_listen", "listen", {button: obj_button_classic, target: rm_classic, play: 0, fresh: "autosave_rm_classic", manual: true})
++
++//GML try/catch must survive under gmloader
++add_case("canary_try_catch", "canary", {})
++
++total = array_length(cases)
++ini_open("autotest.ini")
++	first = ini_read_real("run", "first", 0)
++	last = ini_read_real("run", "last", total - 1)
++	filter = ini_read_string("run", "filter", "")
++	//run the selected cases this many times in one process (memory checks)
++	rounds = ini_read_real("run", "repeat", 1)
++ini_close()
++
++function log_line(_s) {
++	var f = file_text_open_append("autotest_log.txt")
++	file_text_write_string(f, _s)
++	file_text_writeln(f)
++	file_text_close(f)
++	show_debug_message("AUTOTEST " + _s)
++}
++
++function finish(_pass, _why) {
++	var c = cases[current]
++	log_line((_pass ? "PASS " : "FAIL ") + string(current) + " " + c.name + " " + _why + " room=" + room_get_name(room))
++	state = "next"
++	t = 0
++}
++
++//one move for player1 the way the local bot does it (player_local Alarm_0)
++function bot_move() {
++	if (!instance_exists(player1) || !instance_exists(Gamerule_1)) return;
++	if (global.paused) return;
++	var g = Gamerule_1
++	if (!g.controlallowed || g.moving) return;
++	if (!g.IsGemActive2 && !g.multiswap_allowed) return;
++	var list_moves = -1
++	with(g) list_moves = check_summoves(true)
++	if (!is_array(list_moves)) return;
++	var k = irandom(array_length(list_moves) - 1)
++	var it = list_moves[k][0]
++	var jt = list_moves[k][1]
++	var im = it
++	var jm = jt
++	switch (list_moves[k][2]) {
++		case "up": im--; break;
++		case "down": im++; break;
++		case "left": jm--; break;
++		case "right": jm++; break;
++	}
++	with(player1) {
++		if (dont_swap || g.lightOn || !g.illegal_cando) exit;
++		gem1 = g.gem_board1[it, jt]
++		gem2 = g.gem_board1[im, jm]
++		if (instance_exists(gem1) && instance_exists(gem2) && gem1.acc == 0 && !gem1.ammoving && gem2.acc == 0 && !gem2.ammoving) {
++			xlim = jt
++			ylim = it
++			mouse_yy_pos = gem1.y
++			mouse_xx_pos = gem1.x
++			g.IsGemActive2 = 0
++			do_match(g)
++			other.moves++
++		}
++	}
++}
++
++function press(_obj) {
++	global.canbepressed = true
++	var found = false
++	with(_obj) {
++		found = true
++		if (variable_instance_exists(id, "unlocked")) unlocked = true
++		if (variable_instance_exists(id, "canclick")) canclick = true
++		event_perform(ev_mouse, ev_left_press)
++		break;
++	}
++	return found
++}
++
++function open_pause() {
++	toggle_pause()
++}
++
++//pausing deactivates every instance, this one included, so keep reactivating it
++reactivator = time_source_create(time_source_global, 5, time_source_units_frames,
++	method(undefined, function() { instance_activate_object(obj_autotest) }), [], -1)
++time_source_start(reactivator)
++
++exception_unhandled_handler(function(_e) {
++	var f = file_text_open_append("autotest_log.txt")
++	file_text_write_string(f, "ERROR " + string_replace_all(string(_e.longMessage), "\n", " | "))
++	file_text_writeln(f)
++	file_text_close(f)
++	return 0
++})
++
++binds = ["GP_swapdown", "GP_swapright", "GP_swapleft", "GP_swapup", "GP_pass", "GP_replay",
++	"GP_clockwise1", "GP_clockwise2", "GP_cclockwise1", "GP_cclockwise2"]
++last_room = -1
++last_paused = false
++
++current = first - 1
++state = "next"
++t = 0
++moves = 0
++step_i = 0
++log_line("TOTAL " + string(total) + " first=" + string(first) + " last=" + string(last))
+diff -ruN -x .git -x '*.gmx' a/objects/obj_autotest/Step_0.gml b/objects/obj_autotest/Step_0.gml
+--- a/objects/obj_autotest/Step_0.gml	1970-01-01 00:00:00.000000000 +0000
++++ b/objects/obj_autotest/Step_0.gml	2026-10-21 22:27:41.620582198 +0000
+@@ -0,0 +1,237 @@
++/// @description Test case state machine
++t++
++if (state == "next") {
++	current++
++	while (current <= last && ((filter != "" && string_pos(filter, cases[current].name) == 0)
++		|| (filter == "" && variable_struct_exists(cases[current], "manual")))) current++
++	if (current > last && rounds > 1) {
++		rounds--
++		current = first
++		while (current <= last && filter != "" && string_pos(filter, cases[current].name) == 0) current++
++	}
++	if (current > last) {
++		log_line("DONE")
++		game_end()
++		exit;
++	}
++	var c = cases[current]
++	log_line("START " + string(current) + " " + c.name)
++	home = (c.kind == "quest") ? rm_menu_challenges : rm_menu
++	moves = 0
++	step_i = 0
++	home_asked = false
++	state = "home"
++	t = 0
++	exit;
++}
++
++var c = cases[current]
++
++switch (state) {
++	case "home":
++		//let the game boot through its loading and intro rooms by itself
++		if (room == rm_intro && t mod 120 == 119) with(obj_intro) click()
++		if (room == rm_loading_menu || room == rm_intro) {if (t > 3600) finish(false, "stuck in " + room_get_name(room)); break;}
++		if (room != home && !home_asked) {room_goto(home); home_asked = true}
++		if (room == home && t > 90) {state = "start"; t = 0}
++		else if (t > 900) finish(false, "never reached home room")
++		break;
++
++	case "start":
++		if (c.kind == "canary") {
++			var caught = false
++			try {
++				var n = path_get_number(-1)
++			}
++			catch(e) {
++				caught = true
++			}
++			finish(caught, "caught=" + string(caught))
++			break;
++		}
++		if (c.kind == "quest") {
++			with(obj_challenges_room) change_to_quest(other.cases[other.current].cat)
++			state = "quest_press"
++			t = 0
++			break;
++		}
++		if (variable_struct_exists(c, "goto")) {
++			room_goto(c.goto)
++			state = "linger"
++			t = 0
++			break;
++		}
++		var btn = (c.kind == "local") ? obj_button_multiplayer : c.button
++		var grp = variable_struct_exists(c, "group") ? c.group : ""
++		if (c.kind != "menu" || btn != noone) {
++			grp = ""
++			var names = variable_struct_get_names(global.button_group)
++			for (var i = 0; i < array_length(names); i++) {
++				var arr = global.button_group[$ names[i]]
++				for (var j = 0; j < array_length(arr); j++) if (arr[j] == btn) grp = names[i]
++			}
++		}
++		if (variable_struct_exists(c, "fresh")) file_delete(c.fresh)
++		if (grp != "") with(obj_menu_buttons_master) {kill_current_group(true); change_to_group(grp, false)}
++		state = (c.kind == "menu" && btn == noone) ? "linger" : "press"
++		t = 0
++		break;
++
++	case "press":
++		if (t < 20) break;
++		if (variable_struct_exists(c, "twist")) global.blitz_twist = c.twist
++		var btn = (c.kind == "local") ? obj_button_multiplayer : c.button
++		if (!press(btn)) {finish(false, "button " + object_get_name(btn) + " not on screen"); break;}
++		state = (c.kind == "menu") ? "linger" : ((c.kind == "local") ? "lobby" : "wait_target")
++		t = 0
++		break;
++
++	case "linger":
++		if (t > 180) finish(true, "")
++		break;
++
++	case "lobby":
++		if (room != rm_lobby_local) {if (t > 900) finish(false, "lobby not reached"); break;}
++		if (t < 60) break;
++		LOB_gamemode.val = c.gamemode
++		if (c.gamemode == 1) {
++			instance_destroy(LOB_gamemode_2)
++			if (!instance_exists(LOB_gamemode_defence)) instance_create_depth(16, 336, -1, LOB_gamemode_defence)
++			LOB_gamemode_defence.enabled = c.gamemode2
++		}
++		else if (c.gamemode == 0) {
++			instance_destroy(LOB_gamemode_defence)
++			if (!instance_exists(LOB_gamemode_2)) instance_create_depth(168, 336, -1, LOB_gamemode_2)
++			LOB_gamemode_2.val = c.gamemode2
++		}
++		else {instance_destroy(LOB_gamemode_defence); instance_destroy(LOB_gamemode_2)}
++		LOB_twist.enabled = c.twist
++		global.bot1 = true
++		with(obj_controller_choose) index = 3
++		if (!press(obj_button_ready)) {finish(false, "ready button missing"); break;}
++		c.target = rm_LOCAL
++		c.play = 40
++		state = "wait_target"
++		t = 0
++		break;
++
++	case "quest_press":
++		if (t < 30) break;
++		var pressed = false
++		with(obj_challenges_selection) if (index == other.cases[other.current].q) {
++			global.canbepressed = true
++			event_perform(ev_mouse, ev_left_press)
++			pressed = true
++		}
++		if (!pressed) {finish(false, "quest button missing"); break;}
++		state = "quest_locked"
++		t = 0
++		break;
++
++	case "quest_locked":
++		//locked quests ignore the press; start them the way the selection handler does
++		if (room == c.target) {state = "play"; t = 0; break;}
++		if (t < 120) break;
++		global.DIS_quest_category = c.cat
++		global.DIS_quest_incategory = c.q
++		global.challenge_index = string(c.cat) + string(c.q)
++		global.chl_to_unlock = (c.q == 5) ? "none" : string(c.cat) + ":" + string(c.q + 1)
++		global.chl_to_succeed = string(c.cat) + ":" + string(c.q)
++		global.challenge_desc = obj_challenges_room.AR_challenges[c.cat, c.q]
++		global.canbepressed = false
++		fade_to_room(c.target)
++		log_line("NOTE " + c.name + " was locked, started directly")
++		state = "wait_target"
++		t = 0
++		break;
++
++	case "wait_target":
++		if (variable_struct_exists(c, "dialog") && instance_exists(obj_neworcontinue) && t > 30) {
++			var bm = obj_neworcontinue.button_manager
++			with(bm[c.dialog]) event_perform(ev_mouse, ev_left_press)
++			t = 0
++			break;
++		}
++		if (room == c.target) {state = "play"; t = 0}
++		else if (t > 900) finish(false, "target room " + room_get_name(c.target) + " not reached")
++		break;
++
++	case "listen":
++		//report what the game sees from the real pad and mouse
++		var gp = global.gp[0]
++		for (var i = 0; i < array_length(binds); i++) {
++			if (gamepad_button_check_pressed(gp, variable_global_get(binds[i]))) log_line("INPUT " + binds[i])
++		}
++		if (gamepad_button_check_pressed(gp, gp_start)) log_line("INPUT start")
++		if (gamepad_button_check_pressed(gp, gp_padu)) log_line("INPUT padu")
++		if (gamepad_button_check_pressed(gp, gp_padr)) log_line("INPUT padr")
++		if (mouse_check_button_pressed(mb_left)) log_line("INPUT mouse_left")
++		if (mouse_check_button_pressed(mb_right)) log_line("INPUT mouse_right")
++		if (global.paused != last_paused) {last_paused = global.paused; log_line("INPUT paused=" + string(global.paused))}
++		if (room != last_room) {last_room = room; log_line("INPUT room=" + room_get_name(room))}
++		if (t == 2) log_line("LISTEN")
++		if (room == rm_menu && t > 60) finish(true, "pause Main Menu reached by pad")
++		else if (t > 120 * 60) finish(false, "listen timed out")
++		break;
++
++	case "play":
++		if (c.kind == "listen") {state = "listen"; t = 0; last_room = room; break;}
++		if (room != c.target) {
++			//a game can end on its own (no moves left, quest won or lost); check where it went
++			var results = [rm_stats_normal, rm_stats_blitz, rm_stats_survivor, rm_stats_countdown, rm_menu_saverep]
++			if (array_contains(results, room)) {state = "results"; t = 0}
++			else if (room == home) finish(true, "game ended by itself after " + string(t div 60) + "s, moves=" + string(moves))
++			else if (room != rm_loading_menu) finish(false, "left " + room_get_name(c.target) + " for " + room_get_name(room))
++			break;
++		}
++		if (t mod 20 == 0) bot_move()
++		if (c.kind == "pause" && t > 300) {open_pause(); state = "pause_buttons"; t = 0; break;}
++		if (c.play >= 0 && t > c.play * 60) {open_pause(); state = "pause_exit"; t = 0}
++		else if (c.play < 0 && t > 200 * 60) finish(false, "game never ended")
++		break;
++
++	case "results":
++		if (room == rm_menu_saverep && t > 120) {
++			if (!press(obj_replaysave_cancel)) finish(false, "replay cancel missing")
++			t = 0
++		}
++		else if ((room == rm_stats_normal || room == rm_stats_blitz || room == rm_stats_survivor || room == rm_stats_countdown) && t > 180) {
++			if (!instance_exists(obj_menu_gamepad)) {finish(false, "results screen has no gamepad handler"); break;}
++			if (!press(obj_button_statscontinue)) {finish(false, "continue missing"); break;}
++			state = "wait_home"
++			t = 0
++		}
++		else if (room == home && t > 30) finish(true, "game over went straight to " + room_get_name(home) + ", moves=" + string(moves))
++		else if (t > 900) finish(false, "stuck after game over")
++		break;
++
++	case "pause_buttons":
++		if (t < 40) break;
++		var seq = [obj_pause_tick_lighteffects, obj_pause_tick_lighteffects, obj_pause_tick_vsync, obj_pause_tick_vsync,
++			obj_pause_tick_shownum, obj_pause_tick_shownum, obj_pause_tick_transparent, obj_pause_tick_transparent,
++			obj_pause_tick_fullscreen, obj_pause_tick_fullscreen, obj_pause_controls, obj_bindings_return, obj_pause_return]
++		if (step_i < array_length(seq)) {
++			if (!press(seq[step_i])) {finish(false, object_get_name(seq[step_i]) + " not on screen"); break;}
++			step_i++
++			t = 20
++			break;
++		}
++		if (global.paused) {finish(false, "Return did not unpause"); break;}
++		open_pause()
++		state = "pause_exit"
++		t = 0
++		break;
++
++	case "pause_exit":
++		if (t < 40) break;
++		if (!instance_exists(obj_pause_mainmenu)) {finish(false, "pause menu did not open"); break;}
++		press(obj_pause_mainmenu)
++		state = "wait_home"
++		t = 0
++		break;
++
++	case "wait_home":
++		if (room == home && t > 30) finish(true, "moves=" + string(moves))
++		else if (t > 900) finish(false, "did not return to " + room_get_name(home))
++		break;
++}
+diff -ruN -x .git -x '*.gmx' a/objects/obj_autotest/obj_autotest.yy b/objects/obj_autotest/obj_autotest.yy
+--- a/objects/obj_autotest/obj_autotest.yy	1970-01-01 00:00:00.000000000 +0000
++++ b/objects/obj_autotest/obj_autotest.yy	2026-10-21 16:37:26.799917441 +0000
+@@ -0,0 +1,36 @@
++{
++  "$GMObject":"",
++  "%Name":"obj_autotest",
++  "eventList":[
++    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
++    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
++  ],
++  "managed":true,
++  "name":"obj_autotest",
++  "overriddenProperties":[],
++  "parent":{
++    "name":"Music",
++    "path":"folders/Objects/Music.yy",
++  },
++  "parentObjectId":null,
++  "persistent":true,
++  "physicsAngularDamping":0.1,
++  "physicsDensity":0.5,
++  "physicsFriction":0.2,
++  "physicsGroup":0,
++  "physicsKinematic":false,
++  "physicsLinearDamping":0.1,
++  "physicsObject":false,
++  "physicsRestitution":0.1,
++  "physicsSensor":false,
++  "physicsShape":1,
++  "physicsShapePoints":[],
++  "physicsStartAwake":true,
++  "properties":[],
++  "resourceType":"GMObject",
++  "resourceVersion":"2.0",
++  "solid":false,
++  "spriteId":null,
++  "spriteMaskId":null,
++  "visible":false,
++}
+diff -ruN -x .git -x '*.gmx' a/objects/obj_bindings/Create_0.gml b/objects/obj_bindings/Create_0.gml
+--- a/objects/obj_bindings/Create_0.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/objects/obj_bindings/Create_0.gml	2026-10-20 21:52:50.364383946 +0000
+@@ -41,12 +41,12 @@
+ 
+ ini_open("binds.ini")
+ //Binds
+-B_list[0,0]	= ini_read_real("binds","GP_swapdown",gp_face1) 
+-B_list[1,0]	= ini_read_real("binds","GP_swapright",gp_face2)
+-B_list[2,0]	= ini_read_real("binds","GP_swapleft",gp_face3)
+-B_list[3,0]	= ini_read_real("binds","GP_swapup",gp_face4)
++B_list[0,0]	= ini_read_real("binds","GP_swapdown",gp_face2) 
++B_list[1,0]	= ini_read_real("binds","GP_swapright",gp_face1)
++B_list[2,0]	= ini_read_real("binds","GP_swapleft",gp_face4)
++B_list[3,0]	= ini_read_real("binds","GP_swapup",gp_face3)
+ B_list[4,0]	= ini_read_real("binds","GP_pass",gp_select)
+-B_list[5,0]	= ini_read_real("binds","GP_replay",gp_shoulderr)
++B_list[5,0]	= ini_read_real("binds","GP_replay",gp_shoulderl)
+ B_list[6,0]	= ini_read_real("binds","GP_clockwise1",gp_face2)
+ B_list[7,0]	= ini_read_real("binds","GP_clockwise2",gp_face1)
+ B_list[8,0]	= ini_read_real("binds","GP_cclockwise1",gp_face3)
+diff -ruN -x .git -x '*.gmx' a/objects/obj_button_statscontinue/Create_0.gml b/objects/obj_button_statscontinue/Create_0.gml
+--- a/objects/obj_button_statscontinue/Create_0.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/objects/obj_button_statscontinue/Create_0.gml	2026-10-20 21:52:50.637982368 +0000
+@@ -1,2 +1,4 @@
+ /// @description Insert description here
+-image_speed = 0
+\ No newline at end of file
++image_speed = 0
++//the stats rooms have no gamepad menu object
++if (!instance_exists(obj_menu_gamepad)) instance_create_depth(0, 0, 0, obj_menu_gamepad)
+diff -ruN -x .git -x '*.gmx' a/objects/obj_pause_mainmenu/Mouse_4.gml b/objects/obj_pause_mainmenu/Mouse_4.gml
+--- a/objects/obj_pause_mainmenu/Mouse_4.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/objects/obj_pause_mainmenu/Mouse_4.gml	2026-10-22 06:22:03.663746316 +0000
+@@ -4,5 +4,9 @@
+ instance_activate_object(obj_particles)
+ instance_activate_object(Gamerule_1)
+ instance_activate_object(obj_xplier)
++//pause deactivated the persistent objects too; rm_menu would create a second OBJ_GRAPHICS
++instance_activate_object(OBJ_GRAPHICS)
++instance_activate_object(obj_black_fade)
++instance_activate_object(obj_white_fade)
+ if !Gamerule_1.isQuest room_goto(rm_menu)
+ else room_goto(rm_menu_challenges)
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_LOCAL/RoomCreationCode.gml b/rooms/rm_LOCAL/RoomCreationCode.gml
+--- a/rooms/rm_LOCAL/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_LOCAL/RoomCreationCode.gml	2026-10-20 22:10:32.889873911 +0000
+@@ -1,6 +1,6 @@
+ setPREV_MENU(room);
+ room_speed = 60
+-instance_create(0,0,obj_local_getready)
++instance_create_depth(0,0, -1,obj_local_getready)
+ global.user2 = global.user + "(2)"
+ //draw_texture_flush()
+ with(obj_background_shadered) shd = irandom(num_shaders)
+@@ -29,9 +29,9 @@
+ }
+ if global.SET_twist
+ {
+-	instance_create(x,y,obj_twist_spinner)
++	instance_create_depth(0,0, -1,obj_twist_spinner)
+ 	instance_destroy(player1)
+-	instance_create(x,y,obj_twist_spinner_local)
++	instance_create_depth(0,0, -1,obj_twist_spinner_local)
+ 	instance_destroy(player_local)
+ }
+ 
+@@ -90,26 +90,26 @@
+ 		if global.SET_gamemode2 = 0 global.timer = 300
+ 		else if global.SET_gamemode2 = 1 global.timer = 180
+ 		else global.timer = 60
+-		instance_create(640,1104,obj_glassbar)
+-		instance_create(640,552,obj_rotator)
+-		instance_create(576,1104,obj_pipes)
+-		instance_create(64,1104,obj_scorer1)
+-		instance_create(1216,1104,obj_scorer2)
++		instance_create_depth(640,1104, -1,obj_glassbar)
++		instance_create_depth(640,552, -1,obj_rotator)
++		instance_create_depth(576,1104, -1,obj_pipes)
++		instance_create_depth(64,1104, -1,obj_scorer1)
++		instance_create_depth(1216,1104, -1,obj_scorer2)
+ 	}
+ 	else if (global.SET_gamemode == 1)
+ 	{
+ 		blazingallowed = false
+ 		points_allowed = false
+-		instance_create(0,0,obj_music)
++		instance_create_depth(0,0, -1,obj_music)
+ 		force_moves_allowed = false
+ 		compliments_allowed = false
+ 		dic = "Local: Avalanche";
+-		instance_create(320,1168,obj_avalanchedeposit_local)
++		instance_create_depth(320,1168, -1,obj_avalanchedeposit_local)
+ 	}
+ 	else
+ 	{
+-		instance_create(room_width/2,room_height-32,obj_tugowar)
+-		instance_create(0,0,obj_powerupcontrol)
++		instance_create_depth(room_width/2,room_height-32, -1,obj_tugowar)
++		instance_create_depth(0,0, -1,obj_powerupcontrol)
+ 		blazingallowed = false
+ 		force_moves_allowed = false
+ 	}
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_ONLINE/RoomCreationCode.gml b/rooms/rm_ONLINE/RoomCreationCode.gml
+--- a/rooms/rm_ONLINE/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_ONLINE/RoomCreationCode.gml	2026-10-20 22:10:32.891923248 +0000
+@@ -20,7 +20,7 @@
+ }
+ if global.SET_twist
+ {
+-	instance_create(x,y,obj_twist_spinner)
++	instance_create_depth(0,0, -1,obj_twist_spinner)
+ 	instance_destroy(player1)
+ }
+ 
+@@ -46,26 +46,26 @@
+ 		if global.SET_gamemode2 = 0 global.timer = 300
+ 		else if global.SET_gamemode2 = 1 global.timer = 180
+ 		else global.timer = 60
+-		instance_create(640,1104,obj_glassbar)
+-		instance_create(640,552,obj_rotator)
+-		instance_create(576,1104,obj_pipes)
+-		instance_create(64,1104,obj_scorer1)
+-		instance_create(1216,1104,obj_scorer2)
++		instance_create_depth(640,1104, -1,obj_glassbar)
++		instance_create_depth(640,552, -1,obj_rotator)
++		instance_create_depth(576,1104, -1,obj_pipes)
++		instance_create_depth(64,1104, -1,obj_scorer1)
++		instance_create_depth(1216,1104, -1,obj_scorer2)
+ 	}
+ 	else if (global.SET_gamemode == 1)
+ 	{
+ 		blazingallowed = false
+ 		points_allowed = false
+-		instance_create(0,0,obj_music)
++		instance_create_depth(0,0, -1,obj_music)
+ 		force_moves_allowed = false
+ 		compliments_allowed = false
+ 		dic = "Online: Avalanche";
+-		instance_create(320,1168,obj_avalanchedeposit)
++		instance_create_depth(320,1168, -1,obj_avalanchedeposit)
+ 	}
+ 	else //UNUSED
+ 	{
+-		instance_create(room_width/2,room_height-32,obj_tugowar)
+-		instance_create(0,0,obj_powerupcontrol)
++		instance_create_depth(room_width/2,room_height-32, -1,obj_tugowar)
++		instance_create_depth(0,0, -1,obj_powerupcontrol)
+ 		blazingallowed = false
+ 		force_moves_allowed = false
+ 	}
+@@ -85,7 +85,7 @@
+ 	instance_destroy(player1)
+ 	instance_destroy(obj_twist_spinner)
+ 	if (global.SET_gamemode == 1) {
+-		instance_create(320,1168,obj_avalanchedeposit_spectator)
++		instance_create_depth(320,1168, -1,obj_avalanchedeposit_spectator)
+ 		instance_destroy(obj_avalanchedeposit)
+ 	}	
+ }
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_ONLINE_replay/RoomCreationCode.gml b/rooms/rm_ONLINE_replay/RoomCreationCode.gml
+--- a/rooms/rm_ONLINE_replay/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_ONLINE_replay/RoomCreationCode.gml	2026-10-20 22:10:32.893110889 +0000
+@@ -2,7 +2,7 @@
+ room_speed = 60
+ //draw_texture_flush()
+ with(obj_background_shadered) shd = irandom(num_shaders)
+-instance_create(0,0,obj_online_replay)
++instance_create_depth(0,0, -1,obj_online_replay)
+ 
+ var dic = "Online: Battle"
+ with(Gamerule_1)
+@@ -26,29 +26,29 @@
+ 		if global.SET_gamemode2 = 0 global.timer = 300
+ 		else if global.SET_gamemode2 = 1 global.timer = 180
+ 		else global.timer = 60
+-		instance_create(640,1104,obj_glassbar)
+-		instance_create(640,552,obj_rotator)
+-		instance_create(576,1104,obj_pipes)
+-		instance_create(64,1104,obj_scorer1)
+-		instance_create(1216,1104,obj_scorer2)
++		instance_create_depth(640,1104, -1,obj_glassbar)
++		instance_create_depth(640,552, -1,obj_rotator)
++		instance_create_depth(576,1104, -1,obj_pipes)
++		instance_create_depth(64,1104, -1,obj_scorer1)
++		instance_create_depth(1216,1104, -1,obj_scorer2)
+ 	}
+ 	else if (global.SET_gamemode == 1)
+ 	{
+ 		blazingallowed = false
+ 		points_allowed = false
+-		instance_create(0,0,obj_music)
+-		instance_create(room_width/2, 512 + (room_height-512)/2, obj_skip_turn)
++		instance_create_depth(0,0, -1,obj_music)
++		instance_create_depth(room_width/2, 512 + (room_height-512)/2, -1, obj_skip_turn)
+ 		force_moves_allowed = false
+ 		compliments_allowed = false
+ 		dic = "Online: Avalanche";
+-		instance_create(320,1168,obj_avalanchedeposit_spectator)
++		instance_create_depth(320,1168, -1,obj_avalanchedeposit_spectator)
+ 	}
+ 
+ }
+ 
+ 
+ if (global.SET_gamemode == 1) {
+-	instance_create(320,1168,obj_avalanchedeposit_spectator)
++	instance_create_depth(320,1168, -1,obj_avalanchedeposit_spectator)
+ 	instance_destroy(obj_avalanchedeposit)
+ }	
+ 
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_blitz/RoomCreationCode.gml b/rooms/rm_blitz/RoomCreationCode.gml
+--- a/rooms/rm_blitz/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_blitz/RoomCreationCode.gml	2026-10-20 22:10:32.893783383 +0000
+@@ -8,10 +8,10 @@
+ Gamerule_1.geode_xplier = 5
+ DISCORD np_setpresence("Time set: " + convert_seconds_to_time(global.timer), global.DIS_name, "ico_512", "")
+ if (global.blitz_twist) {
+-	instance_create(512, 650, obj_twist_spinner)
++	instance_create_depth(512, 650, -1, obj_twist_spinner)
+ }
+ else {
+-	instance_create(768, 768, player1)
++	instance_create_depth(768, 768, -1, player1)
+ }
+ 
+ with(obj_levelbar)
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_blitz_matchreplay/RoomCreationCode.gml b/rooms/rm_blitz_matchreplay/RoomCreationCode.gml
+--- a/rooms/rm_blitz_matchreplay/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_blitz_matchreplay/RoomCreationCode.gml	2026-10-20 22:10:32.894268595 +0000
+@@ -43,8 +43,8 @@
+ //ini_close()
+ 
+ if (istwist) {
+-	instance_create(512, 650, obj_twist_spinner)
++	instance_create_depth(512, 650, -1, obj_twist_spinner)
+ }
+ else {
+-	instance_create(768, 768, player1_matchreplay)
++	instance_create_depth(768, 768, -1, player1_matchreplay)
+ }
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_countdown/RoomCreationCode.gml b/rooms/rm_countdown/RoomCreationCode.gml
+--- a/rooms/rm_countdown/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_countdown/RoomCreationCode.gml	2026-10-20 22:10:32.895088519 +0000
+@@ -32,4 +32,4 @@
+ 	wheel_spinner_allowed = false
+ 	replay_allowed = false
+ }
+-instance_create(0,0,spawner1)
+\ No newline at end of file
++instance_create_depth(0,0, -1,spawner1)
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_loading_menu/RoomCreationCode.gml b/rooms/rm_loading_menu/RoomCreationCode.gml
+--- a/rooms/rm_loading_menu/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_loading_menu/RoomCreationCode.gml	2026-10-21 16:37:43.140892951 +0000
+@@ -30,7 +30,7 @@
+    {
+ 		if gamepad_is_connected(i) {global.gp[0] = i; break}
+    }
+-if !instance_exists(OBJ_GRAPHICS) instance_create(0,0,OBJ_GRAPHICS)
++if !instance_exists(OBJ_GRAPHICS) instance_create_depth(0,0, -1,OBJ_GRAPHICS)
+ 
+ if (os_type == os_windows || os_type == os_linux) global._discord_allowed = true
+ else global._discord_allowed = false
+@@ -47,12 +47,12 @@
+ if !file_exists("binds.ini")
+ {
+ 	ini_open("binds.ini")
+-		ini_write_real("binds","GP_swapdown",gp_face1)
+-		ini_write_real("binds","GP_swapright",gp_face2)
+-		ini_write_real("binds","GP_swapleft",gp_face3)
+-		ini_write_real("binds","GP_swapup",gp_face4)
++		ini_write_real("binds","GP_swapdown",gp_face2)
++		ini_write_real("binds","GP_swapright",gp_face1)
++		ini_write_real("binds","GP_swapleft",gp_face4)
++		ini_write_real("binds","GP_swapup",gp_face3)
+ 		ini_write_real("binds","GP_pass",gp_select)
+-		ini_write_real("binds","GP_replay",gp_shoulderr)
++		ini_write_real("binds","GP_replay",gp_shoulderl)
+ 		ini_write_real("binds","GP_clockwise1",gp_face2)
+ 		ini_write_real("binds","GP_clockwise2",gp_face1)
+ 		ini_write_real("binds","GP_cclockwise1",gp_face3)
+@@ -61,3 +61,5 @@
+ }
+ read_gamepad_binds()
+ global.PREV_MENU = "initial"
++//PortMaster on-device tests, see tests/ in the port package
++if (file_exists("autotest.ini") && !instance_exists(obj_autotest)) instance_create_depth(0, 0, 0, obj_autotest)
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_lobby/RoomCreationCode.gml b/rooms/rm_lobby/RoomCreationCode.gml
+--- a/rooms/rm_lobby/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_lobby/RoomCreationCode.gml	2026-10-20 22:10:32.896218511 +0000
+@@ -8,7 +8,7 @@
+ 	else if (LOB_gamemode.val = 1)
+ 	{
+ 		instance_destroy(LOB_gamemode_2); 
+-		var g = instance_create(16,336,LOB_gamemode_defence); 
++		var g = instance_create_depth(16,336, -1,LOB_gamemode_defence); 
+ 		g.enabled = global.SET_gamemode2
+ 		g.image_index = LOB_gamemode_defence.enabled
+ 	}
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_lobby_local/RoomCreationCode.gml b/rooms/rm_lobby_local/RoomCreationCode.gml
+--- a/rooms/rm_lobby_local/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_lobby_local/RoomCreationCode.gml	2026-10-20 22:10:32.896583987 +0000
+@@ -17,7 +17,7 @@
+ else if (LOB_gamemode.val = 1)
+ {
+ 	instance_destroy(LOB_gamemode_2); 
+-	var g = instance_create(16,336,LOB_gamemode_defence); 
++	var g = instance_create_depth(16,336, -1,LOB_gamemode_defence); 
+ 	g.enabled = global.SET_gamemode2
+ 	g.image_index = LOB_gamemode_defence.enabled
+ }
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_menu/RoomCreationCode.gml b/rooms/rm_menu/RoomCreationCode.gml
+--- a/rooms/rm_menu/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_menu/RoomCreationCode.gml	2026-10-20 22:10:32.896991734 +0000
+@@ -17,7 +17,7 @@
+ global.replay_match_isplaying = false
+ global.bot1 = false
+ global.botdifficulty1 = 0
+-if !instance_exists(OBJ_GRAPHICS) instance_create(0,0,OBJ_GRAPHICS)
++if !instance_exists(OBJ_GRAPHICS) instance_create_depth(0,0, -1,OBJ_GRAPHICS)
+ 
+ if !file_exists("challenges.ini")
+ {
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_menu_challenges/RoomCreationCode.gml b/rooms/rm_menu_challenges/RoomCreationCode.gml
+--- a/rooms/rm_menu_challenges/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_menu_challenges/RoomCreationCode.gml	2026-10-20 22:10:32.897326186 +0000
+@@ -3,6 +3,6 @@
+ random_set_seed(irandom(1000))
+ global.replay_match_allowed = false
+ global.replay_match_isplaying = false
+-if !instance_exists(OBJ_GRAPHICS) instance_create(0,0,OBJ_GRAPHICS)
++if !instance_exists(OBJ_GRAPHICS) instance_create_depth(0,0, -1,OBJ_GRAPHICS)
+ 
+ DISCORD np_setpresence(global.version, "In Quests Menu", "ico_512", "")
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_menu_saverep/RoomCreationCode.gml b/rooms/rm_menu_saverep/RoomCreationCode.gml
+--- a/rooms/rm_menu_saverep/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_menu_saverep/RoomCreationCode.gml	2026-10-20 22:10:32.897909687 +0000
+@@ -3,6 +3,6 @@
+ random_set_seed(irandom(1000))
+ global.canbepressed = false
+ global.replay_match_allowed = false
+-if !instance_exists(OBJ_GRAPHICS) instance_create(0,0,OBJ_GRAPHICS)
++if !instance_exists(OBJ_GRAPHICS) instance_create_depth(0,0, -1,OBJ_GRAPHICS)
+ 
+ with(obj_menu_buttons_master) change_to_group("replay_save")
+\ No newline at end of file
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_quest/RoomCreationCode.gml b/rooms/rm_quest/RoomCreationCode.gml
+--- a/rooms/rm_quest/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_quest/RoomCreationCode.gml	2026-10-20 22:10:32.898387367 +0000
+@@ -6,7 +6,7 @@
+ Gamerule_1.replay_allowed = false
+ Gamerule_1.autosave_allowed = false
+ /*-*/
+-instance_create(0,0,obj_questmusic)
++instance_create_depth(0,0, -1,obj_questmusic)
+ load_custom_quest(false) //read quest (that is not customly made)
+ //mus0 = mus_timerunning (survivor/avalanche music, use takeyourtimewin and takeyourtimeloss for mus_win and mus_loss)
+ //mus1 = mus_takeyourtime (available for all parts)
+diff -ruN -x .git -x '*.gmx' a/rooms/rm_quest252/RoomCreationCode.gml b/rooms/rm_quest252/RoomCreationCode.gml
+--- a/rooms/rm_quest252/RoomCreationCode.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/rooms/rm_quest252/RoomCreationCode.gml	2026-10-20 22:10:32.898882871 +0000
+@@ -62,11 +62,11 @@
+ 	event_user(0)
+ }
+ 
+-instance_create(x,y,spawner1)
++instance_create_depth(0,0, -1,spawner1)
+ repeat(5) make_companion(false)
+ repeat(3) make_companion(true)
+ /*
+-var tb = instance_create(576,1088,obj_timebar)
++var tb = instance_create_depth(576,1088, -1,obj_timebar)
+ with(tb)
+ {
+ 	var t = 300
+diff -ruN -x .git -x '*.gmx' a/scripts/instance_create/instance_create.gml b/scripts/instance_create/instance_create.gml
+--- a/scripts/instance_create/instance_create.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/scripts/instance_create/instance_create.gml	2026-10-20 16:22:54.241450891 +0000
+@@ -4,8 +4,6 @@
+ /// @param obj The object to create an instance of.
+ function instance_create(argument0, argument1, argument2) {
+ 	var myDepth = 0
+-	try {
+-	myDepth = depth
+-	} catch(e) { }
++	if (instance_exists(self)) myDepth = depth
+ 	return instance_create_depth( argument0, argument1, myDepth-1, argument2 );
+ }
+diff -ruN -x .git -x '*.gmx' a/scripts/load_custom_quest/load_custom_quest.gml b/scripts/load_custom_quest/load_custom_quest.gml
+--- a/scripts/load_custom_quest/load_custom_quest.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/scripts/load_custom_quest/load_custom_quest.gml	2026-10-20 22:12:02.212854735 +0000
+@@ -69,14 +69,14 @@
+ 			var xplierallowed = ini_read_real(s,"xplierallowed",0) //NOT DONE
+ 			if xplierallowed 
+ 			{
+-				instance_create(64+32,608-16,obj_xplier); 
+-				instance_create(128+32,544-16,obj_xplier_num)
++				instance_create_depth(64+32,608-16, -1,obj_xplier); 
++				instance_create_depth(128+32,544-16, -1,obj_xplier_num)
+ 			}
+ 			var t = ini_read_real(s,"time",0)
+ 			if t > 0
+ 			{
+ 				Gamerule_1.time_allowed = true
+-				instance_create(576,1088,obj_timebar)
++				instance_create_depth(576,1088, -1,obj_timebar)
+ 				with(obj_timebar)
+ 				{
+ 					time_full = t
+@@ -108,7 +108,7 @@
+ 						var pow = bo[# i,j] div 10
+ 						if bo[# i,j] != -1
+ 						{
+-							var g = instance_create(Board_1.x + j*64, Board_1.y + i*64, Gem_1)
++							var g = instance_create_depth(Board_1.x + j*64, Board_1.y + i*64, -1, Gem_1)
+ 							if (skn < 8) with(g) {set_skin(skn)}
+ 							else
+ 							{
+@@ -132,7 +132,7 @@
+ 			}
+ 			else
+ 			{
+-				instance_create(576,544,spawner1)
++				instance_create_depth(576,544, -1,spawner1)
+ 				Gamerule_1.spawnallowed = true
+ 				var s = "Companion"
+ 				var istrue = ini_read_real(s,"allowed",0)
+@@ -153,7 +153,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_bombcontrol)
++				var c = instance_create_depth(0,0, -1,obj_bombcontrol)
+ 				var v1 = ini_read_real(s,"turns",0)
+ 				var v2 = ini_read_real(s,"counter",0)
+ 				var v3 = ini_read_real(s,"max",0)
+@@ -178,7 +178,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_doom_control)
++				var c = instance_create_depth(0,0, -1,obj_doom_control)
+ 				var v1 = ini_read_real(s,"counter",0)
+ 				with(c)
+ 				{
+@@ -198,7 +198,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_skull_control)
++				var c = instance_create_depth(0,0, -1,obj_skull_control)
+ 				var v1 = ini_read_real(s,"counter",0)
+ 				var v2 = ini_read_real(s,"max",0)
+ 				with(c)
+@@ -216,7 +216,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_lock_control)
++				var c = instance_create_depth(0,0, -1,obj_lock_control)
+ 				var v1 = ini_read_real(s,"turns",0)
+ 				var v2 = ini_read_real(s,"max",0)
+ 				with(c)
+@@ -236,7 +236,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_ice_lock_control)
++				var c = instance_create_depth(0,0, -1,obj_ice_lock_control)
+ 				var v1 = ini_read_real(s,"turns",0)
+ 				var v2 = ini_read_real(s,"max",0)
+ 				with(c)
+@@ -256,7 +256,7 @@
+ 			var istrue = ini_read_real(s,"allowed",0)
+ 			if istrue
+ 			{
+-				var c = instance_create(0,0,obj_coal_control)
++				var c = instance_create_depth(0,0, -1,obj_coal_control)
+ 				var v1 = ini_read_real(s,"turns",0)
+ 				var v2 = ini_read_real(s,"max",0)
+ 				var v3 = ini_read_real(s,"random",0)
+@@ -281,7 +281,7 @@
+ 			{
+ 				var h = 1024
+ 				if (n > 4) h+=64
+-				instance_create(64+32,h+32,obj_bonus_challenge)
++				instance_create_depth(64+32,h+32, -1,obj_bonus_challenge)
+ 			}
+ 			for(i=1;i<=n;i++)
+ 			{
+@@ -294,8 +294,8 @@
+ 							obj_quest_control.C_gemsare0 = true
+ 							if !Gamerule_1.spawnallowed && !Gamerule_1.multiswap_allowed
+ 							{
+-								instance_create(192-64, 992-64-32-8, obj_button_undo)
+-								instance_create(192-64, 992-32+8, obj_button_reset)
++								instance_create_depth(192-64, 992-64-32-8, -1, obj_button_undo)
++								instance_create_depth(192-64, 992-32+8, -1, obj_button_reset)
+ 							}
+ 							break;
+ 						case 1:
+@@ -404,7 +404,7 @@
+ 							var zentrue = true
+ 							var h = 992
+ 							if (n > 4) h+=64
+-							var z = instance_create(192+32,992-32,obj_zenify)
++							var z = instance_create_depth(192+32,992-32, -1,obj_zenify)
+ 							z.zen_multiplier = 3
+ 							z.zen_countdown_multiplier = 0.5
+ 							break;
+@@ -441,7 +441,7 @@
+ 						case 45:
+ 							obj_quest_control.L_drain = value
+ 							Gamerule_1.points_allowed = true
+-							instance_create(576,1088,obj_pointbar)
++							instance_create_depth(576,1088, -1,obj_pointbar)
+ 							with(obj_timebar) y+=64-16
+ 							break;
+ 						case 46:
+diff -ruN -x .git -x '*.gmx' a/scripts/np_stubs/np_stubs.gml b/scripts/np_stubs/np_stubs.gml
+--- a/scripts/np_stubs/np_stubs.gml	1970-01-01 00:00:00.000000000 +0000
++++ b/scripts/np_stubs/np_stubs.gml	2026-10-20 16:18:20.423294265 +0000
+@@ -0,0 +1,7 @@
++// No-op replacements for the NekoPresence (Discord Rich Presence) extension, which has no Android/ARM binary.
++function np_initdiscord() { return 0; }
++function np_registergame() { return 0; }
++function np_setpresence() { return 0; }
++function np_update() { return 0; }
++function np_clearpresence() { return 0; }
++function np_setpresence_timestamps() { return 0; }
+diff -ruN -x .git -x '*.gmx' a/scripts/np_stubs/np_stubs.yy b/scripts/np_stubs/np_stubs.yy
+--- a/scripts/np_stubs/np_stubs.yy	1970-01-01 00:00:00.000000000 +0000
++++ b/scripts/np_stubs/np_stubs.yy	2026-10-20 16:15:24.524985356 +0000
+@@ -0,0 +1,13 @@
++{
++  "$GMScript":"v1",
++  "%Name":"np_stubs",
++  "isCompatibility":false,
++  "isDnD":false,
++  "name":"np_stubs",
++  "parent":{
++    "name":"Scripts",
++    "path":"folders/Scripts.yy",
++  },
++  "resourceType":"GMScript",
++  "resourceVersion":"2.0",
++}
+diff -ruN -x .git -x '*.gmx' a/scripts/read_gamepad_binds/read_gamepad_binds.gml b/scripts/read_gamepad_binds/read_gamepad_binds.gml
+--- a/scripts/read_gamepad_binds/read_gamepad_binds.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/scripts/read_gamepad_binds/read_gamepad_binds.gml	2026-10-20 21:52:50.364034199 +0000
+@@ -1,11 +1,11 @@
+ function read_gamepad_binds() {
+ 	ini_open("binds.ini")
+-		global.GP_swapdown = ini_read_real("binds","GP_swapdown",gp_face1)
+-		global.GP_swapright = ini_read_real("binds","GP_swapright",gp_face2)
+-		global.GP_swapleft = ini_read_real("binds","GP_swapleft",gp_face3)
+-		global.GP_swapup = ini_read_real("binds","GP_swapup",gp_face4)
++		global.GP_swapdown = ini_read_real("binds","GP_swapdown",gp_face2)
++		global.GP_swapright = ini_read_real("binds","GP_swapright",gp_face1)
++		global.GP_swapleft = ini_read_real("binds","GP_swapleft",gp_face4)
++		global.GP_swapup = ini_read_real("binds","GP_swapup",gp_face3)
+ 		global.GP_pass = ini_read_real("binds","GP_pass",gp_select)
+-		global.GP_replay = ini_read_real("binds","GP_replay",gp_shoulderr)
++		global.GP_replay = ini_read_real("binds","GP_replay",gp_shoulderl)
+ 		global.GP_clockwise1 = ini_read_real("binds","GP_clockwise1",gp_face2)
+ 		global.GP_clockwise2 = ini_read_real("binds","GP_clockwise2",gp_face1)
+ 		global.GP_cclockwise1 = ini_read_real("binds","GP_cclockwise1",gp_face3)
+diff -ruN -x .git -x '*.gmx' a/scripts/set_skin/set_skin.gml b/scripts/set_skin/set_skin.gml
+--- a/scripts/set_skin/set_skin.gml	2025-08-24 15:25:11.000000000 +0000
++++ b/scripts/set_skin/set_skin.gml	2026-10-21 19:24:07.687220975 +0000
+@@ -14,7 +14,6 @@
+ 	}
+ 
+ 	particle_flame_asset = asset_get_index("coord_" + string(image_index))
+-	try {particle_flame_points = path_get_number(particle_flame_asset)}
+-	catch(e){}
++	if (path_exists(particle_flame_asset)) particle_flame_points = path_get_number(particle_flame_asset)
+ 
+ }

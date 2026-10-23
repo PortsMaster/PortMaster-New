@@ -1,0 +1,392 @@
+diff --git a/gmloader/input.cpp b/gmloader/input.cpp
+index cb5142b..5573d12 100644
+--- a/gmloader/input.cpp
++++ b/gmloader/input.cpp
+@@ -2,6 +2,7 @@
+ #include <stdlib.h>
+ #include <math.h>
+ #include <string.h>
++#include <string>
+ 
+ #include "platform.h"
+ #include "so_util.h"
+@@ -62,8 +63,10 @@ static int get_free_yoyogamepad_slot()
+ 
+ static void keyboard_set_key_raw(int key, int state)
+ {
+-    if (state)
++    if (state) {
+         *_IO_CurrentKey = key;
++        *(int32_t *)_IO_LastKey = key;
++    }
+     else if (!state && *_IO_CurrentKey == key)
+         *_IO_CurrentKey = -1;
+     _IO_KeyDown[key] = state;
+@@ -167,6 +170,70 @@ static void keyboard_set_key(SDL_Keycode key, int state)
+     }
+ }
+ 
++// US layout, there is no SDL_TEXTINPUT on most KMSDRM devices.
++static int keyboard_char(SDL_Keycode key, Uint16 mod)
++{
++    static const char shifted_digits[] = ")!@#$%^&*(";
++    int shift = (mod & KMOD_SHIFT) != 0;
++
++    if (key >= SDLK_a && key <= SDLK_z)
++        return (shift != ((mod & KMOD_CAPS) != 0)) ? key + ('A' - 'a') : key;
++    if (key >= SDLK_0 && key <= SDLK_9)
++        return shift ? shifted_digits[key - SDLK_0] : key;
++    if (key >= SDLK_KP_1 && key <= SDLK_KP_9)
++        return '1' + (key - SDLK_KP_1);
++
++    switch (key)
++    {
++    case SDLK_SPACE:        return ' ';
++    case SDLK_BACKSPACE:    return '\b';
++    case SDLK_MINUS:        return shift ? '_' : '-';
++    case SDLK_EQUALS:       return shift ? '+' : '=';
++    case SDLK_LEFTBRACKET:  return shift ? '{' : '[';
++    case SDLK_RIGHTBRACKET: return shift ? '}' : ']';
++    case SDLK_BACKSLASH:    return shift ? '|' : '\\';
++    case SDLK_SEMICOLON:    return shift ? ':' : ';';
++    case SDLK_QUOTE:        return shift ? '"' : '\'';
++    case SDLK_COMMA:        return shift ? '<' : ',';
++    case SDLK_PERIOD:       return shift ? '>' : '.';
++    case SDLK_SLASH:        return shift ? '?' : '/';
++    case SDLK_BACKQUOTE:    return shift ? '~' : '`';
++    case SDLK_KP_0:         return '0';
++    case SDLK_KP_PERIOD:    return '.';
++    case SDLK_KP_DIVIDE:    return '/';
++    case SDLK_KP_MULTIPLY:  return '*';
++    case SDLK_KP_MINUS:     return '-';
++    case SDLK_KP_PLUS:      return '+';
++    default:
++        return 0;
++    }
++}
++
++// Feeds keyboard_lastchar and keyboard_string, like the desktop runners do.
++static void keyboard_type_char(SDL_Keycode key, Uint16 mod)
++{
++    int c = keyboard_char(key, mod);
++    if (c == 0)
++        return;
++
++    if (IO_Char_Last_Set)
++        IO_Char_Last_Set(c);
++
++    if (!IO_String_Get || !IO_String_Set)
++        return;
++
++    std::string str = IO_String_Get();
++    if (c == '\b') {
++        while (!str.empty() && (str.back() & 0xC0) == 0x80)
++            str.pop_back();
++        if (!str.empty())
++            str.pop_back();
++    } else {
++        str += (char)c;
++    }
++    IO_String_Set(str.c_str());
++}
++
+ ABI_ATTR void RegisterAndroidKeyEvent(int state, int key)
+ {
+     keyboard_set_key_raw(key, state ? 0 : 1);
+@@ -201,7 +268,6 @@ int update_inputs(SDL_Window *win)
+     memset(_IO_KeyPressed, 0, N_KEYS);
+     memset(_IO_KeyReleased, 0, N_KEYS);
+ 
+-    *_IO_LastKey = *_IO_CurrentKey;
+     // Other events (keyboard, gamepad hotplug, etc)
+     SDL_Event ev;
+ 
+@@ -282,6 +348,8 @@ int update_inputs(SDL_Window *win)
+                 break;
+ 
+             keyboard_set_key(ev.key.keysym.sym, ev.key.state);
++            if (ev.key.state == SDL_PRESSED)
++                keyboard_type_char(ev.key.keysym.sym, ev.key.keysym.mod);
+             break;
+         case SDL_QUIT:
+             return 0;
+diff --git a/gmloader/libyoyo.cpp b/gmloader/libyoyo.cpp
+index a2f3648..2afff89 100755
+--- a/gmloader/libyoyo.cpp
++++ b/gmloader/libyoyo.cpp
+@@ -31,6 +31,9 @@ ABI_ATTR void (*CThread__start_NS)(CThread *, void *, void *) = NULL;
+ ABI_ATTR void (*CThread__start_PcNS)(CThread *, void *, void *, char *) = NULL;
+ ABI_ATTR void (*FreePNGFile)() = NULL;
+ ABI_ATTR void (*GamepadUpdate)() = NULL;
++ABI_ATTR void (*IO_Char_Last_Set)(char c) = NULL;
++ABI_ATTR const char *(*IO_String_Get)() = NULL;
++ABI_ATTR void (*IO_String_Set)(const char *str) = NULL;
+ ABI_ATTR void (*InitLLVM)(LLVMVars *) = NULL;
+ ABI_ATTR void (*InvalidateTextureState)() = NULL;
+ ABI_ATTR void (*MemoryManager__Free)(void *) = NULL;
+@@ -337,6 +340,9 @@ void patch_libyoyo(so_module *mod)
+     FIND_SYMBOL(mod, ExecuteIt_flags, "_Z9ExecuteItP9CInstanceS0_P5CCodeP6RValuei");
+     FIND_SYMBOL(mod, MemoryManager__Free, "_ZN13MemoryManager4FreeEPv", "_ZN13MemoryManager4FreeEPKv");
+     FIND_SYMBOL(mod, MemoryManager__Free_2, "_ZN13MemoryManager4FreeEPKvb");
++    FIND_SYMBOL(mod, IO_Char_Last_Set, "_Z16IO_Char_Last_Setc");
++    FIND_SYMBOL(mod, IO_String_Get, "_Z13IO_String_Getv");
++    FIND_SYMBOL(mod, IO_String_Set, "_Z13IO_String_SetPKc");
+ 
+     // Unavailable in newer versions
+     FIND_SYMBOL(mod, g_nInstanceVariables, "g_nInstanceVariables"); /* Can be used to sus out for the older OUYA runners... */
+diff --git a/gmloader/libyoyo.h b/gmloader/libyoyo.h
+index cdd41b2..18a46dc 100755
+--- a/gmloader/libyoyo.h
++++ b/gmloader/libyoyo.h
+@@ -281,6 +281,9 @@ extern ABI_ATTR void (*CThread__start_NS)(CThread *, void *, void *);
+ extern ABI_ATTR void (*CThread__start_PcNS)(CThread *, void *, void *, char *);
+ extern ABI_ATTR void (*FreePNGFile)();
+ extern ABI_ATTR void (*GamepadUpdate)();
++extern ABI_ATTR void (*IO_Char_Last_Set)(char c);
++extern ABI_ATTR const char *(*IO_String_Get)();
++extern ABI_ATTR void (*IO_String_Set)(const char *str);
+ extern ABI_ATTR void (*InitLLVM)(LLVMVars *);
+ extern ABI_ATTR void (*InvalidateTextureState)();
+ extern ABI_ATTR void (*MemoryManager__Free)(void *);
+diff --git a/thunks/libc/c_prototypes.h b/thunks/libc/c_prototypes.h
+index 1207ab4..f2abf0d 100644
+--- a/thunks/libc/c_prototypes.h
++++ b/thunks/libc/c_prototypes.h
+@@ -594,4 +594,9 @@ double strtod_l(const char* __s, char** __end_ptr, locale_t __l) __INTRODUCED_IN
+ float strtof_l(const char* __s, char** __end_ptr, locale_t __l) __INTRODUCED_IN(26);
+ long strtol_l(const char* __s, char** __end_ptr, int, locale_t __l) __INTRODUCED_IN(26);
+ char *index(const char *p, int ch);
+-wchar_t *wcswcs (const wchar_t *__haystack, const wchar_t *__needle);
+\ No newline at end of file
++wchar_t *wcswcs (const wchar_t *__haystack, const wchar_t *__needle);
++unsigned if_nametoindex(const char* __name);
++char* if_indextoname(unsigned __index, char* __buf);
++struct statvfs;
++int statvfs(const char* __path, struct statvfs* __buf);
++int fstatvfs(int __fd, struct statvfs* __buf);
+diff --git a/thunks/libc/misc.cpp b/thunks/libc/misc.cpp
+index 4872d92..9783625 100644
+--- a/thunks/libc/misc.cpp
++++ b/thunks/libc/misc.cpp
+@@ -10,19 +10,59 @@
+ #include <stdarg.h>
+ #include <link.h>
+ #include <sys/syscall.h>
++#include <sys/ioctl.h>
++#include <syslog.h>
++#include <netdb.h>
+ #include "platform.h"
+ #include "so_util.h"
++#include <vector>
+ 
+ #include "bionic_file.h"
+ 
++extern std::vector<so_module *> loaded_modules;
++
++// The guest unwinder (GML try/catch) finds .eh_frame_hdr through this
+ extern "C" ABI_ATTR int dl_iterate_phdr_impl(
+                  int (*callback)(struct dl_phdr_info *info,
+                                  size_t size, void *data),
+                  void *data)
+ {
+-    // TODO:: Implement a reasonable version of this.
+-    fatal_error("-- dl_iterate_phdr was called! --\n");
+-    return -1;
++    for (so_module *&mod: loaded_modules) {
++        // The first PT_LOAD maps the ELF header, so the original phdrs are in the image
++        Elf_Ehdr *ehdr = (Elf_Ehdr *)mod->base;
++        if (memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0)
++            continue;
++
++        // so_load rebases PT_LOAD[0].p_vaddr before copying the segment that holds the
++        // header table, so hand out a copy with every vaddr relative again
++        static std::vector<std::vector<Elf_Phdr>> phdr_copies(loaded_modules.size());
++        size_t idx = &mod - &loaded_modules[0];
++        if (phdr_copies.size() <= idx)
++            phdr_copies.resize(loaded_modules.size());
++        std::vector<Elf_Phdr> &phdrs = phdr_copies[idx];
++        if (phdrs.empty()) {
++            Elf_Phdr *src = (Elf_Phdr *)(mod->base + ehdr->e_phoff);
++            phdrs.assign(src, src + ehdr->e_phnum);
++            for (Elf_Phdr &p: phdrs) {
++                if (p.p_vaddr >= mod->base) {
++                    p.p_vaddr -= mod->base;
++                    p.p_paddr = p.p_vaddr;
++                }
++            }
++        }
++
++        struct dl_phdr_info info = {};
++        info.dlpi_addr = mod->base;
++        info.dlpi_name = mod->soname ? mod->soname : "";
++        info.dlpi_phdr = (const ElfW(Phdr) *)phdrs.data();
++        info.dlpi_phnum = phdrs.size();
++
++        int ret = callback(&info, sizeof(info), data);
++        if (ret)
++            return ret;
++    }
++
++    return 0;
+ }
+ 
+ extern "C" ABI_ATTR int login_tty_impl(int fd)
+@@ -162,6 +202,71 @@ extern "C" ABI_ATTR int __open_2_impl(const char* pathname, int flags) {
+   return open(pathname, flags);
+ }
+ 
++// Variadic calls the thunk generator can't forward; the kernel ABI is the same as bionic's
++extern "C" ABI_ATTR int open_impl(const char* pathname, int flags, ...) {
++  va_list ap;
++  va_start(ap, flags);
++  mode_t mode = (flags & (O_CREAT | O_TMPFILE)) ? va_arg(ap, int) : 0;
++  va_end(ap);
++  return open(pathname, flags, mode);
++}
++
++extern "C" ABI_ATTR int fcntl_impl(int fd, int cmd, ...) {
++  va_list ap;
++  va_start(ap, cmd);
++  void *arg = va_arg(ap, void *);
++  va_end(ap);
++  return fcntl(fd, cmd, arg);
++}
++
++extern "C" ABI_ATTR int ioctl_impl(int fd, int request, ...) {
++  va_list ap;
++  va_start(ap, request);
++  void *arg = va_arg(ap, void *);
++  va_end(ap);
++  return ioctl(fd, request, arg);
++}
++
++extern "C" ABI_ATTR void syslog_impl(int priority, const char* fmt, ...) {
++  va_list ap;
++  va_start(ap, fmt);
++  vsyslog(priority, fmt, ap);
++  va_end(ap);
++}
++
++extern "C" ABI_ATTR void __assert2_impl(const char* file, int line, const char* function, const char* msg) {
++  fatal_error("%s:%d: %s: assertion \"%s\" failed\n", file, line, function, msg);
++  abort();
++}
++
++// bionic's struct addrinfo has ai_canonname before ai_addr, glibc the other way round
++static void swap_addrinfo(struct addrinfo *ai) {
++  for (; ai; ai = ai->ai_next) {
++    void *tmp = ai->ai_addr;
++    ai->ai_addr = (struct sockaddr *)ai->ai_canonname;
++    ai->ai_canonname = (char *)tmp;
++  }
++}
++
++extern "C" ABI_ATTR int getaddrinfo_impl(const char *node, const char *service,
++                                         const struct addrinfo *hints, struct addrinfo **res) {
++  struct addrinfo h;
++  if (hints) {
++    h = *hints;
++    h.ai_next = NULL;
++    swap_addrinfo(&h);
++  }
++  int ret = getaddrinfo(node, service, hints ? &h : NULL, res);
++  if (ret == 0)
++    swap_addrinfo(*res);
++  return ret;
++}
++
++extern "C" ABI_ATTR void freeaddrinfo_impl(struct addrinfo *res) {
++  swap_addrinfo(res);
++  freeaddrinfo(res);
++}
++
+ // Taken from https://github.com/libhybris/libhybris/blob/master/hybris/common/hooks.c
+ ABI_ATTR int scandirat_impl(int fd, const char *dir,
+                       struct bionic_dirent ***namelist,
+diff --git a/thunks/zlib/zlib.cpp b/thunks/zlib/zlib.cpp
+index 36403cf..1659de8 100644
+--- a/thunks/zlib/zlib.cpp
++++ b/thunks/zlib/zlib.cpp
+@@ -1,4 +1,5 @@
+ #include <filesystem>
++#include <mutex>
+ #include <stdlib.h>
+ #include <zlib.h>
+ #include <zip.h>
+@@ -31,6 +32,10 @@ Original code of the function can be found here:
+ https://android.googlesource.com/platform/frameworks/base/+/master/native/android/asset_manager.cpp
+ */
+ 
++// One libzip archive handle is shared by every asset, and the runner reads streamed
++// audio from its own thread, so serialise all access to it
++static std::recursive_mutex aasset_lock;
++
+ ABI_ATTR void *AAssetManager_fromJava_impl(void *env, void *obj)
+ {
+     int err;
+@@ -56,6 +61,7 @@ ABI_ATTR void *AAssetManager_fromJava_impl(void *env, void *obj)
+ 
+ ABI_ATTR void *AAssetManager_open_impl(void *mgr, const char *filename, int mode)
+ {
++    std::lock_guard<std::recursive_mutex> guard(aasset_lock);
+ 
+     /* We don't care about AccessMode for now, but for future reference:
+     https://android.googlesource.com/platform/frameworks/base/+/master/libs/androidfw/include/androidfw/Asset.h
+@@ -99,6 +105,7 @@ ABI_ATTR void *AAssetManager_open_impl(void *mgr, const char *filename, int mode
+ 
+ ABI_ATTR off_t AAsset_getLength_impl(void *f)
+ {
++    std::lock_guard<std::recursive_mutex> guard(aasset_lock);
+     AAsset_impl* asset = (AAsset_impl*)f;
+     if(!asset)
+     {
+@@ -119,6 +126,7 @@ ABI_ATTR off_t AAsset_getLength_impl(void *f)
+ 
+ ABI_ATTR off_t AAsset_read_impl(void *f, void *buf, size_t count)
+ {
++    std::lock_guard<std::recursive_mutex> guard(aasset_lock);
+     AAsset_impl* asset = (AAsset_impl*)f;
+     int nread;
+ 
+@@ -151,6 +159,7 @@ ABI_ATTR off_t AAsset_read_impl(void *f, void *buf, size_t count)
+ 
+ ABI_ATTR void AAsset_close_impl(void *f)
+ {
++    std::lock_guard<std::recursive_mutex> guard(aasset_lock);
+     AAsset_impl* asset = (AAsset_impl*)f;
+     if (asset) {
+         if (asset->file) {
+@@ -163,13 +172,22 @@ ABI_ATTR void AAsset_close_impl(void *f)
+ 
+ ABI_ATTR off_t AAsset_seek_impl(void* asset_ptr, off_t offset, int whence)
+ {
++    std::lock_guard<std::recursive_mutex> guard(aasset_lock);
+     AAsset_impl* asset = (AAsset_impl*)asset_ptr;
+-    asset->persistent_read = true;
+-    
+-    if (!asset || !asset->file) {
++    if (!asset) {
+         fatal_error("[AAsset] Cannot seek NULL asset.\n");
+         return -1;
+     }
++    asset->persistent_read = true;
++
++    // Decoders (e.g. Ogg streams) seek before their first read, so open the entry here
++    if (!asset->file) {
++        if ((asset->file = zip_fopen_index(asset->mgr->apk, asset->index, ZIP_FL_UNCHANGED)) == NULL) {
++            fatal_error("[AAsset] Cannot open file (index = %ld).\n", asset->index);
++            return -1;
++        }
++        asset->current_offset = 0;
++    }
+ 
+     if (zip_file_is_seekable(asset->file))
+     {
+@@ -268,6 +286,7 @@ DynLibFunction symtable_zlib[] = {
+     THUNK_DIRECT(deflateInit2_),
+     THUNK_DIRECT(deflateReset),
+     THUNK_DIRECT(crc32),
++    THUNK_DIRECT(zError),
+ 
+     NO_THUNK("AAssetManager_fromJava", (uintptr_t)&AAssetManager_fromJava_impl),
+     NO_THUNK("AAssetManager_open", (uintptr_t)&AAssetManager_open_impl),
