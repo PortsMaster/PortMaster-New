@@ -1000,12 +1000,34 @@ class SNfetchDashboard:
             if not manifest:
                 self.sync_status_text = "Fetching asset catalog from GitHub..."
                 manifest_url = "https://raw.githubusercontent.com/StationNorthMedia/SNfetchPLAYER-PortMaster/main/assets/catalog_manifest.json"
-                req = urllib.request.Request(manifest_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/5.0"})
-                with urllib.request.urlopen(req, timeout=12) as resp:
-                    raw_data = resp.read().decode("utf-8")
-                    manifest = json.loads(raw_data)
-                    with open(manifest_path, "w", encoding="utf-8") as f:
-                        f.write(raw_data)
+                raw_data = None
+                try:
+                    c_res = subprocess.run(
+                        ["curl", "-s", "-L", "-k", "--connect-timeout", "12", "--max-time", "25",
+                         "-H", "User-Agent: SNfetchPLAYER-PortMaster/6.2", manifest_url],
+                        capture_output=True,
+                        timeout=30
+                    )
+                    if c_res.returncode == 0 and c_res.stdout:
+                        raw_data = c_res.stdout.decode("utf-8", errors="replace")
+                except Exception:
+                    raw_data = None
+
+                if not raw_data:
+                    try:
+                        req = urllib.request.Request(manifest_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/6.2"})
+                        with urllib.request.urlopen(req, timeout=12) as resp:
+                            raw_data = resp.read().decode("utf-8", errors="replace")
+                    except Exception:
+                        raw_data = None
+
+                if raw_data:
+                    try:
+                        manifest = json.loads(raw_data)
+                        with open(manifest_path, "w", encoding="utf-8") as f:
+                            f.write(raw_data)
+                    except Exception:
+                        manifest = None
 
             if not manifest:
                 return
@@ -1075,41 +1097,76 @@ class SNfetchDashboard:
                 for b_url in bundle_urls:
                     try:
                         self.sync_status_text = "Connecting to High-Speed Asset Server..."
-                        req = urllib.request.Request(b_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/5.0"})
-                        with urllib.request.urlopen(req, timeout=15) as resp:
-                            content_len_hdr = resp.headers.get("Content-Length")
-                            total_bytes = int(content_len_hdr) if content_len_hdr else 298013869
-                            downloaded_bytes = 0
-                            last_update_time = time.time()
+                        if tmp_zip.exists():
+                            try:
+                                tmp_zip.unlink()
+                            except Exception:
+                                pass
 
-                            with open(tmp_zip, "wb") as out_f:
-                                while True:
-                                    chunk = resp.read(262144)  # 256KB chunks
-                                    if not chunk:
-                                        break
-                                    out_f.write(chunk)
-                                    downloaded_bytes += len(chunk)
-                                    now = time.time()
-                                    if now - last_update_time > 0.25 or downloaded_bytes >= total_bytes:
-                                        last_update_time = now
-                                        dl_mb = downloaded_bytes / (1024 * 1024)
-                                        tot_mb = total_bytes / (1024 * 1024)
-                                        pct = min(99.0, (downloaded_bytes / total_bytes) * 100.0)
-                                        self.sync_pct = pct
-                                        self.sync_status_text = f"Downloading Media Pack: {dl_mb:.1f} MB / {tot_mb:.1f} MB ({int(pct)}%)"
+                        curl_success = False
+                        total_bytes = 298013869
 
-                            if tmp_zip.exists() and tmp_zip.stat().st_size > 50 * 1024 * 1024:
-                                self.sync_status_text = "Extracting Media Pack (TV Idents, Jingles & Comics)..."
-                                self.sync_pct = 99.0
-                                import zipfile
-                                with zipfile.ZipFile(tmp_zip, "r") as z:
-                                    z.extractall(app_dir)
-                                try:
-                                    tmp_zip.unlink()
-                                except Exception:
-                                    pass
-                                bundle_downloaded = True
-                                break
+                        # Try native curl first (works across all CFWs without python _ssl / libssl.so.1.1)
+                        try:
+                            curl_cmd = [
+                                "curl", "-L", "-k", "-f", "-s", "-S",
+                                "--connect-timeout", "15",
+                                "-H", "User-Agent: SNfetchPLAYER-PortMaster/6.2",
+                                "-o", str(tmp_zip),
+                                b_url
+                            ]
+                            proc = subprocess.Popen(curl_cmd)
+                            while proc.poll() is None:
+                                time.sleep(0.3)
+                                if tmp_zip.exists():
+                                    downloaded_bytes = tmp_zip.stat().st_size
+                                    dl_mb = downloaded_bytes / (1024 * 1024)
+                                    tot_mb = total_bytes / (1024 * 1024)
+                                    pct = min(98.0, (downloaded_bytes / total_bytes) * 100.0)
+                                    self.sync_pct = pct
+                                    self.sync_status_text = f"Downloading Media Pack: {dl_mb:.1f} MB / {tot_mb:.1f} MB ({int(pct)}%)"
+                            if proc.returncode == 0 and tmp_zip.exists() and tmp_zip.stat().st_size > 50 * 1024 * 1024:
+                                curl_success = True
+                        except Exception:
+                            curl_success = False
+
+                        # Fallback to urllib if curl was unavailable
+                        if not curl_success and not (tmp_zip.exists() and tmp_zip.stat().st_size > 50 * 1024 * 1024):
+                            req = urllib.request.Request(b_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/6.2"})
+                            with urllib.request.urlopen(req, timeout=15) as resp:
+                                content_len_hdr = resp.headers.get("Content-Length")
+                                total_bytes = int(content_len_hdr) if content_len_hdr else 298013869
+                                downloaded_bytes = 0
+                                last_update_time = time.time()
+
+                                with open(tmp_zip, "wb") as out_f:
+                                    while True:
+                                        chunk = resp.read(262144)  # 256KB chunks
+                                        if not chunk:
+                                            break
+                                        out_f.write(chunk)
+                                        downloaded_bytes += len(chunk)
+                                        now = time.time()
+                                        if now - last_update_time > 0.25 or downloaded_bytes >= total_bytes:
+                                            last_update_time = now
+                                            dl_mb = downloaded_bytes / (1024 * 1024)
+                                            tot_mb = total_bytes / (1024 * 1024)
+                                            pct = min(98.0, (downloaded_bytes / total_bytes) * 100.0)
+                                            self.sync_pct = pct
+                                            self.sync_status_text = f"Downloading Media Pack: {dl_mb:.1f} MB / {tot_mb:.1f} MB ({int(pct)}%)"
+
+                        if tmp_zip.exists() and tmp_zip.stat().st_size > 50 * 1024 * 1024:
+                            self.sync_status_text = "Extracting Media Pack (TV Idents, Jingles & Comics)..."
+                            self.sync_pct = 99.0
+                            import zipfile
+                            with zipfile.ZipFile(tmp_zip, "r") as z:
+                                z.extractall(app_dir)
+                            try:
+                                tmp_zip.unlink()
+                            except Exception:
+                                pass
+                            bundle_downloaded = True
+                            break
                     except Exception as b_err:
                         if tmp_zip.exists():
                             try:
@@ -1141,23 +1198,41 @@ class SNfetchDashboard:
                 self.sync_status_text = f"Syncing {itype} ({idx}/{total_needed}): {display_fname}"
 
                 tmp_target = target.with_suffix(target.suffix + ".part")
+                file_done = False
+
+                # 1. Try native curl first (bypasses python _ssl / OpenSSL 1.1)
                 try:
-                    req = urllib.request.Request(safe_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/5.0"})
-                    with urllib.request.urlopen(req, timeout=15) as resp, open(tmp_target, "wb") as out_f:
-                        while True:
-                            chunk = resp.read(65536)
-                            if not chunk:
-                                break
-                            out_f.write(chunk)
-                    if tmp_target.exists() and tmp_target.stat().st_size > 0:
+                    c_res = subprocess.run(
+                        ["curl", "-L", "-k", "-f", "-s", "--connect-timeout", "10", "--max-time", "60",
+                         "-H", "User-Agent: SNfetchPLAYER-PortMaster/6.2", "-o", str(tmp_target), safe_url],
+                        timeout=65
+                    )
+                    if c_res.returncode == 0 and tmp_target.exists() and tmp_target.stat().st_size > 0:
                         tmp_target.rename(target)
-                except Exception as dl_err:
-                    if tmp_target.exists():
-                        try:
-                            tmp_target.unlink()
-                        except Exception:
-                            pass
-                    time.sleep(0.3)
+                        file_done = True
+                except Exception:
+                    file_done = False
+
+                # 2. Fallback to urllib if curl was not successful
+                if not file_done:
+                    try:
+                        req = urllib.request.Request(safe_url, headers={"User-Agent": "SNfetchPLAYER-PortMaster/6.2"})
+                        with urllib.request.urlopen(req, timeout=15) as resp, open(tmp_target, "wb") as out_f:
+                            while True:
+                                chunk = resp.read(65536)
+                                if not chunk:
+                                    break
+                                out_f.write(chunk)
+                        if tmp_target.exists() and tmp_target.stat().st_size > 0:
+                            tmp_target.rename(target)
+                            file_done = True
+                    except Exception as dl_err:
+                        if tmp_target.exists():
+                            try:
+                                tmp_target.unlink()
+                            except Exception:
+                                pass
+                        time.sleep(0.3)
 
                 # Periodically update asset pool so items can be played immediately
                 if idx % 2 == 0 or idx == total_needed:
