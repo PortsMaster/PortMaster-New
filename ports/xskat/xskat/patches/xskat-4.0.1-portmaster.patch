@@ -1,0 +1,489 @@
+diff -u -x '*.o' -x xskat orig/xskat-4.0/defs.h xskat-4.0/defs.h
+--- a/defs.h	2004-05-22 18:25:14.000000000 +0000
++++ b/defs.h	2026-10-23 14:29:19.961914030 +0000
+@@ -335,6 +335,14 @@
+ int closest_col();
+ unsigned long get_col();
+ VOID calc_desk();
++int fit_avail();
++VOID fit_calc();
++VOID fit_paint();
++VOID fit_full();
++VOID fit_update();
++int fit_event();
++VOID fit_init();
++VOID defcurs();
+ VOID extractnam();
+ VOID extractnamln();
+ VOID usage();
+diff -u -x '*.o' -x xskat orig/xskat-4.0/text.c xskat-4.0/text.c
+--- a/text.c	2004-05-23 12:22:29.000000000 +0000
++++ b/text.c	2026-10-23 14:29:19.962312410 +0000
+@@ -27,7 +27,7 @@
+ #include "defs.h"
+ #include "text.h"
+ 
+-#define VERSION   " X S K A T   4.0 "
++#define VERSION   " X S K A T   4.0.1 "
+ #define COPYRIGHT "Copyright 2004 © Gunter Gerhardt"
+ #define URL       "http://www.xskat.de"
+ 
+diff -u -x '*.o' -x xskat orig/xskat-4.0/xdial.c xskat-4.0/xdial.c
+--- a/xdial.c	2004-05-24 16:49:59.000000000 +0000
++++ b/xdial.c	2026-10-23 14:29:19.960480663 +0000
+@@ -1421,6 +1421,7 @@
+     set_selpos(sn);
+     while (!lost[sn] && XCheckMaskEvent(dpy[sn],~0,&event)) {
+       ob=actdial[sn];
++      if (fit_event(sn,&event)) continue;
+       switch (event.type) {
+       case KeyRelease:
+ 	keysym=XLookupKeysym((XKeyEvent *)&event,0);
+diff -u -x '*.o' -x xskat orig/xskat-4.0/xio.c xskat-4.0/xio.c
+--- a/xio.c	2004-05-25 15:46:46.000000000 +0000
++++ b/xio.c	2026-10-23 14:36:33.044623550 +0000
+@@ -38,6 +38,11 @@
+ #include <X11/Xutil.h>
+ #include <X11/cursorfont.h>
+ #include <X11/Xatom.h>
++#include <X11/extensions/Xcomposite.h>
++#include <X11/extensions/Xrender.h>
++#include <X11/extensions/Xdamage.h>
++#include <X11/extensions/Xfixes.h>
++#include <X11/extensions/shape.h>
+ #include "defs.h"
+ #include "skat.h"
+ #include "bitmaps.h"
+@@ -45,6 +50,13 @@
+ #include "irc.h"
+ #include "text.h"
+ 
++static Picture fitsrc[3],fitdst[3];
++static Damage fitdmg[3];
++static XserverRegion fitreg[3];
++static GC fitgc[3];
++static int fitx[3],fity[3],fitww[3],fithh[3],fitvw[3],fitvh[3];
++static int fitdmgev;
++
+ VOID change_gc(sn,fg,gcp)
+ int sn;
+ unsigned long fg;
+@@ -402,7 +414,7 @@
+   [-bt color] [-3d] [-2d] [-3dtop color] [-3dbot color] [-mark color]\n\
+   [-mb button] [-keyboard 0..2] [-tdelay sec] [-fastdeal] [-slowdeal]\n\
+   [-help|-h] [-frenchcards] [-french4cards] [-germancards] [-german4cards]\n\
+-  [-color] [-mono] [-color1 color] .. [-color4 color] [-large] [-small]\n\
++  [-color] [-mono] [-color1 color] .. [-color4 color] [-large] [-small] [-fit]\n\
+   [-up] [-down] [-alt] [-seq] [-list|-l filename] [-alist] [-nlist] [-tlist]\n\
+   [-log filename] [-dolog] [-nolog] [-fmt] [-unfmt] [-game filename]\n\
+   [-briefmsg] [-verbosemsg] [-trickl2r] [-notrickl2r]\n\
+@@ -1002,6 +1014,261 @@
+   change_gcxor(sn,fgpix[sn]);
+ }
+ 
++int fit_avail(sn)
++int sn;
++{
++  int ev,er,ma,mi;
++
++  if (!XCompositeQueryExtension(dpy[sn],&ev,&er) ||
++      !XRenderQueryExtension(dpy[sn],&ev,&er) ||
++      !XDamageQueryExtension(dpy[sn],&fitdmgev,&er) ||
++      !XFixesQueryExtension(dpy[sn],&ev,&er)) return 0;
++  ma=5;mi=0;
++  XFixesQueryVersion(dpy[sn],&ma,&mi);
++  ma=0;mi=4;
++  XCompositeQueryVersion(dpy[sn],&ma,&mi);
++  ma=1;mi=1;
++  XDamageQueryVersion(dpy[sn],&ma,&mi);
++  return 1;
++}
++
++VOID fit_calc(sn,w,h)
++int sn,w,h;
++{
++  XTransform xf;
++  double s;
++
++  fitvw[sn]=w;
++  fitvh[sn]=h;
++  s=(double)w/desk[sn].w;
++  if ((double)h/desk[sn].h<s) s=(double)h/desk[sn].h;
++  fitww[sn]=desk[sn].w*s+.5;
++  fithh[sn]=desk[sn].h*s+.5;
++  if (fitww[sn]<1) fitww[sn]=1;
++  if (fithh[sn]<1) fithh[sn]=1;
++  fitx[sn]=(w-fitww[sn])/2;
++  fity[sn]=(h-fithh[sn])/2;
++  memset((VOID *)&xf,0,sizeof(xf));
++  xf.matrix[0][0]=XDoubleToFixed((double)desk[sn].w/fitww[sn]);
++  xf.matrix[1][1]=XDoubleToFixed((double)desk[sn].h/fithh[sn]);
++  xf.matrix[2][2]=XDoubleToFixed(1.0);
++  XRenderSetPictureTransform(dpy[sn],fitsrc[sn],&xf);
++  XRenderSetPictureFilter(dpy[sn],fitsrc[sn],
++			  fitww[sn]==desk[sn].w && fithh[sn]==desk[sn].h?
++			  FilterNearest:FilterBilinear,NULL,0);
++}
++
++VOID fit_paint(sn,x,y,w,h)
++int sn,x,y,w,h;
++{
++  int x1,y1,x2,y2;
++
++  x1=fitx[sn]+(long)x*fitww[sn]/desk[sn].w-1;
++  y1=fity[sn]+(long)y*fithh[sn]/desk[sn].h-1;
++  x2=fitx[sn]+((long)(x+w)*fitww[sn]+desk[sn].w-1)/desk[sn].w+1;
++  y2=fity[sn]+((long)(y+h)*fithh[sn]+desk[sn].h-1)/desk[sn].h+1;
++  if (x1<fitx[sn]) x1=fitx[sn];
++  if (y1<fity[sn]) y1=fity[sn];
++  if (x2>fitx[sn]+fitww[sn]) x2=fitx[sn]+fitww[sn];
++  if (y2>fity[sn]+fithh[sn]) y2=fity[sn]+fithh[sn];
++  if (x2<=x1 || y2<=y1) return;
++  XRenderComposite(dpy[sn],PictOpSrc,fitsrc[sn],None,fitdst[sn],
++		   x1-fitx[sn],y1-fity[sn],0,0,x1,y1,x2-x1,y2-y1);
++}
++
++VOID fit_full(sn)
++int sn;
++{
++  int r,b;
++
++  r=fitx[sn]+fitww[sn];
++  b=fity[sn]+fithh[sn];
++  XFillRectangle(dpy[sn],fitw[sn],fitgc[sn],0,0,fitvw[sn],fity[sn]);
++  XFillRectangle(dpy[sn],fitw[sn],fitgc[sn],0,b,fitvw[sn],fitvh[sn]-b);
++  XFillRectangle(dpy[sn],fitw[sn],fitgc[sn],0,fity[sn],fitx[sn],fithh[sn]);
++  XFillRectangle(dpy[sn],fitw[sn],fitgc[sn],r,fity[sn],fitvw[sn]-r,fithh[sn]);
++  fit_paint(sn,0,0,desk[sn].w,desk[sn].h);
++}
++
++VOID fit_update()
++{
++  int sn,snn,i,n,got[3];
++  XEvent ev;
++  XRectangle *r;
++
++  if (!fitmode) return;
++  for (sn=0;sn<numsp;sn++) {
++    got[sn]=0;
++    if (lost[sn] || !fitw[sn]) continue;
++    for (snn=0;snn<sn;snn++) {
++      if (dpy[snn]==dpy[sn]) break;
++    }
++    if (snn<sn) {
++      got[sn]=got[snn];
++      continue;
++    }
++    while (XCheckTypedEvent(dpy[sn],fitdmgev+XDamageNotify,&ev)) got[sn]=1;
++  }
++  for (sn=0;sn<numsp;sn++) {
++    if (!got[sn] || lost[sn] || !fitw[sn]) continue;
++    XDamageSubtract(dpy[sn],fitdmg[sn],None,fitreg[sn]);
++    r=XFixesFetchRegion(dpy[sn],fitreg[sn],&n);
++    for (i=0;i<n;i++) {
++      fit_paint(sn,r[i].x,r[i].y,r[i].width,r[i].height);
++    }
++    if (r) XFree(r);
++  }
++}
++
++int fit_event(sn,ev)
++int sn;
++XEvent *ev;
++{
++  Window w,c,cc;
++  int x,y,nx,ny;
++
++  if (!fitw[sn] || ev->xany.window!=fitw[sn]) return 0;
++  switch (ev->type) {
++  case Expose:
++    if (!ev->xexpose.count) fit_full(sn);
++    return 1;
++  case ConfigureNotify:
++    if (ev->xconfigure.width!=fitvw[sn] ||
++	ev->xconfigure.height!=fitvh[sn]) {
++      fit_calc(sn,ev->xconfigure.width,ev->xconfigure.height);
++      fit_full(sn);
++    }
++    return 1;
++  case ButtonPress:
++    x=ev->xbutton.x-fitx[sn];
++    y=ev->xbutton.y-fity[sn];
++    if (x<0 || y<0 || x>=fitww[sn] || y>=fithh[sn]) return 1;
++    x=(long)x*desk[sn].w/fitww[sn];
++    y=(long)y*desk[sn].h/fithh[sn];
++    w=win[sn];
++    while (XTranslateCoordinates(dpy[sn],w,w,x,y,&nx,&ny,&c) && c) {
++      XTranslateCoordinates(dpy[sn],w,c,x,y,&nx,&ny,&cc);
++      w=c;
++      x=nx;
++      y=ny;
++    }
++    ev->xbutton.window=w;
++    ev->xbutton.x=x;
++    ev->xbutton.y=y;
++    return 0;
++  }
++  return 0;
++}
++
++VOID fit_init(sn)
++int sn;
++{
++  XRenderPictFormat *fmt;
++  XRenderPictureAttributes pa;
++  XGCValues gcv;
++  XserverRegion empty;
++  Atom st,fs;
++
++  XCompositeRedirectWindow(dpy[sn],win[sn],CompositeRedirectManual);
++  empty=XFixesCreateRegion(dpy[sn],NULL,0);
++  XFixesSetWindowShapeRegion(dpy[sn],win[sn],ShapeInput,0,0,empty);
++  XFixesDestroyRegion(dpy[sn],empty);
++  fitreg[sn]=XFixesCreateRegion(dpy[sn],NULL,0);
++  fmt=XRenderFindVisualFormat(dpy[sn],
++			      DefaultVisual(dpy[sn],DefaultScreen(dpy[sn])));
++  pa.subwindow_mode=IncludeInferiors;
++  fitsrc[sn]=XRenderCreatePicture(dpy[sn],win[sn],fmt,CPSubwindowMode,&pa);
++  fitdst[sn]=XRenderCreatePicture(dpy[sn],fitw[sn],fmt,0,&pa);
++  fitdmg[sn]=XDamageCreate(dpy[sn],win[sn],XDamageReportNonEmpty);
++  gcv.foreground=BlackPixel(dpy[sn],DefaultScreen(dpy[sn]));
++  fitgc[sn]=XCreateGC(dpy[sn],fitw[sn],GCForeground,&gcv);
++  st=XInternAtom(dpy[sn],"_NET_WM_STATE",False);
++  fs=XInternAtom(dpy[sn],"_NET_WM_STATE_FULLSCREEN",False);
++  XChangeProperty(dpy[sn],fitw[sn],st,XA_ATOM,32,PropModeReplace,
++		  (unsigned char *)&fs,1);
++  fit_calc(sn,fitvw[sn],fitvh[sn]);
++}
++
++Cursor fit_cursor(sn,shape)
++int sn,shape;
++{
++  Font cf;
++  XFontStruct *fs;
++  XCharStruct *s,*m;
++  Pixmap sp,mp,ap;
++  GC g1,g32;
++  XGCValues gcv;
++  XImage *si,*mi,*ai;
++  XRenderPictFormat *fmt;
++  Picture p;
++  Cursor c;
++  unsigned int *d;
++  char ch;
++  int k,l,r,a,b,w,h,x,y;
++
++  k=fitw[sn]?(fitvh[sn]+200)/400:1;
++  if (k<2 || !(fs=XLoadQueryFont(dpy[sn],"cursor")) ||
++      shape+1>fs->max_char_or_byte2 || !fs->per_char) {
++    return XCreateFontCursor(dpy[sn],shape);
++  }
++  cf=fs->fid;
++  s=&fs->per_char[shape-fs->min_char_or_byte2];
++  m=&fs->per_char[shape+1-fs->min_char_or_byte2];
++  l=s->lbearing<m->lbearing?s->lbearing:m->lbearing;
++  r=s->rbearing>m->rbearing?s->rbearing:m->rbearing;
++  a=s->ascent>m->ascent?s->ascent:m->ascent;
++  b=s->descent>m->descent?s->descent:m->descent;
++  w=r-l;
++  h=a+b;
++  sp=XCreatePixmap(dpy[sn],win[sn],w,h,1);
++  mp=XCreatePixmap(dpy[sn],win[sn],w,h,1);
++  gcv.foreground=0;
++  gcv.font=cf;
++  g1=XCreateGC(dpy[sn],sp,GCForeground|GCFont,&gcv);
++  XFillRectangle(dpy[sn],sp,g1,0,0,w,h);
++  XFillRectangle(dpy[sn],mp,g1,0,0,w,h);
++  XSetForeground(dpy[sn],g1,1);
++  ch=shape;
++  XDrawString(dpy[sn],sp,g1,-l,a,&ch,1);
++  ch=shape+1;
++  XDrawString(dpy[sn],mp,g1,-l,a,&ch,1);
++  si=XGetImage(dpy[sn],sp,0,0,w,h,1,XYPixmap);
++  mi=XGetImage(dpy[sn],mp,0,0,w,h,1,XYPixmap);
++  d=malloc(w*k*h*k*4);
++  for (y=0;y<h*k;y++) {
++    for (x=0;x<w*k;x++) {
++      d[y*w*k+x]=XGetPixel(si,x/k,y/k)?0xff000000:
++	XGetPixel(mi,x/k,y/k)?0xffffffff:0;
++    }
++  }
++  XDestroyImage(si);
++  XDestroyImage(mi);
++  fmt=XRenderFindStandardFormat(dpy[sn],PictStandardARGB32);
++  ap=XCreatePixmap(dpy[sn],win[sn],w*k,h*k,32);
++  g32=XCreateGC(dpy[sn],ap,0,NULL);
++  ai=XCreateImage(dpy[sn],DefaultVisual(dpy[sn],DefaultScreen(dpy[sn])),
++		  32,ZPixmap,0,(char *)d,w*k,h*k,32,0);
++  XPutImage(dpy[sn],ap,g32,ai,0,0,0,0,w*k,h*k);
++  p=XRenderCreatePicture(dpy[sn],ap,fmt,0,NULL);
++  c=XRenderCreateCursor(dpy[sn],p,-l*k,a*k);
++  XRenderFreePicture(dpy[sn],p);
++  XDestroyImage(ai);
++  XFreeGC(dpy[sn],g32);
++  XFreeGC(dpy[sn],g1);
++  XFreePixmap(dpy[sn],ap);
++  XFreePixmap(dpy[sn],sp);
++  XFreePixmap(dpy[sn],mp);
++  XFreeFont(dpy[sn],fs);
++  return c;
++}
++
++VOID defcurs(sn,i)
++int sn,i;
++{
++  XDefineCursor(dpy[sn],win[sn],cursor[sn][i]);
++  if (fitw[sn]) XDefineCursor(dpy[sn],fitw[sn],cursor[sn][i]);
++}
++
+ VOID xinitwin(sn,argc,argv)
+ int sn,argc;
+ char **argv;
+@@ -1011,13 +1278,30 @@
+   XGCValues gcv;
+   int i,gcvf;
+   GC igc[3];
++  Window tw;
+ 
+-  win[sn]=XCreateSimpleWindow(dpy[sn],DefaultRootWindow(dpy[sn]),
++  tw=DefaultRootWindow(dpy[sn]);
++  if (fitmode) {
++    if (fit_avail(sn)) {
++      fitvw[sn]=XDisplayWidth(dpy[sn],DefaultScreen(dpy[sn]));
++      fitvh[sn]=XDisplayHeight(dpy[sn],DefaultScreen(dpy[sn]));
++      fitw[sn]=XCreateSimpleWindow(dpy[sn],tw,0,0,fitvw[sn],fitvh[sn],0,
++				   BlackPixel(dpy[sn],DefaultScreen(dpy[sn])),
++				   BlackPixel(dpy[sn],DefaultScreen(dpy[sn])));
++      tw=fitw[sn];
++    }
++    else {
++      fprintf(stderr,"-fit needs the Composite, Render, Damage and XFixes extensions\n");
++    }
++  }
++  win[sn]=XCreateSimpleWindow(dpy[sn],tw,
+ 			      desk[sn].x,desk[sn].y,desk[sn].w,desk[sn].h,
+ 			      0,fgpix[sn],bgpix[sn]);
+-  cursor[sn][0]=XCreateFontCursor(dpy[sn],XC_hand2);
+-  cursor[sn][1]=XCreateFontCursor(dpy[sn],XC_watch);
+-  XDefineCursor(dpy[sn],win[sn],cursor[sn][1]);
++  if (fitw[sn]) fit_init(sn);
++  else tw=win[sn];
++  cursor[sn][0]=fit_cursor(sn,XC_hand2);
++  cursor[sn][1]=fit_cursor(sn,XC_watch);
++  defcurs(sn,1);
+   gcvf=GCGraphicsExposures|GCForeground|GCBackground;
+   gcv.graphics_exposures=False;
+   gcv.font=dfont[sn]->fid;
+@@ -1071,10 +1355,11 @@
+   }
+   classhint.res_name=prog_name;
+   classhint.res_class=prog_name;
+-  XSetClassHint(dpy[sn],win[sn],&classhint);
+-  XSetStandardProperties(dpy[sn],win[sn],title[sn],title[sn],icon,
+-			 argv,argc,&szhints[sn]);
++  XSetClassHint(dpy[sn],tw,&classhint);
++  XSetStandardProperties(dpy[sn],tw,title[sn],title[sn],icon,
++			 argv,argc,fitw[sn]?NULL:&szhints[sn]);
+ #ifdef PWinGravity
++  if (!fitw[sn]) {
+   szhints[sn].win_gravity=
+     (geom_f[sn]&XNegative?
+      (geom_f[sn]&YNegative?
+@@ -1083,13 +1368,14 @@
+     SouthWestGravity:NorthWestGravity));
+   szhints[sn].flags|=PWinGravity;
+   XSetWMNormalHints(dpy[sn],win[sn],&szhints[sn]);
++  }
+ #endif
+-  if (szhints[sn].flags&USPosition) {
++  if (!fitw[sn] && szhints[sn].flags&USPosition) {
+     XMoveWindow(dpy[sn],win[sn],szhints[sn].x,szhints[sn].y);
+   }
+   wmhints.flags|=IconPixmapHint;
+   wmhints.icon_pixmap=icon;
+-  XSetWMHints(dpy[sn],win[sn],&wmhints);
++  XSetWMHints(dpy[sn],tw,&wmhints);
+   if (desk[sn].large) {
+     XFreePixmap(dpy[sn],symbs[sn]);
+     symbs[sn]=XCreateBitmapFromData(dpy[sn],win[sn],(char *)symbl_bits,
+@@ -1111,6 +1397,11 @@
+     XSelectInput(dpy[sn],win[sn],ButtonPressMask|ExposureMask|
+ 		 KeyPressMask|KeyReleaseMask);
+     XMapWindow(dpy[sn],win[sn]);
++    if (fitw[sn]) {
++      XSelectInput(dpy[sn],fitw[sn],ButtonPressMask|ExposureMask|
++		   KeyPressMask|KeyReleaseMask|StructureNotifyMask);
++      XMapWindow(dpy[sn],fitw[sn]);
++    }
+   }
+ }
+ 
+@@ -1369,7 +1660,21 @@
+       !(font_name=XGetDefault(dpy[sn],prog_name,"font"))) {
+     font_name=desk[sn].large?"10x20":"9x15";
+   }
+-  if (!(dfont[sn]=XLoadQueryFont(dpy[sn],font_name))) {
++  if (!(dfont[sn]=XLoadQueryFont(dpy[sn],font_name)) &&
++      (res=getenv("XSKAT_FONTDIR"))) {
++    char **fp,**nfp;
++    int nfpn;
++    fp=XGetFontPath(dpy[sn],&nfpn);
++    if ((nfp=malloc((nfpn+1)*sizeof(char *)))) {
++      for (i=0;i<nfpn;i++) nfp[i]=fp[i];
++      nfp[nfpn]=res;
++      XSetFontPath(dpy[sn],nfp,nfpn+1);
++      free(nfp);
++    }
++    if (fp) XFreeFontPath(fp);
++    dfont[sn]=XLoadQueryFont(dpy[sn],font_name);
++  }
++  if (!dfont[sn]) {
+     fprintf(stderr,"Font %s not found\n",font_name);
+     exitus(1);
+   }
+@@ -2026,6 +2331,9 @@
+     else if (!strcmp(argv[1],"-small")) {
+       desk[0].large=0;
+     }
++    else if (!strcmp(argv[1],"-fit")) {
++      fitmode=1;
++    }
+     else if (!strcmp(argv[1],"-alist")) {
+       alist[0]=1;
+       alistset[0]=1;
+@@ -2395,6 +2703,7 @@
+ 
+   if (numgames) return;
+   ticker+=t;
++  fit_update();
+   if (!irc_play || irc_state==IRC_PLAYING) {
+     for (sn=0;sn<numsp;sn++) {
+       if (!lost[sn]) {
+@@ -3305,13 +3614,13 @@
+   }
+   if (newsn!=actsn) {
+     wtime=0;
+-    if (actsn>=0) XDefineCursor(dpy[actsn],win[actsn],cursor[actsn][1]);
++    if (actsn>=0) defcurs(actsn,1);
+     actsn=newsn;
+     if (actsn>=0) {
+       for (sn=0;sn<numsp;sn++) {
+ 	if (phase!=WEITER && phase!=REVOLUTION) di_info(sn,actsn);
+       }
+-      XDefineCursor(dpy[actsn],win[actsn],cursor[actsn][0]);
++      defcurs(actsn,0);
+     }
+   }
+   if (f && actsn>=0) {
+diff -u -x '*.o' -x xskat orig/xskat-4.0/xio.h xskat-4.0/xio.h
+--- a/xio.h	2004-05-22 06:38:37.000000000 +0000
++++ b/xio.h	2026-10-23 14:27:11.867880925 +0000
+@@ -38,6 +38,8 @@
+ EXTERN Display *dpy[3];
+ EXTERN Colormap cmap[3];
+ EXTERN Window win[3];
++EXTERN Window fitw[3];
++EXTERN int fitmode;
+ EXTERN unsigned long bpix[3],wpix[3],fgpix[3],bgpix[3],btpix[3];
+ EXTERN unsigned long b3dpix[3],w3dpix[3],mkpix[3];
+ EXTERN int gfx3d[3];
