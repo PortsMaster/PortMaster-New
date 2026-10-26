@@ -1,0 +1,963 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index cdcfa6e..683f17b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_CXX_EXTENSIONS OFF)
+ 
+ option(GOT_BUILD_RAYLIB "Build the native raylib targets" ON)
++option(GOT_PORTMASTER "Build with PortMaster controls and EPX scaling" OFF)
+ 
+ #
+ # Raylib build (native, not DOS)
+@@ -251,6 +252,10 @@ if(GOT_BUILD_RAYLIB)
+   )
+   target_compile_options(got PRIVATE ${GOT_COMPILE_OPTS})
+   target_link_libraries(got PRIVATE ${GOT_RAYLIB_TARGET})
++  if(GOT_PORTMASTER)
++    target_sources(got PRIVATE src/native/pixel_scaler.c)
++    target_compile_definitions(got PRIVATE GOT_PORTMASTER=1)
++  endif()
+ 
+   if(NOT EMSCRIPTEN)
+     # ── Episode 2 ──
+diff --git a/src/native/got_platform.h b/src/native/got_platform.h
+index a4c8875..0c09541 100644
+--- a/src/native/got_platform.h
++++ b/src/native/got_platform.h
+@@ -4,9 +4,38 @@
+ #include <stdint.h>
+ 
+ /* Video */
++typedef struct {
++    float x, y, width, height;
++} got_viewport_t;
++
++/* Shared by gameplay and the launcher. Fit allows fractional scaling so that
++   displays such as 1920x1080 do not lose height to integer-only scaling. */
++static inline got_viewport_t got_viewport_compute(int screen_width, int screen_height,
++                                                 int content_width, int content_height,
++                                                 int stretch) {
++    got_viewport_t view = {0};
++    float sx, sy, scale;
++    if (screen_width <= 0 || screen_height <= 0 || content_width <= 0 || content_height <= 0)
++        return view;
++    sx = (float)screen_width / content_width;
++    sy = (float)screen_height / content_height;
++    scale = sx < sy ? sx : sy;
++    view.width = stretch ? (float)screen_width : content_width * scale;
++    view.height = stretch ? (float)screen_height : content_height * scale;
++    view.x = (screen_width - view.width) * 0.5f;
++    view.y = (screen_height - view.height) * 0.5f;
++    return view;
++}
++
+ void got_platform_video_init(void);
+ void got_platform_video_shutdown(void);
+ void got_platform_set_split(int on);
++void got_platform_apply_fullscreen(void);
++/* Asset paths are separate from the working directory used for saves/settings. */
++const char *got_platform_data_path(const char *name);
++void got_platform_draw_frame(const uint8_t *rgba, int width, int height,
++                             float x, float y, float output_width, float output_height);
++void got_platform_scaler_shutdown(void);
+ 
+ /* Called by the renderer to keep timers/input/audio moving. */
+ void got_platform_pump(void);
+diff --git a/src/native/graphics_got.c b/src/native/graphics_got.c
+index da9401f..783e976 100644
+--- a/src/native/graphics_got.c
++++ b/src/native/graphics_got.c
+@@ -93,16 +93,25 @@ static int decompress_rle(const uint8_t *src, int in_size,
+ 
+ int gg_load(graphics_got_t *gg, const char *path) {
+     FILE *f;
+-    long sz;
++    long sz;
++    long base = 0;
++    uint8_t signature[2];
+     int i;
+ 
+     memset(gg, 0, sizeof(*gg));
+ 
+-    f = fopen(path, "rb");
+-    if (!f) return -1;
+-    fseek(f, 0, SEEK_END);
+-    sz = ftell(f);
+-    fseek(f, 0, SEEK_SET);
++    f = fopen(path, "rb");
++    if (!f) return -1;
++    if (fread(signature, 1, sizeof(signature), f) != sizeof(signature)) {
++        fclose(f); return -1;
++    }
++    /* Adept Software's gotfree.zip embeds GRAPHICS.GOT here. Only resource
++       bytes are read into the graphics container; no DOS code is executed. */
++    if (signature[0] == 'M' && signature[1] == 'Z') base = 101106;
++    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
++    sz = ftell(f);
++    if (sz < base + 2 || fseek(f, base, SEEK_SET) != 0) { fclose(f); return -1; }
++    sz -= base;
+ 
+     gg->blob = (uint8_t *)malloc(sz);
+     if (!gg->blob) { fclose(f); return -1; }
+@@ -114,7 +123,10 @@ int gg_load(graphics_got_t *gg, const char *path) {
+     gg->blob_size = sz;
+ 
+     if (sz < 2) { gg_free(gg); return -1; }
+-    gg->chunk_count = rd16(gg->blob);
++    gg->chunk_count = rd16(gg->blob);
++    if (gg->chunk_count == 0 || (base && gg->chunk_count != 110)) {
++        gg_free(gg); return -1;
++    }
+ 
+     if (sz < 2 + (long)gg->chunk_count * 14) { gg_free(gg); return -1; }
+ 
+@@ -128,7 +140,11 @@ int gg_load(graphics_got_t *gg, const char *path) {
+         gg->descs[i].out_size    = rd16(p + 6);
+         gg->descs[i].in_size     = rd16(p + 8);
+         gg->descs[i].width       = rd16(p + 10);
+-        gg->descs[i].height      = rd16(p + 12);
++        gg->descs[i].height      = rd16(p + 12);
++        if (gg->descs[i].comp_type > 2 || gg->descs[i].file_offset > (uint32_t)sz ||
++            gg->descs[i].in_size > (uint32_t)sz - gg->descs[i].file_offset) {
++            gg_free(gg); return -1;
++        }
+     }
+     return 0;
+ }
+diff --git a/src/native/graphics_got.h b/src/native/graphics_got.h
+index 6a16e80..9f687cd 100644
+--- a/src/native/graphics_got.h
++++ b/src/native/graphics_got.h
+@@ -33,7 +33,8 @@ typedef struct {
+     gg_chunk_desc_t *descs;     /* chunk_count entries */
+ } graphics_got_t;
+ 
+-/* Load and parse GRAPHICS.GOT from disk.  Returns 0 on success. */
++/* Load GRAPHICS.GOT or its resource container embedded in the official
++   freeware GOT.EXE. No executable code is run. Returns 0 on success. */
+ int  gg_load(graphics_got_t *gg, const char *path);
+ 
+ /* Free all resources. */
+diff --git a/src/native/gui.c b/src/native/gui.c
+index df6a645..4a54241 100644
+--- a/src/native/gui.c
++++ b/src/native/gui.c
+@@ -1,4 +1,5 @@
+-#include "gui.h"
++#include "gui.h"
++#include "got_platform.h"
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -70,7 +71,11 @@ void got_config_set_defaults(void) {
+     g_config.gp_item_next    = 10;  /* GAMEPAD_BUTTON_RIGHT_TRIGGER_1 (RB) */
+     g_config.gp_deadzone     = 40;
+     /* Display */
+-    g_config.fullscreen    = 0;
++#ifdef GOT_PORTMASTER
++    g_config.fullscreen    = 1;
++#else
++    g_config.fullscreen    = 0;
++#endif
+     g_config.screen_scroll = 1;
+     /* Audio */
+     g_config.sound_type = 2;  /* digi */
+@@ -120,7 +125,9 @@ int got_config_load(const char *path) {
+         else if (!strcmp(key, "gp_item_prev"))    g_config.gp_item_prev = val;
+         else if (!strcmp(key, "gp_item_next"))    g_config.gp_item_next = val;
+         else if (!strcmp(key, "gp_deadzone"))     g_config.gp_deadzone = val;
+-        else if (!strcmp(key, "fullscreen"))      g_config.fullscreen = val;
++        else if (!strcmp(key, "fullscreen"))      g_config.fullscreen = val;
++        else if (!strcmp(key, "stretch"))         g_config.stretch = val != 0;
++        else if (!strcmp(key, "scaler"))          g_config.scaler = (val >= 0 && val <= 3) ? val : 0;
+         else if (!strcmp(key, "screen_scroll"))   g_config.screen_scroll = val;
+         else if (!strcmp(key, "sound_type"))      g_config.sound_type = val;
+         else if (!strcmp(key, "music_on"))        g_config.music_on = val;
+@@ -154,7 +161,9 @@ int got_config_save(const char *path) {
+     fprintf(fp, "gp_item_prev=%d\n",    g_config.gp_item_prev);
+     fprintf(fp, "gp_item_next=%d\n",    g_config.gp_item_next);
+     fprintf(fp, "gp_deadzone=%d\n",     g_config.gp_deadzone);
+-    fprintf(fp, "fullscreen=%d\n",      g_config.fullscreen);
++    fprintf(fp, "fullscreen=%d\n",      g_config.fullscreen);
++    fprintf(fp, "stretch=%d\n",         g_config.stretch);
++    fprintf(fp, "scaler=%d\n",          g_config.scaler);
+     fprintf(fp, "screen_scroll=%d\n",  g_config.screen_scroll);
+     fprintf(fp, "sound_type=%d\n",      g_config.sound_type);
+     fprintf(fp, "music_on=%d\n",        g_config.music_on);
+@@ -193,7 +202,8 @@ void got_config_apply(void) {
+     setup.music = g_config.music_on ? 1 : 0;
+ 
+     /* Display */
+-    setup.scroll_flag = g_config.screen_scroll ? 1 : 0;
++    setup.scroll_flag = g_config.screen_scroll ? 1 : 0;
++    got_platform_apply_fullscreen();
+ }
+ 
+ /*=========================================================================*/
+diff --git a/src/native/gui.h b/src/native/gui.h
+index e8585d3..204628d 100644
+--- a/src/native/gui.h
++++ b/src/native/gui.h
+@@ -15,7 +15,9 @@ typedef struct {
+     int gp_item_prev, gp_item_next;
+     int gp_deadzone;    /* 0-100, maps to 0.0-1.0 */
+     /* Display */
+-    int fullscreen;
++    int fullscreen;
++    int stretch;       /* fill the window instead of preserving aspect ratio */
++    int scaler;        /* nearest, EPX 2x/4x, or automatic EPX factor */
+     int screen_scroll; /* scroll between screens */
+     /* Audio */
+     int sound_type;     /* 0=none, 1=pc, 2=digi */
+diff --git a/src/native/gui_settings.c b/src/native/gui_settings.c
+index dcacca1..65b6134 100644
+--- a/src/native/gui_settings.c
++++ b/src/native/gui_settings.c
+@@ -1,4 +1,5 @@
+-#include "gui.h"
++#include "gui.h"
++#include "got_platform.h"
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -81,11 +82,12 @@ typedef struct {
+ 
+ /* Select option lists */
+ static const char *snd_opts[] = { "None", "PC Speaker", "Digitized" };
+-static const char *skill_opts[] = { "Easy", "Normal", "Hard" };
++static const char *skill_opts[] = { "Easy", "Normal", "Hard" };
++static const char *scaler_opts[] = { "Nearest", "EPX 2x", "EPX 4x", "EPX Auto" };
+ 
+ /* Per-tab widget arrays */
+ static widget_t audio_widgets[3];
+-static widget_t display_widgets[2];
++static widget_t display_widgets[4];
+ static widget_t keyboard_widgets[7];
+ static widget_t gamepad_widgets[8];
+ 
+@@ -107,9 +109,15 @@ static void init_widgets(void) {
+ 
+     /* Display tab */
+     display_widgets[0] = (widget_t){ "Fullscreen",    W_TOGGLE, &g_config.fullscreen,    0, 1, NULL, 0 };
+-    display_widgets[1] = (widget_t){ "Screen Scroll", W_TOGGLE, &g_config.screen_scroll, 0, 1, NULL, 0 };
++    display_widgets[1] = (widget_t){ "Screen Scroll", W_TOGGLE, &g_config.screen_scroll, 0, 1, NULL, 0 };
++    display_widgets[2] = (widget_t){ "Stretch", W_TOGGLE, &g_config.stretch, 0, 1, NULL, 0 };
++    display_widgets[3] = (widget_t){ "Scaling", W_SELECT, &g_config.scaler, 0, 3, scaler_opts, 4 };
+     tab_widgets[TAB_DISPLAY] = display_widgets;
+-    tab_widget_count[TAB_DISPLAY] = 2;
++#ifdef GOT_PORTMASTER
++    tab_widget_count[TAB_DISPLAY] = 4;
++#else
++    tab_widget_count[TAB_DISPLAY] = 3;
++#endif
+ 
+     /* Keyboard tab */
+     keyboard_widgets[0] = (widget_t){ "Fire",   W_KEYCAP, &g_config.kb_fire,   0, 0, NULL, 0 };
+@@ -234,8 +242,12 @@ static void draw_full_page(int tab, int focus, int cursor_frame, unsigned int pg
+         xput(16, cy, pg, hampic[cursor_frame & 3]);
+     }
+ 
+-    /* Footer hint */
+-    xprint(32, 172, "Tab:switch  Esc:cancel", pg, COL_GREY);
++    /* Footer hint */
++#ifdef GOT_PORTMASTER
++    xprint(32, 172, "L2:tabs X:save Start:cancel", pg, COL_GREY);
++#else
++    xprint(32, 172, "Tab:switch  Esc:cancel", pg, COL_GREY);
++#endif
+ }
+ 
+ /*=========================================================================*/
+@@ -245,15 +257,14 @@ static void apply_audio_immediate(void) {
+ }
+ 
+ /*=========================================================================*/
+-static void handle_fullscreen_toggle(void) {
+-    ToggleBorderlessWindowed();
++static void handle_fullscreen_toggle(void) {
++    got_platform_apply_fullscreen();
+ }
+ 
+ /*=========================================================================*/
+ void got_settings_menu(void) {
+     unsigned int pg;
+     int tab, focus, cursor_frame, kf, key;
+-    int prev_fullscreen;
+     got_config_t saved;
+     int saved_skill;
+     /* Tab switching edge detection */
+@@ -339,14 +350,25 @@ void got_settings_menu(void) {
+         }
+ 
+         /* Input */
+-        key = get_response();
+-
++        key = get_response();
++
++#ifdef GOT_PORTMASTER
++        /* Space (X) otherwise duplicates Enter. Give handheld players an
++           explicit save-and-close action instead of only Escape/cancel. */
++        if (key == SPACE) {
++            wait_not_response();
++            break;
++        }
++#endif
++
+         if (key == ESC) {
+             /* Cancel: revert all changes */
+-            g_config = saved;
+-            setup.skill = saved_skill;
+-            got_config_apply();
+-            break;
++            g_config = saved;
++            setup.skill = saved_skill;
++            skill_mirror = saved_skill;
++            got_config_apply();
++            wait_not_response();
++            break;
+         }
+ 
+         /* Navigation */
+@@ -482,11 +504,14 @@ void got_settings_menu(void) {
+                         setup.skill = skill_mirror;
+                     }
+                     break;
+-                default:
+-                    break;
+-            }
+-        }
+-        else {
++                default:
++                    break;
++            }
++            /* Activation is a discrete action. Holding A/Enter must not
++               toggle a setting repeatedly before the button is released. */
++            wait_not_response();
++        }
++        else {
+             kf = 0;
+         }
+     }
+diff --git a/src/native/launcher.c b/src/native/launcher.c
+index c8919dc..8e3449b 100644
+--- a/src/native/launcher.c
++++ b/src/native/launcher.c
+@@ -21,8 +21,10 @@
+  */
+ #include "launcher.h"
+ #include "launcher_extras.h"
+-#include "graphics_got.h"
+-#include "raylib.h"
++#include "graphics_got.h"
++#include "raylib.h"
++#include "gui.h"
++#include "got_platform.h"
+ 
+ #include "digisnd.h"
+ #include "mu_man.h"
+@@ -98,7 +100,6 @@ static const char *main_menu_items[] = {
+ 
+ graphics_got_t  s_gg;
+ int             s_gg_loaded;
+-static Texture2D       s_fb_tex;
+ uint8_t         s_screen[SCREEN_W * SCREEN_H];    /* 8-bit indexed fb */
+ uint8_t         s_pal6[768];                       /* target palette, VGA 6-bit */
+ uint8_t         s_pal_rgb[256][4];                 /* current RGBA for display */
+@@ -431,8 +432,8 @@ void set_brightness(float b) {
+ /* Convert indexed framebuffer to RGBA and present with optional pixel offset. */
+ static void present_ex(int offset_x, int offset_y) {
+     static Color rgba[SCREEN_W * SCREEN_H];
+-    float scale, sx, sy;
+-    Rectangle src_rec, dst_rec;
++    got_viewport_t view;
++    Rectangle dst_rec;
+     int i;
+ 
+     /* Tick music/sound/timers at 120Hz (same path as the game) */
+@@ -445,24 +446,19 @@ static void present_ex(int offset_x, int offset_y) {
+         rgba[i].b = s_pal_rgb[idx][2];
+         rgba[i].a = 255;
+     }
+-    UpdateTexture(s_fb_tex, rgba);
+ 
+-    sx = (float)GetScreenWidth()  / SCREEN_W;
+-    sy = (float)GetScreenHeight() / SCREEN_H;
+-    scale = (sx < sy) ? sx : sy;
++    view = got_viewport_compute(GetScreenWidth(), GetScreenHeight(), SCREEN_W, SCREEN_H,
++                                g_config.stretch);
+ 
+-    src_rec.x = 0; src_rec.y = 0;
+-    src_rec.width  = SCREEN_W;
+-    src_rec.height = SCREEN_H;
+-
+-    dst_rec.width  = SCREEN_W * scale;
+-    dst_rec.height = SCREEN_H * scale;
+-    dst_rec.x = (GetScreenWidth()  - dst_rec.width)  / 2.0f + offset_x * scale;
+-    dst_rec.y = (GetScreenHeight() - dst_rec.height) / 2.0f + offset_y * scale;
++    dst_rec.width  = view.width;
++    dst_rec.height = view.height;
++    dst_rec.x = view.x + offset_x * view.width / SCREEN_W;
++    dst_rec.y = view.y + offset_y * view.height / SCREEN_H;
+ 
+     BeginDrawing();
+     ClearBackground(BLACK);
+-    DrawTexturePro(s_fb_tex, src_rec, dst_rec, (Vector2){0,0}, 0, WHITE);
++    got_platform_draw_frame((const uint8_t *)rgba, SCREEN_W, SCREEN_H,
++                             dst_rec.x, dst_rec.y, dst_rec.width, dst_rec.height);
+     EndDrawing();
+ }
+ 
+@@ -651,7 +647,7 @@ static int show_dysin(void) {
+     uint8_t *data;
+     long sz;
+ 
+-    f = fopen("DYSIN.GOT", "rb");
++    f = fopen(got_platform_data_path("DYSIN.GOT"), "rb");
+     if (!f) {
+         fprintf(stderr, "[launcher] DYSIN.GOT not found, skipping Impulse logo\n");
+         return 0;
+@@ -1042,9 +1038,9 @@ static int show_credits(void) {
+     /* Load credits palette and background */
+     load_palette(GG_CREDITS_PAL);
+ 
+-    bg_data = gg_decompress_alloc(&s_gg, GG_CREDITS_BG);
+-    if (!bg_data) return 0;
+-
++    bg_data = gg_decompress_alloc(&s_gg, GG_CREDITS_BG);
++    if (!bg_data) return 0;
++
+     memcpy(s_screen, bg_data, SCREEN_W * SCREEN_H);
+     set_brightness(0.0f);
+     if (do_fade_in()) { free(bg_data); return 1; }
+@@ -1372,25 +1368,24 @@ static int confirm_quit(void) {
+ 
+ /* ── public API ── */
+ 
+-int launcher_init(void) {
+-    Image img;
++int launcher_init(void) {
+ 
+-    s_gg_loaded = (gg_load(&s_gg, "GRAPHICS.GOT") == 0);
++    /* Read the freeware launcher's embedded graphics, never its DOS code. */
++    s_gg_loaded = (gg_load(&s_gg, got_platform_data_path("GOT.EXE")) == 0);
++#ifndef GOT_PORTMASTER
++    if (!s_gg_loaded) s_gg_loaded = (gg_load(&s_gg, "GRAPHICS.GOT") == 0);
++#endif
+     fprintf(stderr, "[launcher] GRAPHICS.GOT loaded: %s (%d chunks)\n",
+             s_gg_loaded ? "yes" : "no", s_gg.chunk_count);
+ 
+-    if (!IsWindowReady()) {
+-        SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+-        InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "God of Thunder");
+-    }
++    if (!IsWindowReady()) {
++        SetConfigFlags(FLAG_WINDOW_RESIZABLE);
++        InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "God of Thunder");
++    }
++    got_platform_apply_fullscreen();
+     SetTargetFPS(60);
+     SetExitKey(0);  /* Don't let ESC close the window; we handle it ourselves */
+ 
+-    img = GenImageColor(SCREEN_W, SCREEN_H, BLACK);
+-    s_fb_tex = LoadTextureFromImage(img);
+-    UnloadImage(img);
+-    SetTextureFilter(s_fb_tex, TEXTURE_FILTER_POINT);
+-
+     memset(s_screen, 0, sizeof(s_screen));
+     memset(s_pal6, 0, sizeof(s_pal6));
+     set_brightness(0.0f);
+@@ -1527,6 +1522,5 @@ void launcher_shutdown(void) {
+         gg_free(&s_gg);
+         s_gg_loaded = 0;
+     }
+-    UnloadTexture(s_fb_tex);
+     /* Note: audio device is left open for the game to reuse. */
+ }
+diff --git a/src/native/main_raylib_unified.c b/src/native/main_raylib_unified.c
+index cb054d0..c55e590 100644
+--- a/src/native/main_raylib_unified.c
++++ b/src/native/main_raylib_unified.c
+@@ -5,7 +5,8 @@
+ #include "raylib.h"
+ #include "emscripten_fs.h"
+ #include "episode.h"
+-#include "launcher.h"
++#include "launcher.h"
++#include "gui.h"
+ 
+ /* Unified entrypoint. In the native build, src/game/main.c renames its
+    DOS `main()` to this symbol via a preprocessor define. */
+@@ -41,8 +42,11 @@ int main(int argc, char** argv) {
+      by double-clicking or from a different working directory. */
+   {
+     const char *app_dir = GetApplicationDirectory();
+-    if (app_dir && app_dir[0]) ChangeDirectory(app_dir);
+-  }
++    if (app_dir && app_dir[0]) ChangeDirectory(app_dir);
++  }
++
++  got_config_set_defaults();
++  got_config_load("GOT.CFG");
+ 
+   /* Main loop: launcher → game → launcher → ...
+    * Game completion (beating the episode) returns to the launcher for
+diff --git a/src/native/platform_raylib.c b/src/native/platform_raylib.c
+index 917aa03..b90dde1 100644
+--- a/src/native/platform_raylib.c
++++ b/src/native/platform_raylib.c
+@@ -2,6 +2,9 @@
+ #include "gui.h"
+ 
+ #include "raylib.h"
++#ifdef GOT_PORTMASTER
++#include "pixel_scaler.h"
++#endif
+ 
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -159,9 +162,61 @@ static void maybe_palette_cycle_for_frame(void) {
+ }
+ 
+ static int g_video_ready = 0;
+-static RenderTexture2D g_rt;
+-static Texture2D g_frame_tex;
+ static uint8_t g_frame_rgba[GOT_W * GOT_H * 4];
++static Texture2D g_display_texture;
++#ifdef GOT_PORTMASTER
++static got_pixel_scaler g_pixel_scaler;
++#endif
++/* Read-only diagnostics used by the on-device performance check. */
++static volatile unsigned long g_scaler_frames, g_scaler_updates;
++static volatile double g_scaler_seconds;
++static volatile int g_scaler_factor = 1;
++
++void got_platform_draw_frame(const uint8_t *rgba, int width, int height,
++                             float x, float y, float output_width, float output_height) {
++  const uint8_t *pixels = rgba;
++  int factor = 1, changed = 1;
++  double begin = GetTime();
++#ifdef GOT_PORTMASTER
++  static int failed_mode = -1;
++  factor = got_scaler_factor(g_config.scaler, width, height, output_width, output_height);
++  if (failed_mode != g_config.scaler) {
++    if (got_scaler_process(&g_pixel_scaler, rgba, width, height, factor)) {
++      pixels = g_pixel_scaler.rgba;
++      changed = g_pixel_scaler.changed;
++    } else {
++      TraceLog(LOG_WARNING, "Scaling failed; falling back to nearest");
++      failed_mode = g_config.scaler;
++      got_scaler_destroy(&g_pixel_scaler);
++      factor = 1;
++    }
++  } else factor = 1;
++#endif
++  g_scaler_factor = factor;
++  if (g_display_texture.width != width * factor || g_display_texture.height != height * factor) {
++    Image image = { (void *)pixels, width * factor, height * factor, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 };
++    if (g_display_texture.id) UnloadTexture(g_display_texture);
++    g_display_texture = LoadTextureFromImage(image);
++    SetTextureFilter(g_display_texture, TEXTURE_FILTER_POINT);
++  } else if (changed) UpdateTexture(g_display_texture, pixels);
++  {
++    double elapsed = GetTime() - begin;
++    g_scaler_seconds += elapsed;
++  }
++  ++g_scaler_frames;
++  if (changed) ++g_scaler_updates;
++  DrawTexturePro(g_display_texture,
++                 (Rectangle){0, 0, (float)g_display_texture.width, (float)g_display_texture.height},
++                 (Rectangle){x, y, output_width, output_height}, (Vector2){0, 0}, 0, WHITE);
++}
++
++void got_platform_scaler_shutdown(void) {
++  if (g_display_texture.id) UnloadTexture(g_display_texture);
++  memset(&g_display_texture, 0, sizeof(g_display_texture));
++#ifdef GOT_PORTMASTER
++  got_scaler_destroy(&g_pixel_scaler);
++#endif
++}
+ 
+ /* Mouse state, in 320x240 "game pixels". */
+ static int g_mouse_x = 0;
+@@ -328,28 +383,20 @@ void got_platform_set_split(int on) {
+   g_split_mode = on ? 1 : 0;
+ }
+ 
+-static void compute_viewport(int* out_dx, int* out_dy, int* out_scale) {
+-  int sw = GetScreenWidth();
+-  int sh = GetScreenHeight();
+-  int cw = GOT_W;
+-  int sx = sw / cw;
+-  int sy = sh / GOT_H;
+-  int s = (sx < sy) ? sx : sy;
+-  if (s < 1) s = 1;
+-  if (out_scale) *out_scale = s;
+-  if (out_dx) *out_dx = (sw - (cw * s)) / 2;
+-  if (out_dy) *out_dy = (sh - (GOT_H * s)) / 2;
++static got_viewport_t compute_viewport(void) {
++  return got_viewport_compute(GetScreenWidth(), GetScreenHeight(), GOT_W, GOT_H,
++                              g_config.stretch);
+ }
+ 
+ static void update_mouse_state(void) {
+   Vector2 mp = GetMousePosition();
+-  int dx = 0, dy = 0, s = 1;
++  got_viewport_t view = compute_viewport();
+   int gx = 0, gy = 0;
+ 
+-  compute_viewport(&dx, &dy, &s);
+-
+-  gx = ((int)mp.x - dx) / s;
+-  gy = ((int)mp.y - dy) / s;
++  if (view.width > 0 && view.height > 0) {
++    gx = (int)((mp.x - view.x) * GOT_W / view.width);
++    gy = (int)((mp.y - view.y) * GOT_H / view.height);
++  }
+ 
+   if (gx < 0) gx = 0;
+   if (gy < 0) gy = 0;
+@@ -378,7 +425,11 @@ int got_platform_mouse_button_down(int button) {
+ }
+ 
+ int got_platform_gamepad_is_available(int gamepad) {
+-#ifdef __EMSCRIPTEN__
++#ifdef GOT_PORTMASTER
++  /* PortMaster owns the controller mappings through gptokeyb2. */
++  (void)gamepad;
++  return 0;
++#elif defined(__EMSCRIPTEN__)
+   return got_web_gamepad_is_connected(gamepad);
+ #else
+   return IsGamepadAvailable(gamepad) ? 1 : 0;
+@@ -433,9 +484,32 @@ float got_platform_gamepad_axis_movement(int gamepad, int axis) {
+ #endif
+ }
+ 
++const char *got_platform_data_path(const char *name) {
++#ifdef GOT_PORTMASTER
++  static char path[1024];
++  snprintf(path, sizeof(path), "gamedata/%s", name);
++  return path;
++#else
++  return name;
++#endif
++}
++
++void got_platform_apply_fullscreen(void) {
++  if (IsWindowReady() && IsWindowFullscreen() != (g_config.fullscreen != 0)) {
++    if (g_config.fullscreen) {
++      int monitor = GetCurrentMonitor();
++      int width = GetMonitorWidth(monitor);
++      int height = GetMonitorHeight(monitor);
++      /* Request the native mode before entering fullscreen. Otherwise SDL's
++         Wayland mode emulation can keep a 640x480 buffer on a 1080p output. */
++      if (width > 0 && height > 0) SetWindowSize(width, height);
++    }
++    ToggleFullscreen();
++  }
++}
++
+ void got_platform_video_init(void) {
+   int i;
+-  Image img;
+ 
+   if (g_video_ready) return;
+ 
+@@ -447,18 +521,12 @@ void got_platform_video_init(void) {
+     InitWindow(GOT_W * 2, GOT_H * 2, "God of Thunder (native)");
+   }
+   SetWindowTitle("God of Thunder");
+-
+-  g_rt = LoadRenderTexture(GOT_W, GOT_H);
+-  SetTextureFilter(g_rt.texture, TEXTURE_FILTER_POINT);
++  SetExitKey(KEY_NULL);
++  got_platform_apply_fullscreen();
+ 
+   /* Avoid raylib's internal frame limiter. We control pacing in xshowpage(). */
+   SetTargetFPS(0);
+ 
+-  img = GenImageColor(GOT_W, GOT_H, BLACK);
+-  g_frame_tex = LoadTextureFromImage(img);
+-  UnloadImage(img);
+-  SetTextureFilter(g_frame_tex, TEXTURE_FILTER_POINT);
+-
+   memset(g_full_pages, 0, sizeof(g_full_pages));
+   memset(g_play_pages, 0, sizeof(g_play_pages));
+   memset(g_stat_page, 0, sizeof(g_stat_page));
+@@ -480,8 +548,7 @@ void got_platform_video_init(void) {
+ void got_platform_video_shutdown(void) {
+   if (!g_video_ready) return;
+ 
+-  UnloadTexture(g_frame_tex);
+-  UnloadRenderTexture(g_rt);
++  got_platform_scaler_shutdown();
+   CloseWindow();
+   g_video_ready = 0;
+ }
+@@ -657,11 +724,27 @@ static void apply_keyboard_state(void) {
+ 
+ static int g_item_cycle_dir = 0;
+ 
+-int got_platform_get_item_cycle(void) { return g_item_cycle_dir; }
++int got_platform_get_item_cycle(void) {
++  int direction = g_item_cycle_dir;
++  g_item_cycle_dir = 0;
++  return direction;
++}
+ 
+ static void apply_gamepad_state(void) {
+   memset(g_gp_down, 0, sizeof(g_gp_down));
+ 
++#ifdef GOT_PORTMASTER
++  /* L1/R1 are mapped to brackets. Latch edges until gameplay consumes them,
++     since dialogs and page flips can pump input more than once per frame. */
++  static int previous_left = 0, previous_right = 0;
++  int left_down = IsKeyDown(KEY_LEFT_BRACKET);
++  int right_down = IsKeyDown(KEY_RIGHT_BRACKET);
++  if (left_down && !previous_left) g_item_cycle_dir = -1;
++  if (right_down && !previous_right) g_item_cycle_dir = 1;
++  previous_left = left_down;
++  previous_right = right_down;
++#endif
++
+   int pad = 0;
+   if (!got_platform_gamepad_is_available(pad)) return;
+ 
+@@ -784,7 +867,8 @@ void got_platform_pump(void) {
+     static int f11_prev = 0;
+     int f11_now = IsKeyDown(KEY_F11);
+     if (f11_now && !f11_prev) {
+-      ToggleBorderlessWindowed();
++      g_config.fullscreen = !IsWindowFullscreen();
++      got_platform_apply_fullscreen();
+     }
+     f11_prev = f11_now;
+   }
+@@ -793,7 +877,12 @@ void got_platform_pump(void) {
+      emscripten_sleep(16) and can either abort (no async support) or kill
+      frame pacing. We don't support "closing the window" in web builds. */
+ #ifndef __EMSCRIPTEN__
+-  if (WindowShouldClose()) key_flag[ESC] = 1;
++  if (WindowShouldClose()) {
++    /* A close request stays set in raylib. Converting it to Escape on every
++       pump traps the game in wait_not_response() instead of closing. */
++    exit_code(0);
++    exit(0);
++  }
+ #endif
+ }
+ 
+@@ -926,13 +1015,10 @@ static void upload_composited_rgba(unsigned int pagebase) {
+     }
+   }
+ 
+-  UpdateTexture(g_frame_tex, g_frame_rgba);
+ }
+ 
+ static void present_page(unsigned int pagebase) {
+-  int dx = 0, dy = 0, s = 1;
+-  Rectangle src;
+-  Rectangle dst;
++  got_viewport_t view;
+ 
+   if (!g_video_ready) got_platform_video_init();
+ 
+@@ -940,31 +1026,11 @@ static void present_page(unsigned int pagebase) {
+ 
+   upload_composited_rgba(pagebase);
+ 
+-  BeginTextureMode(g_rt);
+-  ClearBackground(BLACK);
+-  DrawTexture(g_frame_tex, 0, 0, WHITE);
+-  EndTextureMode();
+-
+   BeginDrawing();
+   ClearBackground(BLACK);
+ 
+-  compute_viewport(&dx, &dy, &s);
+-  src.x = 0.0f;
+-  src.y = 0.0f;
+-  src.width = (float)g_rt.texture.width;
+-  src.height = (float)-g_rt.texture.height; /* flip */
+-
+-  dst.x = (float)dx;
+-  dst.y = (float)dy;
+-  dst.width = (float)(GOT_W * s);
+-  dst.height = (float)(GOT_H * s);
+-
+-  {
+-    Vector2 origin;
+-    origin.x = 0.0f;
+-    origin.y = 0.0f;
+-    DrawTexturePro(g_rt.texture, src, dst, origin, 0.0f, WHITE);
+-  }
++  view = compute_viewport();
++  got_platform_draw_frame(g_frame_rgba, GOT_W, GOT_H, view.x, view.y, view.width, view.height);
+   EndDrawing();
+ }
+ 
+diff --git a/src/utility/res_init.c b/src/utility/res_init.c
+index ebd0633..6b03723 100644
+--- a/src/utility/res_init.c
++++ b/src/utility/res_init.c
+@@ -5,7 +5,10 @@
+ #include "modern.h"
+ 
+ #include "res_man.h"
+-#include "res_int.h"
++#include "res_int.h"
++#ifdef GOT_PORTMASTER
++#include "got_platform.h"
++#endif
+ 
+ FILE* res_fp;
+ RES_HEADER res_header[RES_MAX_ENTRIES];
+@@ -21,7 +24,10 @@ void res_init(char far* buff) {
+   res_lzss_buff = buff;
+ }
+ 
+-int res_open(const char* filename) {
++int res_open(const char* filename) {
++#ifdef GOT_PORTMASTER
++  filename = got_platform_data_path(filename);
++#endif
+   if (!res_active) {
+     return RES_NOT_ACTIVE;
+   }
+diff --git a/src/native/pixel_scaler.c b/src/native/pixel_scaler.c
+new file mode 100644
+index 0000000..58fb923
+--- /dev/null
++++ b/src/native/pixel_scaler.c
+@@ -0,0 +1,103 @@
++/* Independent implementation of the published EPX/Scale2x pixel rules.
++ * Algorithm credit: Eric Johnston and Andrea Mazzoleni.
++ * Public domain, like the native God of Thunder port. No GPL code is used. */
++#include "pixel_scaler.h"
++
++#include <limits.h>
++#include <stdlib.h>
++#include <string.h>
++
++int got_scaler_factor(int mode, int width, int height, float output_width, float output_height) {
++    float scale;
++    if (mode == GOT_SCALER_EPX2) return 2;
++    if (mode == GOT_SCALER_EPX4) return 4;
++    if (mode != GOT_SCALER_AUTO || width <= 0 || height <= 0) return 1;
++    scale = output_width / width;
++    if (output_height / height > scale) scale = output_height / height;
++    if (scale <= 1.0f) return 1;
++    return scale <= 2.0f ? 2 : 4;
++}
++
++static void epx2(const uint32_t *source, int width, int height, uint32_t *output) {
++    int x, y;
++    size_t stride = (size_t)width * 2;
++    for (y = 0; y < height; ++y) {
++        const uint32_t *row = source + (size_t)y * width;
++        const uint32_t *above = source + (size_t)(y ? y - 1 : y) * width;
++        const uint32_t *below = source + (size_t)(y + 1 < height ? y + 1 : y) * width;
++        uint32_t *top = output + (size_t)y * 2 * stride;
++        uint32_t *bottom = top + stride;
++        for (x = 0; x < width; ++x) {
++            uint32_t b = above[x], d = row[x ? x - 1 : x], e = row[x];
++            uint32_t f = row[x + 1 < width ? x + 1 : x], h = below[x];
++            if (b != h && d != f) {
++                top[x * 2] = d == b ? d : e;
++                top[x * 2 + 1] = b == f ? f : e;
++                bottom[x * 2] = d == h ? d : e;
++                bottom[x * 2 + 1] = h == f ? f : e;
++            } else {
++                top[x * 2] = top[x * 2 + 1] = e;
++                bottom[x * 2] = bottom[x * 2 + 1] = e;
++            }
++        }
++    }
++}
++
++int got_scaler_process(got_pixel_scaler *scaler, const uint8_t *rgba, int width, int height, int factor) {
++    size_t pixels, needed, i;
++    int full_update;
++    if (!rgba || width <= 0 || height <= 0 || (factor != 1 && factor != 2 && factor != 4) ||
++        width > INT_MAX / 4 || height > INT_MAX / 4) return 0;
++    if ((size_t)width > SIZE_MAX / (size_t)height / (4 * factor * factor)) return 0;
++    pixels = (size_t)width * height;
++    if (scaler->pixels != pixels) {
++        uint8_t *previous = malloc(pixels * 4);
++        uint32_t *input = malloc(pixels * 4);
++        if (!previous || !input) { free(previous); free(input); return 0; }
++        free(scaler->previous);
++        free(scaler->input);
++        scaler->previous = previous;
++        scaler->input = input;
++        scaler->pixels = pixels;
++        scaler->factor = 0;
++    }
++    full_update = scaler->width != width || scaler->height != height || scaler->factor != factor;
++    scaler->changed = full_update || memcmp(scaler->previous, rgba, pixels * 4) != 0;
++    if (!scaler->changed) return 1;
++    if (factor > 1) {
++        needed = pixels * factor * factor;
++        if (scaler->output_capacity < needed) {
++            uint32_t *output = realloc(scaler->output, needed * 4);
++            if (!output) return 0;
++            scaler->output = output;
++            scaler->output_capacity = needed;
++        }
++        /* Exact packed-pixel comparisons preserve every RGBA channel. */
++        for (i = 0; i < pixels; ++i) memcpy(&scaler->input[i], rgba + i * 4, 4);
++        if (factor == 2) epx2(scaler->input, width, height, scaler->output);
++        else {
++            if (scaler->intermediate_capacity < pixels * 4) {
++                uint32_t *intermediate = realloc(scaler->intermediate, pixels * 16);
++                if (!intermediate) return 0;
++                scaler->intermediate = intermediate;
++                scaler->intermediate_capacity = pixels * 4;
++            }
++            epx2(scaler->input, width, height, scaler->intermediate);
++            epx2(scaler->intermediate, width * 2, height * 2, scaler->output);
++        }
++        scaler->rgba = (const uint8_t *)scaler->output;
++    } else scaler->rgba = scaler->previous;
++    memcpy(scaler->previous, rgba, pixels * 4);
++    scaler->width = width;
++    scaler->height = height;
++    scaler->factor = factor;
++    return 1;
++}
++
++void got_scaler_destroy(got_pixel_scaler *scaler) {
++    free(scaler->input);
++    free(scaler->intermediate);
++    free(scaler->output);
++    free(scaler->previous);
++    memset(scaler, 0, sizeof(*scaler));
++}
+diff --git a/src/native/pixel_scaler.h b/src/native/pixel_scaler.h
+new file mode 100644
+index 0000000..1915e39
+--- /dev/null
++++ b/src/native/pixel_scaler.h
+@@ -0,0 +1,21 @@
++#ifndef GOT_PIXEL_SCALER_H
++#define GOT_PIXEL_SCALER_H
++
++#include <stddef.h>
++#include <stdint.h>
++
++enum { GOT_SCALER_NEAREST, GOT_SCALER_EPX2, GOT_SCALER_EPX4, GOT_SCALER_AUTO };
++
++typedef struct {
++    uint32_t *input, *intermediate, *output;
++    uint8_t *previous;
++    size_t pixels, intermediate_capacity, output_capacity;
++    int width, height, factor, changed;
++    const uint8_t *rgba;
++} got_pixel_scaler;
++
++int got_scaler_factor(int mode, int width, int height, float output_width, float output_height);
++int got_scaler_process(got_pixel_scaler *scaler, const uint8_t *rgba, int width, int height, int factor);
++void got_scaler_destroy(got_pixel_scaler *scaler);
++
++#endif
