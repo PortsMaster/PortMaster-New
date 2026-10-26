@@ -8,5 +8,9 @@ Huge thanks to [Escada Games](https://gamejolt.com/games/randungeon/623855) for 
 |--|--| 
 |A|select|
 |DPAD/L-Stick|Movement/Attack|
-|B|Help menu|
+|B|Skip Turn|
+|L1/R1|Zoom in/out|
+|Y|Hide Grid|
+|X|Mute Game|
+|R2|Reset Zoom|
 
