@@ -26,6 +26,14 @@ mkdir -p "$GAMEDIR/cache"
 export XDG_DATA_HOME="$GAMEDIR/conf"
 export XDG_CONFIG_HOME="$GAMEDIR/conf"
 
+# The loader always reports 1280x720; the game picks its first-run font size from the panel
+export WSM_DISPLAY_HEIGHT="$DISPLAY_HEIGHT"
+
+# Bogodroid answers Unity's CPU topology queries from support_files; without them Unity sees one core
+mkdir -p "$GAMEDIR/support_files"
+cat /sys/devices/system/cpu/present > "$GAMEDIR/support_files/cpu_present.txt"
+cat /sys/devices/system/cpu/possible > "$GAMEDIR/support_files/cpu_possible.txt"
+
 chmod a+x "$GAMEDIR/unityloader"
 pm_platform_helper "$GAMEDIR/unityloader"
 
