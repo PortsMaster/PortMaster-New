@@ -1,8 +1,10 @@
 ## Notes
 
-A Papers Please-style cashier simulator set in Ĺ»opka, a fictional Polish convenience store chain. You're Kazio, an ex-coal miner turned cashier. Over 30 days, scan groceries, verify IDs, grill hot dogs, manage your family budget, and deal with 50+ characters, from tracksuit philosophers paying in loose change to a suspiciously large proboscis monkey. Corporate regulations pile up daily. Every shift ends with a choice: pay rent, buy food, save for mom's surgery, or invest in the store. Nine endings reflect your decisions.
+A Papers Please-style cashier simulator set in Żopka, a fictional Polish convenience store chain. You're Kazio, an ex-coal miner turned cashier. Over 30 days, scan groceries, verify IDs, grill hot dogs, manage your family budget, and deal with 50+ characters, from tracksuit philosophers paying in loose change to a suspiciously large proboscis monkey. Corporate regulations pile up daily. Every shift ends with a choice: pay rent, buy food, save for mom's surgery, or invest in the store. Nine endings reflect your decisions.
 
 127 scannable products, 3 minigames, 22 store upgrades, 69 achievements, 200+ easter eggs, New Game Plus, and 43 languages including Silesian and Kashubian.
+
+The PortMaster version includes the "Under the Counter — 1980" expansion for free: a separate campaign set in August 1980, with a saturator, vinegar, mustard and rationed goods in the back room instead of hot dogs.
 
 Thanks to [kloptops](https://github.com/kloptops) for PortMaster and [BinaryCounter](https://github.com/Binarycounter) for Bogodroid NEO.
 
