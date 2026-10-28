@@ -1,0 +1,150 @@
+Metadata-Version: 2.1
+Name: astc-encoder-py
+Version: 0.1.12
+Summary: a python wrapper for astc-encoder
+Author-email: Rudolf Kolbe <rkolbe96@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2024 Rudolf Kolbe
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/K0lb3/astc-encoder-py
+Project-URL: Bug Tracker, https://github.com/K0lb3/astc-encoder-py/issues
+Keywords: astc,texture
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Multimedia :: Graphics
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: archspec >=0.2
+Provides-Extra: tests
+Requires-Dist: pytest >=8.3.3 ; extra == 'tests'
+Requires-Dist: pillow >=10.4.0 ; extra == 'tests'
+Requires-Dist: imagehash >=4.3.1 ; extra == 'tests'
+Requires-Dist: psutil >=6.0.0 ; extra == 'tests'
+
+# astc-encoder-py
+
+[![Win/Mac/Linux](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-informational)]()
+[![MIT](https://img.shields.io/github/license/K0lb3/astc-encoder-py)](https://github.com/K0lb3/astc-encoder-py/blob/master/LICENSE)
+[![Docs](https://github.com/K0lb3/astc-encoder-py/actions/workflows/doc.yml/badge.svg?branch=main)](k0lb3.github.io/astc-encoder-py/)
+
+
+``astc-encoder-py`` is a  Python binding of [astc-encoder](https://github.com/ARM-software/astc-encoder).
+It can compress images into astc textures and decompress astc textures into images.
+
+## Installation
+
+**Python 3.7+**
+
+```bash
+pip install astc-encoder-py
+```
+
+There are prebuild wheels for all platforms covered by cibuildwheel.
+
+
+## Examples
+
+### simple astc via PIL.Image
+
+```py
+# import following once to register the codec
+import astc_encoder.pil_codec
+
+# pass the relevant data to the decoder via the decoder args as below
+profile: int = 1 # LDR_SRGB = 0, LDR = 1, HDR_RGB_LDR_A = 2, HDR = 3
+block_width: int = 4
+block_height: int = 4
+# the target mode should always be RGBA, even for RGB, as the decompression always returns RGBA
+Image.frombytes("RGBA", (512, 512), comp, "astc", (profile, block_width, block_height)).show()
+# compress Image to astc, the Image.mode has to be RGB or RGBA
+quality: float = 100 # 0-100, medium is 60
+Image.tobytes("astc", (profile, quality, block_width, block_height))
+```
+
+### compressing and decompressing using astc_encoder
+```py
+from PIL import Image
+
+from astc_encoder import (
+ ASTCConfig,
+ ASTCContext,
+ ASTCImage,
+ ASTCProfile,
+ ASTCSwizzle,
+ ASTCType,
+)
+
+# create config like astcenc_config_init,
+# color profile, block dimensions, quality, flags
+# and then allow editing by hand afterward
+# optional args:
+#   block depth = 1, quality = 60, flags = 0
+config = ASTCConfig(ASTCProfile.LDR_SRGB, 4, 4)
+
+# create a context from the config
+# as the context creation is expensive,
+# this solution allows re-using the context
+context = ASTCContext(config)
+
+# create a new image for testing
+img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+
+# put it's data into an ASTCImage for handling 
+image = ASTCImage(ASTCType.U8, *img.size, data=img.tobytes())
+
+# create a RGBA swizzle
+swizzle = ASTCSwizzle.from_str("RGBA")
+
+# compress the image with the given context
+comp = context.compress(image, swizzle)
+
+# create a destination image with the correct arguments
+image_dec = ASTCImage(ASTCType.U8, *img.size)
+
+# decompress the data into the image
+# the result has always 4 channels
+context.decompress(comp, image_dec, swizzle)
+
+# load the decompressed image into PIL
+img = Image.frombytes("RGBA", img.size, image_dec.data)
+```
+
+## TODO
+- [x] figuring out segfault for re-using ASTCImage
+- [x] creating ASTCSwizzle from strings instead of from ints
+- [ ] creating ASTCImage directly from PIL.Image
+- [x] ~~export ASTCImage directly to PIL.Image~~ via PIL.ImageDecoder
+- [ ] SVE support for arm
+- [x] tests
+- [x] docs page

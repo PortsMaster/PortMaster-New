@@ -1,0 +1,94 @@
+#!/bin/bash
+# First-launch setup (run by Cuphead.sh through PortMaster's patcher): builds the game for Unity's
+# Android player 2017.4.9f1 from the player's copy of Cuphead in gamedata/ (Cuphead.app from GOG or
+# Steam, or GOG's macOS installers). Each step is marked done, so an interrupted setup continues
+# where it stopped.
+GD="$GAMEDIR/gamedata"; D="$GD/Cuphead_Data"; S="$GAMEDIR/setup"; W="$GD/.setup"
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+fail() { echo "PATCH_FAIL_MSG:$1"; echo "Patching process failed!"; exit 1; }
+. "$S/cpu.sh"
+step() { echo "== $(date +%H:%M:%S) $*"; cpu_state; }   # (setup/cpu.sh: the CPU at each step)
+mkdir -p "$W" || fail "Cannot write to ports/cuphead/gamedata."
+[ -n "$ASPECT" ] && echo "$ASPECT" > "$GAMEDIR/aspect.txt"                # (the launcher reads them)
+[ -n "$RESOLUTION" ] && echo "$RESOLUTION" > "$GAMEDIR/resolution.txt"
+[ -n "$BUTTONS" ] && echo "$BUTTONS" > "$GAMEDIR/buttons.txt"
+[ -n "$TEXTURE_QUALITY" ] && echo "$TEXTURE_QUALITY" > "$GAMEDIR/texture_quality.txt"   # (setup/dlcscript's too)
+export PYTHONPATH="$S/pylibs:$S" PYTHONDONTWRITEBYTECODE=1
+pm() { (cd "$S" && PYTHONHOME="$python_dir" LD_LIBRARY_PATH="$python_dir/libs:$LD_LIBRARY_PATH" "$python_dir/bin/python3" -m pmunity "$@"); }
+
+# 1. the game's data, from Cuphead.app or the installers (largest first: the game, then the DLC)
+if [ ! -f "$W/.step_game" ]; then
+  if [ ! -f "$D/globalgamemanagers" ]; then
+    APP=$(ls -d "$GD"/Cuphead.app "$GD"/*/Cuphead.app 2>/dev/null | head -1)
+    PKGS=$(ls -S "$GD"/*.pkg 2>/dev/null)
+    if [ -z "$APP" ] && [ -n "$PKGS" ]; then
+      [ "$(df -m "$GD" | awk 'NR==2{print $4}')" -gt 9000 ] || fail "The setup needs about 10 GB free on the card."
+      step "unpacking GOG's installers"
+      rm -rf "$W/pkgroot"
+      pm macpkg "$W/pkgroot" $PKGS || fail "Could not unpack the installers (see patchlog.txt)."
+      APP=$(find "$W/pkgroot" -maxdepth 4 -type d -name 'Cuphead.app' | head -1)
+    fi
+    [ -n "$APP" ] || fail "Put Cuphead.app (macOS, from GOG or Steam) or GOG's macOS installers (.pkg) in ports/cuphead/gamedata."
+    grep -aqs "2017.4.9f1" "$APP/Contents/Resources/Data/globalgamemanagers" \
+      || fail "This Cuphead version is not supported (the port needs the macOS build 1.3.4, GOG's or Steam's)."
+    cp "$APP/Contents/Resources/"goggame-*.info "$GD/" 2>/dev/null   # (the DLC check reads them)
+    rm -rf "$GD/mono-etc"; cp -r "$APP/Contents/Mono/etc" "$GD/mono-etc" || fail "The game's Mono folder is missing."
+    mv "$APP/Contents/Resources/Data" "$D" || fail "Could not move the game's data."
+    # (Steam's DLC check, which the code patch replaces: the DLC's bundles are in the data)
+    [ -f "$D/StreamingAssets/AssetBundles/atlas_map_common_dlc" ] && touch "$W/.dlc_files"
+    rm -rf "$W/pkgroot" "$APP"
+  fi
+  touch "$W/.step_game"
+fi
+
+# 2. Unity's Android player 2017.4.9f1, from the port's donor (a small game of its own built with
+# Unity 2017.4.9f1, whose APK carries the player: no download)
+P="$W/player"
+[ -f "$P/player.json" ] || rm -f "$W/.step_player"     # (an older setup's player folder)
+if [ ! -f "$W/.step_player" ]; then
+  step "Unity's player, from the donor"
+  rm -rf "$P"
+  pm player donor 2017.4.9f1 "$P" --apk "$GAMEDIR/donor/donor-2017.4.9f1-mono-armv7.apk" \
+    || fail "Could not unpack Unity's player from the donor (see patchlog.txt)."
+  touch "$W/.step_player"
+fi
+
+# 3. conversion: GLES3 shaders, ASTC textures, audio, settings (the texture quality the first run
+# was given is kept, so a resumed setup does not mix qualities)
+Q=$(cat "$W/.texture_quality" 2>/dev/null); Q=${Q:-${TEXTURE_QUALITY:-fast}}
+echo "$Q" > "$W/.texture_quality"
+if [ ! -f "$W/.step_convert" ]; then
+  step "converting the game, texture quality $Q (the long part)"
+  pm convert "$D" --config "$S/cuphead.json" --plugin "$S/animclips.py" --set textures.quality="$Q" --set textures.guide="$S/astc_guide_$Q.bin" \
+    || fail "Converting the game failed (see patchlog.txt). Launch again to continue."
+  touch "$W/.step_convert"
+fi
+
+# 4. the APK and OBB the player reads, with the port's code patches and helper
+if [ ! -f "$W/.step_package" ]; then
+  step "packing the game"
+  chmod +x "$S/codepatch"
+  DLC=; [ -f "$W/.dlc_files" ] && DLC=--steam-dlc
+  pm android-data --src "$D" --pkg "$P" --out "$W/android" --name Cuphead --package com.cupheadport.game \
+    --root-file animclips.txt --drop-missing-assembly GalaxyCSharp.dll --managed-file "$S/CupheadPort.dll" --game-managed "$D/Managed" \
+    --assembly-patch Assembly-CSharp.dll "env DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 '$S/codepatch' --target=android $DLC {managed} {out}" \
+    --mono-etc "$GD/mono-etc" --dllmap SDL2=libSDL2-2.0.so.0 --consume-src --verify-bundles 2 --pack all --no-video-shader \
+    || fail "Packing the game failed (see patchlog.txt). Launch again to continue."
+  touch "$W/.step_package"
+fi
+
+# 5. into place; the work files and the player's copy of the game are removed (the setup's tools
+# stay: they add the DLC when it comes later, setup/dlcscript)
+step "installing"
+mkdir -p "$GAMEDIR/lib"
+for f in Libs/armeabi-v7a/libmain.so Libs/armeabi-v7a/libunity.so MonoLibs/armeabi-v7a/libmono.so; do
+  cp "$P/Variations/mono/Release/$f" "$GAMEDIR/lib/" || fail "Could not install Unity's player."
+done
+[ -d "$W/android/zip/assets" ] && rm -rf "$GAMEDIR/assets"
+for f in "$W"/android/zip/*; do mv -f "$f" "$GAMEDIR/" || fail "Could not install $(basename "$f")."; done
+[ -f "$W/.dlc_files" ] && touch "$GAMEDIR/cuphead_dlc"
+rm -rf "$W" "$D" "$GD/mono-etc" "$GD"/*.pkg "$GD"/*.app "$GD"/goggame-*.info
+touch "$GAMEDIR/.cuphead_ready"
+sync
+step "setup finished"
