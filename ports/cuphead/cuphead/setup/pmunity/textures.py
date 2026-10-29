@@ -491,9 +491,10 @@ def decode_downscale(o, tex, w, h, fmt_name, pool=None):
     """downscale(texture_image(tex.image)) without the whole decoded image: each band of output
     rows is scaled from just the source rows its Lanczos filter reads (decoded from the block rows
     holding them), so a 8192 x 8192 texture needs a few bands' memory instead of its 256 MB plus
-    copies (Cuphead's DLC map atlas, killed on 1 GB handhelds). Every output row gets the same
-    filter and the same source pixels as one resize: the same image. None when the data cannot be
-    cut in rows (as decode_parallel)."""
+    copies (Cuphead's DLC map atlas, killed on 1 GB handhelds); a band holds two copies of its pixels
+    at most (each core decodes and scales one). Every output row gets the same filter and the same
+    source pixels as one resize: the same image. None when the data cannot be cut in rows (as
+    decode_parallel)."""
     from math import ceil, floor
     from UnityPy.enums import BuildTarget, TextureFormat as TF
     from UnityPy.export import Texture2DConverter as C
@@ -520,10 +521,12 @@ def decode_downscale(o, tex, w, h, fmt_name, pool=None):
         y1 = min(h, y0 + rows)
         a, b = max(0, floor(y0 * sy) - margin), min(H, ceil(y1 * sy) + margin)    # source rows, top first
         s0, s1 = (H - b) // bh * bh, min(H, -(-(H - a) // bh) * bh)              # stored rows (bottom first)
-        part = C.parse_image_data(raw[s0 // bh * per:s1 // bh * per], W, s1 - s0, fmt, version, platform, blob, flip=False)
-        top = part.transpose(Image.Transpose.FLIP_TOP_BOTTOM)    # top first: row r is source row H - s1 + r
+        top = C.parse_image_data(raw[s0 // bh * per:s1 // bh * per], W, s1 - s0, fmt, version, platform, blob,
+                                 flip=False).transpose(Image.Transpose.FLIP_TOP_BOTTOM)   # top first: row r is source row H - s1 + r
         off = H - s1
-        img = texture_image(top.crop((0, a - off, W, b - off)), fmt_name).convert('RGBa')
+        img = texture_image(top.crop((0, a - off, W, b - off)), fmt_name)
+        del top                                              # (each copy goes once the next is made: two at most)
+        img = img.convert('RGBa')
         return y0, img.resize((w, y1 - y0), Image.Resampling.LANCZOS, box=(0, y0 * sy - a, W, y1 * sy - a))
     out = Image.new('RGBa', (w, h))
     for y0, part in (pool.map(band, range(0, h, rows)) if pool else map(band, range(0, h, rows))):

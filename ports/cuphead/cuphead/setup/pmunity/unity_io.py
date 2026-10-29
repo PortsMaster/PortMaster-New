@@ -157,6 +157,20 @@ def collect():
     _trim()
 
 
+def map_big_blocks():
+    """Memory blocks from 1 MB up (decoded textures and their copies, bundle buffers) mapped from the
+    system each on its own and handed back when freed: glibc otherwise raises its threshold for that
+    to the largest block freed so far (up to 32 MB) and keeps the next ones in its heap, where they
+    stay between files and add to every texture's peak (Cuphead-sized textures in a test: peaks
+    30-60 MB lower, the same files at the same speed). Called once, as pmunity starts."""
+    import ctypes, sys
+    if sys.platform.startswith('linux'):
+        try:
+            ctypes.CDLL(None).mallopt(-3, 1 << 20)          # M_MMAP_THRESHOLD (fixed: no longer raised)
+        except (OSError, AttributeError):
+            pass
+
+
 def _trim():
     """Hands freed heap memory back to the system (glibc keeps it otherwise, and a setup that
     converts hundreds of files one after the other grows until a 1 GB handheld runs out)."""

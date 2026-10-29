@@ -85,6 +85,8 @@ def _check_data(data, force):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    from .unity_io import map_big_blocks
+    map_big_blocks()                        # (before anything big is allocated)
     if argv[:1] == ['android-data']:
         from . import android_data
         return android_data.main(argv[1:])
