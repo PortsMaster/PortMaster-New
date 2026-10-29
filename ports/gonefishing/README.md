@@ -2,7 +2,7 @@
 
 Gone Fishing is a free pixel-art fishing game by SkyWalker541, made with LÖVE. Row or motor across five places, from
 an autumn lake to the Columbia River under Mt. Hood, watch the fish under your boat and put your lure where they swim.
-42 fish, five legends, ten lures, bobbers, realistic casting and line physics, trolling, weather, goals,
+42 fish, five legends, ten lures, bobbers, realistic casting and line physics, trolling, weather, 65 achievements,
 gear upgrades, three save slots, and a dog or cat for company.
 
 Tested on the TrimUI Brick with NextUI; it should work on any device that runs PortMaster.
@@ -25,4 +25,4 @@ Thanks to the LÖVE team for the framework, and to the PortMaster crew for their
 | X | Pet your dog or cat |
 | Y | Trolling motor menu (Auto Trolling Motor) |
 | Start | Tackle box |
-| L / R | Tackle box sections |
+| L / R | Tackle box pages |
