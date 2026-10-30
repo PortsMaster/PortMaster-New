@@ -1,0 +1,248 @@
+diff -ru a/src/input.cc b/src/input.cc
+--- a/src/input.cc	2017-09-30 20:37:34.000000000 +0000
++++ b/src/input.cc	2026-10-28 10:27:09.973553400 +0000
+@@ -35,6 +35,7 @@
+ #include <string.h>
+ #include <SDL.h>
+ #include "input.h"
++#include "screen.h"
+ 
+ u_int8 * input::keystate=NULL;
+ u_int8 * input::p_keystate=NULL;
+@@ -62,6 +63,9 @@
+ 
+ SDL_GameController *input::init_controller()
+ {
++	// PortMaster: gptokeyb2 sends every button as a key, so OmniOSK can read them
++	return NULL;
++
+ 	for (int i = 0; i < SDL_NumJoysticks(); ++i)
+ 	{
+ 		if (SDL_IsGameController(i))
+@@ -89,6 +93,14 @@
+ 	delete[] p_keystate;
+ }
+ 
++static Uint32 last_release[SDL_NUM_SCANCODES];
++
++static bool is_arrow(SDL_Scancode idx)
++{
++	return idx == SDL_SCANCODE_UP || idx == SDL_SCANCODE_DOWN ||
++		idx == SDL_SCANCODE_LEFT || idx == SDL_SCANCODE_RIGHT;
++}
++
+ void input::update()
+ {
+ 	static SDL_Event event;
+@@ -103,6 +115,11 @@
+ 				if (!event.key.repeat)
+ 				{
+ 					keystate[idx]=1;
++					// PortMaster: ignore D-pad/stick contact bounce (re-press within 25 ms of release)
++					if (is_arrow(idx) && last_release[idx] != 0 && event.key.timestamp - last_release[idx] < 25)
++					{
++						break;
++					}
+ 					p_keystate[idx]++;
+ 
+ 					if (text_input)
+@@ -121,6 +138,7 @@
+ 			{
+ 				SDL_Scancode idx = event.key.keysym.scancode;
+ 				keystate[idx]=0;
++				if (is_arrow(idx)) last_release[idx] = event.key.timestamp;
+ 				break;
+ 			}
+ 			case SDL_TEXTINPUT:
+@@ -134,6 +152,8 @@
+ 
+ 			case SDL_CONTROLLERBUTTONDOWN:
+ 			{
++				// PortMaster: OmniOSK's ImGui backend opens the pad too; gptokeyb2 already sends these as keys
++				if (controller == NULL) break;
+ 				SDL_Scancode idx = map_controller_button((SDL_GameControllerButton) event.cbutton.button);
+ 				if (idx != SDL_SCANCODE_UNKNOWN)
+ 				{
+@@ -144,6 +164,7 @@
+ 			}
+ 			case SDL_CONTROLLERBUTTONUP:
+ 			{
++				if (controller == NULL) break;
+ 				SDL_Scancode idx = map_controller_button((SDL_GameControllerButton) event.cbutton.button);
+ 				if (idx != SDL_SCANCODE_UNKNOWN)
+ 				{
+@@ -151,6 +172,15 @@
+ 				}
+ 				break;
+ 			}
++			case SDL_WINDOWEVENT:
++			{
++				// compositors may resize a fullscreen window after creation
++				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
++				{
++					screen::update_scale();
++				}
++				break;
++			}
+ 			case SDL_CONTROLLERDEVICEADDED:
+ 			{
+ 				if (controller == NULL)
+diff -ru a/src/prefs.cc b/src/prefs.cc
+--- a/src/prefs.cc	2016-09-12 17:22:34.000000000 +0000
++++ b/src/prefs.cc	2026-10-26 13:04:09.501447875 +0000
+@@ -36,7 +36,7 @@
+ config::config () 
+ {
+     // set some default values where possible
+-    screen_mode = 0;                // Letterbox
++    screen_mode = 1;                // Letterbox
+     display = 0;					// Display for fullscreen mode
+     quick_load = 0;                 // Quick-load disabled
+     audio_channels = 1;             // Stereo
+diff -ru a/src/python_class.h b/src/python_class.h
+--- a/src/python_class.h	2016-10-16 15:47:04.000000000 +0000
++++ b/src/python_class.h	2026-10-26 13:04:09.465448139 +0000
+@@ -35,8 +35,6 @@
+ #include <locale.h>
+ #include "Python.h"
+ #include "compile.h"
+-#include "eval.h"
+-#include "node.h"
+ #include "fileops.h"
+ 
+ #ifndef SWIG
+diff -ru a/src/screen.cc b/src/screen.cc
+--- a/src/screen.cc	2018-12-30 13:46:16.000000000 +0000
++++ b/src/screen.cc	2026-10-28 09:54:38.220057400 +0000
+@@ -354,13 +354,20 @@
+ 		int scale_y = h / height();
+ 
+ 		scale_ = scale_x > scale_y ? scale_y : scale_x;
++		if (scale_ < 1) scale_ = 1;
+ 	}
+ 
+ 	if (mode_ == 1)
+ 	{
+-		// center viewport in letterbox mode
+-		clip_rect_.x = (w - length() * scale_) / 2;
+-		clip_rect_.y = (h - height() * scale_) / 2;
++		// PortMaster: SDL scales the rest of the way so the picture fills the screen height
++		float fx = (float) w / (length() * scale_);
++		float fy = (float) h / (height() * scale_);
++		float extra = fx < fy ? fx : fy;
++		SDL_RenderSetScale(Renderer, extra, extra);
++
++		// center viewport in letterbox mode (in scaled coordinates)
++		clip_rect_.x = (int) ((w / extra - length() * scale_) / 2);
++		clip_rect_.y = (int) ((h / extra - height() * scale_) / 2);
+ 		clip_rect_.w = length() * scale_;
+ 		clip_rect_.h = height() * scale_;
+ 
+@@ -368,6 +375,8 @@
+ 	}
+ 	else
+ 	{
++		SDL_RenderSetScale(Renderer, 1.0f, 1.0f);
++
+ 		// no rendering offset required when running in window or fullscreen modes
+ 		clip_rect_.x = 0;
+ 		clip_rect_.y = 0;
+diff -ru a/src/screen.h b/src/screen.h
+--- a/src/screen.h	2017-10-01 19:00:58.000000000 +0000
++++ b/src/screen.h	2026-10-28 09:57:32.821678006 +0000
+@@ -160,7 +160,12 @@
+      */ 
+     static void show ()
+     {
++        // PortMaster: present unscaled so overlays drawn at present time (OmniOSK) are not scaled
++        float sx, sy;
++        SDL_RenderGetScale(Renderer, &sx, &sy);
++        SDL_RenderSetScale(Renderer, 1.0f, 1.0f);
+         SDL_RenderPresent(Renderer);
++        SDL_RenderSetScale(Renderer, sx, sy);
+     }
+ 
+     /** Returns whether the current mode is fullscreen or windowed.
+@@ -200,12 +205,18 @@
+      * 
+      * @param i advancement of the transition (finished when i == screen::length () / 2)
+      */
+-    static void transition (u_int16 i); 
++    static void transition (u_int16 i);
++
++#ifndef SWIG
++    /**
++     * Recompute scale and letterbox offset from the renderer's current output size.
++     */
++	static void update_scale();
++#endif
+ 
+ private:
+ 
+ 	static u_int8 get_scale_for_display(u_int8 screen, u_int16 nl, u_int16 nh);
+-	static void update_scale();
+ 
+ 	/// Bytes per pixel.
+     static u_int8 bytes_per_pixel_; 
+diff -ru a/src/surface.cc b/src/surface.cc
+--- a/src/surface.cc	2016-10-16 15:46:17.000000000 +0000
++++ b/src/surface.cc	2026-10-28 09:34:52.619403077 +0000
+@@ -182,13 +182,11 @@
+         	srcrect.h *= scale();
+         }
+ 
+-        if (screen::scale() > 1)
+-        {
+-            dstrect.x = dstrect.x * screen::scale() + screen::offset_x();
+-            dstrect.y = dstrect.y * screen::scale() + screen::offset_y();
+-            dstrect.w *= screen::scale();
+-            dstrect.h *= screen::scale();
+-        }
++        // letterbox offset applies at scale 1 too
++        dstrect.x = dstrect.x * screen::scale() + screen::offset_x();
++        dstrect.y = dstrect.y * screen::scale() + screen::offset_y();
++        dstrect.w *= screen::scale();
++        dstrect.h *= screen::scale();
+ 
+         SDL_RenderCopy (screen::get_renderer(), Surface, &srcrect, &dstrect);
+     }
+@@ -216,6 +214,10 @@
+ 			if (dstrect.y < 0) dstrect.y = 0;
+ 		}
+ 
++        // at scale 1 a negative offset would lock memory before the texture
++        if (dstrect.x < 0) { srcrect.x -= dstrect.x; dstrect.w += dstrect.x; dstrect.x = 0; }
++        if (dstrect.y < 0) { srcrect.y -= dstrect.y; dstrect.h += dstrect.y; dstrect.y = 0; }
++
+         // make sure we only update the part of the target texture that is actually changed
+     	if (dstrect.x + dstrect.w > target->length() * scale()) dstrect.w = target->length() * scale() - dstrect.x;
+     	if (dstrect.y + dstrect.h > target->height() * scale()) dstrect.h = target->height() * scale() - dstrect.y;
+@@ -261,13 +263,11 @@
+         u_int8 r, g, b, a;
+         unmap_color(col, r, g, b, a);
+ 
+-        if (screen::scale() > 1)
+-        {
+-            dstrect.x = dstrect.x * screen::scale() + screen::offset_x();
+-            dstrect.y = dstrect.y * screen::scale() + screen::offset_y();
+-            dstrect.w *= screen::scale();
+-            dstrect.h *= screen::scale();
+-        }
++        // letterbox offset applies at scale 1 too
++        dstrect.x = dstrect.x * screen::scale() + screen::offset_x();
++        dstrect.y = dstrect.y * screen::scale() + screen::offset_y();
++        dstrect.w *= screen::scale();
++        dstrect.h *= screen::scale();
+ 
+         SDL_SetRenderDrawBlendMode(screen::get_renderer(), SDL_BLENDMODE_NONE);
+         SDL_SetRenderDrawColor(screen::get_renderer(), r, g, b, a);
+@@ -290,6 +290,9 @@
+             if (dstrect.x < 0) dstrect.x = 0;
+         }
+ 
++        if (dstrect.x < 0) { dstrect.w += dstrect.x; dstrect.x = 0; }
++        if (dstrect.y < 0) { dstrect.h += dstrect.y; dstrect.y = 0; }
++
+         if (dstrect.x + dstrect.w > length() * scale()) dstrect.w = length() * scale() - dstrect.x;
+         if (dstrect.y + dstrect.h > height() * scale()) dstrect.h = height() * scale() - dstrect.y;
+         if (dstrect.w <= 0 || dstrect.h <= 0) return;
