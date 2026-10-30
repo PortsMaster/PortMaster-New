@@ -39,7 +39,8 @@ if [ "$CUPHEAD_ROUTE" = 32 ] && [ "$ARMHF" = no ]; then
 fi
 
 # first launch: the setup builds the game from the player's copy in gamedata/, with PortMaster's
-# Python runtime (setup/pylibs: the extra packages it needs)
+# Python runtime (setup/pylibs: the extra packages it needs). The setup's tools come zipped
+# (setup/setup.zip, setup64/setup64.zip) and are unpacked before their first setup
 runtime="python_3.11"
 export python_dir="$HOME/$runtime"
 run_setup() {   # run_setup <patchscript> <time> [no-questions]
@@ -54,6 +55,11 @@ run_setup() {   # run_setup <patchscript> <time> [no-questions]
   mkdir -p "$python_dir"
   [[ "$PM_CAN_MOUNT" != "N" ]] && $ESUDO umount "$python_dir"
   $ESUDO mount "$controlfolder/libs/${runtime}.squashfs" "$python_dir"
+  for z in "$GAMEDIR"/setup/*.zip "$(dirname "$1")"/*.zip; do
+    [ -f "$z" ] || continue
+    PYTHONHOME="$python_dir" LD_LIBRARY_PATH="$python_dir/libs:$LD_LIBRARY_PATH" "$python_dir/bin/python3" -m zipfile -e "$z" "$(dirname "$z")" \
+      && rm -f "$z" || { pm_message "Could not unpack ${z#$GAMEDIR/}: is the card full?"; sleep 5; pm_finish; exit 1; }
+  done
   export GAMEDIR DEVICE_ARCH controlfolder DISPLAY_WIDTH DISPLAY_HEIGHT   # (the questions read the screen size)
   # the CPU at full speed while the setup runs, kept there if the firmware lowers it (setup/cpu.sh)
   source "$GAMEDIR/setup/cpu.sh"
