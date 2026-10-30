@@ -1,0 +1,266 @@
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/cmake/SetVersion.cmake monochromeworlds-1.0.2/lib/benzaiten/cmake/SetVersion.cmake
+--- a/lib/benzaiten/cmake/SetVersion.cmake	2020-03-07 07:08:54.077293319 +0000
++++ b/lib/benzaiten/cmake/SetVersion.cmake	2026-10-28 15:41:11.500037212 +0000
+@@ -23,8 +23,11 @@
+ 
+         # Remove any extra version information, I only care about the revision
+         # number.
+-        string(REGEX MATCH "^changeset:[ ]+[^;]+" VERSION_REV ${VERSION_REV})
+-        string(REGEX MATCH "[0-9]+" VERSION_REV ${VERSION_REV})
++        string(REGEX MATCH "^changeset:[ ]+[^;]+" VERSION_REV "${VERSION_REV}")
++        string(REGEX MATCH "[0-9]+" VERSION_REV "${VERSION_REV}")
++        if(NOT VERSION_REV)
++            set(VERSION_REV "0")
++        endif(NOT VERSION_REV)
+     else(MERCURIAL_BIN)
+         set(VERSION_REV "0")
+     endif(MERCURIAL_BIN)
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/lib/CMakeLists.txt monochromeworlds-1.0.2/lib/benzaiten/lib/CMakeLists.txt
+--- a/lib/benzaiten/lib/CMakeLists.txt	2020-03-07 07:08:54.077293319 +0000
++++ b/lib/benzaiten/lib/CMakeLists.txt	2026-10-28 15:40:47.074861865 +0000
+@@ -1,2 +1,2 @@
+ # Process subdirectories.
+-add_subdirectory(signals)
++# Boost.Signals was replaced by the header-only Boost.Signals2.
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/CMakeLists.txt monochromeworlds-1.0.2/lib/benzaiten/src/CMakeLists.txt
+--- a/lib/benzaiten/src/CMakeLists.txt	2020-03-07 07:08:54.081293349 +0000
++++ b/lib/benzaiten/src/CMakeLists.txt	2026-10-28 15:40:47.034419786 +0000
+@@ -109,7 +109,7 @@
+ add_library(benzaiten STATIC ${benzaiten_HEADERS} ${benzaiten_SOURCES})
+ 
+ # Tell which libraries need to link against.
+-target_link_libraries(benzaiten signals ${SDLMIXER_LIBRARY} ${SDL_LIBRARY})
++target_link_libraries(benzaiten ${SDLMIXER_LIBRARY} ${SDL_LIBRARY})
+ 
+ # XXX: For some odd reason, I have to link against the vorbis library
+ # under GP2X.
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/EventManager.hpp monochromeworlds-1.0.2/lib/benzaiten/src/EventManager.hpp
+--- a/lib/benzaiten/src/EventManager.hpp	2020-03-07 07:08:54.081293349 +0000
++++ b/lib/benzaiten/src/EventManager.hpp	2026-10-28 15:40:36.176709146 +0000
+@@ -24,7 +24,7 @@
+ #endif // _MSC_VER && _MSC_VER >= 1020
+ 
+ #include <map>
+-#include <boost/signals.hpp>
++#include <boost/signals2/signal.hpp>
+ #include <SDL_events.h>
+ #include <SDL_joystick.h>
+ #if defined (A320)
+@@ -71,18 +71,18 @@
+     {
+         public:
+             /// The type for all events' handler.
+-            typedef boost::signals::connection Handler;
++            typedef boost::signals2::connection Handler;
+ 
+             /// The game should quit.
+-            mutable boost::signal<void ()> OnQuit;
++            mutable boost::signals2::signal<void ()> OnQuit;
+             /// An action has started.
+-            mutable boost::signal<void (int)> OnActionBegin;
++            mutable boost::signals2::signal<void (int)> OnActionBegin;
+             /// An action has ended.
+-            mutable boost::signal<void (int)> OnActionEnd;
++            mutable boost::signals2::signal<void (int)> OnActionEnd;
+             /// A menu accion event.
+-            mutable boost::signal<void (MenuAction)> OnMenuAction;
++            mutable boost::signals2::signal<void (MenuAction)> OnMenuAction;
+             /// The application lost focus.
+-            mutable boost::signal<void()> OnLostFocus;
++            mutable boost::signals2::signal<void()> OnLostFocus;
+ 
+             ///
+             /// @brief Initializes the joystick.
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/ResourceManager.cpp monochromeworlds-1.0.2/lib/benzaiten/src/ResourceManager.cpp
+--- a/lib/benzaiten/src/ResourceManager.cpp	2020-03-07 07:08:54.085293378 +0000
++++ b/lib/benzaiten/src/ResourceManager.cpp	2026-10-28 15:39:15.269710443 +0000
+@@ -46,7 +46,7 @@
+ std::string
+ ResourceManager::findResourcesPath (const std::string &appName)
+ {
+-#if defined (APPLE) || defined (GP2X)
++#if defined (APPLE) || defined (GP2X) || defined (PORTMASTER)
+     // In Mac OS X we assume that the application's working directory is
+     // the Resources directory, so we use the current directory as the
+     // resource's path.
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/SettingsImplUnix.cpp monochromeworlds-1.0.2/lib/benzaiten/src/SettingsImplUnix.cpp
+--- a/lib/benzaiten/src/SettingsImplUnix.cpp	2020-03-07 07:08:54.089293407 +0000
++++ b/lib/benzaiten/src/SettingsImplUnix.cpp	2026-10-28 15:43:17.994251216 +0000
+@@ -126,6 +126,12 @@
+ 
+ SettingsImplUnix::~SettingsImplUnix ()
+ {
++    save ();
++}
++
++void
++SettingsImplUnix::save () const
++{
+     std::ofstream file (fileName_.c_str ());
+     for ( std::map<std::string, Section>::const_iterator section = sections_.begin () ;
+             section != sections_.end () ; ++section )
+@@ -139,7 +145,7 @@
+         file << "\n";
+     }
+     file.close ();
+-#if defined (GP2X) || defined (A320)
++#if defined (GP2X) || defined (A320) || defined (PORTMASTER)
+     // This is required in order to store the values to the SD card.
+     sync ();
+ #endif // GP2X || A320
+@@ -201,6 +207,10 @@
+         const std::string &name, const std::string &value)
+ {
+     sections_[section][name] = value;
++#if defined (PORTMASTER)
++    // The game is usually closed by killing it, so don't wait for the destructor.
++    save ();
++#endif // PORTMASTER
+ }
+ 
+ std::string
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/SettingsImplUnix.hpp monochromeworlds-1.0.2/lib/benzaiten/src/SettingsImplUnix.hpp
+--- a/lib/benzaiten/src/SettingsImplUnix.hpp	2020-03-07 07:08:54.089293407 +0000
++++ b/lib/benzaiten/src/SettingsImplUnix.hpp	2026-10-28 15:43:17.995322871 +0000
+@@ -77,6 +77,11 @@
+             ///
+             std::string settingsFileName (const std::string &appName) const;
+ 
++            ///
++            /// @brief Writes all sections to the settings file.
++            ///
++            void save () const;
++
+             /// The settings file name.
+             std::string fileName_;
+             /// The settings options.
+diff -ruN -x build monochromeworlds-1.0.2.orig/lib/benzaiten/src/System.cpp monochromeworlds-1.0.2/lib/benzaiten/src/System.cpp
+--- a/lib/benzaiten/src/System.cpp	2020-03-07 07:08:54.093293436 +0000
++++ b/lib/benzaiten/src/System.cpp	2026-10-29 22:07:04.317329237 +0000
+@@ -35,8 +35,7 @@
+ {
+     if ( SDL_Init (SDL_INIT_TIMER |
+                 SDL_INIT_AUDIO |
+-                SDL_INIT_VIDEO |
+-                SDL_INIT_JOYSTICK) < 0 )
++                SDL_INIT_VIDEO) < 0 )
+     {
+         throw Error (SDL_GetError ());
+     }
+@@ -94,7 +93,7 @@
+         throw Error (SDL_GetError ());
+     }
+ 
+-#if defined (GP2X) || defined (A320)
++#if defined (GP2X) || defined (A320) || defined (PORTMASTER)
+     // This must be called *after* the call to SDL_SetVideoMode.
+     SDL_ShowCursor (0);
+ #endif // GP2X || A320
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/Stage.hpp monochromeworlds-1.0.2/src/Stage.hpp
+--- a/src/Stage.hpp	2020-02-08 09:54:52.165261885 +0000
++++ b/src/Stage.hpp	2026-10-28 15:40:36.171979557 +0000
+@@ -27,7 +27,7 @@
+ #include <stdexcept>
+ #include <string>
+ #include <boost/multi_array.hpp>
+-#include <boost/signals.hpp>
++#include <boost/signals2/signal.hpp>
+ #include "Undo.hpp"
+ 
+ namespace monochromeworlds
+@@ -205,7 +205,7 @@
+             };
+ 
+             /// A block is toggled except when undoing.
+-            mutable boost::signal<void (const Position &)> OnToggle;
++            mutable boost::signals2::signal<void (const Position &)> OnToggle;
+ 
+             ///
+             /// @brief Creates a new stage where all the blocks are walls.
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/StageMenuState.hpp monochromeworlds-1.0.2/src/StageMenuState.hpp
+--- a/src/StageMenuState.hpp	2020-02-08 09:54:52.173261941 +0000
++++ b/src/StageMenuState.hpp	2026-10-28 15:40:36.175998731 +0000
+@@ -26,7 +26,7 @@
+ #include <IGameState.hpp>
+ #include <Sound.hpp>
+ #include <Surface.hpp>
+-#include <boost/signal.hpp>
++#include <boost/signals2/signal.hpp>
+ 
+ namespace benzaiten
+ {
+@@ -43,10 +43,10 @@
+     class StageMenuState: public benzaiten::IGameState
+     {
+         public:
+-            mutable boost::signal<void ()> OnResume;
+-            mutable boost::signal<void ()> OnUndo;
+-            mutable boost::signal<void ()> OnReset;
+-            mutable boost::signal<void ()> OnQuit;
++            mutable boost::signals2::signal<void ()> OnResume;
++            mutable boost::signals2::signal<void ()> OnUndo;
++            mutable boost::signals2::signal<void ()> OnReset;
++            mutable boost::signals2::signal<void ()> OnQuit;
+ 
+             ///
+             /// @brief Constructor.
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/StageSelectState.cpp monochromeworlds-1.0.2/src/StageSelectState.cpp
+--- a/src/StageSelectState.cpp	2020-02-08 09:54:52.173261941 +0000
++++ b/src/StageSelectState.cpp	2026-10-28 16:17:58.710622548 +0000
+@@ -78,11 +78,18 @@
+ #if defined (GP2X) || defined (A320)
+     stagesTip_.push_back (std::make_pair (L"Press [B] to put or remove blocks at feet. Press\n[A] to switch characters.  Black can walk on\nwhite and White on black. Help each other to\nreach the grey goal.", 4));
+     stagesTip_.push_back (std::make_pair (L"If any of them gets stalled press [Start] to start\nover. Move thinking about what will be going on.", 2));
+-#else // !GP2X && !A320
++#elif defined (PORTMASTER) // !GP2X && !A320
++    stagesTip_.push_back (std::make_pair (L"Press [A] to put or remove blocks at feet. Press\n[Y] to switch characters.  Black can walk on\nwhite and White on black. Help each other to\nreach the grey goal.", 4));
++    stagesTip_.push_back (std::make_pair (L"If any of them gets stalled press [L1] to start\nover. Move thinking about what will be going on.", 2));
++#else // !GP2X && !A320 && !PORTMASTER
+     stagesTip_.push_back (std::make_pair (L"Press [Z] to put or remove blocks at feet. Press\n[Shift] to switch characters.  Black can walk on\nwhite and White on black. Help each other to\nreach the grey goal.", 4));
+     stagesTip_.push_back (std::make_pair (L"If any of them gets stalled press [C] to start over.\nMove thinking about what will be going on.", 2));
+ #endif // GP2X || A320
++#if defined (PORTMASTER)
++    stagesTip_.push_back (std::make_pair (L"Can climb over a wall of one. So, it is not safe to\nmake walls of two. Press [B] repeatelly to rewind\nthe actions. Remember this convenient feature.", 3));
++#else // !PORTMASTER
+     stagesTip_.push_back (std::make_pair (L"Can climb over a wall of one. So, it is not safe to\nmake walls of two. Press [X] repeatelly to rewind\nthe actions. Remember this convenient feature.", 3));
++#endif // PORTMASTER
+     stagesTip_.push_back (std::make_pair (L"It is not possible to change the color where the X\nmarks are. You will need you partner's help.", 2));
+     stagesTip_.push_back (std::make_pair (L"Passing through the ! marks changes the color.\nIt is essential to change the colors in order.", 2));
+     stagesTip_.push_back (std::make_pair (L"", 0));
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/StageState.hpp monochromeworlds-1.0.2/src/StageState.hpp
+--- a/src/StageState.hpp	2020-02-08 09:54:52.177261969 +0000
++++ b/src/StageState.hpp	2026-10-28 15:40:36.175536877 +0000
+@@ -47,7 +47,7 @@
+     {
+         public:
+             /// The stage has been cleared.
+-            mutable boost::signal<void ()> OnStageClear;
++            mutable boost::signals2::signal<void ()> OnStageClear;
+ 
+             ///
+             /// @brief Constructor.
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/TitleState.cpp monochromeworlds-1.0.2/src/TitleState.cpp
+--- a/src/TitleState.cpp	2020-02-08 09:54:52.197262110 +0000
++++ b/src/TitleState.cpp	2026-10-28 16:18:03.036076263 +0000
+@@ -56,6 +56,8 @@
+     std::wstring message (L"Press A or B Button");
+ #elif defined (A320) // !GP2X
+     std::wstring message (L"Press Start Button");
++#elif defined (PORTMASTER) // !A320
++    std::wstring message (L"Press A Button to Start");
+ #else // !A320
+     std::wstring message (L"Press Enter key to Start");
+ #endif // GP2X
+diff -ruN -x build monochromeworlds-1.0.2.orig/src/main.cpp monochromeworlds-1.0.2/src/main.cpp
+--- a/src/main.cpp	2020-02-08 09:54:52.201262138 +0000
++++ b/src/main.cpp	2026-10-28 15:39:26.304915567 +0000
+@@ -62,7 +62,8 @@
+ 
+         if ( !settings.shouldQuit () )
+         {
+-            Surface screen (system.setVideoMode (320, 240));
++            Surface screen (system.setVideoMode (320, 240, 0,
++                        static_cast<Surface::Flags> (SDL_SWSURFACE | SDL_FULLSCREEN)));
+             system.setTitle ("Monochrome Worlds");
+ 
+             Audio audio (44100, Audio::S16SYS, Audio::Stereo, 1024);
