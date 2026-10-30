@@ -61,22 +61,21 @@ Overly verbose, AI-generated ports are the current #1 rejection reason and are r
 
 ## Testing
 
-### Ports must contain a testing matrix that includes the following distributions:
-- Rocknix (wayland/sway/panfrost-or-libmali)
-- MuOS (fbdev and libmali)
-- dArkOS (kmsdrm with the most recent libmali blobs)
-- knulli (kmsdrm libmali)
-- AmberELEC (legacy libmali)
-(optional)
-- ArkOS
+CFW Tests:
+[ ] AmberELEC
+[ ] dArkOS
+[ ] MuOS
+ROCKNIX
+-> [ ] Libmali
+-> [ ] Panfrost
+-> [ ] Adreno (Optional)
+[ ] Knulli
 
-### Also it's advisable to test on varying resolutions:
-- 640x480 (most common)
-- 1024x768
-- 1280x720
-- 720x720
-(optional)
-- 320x240
+Resolutions:
+[ ] 480x320 (Optional)
+[ ] 640x480
+[ ] 720x720 (RGB30) (Optional)
+[ ] Higher resolutions (e.g., 1280)
 
 ### Additionally, PortMaster supports the following CPU types so consider testing on each:
 - rk3326 (mali g31mp2)
