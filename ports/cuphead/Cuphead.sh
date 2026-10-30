@@ -61,8 +61,8 @@ run_setup() {   # run_setup <patchscript> <time> [no-questions]
       && rm -f "$z" || { pm_message "Could not unpack ${z#$GAMEDIR/}: is the card full?"; sleep 5; pm_finish; exit 1; }
   done
   export GAMEDIR DEVICE_ARCH controlfolder DISPLAY_WIDTH DISPLAY_HEIGHT   # (the questions read the screen size)
-  # the CPU at full speed while the setup runs, kept there if the firmware lowers it (setup/cpu.sh)
-  source "$GAMEDIR/setup/cpu.sh"
+  # the CPU at full speed while the setup runs, kept there if the firmware lowers it (setup/cpu.txt)
+  source "$GAMEDIR/setup/cpu.txt"
   { echo "== $(date '+%Y-%m-%d %H:%M:%S') $PORT_INFO: $(basename "$(dirname "$1")")/$(basename "$1")"
     cpu_state; cpu_fast; cpu_state; } >> "$GAMEDIR/patchlog.txt"
   cpu_hold "$GAMEDIR/patchlog.txt" &
@@ -95,7 +95,7 @@ export UA_PAD_NAME="Xbox Wireless Controller"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
 if [ "$CUPHEAD_ROUTE" = 64 ]; then
-  source "$GAMEDIR/launch64.sh"
+  source "$GAMEDIR/launch64.txt"
   exit
 fi
 
