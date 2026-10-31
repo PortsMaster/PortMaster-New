@@ -1,0 +1,44 @@
+#!/bin/bash
+# Sourced by repack.src after entering gamedata.
+scott_select_build() {
+    local executable_hash
+    if [ ! -f Game.exe ]; then
+        echo "ERROR: Missing Game.exe. Copy the contents of a supported Windows ScottPilgrimEX folder into gamedata."
+        return 1
+    fi
+    executable_hash="$(sha256sum Game.exe)" || return 1
+    executable_hash="${executable_hash%% *}"
+    case "$executable_hash" in
+        4dc95a0ee5a4fdd786c1f82e655d48cd3adb69e35efc755a25a9261f612adafc)
+            SCOTT_BUILD=22184139
+            SCOTT_VERSION=1.0.0.13988
+            SCOTT_CHECKSUM_REL=../patches/supported-build.sha256
+            SCOTT_ASSET_PLAN_REL=../patches/asset-plan.txt
+            SCOTT_PATCH_DIR_REL=../patches
+            ;;
+        8d675f35642241ff071210a5487b41e84755eb62346cc775cc3746782798c4c3)
+            SCOTT_BUILD=24607859
+            SCOTT_VERSION=1.0.0.15231
+            SCOTT_CHECKSUM_REL=../patches/supported-build-24607859.sha256
+            SCOTT_ASSET_PLAN_REL=../patches/asset-plan-24607859.txt
+            SCOTT_PATCH_DIR_REL=../patches/build-24607859
+            ;;
+        *)
+            echo "ERROR: Unsupported Game.exe. Supported Steam Windows builds: 22184139 / 1.0.0.13988 and 24607859 / 1.0.0.15231. See README.md."
+            return 1
+            ;;
+    esac
+    for required in "$SCOTT_CHECKSUM_REL" "$SCOTT_ASSET_PLAN_REL" "$SCOTT_PATCH_DIR_REL/Game.ScottPilgrimEXPatches.mm.dll" "$SCOTT_PATCH_DIR_REL/ParisEngine.ScottPilgrimEXPatches.mm.dll"; do
+        if [ ! -f "$required" ]; then
+            echo "ERROR: Missing port setup file: $required"
+            return 1
+        fi
+    done
+    echo "Supported Steam build $SCOTT_BUILD / Game $SCOTT_VERSION selected."
+    if ! sha256sum -c "$SCOTT_CHECKSUM_REL"; then
+        echo "ERROR: Supported-build verification failed. See the individual file results above."
+        return 1
+    fi
+    export SCOTT_BUILD SCOTT_VERSION SCOTT_CHECKSUM_REL SCOTT_ASSET_PLAN_REL SCOTT_PATCH_DIR_REL
+}
+scott_select_build
