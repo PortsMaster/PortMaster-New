@@ -1,0 +1,64 @@
+#!/bin/bash
+# Adds The Delicious Last Course to a built game (run through PortMaster's patcher by Cuphead.sh or
+# launch64.txt when the DLC's files appear in gamedata/ after the setup: GOG's DLC installer, or a
+# Cuphead.app holding the DLC's bundles). The DLC is asset bundles only: they are converted like the
+# game's and packed as the patch OBB beside the built game (DLC_TARGET: $GAMEDIR, or arm64/), which
+# Unity's player reads beside the main one, and the game's DLC check is switched on (cuphead_dlc,
+# GOG's .info file). The built game is not touched. Each step is marked done.
+GD="$GAMEDIR/gamedata"; S="$GAMEDIR/setup"; T="${DLC_TARGET:-$GAMEDIR}"; W="$GD/.dlc"; D="$W/Data"
+Q=$(cat "$GAMEDIR/texture_quality.txt" 2>/dev/null); Q=${Q:-fast}           # (the game's own setup's)
+B="$D/StreamingAssets/AssetBundles"
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+fail() { echo "PATCH_FAIL_MSG:$1"; echo "Patching process failed!"; exit 1; }
+. "$S/cpu.txt"
+step() { echo "== $(date +%H:%M:%S) $*"; cpu_state; }   # (setup/cpu.txt: the CPU at each step)
+mkdir -p "$B" || fail "Cannot write to ports/cuphead/gamedata."
+export PYTHONPATH="$S/pylibs:$S" PYTHONDONTWRITEBYTECODE=1
+pm() { (cd "$S" && PYTHONHOME="$python_dir" LD_LIBRARY_PATH="$python_dir/libs:$LD_LIBRARY_PATH" "$python_dir/bin/python3" -m pmunity "$@"); }
+. "$S/resume.txt"   # (pm_convert: the conversion run again when the kernel kills it)
+
+# 1. the DLC's bundles the game does not have yet, and the game's settings file (its Unity version)
+if [ ! -f "$W/.step_files" ]; then
+  PKG=$(ls "$GD"/*.pkg 2>/dev/null | head -1)
+  APP=$(ls -d "$GD"/Cuphead.app "$GD"/*/Cuphead.app 2>/dev/null | head -1)
+  if [ -n "$PKG" ]; then
+    step "unpacking the DLC's installer"
+    rm -rf "$W/pkgroot"
+    pm macpkg "$W/pkgroot" "$PKG" || fail "Could not unpack $(basename "$PKG") (see patchlog.txt)."
+    SRC=$(find "$W/pkgroot" -type d -path '*Data/StreamingAssets/AssetBundles' | head -1)
+    INFO=$(find "$W/pkgroot" -name 'goggame-2048763853.info' | head -1)
+  else
+    SRC="$APP/Contents/Resources/Data/StreamingAssets/AssetBundles"
+    INFO=$(ls "$APP"/Contents/Resources/goggame-2048763853.info 2>/dev/null)
+  fi
+  [ -d "$SRC" ] || fail "No DLC files found: put GOG's DLC installer (.pkg) or a Cuphead.app with the DLC in ports/cuphead/gamedata."
+  pm patch-obb new "$SRC" "$T" > "$W/new.txt" || fail "Could not read the built game (see patchlog.txt)."
+  grep -q _dlc "$W/new.txt" || fail "These files hold no DLC the game does not have already."
+  step "the DLC: $(wc -l < "$W/new.txt") new bundles"
+  while read -r n; do mv -f "$SRC/$n" "$B/" || fail "Could not move $n."; done < "$W/new.txt"
+  [ -n "$INFO" ] && cp "$INFO" "$W/"
+  pm patch-obb ggm "$T" "$D/globalgamemanagers" || fail "Could not read the built game (see patchlog.txt)."
+  rm -rf "$W/pkgroot"
+  touch "$W/.step_files"
+fi
+
+# 2. conversion: the bundles' shaders, textures and audio, as the setup converted the game's
+if [ ! -f "$W/.step_convert" ]; then
+  step "converting the DLC, texture quality $Q (the long part)"
+  pm_convert "$D" --config "$S/cuphead.json" --steps shaders,textures,audio --set textures.quality="$Q" --set textures.guide="$S/astc_guide_$Q.bin" \
+    || fail "Converting the DLC failed (see patchlog.txt). Launch again to continue."
+  touch "$W/.step_convert"
+fi
+
+# 3. the patch OBB beside the game, and the DLC switched on
+if [ ! -f "$W/.step_pack" ]; then
+  step "adding the DLC to the game"
+  pm patch-obb pack "$B" "$T" || fail "Packing the DLC failed (see patchlog.txt). Launch again to continue."
+  touch "$W/.step_pack"
+fi
+[ -f "$W/goggame-2048763853.info" ] && cp "$W/goggame-2048763853.info" "$T/"
+touch "$T/cuphead_dlc"
+rm -rf "$W" "$GD"/*.pkg "$GD"/*.app
+sync
+step "the DLC is in"
