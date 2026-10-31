@@ -44,6 +44,8 @@ fi
 runtime="python_3.11"
 export python_dir="$HOME/$runtime"
 run_setup() {   # run_setup <patchscript> <time> [no-questions]
+  # (without Wi-Fi: the runtime copied into ports/cuphead/ goes where PortMaster keeps it)
+  [ -f "$GAMEDIR/${runtime}.squashfs" ] && $ESUDO mv -f "$GAMEDIR/${runtime}.squashfs" "$controlfolder/libs/"
   if [ ! -f "$controlfolder/libs/${runtime}.squashfs" ]; then
     if [ ! -f "$controlfolder/harbourmaster" ]; then
       pm_message "This port requires the latest PortMaster to run, please go to https://portmaster.games/ for more info."
@@ -55,6 +57,10 @@ run_setup() {   # run_setup <patchscript> <time> [no-questions]
   mkdir -p "$python_dir"
   [[ "$PM_CAN_MOUNT" != "N" ]] && $ESUDO umount "$python_dir"
   $ESUDO mount "$controlfolder/libs/${runtime}.squashfs" "$python_dir"
+  if [ ! -x "$python_dir/bin/python3" ]; then   # (not installed, and harbourmaster could not download it)
+    pm_message "PortMaster's Python runtime (python_3.11) is missing. Connect to Wi-Fi and start Cuphead again, or install it in PortMaster (Options, Runtime Manager). Without Wi-Fi: put python_3.11.squashfs from PortMaster's releases in ports/cuphead and start Cuphead again."
+    sleep 8; pm_finish; exit 1
+  fi
   for z in "$GAMEDIR"/setup/*.zip "$(dirname "$1")"/*.zip; do
     [ -f "$z" ] || continue
     PYTHONHOME="$python_dir" LD_LIBRARY_PATH="$python_dir/libs:$LD_LIBRARY_PATH" "$python_dir/bin/python3" -m zipfile -e "$z" "$(dirname "$z")" \
