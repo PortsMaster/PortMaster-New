@@ -1,0 +1,266 @@
+diff --git a/decomp/features.cpp b/decomp/features.cpp
+index a8789688..e10a2fb3 100644
+--- a/decomp/features.cpp
++++ b/decomp/features.cpp
+@@ -21,7 +21,7 @@
+ #include "sound.h"
+ #include "view.h"
+ 
+-char gameName[] = "New Game";
++char gameName[22] = "New Game";
+ const char *dialogTexts[289] = {
+     "THE CURRENT PARTY OF ZOOMBINIS WILL BE LOST IF YOU GO TO THE MAP", "LOSE ' EM", "KEEP ' EM",
+     "OK", "CANCEL", "LOAD", "SAVE", "OPTIONS", "= ON", "= OFF", "ON/OFF TOGGLES:",
+diff --git a/decomp/game.cpp b/decomp/game.cpp
+index 7cf723eb..c5a23fc7 100644
+--- a/decomp/game.cpp
++++ b/decomp/game.cpp
+@@ -142,7 +142,7 @@ unsigned long leastFreeMemory = 0x98967f;
+ unsigned short showMemoryStats = 0;
+ short leavingGame = 0;
+ short tempFileExists = 0;
+-char userFileName[] = "ZBUser";
++char userFileName[32] = "ZBUser";
+ char rosterFileName[42] = {
+     90, 111, 111, 109, 98, 105, 110, 105, 46, 119, 104, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 122, 111, 111, 109, 115, 105, 116, 101,
+diff --git a/decomp/zoombinis.h b/decomp/zoombinis.h
+index f0ced2e2..695c15bb 100644
+--- a/decomp/zoombinis.h
++++ b/decomp/zoombinis.h
+@@ -1000,7 +1000,7 @@ extern Callback clickHook; /* @data 0x4a07e8 */
+ extern Callback paintHook; /* @data 0x4a07ec: draws the window's contents, if set */
+ extern Scene *scenes[]; /* @data 0x4a26e8 */
+ extern char installFromDirKey[]; /* @data 0x4a3f06 */
+-extern char userFileName[]; /* @data 0x4a4900 */
++extern char userFileName[32]; /* @data 0x4a4900: the saved game's file (ZOOMnnnn.txt); 32 bytes in the original, up to rosterFileName */
+ extern char rosterFileName[]; /* @data 0x4a4920 */
+ extern short loadingImages; /* @data 0x4a4974 */
+ extern void (*gameActivateHook)(short active); /* @data 0x4a4a00: told when the window is (de)activated */
+@@ -3680,7 +3680,7 @@ enum DialogText
+     textReallyQuit = 41,
+     textCreditLines = 42,
+ };
+-extern char gameName[]; /* @data 0x4a48ea */
++extern char gameName[22]; /* @data 0x4a48ea: 22 bytes in the original, up to userFileName */
+ extern char clickToDragOption; /* @data 0x4b8800: the options' click-to-drag setting */
+ extern unsigned short transitionsOn; /* @data 0x4b0d4a */
+ extern short townDialogView; /* @data 0x4a74dc */
+diff --git a/port/CMakeLists.txt b/port/CMakeLists.txt
+index d7e8fd47..3cb5f19f 100644
+--- a/port/CMakeLists.txt
++++ b/port/CMakeLists.txt
+@@ -144,6 +144,12 @@ target_compile_options(miniwin PRIVATE -fsigned-char -fno-exceptions -fno-rtti -
+     -Wno-unused-function)
+ target_link_libraries(miniwin PRIVATE SDL2::SDL2)
+ 
++# ZB_FULLSCREEN: open the window fullscreen (for handhelds, e.g. PortMaster).
++option(ZB_FULLSCREEN "Open the window fullscreen" OFF)
++if(ZB_FULLSCREEN)
++    target_compile_definitions(miniwin PRIVATE ZB_FULLSCREEN)
++endif()
++
+ # The host layer: fibers and the event loop, per target. It never sees
+ # miniwin's headers, so it can use a host's real Win32 API.
+ if(EMSCRIPTEN)
+diff --git a/port/main.cpp b/port/main.cpp
+index 5c775996..8702f212 100644
+--- a/port/main.cpp
++++ b/port/main.cpp
+@@ -47,6 +47,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPSTR commandLine, in
+ extern "C" void zbDebugRun(const char *commands); /* port/debug/zbdebug.cpp */
+ #endif
+ 
++/* The game's texts (decomp/picker.h, town.h, mainloop.h, features.h, zoombinis.h). */
++extern char *placeNames[16];
++extern char *mapTexts[21];
++extern char *levelTexts[24];
++extern char *monumentTexts[16];
++extern char *featTexts[16];
++extern const char *toggleTexts[15];
++extern const char *dialogTexts[];
++
+ static void usage()
+ {
+     fprintf(stderr, "usage: zoombinis [--data <directory>]\n       zoombinis --drive C=<directory> --cdrom D=<directory>[,<label>[,<serial>]]\n"
+@@ -73,6 +82,115 @@ static void addDriveArgument(const char *argument, bool cdrom)
+     miniwin::addDrive(text[0], path.c_str(), label.c_str(), (DWORD)strtoul(serial.c_str(), 0, 0), cdrom);
+ }
+ 
++/* Mac Roman (the localized CDs' strings) to Windows-1252, from 0x80. */
++static const unsigned char macRoman[128] = {
++    0xc4, 0xc5, 0xc7, 0xc9, 0xd1, 0xd6, 0xdc, 0xe1, 0xe0, 0xe2, 0xe4, 0xe3, 0xe5, 0xe7, 0xe9, 0xe8,
++    0xea, 0xeb, 0xed, 0xec, 0xee, 0xef, 0xf1, 0xf3, 0xf2, 0xf4, 0xf6, 0xf5, 0xfa, 0xf9, 0xfb, 0xfc,
++    0x86, 0xb0, 0xa2, 0xa3, 0xa7, 0x95, 0xb6, 0xdf, 0xae, 0xa9, 0x99, 0xb4, 0xa8, 0x3f, 0xc6, 0xd8,
++    0x3f, 0xb1, 0x3f, 0x3f, 0xa5, 0xb5, 0x3f, 0x3f, 0x3f, 0x3f, 0x3f, 0xaa, 0xba, 0x3f, 0xe6, 0xf8,
++    0xbf, 0xa1, 0xac, 0x3f, 0x83, 0x3f, 0x3f, 0xab, 0xbb, 0x85, 0xa0, 0xc0, 0xc3, 0xd5, 0x8c, 0x9c,
++    0x96, 0x97, 0x93, 0x94, 0x91, 0x92, 0xf7, 0x3f, 0xff, 0x9f, 0x3f, 0x80, 0x8b, 0x9b, 0x3f, 0x3f,
++    0x87, 0xb7, 0x82, 0x84, 0x89, 0xc2, 0xca, 0xc1, 0xcb, 0xc8, 0xcd, 0xce, 0xcf, 0xcc, 0xd3, 0xd4,
++    0x3f, 0xd2, 0xda, 0xdb, 0xd9, 0x3f, 0x88, 0x98, 0xaf, 0x3f, 0x3f, 0x3f, 0xb8, 0x3f, 0x3f, 0x3f,
++};
++
++/* The 'STRL' lists of a Mohawk archive, by id: a count byte, then the strings,
++   each ending in a 0. */
++static std::vector<std::pair<int, std::vector<std::string>>> readStringLists(const std::vector<unsigned char> &d)
++{
++    auto be = [&](size_t at, int n) {
++        unsigned long value = 0;
++        for (int i = 0; i < n; i++)
++            value = value << 8 | (at + i < d.size() ? d[at + i] : 0);
++        return value;
++    };
++    std::vector<std::pair<int, std::vector<std::string>>> lists;
++    if (d.size() < 28 || memcmp(d.data(), "MHWK", 4) || memcmp(d.data() + 8, "RSRC", 4))
++        return lists;
++    size_t directory = be(20, 4), files = directory + be(24, 2);
++    unsigned long types = be(directory + 2, 2), fileCount = be(files, 4);
++    for (unsigned long t = 0; t < types; t++) {
++        size_t type = directory + 4 + t * 8;
++        if (type + 8 > d.size() || memcmp(d.data() + type, "STRL", 4))
++            continue;
++        size_t table = directory + be(type + 4, 2);
++        for (unsigned long r = 0, count = be(table, 2); r < count; r++) {
++            unsigned long id = be(table + 2 + r * 4, 2), index = be(table + 4 + r * 4, 2);
++            if (!index || index > fileCount)
++                continue;
++            size_t entry = files + 4 + (index - 1) * 10;
++            size_t at = be(entry, 4), size = be(entry + 4, 2) | be(entry + 6, 1) << 16 | (be(entry + 7, 1) & 7) << 24;
++            if (at + size > d.size() || !size)
++                continue;
++            std::vector<std::string> strings;
++            std::string text;
++            for (size_t i = at + 1; i < at + size && strings.size() < d[at]; i++) {
++                unsigned char c = d[i];
++                if (!c) {
++                    strings.push_back(text);
++                    text.clear();
++                } else
++                    text += (char)(c >= 0x80 ? macRoman[c - 0x80] : c);
++            }
++            if (strings.size() == d[at])
++                lists.push_back({(int)id, strings});
++        }
++    }
++    return lists;
++}
++
++/* A localized CD (French, German: Windows 3.1's build) keeps the game's texts
++   in TEXTSTR.MHK, which the Windows 95 build doesn't read: they replace the
++   English ones, list by list where a list has as many as the game's table
++   (the dialogs' first 42; the credits stay English). */
++static void useLocalizedTexts(const std::filesystem::path &cd)
++{
++    namespace fs = std::filesystem;
++    std::error_code error;
++    fs::path file;
++    for (const auto &entry : fs::directory_iterator(cd / "DATA", error)) {
++        std::string name = entry.path().filename().string();
++        for (char &c : name)
++            c = (char)toupper((unsigned char)c);
++        if (name == "TEXTSTR.MHK")
++            file = entry.path();
++    }
++    if (file.empty())
++        return;
++    std::ifstream in(file, std::ios::binary);
++    std::vector<unsigned char> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
++    struct Target
++    {
++        int id;
++        size_t count; /* the list's */
++        const char **table;
++        size_t first, used;
++    };
++    const Target targets[] = {
++        {2000, 16, (const char **)placeNames, 0, 16},   {2002, 21, (const char **)mapTexts, 0, 21},
++        {2004, 6, (const char **)levelTexts, 0, 6},     {2006, 4, (const char **)levelTexts, 6, 4},
++        {2008, 1, (const char **)levelTexts, 10, 1},    {2010, 12, (const char **)levelTexts, 11, 12},
++        {2012, 1, (const char **)levelTexts, 23, 1},    {2014, 16, (const char **)monumentTexts, 0, 16},
++        {2016, 16, (const char **)featTexts, 0, 16},    {2018, 47, dialogTexts, 0, 42},
++        {2023, 14, toggleTexts, 1, 14},
++    };
++    int used = 0;
++    for (const auto &list : readStringLists(data))
++        for (const Target &target : targets)
++            if (list.first == target.id && list.second.size() == target.count) {
++                for (size_t i = 0; i < target.used; i++) {
++                    std::string text = list.second[i];
++                    const char *english = target.table[target.first + i];
++                    /* (the population's "...\rpopulation " is followed by the number) */
++                    if (*english && english[strlen(english) - 1] == ' ' && (text.empty() || text.back() != ' '))
++                        text += ' ';
++                    target.table[target.first + i] = strdup(text.c_str());
++                }
++                used++;
++            }
++    printf("texts from %s: %d of %d lists\n", file.filename().string().c_str(), used, (int)(sizeof targets / sizeof *targets));
++}
++
+ /* The packaged game's drives (see the top of this file): C: in the player's
+    preferences directory, seeded from `data`/C, and D: `data`/D. The SoundFont
+    in `data`, if there is one, is `soundFont`. False if `data` isn't one. */
+@@ -99,6 +217,7 @@ static bool useInstalledGame(const std::string &data, std::string &soundFont)
+     }
+     miniwin::addDrive('C', c.string().c_str(), "DISK", 0, false);
+     miniwin::addDrive('D', cd.string().c_str(), "ZOOMBINIS", 0x19960101, true);
++    useLocalizedTexts(cd);
+     for (const auto &entry : fs::directory_iterator(data, error))
+         if (entry.path().extension() == ".sf2")
+             soundFont = entry.path().string();
+diff --git a/port/miniwin/files.cpp b/port/miniwin/files.cpp
+index 6e89e285..1465dabf 100644
+--- a/port/miniwin/files.cpp
++++ b/port/miniwin/files.cpp
+@@ -32,6 +32,9 @@ struct Drive
+ 
+ static Drive *drives[26];
+ static std::string currentDirectory = "C:\\";
++/* Each drive's current directory, as Windows keeps them: "C:" alone (or
++   "C:name") means C:'s, not the root, after the current one moved to D:. */
++static std::string driveDirectories[26];
+ 
+ void addDrive(char letter, const char *path, const char *label, DWORD serial, bool cdrom)
+ {
+@@ -71,8 +74,13 @@ static std::string fullPath(const char *path)
+             full = text;
+         else if (toupper((unsigned char)text[0]) == toupper((unsigned char)currentDirectory[0]))
+             full = currentDirectory + "\\" + text.substr(2);
+-        else
+-            full = text.substr(0, 2) + "\\" + text.substr(2);
++        else {
++            int index = toupper((unsigned char)text[0]) - 'A';
++            if (index >= 0 && index < 26 && !driveDirectories[index].empty())
++                full = driveDirectories[index] + "\\" + text.substr(2);
++            else
++                full = text.substr(0, 2) + "\\" + text.substr(2);
++        }
+     } else if (!text.empty() && text[0] == '\\')
+         full = currentDirectory.substr(0, 2) + text;
+     else
+@@ -624,6 +632,7 @@ BOOL SetCurrentDirectory(LPCSTR path)
+     if (full.size() > 3 && full.back() == '\\')
+         full.pop_back();
+     currentDirectory = full;
++    driveDirectories[toupper((unsigned char)full[0]) - 'A'] = full;
+     return TRUE;
+ }
+ 
+diff --git a/port/miniwin/screen.cpp b/port/miniwin/screen.cpp
+index a3e43b2f..6729fc27 100644
+--- a/port/miniwin/screen.cpp
++++ b/port/miniwin/screen.cpp
+@@ -30,9 +30,12 @@ static SDL_Rect viewport;
+ 
+ bool openScreen(const char *title)
+ {
++    Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
++#ifdef ZB_FULLSCREEN
++    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP; /* (a handheld: the whole screen, letterboxed) */
++#endif
+     window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+-                              SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2,
+-                              SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
++                              SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, flags);
+     if (!window) {
+         trace("SDL_CreateWindow: %s", SDL_GetError());
+         return false;
