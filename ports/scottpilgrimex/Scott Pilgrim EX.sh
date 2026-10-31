@@ -24,10 +24,9 @@ export gamedir="/$directory/ports/scottpilgrimex"
 cd "$gamedir/gamedata" || exit 1
 find "$gamedir/gamedata" -type f -name '.DS_Store' -exec rm -f {} \;
 
-# Grab text output...
-$ESUDO chmod 666 /dev/tty0
-printf "\033c" > /dev/tty0
-echo "Loading... Please Wait." > /dev/tty0
+# Log the launcher, setup and game output.
+> "$gamedir/log.txt" && exec > >(tee "$gamedir/log.txt") 2>&1
+pm_message "Loading... Please Wait."
 
 # Setup mono
 monodir="$HOME/mono"
@@ -35,7 +34,7 @@ monofile="$controlfolder/libs/mono-6.12.0.122-aarch64.squashfs"
 $ESUDO mkdir -p "$monodir"
 $ESUDO umount "$monofile" || true
 if ! $ESUDO mount "$monofile" "$monodir"; then
-    echo "ERROR: Cannot mount Mono runtime: $monofile"
+    pm_message "ERROR: Cannot mount Mono runtime: $monofile"
     exit 1
 fi
 
@@ -61,7 +60,7 @@ export FNA_SDL2_FORCE_BASE_PATH=0
 
 sha1sum -c "${gamedir}/gamedata/.ver_checksum"
 if [ $? -ne 0 ]; then
-	echo "Checksum fail or unpatched binary found, patching game..." 2>&1 | tee /dev/tty0
+	pm_message "Checksum fail or unpatched binary found, patching game..."
 	rm -f "${gamedir}/gamedata/.astc_done"
 	rm -f "${gamedir}/gamedata/.patch_done"
 	rm -f "${gamedir}/gamedata/.intro_done"
@@ -70,13 +69,13 @@ fi
 if [[ ! -f "$gamedir/gamedata/.astc_done" ]] ||
    [[ ! -f "$gamedir/gamedata/.patch_done" ]] ||
    [[ ! -f "$gamedir/gamedata/.intro_done" ]]; then
-    echo "First-launch setup requested. Log: $gamedir/repack.log"
+    pm_message "First-launch setup requested. Log: $gamedir/repack.log"
     chmod +x ../progressor ../repack.src ../utils/* ../patches/setup-screen ../patches/select-build
     if [ -f "$controlfolder/utils/patcher.txt" ] &&
        [ -f "$controlfolder/runtimes/love_11.5/love.txt" ] &&
        [ -x "$controlfolder/runtimes/love_11.5/love.$DEVICE_ARCH" ] &&
        [ -n "$GPTOKEYB" ] && declare -F pm_gptokeyb_finish >/dev/null; then
-        echo "Setup display: PortMaster patcher"
+        pm_message "Setup display: PortMaster patcher"
         export PATCHER_FILE="bash \"$gamedir/patches/setup-screen\""
         export PATCHER_GAME="Scott Pilgrim EX"
         export PATCHER_TIME="a while; keep the device powered and awake"
@@ -84,13 +83,15 @@ if [[ ! -f "$gamedir/gamedata/.astc_done" ]] ||
         export controlfolder
         rm -f "$gamedir/gamedata/.setup_screen_done"
         # Keep the patcher's runtime environment separate from the game.
+        pm_platform_helper "$controlfolder/runtimes/love_11.5/love.$DEVICE_ARCH"
         ( source "$controlfolder/utils/patcher.txt" )
         if [ ! -f "$gamedir/gamedata/.setup_screen_done" ]; then
-            echo "Setup did not finish. See $gamedir/repack.log."
+            pm_message "Setup did not finish. See $gamedir/repack.log."
             exit 1
         fi
     else
-        echo "PortMaster patch screen unavailable; using the setup log display."
+        pm_message "PortMaster patch screen unavailable; using the setup log display."
+        pm_platform_helper "$gamedir/progressor"
         ../progressor --log "../repack.log" --font "../FiraCode-Regular.ttf" \
             --title "First Time Setup" ../repack.src
         [[ $? != 0 ]] && exit 1
@@ -105,14 +106,10 @@ if [[ -f "${gamedir}/gamedata/MONOMODDED_ParisEngine.dll.so" ]]; then
 	mv "${gamedir}/gamedata/MONOMODDED_${gameassembly}.so" "${gamedir}/gamedata/${gameassembly}.so"
 fi
 
-printf "\033c" > /dev/tty0
-echo "Loading... Please Wait." > /dev/tty0
+pm_message "Loading... Please Wait."
 
 $GPTOKEYB "mono" &
-$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly} 2>&1 | tee ${gamedir}/log.txt
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
+pm_platform_helper "$monodir/bin/mono"
+$TASKSET mono --ffast-math -O=all ../MMLoader.exe MONOMODDED_${gameassembly}
 $ESUDO umount "$monodir"
-
-# Disable console
-printf "\033c" >> /dev/tty1
+pm_finish
