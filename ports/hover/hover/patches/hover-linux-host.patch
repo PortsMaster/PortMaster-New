@@ -1,0 +1,238 @@
+--- a/src/linux/CMakeLists.txt
++++ b/src/linux/CMakeLists.txt
+@@ -0,0 +1,47 @@
++# =============================================================================
++# Hover! - static recompilation, Linux host (win32hle, 64-bit based memory)
++#
++#   python3 run_lift.py                       # -> src/recomp/gen/
++#   cmake -S src/linux -B build-linux -G Ninja -DTSF_DIR=<TinySoundFont checkout>
++#   cmake --build build-linux                 # -> build-linux/hover
++#
++# The same lift as the Windows host. win32hle answers every import on SDL2,
++# so nothing here needs Windows, Wine or MSVC.
++# =============================================================================
++cmake_minimum_required(VERSION 3.16)
++project(hover_linux C)
++
++if(NOT CMAKE_BUILD_TYPE)
++  set(CMAKE_BUILD_TYPE Release)
++endif()
++
++get_filename_component(HOVER_ROOT "${CMAKE_SOURCE_DIR}/../.." ABSOLUTE)
++set(PCRECOMP "${HOVER_ROOT}/../pcrecomp" CACHE PATH "pcrecomp checkout")
++set(TSF_DIR "" CACHE PATH "TinySoundFont checkout (tsf.h); empty builds MIDI silent")
++set(HLE "${PCRECOMP}/runtime/win32hle")
++
++file(GLOB GEN_SOURCES CONFIGURE_DEPENDS "${HOVER_ROOT}/src/recomp/gen/*.c")
++if(NOT GEN_SOURCES)
++  message(FATAL_ERROR "src/recomp/gen is empty -- run `python3 run_lift.py` first")
++endif()
++file(GLOB HLE_SOURCES "${HLE}/*.c")
++list(FILTER HLE_SOURCES EXCLUDE REGEX "_selftest\\.c$")
++
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2 SDL2_ttf)
++find_package(Threads REQUIRED)
++
++add_executable(hover host.c sp.c ${HLE_SOURCES} ${GEN_SOURCES})
++target_include_directories(hover PRIVATE
++  "${HOVER_ROOT}/src/recomp/gen" "${HLE}" "${PCRECOMP}/runtime/recomp32")
++target_compile_definitions(hover PRIVATE RECOMP_RETADDR=0u RECOMP_LOCAL_REGS)
++if(TSF_DIR)
++  target_include_directories(hover PRIVATE "${TSF_DIR}")
++  target_compile_definitions(hover PRIVATE HLE_WITH_TSF)
++endif()
++target_link_libraries(hover PRIVATE PkgConfig::SDL2 Threads::Threads m)
++
++set(GEN_OPT "-O2" CACHE STRING "optimisation for the generated C")
++set_source_files_properties(${GEN_SOURCES} PROPERTIES COMPILE_OPTIONS "-w;${GEN_OPT};-fwrapv;-fno-strict-aliasing")
++set_source_files_properties(host.c sp.c PROPERTIES COMPILE_OPTIONS "-Wall;-g")
++set_source_files_properties(${HLE_SOURCES} PROPERTIES COMPILE_OPTIONS "-g")
+--- a/src/linux/host.c
++++ b/src/linux/host.c
+@@ -0,0 +1,155 @@
++/*
++ * host.c - Hover! on win32hle: Linux (and any SDL2 target), no Windows, no
++ * Wine.
++ *
++ *   hover.aarch64 [game dir] [registry file] [SoundFont]
++ *
++ * The game dir holds the player's own HOVER.EXE, DASHRES.DLL, MAZES\ and
++ * SOUNDS\ (default: the current directory). It becomes C:\ and the current
++ * directory, as the game reads its data relative to that. The registry file
++ * keeps the settings and high scores the game writes under
++ * HKCU\Software\Microsoft\Hover!; the SoundFont plays the .MUZ music.
++ *
++ * win32hle answers every import. What is here is what this game needs on top
++ * of it, the Linux counterparts of src/runtime/host.c's shims
++ * (docs/host.md): the display check, the frame pinned to the window surface,
++ * and dialogs answered without being shown.
++ */
++#define _GNU_SOURCE
++#include <limits.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include "win32hle.h"
++#include "host.h"
++
++#define RC_PALETTE 0x0100u
++
++/* The shim win32hle registered for `name`: a title shim that wraps one
++ * calls it with the guest's arguments still on the stack, and it returns as
++ * that import would. */
++static recomp_func_t hle_fn(const win32hle_shim *table, const char *name) {
++    for (; table->name; table++)
++        if (!strcmp(table->name, name)) return table->fn;
++    hle_fatal("win32hle has no %s", name);
++    return NULL;
++}
++
++/* The startup display check (0x0041CEE3, and 0x0041CF6D, the catalog's
++ * entry inside it) wants a 256-colour palette device, or it says "not
++ * running a 256 color video driver". The game draws into its own 8-bit DIBs
++ * either way, so only that check is told what it asks for. */
++static void shim_GetDeviceCaps(void) {
++    uint32_t index = A32(1);
++    hle_fn(win32hle_gdi32, "GetDeviceCaps")();
++    if (g_cur_func == 0x0041CEE3u || g_cur_func == 0x0041CF6Du) {
++        if (index == 38u) g_eax |= RC_PALETTE;           /* RASTERCAPS */
++        else if (index == 104u) g_eax = 256;             /* SIZEPALETTE */
++    }
++}
++
++/* The frame window is the picture. win32hle draws every window into one
++ * window surface at the window's screen position, and the presenter shows
++ * that surface: so the frame is kept at (0, 0) and the surface is the
++ * frame's size (516x388, the client the game insists on). */
++static uint32_t g_frame;
++static uint32_t *g_px;
++static int g_pw, g_ph;
++
++static void fit_surface(void) {
++    int l, t, r, b;
++    if (!g_frame || !hle_window_screen_rect(g_frame, &l, &t, &r, &b)) return;
++    int w = r - l, h = b - t;
++    if (w < 1 || h < 1 || (w == g_pw && h == g_ph)) return;
++    uint32_t *px = (uint32_t *)calloc((size_t)w * (size_t)h, 4);
++    if (!px) return;
++    hle_gdi_window_surface((uint8_t *)px, w, h, w * 4, 32);
++    free(g_px);
++    g_px = px, g_pw = w, g_ph = h;
++    fprintf(stderr, "[hover] frame %dx%d\n", w, h);
++}
++
++static void pin_frame(void) {
++    uint32_t a[7] = { g_frame, 0, 0, 0, 0, 0, 0x0001u | 0x0004u | 0x0010u };   /* SWP_NOSIZE | NOZORDER | NOACTIVATE */
++    hle_call_guest(hle_resolve("SetWindowPos"), 7, a);
++}
++
++/* The frame is the window titled "Hover!", as src/runtime/host.c finds it. */
++static void shim_CreateWindowExA(void) {                /* (exstyle, class, title, style, x, y, w, h, parent, menu, inst, param) */
++    uint32_t title = A32(2);
++    int frame = title >> 16 && !strcmp((const char *)hle_ptr(title), "Hover!");
++    hle_fn(win32hle_user32, "CreateWindowExA")();
++    uint32_t h = g_eax;
++    if (h && !g_frame && frame) {
++        g_frame = h;
++        fprintf(stderr, "[hover] frame window 0x%X\n", h);
++        pin_frame();
++        fit_surface();
++        g_eax = h;
++    }
++}
++
++/* The game centres and sizes its frame: the size is taken, the place is (0, 0). */
++static void shim_SetWindowPos(void) {                   /* (h, after, x, y, w, h, flags) */
++    if (g_frame && A32(0) == g_frame) MEM32(g_esp + 12) = 0, MEM32(g_esp + 16) = 0;
++    hle_fn(win32hle_user32, "SetWindowPos")();
++    uint32_t r = g_eax;
++    fit_surface();
++    g_eax = r;
++}
++static void shim_MoveWindow(void) {                     /* (h, x, y, w, h, repaint) */
++    if (g_frame && A32(0) == g_frame) MEM32(g_esp + 8) = 0, MEM32(g_esp + 12) = 0;
++    hle_fn(win32hle_user32, "MoveWindow")();
++    uint32_t r = g_eax;
++    fit_surface();
++    g_eax = r;
++}
++
++/* win32hle does not draw dialog controls, so a modal dialog would wait,
++ * unseen, for a click. The one at every start is Quick Help (115); the
++ * others are the settings dialogs and the high score. Each is answered OK
++ * unseen, as docs/host.md's headless runs do: the game keeps the settings it
++ * had. */
++static void shim_DialogBoxParamA(void) {
++    fprintf(stderr, "[hover] dialog %u answered OK unseen\n", A32(1));
++    RET(1u /* IDOK */, 5);
++}
++static void shim_DialogBoxIndirectParamA(void) {
++    fprintf(stderr, "[hover] dialog answered OK unseen\n");
++    RET(1u, 5);
++}
++
++static const win32hle_shim g_hover[] = {
++    { "GetDeviceCaps", shim_GetDeviceCaps },
++    { "CreateWindowExA", shim_CreateWindowExA },
++    { "SetWindowPos", shim_SetWindowPos },
++    { "MoveWindow", shim_MoveWindow },
++    { "DialogBoxParamA", shim_DialogBoxParamA },
++    { "DialogBoxIndirectParamA", shim_DialogBoxIndirectParamA },
++    { 0, 0 }
++};
++
++int main(int argc, char **argv) {
++    char root[PATH_MAX], exe[PATH_MAX];
++    if (!realpath(argc > 1 ? argv[1] : ".", root) || chdir(root) != 0) {
++        fprintf(stderr, "[hover] no game folder at %s\n", argc > 1 ? argv[1] : ".");
++        return 2;
++    }
++    hle_set_drive('C', root);
++    if (!hle_host_path("C:\\HOVER.EXE", exe, sizeof exe)) {
++        fprintf(stderr, "[hover] HOVER.EXE is not in %s\n", root);
++        return 2;
++    }
++    hle_set_command_line("C:\\HOVER.EXE");
++    if (argc > 2) hle_reg_load(argv[2]);
++    if (argc > 3) hle_midi_soundfont(argv[3]);
++
++    win32hle_register(g_hover);                          /* ahead of win32hle's own: a name resolves to the first */
++    recomp_host_init();
++    hle_set_screen_size(640, 480);                       /* the desktop the game fits its frame to */
++    if (hle_screen_open("Hover!", 1, 0) != 0) return 1;
++    if (recomp_host_boot_permissive(exe) != 0) return 1;
++    return (int)recomp_host_run();
++}
+--- a/src/linux/sp.c
++++ b/src/linux/sp.c
+@@ -0,0 +1,27 @@
++/*
++ * sp.c - the lift's host hooks (run_lift.py PATCHES) for one player.
++ *
++ * The Windows host answers these from mp.c, for split screen and online
++ * seats. The Linux host plays alone, and with one seat every hook gives what
++ * the patched instruction read before it was patched (mp.c's g_seats < 2
++ * branches): the human's craft, its own flag count, its own sounds, one
++ * render pass.
++ */
++#include <stdint.h>
++#include "recomp_types.h"
++#include "recomp_funcs.h"
++
++#define DOC_HUMAN 0x818Cu                /* CHoverDoc's human craft */
++
++uint32_t hover_cam_obj(uint32_t doc) { return doc + DOC_HUMAN; }
++void hover_render_views(void) { sub_00402250(); }
++int mp_is_seat(uint32_t craft) { (void)craft; return 0; }
++uint32_t hover_pod_hud(uint32_t view, uint32_t owner) { (void)owner; return view; }
++uint32_t hover_hud_full(void) { return MEM32(0x004C4CA8u); }
++void hover_sprite_visible(void) { sub_00405B90(); }
++uint32_t hover_team_flags(uint32_t craft) { return MEM32(craft + 0xC0); }
++uint32_t hover_quarry(uint32_t doc, uint32_t state) { (void)state; return doc + DOC_HUMAN; }
++void hover_seen_mark(uint32_t obj) { (void)obj; }
++uint32_t hover_seen_byte(uint32_t obj) { return MEM8(obj + 0x24); }
++void hover_seen_forget(uint32_t obj) { (void)obj; }
++uint32_t hover_heard(uint32_t craft) { return MEM32(craft + 0x1F8); }
