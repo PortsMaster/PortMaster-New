@@ -1,0 +1,30 @@
+# The conversion run again when the kernel kills it (sourced by the setups, after their pm()). On a
+# 1 GB handheld without swap the converter's biggest textures can need more memory than is free
+# beside the firmware, and the kernel kills it (an RG351MP: twice in the textures, each time on a
+# file a new launch then converted at once). Every step of `pmu convert` journals each file it
+# finishes (<data>/.pmunity.json), so a new process continues after the last one: pm_convert
+# starts one by itself while the killed runs keep finishing files.
+
+pm_convert() {   # pm_convert <data folder> <pmu convert args>
+  local j="$1/.pmunity.json" n rc
+  while :; do
+    n=$(journal_files "$j")
+    pm convert "$@"; rc=$?
+    [ "$rc" = 137 ] && [ "$(journal_files "$j")" -gt "$n" ] || return "$rc"   # (137: SIGKILL)
+    # (the kernel's reason, with the process's size when it was killed, where dmesg can be read)
+    dmesg 2>/dev/null | grep -a -i -E 'out of memory|killed process' | tail -n 2
+    echo "The conversion was stopped by the system (out of memory?): it starts again where it stopped."
+  done
+}
+
+# A conversion that stopped: its message. Status 5: the journal was damaged (an older setup wrote it
+# without a sync and the handheld restarted): the files converted in place cannot be told
+# apart, so the setup starts again from the game's files.
+convert_failed() {   # convert_failed <status> <message>
+  [ "$1" = 5 ] && fail "The handheld restarted during the conversion and the setup lost its place. Delete ports/cuphead/gamedata, copy your Cuphead files into a new gamedata folder and launch Cuphead again."
+  fail "$2"
+}
+
+journal_files() {   # journal_files <.pmunity.json>: the files its steps have finished (0 before the first)
+  pm journal-files "$1" 2>/dev/null || echo 0
+}
