@@ -1,0 +1,1382 @@
+diff --git a/runtime/win32hle/advapi32.c b/runtime/win32hle/advapi32.c
+index 002514a..913a4b3 100644
+--- a/runtime/win32hle/advapi32.c
++++ b/runtime/win32hle/advapi32.c
+@@ -169,6 +169,19 @@ static void r_RegQueryValueExA(void) {                   /* (key, name, 0, &type
+     memcpy(APTR(4), v->data, v->size);
+     RET(ERROR_SUCCESS, 6);
+ }
++/* RegQueryValueA(key, sub, data, &size): the default value of `sub`, as a string. */
++static void r_RegQueryValueA(void) {
++    rkey_t *p = root_of(A32(0));
++    rkey_t *k = p ? subkey(p, ASTR(1) ? ASTR(1) : "", 0) : NULL;
++    value_t *v = k ? find_value(k, "", 0) : NULL;
++    if (!v) RET(ERROR_FILE_NOT_FOUND, 4);
++    uint32_t have = A32(3) ? MEM32(A32(3)) : 0;
++    if (A32(3)) MEM32(A32(3)) = v->size;
++    if (!A32(2)) RET(ERROR_SUCCESS, 4);
++    if (have < v->size) RET(ERROR_MORE_DATA, 4);
++    memcpy(APTR(2), v->data, v->size);
++    RET(ERROR_SUCCESS, 4);
++}
+ static void r_RegSetValueExA(void) {                     /* (key, name, 0, type, data, size) */
+     rkey_t *k = root_of(A32(0));
+     if (!k) RET(6u, 6);
+@@ -248,6 +261,28 @@ static void v_VerQueryValueA(void) { if (A32(3)) MEM32(A32(3)) = 0; RET(0, 4); }
+ static void s_FindExecutableA(void) { if (A32(2)) MEM8(A32(2)) = 0; RET(31u, 3); }   /* SE_ERR_NOASSOC */
+ static void s_ShellExecuteA(void) { fprintf(stderr, "[shell32] ShellExecuteA(%s): not on this host\n", ASTR(2) ? ASTR(2) : ""); RET(31u, 6); }
+ 
++/* DragQueryFileA, DragFinish: nothing is ever dropped; ShellAboutA has no box to show. */
++static void s_DragQueryFileA(void) { RET(0, 4); }
++static void s_DragFinish(void) { RETV(1); }
++static void s_ShellAboutA(void) { RET(1, 4); }
++
++/* ---- COMDLG32: no file dialogs here, so a picker is cancelled ---- */
++static void d_GetOpenFileNameA(void) { RET(0, 1); }
++/* GetFileTitleA(path, buf, n): the name after the last separator. */
++static void d_GetFileTitleA(void) {
++    const char *p = ASTR(0) ? ASTR(0) : "", *b = p;
++    for (const char *q = p; *q; q++) if (*q == '\\' || *q == '/' || *q == ':') b = q + 1;
++    uint32_t need = (uint32_t)strlen(b) + 1;
++    if (!A32(1) || A32(2) < need) RET(need, 3);
++    memcpy(APTR(1), b, need);
++    RET(0, 3);
++}
++
++/* ---- WINSPOOL: no printers ---- */
++static void w_OpenPrinterA(void) { if (A32(1)) MEM32(A32(1)) = 0; hle_set_last_error(1801u /* ERROR_INVALID_PRINTER_NAME */); RET(0, 3); }
++static void w_ClosePrinter(void) { RET(0, 1); }
++static void w_DocumentPropertiesA(void) { RET(0xFFFFFFFFu, 6); }
++
+ const win32hle_shim win32hle_advapi32[] = {
+     { "RegOpenKeyExA", r_RegOpenKeyExA }, { "RegOpenKeyA", r_RegOpenKeyA }, { "RegCreateKeyA", r_RegCreateKeyA },
+     { "RegCreateKeyExA", r_RegCreateKeyExA }, { "RegCloseKey", r_RegCloseKey },
+@@ -262,5 +297,9 @@ const win32hle_shim win32hle_advapi32[] = {
+     { "GetFileVersionInfoSizeA", v_GetFileVersionInfoSizeA }, { "GetFileVersionInfoA", v_GetFileVersionInfoA },
+     { "VerQueryValueA", v_VerQueryValueA },
+     { "FindExecutableA", s_FindExecutableA }, { "ShellExecuteA", s_ShellExecuteA },
++    { "DragQueryFileA", s_DragQueryFileA }, { "DragFinish", s_DragFinish }, { "ShellAboutA", s_ShellAboutA },
++    { "GetOpenFileNameA", d_GetOpenFileNameA }, { "GetSaveFileNameA", d_GetOpenFileNameA }, { "GetFileTitleA", d_GetFileTitleA },
++    { "OpenPrinterA", w_OpenPrinterA }, { "ClosePrinter", w_ClosePrinter }, { "DocumentPropertiesA", w_DocumentPropertiesA },
++    { "RegQueryValueA", r_RegQueryValueA },
+     { 0, 0 }
+ };
+diff --git a/runtime/win32hle/dsound.c b/runtime/win32hle/dsound.c
+index 8880749..fd9572f 100644
+--- a/runtime/win32hle/dsound.c
++++ b/runtime/win32hle/dsound.c
+@@ -76,7 +76,7 @@ static int audio_open_once(void) { return audio_open(); }
+  * rate. */
+ #define MAX_STREAMS 4
+ #define STREAM_FRAMES (1 << 17)
+-static struct { int used, channels, rate; float gain; int16_t *ring; uint32_t rd, wr; double pos; } g_stream[MAX_STREAMS];
++static struct { int used, channels, rate, paused; float gain; int16_t *ring; uint32_t rd, wr; double pos; } g_stream[MAX_STREAMS];
+ int hle_audio_stream_open(int rate, int channels) {
+     if (!audio_open_once()) return -1;
+     pthread_mutex_lock(&g_mix);
+@@ -85,7 +85,7 @@ int hle_audio_stream_open(int rate, int channels) {
+         if (!g_stream[i].used) {
+             id = i;
+             g_stream[i].ring = (int16_t *)calloc(STREAM_FRAMES * 2, 2);
+-            g_stream[i].used = 1, g_stream[i].channels = channels, g_stream[i].rate = rate, g_stream[i].gain = 1.0f;
++            g_stream[i].used = 1, g_stream[i].channels = channels, g_stream[i].rate = rate, g_stream[i].gain = 1.0f, g_stream[i].paused = 0;
+             g_stream[i].rd = g_stream[i].wr = 0, g_stream[i].pos = 0;
+         }
+     pthread_mutex_unlock(&g_mix);
+@@ -109,6 +109,14 @@ int hle_audio_stream_queued(int id) {                    /* frames not yet playe
+     return n;
+ }
+ void hle_audio_stream_gain(int id, float gain) { if (id >= 0 && id < MAX_STREAMS) g_stream[id].gain = gain; }
++/* waveOutPause/waveOutReset: a stream held where it is, or emptied. */
++void hle_audio_stream_pause(int id, int paused) { if (id >= 0 && id < MAX_STREAMS) g_stream[id].paused = paused != 0; }
++void hle_audio_stream_flush(int id) {
++    if (id < 0 || id >= MAX_STREAMS) return;
++    pthread_mutex_lock(&g_mix);
++    g_stream[id].rd = g_stream[id].wr, g_stream[id].pos = 0;
++    pthread_mutex_unlock(&g_mix);
++}
+ void hle_audio_stream_close(int id) {
+     if (id < 0 || id >= MAX_STREAMS) return;
+     pthread_mutex_lock(&g_mix);
+@@ -142,7 +150,7 @@ static void mix(void *ud, Uint8 *stream, int len) {
+         }
+     }
+     for (int i = 0; i < MAX_STREAMS; i++) {
+-        if (!g_stream[i].used) continue;
++        if (!g_stream[i].used || g_stream[i].paused) continue;
+         double step = (double)g_stream[i].rate / OUT_RATE;
+         for (int f = 0; f < frames && g_stream[i].rd < g_stream[i].wr; f++) {
+             uint32_t k = g_stream[i].rd % STREAM_FRAMES;
+diff --git a/runtime/win32hle/gdidc.c b/runtime/win32hle/gdidc.c
+index 40fe7d8..aea9289 100644
+--- a/runtime/win32hle/gdidc.c
++++ b/runtime/win32hle/gdidc.c
+@@ -35,6 +35,7 @@ typedef struct {
+     const uint32_t *ctab;                                /* an 8bpp DIB's colour table, 0x00RRGGBB */
+     uint32_t bmp;                                        /* the bitmap selected into it */
+     int clip, cl, ct, cr, cb;                            /* SelectClipRgn's rectangle, in pixels */
++    int wx, wy, ww, wh;                                  /* a window's DC: its client area on the window surface (ww, wh 0: to the edge) */
+ } dc_t;
+ #define MAX_DC 4096                      /* Civilization III's jgl keeps one per surface */
+ static dc_t g_dc[MAX_DC], g_saved[MAX_DC];
+@@ -72,6 +73,7 @@ void hle_gdi_release_dc(uint32_t h) { dc_t *x = DC(h); if (x) x->used = 0; }
+  * every window: a game that draws its whole screen into one top-level window
+  * is what it serves. Off (no surface), a window DC is state only. */
+ static uint8_t *g_win_px;
++static void win_view(dc_t *x);
+ static int g_win_w, g_win_h, g_win_pitch, g_win_bpp;
+ static volatile unsigned g_win_seq;
+ void hle_gdi_window_surface(uint8_t *px, int w, int h, int pitch, int bpp) {
+@@ -80,14 +82,35 @@ void hle_gdi_window_surface(uint8_t *px, int w, int h, int pitch, int bpp) {
+     /* A window DC the game keeps (Civilization III's jgl holds its own)
+      * follows a mode change: it had been drawing into the old pixels. */
+     for (int i = 0; i < MAX_DC; i++)
+-        if (g_dc[i].used && g_dc[i].win) g_dc[i].px = px, g_dc[i].w = w, g_dc[i].h = h, g_dc[i].pitch = pitch, g_dc[i].bpp = bpp;
++        if (g_dc[i].used && g_dc[i].win) win_view(&g_dc[i]);
+ }
+-uint32_t hle_gdi_window_dc(void) {
++/* A window's DC sees the window surface from its client origin, clipped to
++ * its client size: a child window draws where it sits in its parent, and the
++ * drawing code's own bounds checks clip to it. A part off the surface's top
++ * or left edge is not drawn. */
++static void win_view(dc_t *x) {
++    int l = x->wx < 0 ? 0 : x->wx, t = x->wy < 0 ? 0 : x->wy;
++    int r = x->ww > 0 ? x->wx + x->ww : g_win_w, b = x->wh > 0 ? x->wy + x->wh : g_win_h;
++    if (r > g_win_w) r = g_win_w;
++    if (b > g_win_h) b = g_win_h;
++    x->pitch = g_win_pitch, x->bpp = g_win_bpp, x->win = 1;
++    x->w = r > l ? r - l : 0, x->h = b > t ? b - t : 0;
++    x->px = g_win_px && x->w && x->h ? g_win_px + (size_t)t * (size_t)g_win_pitch + (size_t)l * (size_t)(g_win_bpp / 8) : NULL;
++}
++uint32_t hle_gdi_window_dc_at(int x, int y, int w, int h) {
+     uint32_t d = new_dc();
+-    dc_t *x = DC(d);
+-    if (x && g_win_px) x->px = g_win_px, x->w = g_win_w, x->h = g_win_h, x->pitch = g_win_pitch, x->bpp = g_win_bpp, x->win = 1;
++    dc_t *c = DC(d);
++    if (c && g_win_px) c->wx = x, c->wy = y, c->ww = w, c->wh = h, win_view(c);
+     return d;
+ }
++uint32_t hle_gdi_window_dc(void) { return hle_gdi_window_dc_at(0, 0, 0, 0); }
++/* GetDC(h), GetWindowDC, BeginPaint: the DC of h's client area, or of the
++ * whole surface for the screen (NULL). */
++uint32_t hle_gdi_dc_of_window(uint32_t h) {
++    int l, t, r, b;
++    if (h && hle_window_screen_rect(h, &l, &t, &r, &b)) return hle_gdi_window_dc_at(l, t, r - l, b - t);
++    return hle_gdi_window_dc();
++}
+ void (*hle_gdi_window_hook)(void);                     /* the presenter: a blit reached the window */
+ void hle_gdi_window_touched(void) { g_win_seq++; if (hle_gdi_window_hook) hle_gdi_window_hook(); }   /* a host drew into it directly */
+ int hle_gdi_window_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, unsigned *seq) {
+@@ -557,7 +580,8 @@ static void g_CreateBitmap(void) {                       /* (w, h, planes, bpp,
+ }
+ 
+ /* ---- DCs ---- */
+-static void g_GetDC(void)     { RET(hle_gdi_window_dc(), 1); }   /* a window's: the window surface, if the host set one */
++static void g_GetDC(void)     { RET(hle_gdi_dc_of_window(A32(0)), 1); }   /* a window's: its part of the window surface, if the host set one */
++static void g_GetDCEx(void)   { RET(hle_gdi_dc_of_window(A32(0)), 3); }   /* (h, clip region, flags): the clip is not applied */
+ static void g_ReleaseDC(void) { hle_gdi_release_dc(A32(1)); RET(1, 2); }
+ static void g_SaveDC(void)    { dc_t *d = DC(A32(0)); if (d) g_saved[d - g_dc] = *d; RET(d ? 1u : 0u, 1); }
+ static void g_RestoreDC(void) { dc_t *d = DC(A32(0)); if (d && g_saved[d - g_dc].used) *d = g_saved[d - g_dc]; RET(d ? 1u : 0u, 2); }
+@@ -632,7 +656,9 @@ static void g_GetTextMetricsA(void) {                    /* TEXTMETRICA */
+     RET(1, 2);
+ }
+ 
++static uint32_t colorref_index(const dc_t *d, uint32_t cr);
+ static uint32_t pack(const dc_t *d, uint32_t cr) {       /* COLORREF 0x00BBGGRR -> the surface's pixel */
++    if (d->bpp == 8) return colorref_index(d, cr);
+     uint32_t r = cr & 0xFF, g = (cr >> 8) & 0xFF, b = (cr >> 16) & 0xFF;
+     if (d->bpp == 16) return d->is555 ? (r >> 3) << 10 | (g >> 3) << 5 | (b >> 3) : (r >> 3) << 11 | (g >> 2) << 5 | (b >> 3);
+     return r << 16 | g << 8 | b;
+@@ -657,10 +683,26 @@ static uint32_t to_rgb(const dc_t *d, uint32_t v) {
+     }
+     return v & 0xFFFFFFu;
+ }
++/* The colour table's entry nearest 0x00RRGGBB; the last answer is kept, as
++ * a blit asks for the same colour run after run. */
++static uint32_t nearest_index(const uint32_t *ctab, uint32_t c) {
++    static __thread const uint32_t *last_tab;
++    static __thread uint32_t last_c, last_i;
++    if (ctab == last_tab && c == last_c) return last_i;
++    int r = c >> 16 & 0xFF, g = c >> 8 & 0xFF, b = c & 0xFF;
++    uint32_t best = 0, bd = 0xFFFFFFFFu;
++    for (uint32_t i = 0; i < 256 && bd; i++) {
++        int dr = (int)(ctab[i] >> 16 & 0xFF) - r, dg = (int)(ctab[i] >> 8 & 0xFF) - g, db = (int)(ctab[i] & 0xFF) - b;
++        uint32_t dd = (uint32_t)(dr * dr * 3 + dg * dg * 4 + db * db * 2);
++        if (dd < bd) bd = dd, best = i;
++    }
++    last_tab = ctab, last_c = c, last_i = best;
++    return best;
++}
+ static uint32_t from_rgb(const dc_t *d, uint32_t c) {
+     uint32_t r = c >> 16 & 0xFF, g = c >> 8 & 0xFF, b = c & 0xFF;
+     if (d->bpp == 16) return d->is555 ? (r >> 3) << 10 | (g >> 3) << 5 | (b >> 3) : (r >> 3) << 11 | (g >> 2) << 5 | (b >> 3);
+-    if (d->bpp == 8) return (r * 77 + g * 151 + b * 28) >> 8;      /* ponytail: grey; nothing blits into an 8bpp DIB yet */
++    if (d->bpp == 8) return d->ctab ? nearest_index(d->ctab, c) : (r * 77 + g * 151 + b * 28) >> 8;
+     return c;
+ }
+ static uint32_t mix(const dc_t *d, uint32_t under, uint32_t over, int a) {
+@@ -718,24 +760,30 @@ static uint8_t *text_ink(const font_t *f, TTF_Font *t, const char *buf, int n, i
+     return ink;
+ }
+ 
+-static void g_TextOutA(void) {                           /* (hdc, x, y, text, n) */
+-    dc_t *d = DC(A32(0));
+-    int n = (int)A32(4);
+-    if (!d || !d->px || n <= 0 || (d->bpp != 16 && d->bpp != 32)) RET(1, 5);
++/* A COLORREF as an 8bpp DC's index: PALETTEINDEX (0x01xxxxxx) as it is,
++ * an RGB (or PALETTERGB) the nearest entry of its colour table. */
++static uint32_t colorref_index(const dc_t *d, uint32_t cr) {
++    if ((cr >> 24) == 1) return cr & 0xFFu;
++    return from_rgb(d, (cr & 0xFFu) << 16 | (cr & 0xFF00u) | (cr >> 16 & 0xFFu));
++}
++/* Text at (x, y) in logical units, placed as SetTextAlign says (align), in
++ * the DC's font and colours; a window DC's picture is told it changed. */
++static void text_out(dc_t *d, int lx, int ly, const char *text, int n, int align) {
++    if (!d || !d->px || n <= 0 || (d->bpp != 8 && d->bpp != 16 && d->bpp != 32)) return;
+     font_t *f = FONT(d->font);
+     TTF_Font *t = ttf_of(f);
+-    if (!t) RET(1, 5);
++    if (!t) return;
+     char buf[1024];
+     if (n >= (int)sizeof buf) n = sizeof buf - 1;
+-    memcpy(buf, APTR(3), (size_t)n), buf[n] = 0;
++    memcpy(buf, text, (size_t)n), buf[n] = 0;
+     int iw, ih;
+     uint8_t *ink = text_ink(f, t, buf, n, &iw, &ih);
+-    if (!ink) RET(1, 5);
+-    int x = (int)A32(1) - d->wox + d->vox, y = (int)A32(2) - d->woy + d->voy;
+-    if ((d->align & 6) == 6) x -= iw / 2;                /* TA_CENTER */
+-    else if (d->align & 2) x -= iw;                      /* TA_RIGHT */
+-    if ((d->align & 24) == 24) y -= TTF_FontAscent(t);   /* TA_BASELINE */
+-    else if (d->align & 8) y -= ih;                      /* TA_BOTTOM */
++    if (!ink) return;
++    int x = lx - d->wox + d->vox, y = ly - d->woy + d->voy;
++    if ((align & 6) == 6) x -= iw / 2;                   /* TA_CENTER */
++    else if (align & 2) x -= iw;                         /* TA_RIGHT */
++    if ((align & 24) == 24) y -= TTF_FontAscent(t);      /* TA_BASELINE */
++    else if (align & 8) y -= ih;                         /* TA_BOTTOM */
+     uint32_t fg = pack(d, d->text), bg = pack(d, d->bk);
+     for (int j = 0; j < ih; j++) {
+         int py = y + j;
+@@ -743,13 +791,99 @@ static void g_TextOutA(void) {                           /* (hdc, x, y, text, n)
+         for (int i = 0; i < iw; i++) {
+             int px = x + i, a = ink[j * iw + i];
+             if (px < 0 || px >= d->w) continue;
+-            if (d->bkmode == OPAQUE) put(d, px, py, mix(d, bg, fg, a));
++            if (d->bpp == 8) {                           /* indices do not blend: the ink is on or off */
++                if (a >= 128) put(d, px, py, fg);
++                else if (d->bkmode == OPAQUE) put(d, px, py, bg);
++            } else if (d->bkmode == OPAQUE) put(d, px, py, mix(d, bg, fg, a));
+             else if (a) put(d, px, py, mix(d, get(d, px, py), fg, a));
+         }
+     }
+     free(ink);
++    if (d->win) g_win_seq++;
++    if (d->win && hle_gdi_window_hook) hle_gdi_window_hook();
++}
++static void g_TextOutA(void) {                           /* (hdc, x, y, text, n) */
++    dc_t *d = DC(A32(0));
++    if (d && A32(3)) text_out(d, (int)A32(1), (int)A32(2), (const char *)APTR(3), (int)A32(4), d->align);
+     RET(1, 5);
+ }
++/* The width and height of n characters in the DC's font. */
++static void text_size(dc_t *d, const char *s, int n, int *w, int *h) {
++    font_t *f = FONT(d ? d->font : SYSTEM_FONT);
++    TTF_Font *t = ttf_of(f);
++    *w = 6 * n, *h = 13;
++    if (!t) return;
++    *h = TTF_FontHeight(t);
++    if (n <= 0) { *w = 0; return; }
++    char buf[1024];
++    if (n >= (int)sizeof buf) n = sizeof buf - 1;
++    memcpy(buf, s, (size_t)n), buf[n] = 0;
++    TTF_SizeText(t, buf, w, NULL);
++    if (f->synth_bold) *w += n;
++}
++/* DrawTextA(hdc, text, n, &rect, format): lines (split at newlines, and at
++ * spaces to fit the rectangle with DT_WORDBREAK), placed left, centred
++ * (DT_CENTER) or right (DT_RIGHT), one line centred or at the bottom
++ * vertically (DT_SINGLELINE with DT_VCENTER / DT_BOTTOM); '&' marks a
++ * mnemonic unless DT_NOPREFIX. DT_CALCRECT measures into the rectangle
++ * instead. Returns the height drawn. */
++static void g_DrawTextA(void) {
++    dc_t *d = DC(A32(0));
++    uint32_t r = A32(3), fmt = A32(4);
++    const char *src = A32(1) ? (const char *)APTR(1) : "";
++    int n = (int)A32(2);
++    if (n < 0) n = (int)strlen(src);
++    if (n > 1023) n = 1023;
++    char s[1024];
++    int k = 0;
++    for (int i = 0; i < n; i++) {                        /* mnemonics: "&x" is x, "&&" is & */
++        if (src[i] == '&' && !(fmt & 0x800u) && i + 1 < n) i++;
++        s[k++] = src[i];
++    }
++    s[k] = 0;
++    int l = r ? (int)MEM32(r) : 0, t = r ? (int)MEM32(r + 4) : 0, rr = r ? (int)MEM32(r + 8) : 0, b = r ? (int)MEM32(r + 12) : 0;
++    int lw, lh;
++    text_size(d, "", 0, &lw, &lh);
++    struct { int at, len, w; } line[64];
++    int nl = 0, at = 0, widest = 0;
++    while (at <= k && nl < 64) {
++        int end = at;
++        if (fmt & 0x20u) end = k;                        /* DT_SINGLELINE */
++        else while (end < k && s[end] != '\n' && s[end] != '\r') end++;
++        int len = end - at, w;
++        text_size(d, s + at, len, &w, &lh);
++        if ((fmt & 0x10u) && w > rr - l) {               /* DT_WORDBREAK: back to the last space that fits */
++            int cut = len;
++            while (cut > 0) {
++                while (cut > 0 && s[at + cut - 1] != ' ') cut--;
++                if (cut <= 0) break;
++                text_size(d, s + at, cut - 1, &w, &lh);
++                if (w <= rr - l) { len = cut - 1, end = at + cut; break; }
++                cut--;
++            }
++            text_size(d, s + at, len, &w, &lh);
++        }
++        line[nl].at = at, line[nl].len = len, line[nl].w = w, nl++;
++        if (w > widest) widest = w;
++        if (end >= k) break;
++        at = end;
++        if (s[at] == '\r' && at + 1 < k && s[at + 1] == '\n') at++;
++        if (s[at] == '\r' || s[at] == '\n') at++;
++    }
++    int height = nl * lh;
++    if (fmt & 0x400u) {                                  /* DT_CALCRECT */
++        if (r) MEM32(r + 8) = (uint32_t)(l + widest), MEM32(r + 12) = (uint32_t)(t + height);
++        RET((uint32_t)height, 5);
++    }
++    int y = t;
++    if ((fmt & 0x20u) && (fmt & 0x04u)) y = t + (b - t - lh) / 2;   /* DT_VCENTER */
++    else if ((fmt & 0x20u) && (fmt & 0x08u)) y = b - lh;           /* DT_BOTTOM */
++    for (int i = 0; i < nl; i++, y += lh) {
++        int x = fmt & 0x01u ? l + (rr - l - line[i].w) / 2 : fmt & 0x02u ? rr - line[i].w : l;
++        text_out(d, x, y, s + line[i].at, line[i].len, 0);
++    }
++    RET((uint32_t)height, 5);
++}
+ 
+ /* ---- drawing ---- */
+ static void rectfill(dc_t *d, int l, int t, int r, int b, uint32_t cr) {
+@@ -796,7 +930,14 @@ static void g_PatBlt(void) {                             /* (hdc,x,y,w,h,rop): B
+     RET(1, 6);
+ }
+ static void g_SetPixel(void) { dc_t *d = DC(A32(0)); if (d && d->px) { int x = (int)A32(1) - d->wox + d->vox, y = (int)A32(2) - d->woy + d->voy; if (x >= 0 && y >= 0 && x < d->w && y < d->h) put(d, x, y, pack(d, A32(3))); } RET(A32(3), 4); }
+-static void g_GetPixel(void) { dc_t *d = DC(A32(0)); int x = (int)A32(1), y = (int)A32(2); RET(d && d->px && x >= 0 && y >= 0 && x < d->w && y < d->h ? get(d, x, y) : 0xFFFFFFFFu, 3); }
++/* GetPixel answers a COLORREF (0x00BBGGRR), whatever the DC's format. */
++static void g_GetPixel(void) {
++    dc_t *d = DC(A32(0));
++    int x = (int)A32(1) - (d ? d->wox - d->vox : 0), y = (int)A32(2) - (d ? d->woy - d->voy : 0);
++    if (!d || !d->px || x < 0 || y < 0 || x >= d->w || y >= d->h) RET(0xFFFFFFFFu, 3);   /* CLR_INVALID */
++    uint32_t c = to_rgb(d, get(d, x, y));
++    RET((c & 0xFFu) << 16 | (c & 0xFF00u) | (c >> 16 & 0xFFu), 3);
++}
+ static void g_MoveToEx(void) { dc_t *d = DC(A32(0)); if (A32(3) && d) { MEM32(A32(3)) = (uint32_t)d->cpx; MEM32(A32(3) + 4) = (uint32_t)d->cpy; } if (d) { d->cpx = (int)A32(1); d->cpy = (int)A32(2); } RET(1, 4); }
+ static void g_LineTo(void) {                             /* Bresenham cp -> (x,y) in pen colour */
+     dc_t *d = DC(A32(0)); int x1 = (int)A32(1), y1 = (int)A32(2);
+@@ -820,7 +961,10 @@ static void g_LineTo(void) {                             /* Bresenham cp -> (x,y
+  * back-buffer-to-window blit is ---- */
+ static void blt(dc_t *dst, int dx, int dy, int w, int h, dc_t *src, int sx, int sy, int sw, int sh) {
+     if (!dst || !dst->px || !src || !src->px || w <= 0 || h <= 0) return;
+-    int same = src->bpp == dst->bpp && src->is555 == dst->is555 && src->bpp != 8;
++    /* Same format: the pixels as they are. Two 8bpp DIBs are the same format
++     * when their colour tables are (a game's DIBs share its palette). */
++    int same = src->bpp == dst->bpp && src->is555 == dst->is555 &&
++               (src->bpp != 8 || src->ctab == dst->ctab || (src->ctab && dst->ctab && !memcmp(src->ctab, dst->ctab, 1024)));
+     if (dst->win) g_win_seq++;
+     for (int j = 0; j < h; j++) {
+         int py = dy + j; if (py < 0 || py >= dst->h) continue;
+@@ -839,6 +983,88 @@ static void g_StretchBlt(void) { dc_t *d = DC(A32(0)), *s = DC(A32(5)); blt(d,(i
+ static void g_CreateCompatibleDC(void) { RET(new_dc(), 1); }   /* a memory DC; a bitmap is selected into it */
+ static void g_DeleteDC(void) { hle_gdi_release_dc(A32(0)); RET(1, 1); }
+ 
++/* InvertRect(hdc, &RECT): every bit of every pixel flipped. */
++static void g_InvertRect(void) {
++    dc_t *d = DC(A32(0));
++    uint32_t rc = A32(1);
++    if (!d || !d->px || !rc) RET(1, 2);
++    int ox = d->wox - d->vox, oy = d->woy - d->voy;
++    int l = (int)MEM32(rc) - ox, t = (int)MEM32(rc + 4) - oy, r = (int)MEM32(rc + 8) - ox, b = (int)MEM32(rc + 12) - oy;
++    uint32_t mask = d->bpp >= 32 ? 0xFFFFFFu : (1u << d->bpp) - 1u;
++    for (int y = t < 0 ? 0 : t; y < b && y < d->h; y++)
++        for (int x = l < 0 ? 0 : l; x < r && x < d->w; x++) put(d, x, y, get(d, x, y) ^ mask);
++    if (d->win) g_win_seq++;
++    if (d->win && hle_gdi_window_hook) hle_gdi_window_hook();
++    RET(1, 2);
++}
++/* Mapping modes: MM_TEXT only. The extents are answered as 1:1 and kept as
++ * they are; a viewport offset moves the origin as SetViewportOrgEx does. */
++static void put_pair(uint32_t p, int a, int b) { if (p) MEM32(p) = (uint32_t)a, MEM32(p + 4) = (uint32_t)b; }
++static void g_SetMapMode(void) { RET(1u /* MM_TEXT */, 2); }
++static void g_SetExtEx(void) { put_pair(A32(3), 1, 1); RET(1, 4); }        /* SetViewportExtEx, SetWindowExtEx */
++static void g_ScaleExtEx(void) { put_pair(A32(5), 1, 1); RET(1, 6); }      /* ScaleViewportExtEx, ScaleWindowExtEx */
++static void g_OffsetViewportOrgEx(void) {                /* (hdc, dx, dy, &old) */
++    dc_t *d = DC(A32(0));
++    if (!d) RET(0, 4);
++    put_pair(A32(3), d->vox, d->voy);
++    d->vox += (int)A32(1), d->voy += (int)A32(2);
++    RET(1, 4);
++}
++/* What is visible: the clip rectangle, or the whole DC. */
++static void g_GetClipBox(void) {                         /* (hdc, &RECT) */
++    dc_t *d = DC(A32(0));
++    uint32_t rc = A32(1);
++    if (!d) RET(0, 2);                                   /* ERROR */
++    int l = d->clip ? d->cl : 0, t = d->clip ? d->ct : 0, r = d->clip ? d->cr : d->w, b = d->clip ? d->cb : d->h;
++    int ox = d->wox - d->vox, oy = d->woy - d->voy;
++    if (rc) MEM32(rc) = (uint32_t)(l + ox), MEM32(rc + 4) = (uint32_t)(t + oy), MEM32(rc + 8) = (uint32_t)(r + ox), MEM32(rc + 12) = (uint32_t)(b + oy);
++    RET(r > l && b > t ? 2u : 1u, 2);                    /* SIMPLEREGION, NULLREGION */
++}
++static void g_PtVisible(void) { RET(1, 3); }
++static void g_RectVisible(void) { RET(1, 2); }
++/* Regions are one rectangle each (make_region): a combination is its bounds. */
++static void g_SetRectRgn(void) {                         /* (hrgn, l, t, r, b) */
++    gobj_t *o = GOBJ(A32(0));
++    if (!o || o->type != GO_REGION) RET(0, 5);
++    o->style = (int)A32(1), o->width = (int)A32(2), o->w = (int)A32(3), o->h = (int)A32(4);
++    RET(1, 5);
++}
++static void g_CombineRgn(void) {                         /* (dst, a, b, mode) */
++    gobj_t *d = GOBJ(A32(0)), *a = GOBJ(A32(1)), *b = GOBJ(A32(2));
++    uint32_t mode = A32(3);
++    if (!d || !a || d->type != GO_REGION || a->type != GO_REGION) RET(0, 4);   /* ERROR */
++    int l = a->style, t = a->width, r = a->w, bo = a->h;
++    if (b && b->type == GO_REGION && mode == 1) {        /* RGN_AND */
++        l = b->style > l ? b->style : l, t = b->width > t ? b->width : t;
++        r = b->w < r ? b->w : r, bo = b->h < bo ? b->h : bo;
++    } else if (b && b->type == GO_REGION && (mode == 2 || mode == 3)) {   /* RGN_OR, RGN_XOR: the bounds */
++        l = b->style < l ? b->style : l, t = b->width < t ? b->width : t;
++        r = b->w > r ? b->w : r, bo = b->h > bo ? b->h : bo;
++    }                                                    /* RGN_DIFF, RGN_COPY: a as it is */
++    d->style = l, d->width = t, d->w = r, d->h = bo;
++    RET(r > l && bo > t ? 2u : 1u, 4);
++}
++/* A pattern brush paints in the pattern's middle grey. */
++static void g_CreatePatternBrush(void) { RET(make_brush(0x808080u, 0), 1); }
++static void g_Escape(void) { RET(0, 5); }                /* no printer escapes */
++static void g_GdiFlush(void) { RET(1, 0); }
++static void g_GdiSetBatchLimit(void) { RET(1, 1); }
++/* ExtTextOutA(hdc, x, y, options, &rect, text, n, dx): ETO_OPAQUE fills the
++ * rectangle with the background colour first (MFC's FillSolidRect is this
++ * with no text); the text goes through TextOutA. */
++static void g_ExtTextOutA(void) {
++    dc_t *d = DC(A32(0));
++    uint32_t rc = A32(4);
++    if (d && rc && (A32(3) & 2u))
++        rectfill(d, (int)MEM32(rc), (int)MEM32(rc + 4), (int)MEM32(rc + 8), (int)MEM32(rc + 12), d->bk);
++    if (d && A32(5) && (int)A32(6) > 0) {
++        uint32_t a[5] = { A32(0), A32(1), A32(2), A32(5), A32(6) };
++        hle_call_guest(hle_resolve("TextOutA"), 5, a);
++    }
++    if (d && d->win && hle_gdi_window_hook) hle_gdi_window_hook();
++    RET(1, 8);
++}
++
+ const win32hle_shim win32hle_gdidc[] = {
+     { "GetSysColorBrush", g_GetSysColorBrush },
+     { "GetObjectA", g_GetObjectA },
+@@ -854,6 +1080,12 @@ const win32hle_shim win32hle_gdidc[] = {
+     { "GetSystemPaletteUse", g_GetSystemPaletteUse }, { "UpdateColors", g_UpdateColors },
+     { "FillRect", g_FillRect }, { "FrameRect", g_FrameRect }, { "Rectangle", g_Rectangle }, { "PatBlt", g_PatBlt },
+     { "SetPixel", g_SetPixel }, { "SetPixelV", g_SetPixel }, { "GetPixel", g_GetPixel },
++    { "SetMapMode", g_SetMapMode }, { "SetViewportExtEx", g_SetExtEx }, { "SetWindowExtEx", g_SetExtEx },
++    { "ScaleViewportExtEx", g_ScaleExtEx }, { "ScaleWindowExtEx", g_ScaleExtEx }, { "OffsetViewportOrgEx", g_OffsetViewportOrgEx },
++    { "GetClipBox", g_GetClipBox }, { "PtVisible", g_PtVisible }, { "RectVisible", g_RectVisible },
++    { "SetRectRgn", g_SetRectRgn }, { "CombineRgn", g_CombineRgn }, { "CreatePatternBrush", g_CreatePatternBrush },
++    { "Escape", g_Escape }, { "GdiFlush", g_GdiFlush }, { "GdiSetBatchLimit", g_GdiSetBatchLimit },
++    { "ExtTextOutA", g_ExtTextOutA }, { "InvertRect", g_InvertRect },
+     { "MoveToEx", g_MoveToEx }, { "LineTo", g_LineTo }, { "BitBlt", g_BitBlt }, { "StretchBlt", g_StretchBlt },
+     { "CreateFontA", g_CreateFontA }, { "CreateFontIndirectA", g_CreateFontIndirectA },
+     { "DeleteObject", g_DeleteObject }, { "GetStockObject", g_GetStockObject }, { "SelectObject", g_SelectObject },
+@@ -862,12 +1094,12 @@ const win32hle_shim win32hle_gdidc[] = {
+     { "RemoveFontResourceA", g_RemoveFontResourceA },
+     { "CreateRectRgn", g_CreateRectRgn }, { "CreateRectRgnIndirect", g_CreateRectRgnIndirect },
+     { "SelectClipRgn", g_SelectClipRgn },
+-    { "GetDC", g_GetDC }, { "ReleaseDC", g_ReleaseDC }, { "SaveDC", g_SaveDC }, { "RestoreDC", g_RestoreDC },
++    { "GetDC", g_GetDC }, { "GetWindowDC", g_GetDC }, { "GetDCEx", g_GetDCEx }, { "ReleaseDC", g_ReleaseDC }, { "SaveDC", g_SaveDC }, { "RestoreDC", g_RestoreDC },
+     { "SetTextColor", g_SetTextColor }, { "SetBkColor", g_SetBkColor }, { "SetBkMode", g_SetBkMode },
+     { "SetTextAlign", g_SetTextAlign }, { "GetTextColor", g_GetTextColor }, { "GetBkColor", g_GetBkColor },
+     { "GetBkMode", g_GetBkMode }, { "SetViewportOrgEx", g_SetViewportOrgEx }, { "SetWindowOrgEx", g_SetWindowOrgEx },
+     { "DPtoLP", g_DPtoLP }, { "SetGraphicsMode", g_SetGraphicsMode }, { "ModifyWorldTransform", g_ModifyWorldTransform },
+-    { "GetTextExtentPoint32A", g_GetTextExtentPoint32A }, { "GetTextExtentPointA", g_GetTextExtentPoint32A },
++    { "DrawTextA", g_DrawTextA }, { "GetTextExtentPoint32A", g_GetTextExtentPoint32A }, { "GetTextExtentPointA", g_GetTextExtentPoint32A },
+     { "GetTextMetricsA", g_GetTextMetricsA }, { "TextOutA", g_TextOutA },
+     { 0, 0 }
+ };
+diff --git a/runtime/win32hle/kernel32_crt.c b/runtime/win32hle/kernel32_crt.c
+index b4b150c..bfd9336 100644
+--- a/runtime/win32hle/kernel32_crt.c
++++ b/runtime/win32hle/kernel32_crt.c
+@@ -64,6 +64,13 @@ static void k_ResumeThread(void) {
+ }
+ /* ExitThread from lifted code: the machine is given up first (the thread
+  * will never hand it back), then the thread ends where it stands. */
++/* TerminateThread: a thread cannot be stopped from outside here (it may hold
++ * the machine), so it runs on; a game that kills its worker on the way out
++ * exits next anyway. */
++static void k_TerminateThread(void) {
++    fprintf(stderr, "[win32hle] TerminateThread(0x%X): left running\n", A32(0));
++    RET(1, 2);
++}
+ static void k_ExitThread(void) {
+     if (t_self) t_self->code = A32(0), t_self->done = 1;
+     hle_block_begin();
+@@ -537,6 +544,7 @@ const win32hle_shim win32hle_kernel32_crt[] = {
+     { "CreateThread",                 k_CreateThread },
+     { "ResumeThread",                 k_ResumeThread },
+     { "ExitThread",                   k_ExitThread },
++    { "TerminateThread",              k_TerminateThread },
+     { "GetExitCodeThread",            k_GetExitCodeThread },
+     { "SetThreadPriority",            k_SetThreadPriority },
+     { "GetThreadPriority",            k_GetThreadPriority },
+diff --git a/runtime/win32hle/user32.c b/runtime/win32hle/user32.c
+index b4e7ec8..41715fa 100644
+--- a/runtime/win32hle/user32.c
++++ b/runtime/win32hle/user32.c
+@@ -459,17 +459,23 @@ static void measure(win_t *x) {
+  * keep a new resolution, closed, left the Options screen under it blank
+  * (redalert2-recomp#24). */
+ static void invalidate_rect(win_t *x, int l, int t, int r, int b);
++/* A window going away (hidden, destroyed) uncovers what was under it: every
++ * other visible window it overlapped, at any depth (a child of a parent with
++ * WS_CLIPCHILDREN too, which invalidate_rect does not reach), gets that
++ * part to repaint, as Windows does. */
+ static void uncover(win_t *x) {
+     if (!x || !(x->style & WS_VISIBLE)) return;
+-    win_t *p = x->parent ? W(x->parent) : NULL;
+-    if (p) invalidate_rect(p, x->x, x->y, x->x + x->w, x->y + x->h);
+-    for (int i = 0; i < MAX_WIN; i++) {                  /* the siblings below it (higher z) */
++    int xl, xt;
++    origin(x, &xl, &xt);
++    int xr = xl + x->w, xb = xt + x->h;
++    for (int i = 0; i < MAX_WIN; i++) {
+         win_t *s = &g_win[i];
+-        if (!s->used || s == x || s->parent != x->parent || s->z <= x->z || !(s->style & WS_VISIBLE)) continue;
+-        int l = x->x > s->x ? x->x : s->x, t = x->y > s->y ? x->y : s->y;
+-        int r = x->x + x->w < s->x + s->w ? x->x + x->w : s->x + s->w;
+-        int b = x->y + x->h < s->y + s->h ? x->y + x->h : s->y + s->h;
+-        invalidate_rect(s, l - s->x, t - s->y, r - s->x, b - s->y);   /* empty when they don't overlap */
++        if (!s->used || s == x || !visible(s) || is_descendant(s->hwnd, x->hwnd)) continue;
++        int sl, st;
++        origin(s, &sl, &st);
++        int l = xl > sl ? xl : sl, t = xt > st ? xt : st;
++        int r = xr < sl + s->w ? xr : sl + s->w, b = xb < st + s->h ? xb : st + s->h;
++        invalidate_rect(s, l - sl, t - st, r - sl, b - st);   /* empty when they don't overlap */
+     }
+ }
+ 
+@@ -1835,7 +1841,7 @@ static void u_RedrawWindow(void) {                       /* (h, rect, rgn, flags
+ static void u_BeginPaint(void) {                         /* (h, &PAINTSTRUCT) */
+     win_t *x = W(A32(0));
+     uint32_t ps = A32(1);
+-    uint32_t dc = hle_gdi_window_dc();                   /* the window surface's, if the host set one */
++    uint32_t dc = hle_gdi_dc_of_window(A32(0));          /* its part of the window surface, if the host set one */
+     if (ps) {
+         memset(hle_ptr(ps), 0, 64);
+         MEM32(ps) = dc;
+@@ -1971,7 +1977,6 @@ static void u_CharUpperA(void) { uint32_t s = A32(0); if (s < 0x10000u) RET(s >=
+ static void u_CharLowerA(void) { uint32_t s = A32(0); if (s < 0x10000u) RET(s >= 'A' && s <= 'Z' ? s + 32 : s, 1); for (char *p = ASTR(0); *p; p++) if (*p >= 'A' && *p <= 'Z') *p += 32; RET(s, 1); }
+ static void u_RegisterHotKey(void) { RET(1, 4); }
+ static void u_UnregisterHotKey(void) { RET(1, 2); }
+-static void u_TranslateAcceleratorA(void) { RET(0, 3); }
+ static void u_WinHelpA(void) { RET(0, 4); }
+ static void u_WaitForInputIdle(void) { RET(0, 2); }
+ static void u_MessageBeep(void) { RET(1, 1); }
+@@ -2118,7 +2123,50 @@ static void u_LoadBitmapA(void) {                        /* (hinst, name) */
+     uint32_t hb = load_bitmap(A32(0), A32(1), 0);
+     RET(hb ? hb : 0x1C000004u, 2);
+ }
+-static void u_LoadAcceleratorsA(void){ RET(0x1C000005u, 2); }  /* nonzero: games treat NULL as fatal */
++/* ---- accelerators ----
++ * LoadAcceleratorsA reads the RT_ACCELERATOR resource: 8-byte entries of
++ * flags, key, command (0x80 in the flags ends the table). TranslateAcceleratorA
++ * turns a matching WM_KEYDOWN / WM_SYSKEYDOWN (a virtual key, FVIRTKEY) or
++ * WM_CHAR (a character) into WM_COMMAND (HIWORD 1) sent to the window, with
++ * Shift, Ctrl and Alt as the entry asks. A table that cannot be read still
++ * gets a handle: games treat NULL as fatal. */
++#define MAX_ACCEL 16
++static struct { uint32_t res; int n; struct { uint8_t flags; uint16_t key, cmd; } e[128]; } g_accel[MAX_ACCEL];
++#define ACCEL_BASE 0x1C000100u
++static void u_LoadAcceleratorsA(void) {                   /* (hModule, name) */
++    uint32_t hr = hle_find_resource(A32(0), A32(1), 9 /* RT_ACCELERATOR */);
++    for (int i = 0; i < MAX_ACCEL; i++)
++        if (g_accel[i].res && g_accel[i].res == hr) RET(ACCEL_BASE + (uint32_t)i, 2);
++    for (int i = 0; i < MAX_ACCEL; i++) {
++        if (g_accel[i].res) continue;
++        uint32_t size = 0, data = hr ? hle_resource_data(A32(0), hr, &size) : 0;
++        g_accel[i].res = hr ? hr : 0xFFFFFFFFu, g_accel[i].n = 0;
++        for (uint32_t at = 0; data && at + 8 <= size && g_accel[i].n < 128; at += 8) {
++            const uint8_t *p = (const uint8_t *)hle_ptr(data + at);
++            int k = g_accel[i].n++;
++            g_accel[i].e[k].flags = p[0], g_accel[i].e[k].key = (uint16_t)(p[2] | p[3] << 8), g_accel[i].e[k].cmd = (uint16_t)(p[4] | p[5] << 8);
++            if (p[0] & 0x80) break;
++        }
++        RET(ACCEL_BASE + (uint32_t)i, 2);
++    }
++    RET(0x1C000005u, 2);
++}
++static void u_TranslateAcceleratorA(void) {               /* (hwnd, haccel, &MSG) */
++    uint32_t i = A32(1) - ACCEL_BASE, m = A32(2);
++    if (i >= MAX_ACCEL || !g_accel[i].res || !m || !A32(0)) RET(0, 3);
++    uint32_t msg = MEM32(m + 4), key = MEM32(m + 8);
++    int down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN, chr = msg == WM_CHAR || msg == 0x0106u /* WM_SYSCHAR */;
++    if (!down && !chr) RET(0, 3);
++    int shift = (g_keys[VK_SHIFT] & 0x80) != 0, ctrl = (g_keys[VK_CONTROL] & 0x80) != 0, alt = (g_keys[VK_MENU] & 0x80) != 0;
++    for (int k = 0; k < g_accel[i].n; k++) {
++        uint8_t f = g_accel[i].e[k].flags;
++        if (((f & 0x01) == 0) != chr || g_accel[i].e[k].key != (key & 0xFFFFu)) continue;   /* FVIRTKEY: a key, else a character */
++        if ((f & 0x01) && (!!(f & 0x04) != shift || !!(f & 0x08) != ctrl || !!(f & 0x10) != alt)) continue;
++        hle_send(A32(0), WM_COMMAND, 0x10000u | g_accel[i].e[k].cmd, 0);
++        RET(1, 3);
++    }
++    RET(0, 3);
++}
+ /* ---- menus ----
+  * A menu is a flat list of items; a popup item carries a submenu handle. Menus
+  * are not drawn (no menu bar on the surface yet), but a game queries and edits
+@@ -2242,16 +2290,6 @@ static void u_UnionRect(void) {
+ static void u_AdjustWindowRect(void)   { RET(1, 3); }    /* no non-client area here */
+ static void u_AdjustWindowRectEx(void) { RET(1, 4); }
+ 
+-/* text: one fixed-pitch measure for everything (the game draws its own) */
+-static void u_DrawTextA(void) {                          /* (hdc, text, n, rect, format) */
+-    const char *s = ASTR(1);
+-    int n = (int)A32(2);
+-    uint32_t r = A32(3);
+-    if (n < 0) n = s ? (int)strlen(s) : 0;
+-    if (r && (A32(4) & 0x400u)) MEM32(r + 8) = MEM32(r) + (uint32_t)(n * 6), MEM32(r + 12) = MEM32(r + 4) + 13;   /* DT_CALCRECT */
+-    RET(13, 5);
+-}
+-
+ /* wsprintfA is cdecl: the caller pops, so only the return address goes. */
+ static void u_wsprintfA(void) {
+     int n = hle_guest_format(ASTR(0), 1024, ASTR(1), g_esp + 12);   /* the arguments follow the format on the stack */
+@@ -2277,6 +2315,109 @@ static void u_MessageBoxIndirectA(void) {
+ 
+ /* What a host (a test driver) may ask about a window. */
+ int hle_is_window(uint32_t h) { return W(h) != NULL; }
++/* ---- what MFC asks of USER32 besides windows and messages ---- */
++static void u_IsChild(void) { RET(A32(0) != A32(1) && W(A32(1)) && is_descendant(A32(1), A32(0)), 2); }   /* (parent, child) */
++static void u_IsIconic(void) { RET(0, 1); }              /* nothing is minimised or maximised here */
++static void u_IsZoomed(void) { RET(0, 1); }
++static void u_GetLastActivePopup(void) { RET(A32(0), 1); }
++static void u_ShowOwnedPopups(void) { RET(1, 2); }
++static void u_SetParent(void) {                          /* (h, new parent): the old one */
++    win_t *x = W(A32(0));
++    if (!x) RET(0, 2);
++    uint32_t old = x->parent ? x->parent : x->owner;
++    if (x->style & WS_CHILD) x->parent = A32(1); else x->owner = A32(1);
++    invalidate(x, 1);
++    RET(old, 2);
++}
++static void u_CheckRadioButton(void) {                   /* (dialog, first id, last id, the one checked) */
++    for (int i = 0; i < MAX_WIN; i++)
++        if (g_win[i].used && g_win[i].parent == A32(0) && g_win[i].id >= A32(1) && g_win[i].id <= A32(2))
++            hle_send(g_win[i].hwnd, 0x00F1u /* BM_SETCHECK */, g_win[i].id == A32(3), 0);
++    RET(1, 4);
++}
++/* The last message's time and place: now, and where the cursor is. */
++static void u_GetMessagePos(void) { RET(((uint32_t)(uint16_t)g_cursor_y << 16) | (uint16_t)g_cursor_x, 0); }
++static void u_GetMessageTime(void) { RET(hle_ticks_ms(), 0); }
++/* Window properties (SetPropA and friends): a name, or an atom below 64K. */
++#define MAX_PROPS 256
++static struct { uint32_t hwnd, atom, data; char name[64]; } g_prop[MAX_PROPS];
++static int prop_find(uint32_t h, uint32_t key) {
++    for (int i = 0; i < MAX_PROPS; i++) {
++        if (!g_prop[i].hwnd || g_prop[i].hwnd != h) continue;
++        if (key < 0x10000u ? g_prop[i].atom == key : !g_prop[i].atom && !strcasecmp(g_prop[i].name, (const char *)hle_ptr(key))) return i;
++    }
++    return -1;
++}
++static void u_SetPropA(void) {                           /* (h, name, data) */
++    int i = prop_find(A32(0), A32(1));
++    for (int k = 0; i < 0 && k < MAX_PROPS; k++) if (!g_prop[k].hwnd) i = k;
++    if (i < 0 || !A32(0)) RET(0, 3);
++    g_prop[i].hwnd = A32(0), g_prop[i].data = A32(2), g_prop[i].atom = A32(1) < 0x10000u ? A32(1) : 0;
++    if (!g_prop[i].atom) snprintf(g_prop[i].name, sizeof g_prop[i].name, "%s", (const char *)hle_ptr(A32(1)));
++    RET(1, 3);
++}
++static void u_GetPropA(void) { int i = prop_find(A32(0), A32(1)); RET(i < 0 ? 0u : g_prop[i].data, 2); }
++static void u_RemovePropA(void) {
++    int i = prop_find(A32(0), A32(1));
++    if (i < 0) RET(0, 2);
++    uint32_t d = g_prop[i].data;
++    memset(&g_prop[i], 0, sizeof g_prop[i]);
++    RET(d, 2);
++}
++/* Menus are not drawn here: check marks have a size and no bitmaps. */
++static void u_GetMenuCheckMarkDimensions(void) { RET(13u << 16 | 13u, 0); }
++static void u_SetMenuItemBitmaps(void) { RET(1, 5); }
++/* GrayStringA(hdc, brush, proc, data, n, x, y, w, h): the caller's proc
++ * draws, or the text is drawn as it is (not greyed). */
++static void u_GrayStringA(void) {
++    if (A32(2)) {
++        uint32_t a[3] = { A32(0), A32(3), A32(4) };
++        RET(hle_call_guest(A32(2), 3, a), 9);
++    }
++    uint32_t n = A32(4) ? A32(4) : (A32(3) ? (uint32_t)strlen((const char *)hle_ptr(A32(3))) : 0);
++    uint32_t a[5] = { A32(0), A32(5), A32(6), A32(3), n };
++    if (A32(3)) hle_call_guest(hle_resolve("TextOutA"), 5, a);
++    RET(1, 9);
++}
++/* TabbedTextOutA(hdc, x, y, text, n, ntabs, tabs, origin): tabs are not expanded. */
++static void u_TabbedTextOutA(void) {
++    uint32_t a[5] = { A32(0), A32(1), A32(2), A32(3), A32(4) };
++    if (A32(3) && (int)A32(4) > 0) hle_call_guest(hle_resolve("TextOutA"), 5, a);
++    RET(0, 8);
++}
++/* The OEM code page is taken to be the ANSI one. */
++static void u_CharToOemA(void) {                         /* (src, dst) */
++    if (A32(0) && A32(1) && A32(0) != A32(1)) strcpy((char *)hle_ptr(A32(1)), (const char *)hle_ptr(A32(0)));
++    RET(1, 2);
++}
++/* VkKeyScanA(ch): the key and shift state that type ch on a US keyboard. */
++static void u_VkKeyScanA(void) {
++    int c = (int)(A32(0) & 0xFF);
++    uint32_t r = c >= 'a' && c <= 'z' ? (uint32_t)(c - 32)
++               : c >= 'A' && c <= 'Z' ? (uint32_t)c | 0x100u
++               : (c >= '0' && c <= '9') || c == ' ' || c == '\r' || c == '\b' || c == '\t' || c == 27 ? (uint32_t)c
++               : 0xFFFFu;
++    RET(r, 1);
++}
++/* DDE lParams are packed as they were in Win16. */
++static void u_UnpackDDElParam(void) {                    /* (msg, lParam, &lo, &hi) */
++    if (A32(2)) MEM32(A32(2)) = A32(1) & 0xFFFFu;
++    if (A32(3)) MEM32(A32(3)) = A32(1) >> 16;
++    RET(1, 4);
++}
++static void u_ReuseDDElParam(void) { RET((A32(4) << 16) | (A32(3) & 0xFFFFu), 5); }   /* (lParam, in, out, lo, hi) */
++/* SystemParametersInfoA(action, ui, pv, ini): the work area is the screen;
++ * what is not known is refused, as for a parameter this Windows lacks. */
++static void u_SystemParametersInfoA(void) {
++    uint32_t pv = A32(2);
++    switch (A32(0)) {
++    case 0x0030u: put_rect(pv, 0, 0, g_screen_w, g_screen_h); RET(1, 4);   /* SPI_GETWORKAREA */
++    case 0x0005u: if (pv) MEM32(pv) = 1; RET(1, 4);                         /* SPI_GETBORDER */
++    case 0x0010u: if (pv) MEM32(pv) = 0; RET(1, 4);                         /* SPI_GETSCREENSAVEACTIVE */
++    default: RET(0, 4);
++    }
++}
++
+ int hle_window_screen_rect(uint32_t h, int *l, int *t, int *r, int *b) {
+     win_t *x = W(h);
+     if (!x) return 0;
+@@ -2338,6 +2479,15 @@ const win32hle_shim win32hle_user32[] = {
+     { "EnableMenuItem", u_EnableMenuItem }, { "GetMenuState", u_GetMenuState }, { "CheckMenuRadioItem", u_CheckMenuRadioItem },
+     { "SetMenu", u_SetMenu }, { "DrawMenuBar", u_DrawMenuBar }, { "HiliteMenuItem", u_HiliteMenuItem },
+     { "TrackPopupMenu", u_TrackPopupMenu },
++    { "IsChild", u_IsChild }, { "IsIconic", u_IsIconic }, { "IsZoomed", u_IsZoomed },
++    { "GetLastActivePopup", u_GetLastActivePopup }, { "ShowOwnedPopups", u_ShowOwnedPopups }, { "SetParent", u_SetParent },
++    { "CheckRadioButton", u_CheckRadioButton }, { "GetMessagePos", u_GetMessagePos }, { "GetMessageTime", u_GetMessageTime },
++    { "SetPropA", u_SetPropA }, { "GetPropA", u_GetPropA }, { "RemovePropA", u_RemovePropA },
++    { "GetMenuCheckMarkDimensions", u_GetMenuCheckMarkDimensions }, { "SetMenuItemBitmaps", u_SetMenuItemBitmaps },
++    { "GrayStringA", u_GrayStringA }, { "TabbedTextOutA", u_TabbedTextOutA },
++    { "CharToOemA", u_CharToOemA }, { "OemToCharA", u_CharToOemA }, { "VkKeyScanA", u_VkKeyScanA },
++    { "UnpackDDElParam", u_UnpackDDElParam }, { "ReuseDDElParam", u_ReuseDDElParam },
++    { "SystemParametersInfoA", u_SystemParametersInfoA },
+     { "GetCursor", u_GetCursor }, { "OpenClipboard", u_OpenClipboard }, { "CloseClipboard", u_CloseClipboard },
+     { "EmptyClipboard", u_EmptyClipboard }, { "SetClipboardData", u_SetClipboardData }, { "GetClipboardData", u_GetClipboardData },
+     { "SetCursor", u_SetCursor }, { "ShowCursor", u_ShowCursor }, { "ClipCursor", u_ClipCursor },
+@@ -2396,6 +2546,6 @@ const win32hle_shim win32hle_user32[] = {
+     { "ImmGetContext", m_ret0_1 }, { "ImmAssociateContext", m_ret0_2 }, { "ImmNotifyIME", m_ret0_4 },
+     { "ImmSetOpenStatus", m_ret1_2 }, { "ImmGetCompositionStringA", m_ret0_4 }, { "ImmGetCandidateListA", m_ret0_4 },
+     { "ImmReleaseContext", m_ret1_2 },
+-    { "DrawTextA", u_DrawTextA }, { "wsprintfA", u_wsprintfA }, { "wvsprintfA", u_wvsprintfA },
++    { "wsprintfA", u_wsprintfA }, { "wvsprintfA", u_wvsprintfA },
+     { 0, 0 }
+ };
+diff --git a/runtime/win32hle/win32hle.h b/runtime/win32hle/win32hle.h
+index 091a61e..da56202 100644
+--- a/runtime/win32hle/win32hle.h
++++ b/runtime/win32hle/win32hle.h
+@@ -266,6 +266,8 @@ uint32_t hle_gdi_surface_dc(uint8_t *px, int w, int h, int pitch, int bpp);   /*
+  * DirectDraw primary. seq changes when they may have. */
+ void     hle_gdi_window_surface(uint8_t *px, int w, int h, int pitch, int bpp);
+ uint32_t hle_gdi_window_dc(void);
++uint32_t hle_gdi_window_dc_at(int x, int y, int w, int h);   /* the surface from (x, y), clipped to w x h (0: to its edge) */
++uint32_t hle_gdi_dc_of_window(uint32_t hwnd);                /* a window's client area on the surface; NULL: all of it */
+ int      hle_gdi_window_frame(const uint8_t **px, int *w, int *h, int *pitch, int *bpp, unsigned *seq);
+ void     hle_gdi_window_touched(void);                /* drawn into directly (a movie): show it */
+ extern void (*hle_gdi_window_hook)(void);              /* called after a blit to it: screen.c presents */
+@@ -302,7 +304,10 @@ int  hle_audio_stream_open(int rate, int channels);   /* an id, or -1 with no au
+ void hle_audio_stream_push(int id, const int16_t *pcm, int frames);
+ int  hle_audio_stream_queued(int id);                 /* frames pushed and not yet played */
+ void hle_audio_stream_gain(int id, float gain);
++void hle_audio_stream_pause(int id, int paused);   /* held where it is, not played */
++void hle_audio_stream_flush(int id);               /* what is queued, dropped */
+ void hle_audio_stream_close(int id);
++void hle_midi_soundfont(const char *path);          /* the SoundFont midiStream plays with (winmm.c, HLE_WITH_TSF) */
+ int  hle_file_fd(uint32_t handle);                    /* a file HANDLE's descriptor, or -1 */
+ extern const win32hle_shim win32hle_mss[];            /* Miles: file helpers, an MP3 ASI codec on ffmpeg (mss.c) */
+ extern const win32hle_shim win32hle_bink[];           /* binkw32 on ffmpeg (bink.c; stubs without HLE_WITH_FFMPEG) */
+diff --git a/runtime/win32hle/winmm.c b/runtime/win32hle/winmm.c
+index 817c448..3441add 100644
+--- a/runtime/win32hle/winmm.c
++++ b/runtime/win32hle/winmm.c
+@@ -1,10 +1,9 @@
+ /*
+- * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio, MCI;
+- * no mixer and no recording device.
+- * On libc for timing; audio is "accept and retire" (a silent device that
+- * completes every buffer immediately, so a game's double-buffered mixer thread
+- * keeps cycling without a real sound card); no joystick; MCI stubbed. Real SDL
+- * audio can replace the waveOut path later without touching callers.
++ * winmm.c - win32hle WINMM: multimedia timers, joystick, waveOut audio, MIDI
++ * streams, sndPlaySoundA, MCI; no mixer and no recording device.
++ * On libc for timing; waveOut and MIDI play through dsound.c's SDL audio
++ * (host streams), MIDI on TinySoundFont (HLE_WITH_TSF); no joystick; MCI
++ * stubbed.
+  */
+ #define _GNU_SOURCE
+ #include <stdint.h>
+@@ -14,6 +13,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <SDL2/SDL.h>
+ #include "win32hle.h"
+ 
+ #define MMSYSERR_NOERROR  0u
+@@ -21,6 +21,8 @@
+ #define JOYERR_UNPLUGGED  167u
+ #define WHDR_DONE         0x00000001u
+ #define WHDR_INQUEUE      0x00000010u
++#define MMSYSERR_BADDEVICEID  2u
++#define MMSYSERR_INVALHANDLE  5u
+ 
+ /* --- multimedia timer --- */
+ static void m_timeGetTime(void) {
+@@ -102,25 +104,188 @@ static void m_joyGetDevCapsA(void)  { RET(JOYERR_UNPLUGGED, 3); }
+ static void m_joyGetPos(void)       { RET(JOYERR_UNPLUGGED, 2); }
+ static void m_joyGetPosEx(void)     { RET(JOYERR_UNPLUGGED, 2); }
+ 
+-/* --- waveOut: a silent device that retires every buffer at once ---
+- * waveOutOpen succeeds with a fake handle; waveOutWrite marks the WAVEHDR done
+- * and not-in-queue, so a mixer that waits for buffers to drain keeps going. */
++/* --- the callbacks a device makes ---
++ * As the open asked (fdwOpen's CALLBACK_*): a message posted to a window, a
++ * guest function called (h, msg, instance, p1, 0), or an event set. Made from
++ * a host thread or from inside a shim; the machine lock nests either way. */
++#define CALLBACK_TYPEMASK 0x00070000u
++#define CALLBACK_WINDOW   0x00010000u
++#define CALLBACK_FUNCTION 0x00030000u
++#define CALLBACK_EVENT    0x00050000u
++#define WOM_OPEN  0x3BBu
++#define WOM_CLOSE 0x3BCu
++#define WOM_DONE  0x3BDu
++#define MOM_OPEN  0x3C7u
++#define MOM_CLOSE 0x3C8u
++#define MOM_DONE  0x3C9u
++static void mm_notify(uint32_t flags, uint32_t cb, uint32_t inst, uint32_t h, uint32_t msg, uint32_t p1) {
++    if (!cb) return;
++    switch (flags & CALLBACK_TYPEMASK) {
++    case CALLBACK_WINDOW:   mach_enter(); hle_post_message(cb, msg, h, p1); mach_leave(); break;
++    case CALLBACK_FUNCTION: { uint32_t a[5] = { h, msg, inst, p1, 0 }; hle_call_guest(cb, 5, a); break; }
++    case CALLBACK_EVENT:    mach_enter(); hle_set_event(cb); mach_leave(); break;
++    default: break;                                      /* CALLBACK_THREAD: not made */
++    }
++}
++/* A header the device is finished with: WHDR_DONE / MHDR_DONE (both 1), out
++ * of the queue (WHDR_INQUEUE 0x10, MHDR_INQUEUE 4). */
++static void hdr_done(uint32_t hdr, uint32_t inqueue) {
++    mach_enter();
++    MEM32(hdr + 16) = (MEM32(hdr + 16) | WHDR_DONE) & ~inqueue;
++    mach_leave();
++}
++static pthread_mutex_t g_mmq = PTHREAD_MUTEX_INITIALIZER;   /* the queues below; never held across a callback */
++
++/* --- waveOut on SDL audio ---
++ * Each device is a dsound.c host stream at the device's rate. A buffer is
++ * converted to s16 and pushed whole at waveOutWrite; it is done once the
++ * mixer has played past its last frame, which a thread of its own watches
++ * (the stream's queue drains in real time), so a game that double-buffers
++ * against WOM_DONE (WaveMix) runs at the card's pace, as on Windows. */
++#define MAX_WAVEOUT 4
++#define WAVE_QUEUE  64
++typedef struct { uint32_t hdr; uint64_t end; } wq_t;     /* a header, and the frames pushed once it was */
++static struct {
++    int used, stream, channels, bits, block, rate;
++    uint32_t cb, inst, flags;
++    uint64_t pushed;
++    wq_t q[WAVE_QUEUE]; int qn;
++} g_wo[MAX_WAVEOUT];
++#define HWO(i) (0x5A5E0001u + (uint32_t)(i))
++static int wo_index(uint32_t h) { uint32_t i = h - HWO(0); return i < MAX_WAVEOUT && g_wo[i].used ? (int)i : -1; }
++static uint64_t wo_played(int i) { uint64_t q = (uint64_t)hle_audio_stream_queued(g_wo[i].stream); return g_wo[i].pushed > q ? g_wo[i].pushed - q : 0; }
++
++/* Take the headers of device i that are done (all of them with `all`), in order. */
++static int wo_take(int i, int all, uint32_t *out) {
++    int n = 0;
++    pthread_mutex_lock(&g_mmq);
++    uint64_t played = all ? ~0ull : wo_played(i);
++    while (n < g_wo[i].qn && g_wo[i].q[n].end <= played) out[n] = g_wo[i].q[n].hdr, n++;
++    memmove(g_wo[i].q, g_wo[i].q + n, sizeof(wq_t) * (size_t)(g_wo[i].qn - n));
++    g_wo[i].qn -= n;
++    pthread_mutex_unlock(&g_mmq);
++    return n;
++}
++static void wo_retire(int i, int n, const uint32_t *hdrs) {
++    for (int k = 0; k < n; k++) {
++        hdr_done(hdrs[k], WHDR_INQUEUE);
++        mm_notify(g_wo[i].flags, g_wo[i].cb, g_wo[i].inst, HWO(i), WOM_DONE, hdrs[k]);
++    }
++}
++static void *wo_watch(void *arg) {
++    (void)arg;
++    for (;;) {
++        usleep(2000);
++        for (int i = 0; i < MAX_WAVEOUT; i++) {
++            if (!g_wo[i].used) continue;
++            uint32_t hdrs[WAVE_QUEUE];
++            wo_retire(i, wo_take(i, 0, hdrs), hdrs);
++        }
++    }
++    return NULL;
++}
++
++#define WAVE_FORMAT_QUERY 0x0001u
++#define WAVERR_BADFORMAT  32u
++#define MMSYSERR_ALLOCATED 4u
+ static void m_waveOutOpen(void) {              /* (&hwo, devID, &fmt, cb, inst, flags) */
+-    uint32_t ph = A32(0);
+-    if (ph) MEM32(ph) = 0x5A5E0001u;           /* a nonzero HWAVEOUT */
++    uint32_t ph = A32(0), fmt = A32(2), flags = A32(5);
++    if (!fmt) RET(97u /* MMSYSERR_INVALPARAM */, 6);
++    uint32_t tag = MEM16(fmt), ch = MEM16(fmt + 2), rate = MEM32(fmt + 4), block = MEM16(fmt + 12), bits = MEM16(fmt + 14);
++    if (tag != 1 || (ch != 1 && ch != 2) || (bits != 8 && bits != 16) || rate < 1000 || rate > 96000)
++        RET(WAVERR_BADFORMAT, 6);
++    if (flags & WAVE_FORMAT_QUERY) RET(MMSYSERR_NOERROR, 6);
++    int i = 0;
++    while (i < MAX_WAVEOUT && g_wo[i].used) i++;
++    if (i == MAX_WAVEOUT) RET(MMSYSERR_ALLOCATED, 6);
++    int stream = hle_audio_stream_open((int)rate, (int)ch);
++    if (stream < 0) RET(MMSYSERR_ALLOCATED, 6);           /* no audio at all: the game takes its no-sound path */
++    static int watching;
++    if (!watching) { pthread_t t; if (pthread_create(&t, NULL, wo_watch, NULL) == 0) pthread_detach(t), watching = 1; }
++    pthread_mutex_lock(&g_mmq);
++    memset(&g_wo[i], 0, sizeof g_wo[i]);
++    g_wo[i].stream = stream, g_wo[i].channels = (int)ch, g_wo[i].bits = (int)bits, g_wo[i].rate = (int)rate;
++    g_wo[i].block = (int)(block ? block : ch * bits / 8);
++    g_wo[i].cb = A32(3), g_wo[i].inst = A32(4), g_wo[i].flags = flags;
++    g_wo[i].used = 1;
++    pthread_mutex_unlock(&g_mmq);
++    if (ph) MEM32(ph) = HWO(i);
++    fprintf(stderr, "[winmm] waveOutOpen: %u Hz, %u-bit, %u channel(s)\n", rate, bits, ch);
++    mm_notify(flags, A32(3), A32(4), HWO(i), WOM_OPEN, 0);
+     RET(MMSYSERR_NOERROR, 6);
+ }
+ static void m_waveOutWrite(void) {             /* (hwo, lpWaveHdr, cbwh) */
++    int i = wo_index(A32(0));
+     uint32_t wh = A32(1);
+-    if (wh) { MEM32(wh + 16) = (MEM32(wh + 16) | WHDR_DONE) & ~WHDR_INQUEUE; }
++    if (i < 0) RET(MMSYSERR_INVALHANDLE, 3);
++    if (!wh) RET(97u, 3);
++    uint32_t bytes = MEM32(wh + 4), frames = bytes / (uint32_t)g_wo[i].block, n = frames * (uint32_t)g_wo[i].channels;
++    const uint8_t *src = (const uint8_t *)hle_ptr(MEM32(wh));
++    int16_t *pcm = (int16_t *)malloc(sizeof(int16_t) * (n ? n : 1));
++    for (uint32_t k = 0; k < n && src; k++)
++        pcm[k] = g_wo[i].bits == 16 ? (int16_t)(src[2 * k] | src[2 * k + 1] << 8) : (int16_t)((src[k] - 128) << 8);
++    MEM32(wh + 16) = (MEM32(wh + 16) & ~WHDR_DONE) | WHDR_INQUEUE;
++    pthread_mutex_lock(&g_mmq);
++    if (g_wo[i].qn == WAVE_QUEUE) { pthread_mutex_unlock(&g_mmq); free(pcm); MEM32(wh + 16) &= ~WHDR_INQUEUE; RET(MMSYSERR_ERROR, 3); }
++    hle_audio_stream_push(g_wo[i].stream, pcm, (int)frames);
++    g_wo[i].pushed += frames;
++    g_wo[i].q[g_wo[i].qn].hdr = wh, g_wo[i].q[g_wo[i].qn].end = g_wo[i].pushed, g_wo[i].qn++;
++    pthread_mutex_unlock(&g_mmq);
++    free(pcm);
+     RET(MMSYSERR_NOERROR, 3);
+ }
+ static void m_waveOutPrepareHeader(void)   { uint32_t wh=A32(1); if(wh) MEM32(wh+16)|=0x00000002u/*WHDR_PREPARED*/; RET(MMSYSERR_NOERROR, 3); }
+ static void m_waveOutUnprepareHeader(void) { uint32_t wh=A32(1); if(wh) MEM32(wh+16)&=~0x00000002u; RET(MMSYSERR_NOERROR, 3); }
+-static void m_waveOutReset(void)       { RET(MMSYSERR_NOERROR, 1); }
+-static void m_waveOutClose(void)       { RET(MMSYSERR_NOERROR, 1); }
+-static void m_waveOutGetNumDevs(void)  { RET(1, 0); }          /* one (silent) device */
+-static void m_waveOutGetDevCapsA(void) { RET(MMSYSERR_NOERROR, 3); }
++/* Reset: what is queued is dropped, and every buffer comes back done. */
++static void m_waveOutReset(void) {
++    int i = wo_index(A32(0));
++    if (i < 0) RET(MMSYSERR_INVALHANDLE, 1);
++    pthread_mutex_lock(&g_mmq);
++    hle_audio_stream_flush(g_wo[i].stream);
++    hle_audio_stream_pause(g_wo[i].stream, 0);
++    pthread_mutex_unlock(&g_mmq);
++    uint32_t hdrs[WAVE_QUEUE];
++    wo_retire(i, wo_take(i, 1, hdrs), hdrs);
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_waveOutClose(void) {
++    int i = wo_index(A32(0));
++    if (i < 0) RET(MMSYSERR_INVALHANDLE, 1);
++    if (g_wo[i].qn) RET(33u /* WAVERR_STILLPLAYING */, 1);
++    uint32_t flags = g_wo[i].flags, cb = g_wo[i].cb, inst = g_wo[i].inst;
++    pthread_mutex_lock(&g_mmq);
++    hle_audio_stream_close(g_wo[i].stream);
++    g_wo[i].used = 0;
++    pthread_mutex_unlock(&g_mmq);
++    mm_notify(flags, cb, inst, HWO(i), WOM_CLOSE, 0);
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_waveOutPause(void)   { int i = wo_index(A32(0)); if (i < 0) RET(MMSYSERR_INVALHANDLE, 1); hle_audio_stream_pause(g_wo[i].stream, 1); RET(MMSYSERR_NOERROR, 1); }
++static void m_waveOutRestart(void) { int i = wo_index(A32(0)); if (i < 0) RET(MMSYSERR_INVALHANDLE, 1); hle_audio_stream_pause(g_wo[i].stream, 0); RET(MMSYSERR_NOERROR, 1); }
++/* (hwo, MMTIME*, cb): samples or bytes played; any other unit is answered in bytes. */
++static void m_waveOutGetPosition(void) {
++    int i = wo_index(A32(0));
++    uint32_t mt = A32(1);
++    if (i < 0) RET(MMSYSERR_INVALHANDLE, 3);
++    if (!mt) RET(97u, 3);
++    pthread_mutex_lock(&g_mmq);
++    uint64_t played = wo_played(i);
++    pthread_mutex_unlock(&g_mmq);
++    if (MEM32(mt) == 2u) MEM32(mt + 4) = (uint32_t)played;                       /* TIME_SAMPLES */
++    else MEM32(mt) = 4u, MEM32(mt + 4) = (uint32_t)(played * (uint64_t)g_wo[i].block);   /* TIME_BYTES */
++    RET(MMSYSERR_NOERROR, 3);
++}
++static void m_waveOutGetNumDevs(void)  { RET(1, 0); }
++/* WAVEOUTCAPSA: every PCM format (WAVE_FORMAT_1M08..4S16), stereo, volume. */
++static void m_waveOutGetDevCapsA(void) {       /* (devID, &caps, cb) */
++    uint32_t c = A32(1), cb = A32(2);
++    if (!c || cb < 52) RET(97u, 3);
++    memset(APTR(1), 0, 52);
++    MEM16(c) = 1, MEM16(c + 2) = 1, MEM32(c + 4) = 0x0100;
++    strcpy((char *)hle_ptr(c + 8), "win32hle wave out");
++    MEM32(c + 40) = 0x0FFFu, MEM16(c + 44) = 2, MEM32(c + 48) = 0x000Cu;   /* WAVECAPS_VOLUME | LRVOLUME */
++    RET(MMSYSERR_NOERROR, 3);
++}
+ 
+ /* The device's own volume, the id behind a handle: the one device, at full
+  * volume (a caller's level is its own business: dsound.c mixes at the level
+@@ -134,8 +299,6 @@ static void m_waveOutGetID(void)      { if (A32(1)) MEM32(A32(1)) = 0; RET(MMSYS
+  * 0 refused as a bad id, and anything given a handle told it is not one. A
+  * program that sets its card's levels through the mixer, or enumerates
+  * inputs for a record page, carries on without them. */
+-#define MMSYSERR_BADDEVICEID  2u
+-#define MMSYSERR_INVALHANDLE  5u
+ static void m_none0(void)       { RET(0, 0); }                        /* mixerGetNumDevs, waveInGetNumDevs */
+ static void m_mixerOpen(void)   { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 5); }
+ static void m_waveInOpen(void)  { if (A32(0)) MEM32(A32(0)) = 0; RET(MMSYSERR_BADDEVICEID, 6); }
+@@ -279,6 +442,300 @@ static void m_mmioStringToFOURCCA(void) {
+     RET(fcc, 2);
+ }
+ 
++/* --- MIDI out: midiStream* and the midiOut* calls a stream takes ---
++ * One synthesizer device, TinySoundFont (HLE_WITH_TSF) playing the SoundFont
++ * a host names (hle_midi_soundfont), into a dsound.c host stream. A thread of
++ * its own sequences the stream's MIDIEVENTs against the samples it renders,
++ * so the timing is the audio's. Without a SoundFont the events still run in
++ * time, silently, and every buffer comes back done as it would. midiOutOpen
++ * and midiOutShortMsg are not here: no title has asked for them yet. */
++#ifdef HLE_WITH_TSF
++#define TSF_IMPLEMENTATION
++#include "tsf.h"
++static tsf *g_tsf;
++#endif
++static char g_sf_path[1024];
++void hle_midi_soundfont(const char *path) { snprintf(g_sf_path, sizeof g_sf_path, "%s", path ? path : ""); }
++
++#define MIDI_RATE   44100
++#define MIDI_QUEUE  32
++#define MIDI_AHEAD  2048                      /* frames kept queued in the mixer: ~46 ms */
++#define MHDR_INQUEUE 0x00000004u
++#define MHDR_ISSTRM  0x00000008u
++#define HMS 0x5A5F0001u
++static struct {
++    int used, stream, paused;
++    uint32_t cb, inst, flags;
++    uint32_t timediv, tempo;                  /* ticks per quarter note; microseconds per quarter */
++    uint32_t q[MIDI_QUEUE]; int qn;
++    uint32_t off;                             /* the next event's byte offset in q[0] */
++    double wait;                              /* frames until it is due, once read; <0 not read yet */
++    uint64_t ticks; double tick_frac;         /* ticks played, for midiStreamPosition */
++} g_ms;
++
++static void midi_short(uint32_t m) {
++#ifdef HLE_WITH_TSF
++    if (!g_tsf) return;
++    int st = m & 0xF0, ch = m & 0x0F, d1 = (m >> 8) & 0x7F, d2 = (m >> 16) & 0x7F;
++    switch (st) {
++    case 0x80: tsf_channel_note_off(g_tsf, ch, d1); break;
++    case 0x90: if (d2) tsf_channel_note_on(g_tsf, ch, d1, d2 / 127.0f); else tsf_channel_note_off(g_tsf, ch, d1); break;
++    case 0xB0: tsf_channel_midi_control(g_tsf, ch, d1, d2); break;
++    case 0xC0: tsf_channel_set_presetnumber(g_tsf, ch, d1, ch == 9); break;
++    case 0xE0: tsf_channel_set_pitchwheel(g_tsf, ch, d1 | d2 << 7); break;
++    default: break;                           /* aftertouch: not modelled */
++    }
++#else
++    (void)m;
++#endif
++}
++static void midi_silence(void) {
++#ifdef HLE_WITH_TSF
++    if (g_tsf) tsf_note_off_all(g_tsf);
++#endif
++}
++static double frames_per_tick(void) {
++    uint32_t div = g_ms.timediv ? g_ms.timediv : 96;
++    return (double)g_ms.tempo / 1e6 * MIDI_RATE / (double)(div & 0x7FFF);
++}
++/* Under g_mmq: run the events due within `frames`, and say how many frames
++ * pass before the next one (or all of them). A finished header goes to
++ * done[]; returns how many frames to render before calling again. */
++static int midi_step(int frames, uint32_t *done, int *ndone) {
++    while (!g_ms.paused && g_ms.qn) {
++        uint32_t h = g_ms.q[0], data = MEM32(h), len = MEM32(h + 8);
++        if (g_ms.off + 12 > len) {            /* this buffer is played */
++            done[(*ndone)++] = h;
++            memmove(g_ms.q, g_ms.q + 1, sizeof(uint32_t) * (size_t)--g_ms.qn);
++            g_ms.off = 0, g_ms.wait = -1;
++            continue;
++        }
++        uint32_t at = data + g_ms.off;
++        if (g_ms.wait < 0) g_ms.wait = MEM32(at) * frames_per_tick();
++        if (g_ms.wait >= 1.0) {
++            int n = g_ms.wait < frames ? (int)g_ms.wait : frames;
++            g_ms.wait -= n;
++            double t = n / frames_per_tick() + g_ms.tick_frac;
++            g_ms.ticks += (uint64_t)t, g_ms.tick_frac = t - (double)(uint64_t)t;
++            return n;
++        }
++        g_ms.ticks += MEM32(at);
++        uint32_t ev = MEM32(at + 8), type = (ev >> 24) & ~0x40u;   /* MEVT_F_CALLBACK aside */
++        if (ev & 0x80000000u) g_ms.off += 12 + (((ev & 0xFFFFFFu) + 3u) & ~3u);   /* MEVT_F_LONG: sysex, comment: skipped */
++        else {
++            if (type == 0) midi_short(ev & 0xFFFFFFu);              /* MEVT_SHORTMSG */
++            else if (type == 1) g_ms.tempo = ev & 0xFFFFFFu;         /* MEVT_TEMPO */
++            g_ms.off += 12;
++        }
++        g_ms.wait = -1;
++    }
++    return frames;
++}
++static void *midi_thread(void *arg) {
++    (void)arg;
++    int16_t pcm[2 * 512];
++    for (;;) {
++        if (!g_ms.used || hle_audio_stream_queued(g_ms.stream) >= MIDI_AHEAD) { usleep(3000); continue; }
++        uint32_t done[MIDI_QUEUE + 1]; int ndone = 0, left = 512, at = 0;
++        pthread_mutex_lock(&g_mmq);
++        while (left > 0 && g_ms.used) {
++            int n = midi_step(left, done, &ndone);
++#ifdef HLE_WITH_TSF
++            if (g_tsf) tsf_render_short(g_tsf, pcm + 2 * at, n, 0);
++            else
++#endif
++            memset(pcm + 2 * at, 0, sizeof(int16_t) * 2 * (size_t)n);
++            at += n, left -= n;
++        }
++        int stream = g_ms.used ? g_ms.stream : -1;
++        uint32_t flags = g_ms.flags, cb = g_ms.cb, inst = g_ms.inst;
++        pthread_mutex_unlock(&g_mmq);
++        if (stream >= 0) hle_audio_stream_push(stream, pcm, at);
++        for (int k = 0; k < ndone; k++) {
++            hdr_done(done[k], MHDR_INQUEUE);
++            mm_notify(flags, cb, inst, HMS, MOM_DONE, done[k]);
++        }
++    }
++    return NULL;
++}
++
++static void m_midiOutGetNumDevs(void) { RET(1, 0); }
++/* MIDIOUTCAPSA: a synthesizer that takes streams, reported as an FM synth
++ * (MOD_FMSYNTH), what a 1995 sound card's device 0 was: Hover! plays music
++ * only on an FM synth or the MIDI mapper, and turns it off for anything else. */
++static void m_midiOutGetDevCapsA(void) {      /* (devID, &caps, cb) */
++    uint32_t c = A32(1);
++    if (!c || A32(2) < 52) RET(97u, 3);
++    memset(APTR(1), 0, 52);
++    MEM16(c) = 1, MEM16(c + 2) = 2, MEM32(c + 4) = 0x0100;
++    strcpy((char *)hle_ptr(c + 8), "win32hle synthesizer");
++    MEM16(c + 40) = 4 /* MOD_FMSYNTH */, MEM16(c + 42) = 64, MEM16(c + 44) = 64, MEM16(c + 46) = 0xFFFF;
++    MEM32(c + 48) = 0x0009u;                  /* MIDICAPS_VOLUME | MIDICAPS_STREAM */
++    RET(MMSYSERR_NOERROR, 3);
++}
++static void m_midiStreamOpen(void) {          /* (&hms, &devID, cMidi, cb, inst, flags) */
++    if (g_ms.used) RET(MMSYSERR_ALLOCATED, 6);
++    int stream = hle_audio_stream_open(MIDI_RATE, 2);
++    if (stream < 0) RET(MMSYSERR_ALLOCATED, 6);
++#ifdef HLE_WITH_TSF
++    if (!g_tsf && g_sf_path[0]) {
++        g_tsf = tsf_load_filename(g_sf_path);
++        fprintf(stderr, "[winmm] SoundFont %s: %s\n", g_sf_path, g_tsf ? "loaded" : "could not be read, MIDI is silent");
++        if (g_tsf) {
++            tsf_set_output(g_tsf, TSF_STEREO_INTERLEAVED, MIDI_RATE, 0.0f);
++            tsf_set_max_voices(g_tsf, 64);
++        }
++    }
++    if (g_tsf) {
++        tsf_reset(g_tsf);
++        tsf_channel_set_bank_preset(g_tsf, 9, 128, 0);  /* GM: channel 10 is drums */
++    }
++#else
++    fprintf(stderr, "[winmm] midiStreamOpen: no synthesizer in this build, MIDI is silent\n");
++#endif
++    static int running;
++    if (!running) { pthread_t t; if (pthread_create(&t, NULL, midi_thread, NULL) == 0) pthread_detach(t), running = 1; }
++    pthread_mutex_lock(&g_mmq);
++    memset(&g_ms, 0, sizeof g_ms);
++    g_ms.stream = stream, g_ms.paused = 1, g_ms.wait = -1;   /* a stream opens paused */
++    g_ms.timediv = 96, g_ms.tempo = 500000;
++    g_ms.cb = A32(3), g_ms.inst = A32(4), g_ms.flags = A32(5);
++    g_ms.used = 1;
++    pthread_mutex_unlock(&g_mmq);
++    if (A32(0)) MEM32(A32(0)) = HMS;
++    mm_notify(A32(5), A32(3), A32(4), HMS, MOM_OPEN, 0);
++    RET(MMSYSERR_NOERROR, 6);
++}
++#define MS_OK(h) (g_ms.used && (h) == HMS)
++/* Every queued buffer back, done, and every note off: midiStreamStop, midiOutReset. */
++static void ms_return_all(void) {
++    uint32_t done[MIDI_QUEUE]; int n;
++    pthread_mutex_lock(&g_mmq);
++    n = g_ms.qn;
++    memcpy(done, g_ms.q, sizeof(uint32_t) * (size_t)n);
++    g_ms.qn = 0, g_ms.off = 0, g_ms.wait = -1;
++    midi_silence();
++    pthread_mutex_unlock(&g_mmq);
++    for (int k = 0; k < n; k++) {
++        hdr_done(done[k], MHDR_INQUEUE);
++        mm_notify(g_ms.flags, g_ms.cb, g_ms.inst, HMS, MOM_DONE, done[k]);
++    }
++}
++static void m_midiStreamOut(void) {           /* (hms, MIDIHDR*, cb) */
++    uint32_t h = A32(1);
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 3);
++    if (!h || !(MEM32(h + 16) & 2u)) RET(64u /* MIDIERR_UNPREPARED */, 3);
++    pthread_mutex_lock(&g_mmq);
++    if (g_ms.qn == MIDI_QUEUE) { pthread_mutex_unlock(&g_mmq); RET(MMSYSERR_ERROR, 3); }
++    MEM32(h + 16) = (MEM32(h + 16) & ~WHDR_DONE) | MHDR_INQUEUE | MHDR_ISSTRM;
++    g_ms.q[g_ms.qn++] = h;
++    pthread_mutex_unlock(&g_mmq);
++    RET(MMSYSERR_NOERROR, 3);
++}
++static void m_midiStreamRestart(void) {
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 1);
++    g_ms.paused = 0;
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_midiStreamPause(void) {
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 1);
++    pthread_mutex_lock(&g_mmq);
++    g_ms.paused = 1;
++    midi_silence();
++    pthread_mutex_unlock(&g_mmq);
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_midiStreamStop(void) {
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 1);
++    g_ms.paused = 1;
++    ms_return_all();
++    g_ms.ticks = 0, g_ms.tick_frac = 0;
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_midiOutReset(void) {
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 1);
++    ms_return_all();
++    RET(MMSYSERR_NOERROR, 1);
++}
++static void m_midiStreamClose(void) {
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 1);
++    ms_return_all();
++    uint32_t flags = g_ms.flags, cb = g_ms.cb, inst = g_ms.inst;
++    pthread_mutex_lock(&g_mmq);
++    hle_audio_stream_close(g_ms.stream);
++    g_ms.used = 0;
++    pthread_mutex_unlock(&g_mmq);
++    mm_notify(flags, cb, inst, HMS, MOM_CLOSE, 0);
++    RET(MMSYSERR_NOERROR, 1);
++}
++/* (hms, MIDIPROP*, flags): MIDIPROP_SET 0x80000000 / GET 0x40000000, of
++ * MIDIPROP_TIMEDIV 1 or MIDIPROP_TEMPO 2; the struct is {cbStruct, value}. */
++static void m_midiStreamProperty(void) {
++    uint32_t p = A32(1), f = A32(2);
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 3);
++    if (!p) RET(97u, 3);
++    uint32_t *v = (f & 1u) ? &g_ms.timediv : (f & 2u) ? &g_ms.tempo : NULL;
++    if (!v) RET(97u, 3);
++    pthread_mutex_lock(&g_mmq);
++    if (f & 0x80000000u) *v = MEM32(p + 4);
++    else MEM32(p + 4) = *v;
++    pthread_mutex_unlock(&g_mmq);
++    RET(MMSYSERR_NOERROR, 3);
++}
++/* (hms, MMTIME*, cb): ticks (TIME_TICKS 0x20), otherwise milliseconds (TIME_MS 1). */
++static void m_midiStreamPosition(void) {
++    uint32_t mt = A32(1);
++    if (!MS_OK(A32(0))) RET(MMSYSERR_INVALHANDLE, 3);
++    if (!mt) RET(97u, 3);
++    pthread_mutex_lock(&g_mmq);
++    uint64_t ticks = g_ms.ticks;
++    double ms = (double)ticks * frames_per_tick() * 1000.0 / MIDI_RATE;
++    pthread_mutex_unlock(&g_mmq);
++    if (MEM32(mt) == 0x20u) MEM32(mt + 4) = (uint32_t)ticks;
++    else MEM32(mt) = 1u, MEM32(mt + 4) = (uint32_t)ms;
++    RET(MMSYSERR_NOERROR, 3);
++}
++static void m_midiOutPrepareHeader(void)   { uint32_t h = A32(1); if (h) MEM32(h + 16) |= 2u; RET(MMSYSERR_NOERROR, 3); }
++static void m_midiOutUnprepareHeader(void) {
++    uint32_t h = A32(1);
++    if (h && (MEM32(h + 16) & MHDR_INQUEUE)) RET(65u /* MIDIERR_STILLPLAYING */, 3);
++    if (h) MEM32(h + 16) &= ~2u;
++    RET(MMSYSERR_NOERROR, 3);
++}
++
++/* --- sndPlaySoundA: a WAV file (or one in memory, SND_MEMORY) on a stream of
++ * its own; a new sound stops the last one, as on Windows. Without SND_ASYNC
++ * the call returns once it has played. SND_LOOP plays it once. */
++static int g_snd = -1, g_snd_rate;
++static void m_sndPlaySoundA(void) {           /* (name or WAV, flags) */
++    uint32_t name = A32(0), flags = A32(1);
++    if (g_snd >= 0) hle_audio_stream_flush(g_snd);
++    if (!name) RET(1, 2);
++    SDL_RWops *rw = NULL;
++    char host[1024];
++    if (flags & 0x0004u) rw = SDL_RWFromConstMem(hle_ptr(name), (int)(MEM32(name + 4) + 8));   /* SND_MEMORY: a RIFF image */
++    else if (hle_host_path((const char *)hle_ptr(name), host, sizeof host)) rw = SDL_RWFromFile(host, "rb");
++    SDL_AudioSpec spec; Uint8 *buf = NULL; Uint32 len = 0;
++    if (!rw || !SDL_LoadWAV_RW(rw, 1, &spec, &buf, &len)) {
++        fprintf(stderr, "[winmm] sndPlaySoundA(%s): not played\n", flags & 0x0004u ? "<memory>" : (const char *)hle_ptr(name));
++        RET(0, 2);
++    }
++    SDL_AudioCVT cvt;
++    if (SDL_BuildAudioCVT(&cvt, spec.format, spec.channels, spec.freq, AUDIO_S16SYS, 2, spec.freq) < 0) { SDL_FreeWAV(buf); RET(0, 2); }
++    cvt.len = (int)len;
++    cvt.buf = (Uint8 *)SDL_malloc((size_t)len * (size_t)(cvt.len_mult > 0 ? cvt.len_mult : 1));
++    memcpy(cvt.buf, buf, len);
++    SDL_FreeWAV(buf);
++    SDL_ConvertAudio(&cvt);
++    if (g_snd >= 0 && g_snd_rate != spec.freq) hle_audio_stream_close(g_snd), g_snd = -1;
++    if (g_snd < 0) g_snd = hle_audio_stream_open(spec.freq, 2), g_snd_rate = spec.freq;
++    if (g_snd >= 0) hle_audio_stream_push(g_snd, (const int16_t *)cvt.buf, cvt.len_cvt / 4);
++    SDL_free(cvt.buf);
++    if (!(flags & 0x0001u) && g_snd >= 0)     /* not SND_ASYNC: wait for it, the machine given up */
++        while (hle_audio_stream_queued(g_snd) > 0) { hle_block_begin(); usleep(2000); hle_block_end(); }
++    RET(1, 2);
++}
++
+ const win32hle_shim win32hle_winmm[] = {
+     { "mmioStringToFOURCCA",    m_mmioStringToFOURCCA },
+     { "mmioOpenA", m_mmioOpenA }, { "mmioClose", m_mmioClose }, { "mmioRead", m_mmioRead }, { "mmioWrite", m_mmioWrite },
+@@ -306,6 +763,23 @@ const win32hle_shim win32hle_winmm[] = {
+     { "waveOutSetVolume",       m_waveOutSetVolume },
+     { "waveOutGetVolume",       m_waveOutGetVolume },
+     { "waveOutGetID",           m_waveOutGetID },
++    { "waveOutPause",           m_waveOutPause },
++    { "waveOutRestart",         m_waveOutRestart },
++    { "waveOutGetPosition",     m_waveOutGetPosition },
++    { "midiOutGetNumDevs",      m_midiOutGetNumDevs },
++    { "midiOutGetDevCapsA",     m_midiOutGetDevCapsA },
++    { "midiOutPrepareHeader",   m_midiOutPrepareHeader },
++    { "midiOutUnprepareHeader", m_midiOutUnprepareHeader },
++    { "midiOutReset",           m_midiOutReset },
++    { "midiStreamOpen",         m_midiStreamOpen },
++    { "midiStreamClose",        m_midiStreamClose },
++    { "midiStreamOut",          m_midiStreamOut },
++    { "midiStreamProperty",     m_midiStreamProperty },
++    { "midiStreamPosition",     m_midiStreamPosition },
++    { "midiStreamRestart",      m_midiStreamRestart },
++    { "midiStreamPause",        m_midiStreamPause },
++    { "midiStreamStop",         m_midiStreamStop },
++    { "sndPlaySoundA",          m_sndPlaySoundA },
+     { "mixerGetNumDevs",        m_none0 },
+     { "mixerOpen",              m_mixerOpen },
+     { "mixerClose",             m_badhandle1 },
