@@ -1,0 +1,99 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+# Same first-run patch/repack entry point as the supplied TMNT port.
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$PATH:$SCRIPT_PATH/utils"
+gamedir="${gamedir:-$SCRIPT_PATH}"
+export gamedir
+cd "$gamedir/gamedata" || exit 1
+set -e
+set -o pipefail
+command -v mono >/dev/null
+source "$gamedir/patches/select-build"
+
+# A code-only update does not require recompressing verified game assets.
+if [ -f .assets_checksum ] && [ -f .ver_checksum ] &&
+   { [ ! -f .astc_done ] || [ ! -f .intro_done ]; }; then
+  if [ "$(awk '$2 == "Game.exe" || $2 == "ParisEngine.dll" {n++} END {print n+0}' .ver_checksum)" -eq 2 ] &&
+     awk '$2 == "Game.exe" || $2 == "ParisEngine.dll"' .ver_checksum | sha1sum -c - >/dev/null 2>&1; then
+    if cmp -s <(cut -c43- .assets_checksum | LC_ALL=C sort) <(
+      { cat "$SCOTT_ASSET_PLAN_REL"; for video in GameIntro.ogv GameIntro_DLC.ogv; do
+          [ ! -f "Content/Videos/$video" ] || printf '%s\n' "Content/Videos/$video"
+        done; } | LC_ALL=C sort
+    ) && sha1sum -c .assets_checksum >/dev/null 2>&1; then
+      touch .astc_done .intro_done
+      echo "First Time Setup: Reusing checksum-verified textures and videos."
+    fi
+  fi
+fi
+
+patch() {
+  [ -f .patch_done ] && return 0
+  echo "First Time Setup: Applying Scott Pilgrim EX patches..."
+  mkdir -p .setup
+  mono ../patches/Prepare.exe compat . .setup
+  export MONOMOD_MODS="$(cd "$SCOTT_PATCH_DIR_REL" && pwd)"
+  export MONOMOD_DEPDIRS="$gamedir/gamedata/.setup:$MONO_PATH:$gamedir/monomod"
+  mono ../monomod/MonoMod.exe .setup/ParisEngine.dll
+  mono ../monomod/MonoMod.exe .setup/Game.exe
+  mv -f .setup/MONOMODDED_ParisEngine.dll MONOMODDED_ParisEngine.dll
+  mv -f .setup/MONOMODDED_Game.exe MONOMODDED_Game.exe
+  mono ../patches/Optimize.exe MONOMODDED_ParisEngine.dll ../dlls/ScottLowMemory.dll
+  # AOT is optional: on a firmware without working AOT, Mono can still JIT.
+  for assembly in MONOMODDED_ParisEngine.dll MONOMODDED_Game.exe; do
+    if mono -O=all --aot "$assembly"; then
+      mv -f "$assembly.so" "${assembly#MONOMODDED_}.so"
+    else
+      rm -f "$assembly.so" "${assembly#MONOMODDED_}.so"
+      echo "AOT unavailable for $assembly; using JIT."
+    fi
+  done
+  sha1sum Game.exe ParisEngine.dll MONOMODDED_Game.exe MONOMODDED_ParisEngine.dll \
+    "$SCOTT_PATCH_DIR_REL"/*.dll ../dlls/FNA.dll ../patches/Prepare.exe ../repack.src ../FNARepacker.exe \
+    ../dlls/ScottLowMemory.dll ../patches/Optimize.exe \
+    ../patches/select-build "$SCOTT_CHECKSUM_REL" "$SCOTT_ASSET_PLAN_REL" > .ver_checksum.tmp
+  mv -f .ver_checksum.tmp .ver_checksum
+  touch .patch_done
+}
+astc() {
+  [ -f .astc_done ] && return 0
+  echo "First Time Setup: Compressing textures. This can take a long time."
+  export ASTC_QUALITY=30.0
+  mono ../FNARepacker.exe Content/ 2>&1 | tee ../textures.log
+  if grep -q 'failed to be re-encoded:' ../textures.log; then
+    echo "Texture conversion reported an error; setup remains incomplete."
+    return 1
+  fi
+  while IFS= read -r asset; do
+    [ -s "$asset" ] || { echo "Missing converted texture: $asset"; return 1; }
+  done < "$SCOTT_ASSET_PLAN_REL"
+  touch .astc_done
+}
+intro() {
+  [ -f .intro_done ] && return 0
+  mkdir -p .pc-libraries
+  for video in GameIntro.ogv GameIntro_DLC.ogv; do
+    [ -f "Content/Videos/$video" ] || continue
+    echo "First Time Setup: Reducing $video to 640x360."
+    "$SCRIPT_PATH/utils/ffmpeg" -y -hide_banner -loglevel error -threads 1 -i "Content/Videos/$video" \
+      -vf 'scale=640:360:flags=bilinear,setsar=1' -r 30 -c:v libtheora -q:v 4 \
+      -c:a libvorbis -q:a 3 -threads 1 "Content/Videos/.$video.portmaster.ogv"
+    [ -s "Content/Videos/.$video.portmaster.ogv" ]
+    [ -f ".pc-libraries/$video" ] || cp "Content/Videos/$video" ".pc-libraries/$video"
+    mv -f "Content/Videos/.$video.portmaster.ogv" "Content/Videos/$video"
+  done
+  touch .intro_done
+}
+
+# Sequential jobs keep the graphics converter, AOT compiler and video encoder
+# from competing for the 1 GB memory budget.
+patch
+astc
+mono ../patches/Optimize.exe --audit "$SCOTT_ASSET_PLAN_REL" ../memory-assets.log
+intro
+while IFS= read -r asset; do sha1sum "$asset"; done < "$SCOTT_ASSET_PLAN_REL" > .assets_checksum.tmp
+for video in GameIntro.ogv GameIntro_DLC.ogv; do
+  [ ! -f "Content/Videos/$video" ] || sha1sum "Content/Videos/$video" >> .assets_checksum.tmp
+done
+mv -f .assets_checksum.tmp .assets_checksum
+echo "First Time Setup: Finished."
