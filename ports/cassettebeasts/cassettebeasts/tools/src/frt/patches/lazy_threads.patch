@@ -1,0 +1,86 @@
+--- a/drivers/gles3/rasterizer_storage_gles3.h
++++ b/drivers/gles3/rasterizer_storage_gles3.h
+@@ -31,6 +31,7 @@
+ #ifndef RASTERIZER_STORAGE_GLES3_H
+ #define RASTERIZER_STORAGE_GLES3_H
+ 
++#include "core/os/mutex.h"
+ #include "core/self_list.h"
+ #include "drivers/gles_common/rasterizer_asserts.h"
+ #include "servers/visual/rasterizer.h"
+@@ -377,9 +378,18 @@
+ 		int uploads = 0;
+ 		int evictions = 0;
+ 		int failed = 0;
++		struct Pending { // set_source calls from loading threads, applied by the main thread
++			RID texture;
++			String path;
++			int custom_width = 0;
++			int custom_height = 0;
++		};
++		Vector<Pending> pending;
++		Mutex mutex;
+ 	} lazy;
+ 	static RasterizerStorageGLES3 *lazy_singleton;
+ 	static void _lazy_set_source(RID p_texture, const String &p_path, int p_custom_width, int p_custom_height);
++	void _texture_lazy_apply_source(RID p_texture, const String &p_path, int p_custom_width, int p_custom_height);
+ 	void _texture_lazy_drop(Texture *p_texture);
+ 	void _texture_lazy_realize(Texture *p_texture);
+ 	void _texture_lazy_update();
+--- a/drivers/gles3/rasterizer_storage_gles3.cpp
++++ b/drivers/gles3/rasterizer_storage_gles3.cpp
+@@ -37,6 +37,8 @@
+ #include "main/main.h"
+ #include "rasterizer_canvas_gles3.h"
+ #include "rasterizer_scene_gles3.h"
++#include "core/os/mutex.h"
++#include "core/os/thread.h"
+ #include "servers/visual/lazy_texture.h"
+ #include "servers/visual_server.h"
+ 
+@@ -541,9 +543,25 @@
+ void RasterizerStorageGLES3::_lazy_set_source(RID p_texture, const String &p_path, int p_custom_width, int p_custom_height) {
+ 	RasterizerStorageGLES3 *s = lazy_singleton;
+ 	ERR_FAIL_COND(!s);
+-	Texture *t = s->texture_owner.getornull(p_texture);
++	if (Thread::get_caller_id() != Thread::get_main_id()) {
++		// called by StreamTexture::load on a loading thread: the main thread applies it at the start of
++		// the next frame (the renderer's own state is only touched there)
++		MutexLock lock(s->lazy.mutex);
++		LazyState::Pending p;
++		p.texture = p_texture;
++		p.path = p_path;
++		p.custom_width = p_custom_width;
++		p.custom_height = p_custom_height;
++		s->lazy.pending.push_back(p);
++		return;
++	}
++	s->_texture_lazy_apply_source(p_texture, p_path, p_custom_width, p_custom_height);
++}
++
++void RasterizerStorageGLES3::_texture_lazy_apply_source(RID p_texture, const String &p_path, int p_custom_width, int p_custom_height) {
++	Texture *t = texture_owner.getornull(p_texture);
+ 	ERR_FAIL_COND(!t);
+-	s->_texture_lazy_drop(t);
++	_texture_lazy_drop(t);
+ 	t->self = p_texture;
+ 	t->lazy_source = p_path;
+ 	t->lazy_custom_width = p_custom_width;
+@@ -595,6 +613,17 @@
+ 	if (!lazy.enabled) {
+ 		return;
+ 	}
++	Vector<LazyState::Pending> pending;
++	{
++		MutexLock lock(lazy.mutex);
++		pending = lazy.pending;
++		lazy.pending.clear();
++	}
++	for (int i = 0; i < pending.size(); i++) {
++		if (texture_owner.owns(pending[i].texture)) {
++			_texture_lazy_apply_source(pending[i].texture, pending[i].path, pending[i].custom_width, pending[i].custom_height);
++		}
++	}
+ 	lazy.now = OS::get_singleton()->get_ticks_msec();
+ 	if (lazy.evict_msec && lazy.now - lazy.last_evict_check >= 1000) {
+ 		lazy.last_evict_check = lazy.now;
