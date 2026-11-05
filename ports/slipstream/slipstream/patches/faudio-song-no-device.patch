@@ -1,0 +1,53 @@
+diff --git a/src/XNA_Song.c b/src/XNA_Song.c
+index a50f9d4..231b807 100644
+--- a/src/XNA_Song.c
++++ b/src/XNA_Song.c
+@@ -183,7 +183,7 @@ static void XNA_SongKill()
+ FAUDIOAPI void XNA_SongInit()
+ {
+ 	FAudioCreate(&songAudio, 0, FAUDIO_DEFAULT_PROCESSOR);
+-	FAudio_CreateMasteringVoice(
++	if (FAudio_CreateMasteringVoice(
+ 		songAudio,
+ 		&songMaster,
+ 		FAUDIO_DEFAULT_CHANNELS,
+@@ -191,12 +191,23 @@ FAUDIOAPI void XNA_SongInit()
+ 		0,
+ 		0,
+ 		NULL
+-	);
++	) != 0)
++	{
++		/* No output device: songs keep their length but play silently. */
++		FAudio_Log("XNA_SongInit: no audio device, songs play silently");
++		FAudio_Release(songAudio);
++		songAudio = NULL;
++		songMaster = NULL;
++	}
+ }
+ 
+ FAUDIOAPI void XNA_SongQuit()
+ {
+ 	XNA_SongKill();
++	if (songAudio == NULL)
++	{
++		return;
++	}
+ 	FAudioVoice_DestroyVoice(songMaster);
+ 	FAudio_Release(songAudio);
+ }
+@@ -240,6 +251,14 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
+ 		format.cbSize = 0;
+ 	}
+ 
++	/* No device: the length alone, no voice; XNA_SongKill closes the file. */
++	if (songAudio == NULL)
++	{
++		return (activeVorbisSong != NULL) ?
++			stb_vorbis_stream_length_in_seconds(activeVorbisSong) :
++			qoaTotalSamplesPerChannel / (float) qoaSampleRate;
++	}
++
+ 	/* Allocate decode cache */
+ 	songCache = (uint8_t*) FAudio_malloc(format.nAvgBytesPerSec);
+ 
