@@ -4,6 +4,9 @@ Thanks to [Valkayree Productions](https://rpg.hamsterrepublic.com/ohrrpgce/Game:
 
 This port uses the same OHRRPGCE engine binary as Vikings of Midgard, pointed at `EOTE2.RPG`.
 
+License notices for the bundled runtime libraries are included in
+`endsoftheearth2/licenses/`.
+
 ## You need to provide EOTE2.RPG yourself
 
 This port ships the OHRRPGCE engine (GPL-licensed and freely redistributable) but **not** the game data. `EOTE2.RPG` is Ends of the Earth 2's actual game content, copyright Valkayree Productions, All Rights Reserved, so it cannot be bundled here.
