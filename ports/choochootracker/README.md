@@ -14,6 +14,20 @@ ChooChooTracker is a handheld tracker based on ChipNomad. It combines AY/YM synt
 
 The first PortMaster build targets aarch64 devices such as the Anbernic RG353V. Audio runs at 96 kHz.
 
+## First launch and updates
+
+Bundled assets ship in `data.tar.gz` and are extracted on the first launch.
+Wait for the extraction message to finish. Existing projects, samples, presets
+and other assets are preserved; updates add missing files without replacing
+your edits. The archive is deleted only after successful extraction. If
+extraction fails, the app does not start and the archive remains for a retry.
+Legacy installations with already-extracted data continue to work.
+
+Validated on RG353V / ArkOS: all 781 bundled files matched after extraction,
+relaunch skipped extraction, updates preserved a modified project, and a corrupt
+archive stopped launch without being deleted. The isolated rebuilt tracker also
+passed a manual display, controls, playback/audio and normal-exit check.
+
 ## ROCKNIX
 
 PortMaster must be fully installed in the active ROMs location. With two SD

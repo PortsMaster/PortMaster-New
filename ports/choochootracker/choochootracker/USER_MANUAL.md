@@ -65,6 +65,28 @@ Run `choochootracker.exe` with `SDL2.dll` and `libwinpthread-1.dll` in the same 
 Press **ALT + ENTER** to toggle fullscreen. The window is resizable; the image
 scales while keeping its original aspect ratio.
 
+### macOS (experimental)
+
+Download the universal macOS ZIP for Apple Silicon and Intel from GitHub
+Releases. Extract it and move **ChooChooTracker.app** to Applications. SDL2 and
+all runtime assets are included; Homebrew is not required. The build targets
+macOS 11 or later, but automated checks run on newer macOS only.
+
+The application is ad-hoc signed, **not Apple Developer signed or notarized**.
+If macOS blocks a trusted release package, try opening it, then use
+**System Settings > Privacy & Security > Open Anyway** and confirm. Do not
+disable Gatekeeper globally.
+
+Settings, autosave, projects and bundled resources are stored in
+`~/Library/Application Support/ChooChooTracker`. Missing resources are copied
+there at launch without replacing existing files. Back up this directory;
+replacing the application does not delete it. Open `.cct` files from the app's
+Load browser, not by double-clicking them in Finder.
+
+Allow microphone access when using sampler audio recording. This platform
+remains experimental pending community testing of Finder, Retina, real audio
+and recording, MIDI and Ableton Link on both Mac architectures.
+
 ### Web
 
 The browser version refreshes its display at about 30 FPS and uses a fixed
@@ -306,7 +328,7 @@ You can keep multiple sub-songs in a project by creating "islands": sections sep
 
 #### Live Mode
 
-Double-tap **OPT** to enter or leave Live Mode; `LIVE` replaces the Song title. The switch happens a moment after the second tap, so tapping **OPT** 3 times adds a highlight without entering or leaving Live Mode. In Live Mode, **PLAY** starts the selected chain on its own track when that track is stopped. On a playing track, it queues the selected chain for the next chain boundary; press **PLAY** twice for an urgent change at the next phrase boundary. A selected empty Song cell queues a quantised stop instead. `+` marks a queued chain, `!` an urgent chain and `-` a queued stop.
+Double-tap **OPT** to enter or leave Live Mode; `LIVE` replaces the Song title. The switch happens a moment after the second tap, so tapping **OPT** 3 times adds a highlight without entering or leaving Live Mode. In Live Mode, **PLAY** queues the selected chain for the next chain boundary. A playing track finishes its own chain; a stopped track waits for the first active track (lowest track number) to finish its chain. When no track is playing, playback starts immediately. Selected stopped tracks launch together on their reference boundary. Press **PLAY** twice for an urgent change at the next phrase boundary instead. A selected empty Song cell queues a quantised stop on a playing track, or cancels a stopped track's pending launch. `+` marks a queued chain, `!` an urgent chain and `-` a queued stop.
 
 Select one Song row across several columns to queue or stop those tracks together. Multi-row selections are deliberately rejected. Live queues are cleared while a Song range loop is active. Live is a performance mode and is not saved in the project.
 
@@ -1078,6 +1100,8 @@ The Pitch column accepts relative (`~`) or absolute (`=`) pitch values in semito
 
 Putting a `TIC` FX on the last table row sets the speed of that column and overrides the instrument's default table speed. Each FX column can run at a different tick speed. The Pitch and Volume columns follow the speed of the 1st FX column.
 
+Continuous table modifiers stay active throughout their table step, even when notes or several phrase loops pass before the next table step. Instrument and auxiliary table modifiers combine with the phrase FX; a phrase command on the same parameter takes precedence on that phrase row. Advancing the phrase does not repeat one-shot table actions such as MIDI CC sends, note retriggers or jumps.
+
 A 16-row table may look short next to a long Vortex Tracker instrument, but the `HOP` FX can create conditional loops such as "repeat these rows 5 times", as well as nested loops. With loops and independent FX column speeds, those 16 rows can go a surprisingly long way.
 
 ### Retrigger mode
@@ -1441,6 +1465,8 @@ The Project screen provides **Load**, **Save**, **New**, **Export**, **Manage**,
 
 ### Export location
 
+WAV master exports, stems and selection bounces support slow project tempos, including 10 BPM; slow tempos must not produce header-only (44-byte) WAV files.
+
 Exports, stems and bounces are written to a per-project folder inside the app's preexisting samples directory:
 
 - **Default**: `<app folder>/samples/Exports/<project name>/`. While the project is unnamed, the folder is `current-project`.
@@ -1521,6 +1547,8 @@ During Link playback, CCT gently corrects its local tick rate once per four-beat
 - **Quit ChooChooTracker** exits cleanly.
 
 Animated backgrounds blend the theme's **Background** and **Value Bars** colors. **Intensity** controls how strongly the accent appears; at zero, the background stays solid. Change **Value Bars** in **Edit color theme** to choose the accent. Animated backgrounds keep moving across the whole screen while you browse lane FX in Phrase or Table. The Mixer CPU reading stays visible as the background moves.
+
+For a personal background, choose **Load BMP** in the Background settings. On Android, put the `.bmp` file in your working folder (including a folder selected with the system picker), then select it in the tracker. The saved selection is loaded again when the app starts; keep the file in place and retain access to the working folder. **Missing** indicates that the selected BMP could not be opened or decoded.
 
 Battery information appears at the top right when the device reports a battery. **Battery info** selects **Percent**, estimated remaining **Time**, or **Off** (the default). Time starts with a rough estimate based on the charge percentage, then adjusts as soon as an observed one-minute reading shows a drop. Later readings smooth the estimate over the last ten minutes. It shows `CHARGE` or `FULL` while connected to power.
 
