@@ -1,0 +1,1204 @@
+Binary files capitan-1.0.3.orig/- and capitan-1.0.3/- differ
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/Makefile capitan-1.0.3/Makefile
+--- capitan-1.0.3.orig/Makefile	2009-04-10 10:01:26.000000000 +0000
++++ capitan-1.0.3/Makefile	2026-11-05 17:10:17.767092584 +0000
+@@ -1,11 +1,13 @@
+ 
++include ../allegro-flags.mk
++
+ CC = g++
+-CFLAGS = -g3 -Iinclude -Isrc/include
+-LDFLAGS = -Llib -lalogg `allegro-config --libs` -lalfont -lpng -lz
++CFLAGS = -O2 -fsigned-char -DPORTMASTER -DALLEGRO_LEGACY_NO_FIX_ALIASES -Iinclude -Isrc/include $(AL_INC)
++LDFLAGS = -Llib -lalogg -lalfont $(AL_LIBS) -lSDL2 -lpng -lz -lm
+ 
+ PACKAGE = Capitan
+ VERSION = 1.0
+-EXE = capitan
++EXE = capitan.aarch64
+ 
+ SRCDIR = src
+ OBJDIR = $(SRCDIR)/obj
+@@ -35,7 +37,8 @@
+ 	$(SRCDIR)/panel.cpp		$(SRCDIR)/particula.cpp    \
+ 	$(SRCDIR)/partida.cpp		$(SRCDIR)/presentacion.cpp \
+ 	$(SRCDIR)/sistparticulas.cpp	$(SRCDIR)/sonido.cpp       \
+-	$(SRCDIR)/sprite.cpp		$(SRCDIR)/sprmanager.cpp
++	$(SRCDIR)/sprite.cpp		$(SRCDIR)/sprmanager.cpp \
++	$(SRCDIR)/pmblit.cpp
+ 
+ OBJECTS = $(addprefix $(OBJDIR)/, $(notdir $(patsubst %.cpp, %.o, $(MODULES))))
+ 
+@@ -48,6 +51,8 @@
+ 
+ all: $(EXE)
+ 
++$(OBJDIR)/pmblit.o: CFLAGS += -O3
++
+ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+ 	$(CC) $(CFLAGS) -c $< -o $@
+ 
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/background.cpp capitan-1.0.3/src/background.cpp
+--- capitan-1.0.3.orig/src/background.cpp	2009-04-10 10:57:23.000000000 +0000
++++ capitan-1.0.3/src/background.cpp	2026-11-01 19:55:10.574981618 +0000
+@@ -147,9 +147,15 @@
+ #endif
+ 
+ #ifndef FBLEND
++#ifdef PORTMASTER
++     if (!PMTransSprite16 (FondoStar, FondoBack, 0, 0, 64)) {
++#endif
+      set_trans_blender (0,0,0,64);
+      draw_trans_sprite(FondoStar, FondoBack, 0, 0);  // Al hacer esto se borran las estrellas, y, ademas, queda mas "Bonito"
+      solid_mode();
++#ifdef PORTMASTER
++     }
++#endif
+ #endif
+ 
+      if (NumHab >= 0) // Habitación (que están reducidas al tamaño normal)
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/configuracion.cpp capitan-1.0.3/src/configuracion.cpp
+--- capitan-1.0.3.orig/src/configuracion.cpp	2009-04-11 20:00:11.000000000 +0000
++++ capitan-1.0.3/src/configuracion.cpp	2026-11-01 20:23:19.592720461 +0000
+@@ -58,6 +58,10 @@
+         Passwd = config[1] & (1 << 4);
+         Resol = config[2];
+         GraphDet = config[3];
++#ifdef PORTMASTER
++        if (GraphDet > 3)
++           GraphDet = 3;
++#endif
+         VolFX = (unsigned char) config[4];
+         VolMus = (unsigned char) config[5];
+         Fase = config[6];
+@@ -180,6 +184,9 @@
+ 
+ const int Configuracion::VerResAlto ()
+ {
++#ifdef PORTMASTER
++    return 480;
++#endif
+ #ifdef GP2X
+     return 240;
+ #endif
+@@ -198,6 +205,9 @@
+ 
+ const int Configuracion::VerResAncho ()
+ {
++#ifdef PORTMASTER
++    return 640;
++#endif
+ #ifdef GP2X
+     return 320;
+ #endif
+@@ -252,10 +262,14 @@
+ }
+ 
+ void Configuracion::ToggleWindowed (char Rec){
++#ifdef PORTMASTER
++     Windowed = false;
++#else
+      if (Rec < 0)
+         Windowed = !Windowed;
+       else
+         Windowed = Rec;
++#endif
+      Save();
+ }
+ 
+@@ -284,10 +298,14 @@
+ }
+ 
+ void Configuracion::ToggleRes (char Rec) {
++#ifdef PORTMASTER
++     Resol = 1;
++#else
+      if (Rec < 0)
+         if (++Resol > 3) Resol = 1;
+      if (Rec >= 0)
+          Resol = Rec;
++#endif
+      Save();
+ }
+ 
+@@ -312,8 +330,13 @@
+ 
+ char Configuracion::IncGraphDetail (char Inc)
+ {
++#ifdef PORTMASTER
++     if (GraphDet + Inc > 3)
++        GraphDet = 3;
++#else
+      if (GraphDet + Inc > 4)
+         GraphDet = 4;
++#endif
+       else
+         if (GraphDet + Inc < 0)
+            GraphDet = 0;
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/hardware.cpp capitan-1.0.3/src/hardware.cpp
+--- capitan-1.0.3.orig/src/hardware.cpp	2009-04-10 11:11:28.000000000 +0000
++++ capitan-1.0.3/src/hardware.cpp	2026-11-04 13:07:14.367413273 +0000
+@@ -1,5 +1,295 @@
+ #include "hardware.h"
+ 
++#ifdef PORTMASTER
++#include <string.h>
++#include <a5alleg.h>
++#include <SDL2/SDL.h>
++
++/* The game draws everything into the A4 memory bitmap "screen". PMPresent copies
++   each finished frame into a triple buffer; a present thread owns the GL context
++   and converts, uploads and flips it while the game draws the next frame. */
++
++enum { PM_COPY_NONE, PM_COPY_565, PM_COPY_565_SWAP, PM_COPY_8888, PM_COPY_8888_SWAP };
++
++static ALLEGRO_BITMAP *PMScreen = NULL;
++static double PMLastFlip = 0;
++
++static ALLEGRO_THREAD *PMThread = NULL;
++static ALLEGRO_MUTEX *PMMutex = NULL;
++static ALLEGRO_COND *PMCond = NULL;
++static unsigned char *PMBuf[3] = { NULL, NULL, NULL };
++static int PMWrite, PMReady, PMRead, PMW, PMH, PMMode, PMBpp;
++static bool PMNewFrame, PMStop, PMStarted, PMThreadOK;
++static SDL_Window *PMWindow = NULL;
++static SDL_GLContext PMContext = NULL;
++static ALLEGRO_EVENT_QUEUE *PMEvents = NULL;
++static bool PMNoThread = false;
++
++static int PMCopyMode ()
++{
++    int Depth = bitmap_color_depth (screen);
++
++    if (Depth == 16 && _rgb_g_shift_16 == 5) {
++       if (_rgb_r_shift_16 == 11 && _rgb_b_shift_16 == 0)
++          return PM_COPY_565;
++       if (_rgb_r_shift_16 == 0 && _rgb_b_shift_16 == 11)
++          return PM_COPY_565_SWAP;
++       }
++    if (Depth == 32 && _rgb_g_shift_32 == 8) {
++       if (_rgb_r_shift_32 == 0 && _rgb_b_shift_32 == 16)
++          return PM_COPY_8888;
++       if (_rgb_r_shift_32 == 16 && _rgb_b_shift_32 == 0)
++          return PM_COPY_8888_SWAP;
++       }
++    return PM_COPY_NONE;
++}
++
++static int PMFormat (int Mode)
++{
++    if (Mode == PM_COPY_565 || Mode == PM_COPY_565_SWAP)
++       return ALLEGRO_PIXEL_FORMAT_RGB_565;
++    if (Mode == PM_COPY_8888 || Mode == PM_COPY_8888_SWAP)
++       return ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE;
++    return ALLEGRO_PIXEL_FORMAT_ANY;
++}
++
++static void PMConvertRow (int Mode, const void *SrcRow, void *DstRow, int w)
++{
++    const uint32_t *Src = (const uint32_t*) SrcRow;
++    uint32_t *Dst = (uint32_t*) DstRow;
++    int n;
++
++    switch (Mode) {
++           case PM_COPY_565:
++                memcpy (Dst, Src, w * 2);
++                break;
++           case PM_COPY_565_SWAP:
++                for (n = 0; n < w / 2; n++) {
++                    uint32_t c = Src[n];
++                    Dst[n] = ((c & 0x001F001Fu) << 11) | (c & 0x07E007E0u) | ((c >> 11) & 0x001F001Fu);
++                    }
++                break;
++           case PM_COPY_8888:
++                for (n = 0; n < w; n++)
++                    Dst[n] = Src[n] | 0xFF000000u;
++                break;
++           case PM_COPY_8888_SWAP:
++                for (n = 0; n < w; n++) {
++                    uint32_t c = Src[n];
++                    Dst[n] = 0xFF000000u | ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >> 16) & 0xFF);
++                    }
++                break;
++           }
++}
++
++static void PMDisplayEvents ()
++{
++    ALLEGRO_EVENT Event;
++
++    if (!PMEvents)
++       return;
++    while (al_get_next_event (PMEvents, &Event)) {
++          switch (Event.type) {
++                 case ALLEGRO_EVENT_DISPLAY_RESIZE:
++                      al_acknowledge_resize (Event.display.source);
++                      break;
++                 case ALLEGRO_EVENT_DISPLAY_HALT_DRAWING:
++                      al_acknowledge_drawing_halt (Event.display.source);
++                      break;
++                 case ALLEGRO_EVENT_DISPLAY_RESUME_DRAWING:
++                      al_acknowledge_drawing_resume (Event.display.source);
++                      break;
++                 }
++          }
++}
++
++static void PMDraw (ALLEGRO_DISPLAY *Disp)
++{
++    ALLEGRO_TRANSFORM Trans;
++    int OffX, OffY;
++    double Scale;
++
++    al_set_target_backbuffer (Disp);
++    Scale = al_get_display_width (Disp) / (double) al_get_bitmap_width (PMScreen);
++    if (al_get_display_height (Disp) / (double) al_get_bitmap_height (PMScreen) < Scale)
++       Scale = al_get_display_height (Disp) / (double) al_get_bitmap_height (PMScreen);
++    OffX = (int) ((al_get_display_width (Disp) - al_get_bitmap_width (PMScreen) * Scale) / 2);
++    OffY = (int) ((al_get_display_height (Disp) - al_get_bitmap_height (PMScreen) * Scale) / 2);
++    al_build_transform (&Trans, OffX, OffY, Scale, Scale, 0);
++    al_use_transform (&Trans);
++    al_clear_to_color (al_map_rgb (0, 0, 0));
++    al_draw_bitmap (PMScreen, 0, 0, 0);
++    al_flip_display();
++}
++
++static void *PMPresentThread (ALLEGRO_THREAD *Thread, void *Arg)
++{
++    ALLEGRO_DISPLAY *Disp = (ALLEGRO_DISPLAY*) Arg;
++
++    SDL_GL_MakeCurrent (PMWindow, PMContext);
++    al_set_target_backbuffer (Disp);
++    al_set_new_bitmap_flags (ALLEGRO_VIDEO_BITMAP | ALLEGRO_NO_PRESERVE_TEXTURE);
++    al_set_new_bitmap_format (PMFormat (PMMode));
++    PMScreen = al_create_bitmap (PMW, PMH);
++
++    al_lock_mutex (PMMutex);
++    PMThreadOK = PMScreen && al_get_bitmap_format (PMScreen) == PMFormat (PMMode);
++    PMStarted = true;
++    al_broadcast_cond (PMCond);
++    al_unlock_mutex (PMMutex);
++
++    while (PMThreadOK) {
++        al_lock_mutex (PMMutex);
++        while (!PMNewFrame && !PMStop)
++              al_wait_cond (PMCond, PMMutex);
++        if (PMStop) {
++           al_unlock_mutex (PMMutex);
++           break;
++           }
++        int t = PMRead; PMRead = PMReady; PMReady = t;
++        PMNewFrame = false;
++        al_unlock_mutex (PMMutex);
++
++        PMDisplayEvents();
++
++        ALLEGRO_LOCKED_REGION *Lock = al_lock_bitmap (PMScreen, PMFormat (PMMode), ALLEGRO_LOCK_WRITEONLY);
++        if (Lock) {
++           for (int y = 0; y < PMH; y++)
++               PMConvertRow (PMMode, PMBuf[PMRead] + y * PMW * PMBpp, (char*) Lock->data + y * Lock->pitch, PMW);
++           al_unlock_bitmap (PMScreen);
++           }
++        PMDraw (Disp);
++        }
++
++    if (PMScreen)
++       al_destroy_bitmap (PMScreen);
++    PMScreen = NULL;
++    SDL_GL_MakeCurrent (PMWindow, NULL);
++    return NULL;
++}
++
++static void PMStopThread ()
++{
++    if (!PMThread)
++       return;
++    al_lock_mutex (PMMutex);
++    PMStop = true;
++    al_broadcast_cond (PMCond);
++    al_unlock_mutex (PMMutex);
++    al_join_thread (PMThread, NULL);
++    al_destroy_thread (PMThread);
++    PMThread = NULL;
++    SDL_GL_MakeCurrent (PMWindow, PMContext);
++}
++
++static bool PMStartThread (ALLEGRO_DISPLAY *Disp, int Mode)
++{
++    if (!PMMutex) {
++       PMMutex = al_create_mutex();
++       PMCond = al_create_cond();
++       }
++    PMW = screen->w;
++    PMH = screen->h;
++    PMMode = Mode;
++    PMBpp = bitmap_color_depth (screen) == 16 ? 2 : 4;
++    for (int n = 0; n < 3; n++) {
++        free (PMBuf[n]);
++        PMBuf[n] = (unsigned char*) malloc (PMW * PMH * PMBpp);
++        if (!PMBuf[n])
++           return false;
++        }
++    PMWrite = 0; PMReady = 1; PMRead = 2;
++    PMNewFrame = PMStop = PMStarted = PMThreadOK = false;
++
++    PMWindow = SDL_GL_GetCurrentWindow();
++    PMContext = SDL_GL_GetCurrentContext();
++    if (!PMWindow || !PMContext)
++       return false;
++    SDL_GL_MakeCurrent (PMWindow, NULL);
++
++    PMThread = al_create_thread (PMPresentThread, Disp);
++    if (!PMThread) {
++       SDL_GL_MakeCurrent (PMWindow, PMContext);
++       return false;
++       }
++    al_start_thread (PMThread);
++    al_lock_mutex (PMMutex);
++    while (!PMStarted)
++          al_wait_cond (PMCond, PMMutex);
++    al_unlock_mutex (PMMutex);
++    if (!PMThreadOK) {
++       PMStopThread();
++       return false;
++       }
++    return true;
++}
++
++void PMDestroyScreen ()
++{
++    PMStopThread();
++    if (PMScreen)
++       al_destroy_bitmap (PMScreen);
++    PMScreen = NULL;
++}
++
++static void PMPresentSync (ALLEGRO_DISPLAY *Disp, int Mode)
++{
++    ALLEGRO_LOCKED_REGION *Lock = NULL;
++
++    PMDisplayEvents();
++    if (!PMScreen) {
++       al_set_new_bitmap_flags (ALLEGRO_VIDEO_BITMAP | ALLEGRO_NO_PRESERVE_TEXTURE);
++       al_set_new_bitmap_format (PMFormat (Mode));
++       PMScreen = al_create_bitmap (screen->w, screen->h);
++       if (!PMScreen)
++          return;
++       }
++    if (Mode != PM_COPY_NONE && al_get_bitmap_format (PMScreen) == PMFormat (Mode))
++       Lock = al_lock_bitmap (PMScreen, PMFormat (Mode), ALLEGRO_LOCK_WRITEONLY);
++    if (Lock) {
++       for (int y = 0; y < screen->h; y++)
++           PMConvertRow (Mode, screen->line[y], (char*) Lock->data + y * Lock->pitch, screen->w);
++       al_unlock_bitmap (PMScreen);
++       }
++     else
++       all_render_a5_bitmap (screen, PMScreen);
++    PMDraw (Disp);
++}
++
++void PMPresent ()
++{
++    ALLEGRO_DISPLAY *Disp = all_get_display();
++    int Mode;
++    double Wait;
++
++    if (!Disp || !screen)
++       return;
++
++    Mode = PMCopyMode();
++    if (PMThread && (Mode != PMMode || screen->w != PMW || screen->h != PMH))
++       PMDestroyScreen();
++    if (!PMThread && !PMNoThread && Mode != PM_COPY_NONE && !PMScreen)
++       PMNoThread = !PMStartThread (Disp, Mode);
++
++    if (PMThread) {
++       for (int y = 0; y < PMH; y++)
++           memcpy (PMBuf[PMWrite] + y * PMW * PMBpp, screen->line[y], PMW * PMBpp);
++       al_lock_mutex (PMMutex);
++       int t = PMWrite; PMWrite = PMReady; PMReady = t;
++       PMNewFrame = true;
++       al_signal_cond (PMCond);
++       al_unlock_mutex (PMMutex);
++       }
++     else
++       PMPresentSync (Disp, Mode);
++
++    Wait = PMLastFlip + 1.0 / 60.0 - al_get_time();
++    if (Wait > 0)
++       al_rest (Wait);
++    PMLastFlip = al_get_time();
++}
++#endif
++
+ void Hardware::Indicador ()
+ {
+      BITMAP *BMPPointer[2];
+@@ -40,6 +330,9 @@
+ Hardware::Hardware()
+ {
+  LogWrite ("Iniciando Allegro...");
++#ifdef PORTMASTER
++ al_init();
++#endif
+  allegro_init();
+  LOCK_FUNCTION(close_button_handler);
+  set_close_button_callback(close_button_handler);
+@@ -51,6 +344,9 @@
+  Izquierda = Config->VerTecla (IZQUIERDA);
+  Derecha = Config->VerTecla (DERECHA);
+  Arriba = Config->VerTecla (ARRIBA);
++#ifdef PORTMASTER
++ Arriba = KEY_SPACE;
++#endif
+  Abajo = Config->VerTecla (ABAJO);
+  Fuego = Config->VerTecla (FUEGO);
+  Selec = Config->VerTecla (SELEC);
+@@ -100,6 +396,9 @@
+  DeInit();
+  //FSOUND_Close();
+  alfont_exit();
++#ifdef PORTMASTER
++ PMDestroyScreen();
++#endif
+  allegro_exit();
+  LogWrite ("OK.\n");
+ }
+@@ -181,6 +480,14 @@
+      else
+     ModoGraf = GFX_AUTODETECT_FULLSCREEN;
+ 
++#ifdef PORTMASTER
++   ModoGraf = GFX_AUTODETECT;
++   PMDestroyScreen();
++   all_disable_threaded_display();
++   al_set_new_display_flags (ALLEGRO_FULLSCREEN_WINDOW);
++   al_set_new_display_option (ALLEGRO_VSYNC, 2, ALLEGRO_SUGGEST);
++#endif
++
+    LogWrite ("Iniciando modo grÃ¡fico: ");
+ 
+ #ifndef GP2X
+@@ -218,6 +525,17 @@
+        (!is_windowed_mode() && Config->VerWindowed()))
+             Config->ToggleWindowed();
+ 
++#ifdef PORTMASTER
++   if (all_get_display()) {
++      al_hide_mouse_cursor(all_get_display());
++      if (PMEvents)
++         al_destroy_event_queue (PMEvents);
++      PMEvents = al_create_event_queue();
++      if (PMEvents)
++         al_register_event_source (PMEvents, al_get_display_event_source (all_get_display()));
++      }
++#endif
++
+    LogWrite ("%ix%i (W = %i) (CDepth = %i): %s\n", screen->w, screen->h, Config->VerWindowed(), get_color_depth(), gfx_driver->name);
+ 
+    LocateBuffer();
+@@ -256,6 +574,11 @@
+     DATAFILE *Objeto;
+     char Fichero[255];
+ 
++#ifdef PORTMASTER
++    Config->ToggleIdioma (1);
++    return 0;
++#endif
++
+     while (!SMS->Init(ContLang++));
+ 
+     if (--ContLang <= 1)
+@@ -317,6 +640,9 @@
+     DataP = load_datafile ("./data/loading.dat");
+     if (!DataP) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo LOADING.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos LOADING.DAT\n");
+        return 1;
+@@ -327,6 +653,9 @@
+     SpritesBM = load_datafile("./data/sprites.dat");
+     if (!SpritesBM) {
+       allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo SPRITES.DAT");
++#ifdef PORTMASTER
++      PMDestroyScreen();
++#endif
+       set_gfx_mode(GFX_TEXT,0,0,0,0);
+       LogWrite ("Falta el archivo de datos SPRITES.DAT\n");
+       return 1;
+@@ -348,6 +677,9 @@
+     ScreensBM = load_datafile_callback ("./data/screens.dat", IndicadorCarga);
+     if (!ScreensBM) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo SCREENS.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos SCREENS.DAT\n");
+        return 1;
+@@ -358,6 +690,9 @@
+     BitMapsBM = load_datafile_callback ("./data/bitmaps0.dat", IndicadorCarga);
+     if (!BitMapsBM) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo BITMAPS0.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos BITMAPS0.DAT\n");
+        return 1;
+@@ -368,6 +703,9 @@
+     SFx = load_datafile_callback ("./data/sfx.dat", IndicadorCarga);
+     if (!BitMapsBM) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo SFX.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos SFX.DAT\n");
+        return 1;
+@@ -383,6 +721,9 @@
+     ScreensBM = load_datafile ("./data/screens.dat");
+     if (!ScreensBM) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo SCREENS.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos SCREENS.DAT\n");
+        return 1;
+@@ -393,6 +734,9 @@
+     BitMapsBM = load_datafile ("./data/bitmaps0.dat");
+     if (!BitMapsBM) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo BITMAPS0.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos BITMAPS0.DAT\n");
+        return 1;
+@@ -566,9 +910,53 @@
+      textprintf_ex (Buffer, MyFont, BufMargX + x, BufMargY + y, color, fondo, "%i", Num);
+ }
+ 
++#ifdef PORTMASTER
++struct PMFontSet {
++    char Name[32];
++    ALFONT_FONT *Font[20];
++    int Size[20];
++};
++static PMFontSet PMFonts[8];
++static int PMNumFonts = 0;
++static PMFontSet *PMCurFont = NULL;
++#endif
++
+ int Hardware::SetFont_af (const char *s1, int points)
+ {
+      DATAFILE *PreFuente;
++#ifdef PORTMASTER
++     PMFontSet *Set = NULL;
++
++     for (int n = 0; n < PMNumFonts && !Set; n++)
++         if (!strcmp (PMFonts[n].Name, s1))
++            Set = &PMFonts[n];
++     if (!Set && PMNumFonts < 8) {
++        LogWrite ("Cargando fuente TTF (%s)..", s1);
++        PreFuente = load_datafile_object ("./data/fonts.dat", s1);
++        if (PreFuente) {
++           Set = &PMFonts[PMNumFonts++];
++           snprintf (Set->Name, sizeof (Set->Name), "%s", s1);
++           for (int n = 0; n < 20; n++) {
++               Set->Font[n] = alfont_load_font_from_mem ((char*)PreFuente->dat, PreFuente->size);
++               Set->Size[n] = -1;
++               }
++           unload_datafile_object (PreFuente);
++           }
++        LogWrite (".Ok.\n");
++        }
++     if (Set) {
++        for (int n = 0; n < 20; n++) {
++            if (Set->Size[n] != 10 + 5 * n) {
++               alfont_set_font_size (Set->Font[n], 10 + 5 * n);
++               Set->Size[n] = 10 + 5 * n;
++               }
++            FuenteTam[n] = Set->Font[n];
++            }
++        PMCurFont = Set;
++        Fuente = FuenteTam[0];
++        return ResizeFont_af (points);
++        }
++#endif
+ 
+      DelFont_af();
+      LogWrite ("Cargando fuente TTF (%s)..", s1);
+@@ -588,6 +976,12 @@
+ void Hardware::DelFont_af () {
+      if (!Fuente)
+         return;
++#ifdef PORTMASTER
++     if (PMCurFont) {
++        Fuente = NULL;
++        return;
++        }
++#endif
+      LogWrite ("Liberando memoria de fuente TTF Cargada...");
+      for (int n = 0; n < 20; n++)
+          alfont_destroy_font (FuenteTam[n]);
+@@ -602,9 +996,18 @@
+         Indice = 20;
+      if (Indice < 0)
+         Indice = 0;
++#ifdef PORTMASTER
++     if (Indice > 19)
++        Indice = 19;
++#endif
+      Fuente = FuenteTam[Indice];
+-     if (Points % 5)
++     if (Points % 5) {
+         alfont_set_font_size (Fuente, Points);
++#ifdef PORTMASTER
++        if (PMCurFont && PMCurFont->Font[Indice] == Fuente)
++           PMCurFont->Size[Indice] = Points;
++#endif
++        }
+      return 0;
+ }
+ 
+@@ -660,21 +1063,35 @@
+         clear_bitmap (Buffer2);
+         blit (Buffer, Buffer2, BufMargX, BufMargY, 0, Mamporrazo, ANCHOPANTALLA, ALTOPANTALLA);
+         blit (Buffer2, screen, 0, 0, Xor, Yor, 640, 480);
++#ifdef PORTMASTER
++        PMPresent();
++#endif
+         return;
+         }
+     TerreX = Terremot * ((int) (rand() % 8) - 4);
+     TerreY = Terremot * ((int) (rand() % 8) - 4);
+ 
++#ifndef PORTMASTER
+     vsync();
++#endif
+     blit (Buffer, screen,
+           BufMargX + TerreX, BufMargY + TerreY,
+           Xor, Yor,
+           AnchoPantalla, AltoPantalla);
++#ifdef PORTMASTER
++    PMPresent();
++#endif
+ }
+ 
+ void Hardware::ScanLines (int Trans) {
+      if (!Config->VerScanL())
+         return;
++#ifdef PORTMASTER
++     if (!Config->VerBlending())
++        return;
++     if (PMTransRect16 (Buffer, BufMargX, BufMargY, BufMargX + ScanL->w - 1, BufMargY + ScanL->h - 1, 0, Trans, 2))
++        return;
++#endif
+      Dibuja_Trans (0, 0, (void*) ScanL, Trans);
+ }
+ 
+@@ -721,6 +1138,10 @@
+ {
+      BITMAP *Temp;
+      Temp = (BITMAP*)Spr;
++#ifdef PORTMASTER
++     if (PMStretch2x16 (Buffer, Temp, BufMargX + x, BufMargY + y))
++        return;
++#endif
+      stretch_sprite (Buffer, Temp, BufMargX + x, BufMargY + y, 2*(Temp->w), 2*(Temp->h));
+ }
+ 
+@@ -827,6 +1248,10 @@
+ 
+ void Hardware::DibujaNegro (int x, int y, void *Spr)
+ {
++#ifdef PORTMASTER
++     if (PMBlackSprite16 (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y))
++        return;
++#endif
+      set_luminance_blender (0,0,0,255);
+      draw_lit_sprite (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y, makecol (0,0,0));
+      solid_mode();
+@@ -893,6 +1318,10 @@
+ #endif
+ 
+ #ifndef FBLEND
++#ifdef PORTMASTER
++  if (PMTransSprite16 (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y, Trans))
++     return;
++#endif
+   set_trans_blender(0, 0, 0, Trans);
+   draw_trans_sprite (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y);
+   solid_mode();
+@@ -931,6 +1360,10 @@
+ #endif
+ 
+ #ifndef FBLEND // Blending con Allegro
++#ifdef PORTMASTER
++  if (PMAddSprite16 (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y, Trans))
++     return;
++#endif
+   set_add_blender (0,0,0,Trans);
+   draw_trans_sprite (Buffer, (BITMAP*)Spr, BufMargX + x, BufMargY + y);
+   solid_mode();
+@@ -951,6 +1384,10 @@
+ 
+ void Hardware::Dibuja_Sombra (int x, int y, void *Spr)
+ {
++#ifdef PORTMASTER
++     if (PMBlackSprite16 (Sombras, (BITMAP*)Spr, x, y))
++        return;
++#endif
+      set_luminance_blender (0,0,0,255);
+      draw_lit_sprite (Sombras, (BITMAP*)Spr, x, y, makecol (0,0,0));
+      solid_mode();
+@@ -1337,11 +1774,13 @@
+              SueltaTecla[3] = true;
+          }
+ 
++#ifndef PORTMASTER
+      if (key[KEY_S] && SueltaTecla[2]) { // <------------------------------ BETA TESTING
+         ScreenShot();
+         SueltaTecla[2] = false;
+         }
+      if (!key[KEY_S]) SueltaTecla[2] = true;
++#endif
+ 
+      if (key[Abort] && SueltaTecla[3]) {
+         TeclaPulsada += ABORT;
+@@ -1352,8 +1791,13 @@
+      if (Config->VerJoy() == 1) // Si es 1 es que solo funciona el joystick y el teclado no
+         return TeclaPulsada;
+ 
++#ifdef PORTMASTER
++     if (key[Arriba] && !Menu) TeclaPulsada += ARRIBA;
++     if (key[Abajo] && !(key[Arriba] && !Menu)) TeclaPulsada += ABAJO;
++#else
+      if (key[Arriba]) TeclaPulsada += ARRIBA;
+      if (key[Abajo] && !key[Arriba]) TeclaPulsada += ABAJO;
++#endif
+      if (key[Izquierda]&& !key[Abajo]) TeclaPulsada += IZQUIERDA;
+      if (key[Derecha] && !key[Izquierda] && !key[Abajo]) TeclaPulsada += DERECHA;
+ 
+@@ -1596,6 +2040,10 @@
+         return;
+         }
+ #ifndef FBLEND
++#ifdef PORTMASTER
++    if (PMTransRect16 (Buffer, BufMargX + X, BufMargY + Y, BufMargX + X + W, BufMargY + Y + H, 0, Trans))
++       return;
++#endif
+     TransMode(Trans);
+     rectfill (Buffer, BufMargX + X, BufMargY + Y, BufMargX + X + W, BufMargY + Y + H, 0);
+     SolidMode();
+@@ -1707,6 +2155,9 @@
+     MapaDat = load_datafile("./data/map.dat");
+     if (!MapaDat) {
+        allegro_message ("                   ERROR DE E/S\n\n No se encuentra el archivo MAP.DAT");
++#ifdef PORTMASTER
++       PMDestroyScreen();
++#endif
+        set_gfx_mode(GFX_TEXT,0,0,0,0);
+        LogWrite ("Falta el archivo de datos MAP.DAT\n");
+        return 1;
+@@ -1861,6 +2312,10 @@
+ 
+ void Hardware::InitJoy ()
+ {
++#ifdef PORTMASTER
++     Config->ToggleJoy (0);
++     return;
++#endif
+      if (install_joystick(JOY_TYPE_AUTODETECT) != 0 || !num_joysticks ||
+ 	    (joy[0].stick[0].axis[0].pos/40 < 0 && joy[0].stick[0].axis[1].pos/40 < 0)) {
+          LogWrite((char*)"No se detecta joystick.\nContinuando inicializaciÃ³n de Allegro...");
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/loadpng.cpp capitan-1.0.3/src/loadpng.cpp
+--- capitan-1.0.3.orig/src/loadpng.cpp	2009-04-10 10:57:23.000000000 +0000
++++ capitan-1.0.3/src/loadpng.cpp	2026-11-01 16:26:30.333289205 +0000
+@@ -6,6 +6,7 @@
+ 
+ 
+ #include <png.h>
++#include <zlib.h>
+ #include <allegro.h>
+ #include <allegro/internal/aintern.h>
+ #include "loadpng.h"
+@@ -276,7 +277,7 @@
+      * the normal method of doing things with libpng).  REQUIRED unless you
+      * set up your own error handlers in the png_create_read_struct() earlier.
+      */
+-    if (setjmp(png_ptr->jmpbuf)) {
++    if (setjmp(png_jmpbuf(png_ptr))) {
+ 	/* Free all of the memory associated with the png_ptr and info_ptr */
+ 	png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
+ 	/* If we get here, we had a problem reading the file */
+@@ -372,7 +373,7 @@
+      * the normal method of doing things with libpng).  REQUIRED unless you
+      * set up your own error handlers in the png_create_read_struct() earlier.
+      */
+-    if (setjmp(png_ptr->jmpbuf)) {
++    if (setjmp(png_jmpbuf(png_ptr))) {
+ 	/* Free all of the memory associated with the png_ptr and info_ptr */
+ 	png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
+ 	/* If we get here, we had a problem reading the file */
+@@ -644,7 +645,7 @@
+ 	goto Error;
+ 
+     /* Set error handling. */
+-    if (setjmp(png_ptr->jmpbuf)) {
++    if (setjmp(png_jmpbuf(png_ptr))) {
+ 	/* If we get here, we had a problem reading the file. */
+ 	goto Error;
+     }
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/main.cpp capitan-1.0.3/src/main.cpp
+--- capitan-1.0.3.orig/src/main.cpp	2009-04-10 10:57:23.000000000 +0000
++++ capitan-1.0.3/src/main.cpp	2026-11-01 18:58:56.144530029 +0000
+@@ -105,6 +105,9 @@
+     if (Ret) return Ret;
+ 
+     textout_centre_ex (screen, font, SMS->ReadMens(1), screen->w / 2, screen->h / 2 - 4, makecol (255,255,255), 0);
++#ifdef PORTMASTER
++    PMPresent();
++#endif
+ 
+     if (H->LoadDF1())
+        return 1;
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/menuplayer.cpp capitan-1.0.3/src/menuplayer.cpp
+--- capitan-1.0.3.orig/src/menuplayer.cpp	2009-04-10 10:57:23.000000000 +0000
++++ capitan-1.0.3/src/menuplayer.cpp	2026-11-01 18:58:56.145429497 +0000
+@@ -24,6 +24,11 @@
+     ConfC = new Menu (432, 294, 3, 25, 0, "Configurar controles", Fondo);
+     Redefine = new Menu (432, 244, 7, 25, 0, "Redefinir teclas", Fondo);
+     Extras = new Menu (432, 294, 3, 25, 0, "Extras", Fondo);
++#ifdef PORTMASTER
++    ConfV->DActivar (2, false);
++    ConfV->DActivar (3, false);
++    Conf->DActivar (3, false);
++#endif
+ 
+     LogWrite ("Gestor de menús creado correctamente.\n");
+ }
+@@ -313,6 +318,9 @@
+                                                H->InitGraph();
+                                                H->DelFont();
+                                                textout_centre_ex (screen, font, SMS->ReadMens(1), screen->w / 2, screen->h / 2 - 4, makecol (255,255,255), 0);
++#ifdef PORTMASTER
++                                               PMPresent();
++#endif
+                                                H->ReInit();
+ 
+                                                M->DeleteGraph();
+diff -ruN -x '*.o' -x '*.a' -x capitan.aarch64 -x capitan.dbg -x obj -x objdbg -x lib -x include capitan-1.0.3.orig/src/pmblit.cpp capitan-1.0.3/src/pmblit.cpp
+--- capitan-1.0.3.orig/src/pmblit.cpp	1970-01-01 00:00:00.000000000 +0000
++++ capitan-1.0.3/src/pmblit.cpp	2026-11-01 20:04:06.553990178 +0000
+@@ -0,0 +1,267 @@
++#ifdef PORTMASTER
++/* Fast 16 bpp versions of the Allegro 4 sprite blends the game uses every frame.
++   Each one reproduces the matching Allegro blender exactly, without its per-pixel
++   function pointer call. */
++
++#include <allegro.h>
++#include <stdint.h>
++#include <arm_neon.h>
++#include "pmblit.h"
++
++#define PM_MASK16 0xF81F
++
++static bool PMClip (BITMAP *Dst, BITMAP *Src, int &x, int &y, int &sx, int &sy, int &w, int &h)
++{
++    int cl = 0, ct = 0, cr = Dst->w, cb = Dst->h;
++
++    if (Dst->clip) {
++       cl = Dst->cl; ct = Dst->ct; cr = Dst->cr; cb = Dst->cb;
++       }
++    sx = 0; sy = 0; w = Src->w; h = Src->h;
++    if (x < cl) { sx = cl - x; w -= sx; x = cl; }
++    if (y < ct) { sy = ct - y; h -= sy; y = ct; }
++    if (x + w > cr) w = cr - x;
++    if (y + h > cb) h = cb - y;
++    return w > 0 && h > 0;
++}
++
++static bool PMIs16 (BITMAP *Bmp)
++{
++    return Bmp && is_memory_bitmap (Bmp) && bitmap_color_depth (Bmp) == 16;
++}
++
++static inline uint16_t PMTrans (unsigned long x, unsigned long y, unsigned long n)
++{
++    unsigned long result;
++
++    x = ((x & 0xFFFF) | (x << 16)) & 0x7E0F81F;
++    y = ((y & 0xFFFF) | (y << 16)) & 0x7E0F81F;
++    result = ((x - y) * n / 32 + y) & 0x7E0F81F;
++    return (uint16_t) ((result & 0xFFFF) | (result >> 16));
++}
++
++/* Same result as PMTrans for n <= 32, one channel at a time so it vectorizes. */
++static inline uint16_t PMTransCh (int x, int y, int n)
++{
++    int xb = x & 0x1F, xg = (x >> 5) & 0x3F, xr = x >> 11;
++    int yb = y & 0x1F, yg = (y >> 5) & 0x3F, yr = y >> 11;
++
++    yb += ((xb - yb) * n) >> 5;
++    yg += ((xg - yg) * n) >> 5;
++    yr += ((xr - yr) * n) >> 5;
++    return (uint16_t) ((yr << 11) | (yg << 5) | yb);
++}
++
++static unsigned long PMTransN (int Alpha)
++{
++    unsigned long n = (unsigned long) (long) Alpha;
++
++    if (n)
++       n = (n + 1) / 8;
++    return n;
++}
++
++bool PMTransSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y, int Alpha)
++{
++    int sx, sy, w, h;
++    unsigned long n;
++
++    if (!PMIs16 (Dst) || !PMIs16 (Src))
++       return false;
++    if (!PMClip (Dst, Src, x, y, sx, sy, w, h))
++       return true;
++
++    n = PMTransN (Alpha);
++    if (n == 0)
++       return true;
++    for (int j = 0; j < h; j++) {
++        const uint16_t *s = (const uint16_t*) Src->line[sy + j] + sx;
++        uint16_t *d = (uint16_t*) Dst->line[y + j] + x;
++        if (n <= 32) {
++           int nn = (int) n;
++           for (int i = 0; i < w; i++) {
++               uint16_t c = s[i], o = d[i];
++               uint16_t b = PMTransCh (c, o, nn);
++               d[i] = (c == PM_MASK16) ? o : b;
++               }
++           }
++         else
++           for (int i = 0; i < w; i++) {
++               uint16_t c = s[i];
++               if (c != PM_MASK16)
++                  d[i] = PMTrans (c, d[i], n);
++               }
++        }
++    return true;
++}
++
++bool PMTransRect16 (BITMAP *Dst, int x1, int y1, int x2, int y2, int Color, int Alpha, int Step)
++{
++    int cl = 0, ct = 0, cr = Dst->w, cb = Dst->h;
++    unsigned long n;
++
++    if (!PMIs16 (Dst))
++       return false;
++    if (x2 < x1) { int t = x1; x1 = x2; x2 = t; }
++    if (y2 < y1) { int t = y1; y1 = y2; y2 = t; }
++    if (Dst->clip) {
++       cl = Dst->cl; ct = Dst->ct; cr = Dst->cr; cb = Dst->cb;
++       }
++    if (x1 < cl) x1 = cl;
++    if (y1 < ct) y1 += ((ct - y1 + Step - 1) / Step) * Step;
++    if (x2 >= cr) x2 = cr - 1;
++    if (y2 >= cb) y2 = cb - 1;
++    if (x2 < x1 || y2 < y1)
++       return true;
++
++    n = PMTransN (Alpha);
++    if (n == 0)
++       return true;
++    for (int j = y1; j <= y2; j += Step) {
++        uint16_t *d = (uint16_t*) Dst->line[j];
++        if (n <= 32 && Color >= 0 && Color <= 0xFFFF) {
++           int nn = (int) n;
++           for (int i = x1; i <= x2; i++)
++               d[i] = PMTransCh (Color, d[i], nn);
++           }
++         else
++           for (int i = x1; i <= x2; i++)
++               d[i] = PMTrans ((unsigned long) (long) Color, d[i], n);
++        }
++    return true;
++}
++
++bool PMAddSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y, int Amount)
++{
++    int sx, sy, w, h;
++    unsigned long n = (unsigned long) (long) Amount;
++    int Add5[32], Add6[64];
++    int rs = _rgb_r_shift_16, gs = _rgb_g_shift_16, bs = _rgb_b_shift_16;
++
++    if (!PMIs16 (Dst) || !PMIs16 (Src))
++       return false;
++    if (!PMClip (Dst, Src, x, y, sx, sy, w, h))
++       return true;
++
++    for (int i = 0; i < 32; i++)
++        Add5[i] = (int) (_rgb_scale_5[i] * n / 256);
++    for (int i = 0; i < 64; i++)
++        Add6[i] = (int) (_rgb_scale_6[i] * n / 256);
++
++    /* NEON path: the 5 bit fields at bits 0 and 11 use the same tables whichever
++       of them is red, so it only needs green at bit 5. Every table entry fits a
++       byte when 0 <= n <= 256, and a saturating byte add is the MIN (x, 255). */
++    bool Neon = gs == 5 && ((rs == 0 && bs == 11) || (rs == 11 && bs == 0)) && (long) n >= 0 && n <= 256;
++    uint8_t S5[32], S6[64], A5[32], A6[64];
++    uint8x16x2_t TS5, TA5;
++    uint8x16x4_t TS6, TA6;
++    if (Neon) {
++       for (int i = 0; i < 32; i++) { S5[i] = (uint8_t) _rgb_scale_5[i]; A5[i] = (uint8_t) Add5[i]; }
++       for (int i = 0; i < 64; i++) { S6[i] = (uint8_t) _rgb_scale_6[i]; A6[i] = (uint8_t) Add6[i]; }
++       TS5 = vld1q_u8_x2 (S5); TA5 = vld1q_u8_x2 (A5);
++       TS6 = vld1q_u8_x4 (S6); TA6 = vld1q_u8_x4 (A6);
++       }
++
++    for (int j = 0; j < h; j++) {
++        const uint16_t *s = (const uint16_t*) Src->line[sy + j] + sx;
++        uint16_t *d = (uint16_t*) Dst->line[y + j] + x;
++        int i = 0;
++        if (Neon)
++           for (; i + 16 <= w; i += 16) {
++               uint16x8_t c0 = vld1q_u16 (s + i), c1 = vld1q_u16 (s + i + 8);
++               uint16x8_t o0 = vld1q_u16 (d + i), o1 = vld1q_u16 (d + i + 8);
++               uint16x8_t m0 = vceqq_u16 (c0, vdupq_n_u16 (PM_MASK16));
++               uint16x8_t m1 = vceqq_u16 (c1, vdupq_n_u16 (PM_MASK16));
++               if (vmaxvq_u16 (vandq_u16 (m0, m1)) == 0xFFFF && vminvq_u16 (vandq_u16 (m0, m1)) == 0xFFFF)
++                  continue;
++               uint8x16_t cl5 = vcombine_u8 (vmovn_u16 (vandq_u16 (c0, vdupq_n_u16 (0x1F))), vmovn_u16 (vandq_u16 (c1, vdupq_n_u16 (0x1F))));
++               uint8x16_t ch5 = vcombine_u8 (vmovn_u16 (vshrq_n_u16 (c0, 11)), vmovn_u16 (vshrq_n_u16 (c1, 11)));
++               uint8x16_t cg6 = vcombine_u8 (vmovn_u16 (vandq_u16 (vshrq_n_u16 (c0, 5), vdupq_n_u16 (0x3F))), vmovn_u16 (vandq_u16 (vshrq_n_u16 (c1, 5), vdupq_n_u16 (0x3F))));
++               uint8x16_t ol5 = vcombine_u8 (vmovn_u16 (vandq_u16 (o0, vdupq_n_u16 (0x1F))), vmovn_u16 (vandq_u16 (o1, vdupq_n_u16 (0x1F))));
++               uint8x16_t oh5 = vcombine_u8 (vmovn_u16 (vshrq_n_u16 (o0, 11)), vmovn_u16 (vshrq_n_u16 (o1, 11)));
++               uint8x16_t og6 = vcombine_u8 (vmovn_u16 (vandq_u16 (vshrq_n_u16 (o0, 5), vdupq_n_u16 (0x3F))), vmovn_u16 (vandq_u16 (vshrq_n_u16 (o1, 5), vdupq_n_u16 (0x3F))));
++               uint8x16_t rl = vshrq_n_u8 (vqaddq_u8 (vqtbl2q_u8 (TS5, ol5), vqtbl2q_u8 (TA5, cl5)), 3);
++               uint8x16_t rh = vshrq_n_u8 (vqaddq_u8 (vqtbl2q_u8 (TS5, oh5), vqtbl2q_u8 (TA5, ch5)), 3);
++               uint8x16_t rg = vshrq_n_u8 (vqaddq_u8 (vqtbl4q_u8 (TS6, og6), vqtbl4q_u8 (TA6, cg6)), 2);
++               uint16x8_t r0 = vorrq_u16 (vorrq_u16 (vmovl_u8 (vget_low_u8 (rl)), vshlq_n_u16 (vmovl_u8 (vget_low_u8 (rg)), 5)), vshlq_n_u16 (vmovl_u8 (vget_low_u8 (rh)), 11));
++               uint16x8_t r1 = vorrq_u16 (vorrq_u16 (vmovl_u8 (vget_high_u8 (rl)), vshlq_n_u16 (vmovl_u8 (vget_high_u8 (rg)), 5)), vshlq_n_u16 (vmovl_u8 (vget_high_u8 (rh)), 11));
++               vst1q_u16 (d + i, vbslq_u16 (m0, o0, r0));
++               vst1q_u16 (d + i + 8, vbslq_u16 (m1, o1, r1));
++               }
++        for (; i < w; i++) {
++            unsigned c = s[i], o;
++            int r, g, b;
++            if (c == PM_MASK16)
++               continue;
++            o = d[i];
++            r = _rgb_scale_5[(o >> rs) & 0x1F] + Add5[(c >> rs) & 0x1F];
++            g = _rgb_scale_6[(o >> gs) & 0x3F] + Add6[(c >> gs) & 0x3F];
++            b = _rgb_scale_5[(o >> bs) & 0x1F] + Add5[(c >> bs) & 0x1F];
++            if (r > 255) r = 255;
++            if (g > 255) g = 255;
++            if (b > 255) b = 255;
++            d[i] = (uint16_t) (((r >> 3) << rs) | ((g >> 2) << gs) | ((b >> 3) << bs));
++            }
++        }
++    return true;
++}
++
++bool PMBlackSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y)
++{
++    int sx, sy, w, h;
++
++    if (!PMIs16 (Dst) || !PMIs16 (Src))
++       return false;
++    if (!PMClip (Dst, Src, x, y, sx, sy, w, h))
++       return true;
++
++    for (int j = 0; j < h; j++) {
++        const uint16_t *s = (const uint16_t*) Src->line[sy + j] + sx;
++        uint16_t *d = (uint16_t*) Dst->line[y + j] + x;
++        for (int i = 0; i < w; i++)
++            if (s[i] != PM_MASK16)
++               d[i] = 0;
++        }
++    return true;
++}
++bool PMStretch2x16 (BITMAP *Dst, BITMAP *Src, int x, int y)
++{
++    int cl = 0, ct = 0, cr, cb;
++
++    if (!PMIs16 (Dst) || !PMIs16 (Src))
++       return false;
++    cr = Dst->w; cb = Dst->h;
++    if (Dst->clip) {
++       cl = Dst->cl; ct = Dst->ct; cr = Dst->cr; cb = Dst->cb;
++       }
++    int x0 = x < cl ? cl : x, y0 = y < ct ? ct : y;
++    int x1 = x + 2 * Src->w, y1 = y + 2 * Src->h;
++    if (x1 > cr) x1 = cr;
++    if (y1 > cb) y1 = cb;
++    for (int j = y0; j < y1; j++) {
++        const uint16_t *s = (const uint16_t*) Src->line[(j - y) >> 1];
++        uint16_t *d = (uint16_t*) Dst->line[j];
++        int i = x0;
++        if ((i - x) & 1) {
++           uint16_t c = s[(i - x) >> 1];
++           if (c != PM_MASK16)
++              d[i] = c;
++           i++;
++           }
++        for (; i + 16 <= x1; i += 16) {
++            uint16x8_t c = vld1q_u16 (s + ((i - x) >> 1));
++            uint16x8x2_t c2 = vzipq_u16 (c, c);
++            uint16x8_t m0 = vceqq_u16 (c2.val[0], vdupq_n_u16 (PM_MASK16));
++            uint16x8_t m1 = vceqq_u16 (c2.val[1], vdupq_n_u16 (PM_MASK16));
++            vst1q_u16 (d + i, vbslq_u16 (m0, vld1q_u16 (d + i), c2.val[0]));
++            vst1q_u16 (d + i + 8, vbslq_u16 (m1, vld1q_u16 (d + i + 8), c2.val[1]));
++            }
++        for (; i < x1; i++) {
++            uint16_t c = s[(i - x) >> 1];
++            if (c != PM_MASK16)
++               d[i] = c;
++            }
++        }
++    return true;
++}
++#endif
+diff -ruN capitan-1.0.3.orig/src/include/hardware.h capitan-1.0.3/src/include/hardware.h
+--- capitan-1.0.3.orig/src/include/hardware.h	2009-04-10 10:57:23.000000000 +0000
++++ capitan-1.0.3/src/include/hardware.h	2026-11-01 19:46:29.834293279 +0000
+@@ -4,6 +4,7 @@
+ #include "constantes.h"
+ #include "configuracion.h"
+ #include "messages.h"
++#include "pmblit.h"
+ 
+ extern int ObjCargados;
+ extern Configuracion *Config;
+@@ -144,5 +145,10 @@
+         void TextSLang (const char *Texto, int x, int y, bool Center = true);
+ };
+ 
++#ifdef PORTMASTER
++void PMPresent ();
++void PMDestroyScreen ();
++#endif
++
+ #endif
+ 
+diff -ruN capitan-1.0.3.orig/src/include/pmblit.h capitan-1.0.3/src/include/pmblit.h
+--- capitan-1.0.3.orig/src/include/pmblit.h	1970-01-01 00:00:00.000000000 +0000
++++ capitan-1.0.3/src/include/pmblit.h	2026-11-01 19:54:07.770530759 +0000
+@@ -0,0 +1,12 @@
++#ifndef PMBLIT_H
++#define PMBLIT_H
++
++#ifdef PORTMASTER
++bool PMTransSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y, int Alpha);
++bool PMTransRect16 (BITMAP *Dst, int x1, int y1, int x2, int y2, int Color, int Alpha, int Step = 1);
++bool PMAddSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y, int Amount);
++bool PMStretch2x16 (BITMAP *Dst, BITMAP *Src, int x, int y);
++bool PMBlackSprite16 (BITMAP *Dst, BITMAP *Src, int x, int y);
++#endif
++
++#endif
