@@ -19,7 +19,7 @@ Changes made for this port:
 - Removes wall/closed-door collision damage and associated bounce, impact messages, sound and distortion. Enemy damage and enemy-hit effects are unchanged.
 - Makes game stdout line-buffered so diagnostic messages are retained promptly.
 - Handles quit/window-close events in input, queue clearing, animations, fades and delays. Video shutdown stops VLC callbacks before releasing their surfaces and mutex.
-- Couples game and mapper lifetimes with Bash `wait -n`. On exit, SIGTERM, SIGINT or SIGHUP, stops the game with a three-second graceful-stop limit and SIGKILL fallback, then delegates mapper cleanup to `pm_finish`. This prevents a dead mapper or interrupted launcher from leaving an uncontrollable fullscreen game behind.
+- Runs the game in the foreground and delegates mapper cleanup to `pm_finish` after the game returns, following the standard native launcher pattern.
 - Adds a CMake build and ships every source change in `patches/cytadela-1.1.0-portmaster.patch`, tested against the checksummed upstream release.
 - Uses a 12000 stick-to-key deadzone while retaining the existing right-stick mouse curve and all button bindings.
 - Ships bulk assets in a zero-owned, dereferenced `gamedata.tar.gz`; extraction preserves the original `data/` paths and does not touch `conf/`.

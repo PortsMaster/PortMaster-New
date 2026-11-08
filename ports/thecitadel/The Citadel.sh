@@ -22,11 +22,9 @@ BINARY=cytadela.${DEVICE_ARCH}
 mkdir -p "$GAMEDIR/conf"
 cd "$GAMEDIR" || exit 1
 
-# Drain shutdown messages even when the whole launcher's process group is stopped.
-> "$GAMEDIR/log.txt" && exec > >(trap '' HUP INT TERM; exec tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
-export SDL_TOUCH_MOUSE_EVENTS=0
 export CYTADELA_SAVE_DIR="$GAMEDIR/conf"
 
 if [ -f "$controlfolder/libgl_${CFW_NAME}.txt" ]; then
@@ -45,38 +43,6 @@ case ":${LD_LIBRARY_PATH}:" in
     ;;
 esac
 
-game_pid=
-mapper_pid=
-
-# Stop the game before pm_finish releases its input mapper.
-stop_child() {
-  local pid="$1"
-  [ -n "$pid" ] || return 0
-  if kill -0 "$pid" 2>/dev/null; then
-    kill -TERM "$pid" 2>/dev/null
-    for attempt in {1..30}; do
-      kill -0 "$pid" 2>/dev/null || break
-      sleep 0.1
-    done
-    kill -KILL "$pid" 2>/dev/null
-  fi
-  wait "$pid" 2>/dev/null || true
-}
-
-cleanup() {
-  local status=$?
-  trap - EXIT
-  trap '' HUP INT TERM
-  stop_child "$game_pid"
-  pm_finish
-  return "$status"
-}
-
-trap cleanup EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
 ARCHIVE_FILE="gamedata.tar.gz"
 if [[ -f "$ARCHIVE_FILE" ]]; then
   pm_message "Extracting game data, this can take a few minutes..." --title "Please wait"
@@ -92,16 +58,8 @@ fi
 
 # Linux process names truncate this executable's name to 15 characters.
 $GPTOKEYB2 "${BINARY:0:15}" -c "$GAMEDIR/thecitadel.ini" > /dev/null 2>&1 &
-mapper_pid=$!
 pm_platform_helper "$GAMEDIR/$BINARY"
 
-./$BINARY &
-game_pid=$!
+./$BINARY
 
-# A dead mapper must not leave an uncontrollable game covering the frontend.
-if ! kill -0 "$mapper_pid" 2>/dev/null; then
-  wait "$mapper_pid"
-  exit $?
-fi
-wait -n "$game_pid" "$mapper_pid"
-exit $?
+pm_finish
