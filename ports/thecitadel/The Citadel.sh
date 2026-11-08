@@ -60,6 +60,7 @@ fi
 $GPTOKEYB2 "${BINARY:0:15}" -c "$GAMEDIR/thecitadel.ini" > /dev/null 2>&1 &
 pm_platform_helper "$GAMEDIR/$BINARY"
 
-./$BINARY
+# Let SDL select its backend; forced Wayland loses keyboard input on multi-seat compositors.
+env -u SDL_VIDEODRIVER ./$BINARY
 
 pm_finish
