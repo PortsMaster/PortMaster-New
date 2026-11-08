@@ -1,0 +1,62 @@
+#!/bin/bash
+# First-run setup for Cassette Beasts (run by PortMaster's patcher): the game's sound effects become IMA-ADPCM and
+# its large illustration textures ETC2 (grey ones L8), written to gamedata/data with the pack's references pointing
+# there, so the game fits in 1 GB. The pack itself is changed in place (only its directory of references).
+GAMEFILES="$GAMEDIR/gamedata"
+PCK="$GAMEFILES/CassetteBeasts.pck"
+T="$GAMEDIR/tools"
+# the pack's references point here; the launcher links it to gamedata/data on every start, so the port folder can
+# move (another SD card path, another device) without touching the pack
+LINK=/tmp/cassettebeasts-data
+# fingerprint of a converted pack (size, first and last MB): the launcher sees a replaced pack by it (keep this
+# identical to pck_id in the launcher)
+pck_id() { echo "$(wc -c < "$1" | tr -d " ") $(head -c 1048576 "$1" | md5sum | cut -c1-8) $(tail -c 1048576 "$1" | md5sum | cut -c1-8)"; }
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+echo "=== $(date) Cassette Beasts setup ==="
+
+fail() {
+  echo "PATCH_FAIL_MSG:$1"
+  echo "Patching process failed!"
+  exit 1
+}
+
+[ -f "$PCK" ] || fail "CassetteBeasts.pck not found: copy it from the Steam or Epic version into ports/cassettebeasts/gamedata."
+[ "$(head -c 4 "$PCK")" = "GDPC" ] || fail "CassetteBeasts.pck is not a Godot pack (Steam or Epic version needed)."
+FREE=$(df -Pm "$GAMEFILES" | awk 'NR==2 {print $4}')
+[ -f "$GAMEFILES/data/.samples_done" ] || [ -z "$FREE" ] || [ "$FREE" -ge 450 ] || fail "Not enough space: setup needs about 450 MB free next to the game (${FREE} MB)."
+
+cd "$GAMEFILES" || fail "Cannot open $GAMEFILES."
+mkdir -p data
+
+# one marker per step: a setup that stopped half-way continues where it was (data/ is only deleted by the launcher,
+# together with the markers, when the pack was replaced)
+if [ ! -f data/.samples_done ]; then
+  echo "Converting the sound effects (about 1 minute)..."
+  "$T/wav_adpcm" CassetteBeasts.pck data "$LINK" || fail "Converting the sound effects failed (see patchlog.txt)."
+  touch data/.samples_done
+fi
+
+if [ ! -f data/.textures_done ]; then
+  echo "Converting the illustrations (about 1 minute)..."
+  "$T/tex3_convert" -e "$T/etc2_folders.txt" CassetteBeasts.pck data "$LINK" || fail "Converting the textures failed (see patchlog.txt)."
+  touch data/.textures_done
+fi
+
+# the owner's DLC packs (copied from Steam's dlc folder into gamedata/dlc): the same conversions, each into its own
+# folder with its own marker (DLC added later is converted on the next start)
+for DLC in dlc/*.pck; do
+  [ -f "$DLC" ] || continue
+  D="data/dlc_$(basename "$DLC" .pck)"
+  [ -f "$D/.done" ] && continue
+  [ "$(head -c 4 "$DLC")" = "GDPC" ] || fail "$DLC is not a Godot pack."
+  echo "Converting the DLC $(basename "$DLC")..."
+  mkdir -p "$D"
+  "$T/wav_adpcm" "$DLC" "$D" "$LINK/${D#data/}" || fail "Converting $(basename "$DLC") failed (see patchlog.txt)."
+  "$T/tex3_convert" -e "$T/etc2_folders.txt" "$DLC" "$D" "$LINK/${D#data/}" || fail "Converting $(basename "$DLC") failed (see patchlog.txt)."
+  pck_id "$DLC" > "$D/.done"
+done
+
+pck_id CassetteBeasts.pck > "$GAMEFILES/.patched_complete"
+echo "Setup done."
+echo "Patching completed successfully!"

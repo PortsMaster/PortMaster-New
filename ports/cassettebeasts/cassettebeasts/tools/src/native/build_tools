@@ -1,0 +1,32 @@
+#!/bin/bash
+# Build the install-time converters (wav_adpcm, tex3_convert) for the host architecture.
+# From Dome Keeper (Godot 4), adapted to Godot 3 packs for Cassette Beasts.
+# usage: build_tools <out_dir>
+# Third-party sources: third_party/etcpak (BSD-3, included: github.com/wolfpld/etcpak commit 3d716e15) and third_party/libwebp (BSD-3, v1.4.0:
+#   git clone --depth 1 --branch v1.4.0 https://chromium.googlesource.com/webm/libwebp third_party/libwebp).
+set -e
+T=$(cd "$(dirname "$0")" && pwd)
+OUT=$(mkdir -p "$1" && cd "$1" && pwd)
+B="$OUT/build-$(uname -m)"
+mkdir -p "$B"
+
+# libwebp: decoder only, static
+cmake -S "$T/third_party/libwebp" -B "$B/libwebp" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+	-DWEBP_BUILD_ANIM_UTILS=OFF -DWEBP_BUILD_CWEBP=OFF -DWEBP_BUILD_DWEBP=OFF -DWEBP_BUILD_GIF2WEBP=OFF \
+	-DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF -DWEBP_BUILD_WEBPINFO=OFF -DWEBP_BUILD_WEBPMUX=OFF \
+	-DWEBP_BUILD_EXTRAS=OFF -DWEBP_BUILD_LIBWEBPMUX=OFF -DWEBP_USE_THREAD=OFF > "$B/libwebp.log"
+cmake --build "$B/libwebp" --target webpdecoder -j"$(nproc)" >> "$B/libwebp.log"
+
+case "$(uname -m)" in
+	x86_64) ARCH=-msse4.1 ;;
+	*) ARCH= ;;
+esac
+E="$T/third_party/etcpak"
+gcc -O2 -Wall -Wextra -o "$OUT/wav_adpcm" "$T/wav_adpcm/wav_adpcm.c" "$T/common/pck.c"
+gcc -O2 -Wall -Wextra -c -o "$B/pck.o" "$T/common/pck.c"
+for s in ProcessRGB.cpp Tables.cpp Decode.cpp Dither.cpp bcdec.c; do
+	g++ -O2 $ARCH -std=c++17 -w -c -o "$B/etcpak-${s%.*}.o" "$E/$s"
+done
+g++ -O2 $ARCH -std=c++17 -Wall -Wextra -o "$OUT/tex3_convert" "$T/tex3/tex3_convert.cpp" "$B"/etcpak-*.o "$B/pck.o" \
+	-I"$E" -I"$T/third_party/libwebp/src" "$B/libwebp/libwebpdecoder.a" -static-libstdc++ -static-libgcc
+echo "built $OUT/wav_adpcm $OUT/tex3_convert"

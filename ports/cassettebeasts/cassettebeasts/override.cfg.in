@@ -1,0 +1,103 @@
+[application]
+
+; custom frt only (apply_boot_progress.py): the boot image redrawn with the port's progress bar while the game's
+; autoloads load (~13 s on an RG Cube XX); the splash cover (SplashDefer.gd) continues it from progress_end
+boot_splash/progress_bar=true
+boot_splash/progress_end=0.35
+
+scene_manager/enable_scene_preload_on_start=false
+scene_manager/enable_shader_precompile=false
+; level streamer: instance overworld chunks only when in range (game default 1 = every chunk of the current map half at load)
+level_streamer/instance_chunks_when=2
+
+[rendering]
+
+; frt reports the "mobile" feature, so the project's .mobile keys beat the plain ones: write both
+quality/directional_shadow/size=256
+quality/directional_shadow/size.mobile=256
+quality/shadow_atlas/size=0
+quality/shadow_atlas/size.mobile=0
+; omni shadow cubemaps are unusable without a shadow atlas (ladder 512..32 = 8 MB at the default 512)
+quality/shadow_atlas/cubemap_size=64
+; no reflection probe atlas (half-float, ~40 MB at the default 2048)
+quality/reflections/atlas_size=0
+; custom frt: 3D at half size (360x360 on the 720x720 screen), UI at full size
+quality/3d_render_scale=0.5
+; custom frt: any other 3D viewport (boss fights render a second world into 800x800..1500x1250 viewports) renders
+; its 3D through a companion of at most this many pixels (129600 = 360x360, the root stays as above)
+viewports/max_3d_pixels=129600
+; custom frt: on the 1:1 screen the 3D is letterboxed to 16:9 (exactly the PC framing, nothing cut off at the sides,
+; black bars above/below, UI over the whole screen); camera/fit_aspect (widen the camera instead) off
+camera/letterbox_aspect=1.777778
+camera/fit_aspect=0
+quality/shadows/filter_mode=0
+; renderer start-up buffers the game does not use (blend shapes, ImmediateGeometry) and a smaller render list:
+; measured -16 MB of Mali memory in the Overworld with no errors
+limits/buffers/blend_shape_max_buffer_size_kb=64
+limits/buffers/immediate_buffer_size_kb=64
+limits/rendering/max_renderable_elements=16384
+; device: render targets without MSAA/HDR/effect buffers (the game settings.cfg also turns AA/DOF/glow/shadows off)
+quality/filters/msaa=0
+quality/depth/hdr=false
+quality/depth/hdr.mobile=false
+quality/intended_usage/framebuffer_allocation=3
+
+; custom frt only (servers/visual/lazy_texture.h): upload textures on first draw, free them after 90 s unused
+; (the Mali driver keeps freed GPU memory anyway: only the peak resident set matters, decodes cost main-thread time)
+lazy_textures/enabled=true
+lazy_textures/evict_after_seconds=90
+; custom frt only: below this much MemAvailable, free textures not drawn in the last second at once
+; (a battle start adds 40-50 MB within seconds: start evicting before it, not inside it)
+lazy_textures/low_memory_mb=150
+; custom frt only: compiled shader variants not drawn for 60 s are deleted (Mali keeps each linked program's binary
+; and state in RAM: Prepare shaders alone leaves ~100 MB of them); with the program cache below a variant needed
+; again is loaded back from disk instead of compiled, so no stall (Cube XX walk: same frame times with it on)
+lazy_shaders/evict_after_seconds=60
+; custom frt only: render targets without HDR, effect buffers and MSAA (DEPTH/SCREEN_TEXTURE materials get copies)
+viewports/force_no_hdr=true
+viewports/force_no_3d_effects=true
+viewports/force_no_msaa=true
+; custom frt only: compiled shader programs are kept on disk (cache/ in the port folder, XDG_CACHE_HOME): a material
+; compiles once, later sessions load the binary instead of stalling the first time it is seen
+gles3/shaders/shader_cache_sync=true
+gles3/shaders/shader_cache_size_mb=128
+
+[memory]
+
+; custom frt only: hand freed heap memory back to the system every 20 s (malloc_trim), so the driver memory freed by
+; the eviction above is available to the GPU again (Cube XX: after Prepare shaders back to the level before it)
+malloc_trim_seconds=20
+
+[physics]
+
+; no 2D physics bodies in the game: no per-step 2D thread handoff; no per-input-event object picking
+2d/thread_model=1
+common/enable_object_picking=false
+
+[audio]
+; bigger sound buffer (60 ms instead of 15): slow devices crackled and stuttered with the default (RG351P)
+output_latency=60
+
+; custom frt only: Ogg Vorbis data stays in the pack until a stream plays
+lazy_ogg_streams=true
+; custom frt only: sound effect data stays in the pack until played, 16 MB LRU cache
+lazy_samples=true
+lazy_samples_budget_mb=16
+
+
+[gui]
+
+; custom frt only: FreeType reads font files from the pack on demand instead of keeping them in memory
+fonts/stream_font_files=true
+
+[locale]
+
+; custom frt only: load other languages' translations only when the game switches to them
+lazy_translations=true
+
+[autoload]
+
+; the port's scripts (port/PortOptions.gd): "Aspect ratio" row in Graphics settings and the letterbox art, splash
+; load under the key art, level streaming spread over frames, on-screen keyboard, title and pause menu tweaks.
+; The launcher fills in the install path.
+PortOptions="*@GAMEDIR@/port/PortOptions.gd"
