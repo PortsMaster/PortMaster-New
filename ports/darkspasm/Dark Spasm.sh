@@ -31,13 +31,6 @@ $ESUDO chmod +x "$GAMEDIR/tools/patchscript"
 export LD_LIBRARY_PATH="/usr/lib:$LD_LIBRARY_PATH"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
-# Check if 7zzs present
-if [ ! -f "$controlfolder/7zzs.${DEVICE_ARCH}" ]; then
-    pm_message "this port requires the latest portmaster to run, please go to https://portmaster.games/ for more info."
-    sleep 5
-    exit 1
-fi
-
 # Check if we need to patch the game
 if [ ! -f install_completed ]; then
     if [ -f "$controlfolder/utils/patcher.txt" ]; then

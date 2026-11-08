@@ -1,6 +1,6 @@
 ## Notes
 
-Thanks to **Hijon Park** for developing this game and allowing us to host it on PortMaster. Feel free to check other great games at [Itch.io](https://hijong-park.itch.io/) or [Steam](https://store.steampowered.com/developer/HijongPark).
+Thanks to **Hijong Park** for developing this game and allowing us to host it on PortMaster. Feel free to check other great games at [Itch.io](https://hijong-park.itch.io/) or [Steam](https://store.steampowered.com/developer/HijongPark).
 
 
 
@@ -18,7 +18,7 @@ Thanks to **Hijon Park** for developing this game and allowing us to host it on 
 |L2|Hotkey|
 |R2|Walk|
 |Start|Pause Menu / Confirm|
-|Select / Start + Hotkey|Quick Safe / Quick Load|
+|Select / Start + Hotkey|Quick Save / Quick Load|
 
 
 
