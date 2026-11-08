@@ -70,13 +70,15 @@ echo '08ec0e1f44cfa0929f3c97c2b9bc65712f8b44e1777bdd36d52f4442cc37bc61  glu-pack
 
 ### 3. Game executable
 
-Download the exact upstream 1.1.0 release, verify it, and apply the supplied patch. Run from the directory containing this README and `patches/`:
+Download the exact upstream 1.1.0 release, verify it, and apply the supplied patch. Run from the directory containing this README.
 
 ```bash
 curl --fail --location --output cytadela-1.1.0.tar.bz2 https://downloads.sourceforge.net/project/cytadela/cytadela/1.1.0/cytadela-1.1.0.tar.bz2
 echo '90497fe473639ff2fefc68ab44d22936ea5b335e05595b966454cb53f1f42fbe  cytadela-1.1.0.tar.bz2' | sha256sum --check -
 tar -xjf cytadela-1.1.0.tar.bz2
-patch --directory=cytadela-1.1.0 -p1 < patches/cytadela-1.1.0-portmaster.patch
+PATCH_DIR=thecitadel/patches
+[ -d "$PATCH_DIR" ] || PATCH_DIR=patches
+patch --directory=cytadela-1.1.0 -p1 < "$PATCH_DIR/cytadela-1.1.0-portmaster.patch"
 cmake -S cytadela-1.1.0 -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ```

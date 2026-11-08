@@ -19,7 +19,8 @@ Changes made for this port:
 - Removes wall/closed-door collision damage and associated bounce, impact messages, sound and distortion. Enemy damage and enemy-hit effects are unchanged.
 - Makes game stdout line-buffered so diagnostic messages are retained promptly.
 - Handles quit/window-close events in input, queue clearing, animations, fades and delays. Video shutdown stops VLC callbacks before releasing their surfaces and mutex.
-- Runs the game in the foreground and delegates mapper cleanup to `pm_finish` after the game returns, following the standard native launcher pattern.
+- Runs the game in the foreground and delegates mapper cleanup to `pm_finish`. No custom supervision functions or signal traps are used.
+- Clears the inherited `SDL_VIDEODRIVER` override for the game only, leaving SDL to select its backend. On RG353VS, the firmware forced Wayland on a two-seat compositor and mapped keyboard events did not reach the game. With automatic selection, SDL used XWayland; A confirmed the language menu and D-pad down reached SDL as Page Down. The mapper and audio retain their firmware environment. No backend name or firmware name is hardcoded in the launcher.
 - Adds a CMake build and ships every source change in `patches/cytadela-1.1.0-portmaster.patch`, tested against the checksummed upstream release.
 - Uses a 12000 stick-to-key deadzone while retaining the existing right-stick mouse curve and all button bindings.
 - Ships bulk assets in a zero-owned, dereferenced `gamedata.tar.gz`; extraction preserves the original `data/` paths and does not touch `conf/`.

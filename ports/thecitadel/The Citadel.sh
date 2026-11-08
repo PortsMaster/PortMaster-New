@@ -33,15 +33,11 @@ else
   source "$controlfolder/libgl_default.txt"
 fi
 
-# SDL needs explicit wrapper paths only when PortMaster selected GL4ES.
-gl4es_dir="$PWD/gl4es.${DEVICE_ARCH}"
-case ":${LD_LIBRARY_PATH}:" in
-  *":${gl4es_dir}:"*)
-    export CYTADELA_PERSISTENT_GL=1
-    export SDL_VIDEO_GL_DRIVER="$gl4es_dir/libGL.so.1"
-    export SDL_VIDEO_EGL_DRIVER="$gl4es_dir/libEGL.so.1"
-    ;;
-esac
+if [[ "$LIBGL_ES" != "" ]]; then
+  export CYTADELA_PERSISTENT_GL=1
+  export SDL_VIDEO_GL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libGL.so.1"
+  export SDL_VIDEO_EGL_DRIVER="$GAMEDIR/gl4es.${DEVICE_ARCH}/libEGL.so.1"
+fi
 
 ARCHIVE_FILE="gamedata.tar.gz"
 if [[ -f "$ARCHIVE_FILE" ]]; then
