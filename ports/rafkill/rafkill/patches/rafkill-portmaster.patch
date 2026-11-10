@@ -1,0 +1,611 @@
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/Makefile.pm ../rafkill-1.2.3/Makefile.pm
+--- rafkill-1.2.3/Makefile.pm	1970-01-01 00:00:00.000000000 +0000
++++ rafkill-1.2.3/Makefile.pm	2026-11-10 12:27:54.853273628 +0000
+@@ -0,0 +1,31 @@
++# PortMaster build: Allegro Legacy on Allegro 5 (SDL2 + GLES2), DUMB 0.9.3 static.
++DEPS ?= ..
++A5 = $(DEPS)/allegro5
++AL = $(DEPS)/allegro-legacy
++DUMB = $(DEPS)/dumb-0.9.3
++
++CXX ?= g++
++CXXFLAGS ?= -O2 -g
++CPPFLAGS = -DPORTMASTER -DALLEGRO_LEGACY_NO_FIX_ALIASES -include $(DEPS)/patches/glibc-compat.h -iquote src \
++	-I$(DUMB)/include \
++	-I$(AL)/build-pm/include -I$(AL)/include \
++	-I$(A5)/build-pm/include -I$(A5)/include \
++	-I$(A5)/addons/audio -I$(A5)/addons/image -I$(A5)/addons/font -I$(A5)/addons/primitives -I$(A5)/addons/acodec
++LDLIBS = -L$(DUMB)/lib -laldmb -ldumb \
++	-L$(AL)/build-pm/lib -L$(A5)/build-pm/lib -lalleg -lallegro_audio -lallegro \
++	-lSDL2 -lpthread -lm
++
++SRCS = $(wildcard src/*.cpp src/guns/*.cpp src/hulls/*.cpp src/weapons/*.cpp)
++OBJS = $(SRCS:src/%.cpp=obj/%.o)
++
++rafkill.aarch64: $(OBJS)
++	$(CXX) -o $@ $(OBJS) $(LDLIBS)
++
++obj/%.o: src/%.cpp
++	@mkdir -p $(dir $@)
++	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -w -c $< -o $@
++
++clean:
++	rm -rf obj rafkill.aarch64
++
++.PHONY: clean
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/bitmap.cpp ../rafkill-1.2.3/src/bitmap.cpp
+--- rafkill-1.2.3/src/bitmap.cpp	2006-06-04 14:44:37.000000000 +0000
++++ rafkill-1.2.3/src/bitmap.cpp	2026-11-10 12:24:37.667789679 +0000
+@@ -1,6 +1,7 @@
+ #include <allegro.h>
+ #include "bitmap.h"
+ #include "font.h"
++#include "pmpresent.h"
+ #include <stdarg.h>
+ #include <vector>
+ #include <string>
+@@ -477,6 +478,9 @@
+ }
+ 
+ static int setGfxMode( int mode, int x, int y ){
++#ifdef PORTMASTER
++	pmDestroyScreen();
++#endif
+ 	int ret = ::set_gfx_mode( mode, x, y, 0, 0 );
+ 	if ( Bitmap::Screen != NULL ){
+ 		delete Bitmap::Screen;
+@@ -497,11 +501,9 @@
+ 	return setGfxMode( GFX_AUTODETECT_WINDOWED, x, y );
+ }
+ 
+-/*
+ int Bitmap::setGfxModeAny( int x, int y ){
+ 	return setGfxMode( GFX_AUTODETECT, x, y );
+ }
+-*/
+ 	
+ int Bitmap::makeColor( int r, int g, int b ){
+ 	return ::makecol16( r, g, b );
+@@ -743,4 +745,7 @@
+ 
+ void Bitmap::BlitToScreen(){
+ 	this->Blit( *Bitmap::Screen );
++#ifdef PORTMASTER
++	pmPresent();
++#endif
+ }
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/bitmap.h ../rafkill-1.2.3/src/bitmap.h
+--- rafkill-1.2.3/src/bitmap.h	2006-06-04 14:43:47.000000000 +0000
++++ rafkill-1.2.3/src/bitmap.h	2026-11-10 12:24:37.668057531 +0000
+@@ -153,6 +153,7 @@
+ 	static int setGfxModeText();
+ 	static int setGfxModeFullscreen( int x, int y );
+ 	static int setGfxModeWindowed( int x, int y );
++	static int setGfxModeAny( int x, int y );
+ 
+ 	static int makeColor( int r, int g, int b );
+ 	static void hsvToRGB( float h, float s, float v, int * r, int * g, int * b );
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/defs.cpp ../rafkill-1.2.3/src/defs.cpp
+--- rafkill-1.2.3/src/defs.cpp	2006-08-31 00:16:04.000000000 +0000
++++ rafkill-1.2.3/src/defs.cpp	2026-11-10 12:56:56.837854529 +0000
+@@ -161,6 +161,9 @@
+ }
+ 
+ string Util::getInstallDirectory(){
++#ifdef PORTMASTER
++	return "./";
++#endif
+ 	return string( INSTALL_DIR ) + "/rafkill/";
+ }
+ 
+@@ -173,10 +176,20 @@
+ 	if ( al_findfirst( (dataPath + find).c_str(), &info, FA_ARCH ) != 0 ){
+ 		return files;
+ 	}
+-	files.push_back( string( info.name ) );
++#ifdef PORTMASTER
++	/* Allegro Legacy lists . and .. and returns full paths */
++	do {
++		const char * name = get_filename( info.name );
++		if ( name[ 0 ] != '.' && ! ( info.attrib & FA_DIREC ) ){
++			files.push_back( dataPath + string( name ) );
++		}
++	} while ( al_findnext( &info ) == 0 );
++#else
++	files.push_back( dataPath + string( info.name ) );
+ 	while ( al_findnext( &info ) == 0 ){
+ 		files.push_back( dataPath + string( info.name ) );
+ 	}
++#endif
+ 	al_findclose( &info );
+ 
+ 	return files;
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/drawer.cpp ../rafkill-1.2.3/src/drawer.cpp
+--- rafkill-1.2.3/src/drawer.cpp	2006-05-07 17:51:40.000000000 +0000
++++ rafkill-1.2.3/src/drawer.cpp	2026-11-10 12:27:55.080611128 +0000
+@@ -1,4 +1,5 @@
+ #include "drawer.h"
++#include "pmpresent.h"
+ #include "playerobj.h"
+ #include "bitmap.h"
+ #include "explode.h"
+@@ -6,6 +7,7 @@
+ #include "hulls/hull_player.h"
+ #include "spaceobj.h"
+ #include <vector>
++#include <string.h>
+ #include <map>
+ #include "defs.h"
+ #include "trigtable.h"
+@@ -295,6 +297,9 @@
+ 	} else {
+ 		work->Blit( view_port, Y_BLIT_OFFSET, 0, 0, *Bitmap::Screen );
+ 	}
++#ifdef PORTMASTER
++	pmPresent();
++#endif
+ 
+ 	/*
+ 	time.endTime();
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/init.cpp ../rafkill-1.2.3/src/init.cpp
+--- rafkill-1.2.3/src/init.cpp	2006-06-04 14:50:05.000000000 +0000
++++ rafkill-1.2.3/src/init.cpp	2026-11-10 12:24:02.417385298 +0000
+@@ -2,6 +2,10 @@
+ #include "defs.h"
+ #include <dumb.h>
+ #include <aldumb.h>
++#include "pmpresent.h"
++#ifdef PORTMASTER
++#include <a5alleg.h>
++#endif
+ 
+ void inc_speed_counter() {
+ 	Util::speed_counter++;
+@@ -24,11 +28,20 @@
+ 	*/
+ 
+ 	set_color_depth( 16 );
++#ifdef PORTMASTER
++	all_disable_threaded_display();
++	al_set_new_display_flags( ALLEGRO_FULLSCREEN_WINDOW );
++	al_set_new_display_option( ALLEGRO_VSYNC, 2, ALLEGRO_SUGGEST );
++	Bitmap::setGfxModeAny( GRAPHICS_X, GRAPHICS_Y );
++	pmSetupDisplay();
++	printf( "Screen %dx%d, depth %d\n", SCREEN_W, SCREEN_H, bitmap_color_depth( screen ) );
++#else
+ 	if ( windowMode ){
+ 		Bitmap::setGfxModeWindowed( GRAPHICS_X, GRAPHICS_Y );
+ 	} else {
+ 		Bitmap::setGfxModeFullscreen( GRAPHICS_X, GRAPHICS_Y );
+ 	}
++#endif
+ 	
+ 	reserve_voices (8, -1);
+ 	set_volume_per_voice( 0 );
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/loading_screen.cpp ../rafkill-1.2.3/src/loading_screen.cpp
+--- rafkill-1.2.3/src/loading_screen.cpp	2006-05-06 21:06:25.000000000 +0000
++++ rafkill-1.2.3/src/loading_screen.cpp	2026-11-10 12:24:37.671269992 +0000
+@@ -5,6 +5,7 @@
+ 
+ #include "bitmap.h"
+ #include "defs.h"
++#include "pmpresent.h"
+ #include <pthread.h>
+ 
+ static pthread_t loadingThread;
+@@ -64,6 +65,9 @@
+ 			
+ 			// Bitmap::Screen->printfNormal( 300, 220, color, "Loading" );
+ 			Bitmap::Screen->printf( 300, 220, color, &font, "Loading" );
++#ifdef PORTMASTER
++			pmPresent();
++#endif
+ 		}
+ 	}
+ 
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/loadsave.cpp ../rafkill-1.2.3/src/loadsave.cpp
+--- rafkill-1.2.3/src/loadsave.cpp	2006-05-02 01:43:33.000000000 +0000
++++ rafkill-1.2.3/src/loadsave.cpp	2026-11-10 12:27:55.081630143 +0000
+@@ -3,6 +3,8 @@
+ 
+ #include "loadsave.h"
+ #include <stdio.h>
++#include <string.h>
++#include <strings.h>
+ #include "spaceobj.h"
+ #include "strings.h"
+ #include <string>
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/pmpresent.cpp ../rafkill-1.2.3/src/pmpresent.cpp
+--- rafkill-1.2.3/src/pmpresent.cpp	1970-01-01 00:00:00.000000000 +0000
++++ rafkill-1.2.3/src/pmpresent.cpp	2026-11-10 12:23:38.822359551 +0000
+@@ -0,0 +1,301 @@
++#ifdef PORTMASTER
++#include <allegro.h>
++#include <a5alleg.h>
++#include <SDL2/SDL.h>
++#include <stdlib.h>
++#include <string.h>
++#include "pmpresent.h"
++
++/* The game draws everything into the A4 memory bitmap "screen". pmPresent copies
++   each finished frame into a triple buffer; a present thread owns the GL context
++   and converts, uploads and flips it while the game draws the next frame. */
++
++enum { PM_COPY_NONE, PM_COPY_565, PM_COPY_565_SWAP, PM_COPY_8888, PM_COPY_8888_SWAP };
++
++static ALLEGRO_BITMAP * pmScreen = NULL;
++static double pmLastFlip = 0;
++
++static ALLEGRO_THREAD * pmThread = NULL;
++static ALLEGRO_MUTEX * pmMutex = NULL;
++static ALLEGRO_MUTEX * pmCallMutex = NULL;
++static ALLEGRO_COND * pmCond = NULL;
++static unsigned char * pmBuf[ 3 ] = { NULL, NULL, NULL };
++static int pmWrite, pmReady, pmRead, pmW, pmH, pmMode, pmBpp;
++static bool pmNewFrame, pmStop, pmStarted, pmThreadOK;
++static SDL_Window * pmWindow = NULL;
++static SDL_GLContext pmContext = NULL;
++static ALLEGRO_EVENT_QUEUE * pmEvents = NULL;
++static bool pmNoThread = false;
++
++static int pmCopyMode(){
++	int depth = bitmap_color_depth( screen );
++
++	if ( depth == 16 && _rgb_g_shift_16 == 5 ){
++		if ( _rgb_r_shift_16 == 11 && _rgb_b_shift_16 == 0 )
++			return PM_COPY_565;
++		if ( _rgb_r_shift_16 == 0 && _rgb_b_shift_16 == 11 )
++			return PM_COPY_565_SWAP;
++	}
++	if ( depth == 32 && _rgb_g_shift_32 == 8 ){
++		if ( _rgb_r_shift_32 == 0 && _rgb_b_shift_32 == 16 )
++			return PM_COPY_8888;
++		if ( _rgb_r_shift_32 == 16 && _rgb_b_shift_32 == 0 )
++			return PM_COPY_8888_SWAP;
++	}
++	return PM_COPY_NONE;
++}
++
++static int pmFormat( int mode ){
++	if ( mode == PM_COPY_565 || mode == PM_COPY_565_SWAP )
++		return ALLEGRO_PIXEL_FORMAT_RGB_565;
++	if ( mode == PM_COPY_8888 || mode == PM_COPY_8888_SWAP )
++		return ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE;
++	return ALLEGRO_PIXEL_FORMAT_ANY;
++}
++
++static void pmConvertRow( int mode, const void * srcRow, void * dstRow, int w ){
++	const uint32_t * src = (const uint32_t *) srcRow;
++	uint32_t * dst = (uint32_t *) dstRow;
++
++	switch ( mode ){
++		case PM_COPY_565 :
++			memcpy( dst, src, w * 2 );
++			break;
++		case PM_COPY_565_SWAP :
++			for ( int n = 0; n < w / 2; n++ ){
++				uint32_t c = src[ n ];
++				dst[ n ] = ((c & 0x001F001Fu) << 11) | (c & 0x07E007E0u) | ((c >> 11) & 0x001F001Fu);
++			}
++			break;
++		case PM_COPY_8888 :
++			for ( int n = 0; n < w; n++ )
++				dst[ n ] = src[ n ] | 0xFF000000u;
++			break;
++		case PM_COPY_8888_SWAP :
++			for ( int n = 0; n < w; n++ ){
++				uint32_t c = src[ n ];
++				dst[ n ] = 0xFF000000u | ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >> 16) & 0xFF);
++			}
++			break;
++	}
++}
++
++static void pmDisplayEvents(){
++	ALLEGRO_EVENT event;
++
++	if ( ! pmEvents )
++		return;
++	while ( al_get_next_event( pmEvents, &event ) ){
++		switch ( event.type ){
++			case ALLEGRO_EVENT_DISPLAY_RESIZE :
++				al_acknowledge_resize( event.display.source );
++				break;
++			case ALLEGRO_EVENT_DISPLAY_HALT_DRAWING :
++				al_acknowledge_drawing_halt( event.display.source );
++				break;
++			case ALLEGRO_EVENT_DISPLAY_RESUME_DRAWING :
++				al_acknowledge_drawing_resume( event.display.source );
++				break;
++		}
++	}
++}
++
++static void pmDraw( ALLEGRO_DISPLAY * disp ){
++	ALLEGRO_TRANSFORM trans;
++	double scale;
++
++	al_set_target_backbuffer( disp );
++	scale = al_get_display_width( disp ) / (double) al_get_bitmap_width( pmScreen );
++	if ( al_get_display_height( disp ) / (double) al_get_bitmap_height( pmScreen ) < scale )
++		scale = al_get_display_height( disp ) / (double) al_get_bitmap_height( pmScreen );
++	int offX = (int)( (al_get_display_width( disp ) - al_get_bitmap_width( pmScreen ) * scale) / 2 );
++	int offY = (int)( (al_get_display_height( disp ) - al_get_bitmap_height( pmScreen ) * scale) / 2 );
++	al_build_transform( &trans, offX, offY, scale, scale, 0 );
++	al_use_transform( &trans );
++	al_clear_to_color( al_map_rgb( 0, 0, 0 ) );
++	al_draw_bitmap( pmScreen, 0, 0, 0 );
++	al_flip_display();
++}
++
++static void * pmPresentThread( ALLEGRO_THREAD * thread, void * arg ){
++	ALLEGRO_DISPLAY * disp = (ALLEGRO_DISPLAY *) arg;
++
++	SDL_GL_MakeCurrent( pmWindow, pmContext );
++	al_set_target_backbuffer( disp );
++	al_set_new_bitmap_flags( ALLEGRO_VIDEO_BITMAP | ALLEGRO_NO_PRESERVE_TEXTURE | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR );
++	al_set_new_bitmap_format( pmFormat( pmMode ) );
++	pmScreen = al_create_bitmap( pmW, pmH );
++
++	al_lock_mutex( pmMutex );
++	pmThreadOK = pmScreen && al_get_bitmap_format( pmScreen ) == pmFormat( pmMode );
++	pmStarted = true;
++	al_broadcast_cond( pmCond );
++	al_unlock_mutex( pmMutex );
++
++	while ( pmThreadOK ){
++		al_lock_mutex( pmMutex );
++		while ( ! pmNewFrame && ! pmStop )
++			al_wait_cond( pmCond, pmMutex );
++		if ( pmStop ){
++			al_unlock_mutex( pmMutex );
++			break;
++		}
++		int t = pmRead; pmRead = pmReady; pmReady = t;
++		pmNewFrame = false;
++		al_unlock_mutex( pmMutex );
++
++		pmDisplayEvents();
++
++		ALLEGRO_LOCKED_REGION * lock = al_lock_bitmap( pmScreen, pmFormat( pmMode ), ALLEGRO_LOCK_WRITEONLY );
++		if ( lock ){
++			for ( int y = 0; y < pmH; y++ )
++				pmConvertRow( pmMode, pmBuf[ pmRead ] + y * pmW * pmBpp, (char *) lock->data + y * lock->pitch, pmW );
++			al_unlock_bitmap( pmScreen );
++		}
++		pmDraw( disp );
++	}
++
++	if ( pmScreen )
++		al_destroy_bitmap( pmScreen );
++	pmScreen = NULL;
++	SDL_GL_MakeCurrent( pmWindow, NULL );
++	return NULL;
++}
++
++static void pmStopThread(){
++	if ( ! pmThread )
++		return;
++	al_lock_mutex( pmMutex );
++	pmStop = true;
++	al_broadcast_cond( pmCond );
++	al_unlock_mutex( pmMutex );
++	al_join_thread( pmThread, NULL );
++	al_destroy_thread( pmThread );
++	pmThread = NULL;
++	SDL_GL_MakeCurrent( pmWindow, pmContext );
++}
++
++static bool pmStartThread( ALLEGRO_DISPLAY * disp, int mode ){
++	if ( ! pmMutex ){
++		pmMutex = al_create_mutex();
++		pmCond = al_create_cond();
++	}
++	pmW = screen->w;
++	pmH = screen->h;
++	pmMode = mode;
++	pmBpp = bitmap_color_depth( screen ) == 16 ? 2 : 4;
++	for ( int n = 0; n < 3; n++ ){
++		free( pmBuf[ n ] );
++		pmBuf[ n ] = (unsigned char *) malloc( pmW * pmH * pmBpp );
++		if ( ! pmBuf[ n ] )
++			return false;
++	}
++	pmWrite = 0; pmReady = 1; pmRead = 2;
++	pmNewFrame = pmStop = pmStarted = pmThreadOK = false;
++
++	pmWindow = SDL_GL_GetCurrentWindow();
++	pmContext = SDL_GL_GetCurrentContext();
++	if ( ! pmWindow || ! pmContext )
++		return false;
++	SDL_GL_MakeCurrent( pmWindow, NULL );
++
++	pmThread = al_create_thread( pmPresentThread, disp );
++	if ( ! pmThread ){
++		SDL_GL_MakeCurrent( pmWindow, pmContext );
++		return false;
++	}
++	al_start_thread( pmThread );
++	al_lock_mutex( pmMutex );
++	while ( ! pmStarted )
++		al_wait_cond( pmCond, pmMutex );
++	al_unlock_mutex( pmMutex );
++	if ( ! pmThreadOK ){
++		pmStopThread();
++		return false;
++	}
++	return true;
++}
++
++static void pmPresentSync( ALLEGRO_DISPLAY * disp, int mode ){
++	ALLEGRO_LOCKED_REGION * lock = NULL;
++
++	pmDisplayEvents();
++	if ( ! pmScreen ){
++		al_set_new_bitmap_flags( ALLEGRO_VIDEO_BITMAP | ALLEGRO_NO_PRESERVE_TEXTURE | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR );
++		al_set_new_bitmap_format( pmFormat( mode ) );
++		pmScreen = al_create_bitmap( screen->w, screen->h );
++		if ( ! pmScreen )
++			return;
++	}
++	if ( mode != PM_COPY_NONE && al_get_bitmap_format( pmScreen ) == pmFormat( mode ) )
++		lock = al_lock_bitmap( pmScreen, pmFormat( mode ), ALLEGRO_LOCK_WRITEONLY );
++	if ( lock ){
++		for ( int y = 0; y < screen->h; y++ )
++			pmConvertRow( mode, screen->line[ y ], (char *) lock->data + y * lock->pitch, screen->w );
++		al_unlock_bitmap( pmScreen );
++	} else {
++		all_render_a5_bitmap( screen, pmScreen );
++	}
++	pmDraw( disp );
++}
++
++void pmSetupDisplay(){
++	if ( ! pmCallMutex )
++		pmCallMutex = al_create_mutex();
++	if ( all_get_display() ){
++		al_hide_mouse_cursor( all_get_display() );
++		if ( pmEvents )
++			al_destroy_event_queue( pmEvents );
++		pmEvents = al_create_event_queue();
++		if ( pmEvents )
++			al_register_event_source( pmEvents, al_get_display_event_source( all_get_display() ) );
++	}
++}
++
++void pmDestroyScreen(){
++	if ( pmCallMutex )
++		al_lock_mutex( pmCallMutex );
++	pmStopThread();
++	if ( pmScreen )
++		al_destroy_bitmap( pmScreen );
++	pmScreen = NULL;
++	if ( pmCallMutex )
++		al_unlock_mutex( pmCallMutex );
++}
++
++void pmPresent(){
++	ALLEGRO_DISPLAY * disp = all_get_display();
++
++	if ( ! disp || ! screen || ! pmCallMutex )
++		return;
++
++	al_lock_mutex( pmCallMutex );
++	int mode = pmCopyMode();
++	if ( pmThread && ( mode != pmMode || screen->w != pmW || screen->h != pmH ) ){
++		pmStopThread();
++		if ( pmScreen )
++			al_destroy_bitmap( pmScreen );
++		pmScreen = NULL;
++	}
++	if ( ! pmThread && ! pmNoThread && mode != PM_COPY_NONE && ! pmScreen )
++		pmNoThread = ! pmStartThread( disp, mode );
++
++	if ( pmThread ){
++		for ( int y = 0; y < pmH; y++ )
++			memcpy( pmBuf[ pmWrite ] + y * pmW * pmBpp, screen->line[ y ], pmW * pmBpp );
++		al_lock_mutex( pmMutex );
++		int t = pmWrite; pmWrite = pmReady; pmReady = t;
++		pmNewFrame = true;
++		al_signal_cond( pmCond );
++		al_unlock_mutex( pmMutex );
++	} else {
++		pmPresentSync( disp, mode );
++	}
++
++	double wait = pmLastFlip + 1.0 / 60.0 - al_get_time();
++	if ( wait > 0 )
++		al_rest( wait );
++	pmLastFlip = al_get_time();
++	al_unlock_mutex( pmCallMutex );
++}
++#endif
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/pmpresent.h ../rafkill-1.2.3/src/pmpresent.h
+--- rafkill-1.2.3/src/pmpresent.h	1970-01-01 00:00:00.000000000 +0000
++++ rafkill-1.2.3/src/pmpresent.h	2026-11-10 12:23:41.313635215 +0000
+@@ -0,0 +1,10 @@
++#ifndef _rafkill_pmpresent_h
++#define _rafkill_pmpresent_h
++
++#ifdef PORTMASTER
++void pmSetupDisplay();
++void pmPresent();
++void pmDestroyScreen();
++#endif
++
++#endif
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/raptor.cpp ../rafkill-1.2.3/src/raptor.cpp
+--- rafkill-1.2.3/src/raptor.cpp	2006-09-30 01:23:02.000000000 +0000
++++ rafkill-1.2.3/src/raptor.cpp	2026-11-10 12:24:37.673435864 +0000
+@@ -13,6 +13,7 @@
+ #include <iostream>
+ #include "loadsave.h"
+ #include "defs.h"
++#include "pmpresent.h"
+ #include "ebox.h"
+ #include "raptor.h"
+ #include "sound.h"
+@@ -275,6 +276,9 @@
+ 	work.drawBorder( 2, Bitmap::makeColor( 200, 200, 200 ) );
+ 
+ 	work.drawTrans( GRAPHICS_X / 2 - work.getWidth() / 2, GRAPHICS_Y / 2 - work.getHeight() / 2 - 100, *Bitmap::Screen );
++#ifdef PORTMASTER
++	pmPresent();
++#endif
+ 
+ 	while ( Keyboard::readKey() != -1 ){
+ 		Util::YIELD();
+@@ -341,14 +345,16 @@
+ 
+ 	changeKeyMenu.addMenu( "Return", normalFont, true, INIT_OPT, NULL, select_smp );
+ 
++	RField * fullscreenField = NULL;
++#ifndef PORTMASTER
+ 	option_menu.addMenu( "Change Keys", normalFont, true, INIT_CHANGE_KEYS, &changeKeyMenu, select_smp );
+ 	
+-	RField * fullscreenField;
+ 	if ( Configuration::getWindowMode() ){
+ 		fullscreenField = option_menu.addMenu( "Fullscreen Off", normalFont, true,INIT_SCREEN,&option_menu,select_smp);
+ 	} else {
+ 		fullscreenField = option_menu.addMenu( "Fullscreen On",  normalFont, true,INIT_SCREEN,&option_menu,select_smp);
+ 	}
++#endif
+ 
+ 	RField * backgroundField;
+ 	if ( Configuration::getBackground() ){
+@@ -743,6 +749,9 @@
+ 	work.printf( 320 - font.textLength( "Paused" ) / 2, 240 - 10, Bitmap::makeColor(255,128,0), &font, "Paused" );
+ 
+ 	work.drawTrans( 0, 0, *Bitmap::Screen );
++#ifdef PORTMASTER
++	pmPresent();
++#endif
+ 	while ( Keyboard::getAnyKey( Keyboard::P ) ){
+ 		Util::YIELD();
+ 	}
+@@ -990,9 +999,15 @@
+ 
+ 	cout << "Unloading data" << endl;
+ 
++#ifdef PORTMASTER
++	pmDestroyScreen();
++#endif
++
+ 	Util::unloadGlobals();
+ 
++#ifndef PORTMASTER
+ 	credits();
++#endif
+ 
+ 	return 0;
+ }
+diff -ruN -x obj -x rafkill.aarch64 rafkill-1.2.3/src/system.cpp ../rafkill-1.2.3/src/system.cpp
+--- rafkill-1.2.3/src/system.cpp	2006-08-22 00:47:05.000000000 +0000
++++ rafkill-1.2.3/src/system.cpp	2026-11-10 12:27:55.082274651 +0000
+@@ -1,5 +1,6 @@
+ #include "system.h"
+ #include <strings.h>
++#include <unistd.h>
+ #include <string>
+ 
+ #ifdef WINDOWS
