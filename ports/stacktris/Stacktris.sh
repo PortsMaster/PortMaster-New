@@ -61,11 +61,6 @@ cd "$GAMEDIR"
 $GPTOKEYB2 "godot471" -x > /dev/null 2>&1 &
 pm_platform_helper "$godot_dir/$godot_executable"
 
-# Westonpack normally guesses its virtual desktop size from the device capability
-# string, and that guess can be wrong (Knulli reports the square 720x720 RG CubeXX
-# as 1280x720). Godot then goes fullscreen at the *virtual* size while the real
-# screen is smaller, so the game gets cropped. Pin the virtual desktop to the real
-# display size so the two always match.
 echo "Stacktris: display ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} (device: ${DEVICE_NAME})"
 
 $ESUDO env CRUSTY_BLOCK_INPUT=1 \
