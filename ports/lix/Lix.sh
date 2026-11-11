@@ -19,7 +19,7 @@ get_controls
 GAMEDIR="/$directory/ports/lix"
 
 cd "$GAMEDIR"
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+: > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 $ESUDO chmod +x "$GAMEDIR/lix.${DEVICE_ARCH}"
 
