@@ -1,0 +1,1301 @@
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,23 @@
++cmake_minimum_required(VERSION 3.16)
++project(cytadela VERSION 1.1.0 LANGUAGES CXX)
++
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
++pkg_check_modules(SDL2_MIXER REQUIRED IMPORTED_TARGET SDL2_mixer)
++pkg_check_modules(VLC REQUIRED IMPORTED_TARGET libvlc)
++find_package(OpenGL REQUIRED)
++
++add_executable(cytadela
++    src/cmf/CMFile.cpp src/cmf/File3Dg.cpp src/cmf/GameObjectsManager.cpp
++    src/cmf/I3Dg.cpp src/cmf/Enemy.cpp src/cmf/fileio.cpp
++    src/CCytadelaConfig.cpp src/CCytadelaGame.cpp src/CCytadelaMain.cpp
++    src/CCytadelaMenu.cpp src/CytadelaSaveFile.cpp src/CInfoText.cpp
++    src/COGLClass.cpp src/CSDLClass.cpp src/farread.cpp src/GameControl.cpp
++    src/Localization.cpp src/UsableItem.cpp src/videoplayer.cpp src/main.cpp)
++target_compile_features(cytadela PRIVATE cxx_std_11)
++target_compile_options(cytadela PRIVATE -Wno-narrowing)
++target_compile_definitions(cytadela PRIVATE DATADIR="data")
++target_include_directories(cytadela PRIVATE src)
++target_link_libraries(cytadela PRIVATE PkgConfig::SDL2 PkgConfig::SDL2_MIXER
++    OpenGL::GL OpenGL::GLU)
++set_target_properties(cytadela PROPERTIES OUTPUT_NAME "cytadela.${CMAKE_SYSTEM_PROCESSOR}")
+--- a/src/CCytadelaGame.cpp
++++ b/src/CCytadelaGame.cpp
+@@ -999,15 +999,15 @@
+ 	}
+ 
+ 	//actualize action map
+-	uint8_t *keyMap = inputArray.keyMap;
++	const uint8_t *keyMap = inputArray.keyMap;
+ 
+ 	//if level map on display
+ 	if(mMap) {
+-		if(keyMap[SDLK_RETURN] or keyMap[SDLK_KP_ENTER] or keyMap[SDLK_LSHIFT] or
+-				keyMap[SDLK_RSHIFT] or inputArray.rmb or inputArray.joyButtonPressed)
++		if(keyMap[SDL_SCANCODE_RETURN] or keyMap[SDL_SCANCODE_KP_ENTER] or keyMap[SDL_SCANCODE_LSHIFT] or
++				keyMap[SDL_SCANCODE_RSHIFT] or inputArray.rmb or inputArray.joyButtonPressed)
+ 			mMap = false;
+ 		for(uint32_t i = 0; i < 5; ++i) {
+-			if(inputArray.status[i] and inputArray.key[i] == SDLK_TAB) {
++			if(inputArray.status[i] and (inputArray.key[i] == SDLK_TAB or inputArray.key[i] == SDLK_PAGEUP)) {
+ 				//if status was left 'true' it would turn on the map again
+ 				//in handleInput()
+ 				inputArray.status[i] = false;
+@@ -1034,36 +1034,36 @@
+ 	}
+ 
+ 	//fire
+-	if(keyMap[SDLK_RETURN] or keyMap[SDLK_KP_ENTER] or keyMap[SDLK_LSHIFT] or
+-				keyMap[SDLK_RSHIFT] or inputArray.rmb or inputArray.joyButtonPressed)
++	if(keyMap[SDL_SCANCODE_RETURN] or keyMap[SDL_SCANCODE_KP_ENTER] or keyMap[SDL_SCANCODE_LSHIFT] or
++				keyMap[SDL_SCANCODE_RSHIFT] or inputArray.rmb or inputArray.joyButtonPressed)
+ 		mActionMap[ACT_FIRE] = true;
+ 	else {
+ 		mActionMap[ACT_FIRE] = false;
+ 		mFireOnce = false;
+ 	}
+ 	//forward
+-	if(keyMap[SDLK_UP] or keyMap[SDLK_KP8] or keyMap[SDLK_w] or inputArray.lmb or
++	if(keyMap[SDL_SCANCODE_UP] or keyMap[SDL_SCANCODE_KP_8] or keyMap[SDL_SCANCODE_W] or inputArray.lmb or
+ 	   inputArray.joyUp)
+ 		mActionMap[ACT_FORWARD] = true;
+ 	else mActionMap[ACT_FORWARD] = false;
+ 	//backward
+-	if(keyMap[SDLK_DOWN] or keyMap[SDLK_KP5] or keyMap[SDLK_s] or inputArray.joyDown)
++	if(keyMap[SDL_SCANCODE_DOWN] or keyMap[SDL_SCANCODE_KP_5] or keyMap[SDL_SCANCODE_S] or inputArray.joyDown)
+ 		mActionMap[ACT_BACKWARD] = true;
+ 	else mActionMap[ACT_BACKWARD] = false;
+ 	//turn left
+-	if(keyMap[SDLK_LEFT] or keyMap[SDLK_KP7] or inputArray.joyLeft)
++	if(keyMap[SDL_SCANCODE_LEFT] or keyMap[SDL_SCANCODE_KP_7] or inputArray.joyLeft)
+ 		mActionMap[ACT_TURN_LEFT] = true;
+ 	else mActionMap[ACT_TURN_LEFT] = false;
+ 	//turn right
+-	if(keyMap[SDLK_RIGHT] or keyMap[SDLK_KP9] or inputArray.joyRight)
++	if(keyMap[SDL_SCANCODE_RIGHT] or keyMap[SDL_SCANCODE_KP_9] or inputArray.joyRight)
+ 		mActionMap[ACT_TURN_RIGHT] = true;
+ 	else mActionMap[ACT_TURN_RIGHT] = false;
+ 	//strafe left
+-	if(keyMap[SDLK_KP4] or keyMap[SDLK_a])
++	if(keyMap[SDL_SCANCODE_KP_4] or keyMap[SDL_SCANCODE_A])
+ 		mActionMap[ACT_STRAFE_LEFT] = true;
+ 	else mActionMap[ACT_STRAFE_LEFT] = false;
+ 	//strafe right
+-	if(keyMap[SDLK_KP6] or keyMap[SDLK_d])
++	if(keyMap[SDL_SCANCODE_KP_6] or keyMap[SDL_SCANCODE_D])
+ 		mActionMap[ACT_STRAFE_RIGHT] = true;
+ 	else mActionMap[ACT_STRAFE_RIGHT] = false;
+ 
+@@ -1208,9 +1208,39 @@
+ 	}
+ }
+ 
+-void CCytadelaGame::handleInput(SDLKey key)
++void CCytadelaGame::cycleItem(int direction, bool weaponsOnly)
++{
++	const int count = weaponsOnly ? UIT_RED_CARD : UIT_BLUE_CARD + 1;
++	int item = mSelectedItem->getType();
++	if(weaponsOnly and item >= count)
++		item = direction > 0 ? -1 : 0;
++	for(int i = 0; i < count; ++i) {
++		item = (item + direction + count) % count;
++		if(item == UIT_HAND or item >= UIT_RED_CARD or
++		   mUsableItems[static_cast<UsableItemType>(item)]->getStatus() != WPNS_NA) {
++			handleInput(item == 9 ? SDLK_0 : SDLK_1 + item);
++			return;
++		}
++	}
++}
++
++void CCytadelaGame::handleInput(SDL_Keycode key)
+ {
+ 	switch(key) {
++		case SDLK_c:
++			cycleItem(1, true);
++			return;
++		case SDLK_v:
++			cycleItem(-1, true);
++			return;
++		case SDLK_q:
++		case SDLK_PAGEDOWN:
++		case SDLK_e: {
++			int direction = (key == SDLK_e or key == SDLK_PAGEDOWN) ? 1 : -1;
++			cycleItem(direction, false);
++			return;
++		}
++		case SDLK_f:
+ 		case SDLK_SPACE:
+ 			mGameCtrl->useItem(mUsableItems[UIT_HAND]);
+ 			return;
+@@ -1321,6 +1351,7 @@
+ 			mOGL->osd.setImage(OSDIMG_WEAPON_BC, OSD_WEAPON);
+ 			break;
+ 		//map
++		case SDLK_PAGEUP:
+ 		case SDLK_TAB: {
+ 			mMap = true;
+ 			//redraw map in memory
+--- a/src/CCytadelaGame.h
++++ b/src/CCytadelaGame.h
+@@ -137,7 +137,8 @@
+ 	void processRotationAngle();
+ 	bool isCode(const char *code);
+ 	void doActions(Actions action);
+-	void handleInput(SDLKey key);
++	void handleInput(SDL_Keycode key);
++	void cycleItem(int direction, bool weaponsOnly);
+ 	void takeWeapon(Weapon *weapon);
+ 	void takeCard(Card *card);
+ 	void takeAmmo(Ammo *ammo);
+--- a/src/CCytadelaMain.cpp
++++ b/src/CCytadelaMain.cpp
+@@ -272,7 +272,7 @@
+ 
+ 	if(not versionOK) {
+ 		mSDL->drawFrame();
+-		SDLKey key;
++		SDL_Keycode key;
+ 		while(true) {
+ 			key = mSDL->readInputMenu();
+ 			if(key == SDLK_RETURN or key == SDLK_ESCAPE)
+@@ -345,13 +345,13 @@
+ 	}
+ 
+ 	fprintf(stdout, "Entering the config menu main loop...\n");
+-	SDLKey key;
++	SDL_Keycode key;
+ 	char localizationName[FILENAME_MAX];
+ 	mSDL->clearEventQueue();
+ 	while(true) {
+ 		key = mSDL->readInputMenu();
+ 		//if user chose to exit
+-		if(key == SDLK_ESCAPE) {
++		if(key == SDLK_ESCAPE or key == SDLK_BACKSPACE) {
+ 			delete[] entryNames;
+ 			fprintf(stdout, "Program terminated by user - exiting...\n");
+ 			mSDL->stopSound(sound, 500);
+@@ -622,7 +622,7 @@
+ 	uint32_t imgNums[] = {imgNum, font, endCur, saveCur};
+ 	mSDL->clearEventQueue();
+ 	while(true) {
+-		SDLKey key = mSDL->readInputMenu();
++		SDL_Keycode key = mSDL->readInputMenu();
+ 		if(key == SDLK_ESCAPE) {
+ 			mState.exitGame = true;
+ 			break;
+@@ -687,7 +687,7 @@
+ 			mSDL->displayImage(imgNums[3], &srcRect, 192, 348);
+ 		mSDL->drawFrame();
+ 		//read input
+-		SDLKey key = mSDL->readInputMenu();
++		SDL_Keycode key = mSDL->readInputMenu();
+ 		switch(key) {
+ 			case SDLK_UP: {
+ 				if(num == 0) num = NumberOfSaves;
+@@ -789,7 +789,7 @@
+ 		mSDL->displayText(fontImg, text, 344, 426);
+ 		mSDL->drawFrame();
+ 		//read input
+-		SDLKey key = mSDL->readInputMenu();
++		SDL_Keycode key = mSDL->readInputMenu();
+ 		switch(key) {
+ 			case SDLK_DOWN:
+ 			case SDLK_LEFT: {
+--- a/src/CCytadelaMenu.cpp
++++ b/src/CCytadelaMenu.cpp
+@@ -623,7 +623,7 @@
+ 	mLastTime = mSDL->getTicks();
+ 	//main loop of the menu
+ 	while(action == MENUACT_CONTINUE) {
+-		SDLKey key = mSDL->readInputMenu();
++		SDL_Keycode key = mSDL->readInputMenu();
+ 		//check which events occured
+ 		switch(key) {
+ 			case SDLK_UP: {
+@@ -644,6 +644,13 @@
+ 				if(mMenu != MENU_INFO)
+ 					action = enter();
+ 				else mScrollInfoText = not mScrollInfoText;
++				break;
++			}
++			case SDLK_BACKSPACE: {
++				if(mMenu != MENU_MAIN) {
++					mSelItem = 5;
++					action = enter();
++				}
+ 				break;
+ 			}
+ 			case SDLK_ESCAPE: {
+--- a/src/COGLClass.cpp
++++ b/src/COGLClass.cpp
+@@ -30,7 +30,7 @@
+ #include <algorithm>
+ #include <math.h>
+ #include <memory.h>
+-#include <SDL/SDL_video.h>
++#include <SDL2/SDL_video.h>
+ #include "COGLClass.h"
+ 
+ //echm... that windows...
+@@ -44,6 +44,41 @@
+ 	//check the Open GL version and extensions
+ 	if(not checkOGL())
+ 		return false;
++
++	// The drawable can be larger than the requested fullscreen mode on handhelds.
++	// Keep the selected aspect ratio and center all gameplay and HUD viewports.
++	int drawableWidth = 0, drawableHeight = 0;
++	SDL_Window *window = SDL_GL_GetCurrentWindow();
++	if(window)
++		SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
++	osd.mViewportX = osd.mViewportY = 0;
++	if(width > 0 and height > 0 and drawableWidth > 0 and drawableHeight > 0) {
++		int scaledWidth = drawableWidth;
++		int scaledHeight = int(int64_t(drawableWidth) * height / width);
++		if(scaledHeight > drawableHeight) {
++			scaledHeight = drawableHeight;
++			scaledWidth = int(int64_t(drawableHeight) * width / height);
++		}
++		osd.mViewportX = (drawableWidth - scaledWidth) / 2;
++		osd.mViewportY = (drawableHeight - scaledHeight) / 2;
++		width = scaledWidth;
++		height = scaledHeight;
++	}
++
++	//SDL's menu renderer can leave a shader selected in GL4ES's cached state.
++	auto useProgram = reinterpret_cast<PFNGLUSEPROGRAMPROC>(SDL_GL_GetProcAddress("glUseProgram"));
++	if(useProgram)
++		useProgram(0);
++	glDisableClientState(GL_COLOR_ARRAY);
++	glDisableClientState(GL_NORMAL_ARRAY);
++	glDisable(GL_ALPHA_TEST);
++	glDisable(GL_SCISSOR_TEST);
++	glDisable(GL_STENCIL_TEST);
++	glDepthMask(GL_TRUE);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glStencilMask(~0u);
++	glDepthFunc(GL_LESS);
++	glColor4f(1, 1, 1, 1);
+ 
+ 	//z-buffer
+ 	glEnable(GL_DEPTH_TEST);
+@@ -101,6 +136,7 @@
+ 	projectionMatrix(width, height);
+ 	//init OSD interface
+ 	osd.init(width, height);
++	glGenTextures(1, &mTransitionTexture);
+ 	return true;
+ }
+ 
+@@ -192,6 +228,8 @@
+ 
+ void COGLClass::freeOGL()
+ {
++	glDeleteTextures(1, &mTransitionTexture);
++	mTransitionTexture = 0;
+ 	osd.deleteFXTextures();
+ 	osd.deleteImages();
+ 
+@@ -208,50 +246,65 @@
+ 
+ void COGLClass::preDissolve(float r, float g, float b, DissolveType disType)
+ {
+-	switch(disType) {
+-		case DT_FADEIN: {
+-			//load color buffer to accumulation buffer
+-			glAccum(GL_LOAD, 1.0f);
+-			//clear color buffer to initial color
+-			glClearColor(r, g, b, 1.0f);
+-			glClear(GL_COLOR_BUFFER_BIT);
+-			break;
+-		}
+-		case DT_DISSOLVE: {
+-			//load color buffer to accumulation buffer
+-			glAccum(GL_LOAD, 1.0f);
+-			break;
+-		}
+-		case DT_FADEOUT: {
+-			//load color buffer to accumulation buffer
+-			glAccum(GL_LOAD, 1.0f);
+-			break;
+-		}
+-	}
++	//Mobile GL implementations have no accumulation buffer. Capture once and blend.
++	mTransitionColor[0] = r;
++	mTransitionColor[1] = g;
++	mTransitionColor[2] = b;
++	glPushAttrib(GL_TEXTURE_BIT);
++	glActiveTexture(GL_TEXTURE0);
++	glBindTexture(GL_TEXTURE_2D, mTransitionTexture);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, osd.mViewportX, osd.mViewportY, osd.mScreenW, osd.mScreenH, 0);
++	glPopAttrib();
+ }
+ 
+ void COGLClass::dissolveFrame(DissolveType disType, float fadeValue)
+ {
+-	switch(disType) {
+-		case DT_FADEIN:
+-			glAccum(GL_RETURN, fadeValue);
+-			break;
+-		case DT_DISSOLVE:
+-			renderFrame();
+-			glAccum(GL_MULT, 1.0f - fadeValue);
+-			glAccum(GL_ACCUM, fadeValue);
+-			glAccum(GL_RETURN, 1.0f);
+-			break;
+-		case DT_FADEOUT:
+-			glAccum(GL_RETURN, 1.0f - fadeValue);
+-			break;
+-	}
++	if(disType == DT_DISSOLVE)
++		renderFrame();
++	glPushAttrib(GL_ALL_ATTRIB_BITS);
++	if(disType != DT_DISSOLVE) {
++		glClearColor(mTransitionColor[0], mTransitionColor[1], mTransitionColor[2], 1.0f);
++		glClear(GL_COLOR_BUFFER_BIT);
++	}
++	glViewport(osd.mViewportX, osd.mViewportY, osd.mScreenW, osd.mScreenH);
++	glDisable(GL_DEPTH_TEST);
++	glDisable(GL_STENCIL_TEST);
++	glDisable(GL_CULL_FACE);
++	glDisable(GL_FOG);
++	glActiveTexture(GL_TEXTURE1);
++	glDisable(GL_TEXTURE_2D);
++	glActiveTexture(GL_TEXTURE0);
++	glEnable(GL_TEXTURE_2D);
++	glBindTexture(GL_TEXTURE_2D, mTransitionTexture);
++	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
++	glEnable(GL_BLEND);
++	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	glColor4f(1.0f, 1.0f, 1.0f, disType == DT_FADEIN ? fadeValue : 1.0f - fadeValue);
++	glMatrixMode(GL_PROJECTION);
++	glPushMatrix();
++	glLoadIdentity();
++	glMatrixMode(GL_MODELVIEW);
++	glPushMatrix();
++	glLoadIdentity();
++	glBegin(GL_QUADS);
++	glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, -1.0f);
++	glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, -1.0f);
++	glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
++	glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
++	glEnd();
++	glPopMatrix();
++	glMatrixMode(GL_PROJECTION);
++	glPopMatrix();
++	glMatrixMode(GL_MODELVIEW);
++	glPopAttrib();
+ }
+ 
+ void COGLClass::projectionMatrix(GLsizei width, GLsizei height)
+ {
+ 	//set the viewport
+-	glViewport(0, (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
++	glViewport(osd.mViewportX, osd.mViewportY + (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
+ 
+ 	//set the projection matrix
+ 	glMatrixMode(GL_PROJECTION);
+@@ -818,7 +871,7 @@
+ {
+ 	//now we draw on whole screen
+ 	//(vision noise and map are also drawn by OSDClass)
+-	glViewport(0, 0, mScreenW, mScreenH);
++	glViewport(mViewportX, mViewportY, mScreenW, mScreenH);
+ 
+ 	glMatrixMode(GL_PROJECTION);
+ 	glPushMatrix();
+@@ -833,7 +886,7 @@
+ void COSDClass::disable2D()
+ {
+ 	//set the viewport back to its original size and position
+-	glViewport(0, (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
++	glViewport(mViewportX, mViewportY + (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
+ 	//every matrix mode has its own stack, so the order doesn't matter;
+ 	//the modelview matrix is poped at the end so we don't need to set is as
+ 	//the current matrix mode again
+--- a/src/COGLClass.h
++++ b/src/COGLClass.h
+@@ -25,7 +25,8 @@
+ #ifndef _COGLClass_H_
+ #define _COGLClass_H_
+ 
+-#include <SDL/SDL_opengl.h>
++#include <SDL2/SDL_opengl.h>
++#include <GL/glu.h>
+ #include <list>
+ #include <vector>
+ #include "cmf/GameObjectsManager.h"
+@@ -97,6 +98,8 @@
+ 
+ 	GLsizei mScreenW;
+ 	GLsizei mScreenH;
++	GLint mViewportX = 0;
++	GLint mViewportY = 0;
+ 	void enable2D();
+ 	void disable2D();
+ 	void drawText();
+@@ -141,6 +144,8 @@
+ 	float mCosHVA;
+ 	float mX;
+ 	float mZ;
++	GLuint mTransitionTexture = 0;
++	float mTransitionColor[3];
+ 
+ 	bool checkOGL();
+ 
+--- a/src/CSDLClass.cpp
++++ b/src/CSDLClass.cpp
+@@ -20,9 +20,32 @@
+ */
+ 
+ #include <memory.h>
++#include <cstdlib>
++#ifdef CYTADELA_CAPTURE
++#include <vector>
++#endif
++#define GL_GLEXT_PROTOTYPES
++#include <SDL2/SDL_opengl.h>
+ #include "CSDLClass.h"
+ #include "videoplayer.h"
+ 
++#ifdef CYTADELA_CAPTURE
++namespace {
++struct AudioCapture { FILE *file = nullptr; size_t remaining = 0; bool started = false; } audioCapture;
++void captureAudio(void *, Uint8 *stream, int length)
++{
++	if(not audioCapture.file) return;
++	size_t count = size_t(length) < audioCapture.remaining ? size_t(length) : audioCapture.remaining;
++	fwrite(stream, 1, count, audioCapture.file);
++	audioCapture.remaining -= count;
++	if(not audioCapture.remaining) {
++		fclose(audioCapture.file);
++		audioCapture.file = nullptr;
++	}
++}
++}
++#endif
++
+ CSDLClass *CSDLClass::instance()
+ {
+ 	static CSDLClass inst;
+@@ -30,37 +53,25 @@
+ }
+ 
+ //init/free functions
+-CSDLClass::CSDLClass() : mScreen(0), mJoystick(0), mMusic(0), mAudioAvailable(false),
++CSDLClass::CSDLClass() : mScreen(0), mWindow(0), mGLContext(0), mJoystick(0), mMusic(0), mAudioAvailable(false),
+ 	mAudioEnabled(true), mLoadedSoundsCount(0), mMenuMouseXPos(0), mMenuMouseYPos(0),
+ 	mLastMouseInputTime(0), mLastJoyInputTime(0), mScreenSizesCount(0),
+ 	mScreenSizes(0), mScreenMode(FullScreen)
+ {
+ 	memset(mSounds, 0, sizeof(mSounds));
++	const char *persistent = std::getenv("CYTADELA_PERSISTENT_GL");
++	mPersistentGL = persistent and strcmp(persistent, "1") == 0;
+ }
+ 
+ bool CSDLClass::init()
+ {
+-	uint32_t flags = SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE;
+-#if !defined(__MINGW32__) && !defined(__APPLE__)
+-	flags |= SDL_INIT_EVENTTHREAD; /* Not supported on Windows or Mac OS X */
+-#endif
++	uint32_t flags = SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO;
+ 	if(-1 == SDL_Init(flags)) {
+ 		fprintf(stderr, "!SDL_Init(): %s\n", SDL_GetError());
+ 		return false;
+ 	}
+ 
+-	//check for needed screen sizes
+-	//size for 2D video mode
+-	flags = SDL_HWSURFACE | SDL_FULLSCREEN | SDL_DOUBLEBUF;
+-	if(not SDL_VideoModeOK(CSDL_DEFAULT_SCREEN_W, CSDL_DEFAULT_SCREEN_H, 24, flags)) {
+-		fprintf(stderr, "Hardware surface in %sx%s mode not available!\n",
+-		        CSDL_DEFAULT_SCREEN_W_TXT, CSDL_DEFAULT_SCREEN_H_TXT);
+-		SDL_Quit();
+-		return false;
+-	}
+-	//sizes for OpenGL (we need at least one of them)
+-	flags &= ~SDL_DOUBLEBUF;
+-	flags |= SDL_OPENGL;
++	//SDL2 scales the fixed-size interface to the active display.
+ 	static ScreenSize sizes[] = {{{CSDL_DEFAULT_SCREEN_W_TXT, CSDL_DEFAULT_SCREEN_H_TXT},
+ 	                               {CSDL_DEFAULT_SCREEN_W, CSDL_DEFAULT_SCREEN_H}, true},
+ 	                              {{"800", "600"}, {800, 600}, true},
+@@ -76,35 +87,13 @@
+ 	                              {{"1920", "1080"}, {1920, 1080}, true},
+ 	                              {{"1920", "1200"}, {1920, 1200}, true},
+ 	                              {{"2048", "1536"}, {2048, 1536}, true}};
+-	bool anySizeAvailable = false;
+ 	//how many sizes the ScreenSizes array consists of?
+ 	mScreenSizesCount = sizeof(sizes) / sizeof(ScreenSize);
+-	for(int32_t i = 0; i < mScreenSizesCount; i++) {
+-		if(SDL_VideoModeOK(sizes[i].resolution[0], sizes[i].resolution[1], 24, flags) < 16)
+-			sizes[i].available = false;
+-		else anySizeAvailable = true;
+-	}
+-	if(not anySizeAvailable) {
+-		fprintf(stderr, "No required screen resolutions in OpenGL mode available!\n"
+-		                "At least one of the following screen resolutions in OpenGL\n"
+-		                "mode is needed to run the game (in at least 16 bit color\n"
+-		                "mode):\n");
+-		for(int32_t i = 0; i < mScreenSizesCount; i++)
+-			fprintf(stderr, "%dx%d ", sizes[i].resolution[0], sizes[i].resolution[1]);
+-		fprintf(stderr, "\n");
+-		SDL_Quit();
+-		return false;
+-	}
+ 	mScreenSizes = sizes;
+ 
+  	SDL_ShowCursor(SDL_DISABLE);
+ 
+-	//if there is a joystick then we enable it's events and open it
+-	mJoystick = 0;
+-	if(SDL_NumJoysticks() > 0) {
+-		SDL_JoystickEventState(SDL_ENABLE);
+-		mJoystick = SDL_JoystickOpen(0);
+-	}
++	//Controller input is translated by gptokeyb2, not the legacy joystick map.
+ 
+ 	//audio initialization
+ 	if(0 == Mix_OpenAudio(44100, AUDIO_S16, 2, 4096))
+@@ -122,35 +111,74 @@
+ 	if(smode != NoChange)
+ 		mScreenMode = smode;
+ 
+-	uint32_t flags = SDL_HWSURFACE;
+-	if(mScreenMode == FullScreen)
+-		flags |= SDL_FULLSCREEN;
+-
+-	switch(vmode) {
+-		case Mode2D: {
+-			flags |= SDL_DOUBLEBUF;
+-			break;
+-		}
+-		case Mode3D: {
+-			//attribs for OGL
++	if(mPersistentGL) {
++		uint32_t flags = SDL_WINDOW_OPENGL;
++		if(mScreenMode == FullScreen)
++			flags |= SDL_WINDOW_FULLSCREEN;
++		if(not mWindow) {
+ 			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+ 			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+-			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
+-			SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 8);
+-			SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 8);
+-			SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 8);
+-			flags |= SDL_OPENGL;
+-			break;
+-		}
+-	}
+-
+-	mScreen = SDL_SetVideoMode(width, height, 24, flags);
+-
+-	if(mScreen == 0) {
+-		fprintf(stderr, "!SDL_SetVideoMode(%d, %d, %s): %s\n", width, height,
+-		        (flags & SDL_OPENGL) ? "3D" : "2D", SDL_GetError());
+-		return false;
+-	}
++			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
++			const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
++			bool translated = driver and strstr(driver, "/gl4es.");
++			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, translated ? SDL_GL_CONTEXT_PROFILE_ES : 0);
++			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
++			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, translated ? 0 : 1);
++			mWindow = SDL_CreateWindow("Cytadela", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
++			                           width, height, flags);
++			if(mWindow) {
++				mGLContext = SDL_GL_CreateContext(mWindow);
++				if(mGLContext)
++					SDL_GL_SetSwapInterval(1);
++			}
++		} else {
++			SDL_SetWindowSize(mWindow, width, height);
++			SDL_SetWindowFullscreen(mWindow, mScreenMode == FullScreen ? SDL_WINDOW_FULLSCREEN : 0);
++		}
++		if(vmode == Mode2D and (not mScreen or mScreen->w != width or mScreen->h != height)) {
++			SDL_FreeSurface(mScreen);
++			mScreen = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
++		}
++		if(not mWindow or not mGLContext or (vmode == Mode2D and not mScreen)) {
++			fprintf(stderr, "!SDL2 video mode (%d, %d, %s): %s\n", width, height,
++			        vmode == Mode3D ? "3D" : "2D", SDL_GetError());
++			return false;
++		}
++	} else {
++		if(mGLContext) {
++			SDL_GL_DeleteContext(mGLContext);
++			mGLContext = 0;
++		}
++		SDL_DestroyWindow(mWindow);
++		mWindow = 0;
++		SDL_FreeSurface(mScreen);
++		mScreen = 0;
++		uint32_t flags = mScreenMode == FullScreen ? SDL_WINDOW_FULLSCREEN : 0;
++		if(vmode == Mode3D) {
++			SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
++			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
++			SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
++			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
++			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
++			flags |= SDL_WINDOW_OPENGL;
++		}
++		mWindow = SDL_CreateWindow("Cytadela", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
++		                           width, height, flags);
++		if(mWindow) {
++			if(vmode == Mode3D) {
++				mGLContext = SDL_GL_CreateContext(mWindow);
++				if(mGLContext) SDL_GL_SetSwapInterval(1);
++			} else {
++				mScreen = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
++			}
++		}
++		if(not mWindow or (vmode == Mode3D ? not mGLContext : not mScreen)) {
++			fprintf(stderr, "!SDL2 video mode (%d, %d, %s): %s\n", width, height,
++			        vmode == Mode3D ? "3D" : "2D", SDL_GetError());
++			return false;
++		}
++	}
++	SDL_SetRelativeMouseMode(vmode == Mode3D ? SDL_TRUE : SDL_FALSE);
+ 	return true;
+ }
+ 
+@@ -158,14 +186,175 @@
+ {
+ 	freeSounds();
+ 	Mix_CloseAudio();
++#ifdef CYTADELA_CAPTURE
++	if(audioCapture.file) {
++		fclose(audioCapture.file);
++		audioCapture.file = nullptr;
++	}
++#endif
+ 	if(mJoystick != 0)
+ 		SDL_JoystickClose(mJoystick);
+-	SDL_WM_GrabInput(SDL_GRAB_OFF);
++	SDL_SetRelativeMouseMode(SDL_FALSE);
++	if(mPersistentGL) {
++		if(mMenuTexture)
++			glDeleteTextures(1, &mMenuTexture);
++		mMenuTexture = 0;
++	}
++	SDL_FreeSurface(mScreen);
++	if(mGLContext)
++		SDL_GL_DeleteContext(mGLContext);
++	SDL_DestroyWindow(mWindow);
++	mGLContext = 0;
++	mWindow = 0;
++	mScreen = 0;
+ 	SDL_ShowCursor(SDL_ENABLE);
+ 	SDL_Quit();
+ }
+ 
++void CSDLClass::drawFrame()
++{
++	checkQuit();
++	if(not mPersistentGL) {
++		SDL_Surface *windowSurface = SDL_GetWindowSurface(mWindow);
++		if(windowSurface and mScreen) {
++			SDL_FillRect(windowSurface, nullptr, SDL_MapRGB(windowSurface->format, 0, 0, 0));
++			int width = windowSurface->w;
++			int height = width * mScreen->h / mScreen->w;
++			if(height > windowSurface->h) {
++				height = windowSurface->h;
++				width = height * mScreen->w / mScreen->h;
++			}
++			SDL_Rect target = {(windowSurface->w - width) / 2, (windowSurface->h - height) / 2, width, height};
++			SDL_BlitScaled(mScreen, nullptr, windowSurface, &target);
++		}
++		SDL_UpdateWindowSurface(mWindow);
++		return;
++	}
++	//Software menus and videos share one context with the existing GL renderer.
++	glPushAttrib(GL_ALL_ATTRIB_BITS);
++	int drawableWidth, drawableHeight;
++	SDL_GL_GetDrawableSize(mWindow, &drawableWidth, &drawableHeight);
++	int width = drawableWidth;
++	int height = width * mScreen->h / mScreen->w;
++	if(height > drawableHeight) {
++		height = drawableHeight;
++		width = height * mScreen->w / mScreen->h;
++	}
++	glDisable(GL_SCISSOR_TEST);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glClearColor(0, 0, 0, 1);
++	glClear(GL_COLOR_BUFFER_BIT);
++	glViewport((drawableWidth - width) / 2, (drawableHeight - height) / 2, width, height);
++	glDisable(GL_DEPTH_TEST);
++	glDisable(GL_STENCIL_TEST);
++	glDisable(GL_CULL_FACE);
++	glDisable(GL_FOG);
++	glDisable(GL_LIGHTING);
++	glDisable(GL_BLEND);
++	glDisable(GL_ALPHA_TEST);
++	glDisable(GL_SCISSOR_TEST);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glActiveTexture(GL_TEXTURE1);
++	glDisable(GL_TEXTURE_2D);
++	glActiveTexture(GL_TEXTURE0);
++	glEnable(GL_TEXTURE_2D);
++	if(not mMenuTexture)
++		glGenTextures(1, &mMenuTexture);
++	glBindTexture(GL_TEXTURE_2D, mMenuTexture);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
++	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
++	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mScreen->w, mScreen->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mScreen->pixels);
++	glMatrixMode(GL_PROJECTION);
++	glPushMatrix();
++	glLoadIdentity();
++	glMatrixMode(GL_MODELVIEW);
++	glPushMatrix();
++	glLoadIdentity();
++	glBegin(GL_QUADS);
++	glTexCoord2f(0, 0); glVertex2f(-1, 1);
++	glTexCoord2f(1, 0); glVertex2f(1, 1);
++	glTexCoord2f(1, 1); glVertex2f(1, -1);
++	glTexCoord2f(0, 1); glVertex2f(-1, -1);
++	glEnd();
++	glPopMatrix();
++	glMatrixMode(GL_PROJECTION);
++	glPopMatrix();
++	glMatrixMode(GL_MODELVIEW);
++	glPopAttrib();
++	SDL_GL_SwapWindow(mWindow);
++}
++
+ //input functions
++#ifdef CYTADELA_CAPTURE
++void CSDLClass::swapBuffers()
++{
++	checkQuit();
++	static unsigned frames = 0;
++	if(++frames == 60) {
++		const char *path = std::getenv("CYTADELA_CAPTURE_FRAME");
++		if(path) {
++			int size[2];
++			SDL_GL_GetDrawableSize(mWindow, &size[0], &size[1]);
++			std::vector<unsigned char> pixels(size_t(size[0]) * size[1] * 4);
++			using ReadPixels = void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
++			ReadPixels read = glReadPixels;
++			void *native = nullptr;
++			const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
++			if(driver and strstr(driver, "/gl4es.")) {
++				native = SDL_LoadObject("libGLESv2.so");
++				if(native)
++					read = reinterpret_cast<ReadPixels>(SDL_LoadFunction(native, "glReadPixels"));
++			}
++			if(read)
++				read(0, 0, size[0], size[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
++			if(native) SDL_UnloadObject(native);
++			FILE *file = fopen(path, "wb");
++			if(file) {
++				fwrite(size, sizeof(size), 1, file);
++				fwrite(pixels.data(), 1, pixels.size(), file);
++				fclose(file);
++			}
++		}
++	}
++	SDL_GL_SwapWindow(mWindow);
++}
++#endif
++
++bool CSDLClass::pollEvent(SDL_Event *event)
++{
++	if(not SDL_PollEvent(event))
++		return false;
++	if(event->type == SDL_QUIT or
++	   (event->type == SDL_WINDOWEVENT and event->window.event == SDL_WINDOWEVENT_CLOSE))
++		throw QuitRequested();
++	return true;
++}
++
++void CSDLClass::checkQuit()
++{
++	//Animations and fades render without reading input, so check their queue too.
++	SDL_PumpEvents();
++	if(SDL_HasEvent(SDL_QUIT))
++		throw QuitRequested();
++}
++
++void CSDLClass::delay(uint32_t miliseconds)
++{
++	uint32_t start = SDL_GetTicks();
++	while(true) {
++		checkQuit();
++		uint32_t elapsed = SDL_GetTicks() - start;
++		if(elapsed >= miliseconds)
++			return;
++		uint32_t remaining = miliseconds - elapsed;
++		SDL_Delay(remaining > 16 ? 16 : remaining);
++	}
++}
++
+ void CSDLClass::delayInput()
+ {
+ 	uint32_t time = SDL_GetTicks();
+@@ -176,20 +365,37 @@
+ void CSDLClass::clearEventQueue()
+ {
+ 	SDL_Event event;
+-	while(SDL_PollEvent(&event));
+-}
+-
+-SDLKey CSDLClass::readInputMenu()
++	while(pollEvent(&event));
++}
++
++SDL_Keycode CSDLClass::readInputMenu()
+ {
+ 	uint32_t time = SDL_GetTicks();
+ 	SDL_Event event;
+ 	//check if there are any events
+-	while(SDL_PollEvent(&event)) {
++	while(pollEvent(&event)) {
+ 		switch(event.type) {
+ 			case SDL_KEYDOWN: {
+ 				switch(event.key.keysym.sym) {
++				case SDLK_c:
++				case SDLK_f:
+ 				case SDLK_KP_ENTER:
+ 					return SDLK_RETURN;
++				case SDLK_PAGEUP:
++				case SDLK_w:
++					return SDLK_UP;
++				case SDLK_PAGEDOWN:
++				case SDLK_s:
++					return SDLK_DOWN;
++				case SDLK_q:
++				case SDLK_a:
++					return SDLK_LEFT;
++				case SDLK_e:
++				case SDLK_d:
++					return SDLK_RIGHT;
++				case SDLK_v:
++					return SDLK_BACKSPACE;
++				case SDLK_BACKSPACE:
+ 				case SDLK_ESCAPE:
+ 				case SDLK_RETURN:
+ 				case SDLK_SPACE:
+@@ -270,7 +476,7 @@
+ 	SDL_Event event;
+ 	//check if there are any events
+ 	uint32_t readCounter = 0;
+-	while(SDL_PollEvent(&event)) {
++	while(pollEvent(&event)) {
+ 		switch(event.type) {
+ 			case SDL_KEYDOWN: {
+ 				if(readCounter == 5)
+@@ -289,15 +495,15 @@
+ 				break;
+ 			}
+ 			case SDL_MOUSEMOTION: {
+-				inputArray->mouseX = event.motion.xrel;
+-				inputArray->mouseY = event.motion.yrel;
++				inputArray->mouseX += event.motion.xrel;
++				inputArray->mouseY += event.motion.yrel;
+ 				break;
+ 			}
+ 			default:
+ 				break;
+ 		}
+ 	}
+-	inputArray->keyMap = SDL_GetKeyState(0);
++	inputArray->keyMap = SDL_GetKeyboardState(0);
+ 	//if left mouse button is pressed
+ 	if(SDL_GetMouseState(0, 0) & SDL_BUTTON(SDL_BUTTON_LEFT))
+ 		inputArray->lmb = true;
+@@ -433,6 +639,15 @@
+ {
+ 	if(mAudioEnabled and mAudioAvailable and -1 == Mix_PlayMusic(mMusic, loops))
+ 		fprintf(stderr, "!Mix_PlayMusic(): %s\n", Mix_GetError());
++#ifdef CYTADELA_CAPTURE
++	const char *path = std::getenv("CYTADELA_CAPTURE_AUDIO");
++	if(path and mAudioEnabled and mAudioAvailable and not audioCapture.started) {
++		audioCapture.started = true;
++		audioCapture.file = fopen(path, "wb");
++		audioCapture.remaining = 44100 * 2 * 2 * 2;
++		if(audioCapture.file) Mix_SetPostMix(captureAudio, nullptr);
++	}
++#endif
+ }
+ 
+ void CSDLClass::stopMusic()
+@@ -594,7 +809,7 @@
+ #endif
+ 
+ 	//create the surface (in video memory - SDL_HWSURFACE)
+-	tmpSurf[mImagesCount] = SDL_CreateRGBSurface(SDL_HWSURFACE, w, h, bpp, rMask, gMask, bMask, aMask);
++	tmpSurf[mImagesCount] = SDL_CreateRGBSurface(0, w, h, bpp, rMask, gMask, bMask, aMask);
+ 	if(tmpSurf[mImagesCount] == 0) {
+ 		delete[] tmpDims;
+ 		delete[] tmpSurf;
+--- a/src/CSDLClass.h
++++ b/src/CSDLClass.h
+@@ -22,8 +22,8 @@
+ #ifndef _CSDLCLASS_H_
+ #define _CSDLCLASS_H_
+ 
+-#include <SDL/SDL.h>
+-#include <SDL/SDL_mixer.h>
++#include <SDL2/SDL.h>
++#include <SDL2/SDL_mixer.h>
+ #include "farread.h"
+ 
+ #define CSDL_DEFAULT_SCREEN_W      640
+@@ -62,13 +62,13 @@
+ 
+ typedef class {
+ public:
+-	SDLKey key[5];     //eKey and bStatus are used to handle key up/down events
++	SDL_Keycode key[5]; //eKey and bStatus are used to handle key up/down events
+ 	bool   status[5];  // which just occured (we could use pKeyMap for this,
+ 	                   // but then we would have to check the previous key map
+ 	                   // status - it is much simplier to just check for events
+ 	                   // which have just occured) - good to handle options
+ 	                   // switching
+-	uint8_t *keyMap;   //pressed/unpressed keys state - a good way to handle
++	const uint8_t *keyMap; //pressed/unpressed keys state - a good way to handle
+ 	                   // player's
+ 	                   //movement and weapons/tools usage
+ 	int16_t mouseX;
+@@ -89,9 +89,14 @@
+ public:
+ 	enum VideoMode { Mode2D, Mode3D };
+ 	enum ScreenMode { FullScreen, Windowed, NoChange };
++	class QuitRequested {};
+ 
+ private:
+ 	SDL_Surface  *mScreen;
++	SDL_Window   *mWindow;
++	SDL_GLContext mGLContext;
++	unsigned int mMenuTexture = 0;
++	bool mPersistentGL = false;
+ 	SDL_Joystick *mJoystick;
+ 	Mix_Music    *mMusic;
+ 	Mix_Chunk    *mSounds[MAX_SOUNDS_COUNT];
+@@ -122,20 +127,26 @@
+ 	//input
+ 	void delayInput();
+ 	void clearEventQueue();
+-	SDLKey readInputMenu();
++	bool pollEvent(SDL_Event *event);
++	void checkQuit();
++	SDL_Keycode readInputMenu();
+ 	void readInputGame(InputArray *inputArray);
+ 
+ 	//time
+ 	uint32_t getTicks() { return SDL_GetTicks(); }
+ 
+-	void delay(uint32_t miliseconds) { SDL_Delay(miliseconds); }
++	void delay(uint32_t miliseconds);
+ 
+ 	//display
+ 	void displayImage(uint32_t imgNum, SDL_Rect *srcRect, int16_t x, int16_t y);
+ 	void displayText(uint32_t imgNum, const char *text, int16_t x, int16_t y);
+ 	void blackScreen();
+-	void drawFrame() { SDL_Flip(mScreen); }
+-	void swapBuffers() { SDL_GL_SwapBuffers(); }
++	void drawFrame();
++#ifdef CYTADELA_CAPTURE
++	void swapBuffers();
++#else
++	void swapBuffers() { checkQuit(); SDL_GL_SwapWindow(mWindow); }
++#endif
+ 	int32_t getScreenSizesCount() { return mScreenSizesCount; }
+ 	const ScreenSize *getScreenSizes() { return mScreenSizes; }
+ 	int32_t findFirstAvailableScreenSize(int32_t start);
+--- a/src/GameControl.cpp
++++ b/src/GameControl.cpp
+@@ -1983,49 +1983,7 @@
+ 		//(can happen after going through a wall from the back)
+ 		if(dotProd > SQR2BY2)
+ 			return 0;
+-		//bump the wall
+-		if(dotProd < -SQR2BY2) {
+-			intfloat ix, iz;
+-			//module
+-			ix.f = mVelocity.x; ix.i &= 0x7FFFFFFF;
+-			iz.f = mVelocity.z; iz.i &= 0x7FFFFFFF;
+-			//calculate the auxiliary velocity that will be used to
+-			//simulate the inertia after bumping the wall
+-			//(we don't zero the regular velocity here 'cause we want the
+-			//bump to begin at the position to which the player actually
+-			//got; the regular velocity will be zeroed as soon as the
+-			//inertia simulation starts)
+-			mAuxiliaryV.x = mVelocity.x + normal.x * ix.f * 2;
+-			mAuxiliaryV.z = mVelocity.z + normal.z * iz.f * 2;
+-			mAuxVTime = 250;
+-			//if door collision
+-			if(obj->getType() == GOTYPE_DOOR) {
+-				//and its material number
+-				uint32_t mtlNum = ((GODoor *)obj)->getFrameMesh()->materialNumber;
+-				switch(mtlNum) {
+-					//closed or opening?
+-					case 14:
+-					case 17:
+-						mOGL->osd.addText(mTexts[BUMP_DOOR_TEXTS].getText());
+-						break;
+-					case 16:
+-					case 19:
+-						mOGL->osd.addText(mTexts[BUMP_OPENING_TEXTS].getText());
+-						break;
+-				}
+-			}
+-			//normal wall collision
+-			else mOGL->osd.addText(mTexts[BUMP_WALL_TEXTS].getText());
+-			excite();
+-			mSDL->playSound(mCollisionSounds[CSND_WALL_BUMP], 1);
+-			if(mVisionNoise)
+-				displayNoise();
+-			if(mHighDificulty and not mImmortal)
+-				return 1;
+-			return 0;
+-		}
+-		//if no bumping then just move the player away from the wall to a
+-		//distaince equal to the camera's ray
++		//Stop at the wall without impact damage, bounce or audiovisual effects.
+ 		normal *= mCamRay - dist;
+ 		mVelocity += normal;
+ 	}
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -78,8 +78,11 @@
+ 
+ bool getSysDirectoryPath(string &path)
+ {
++	char *saveDir = getenv("CYTADELA_SAVE_DIR");
+ 	char *homeDir = getenv("HOME");
+-	if(homeDir != 0)
++	if(saveDir != 0 and saveDir[0] != '\0')
++		path = saveDir;
++	else if(homeDir != 0)
+ 		path = string(homeDir) + "/.cytadela";
+ 	else path = "sys";
+ 
+@@ -109,6 +112,7 @@
+ 
+ int main(int argc, char *argv[])
+ {
++	setvbuf(stdout, 0, _IOLBF, 0);
+ 	fprintf(stdout, "\n");
+ 
+ 	//handle the command line arguments
+@@ -135,7 +139,11 @@
+ 		return 1;
+ 	}
+ 	CCytadelaMain cytadelaMain(path.c_str());
+-	cytadelaMain.runMain();
++	try {
++		cytadelaMain.runMain();
++	} catch(const CSDLClass::QuitRequested &) {
++		fprintf(stdout, "Shutdown requested. Closing the game.\n");
++	}
+ 
+ 	fprintf(stdout, "\n");
+ 	return 0;
+--- a/src/videoplayer.cpp
++++ b/src/videoplayer.cpp
+@@ -28,8 +28,8 @@
+ #include <stdlib.h>
+ #include <assert.h>
+ 
+-#include <SDL/SDL.h>
+-#include <SDL/SDL_mutex.h>
++#include <SDL2/SDL.h>
++#include "CSDLClass.h"
+ 
+ #include <vlc/vlc.h>
+ 
+@@ -71,13 +71,38 @@
+ 
+ bool play(const char *filename, SDL_Surface *screen, bool offOnFinish, bool audio)
+ {
++	// Movies are optional on firmware without libVLC; gameplay must still start.
++	void *vlcLibrary = SDL_LoadObject("libvlc.so.5");
++	if(not vlcLibrary) {
++		fprintf(stderr, "libVLC unavailable; skipping video: %s\n", filename);
++		return true;
++	}
++	struct LibraryGuard {
++		void *handle;
++		~LibraryGuard() { SDL_UnloadObject(handle); }
++	} guard = {vlcLibrary};
++#define LOAD_VLC(name) auto name = reinterpret_cast<decltype(&::name)>(SDL_LoadFunction(vlcLibrary, #name)); \
++	if(not name) { fprintf(stderr, "libVLC missing %s; skipping video: %s\n", #name, filename); return true; }
++	LOAD_VLC(libvlc_new)
++	LOAD_VLC(libvlc_release)
++	LOAD_VLC(libvlc_media_new_path)
++	LOAD_VLC(libvlc_media_release)
++	LOAD_VLC(libvlc_media_player_new_from_media)
++	LOAD_VLC(libvlc_media_player_release)
++	LOAD_VLC(libvlc_media_player_play)
++	LOAD_VLC(libvlc_media_player_pause)
++	LOAD_VLC(libvlc_media_player_stop)
++	LOAD_VLC(libvlc_media_player_get_state)
++	LOAD_VLC(libvlc_video_set_callbacks)
++	LOAD_VLC(libvlc_video_set_format)
++#undef LOAD_VLC
+ 	libvlc_instance_t *libvlc;
+ 	libvlc_media_t *m;
+ 	libvlc_media_player_t *mp;
+ 	char const *vlc_argv[] =
+ 	{
+ 	    "--ignore-config", /* Don't use VLC's config files */
+-	    audio ? "" : "--noaudio",
++	    audio ? "--audio" : "--no-audio",
+ 	    "--no-xlib", /* tell VLC to not use Xlib */
+ 	    "--no-video-title-show"
+ 	};
+@@ -89,7 +114,7 @@
+ 
+ 	struct ctx ctx;
+ 
+-	empty = SDL_CreateRGBSurface(SDL_SWSURFACE, VIDEOWIDTH, VIDEOHEIGHT,
++	empty = SDL_CreateRGBSurface(0, VIDEOWIDTH, VIDEOHEIGHT,
+ 	                             screen->format->BitsPerPixel, 0, 0, 0, 0);
+ 	uint32_t aMask = 0;
+ #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+@@ -109,7 +134,7 @@
+ 	if(screen->format->BitsPerPixel == 32)
+ 		aMask = 0xFF000000;
+ #endif
+-	ctx.surf = SDL_CreateRGBSurface(SDL_SWSURFACE, VIDEOWIDTH, VIDEOHEIGHT,
++	ctx.surf = SDL_CreateRGBSurface(0, VIDEOWIDTH, VIDEOHEIGHT,
+ 	                                screen->format->BitsPerPixel, rMask, gMask, bMask, aMask);
+ 
+ 	ctx.mutex = SDL_CreateMutex();
+@@ -118,6 +143,12 @@
+ 	 *  Initialise libVLC
+ 	 */
+ 	libvlc = libvlc_new(vlc_argc, vlc_argv);
++	if(not libvlc) {
++		SDL_DestroyMutex(ctx.mutex);
++		SDL_FreeSurface(ctx.surf);
++		SDL_FreeSurface(empty);
++		return false;
++	}
+ 	m = libvlc_media_new_path(libvlc, filename);
+ 	mp = libvlc_media_player_new_from_media(m);
+ 	libvlc_media_release(m);
+@@ -127,6 +158,7 @@
+ 	sprintf(format, "RV%d", screen->format->BitsPerPixel);
+ 	libvlc_video_set_format(mp, format, VIDEOWIDTH, VIDEOHEIGHT, VIDEOWIDTH*(screen->format->BitsPerPixel / 8));
+ 	libvlc_media_player_play(mp);
++	fprintf(stdout, "Video playback started: %s\n", filename);
+ 
+ 	/*
+ 	 *  Main loop
+@@ -136,51 +168,56 @@
+ 	rect.x = (int)((screen->w - VIDEOWIDTH) / 2);
+ 	rect.y = (int)((screen->h - VIDEOHEIGHT) / 2);
+ 
+-	while(true) {
+-		int action = 0;
+-		bool stop = false;
+-		/* Keys: enter, escape (quit) */
+-		while(SDL_PollEvent(&event))  {
+-			switch(event.type) {
+-			case SDL_QUIT:
++	bool quitRequested = false;
++	try {
++		while(true) {
++			int action = 0;
++			bool stop = false;
++			/* Keys: enter, escape (quit) */
++			while(CSDLClass::instance()->pollEvent(&event))  {
++				switch(event.type) {
++				case SDL_KEYDOWN:
++					action = event.key.keysym.sym;
++					break;
++				}
++			}
++
++			switch(action) {
++			case SDLK_c:
++			case SDLK_v:
++			case SDLK_f:
++			case SDLK_BACKSPACE:
++			case SDLK_ESCAPE:
++			case SDLK_RETURN:
++			case SDLK_KP_ENTER:
+ 				stop = true;
+ 				break;
+-			case SDL_KEYDOWN:
+-				action = event.key.keysym.sym;
++			case ' ':
++				libvlc_media_player_pause(mp);
+ 				break;
+ 			}
+-		}
+-		if(stop)
+-			break;
+-
+-		switch(action) {
+-		case SDLK_ESCAPE:
+-		case SDLK_RETURN:
+-		case SDLK_KP_ENTER:
+-			stop = true;
+-			break;
+-		case ' ':
+-			libvlc_media_player_pause(mp);
+-			break;
+-		}
+-		if(stop)
+-			break;
++			if(stop)
++				break;
+ 
+ 
+ 		/* Blitting the surface does not prevent it from being locked and
+ 		 * written to by another thread, so we use this additional mutex. */
+-		SDL_LockMutex(ctx.mutex);
+-		SDL_BlitSurface(ctx.surf, NULL, screen, &rect);
+-		SDL_UnlockMutex(ctx.mutex);
+-
+-		SDL_Flip(screen);
+-		SDL_Delay(10);
+-
+-		SDL_BlitSurface(empty, NULL, screen, &rect);
+-
+-		libvlc_state_t state = libvlc_media_player_get_state(mp);
+-		if(state == libvlc_Ended and offOnFinish)
+-			break;
++			SDL_LockMutex(ctx.mutex);
++			SDL_BlitSurface(ctx.surf, NULL, screen, &rect);
++			SDL_UnlockMutex(ctx.mutex);
++
++			CSDLClass::instance()->drawFrame();
++			SDL_Delay(10);
++
++			SDL_BlitSurface(empty, NULL, screen, &rect);
++
++			libvlc_state_t state = libvlc_media_player_get_state(mp);
++			if(state == libvlc_Error or (state == libvlc_Ended and offOnFinish))
++				break;
++		}
++	} catch(const CSDLClass::QuitRequested &) {
++		//Stop decoder callbacks before the stack-owned surfaces and mutex disappear.
++		quitRequested = true;
+ 	}
+ 
+ 	/*
+@@ -193,6 +230,8 @@
+ 	SDL_DestroyMutex(ctx.mutex);
+ 	SDL_FreeSurface(ctx.surf);
+ 	SDL_FreeSurface(empty);
++	if(quitRequested)
++		throw CSDLClass::QuitRequested();
+ 
+ 	return true;
+ }
