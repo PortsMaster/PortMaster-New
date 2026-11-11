@@ -39,7 +39,7 @@ merge_data() {
 }
 
 unpack_data() {
-  tar -xzf data.tar.gz -C "$data_stage" || return 1
+  (set -o pipefail; gunzip -c data.tar.gz | tar --no-same-owner -xf - -C "$data_stage") || return 1
   shopt -s nullglob dotglob
   merge_data "$data_stage" || return 1
   [ -f instruments/FACTORY/catalog.tsv ] && [ -f instruments/FACTORY/builtins.tsv ]
