@@ -20,24 +20,14 @@ get_controls
 GAMEDIR="/$directory/ports/endsoftheearth2"
 CONFDIR="$GAMEDIR/conf/"
 DATAFILE="EOTE2.RPG"
-CUR_TTY=/dev/tty0
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
 mkdir -p "$GAMEDIR/conf"
 
-# This distribution doesn't (and can't) bundle EOTE2.RPG -- it's the copyrighted
-# game data (All Rights Reserved by Valkayree Productions), separate from the
-# GPL-licensed OHRRPGCE engine this port ships. See README.md for the
-# download link; drop the file here before running.
+# EOTE2.RPG is copyrighted game data and must be supplied by the user; see README.md.
 if [ ! -f "$GAMEDIR/$DATAFILE" ]; then
-  $ESUDO chmod 666 $CUR_TTY 2>/dev/null
-  printf "\033c" > $CUR_TTY
-  echo "Missing $DATAFILE." > $CUR_TTY
-  echo "See README.md for where to get it, then place it in:" > $CUR_TTY
-  echo "$GAMEDIR/$DATAFILE" > $CUR_TTY
-  sleep 8
-  printf "\033c" > $CUR_TTY
+  pm_show_error "Missing $DATAFILE. See README.md for where to get it, then place it in $GAMEDIR/$DATAFILE." --title "Game files missing" --type warning
   exit 1
 fi
 
@@ -46,9 +36,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export TEXTINPUTINTERACTIVE="Y"
 export XDG_DATA_HOME="$CONFDIR"
 
-# OHRRPGCE's MIDI music needs a GM soundfont for fluidsynth -- without this,
-# SDL2_mixer logs "no soundfonts for MIDI playback" and background music (but
-# not sound effects) stays silent. Use ROCKNIX's bundled GeneralUser.sf2 if present.
+# Use ROCKNIX's bundled GeneralUser.sf2 for OHRRPGCE MIDI playback when available.
 [ -f "/usr/share/soundfonts/GeneralUser.sf2" ] && export SDL_SOUNDFONTS="/usr/share/soundfonts/GeneralUser.sf2"
 
 cd $GAMEDIR
