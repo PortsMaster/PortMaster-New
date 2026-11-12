@@ -1,0 +1,44 @@
+diff -ruN -x build-pm allegro5/addons/audio/sdl_audio.c b/addons/audio/sdl_audio.c
+--- a/addons/audio/sdl_audio.c	2026-02-09 01:56:29.000000000 +0000
++++ b/addons/audio/sdl_audio.c	2026-11-04 12:46:13.107523894 +0000
+@@ -76,8 +76,10 @@
+    want.freq = voice->frequency;
+    want.format = allegro_format_to_sdl(voice->depth);
+    want.channels = al_get_channel_count(voice->chan_conf);
+-   // TODO: Should make this configurable somehow
+    want.samples = 4096;
++   const char *buffer_size = al_get_config_value(al_get_system_config(), "sdl", "buffer_size");
++   if (buffer_size && atoi(buffer_size) > 0)
++      want.samples = atoi(buffer_size);
+    want.callback = audio_callback;
+    want.userdata = sv;
+ 
+diff -ruN -x build-pm allegro5/src/sdl/sdl_display.c b/src/sdl/sdl_display.c
+--- a/src/sdl/sdl_display.c	2026-02-09 01:56:29.000000000 +0000
++++ b/src/sdl/sdl_display.c	2026-11-04 12:46:13.109510472 +0000
+@@ -407,6 +407,10 @@
+    ALLEGRO_DISPLAY_SDL *sdl = (void *)display;
+    SDL_GL_GetDrawableSize(sdl->window, &display->w, &display->h);
+ 
++   /* recreate_textures() restores bitmaps from their memory copies, which are
++    * only refreshed on flip; bring them up to date first */
++   al_backup_dirty_bitmaps(display);
++
+    _al_ogl_setup_gl(display);
+ 
+    if (display->flags & ALLEGRO_PROGRAMMABLE_PIPELINE) {
+diff -ruN -x build-pm allegro5/src/sdl/sdl_joystick.c b/src/sdl/sdl_joystick.c
+--- a/src/sdl/sdl_joystick.c	2026-02-09 01:56:29.000000000 +0000
++++ b/src/sdl/sdl_joystick.c	2026-11-04 12:59:31.115935082 +0000
+@@ -91,6 +91,11 @@
+ {
+    bool emit = false;
+    ALLEGRO_EVENT event;
++
++   /* SDL reports pad events even when the joystick driver isn't installed */
++   if (!al_is_joystick_installed())
++      return;
++
+    memset(&event, 0, sizeof event);
+ 
+    event.joystick.timestamp = al_get_time();
