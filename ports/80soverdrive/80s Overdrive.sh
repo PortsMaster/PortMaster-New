@@ -19,7 +19,7 @@ get_controls
 GAMEDIR="/$directory/ports/80soverdrive"
 cd "$GAMEDIR" || exit 1
 
-> "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
+> "$GAMEDIR/log.txt" && exec > >(tee -a "$GAMEDIR/log.txt") 2>&1
 
 if [ ! -f "$GAMEDIR/install_completed" ]; then
   if [ ! -f "$controlfolder/utils/patcher.txt" ]; then
@@ -57,12 +57,12 @@ if [ ! -f "$monofile" ]; then
 fi
 
 $ESUDO mkdir -p "$monodir"
-$ESUDO umount "$monofile" 2>/dev/null || true
 if ! $ESUDO mount "$monofile" "$monodir"; then
   pm_show_error "Unable to mount the Mono runtime." --title "80's Overdrive"
   exit 1
 fi
 
+cd "$GAMEDIR" || exit 1
 if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
   source "${controlfolder}/libgl_${CFW_NAME}.txt"
 else
@@ -83,6 +83,15 @@ export PATH="$monodir/bin:$PATH"
 export LD_LIBRARY_PATH="$libsdir:$monodir/lib:$LD_LIBRARY_PATH"
 export MONO_PATH="$GAMEDIR/gamedata"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+# FMOD and OpenAL fight over exclusive ALSA: share one dmix, or alias through PipeWire.
+export OVERDRIVE_FMOD_OUTPUT=alsa
+if [ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pipewire-0" ]; then
+  export ALSA_CONFIG_PATH="$GAMEDIR/alsa_pipewire.conf"
+else
+  export ALSA_CONFIG_PATH="$GAMEDIR/alsa_shared.conf"
+fi
+echo "Audio: ALSA_CONFIG_PATH=$ALSA_CONFIG_PATH CFW=$CFW_NAME"
 
 cd "$GAMEDIR/gamedata" || exit 1
 
