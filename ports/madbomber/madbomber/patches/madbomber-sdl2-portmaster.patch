@@ -1,0 +1,337 @@
+--- a/madbomber.c	2003-03-17 04:27:35.000000000 +0000
++++ b/madbomber.c	2026-11-12 16:44:42.537233308 +0000
+@@ -37,6 +37,25 @@
+ #endif
+ 
+ 
++/* SDL2: the game draws into a 640x480 software surface ("screen"),
++   which present() copies to a streaming texture. */
++
++typedef SDL_Keycode SDLKey;
++#define SDLK_LAST SDLK_UNKNOWN
++
++SDL_Window * window;
++SDL_Renderer * renderer;
++SDL_Texture * texture;
++int screen_dirty;
++Uint32 last_present;
++
++void present(void);
++int my_pollevent(SDL_Event * event);
++void my_delay(Uint32 ms);
++#define SDL_PollEvent(e) my_pollevent(e)
++#define SDL_Delay(ms) my_delay(ms)
++
++
+ /* Image enumerations: */
+ 
+ enum {
+@@ -257,7 +276,11 @@
+   DATA_PREFIX "images/game/paused.png",
+   DATA_PREFIX "images/game/game-over.png",
+   DATA_PREFIX "images/game/press-fire.png",
++#ifdef PORTMASTER
++  DATA_PREFIX "images/game/press-select.png",
++#else
+   DATA_PREFIX "images/game/press-escape.png",
++#endif
+   DATA_PREFIX "images/spray-cyan.png",
+   DATA_PREFIX "images/spray-black.png",
+   DATA_PREFIX "images/spray-blue.png",
+@@ -867,6 +890,7 @@
+ void my_blit(SDL_Surface * src_img, SDL_Rect * src_rect,
+ 	     SDL_Surface * dest_img, SDL_Rect * dest_rect);
+ void my_updaterect(SDL_Surface * surf, int x, int y, int w, int h);
++SDL_Surface * my_setvideomode(Uint32 flags);
+ void my_fillrect(SDL_Surface * surf, SDL_Rect * dest, Uint32 color);
+ 
+ 
+@@ -1066,8 +1090,8 @@
+ 		}
+ 	      else if (strstr(temp, "highscorer=") == temp)
+ 		{
+-		  if (strlen(temp) > 11 + sizeof(highscorer))
+-		    temp[11 + sizeof(highscorer)] = '\0';
++		  if (strlen(temp) > 11 + sizeof(highscorer) - 1)
++		    temp[11 + sizeof(highscorer) - 1] = '\0';
+ 		  
+ 		  strcpy(highscorer, temp + 11);
+ 		}
+@@ -2227,7 +2251,7 @@
+ 	{
+ 	  /* Update the screen: */
+ 	  
+-	  SDL_UpdateRects(screen, num_rects, rects);
++	  present();
+ 	  num_rects = 0;
+ 	  
+ 	  explode_the_bombs = 0;
+@@ -2314,7 +2338,7 @@
+       
+       /* Update the screen: */
+       
+-      SDL_UpdateRects(screen, num_rects, rects);
++      present();
+       
+       
+ #ifndef NOSOUND
+@@ -2669,7 +2693,7 @@
+   
+   /* Init SDL Video: */
+   
+-  if (SDL_Init(SDL_INIT_VIDEO) < 0)
++  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
+     {
+       fprintf(stderr,
+ 	      "\nError: I could not initialize video!\n"
+@@ -2714,9 +2738,13 @@
+   
+   /* Open display: */
+   
++#ifdef PORTMASTER
++  use_fullscreen = 1;
++#endif
++
+   if (use_fullscreen == 1)
+     {
+-      screen = SDL_SetVideoMode(640, 480, 16, SDL_FULLSCREEN);
++      screen = my_setvideomode(SDL_WINDOW_FULLSCREEN_DESKTOP);
+       if (screen == NULL)
+ 	{
+ 	  fprintf(stderr,
+@@ -2731,7 +2759,7 @@
+   if (use_fullscreen == 0)
+     {
+ #ifndef EMBEDDED
+-      screen = SDL_SetVideoMode(640, 480, 16, 0);
++      screen = my_setvideomode(0);
+       
+       if (screen == NULL)
+ 	{
+@@ -2760,8 +2788,9 @@
+   
+   /* Set window manager stuff: */
+   
+-  SDL_WM_SetCaption("Mad Bomber", "Mad Bomber");
+-  /* SDL_ShowCursor(0); */
++#ifdef PORTMASTER
++  SDL_ShowCursor(SDL_DISABLE);
++#endif
+   
+   
+   /* Load graphics: */
+@@ -2800,7 +2829,7 @@
+       /* Set transparency: */
+       
+ /* #ifndef EMBEDDED */
+-      images[i] = SDL_DisplayFormat(image);
++      images[i] = SDL_ConvertSurface(image, screen -> format, 0);
+       if (images[i] == NULL)
+ 	{
+ 	  fprintf(stderr,
+@@ -2812,7 +2841,8 @@
+ 	}
+ /* #endif */
+       
+-      if (SDL_SetColorKey(images[i], (SDL_SRCCOLORKEY | SDL_RLEACCEL),
++      SDL_SetSurfaceRLE(images[i], 1);
++      if (SDL_SetColorKey(images[i], SDL_TRUE,
+ 			  SDL_MapRGB(images[i] -> format,
+ 				     0xFF, 0xFF, 0xFF)) == -1)
+ 	{
+@@ -2874,7 +2904,7 @@
+   
+   /* Create zen background: */
+   
+-  image = SDL_CreateRGBSurface(SDL_SWSURFACE, 640, 480, 16, 0, 0, 0, 0);
++  image = SDL_CreateRGBSurfaceWithFormat(0, 640, 480, 32, SDL_PIXELFORMAT_RGB888);
+   
+   dest.x = 0;
+   dest.y = 0;
+@@ -2902,7 +2932,7 @@
+   
+   my_updaterect(image, 0, 0, 640, 480);
+   
+-  zen_background = SDL_DisplayFormat(image);
++  zen_background = SDL_ConvertSurface(image, screen -> format, 0);
+ 
+   
+   /* Determine widest title screen option image: */
+@@ -4958,6 +4988,8 @@
+   strcpy(highscorer, "");
+   l = 0;
+   
++  SDL_StartTextInput();
++  
+   done = 0;
+   draw_text = 1;
+   
+@@ -4984,15 +5016,28 @@
+ 		      playsound(SND_CONFIRM, 0);
+ 		    }
+ 		}
+-	      else if ((key >= SDLK_a && key <= SDLK_z) ||
+-		       (key >= SDLK_0 && key <= SDLK_9) ||
+-		       key == SDLK_SPACE)
++	      else if (key == SDLK_RETURN || key == SDLK_KP_ENTER)
+ 		{
+-		  if (l < sizeof (highscorer))
++		  done = 1;
++		  playsound(SND_EXPLOSION, 0);
++		}
++	    }
++	  else if (event.type == SDL_TEXTINPUT)
++	    {
++	      /* Typed text (keyboard or on-screen keyboard): */
++	      
++	      for (i = 0; event.text.text[i] != '\0'; i++)
++		{
++		  key = event.text.text[i];
++		  
++		  if (key >= 'a' && key <= 'z')
++		    key = key - 'a' + 'A';
++		  
++		  if (((key >= 'A' && key <= 'Z') ||
++		       (key >= '0' && key <= '9') ||
++		       key == ' ') &&
++		      l < sizeof (highscorer) - 1)
+ 		    {
+-		      if (key >= SDLK_a && key <= SDLK_z)
+-			key = key - SDLK_a + 'A';
+-		      
+ 		      highscorer[l] = key;
+ 		      l++;
+ 		      highscorer[l] = '\0';
+@@ -5001,11 +5046,6 @@
+ 		      playsound(SND_SELECT, 0);
+ 		    }
+ 		}
+-	      else if (key == SDLK_RETURN)
+-		{
+-		  done = 1;
+-		  playsound(SND_EXPLOSION, 0);
+-		}
+ 	    }
+ 	  else if (event.type == SDL_QUIT)
+ 	    return(2);
+@@ -5168,7 +5208,7 @@
+   
+   /* Set icon: */
+   
+-  SDL_WM_SetIcon(icon, mask);
++  SDL_SetWindowIcon(window, icon);
+   
+   
+   /* Free icon surface & mask: */
+@@ -5211,7 +5251,12 @@
+ void my_updaterect(SDL_Surface * surf, int x, int y, int w, int h)
+ {
+ #ifndef EMBEDDED
+-  SDL_UpdateRect(surf, x, y, w, h);
++  if (surf == screen)
++    {
++      screen_dirty = 1;
++      if (SDL_GetTicks() - last_present >= 16)
++	present();
++    }
+ #else
+   SDL_UpdateRect(surf, 240 - y / 2 - h / 2, x / 2, h / 2, w / 2);
+ #endif
+@@ -5234,3 +5279,83 @@
+   SDL_FillRect(surf, dest, color);  
+ }
+ 
++
++
++/* SDL2 display: create the window, renderer, texture and the 640x480
++   surface the game draws into: */
++
++#undef SDL_PollEvent
++#undef SDL_Delay
++
++SDL_Surface * my_setvideomode(Uint32 flags)
++{
++  SDL_Surface * surf;
++  
++  window = SDL_CreateWindow("Mad Bomber", SDL_WINDOWPOS_CENTERED,
++			    SDL_WINDOWPOS_CENTERED, 640, 480, flags);
++  if (window == NULL)
++    return(NULL);
++  
++  renderer = SDL_CreateRenderer(window, -1, 0);
++  if (renderer != NULL)
++    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
++				SDL_TEXTUREACCESS_STREAMING, 640, 480);
++  
++  if (texture == NULL)
++    {
++      fprintf(stderr, "Warning: falling back to the software renderer: %s\n",
++	      SDL_GetError());
++      if (renderer != NULL)
++	SDL_DestroyRenderer(renderer);
++      renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
++      if (renderer == NULL)
++	return(NULL);
++      texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
++				  SDL_TEXTUREACCESS_STREAMING, 640, 480);
++      if (texture == NULL)
++	return(NULL);
++    }
++  
++  SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
++  SDL_RenderSetLogicalSize(renderer, 640, 480);
++  
++  surf = SDL_CreateRGBSurfaceWithFormat(0, 640, 480, 32,
++					SDL_PIXELFORMAT_RGB888);
++  return(surf);
++}
++
++
++/* Copy the game's surface to the display: */
++
++void present(void)
++{
++  SDL_UpdateTexture(texture, NULL, screen -> pixels, screen -> pitch);
++  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
++  SDL_RenderClear(renderer);
++  SDL_RenderCopy(renderer, texture, NULL, NULL);
++  SDL_RenderPresent(renderer);
++  
++  screen_dirty = 0;
++  last_present = SDL_GetTicks();
++}
++
++
++/* Show anything drawn since the last present before handling events
++   or waiting: */
++
++int my_pollevent(SDL_Event * event)
++{
++  if (screen_dirty)
++    present();
++  
++  return(SDL_PollEvent(event));
++}
++
++
++void my_delay(Uint32 ms)
++{
++  if (screen_dirty)
++    present();
++  
++  SDL_Delay(ms);
++}
+--- a/Makefile	2003-03-17 04:29:41.000000000 +0000
++++ b/Makefile	2026-11-12 16:42:36.088434928 +0000
+@@ -84,3 +84,11 @@
+ # Main object:
+ 
+ madbomber.o:	madbomber.c
++
++
++# PortMaster (SDL2, data next to the binary):
++
++portmaster:
++	$(CC) -O2 -Wall -DPORTMASTER -DLINUX -D__SOUND -DDATA_PREFIX=\"data/\" \
++		$(shell sdl2-config --cflags) madbomber.c -o madbomber.aarch64 \
++		-lSDL2_image -lSDL2_mixer -lSDL2 -lm
