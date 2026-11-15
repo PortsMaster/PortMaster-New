@@ -21,11 +21,9 @@ Button labels below use the Nintendo layout: A is east, B south, X north, Y west
 | Left stick | Move forward/backward and strafe |
 | Right stick | Turn; navigate menus |
 | A / B / X / Y | Interact with hand / use / open; confirm / skip movie |
-| L1 / R1 | Interact with hand / use / open; confirm / skip movie |
-| L2 | Hold for slower, more precise right-stick turning |
-| R2 | Fire selected weapon / use selected keycard |
-| Start | Pause / resume gameplay |
-| Select | Return to menu / exit from main menu |
+| L1 / L2 | Hold for slower, more precise right-stick turning |
+| R1 / R2 | Fire selected weapon / use selected keycard |
+| Start / Select | Pause / quit confirmation; A quits gameplay |
 | Start + Select | Force exit |
 
 ## Compile

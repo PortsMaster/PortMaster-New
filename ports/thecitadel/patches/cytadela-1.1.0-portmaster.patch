@@ -134,7 +134,47 @@
  	}
  	//copy game state
  	state->totalTime = mTotalTime;
-@@ -999,15 +1050,15 @@
+@@ -824,17 +875,30 @@
+ 	InputArray inputArray;
+ 	memset(&inputArray, 0, sizeof(inputArray));
+ 	mSDL->readInputGame(&inputArray);
++	// Consume the confirmation input before it can fire, move or interact.
++	if(mPause) {
++		for(uint32_t i = 0; i < 5; ++i) {
++			if(not inputArray.status[i]) continue;
++			if(inputArray.key[i] == SDLK_HOME)
++				return false;
++			mPause = false;
++			mOGL->osd.setPause(false);
++			return true;
++		}
++		if(inputArray.lmb or inputArray.rmb or inputArray.mouseX or inputArray.mouseY) {
++			mPause = false;
++			mOGL->osd.setPause(false);
++		}
++		return true;
++	}
+ 	//check actions
+ 	for(uint32_t i = 0; i < 5; ++i) {
+-		if(inputArray.key[i] == SDLK_ESCAPE and not mMap)
+-			return false;
+-		if(inputArray.key[i] == SDLK_p and inputArray.status[i] and not mMap) {
+-			mPause = not mPause;
+-			mOGL->osd.setPause(mPause);
+-			if(mPause) {
+-				mPauseStartTime = mSDL->getTicks();
+-				mOGL->osd.addText(mTexts[PAUSE_ON_TEXTS].getText());
+-			} else mOGL->osd.addText(mTexts[PAUSE_OFF_TEXTS].getText());
++		if((inputArray.key[i] == SDLK_ESCAPE or inputArray.key[i] == SDLK_p) and inputArray.status[i]) {
++			mPause = true;
++			mPauseStartTime = mSDL->getTicks();
++			mOGL->osd.setPause(true);
++			memset(mActionMap, 0, sizeof(mActionMap));
++			return true;
+ 		}
+ 		//in map we don't check for codes
+ 		if(mMap) continue;
+@@ -999,15 +1063,15 @@
  	}
  
  	//actualize action map
@@ -154,7 +194,7 @@
  				//if status was left 'true' it would turn on the map again
  				//in handleInput()
  				inputArray.status[i] = false;
-@@ -1034,36 +1085,36 @@
+@@ -1034,36 +1098,36 @@
  	}
  
  	//fire
@@ -199,7 +239,17 @@
  		mActionMap[ACT_STRAFE_RIGHT] = true;
  	else mActionMap[ACT_STRAFE_RIGHT] = false;
  
-@@ -1208,9 +1259,39 @@
+@@ -1081,7 +1145,8 @@
+ 
+ 	//mouse rotation (only if mouse moved)
+ 	if(inputArray.mouseX) {
+-		mRotY += inputArray.mouseX * 0.01f * mConfig->getMouseSpeed();
++		float precision = keyMap[SDL_SCANCODE_LCTRL] ? 0.5f : 1.0f;
++		mRotY += inputArray.mouseX * 0.01f * mConfig->getMouseSpeed() * precision;
+ 		processRotationAngle();
+ 	}
+ 	return true;
+@@ -1208,9 +1273,40 @@
  	}
  }
  
@@ -237,10 +287,11 @@
 +			return;
 +		}
 +		case SDLK_f:
++		case SDLK_HOME:
  		case SDLK_SPACE:
  			mGameCtrl->useItem(mUsableItems[UIT_HAND]);
  			return;
-@@ -1321,6 +1402,7 @@
+@@ -1321,6 +1417,7 @@
  			mOGL->osd.setImage(OSDIMG_WEAPON_BC, OSD_WEAPON);
  			break;
  		//map
@@ -1101,7 +1152,49 @@
  	//every matrix mode has its own stack, so the order doesn't matter;
  	//the modelview matrix is poped at the end so we don't need to set is as
  	//the current matrix mode again
-@@ -1047,7 +1511,8 @@
+@@ -909,9 +1373,41 @@
+ 	//vision noise
+ 	if(mVisionNoise and not mMap)
+ 		drawNoise();
++	if(mPause)
++		drawPausePrompt();
+ 
+ 	glEnable(GL_DEPTH_TEST);
+ 	disable2D();
++}
++
++void COSDClass::drawPausePrompt()
++{
++	const char *text = "PAUSED - PRESS A TO QUIT";
++	float width = strlen(text) * 8.0f;
++	float x = 160.0f - width / 2;
++	float y = (40.0f + mCanvasHeight) / 2 - 3.5f;
++	glDisable(GL_TEXTURE_2D);
++	glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
++	glBegin(GL_QUADS);
++	glVertex2f(x - 8.0f, y - 8.0f);
++	glVertex2f(x + width + 8.0f, y - 8.0f);
++	glVertex2f(x + width + 8.0f, y + 15.0f);
++	glVertex2f(x - 8.0f, y + 15.0f);
++	glEnd();
++	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
++	glEnable(GL_TEXTURE_2D);
++	glBindTexture(GL_TEXTURE_2D, mImages[mElementTex[OSD_TEXT]]);
++	for(const char *c = text; *c; ++c, x += 8.0f) {
++		int column = *c % 16, row = 15 - *c / 16;
++		float left = column * 0.0625f, bottom = row * 0.0625f + 0.0078125f;
++		float right = (column + 1) * 0.0625f, top = (row + 1) * 0.0625f;
++		glBegin(GL_TRIANGLE_STRIP);
++		glTexCoord2f(left, bottom); glVertex2f(x, y);
++		glTexCoord2f(right, bottom); glVertex2f(x + 8.0f, y);
++		glTexCoord2f(left, top); glVertex2f(x, y + 7.0f);
++		glTexCoord2f(right, top); glVertex2f(x + 8.0f, y + 7.0f);
++		glEnd();
++	}
+ }
+ 
+ void COSDClass::addText(const char *text)
+@@ -1047,7 +1543,8 @@
  	glDisable(GL_DEPTH_TEST);
  	//background
  	glBindTexture(GL_TEXTURE_2D, mImages[mElementTex[OSD_PANEL]]);
@@ -1111,7 +1204,7 @@
  	float bkgndT[] = {0.0f, 0.15625f, 0.625f, 0.15625f, 0.0f, 0.78125f, 0.625f, 0.78125f};
  	glTexCoordPointer(2, GL_FLOAT, 0, bkgndT);
  	glVertexPointer(2, GL_FLOAT, 0, bkgndV);
-@@ -1055,22 +1520,23 @@
+@@ -1055,22 +1552,23 @@
  
  	//map
  	float posX = 8.0f * playerPosX, posY = 8.0f * playerPosY;
@@ -1141,7 +1234,7 @@
  	float mapT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
  	glTexCoordPointer(2, GL_FLOAT, 0, mapT);
  	glVertexPointer(2, GL_FLOAT, 0, mapV);
-@@ -1078,7 +1544,8 @@
+@@ -1078,7 +1576,8 @@
  	glDisable(GL_STENCIL_TEST);
  	//position cursor
  	glBindTexture(GL_TEXTURE_2D, mPosCursorTexNum);
@@ -1151,7 +1244,7 @@
  	float curT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
  	glTexCoordPointer(2, GL_FLOAT, 0, curT);
  	glVertexPointer(2, GL_FLOAT, 0, curV);
-@@ -1271,6 +1738,7 @@
+@@ -1271,6 +1770,7 @@
  
  void COSDClass::drawNoise()
  {
@@ -1159,7 +1252,7 @@
  	if(mNoiseTime <= 500) {
  		if(not mPause)
  			mNoiseTime += mDiff;
-@@ -1280,13 +1748,13 @@
+@@ -1280,13 +1780,13 @@
  			glBindTexture(GL_TEXTURE_2D, mNoiseTexNum[1]);
  		glBegin(GL_TRIANGLE_STRIP);
  		glTexCoord2f(0.0f, 0.0f);
@@ -1177,7 +1270,7 @@
  		glEnd();
  	} else freeNoise();
  }
-@@ -1322,19 +1790,20 @@
+@@ -1322,19 +1822,20 @@
  
  void COSDClass::drawBlood()
  {
@@ -1218,7 +1311,7 @@
  
  typedef enum {
  	DT_DISSOLVE,
-@@ -97,6 +99,11 @@
+@@ -97,9 +99,15 @@
  
  	GLsizei mScreenW;
  	GLsizei mScreenH;
@@ -1230,7 +1323,11 @@
  	void enable2D();
  	void disable2D();
  	void drawText();
-@@ -139,8 +146,24 @@
++	void drawPausePrompt();
+ 	void drawHeartPlotter();
+ 	void drawNoise();
+ 	void deleteFXTextures();
+@@ -139,8 +147,24 @@
  	float mSin;
  	float mCos;
  	float mCosHVA;
@@ -1255,7 +1352,7 @@
  
  	bool checkOGL();
  
-@@ -148,6 +171,8 @@
+@@ -148,6 +172,8 @@
  	void setTextures(Mesh3Dg *mesh);
  
  	void drawMeshes();
@@ -1682,7 +1779,7 @@
  void CSDLClass::delayInput()
  {
  	uint32_t time = SDL_GetTicks();
-@@ -176,20 +389,37 @@
+@@ -176,20 +389,38 @@
  void CSDLClass::clearEventQueue()
  {
  	SDL_Event event;
@@ -1705,6 +1802,7 @@
  				switch(event.key.keysym.sym) {
 +				case SDLK_c:
 +				case SDLK_f:
++				case SDLK_HOME:
  				case SDLK_KP_ENTER:
  					return SDLK_RETURN;
 +				case SDLK_PAGEUP:
@@ -1725,7 +1823,7 @@
  				case SDLK_ESCAPE:
  				case SDLK_RETURN:
  				case SDLK_SPACE:
-@@ -270,7 +500,7 @@
+@@ -270,9 +501,10 @@
  	SDL_Event event;
  	//check if there are any events
  	uint32_t readCounter = 0;
@@ -1733,8 +1831,11 @@
 +	while(pollEvent(&event)) {
  		switch(event.type) {
  			case SDL_KEYDOWN: {
++				if(event.key.repeat) break;
  				if(readCounter == 5)
-@@ -289,15 +519,15 @@
+ 					break;
+ 				inputArray->key[readCounter] = event.key.keysym.sym;
+@@ -289,15 +521,15 @@
  				break;
  			}
  			case SDL_MOUSEMOTION: {
@@ -1753,7 +1854,7 @@
  	//if left mouse button is pressed
  	if(SDL_GetMouseState(0, 0) & SDL_BUTTON(SDL_BUTTON_LEFT))
  		inputArray->lmb = true;
-@@ -433,6 +663,15 @@
+@@ -433,6 +665,15 @@
  {
  	if(mAudioEnabled and mAudioAvailable and -1 == Mix_PlayMusic(mMusic, loops))
  		fprintf(stderr, "!Mix_PlayMusic(): %s\n", Mix_GetError());
@@ -1769,7 +1870,7 @@
  }
  
  void CSDLClass::stopMusic()
-@@ -594,7 +833,7 @@
+@@ -594,7 +835,7 @@
  #endif
  
  	//create the surface (in video memory - SDL_HWSURFACE)
