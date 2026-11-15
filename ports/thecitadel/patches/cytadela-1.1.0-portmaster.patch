@@ -341,7 +341,7 @@
  			case SDLK_ESCAPE: {
 --- a/src/COGLClass.cpp
 +++ b/src/COGLClass.cpp
-@@ -28,10 +28,55 @@
+@@ -28,10 +28,56 @@
  #include "farread.h"
  #include <cstdlib>
  #include <algorithm>
@@ -355,6 +355,7 @@
 +#endif
  #include "COGLClass.h"
 +#include "FrameProfile.h"
++#include "GameplayViewport.h"
 +
 +static bool useDoorStencilReferences()
 +{
@@ -398,30 +399,33 @@
  
  //echm... that windows...
  #if defined(__WIN32__)
-@@ -44,6 +89,50 @@
+@@ -44,6 +90,53 @@
  	//check the Open GL version and extensions
  	if(not checkOGL())
  		return false;
 +
-+	// The drawable can be larger than the requested fullscreen mode on handhelds.
-+	// Keep the selected aspect ratio and center all gameplay and HUD viewports.
++	// Gameplay can use the extra height of square displays; software menus/videos
++	// keep their independent aspect-fit presentation in CSDLClass.
 +	int drawableWidth = 0, drawableHeight = 0;
 +	SDL_Window *window = SDL_GL_GetCurrentWindow();
 +	if(window)
 +		SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
-+	osd.mViewportX = osd.mViewportY = 0;
-+	if(width > 0 and height > 0 and drawableWidth > 0 and drawableHeight > 0) {
-+		int scaledWidth = drawableWidth;
-+		int scaledHeight = int(int64_t(drawableWidth) * height / width);
-+		if(scaledHeight > drawableHeight) {
-+			scaledHeight = drawableHeight;
-+			scaledWidth = int(int64_t(drawableHeight) * width / height);
-+		}
-+		osd.mViewportX = (drawableWidth - scaledWidth) / 2;
-+		osd.mViewportY = (drawableHeight - scaledHeight) / 2;
-+		width = scaledWidth;
-+		height = scaledHeight;
-+	}
++	bool fillTallScreen = true;
++#ifdef CYTADELA_PROFILE
++	fillTallScreen = std::getenv("CYTADELA_PROFILE_LETTERBOX_GAMEPLAY") == nullptr;
++#endif
++	GameplayViewport viewport = gameplayViewport(width, height, drawableWidth, drawableHeight, fillTallScreen);
++	osd.mViewportX = viewport.x;
++	osd.mViewportY = viewport.y;
++	osd.mHudHeight = viewport.hudHeight;
++	osd.mCanvasHeight = viewport.canvasHeight;
++	osd.mCanvasWidth = viewport.canvasWidth;
++	mVerticalFov = viewport.verticalFov;
++	mReferenceWorldAspect = viewport.referenceWorldAspect;
++	width = viewport.width;
++	height = viewport.height;
++	fprintf(stdout, "Gameplay viewport: %dx%d at %d,%d; HUD=%d; world=%dx%d; vertical FOV=%.3f\n",
++		width, height, viewport.x, viewport.y, viewport.hudHeight, width, viewport.worldHeight(), mVerticalFov);
 +
 +	//SDL's menu renderer can leave a shader selected in GL4ES's cached state.
 +	auto useProgram = reinterpret_cast<PFNGLUSEPROGRAMPROC>(SDL_GL_GetProcAddress("glUseProgram"));
@@ -449,7 +453,7 @@
  
  	//z-buffer
  	glEnable(GL_DEPTH_TEST);
-@@ -101,6 +190,10 @@
+@@ -101,8 +194,135 @@
  	projectionMatrix(width, height);
  	//init OSD interface
  	osd.init(width, height);
@@ -459,8 +463,133 @@
 +#endif
  	return true;
  }
++
++#ifdef CYTADELA_PROFILE
++bool COGLClass::profileAlphaBackend()
++{
++	// Compare blended/unblended draws in the live backend, including minification,
++	// border sampling, two-texture alpha ADD, and non-opaque negative controls.
++	glPushAttrib(GL_ALL_ATTRIB_BITS);
++	glMatrixMode(GL_PROJECTION);
++	glPushMatrix();
++	glLoadIdentity();
++	glMatrixMode(GL_MODELVIEW);
++	glPushMatrix();
++	glLoadIdentity();
++	glViewport(0, 0, 8, 4);
++	glDisable(GL_DEPTH_TEST);
++	glDisable(GL_STENCIL_TEST);
++	glDisable(GL_SCISSOR_TEST);
++	glDisable(GL_CULL_FACE);
++	glDisable(GL_FOG);
++	glDisable(GL_ALPHA_TEST);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	GLint alphaBits = 0;
++	glGetIntegerv(GL_ALPHA_BITS, &alphaBits);
++	fprintf(stdout, "Blend alpha backend storage: alpha_bits=%d\n", alphaBits);
++	GLuint textures[3];
++	glGenTextures(3, textures);
++	bool passed = true;
++	for(unsigned index = 0; index < 3; ++index) {
++		bool rgba = index != 0;
++		unsigned stride = rgba ? 4 : 3;
++		std::vector<unsigned char> data(16 * 16 * stride);
++		for(unsigned i = 0; i < 16 * 16; ++i) {
++			data[i * stride] = rgba ? 30 : 220;
++			data[i * stride + 1] = rgba ? 70 : 135;
++			data[i * stride + 2] = rgba ? 210 : 45;
++			if(rgba) data[i * stride + 3] = index == 1 ? 96 : 0;
++		}
++		glActiveTexture(GL_TEXTURE0);
++		glBindTexture(GL_TEXTURE_2D, textures[index]);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++		if(gluBuild2DMipmaps(GL_TEXTURE_2D, stride, 16, 16, rgba ? GL_BGRA : GL_BGR,
++			GL_UNSIGNED_BYTE, data.data()) != GL_NO_ERROR) passed = false;
++	}
++	using ReadPixels = void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
++	ReadPixels read = glReadPixels;
++	void *native = nullptr;
++	const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
++	if(driver and strstr(driver, "/gl4es.")) {
++		native = SDL_LoadObject("libGLESv2.so");
++		if(native) read = reinterpret_cast<ReadPixels>(SDL_LoadFunction(native, "glReadPixels"));
++	}
++	struct Test { bool rgb; int second; float primary; bool equal; };
++	const Test tests[] = {{true, -1, 1, true}, {true, -1, 0.25f, false}, {false, -1, 1, false},
++		{true, 0, 1, true}, {true, 0, 0.25f, false}, {false, 1, 1, true},
++		{false, 1, 0.25f, true}, {false, 0, 1, false}, {true, 2, 1, true},
++		{true, 2, 0.25f, false}, {false, 2, 1, false}};
++	const GLint wraps[] = {GL_REPEAT, GL_CLAMP, GL_CLAMP_TO_BORDER};
++	for(GLint wrap : wraps) for(const Test &test : tests) {
++		glActiveTexture(GL_TEXTURE0);
++		glEnable(GL_TEXTURE_2D);
++		glBindTexture(GL_TEXTURE_2D, textures[test.rgb ? 0 : 1]);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
++		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
++		glActiveTexture(GL_TEXTURE1);
++		if(test.second >= 0) {
++			glEnable(GL_TEXTURE_2D);
++			glBindTexture(GL_TEXTURE_2D, textures[test.second == 1 ? 0 : test.second == 2 ? 2 : 1]);
++			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
++			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
++		} else glDisable(GL_TEXTURE_2D);
++		glActiveTexture(GL_TEXTURE0);
++		glClearColor(0.125f, 0.25f, 0.375f, 0.5f);
++		glClear(GL_COLOR_BUFFER_BIT);
++		glColor4f(1, 1, 1, test.primary);
++		for(unsigned side = 0; side < 2; ++side) {
++			if(side == 0) glEnable(GL_BLEND); else glDisable(GL_BLEND);
++			float left = side == 0 ? -1.0f : 0.0f, right = left + 1;
++			glBegin(GL_QUADS);
++			glMultiTexCoord2f(GL_TEXTURE0, -0.25f, -0.25f); glMultiTexCoord2f(GL_TEXTURE1, -0.25f, -0.25f); glVertex2f(left, -1);
++			glMultiTexCoord2f(GL_TEXTURE0, 1.25f, -0.25f); glMultiTexCoord2f(GL_TEXTURE1, 1.25f, -0.25f); glVertex2f(right, -1);
++			glMultiTexCoord2f(GL_TEXTURE0, 1.25f, 1.25f); glMultiTexCoord2f(GL_TEXTURE1, 1.25f, 1.25f); glVertex2f(right, 1);
++			glMultiTexCoord2f(GL_TEXTURE0, -0.25f, 1.25f); glMultiTexCoord2f(GL_TEXTURE1, -0.25f, 1.25f); glVertex2f(left, 1);
++			glEnd();
++		}
++		glFlush(); // Drain the wrapper before the capture-only native readback.
++		unsigned char pixels[8 * 4 * 4] = {};
++		if(read) read(0, 0, 8, 4, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
++		bool equal = read != nullptr;
++		for(unsigned y = 0; y < 4; ++y) for(unsigned x = 0; x < 4; ++x)
++			if(memcmp(pixels + (y * 8 + x) * 4, pixels + (y * 8 + x + 4) * 4, 4)) equal = false;
++		const float rgb[3] = {45, 135, 220}, rgba[3] = {210, 70, 30};
++		float expectedRGB[3];
++		for(unsigned c = 0; c < 3; ++c) expectedRGB[c] = test.rgb ? rgb[c] : rgba[c];
++		if(test.second >= 0) {
++			float alpha = test.second == 1 ? 1.0f : test.second == 2 ? 0.0f : 96.0f / 255;
++			for(unsigned c = 0; c < 3; ++c)
++				expectedRGB[c] = (test.second == 1 ? rgb[c] : rgba[c]) * alpha + expectedRGB[c] * (1 - alpha);
++		}
++		bool colors = read != nullptr;
++		// Interior samples avoid border-color ambiguity while checking that the
++		// contrasting fractional/transparent decal really contributes correctly.
++		for(unsigned y = 1; y < 3; ++y) for(unsigned x = 1; x < 3; ++x)
++			for(unsigned c = 0; c < 3; ++c)
++				if(fabsf(pixels[(y * 8 + x + 4) * 4 + c] - expectedRGB[c]) > 3) colors = false;
++		fprintf(stdout, "Blend alpha backend: wrap=%d rgb=%d second=%d primary=%.2f equal=%d expected=%d decal_rgb=%d\n",
++			wrap, test.rgb, test.second, test.primary, equal, test.equal, colors);
++		passed = passed and equal == test.equal and colors;
++	}
++	if(native) SDL_UnloadObject(native);
++	glDeleteTextures(3, textures);
++	glMatrixMode(GL_MODELVIEW);
++	glPopMatrix();
++	glMatrixMode(GL_PROJECTION);
++	glPopMatrix();
++	glMatrixMode(GL_MODELVIEW);
++	glPopAttrib();
++	fprintf(stdout, "Blend alpha backend result: %s\n", passed ? "PASS" : "FAIL");
++	return passed;
++}
++#endif
  
-@@ -192,6 +285,9 @@
+ //yeah... I know - there is gluCheckExtension, but in GLU v1.3, and guess what... I couldn't find any GLU 1.3
+ //development files (namely: libglu32.a v1.3) for windows :[ I guess for windows there is only GLU 1.2
+@@ -192,6 +412,9 @@
  
  void COGLClass::freeOGL()
  {
@@ -470,7 +599,7 @@
  	osd.deleteFXTextures();
  	osd.deleteImages();
  
-@@ -202,56 +298,72 @@
+@@ -202,79 +425,109 @@
  	osd.clear();
  	//clear all lists
  	mTextureIDs.clear();
@@ -574,11 +703,25 @@
  {
  	//set the viewport
 -	glViewport(0, (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
-+	glViewport(osd.mViewportX, osd.mViewportY + (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
++	glViewport(osd.mViewportX, osd.mViewportY + osd.mHudHeight, width, height - osd.mHudHeight);
  
  	//set the projection matrix
  	glMatrixMode(GL_PROJECTION);
-@@ -269,12 +381,28 @@
+ 	glLoadIdentity();
+ 
+-	float aspectRatio = (height != 0) ? (float)width / (height * 0.8) : (float)width;
+-	gluPerspective(45.0f, aspectRatio, 1.0f, 3200.0f);
+-	//now calculate cosinus of horizontal view angle
+-	//coshva = 1 / sqrt(l^2 + 1); l = aspectRatio / tan(fovy);
+-	//fovy = 45deg = pi/2 (vertical view angle); tan(pi/2) = 1
+-	mCosHVA = (float)(1.0 / sqrt(aspectRatio * aspectRatio + 1.0));
++	float aspectRatio = float(width) / std::max(height - osd.mHudHeight, 1);
++	gluPerspective(mVerticalFov, aspectRatio, 1.0f, 3200.0f);
++	// Include the wider display in the existing conservative horizontal culling cone.
++	mCosHVA = (float)(1.0 / sqrt(mReferenceWorldAspect * mReferenceWorldAspect + 1.0));
+ 	glMatrixMode(GL_MODELVIEW);
+ 	glLoadIdentity();
+ }
  
  void COGLClass::renderFrame()
  {
@@ -609,7 +752,7 @@
  }
  
  void COGLClass::setCamMatrix(float x, float z, float sin, float cos)
-@@ -292,11 +420,13 @@
+@@ -292,11 +545,13 @@
  
  bool COGLClass::setGOManager(GameObjectsManager *objects)
  {
@@ -623,7 +766,7 @@
  	//create transparent and opaque mesh lists
  	createMeshLists();
  
-@@ -398,20 +528,122 @@
+@@ -398,20 +653,122 @@
  	return true;
  }
  
@@ -747,7 +890,7 @@
  	for(Mesh3DgList::iterator i = mOpaqueMeshes.begin(); i != mOpaqueMeshes.end(); i++) {
  		Mesh3Dg *mesh = *i;
  		MeshBase3Dg *base = mesh->getBase();
-@@ -430,20 +662,44 @@
+@@ -430,20 +787,44 @@
  		//we need -cosinus, so in dot product we can substract in stead of adding
  		if((((vx / length) * mSin) - ((vz / length) * mCos)) < mCosHVA or length > 3200.0f)
  			continue;
@@ -801,7 +944,7 @@
  
  	for(Mesh3DgList::iterator i = mTransparentMeshes.begin(); i != mTransparentMeshes.end(); i++) {
  		Mesh3Dg *mesh = *i;
-@@ -484,25 +740,58 @@
+@@ -484,25 +865,58 @@
  		setTextures(mesh);
  		glVertexPointer(3, GL_FLOAT, 0, base->getVCoordsStream());
  		glDrawArrays(GL_TRIANGLES, 0, base->getTriansQuantity() * 3);
@@ -863,7 +1006,7 @@
  }
  
  void COGLClass::setTextures(Mesh3Dg *mesh)
-@@ -515,6 +804,30 @@
+@@ -515,6 +929,30 @@
  	glClientActiveTexture(GL_TEXTURE0);
  	glTexCoordPointer(2, GL_FLOAT, 0, base->getTCoordsStream());
  	glBindTexture(GL_TEXTURE_2D, mTextureIDs[mtl->getTexture(0)]);
@@ -894,7 +1037,7 @@
  
  	//if only one texture, then disable the texture unit 1
  	if(mtl->texturesQuantity < 2) {
-@@ -623,6 +936,31 @@
+@@ -623,6 +1061,31 @@
  			break;
  	}
  
@@ -926,7 +1069,7 @@
  	//turn on mipmapping for new texture and generate mipmaps
  	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
  	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-@@ -636,6 +974,7 @@
+@@ -636,6 +1099,7 @@
  		        farFileName, texFileName, gluErrorString(result));
  		return false;
  	}
@@ -934,7 +1077,7 @@
  	return true;
  }
  
-@@ -818,7 +1157,7 @@
+@@ -818,12 +1282,12 @@
  {
  	//now we draw on whole screen
  	//(vision noise and map are also drawn by OSDClass)
@@ -943,15 +1086,122 @@
  
  	glMatrixMode(GL_PROJECTION);
  	glPushMatrix();
-@@ -833,7 +1172,7 @@
+ 	glLoadIdentity();
+-	glOrtho(0.0, 320.0, 0.0, 200.0, 1.0, -1.0);
++	glOrtho((320.0f - mCanvasWidth) / 2, (320.0f + mCanvasWidth) / 2, 0.0, mCanvasHeight, 1.0, -1.0);
+ 
+ 	glMatrixMode(GL_MODELVIEW);
+ 	glPushMatrix();
+@@ -833,7 +1297,7 @@
  void COSDClass::disable2D()
  {
  	//set the viewport back to its original size and position
 -	glViewport(0, (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
-+	glViewport(mViewportX, mViewportY + (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
++	glViewport(mViewportX, mViewportY + mHudHeight, mScreenW, mScreenH - mHudHeight);
  	//every matrix mode has its own stack, so the order doesn't matter;
  	//the modelview matrix is poped at the end so we don't need to set is as
  	//the current matrix mode again
+@@ -1047,7 +1511,8 @@
+ 	glDisable(GL_DEPTH_TEST);
+ 	//background
+ 	glBindTexture(GL_TEXTURE_2D, mImages[mElementTex[OSD_PANEL]]);
+-	float bkgndV[] = {0.0f, 40.0f, 320.0f, 40.0f, 0.0f, 200.0f, 320.0f, 200.0f};
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
++	float bkgndV[] = {left, 40.0f, right, 40.0f, left, mCanvasHeight, right, mCanvasHeight};
+ 	float bkgndT[] = {0.0f, 0.15625f, 0.625f, 0.15625f, 0.0f, 0.78125f, 0.625f, 0.78125f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, bkgndT);
+ 	glVertexPointer(2, GL_FLOAT, 0, bkgndV);
+@@ -1055,22 +1520,23 @@
+ 
+ 	//map
+ 	float posX = 8.0f * playerPosX, posY = 8.0f * playerPosY;
++	float centerOffset = (mCanvasHeight - 200.0f) / 2;
+ 	glEnable(GL_STENCIL_TEST);
+ 	//stencil mask for map
+ 	glClear(GL_STENCIL_BUFFER_BIT);
+ 	glStencilFunc(GL_ALWAYS, 1, 1);
+ 	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+ 	glBegin(GL_TRIANGLE_STRIP);
+-	glVertex2f(64.0f, 56.0f);
+-	glVertex2f(256.0f, 56.0f);
+-	glVertex2f(64.0f, 184.0f);
+-	glVertex2f(256.0f, 184.0f);
++	glVertex2f(64.0f, 56.0f + centerOffset);
++	glVertex2f(256.0f, 56.0f + centerOffset);
++	glVertex2f(64.0f, 184.0f + centerOffset);
++	glVertex2f(256.0f, 184.0f + centerOffset);
+ 	glEnd();
+ 	glStencilFunc(GL_EQUAL, 1, 1);
+ 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+ 	glBindTexture(GL_TEXTURE_2D, mMapTextureNum);
+-	float mapV[] = {160.0f - posX, 112.0f - posY, 672.0f - posX, 112.0f - posY,
+-	                160.0f - posX, 624.0f - posY, 672.0f - posX, 624.0f - posY};
++	float mapV[] = {160.0f - posX, 112.0f - posY + centerOffset, 672.0f - posX, 112.0f - posY + centerOffset,
++	                160.0f - posX, 624.0f - posY + centerOffset, 672.0f - posX, 624.0f - posY + centerOffset};
+ 	float mapT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, mapT);
+ 	glVertexPointer(2, GL_FLOAT, 0, mapV);
+@@ -1078,7 +1544,8 @@
+ 	glDisable(GL_STENCIL_TEST);
+ 	//position cursor
+ 	glBindTexture(GL_TEXTURE_2D, mPosCursorTexNum);
+-	float curV[] = {160.0f, 112.0f, 168.0f, 112.0f, 160.0f, 120.0f, 168.0f, 120.0f};
++	float curV[] = {160.0f, 112.0f + centerOffset, 168.0f, 112.0f + centerOffset,
++	               160.0f, 120.0f + centerOffset, 168.0f, 120.0f + centerOffset};
+ 	float curT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, curT);
+ 	glVertexPointer(2, GL_FLOAT, 0, curV);
+@@ -1271,6 +1738,7 @@
+ 
+ void COSDClass::drawNoise()
+ {
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
+ 	if(mNoiseTime <= 500) {
+ 		if(not mPause)
+ 			mNoiseTime += mDiff;
+@@ -1280,13 +1748,13 @@
+ 			glBindTexture(GL_TEXTURE_2D, mNoiseTexNum[1]);
+ 		glBegin(GL_TRIANGLE_STRIP);
+ 		glTexCoord2f(0.0f, 0.0f);
+-		glVertex2f(0.0f, 40.0f);
++		glVertex2f(left, 40.0f);
+ 		glTexCoord2f(0.625f, 0.0f);
+-		glVertex2f(320.0f, 40.0f);
++		glVertex2f(right, 40.0f);
+ 		glTexCoord2f(0.0f, 0.625f);
+-		glVertex2f(0.0f, 200.0f);
++		glVertex2f(left, mCanvasHeight);
+ 		glTexCoord2f(0.625f, 0.625f);
+-		glVertex2f(320.0f, 200.0f);
++		glVertex2f(right, mCanvasHeight);
+ 		glEnd();
+ 	} else freeNoise();
+ }
+@@ -1322,19 +1790,20 @@
+ 
+ void COSDClass::drawBlood()
+ {
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
+ 	enable2D();
+ 	glDisable(GL_DEPTH_TEST);
+ 
+ 	glBindTexture(GL_TEXTURE_2D, mBloodTexNum);
+ 	glBegin(GL_TRIANGLE_STRIP);
+ 	glTexCoord2f(1.0f, 0.0f);
+-	glVertex2f(0.0f, 0.0f);
++	glVertex2f(left, 0.0f);
+ 	glTexCoord2f(1.0f, 0.625f);
+-	glVertex2f(320.0f, 0.0f);
++	glVertex2f(right, 0.0f);
+ 	glTexCoord2f(0.0f, 0.0f);
+-	glVertex2f(0.0f, 200.0f);
++	glVertex2f(left, mCanvasHeight);
+ 	glTexCoord2f(0.0f, 0.625f);
+-	glVertex2f(320.0f, 200.0f);
++	glVertex2f(right, mCanvasHeight);
+ 	glEnd();
+ 
+ 	glEnable(GL_DEPTH_TEST);
 --- a/src/COGLClass.h
 +++ b/src/COGLClass.h
 @@ -25,10 +25,12 @@
@@ -968,17 +1218,24 @@
  
  typedef enum {
  	DT_DISSOLVE,
-@@ -97,6 +99,8 @@
+@@ -97,6 +99,11 @@
  
  	GLsizei mScreenW;
  	GLsizei mScreenH;
 +	GLint mViewportX = 0;
 +	GLint mViewportY = 0;
++	GLsizei mHudHeight = 0;
++	float mCanvasHeight = 200.0f;
++	float mCanvasWidth = 320.0f;
  	void enable2D();
  	void disable2D();
  	void drawText();
-@@ -141,6 +145,20 @@
+@@ -139,8 +146,24 @@
+ 	float mSin;
+ 	float mCos;
  	float mCosHVA;
++	float mVerticalFov = 45.0f;
++	float mReferenceWorldAspect = 1.0f;
  	float mX;
  	float mZ;
 +	GLuint mTransitionTexture = 0;
@@ -998,7 +1255,7 @@
  
  	bool checkOGL();
  
-@@ -148,6 +166,8 @@
+@@ -148,6 +171,8 @@
  	void setTextures(Mesh3Dg *mesh);
  
  	void drawMeshes();
@@ -1742,6 +1999,53 @@
  		normal *= mCamRay - dist;
  		mVelocity += normal;
  	}
+--- /dev/null
++++ b/src/GameplayViewport.h
+@@ -0,0 +1,44 @@
++#ifndef GAMEPLAY_VIEWPORT_H
++#define GAMEPLAY_VIEWPORT_H
++
++#include <algorithm>
++#include <cmath>
++#include <cstdint>
++
++struct GameplayViewport {
++	int x, y, width, height, hudHeight;
++	float canvasHeight, verticalFov, referenceWorldAspect, canvasWidth;
++	int worldHeight() const { return height - hudHeight; }
++};
++
++inline GameplayViewport gameplayViewport(int requestedWidth, int requestedHeight,
++	int drawableWidth, int drawableHeight, bool fillTallScreen = true)
++{
++	requestedWidth = std::max(requestedWidth, 1);
++	requestedHeight = std::max(requestedHeight, 1);
++	if(drawableWidth <= 0 or drawableHeight <= 0) {
++		drawableWidth = requestedWidth;
++		drawableHeight = requestedHeight;
++	}
++	int fitWidth = drawableWidth;
++	int64_t fittedHeight = int64_t(drawableWidth) * requestedHeight / requestedWidth;
++	int fitHeight;
++	if(fittedHeight > drawableHeight) {
++		fitHeight = drawableHeight;
++		fitWidth = int(int64_t(drawableHeight) * requestedWidth / requestedHeight);
++	} else fitHeight = int(fittedHeight);
++	fitWidth = std::max(fitWidth, 1);
++	fitHeight = std::max(fitHeight, 1);
++	int height = fillTallScreen ? drawableHeight : fitHeight;
++	int width = fillTallScreen ? drawableWidth : fitWidth;
++	int hudHeight = std::min(fitHeight / 5, std::max(height - 1, 0));
++	int referenceWorldHeight = std::max(fitHeight - hudHeight, 1);
++	int worldHeight = std::max(height - hudHeight, 1);
++	// Expand the visible world on either axis, preserving the fitted view's pixel scale.
++	const double pi = 3.14159265358979323846;
++	float fov = float(2 * std::atan(std::tan(pi / 8) * worldHeight / referenceWorldHeight) * 180 / pi);
++	return {(drawableWidth - width) / 2, (drawableHeight - height) / 2,
++		width, height, hudHeight, 200.0f * height / fitHeight,
++		fov, float(width) / referenceWorldHeight, 320.0f * width / fitWidth};
++}
++#endif
 --- /dev/null
 +++ b/src/OpaqueDrawBatch.h
 @@ -0,0 +1,76 @@

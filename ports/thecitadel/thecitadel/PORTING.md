@@ -25,6 +25,7 @@ Changes made for this port:
 - Clears the inherited `SDL_VIDEODRIVER` override for the game only, leaving SDL to select its backend. On RG353VS, the firmware forced Wayland on a two-seat compositor and mapped keyboard events did not reach the game. With automatic selection, SDL used XWayland; A confirmed the language menu and D-pad down reached SDL as Page Down. The mapper and audio retain their firmware environment. No backend name or firmware name is hardcoded in the launcher.
 - Adds a CMake build and ships every source change in `patches/cytadela-1.1.0-portmaster.patch`, tested against the checksummed upstream release.
 - Uses a 12000 stick-to-key deadzone while retaining the existing right-stick mouse curve and all button bindings.
+- Fills the gameplay drawable on square and widescreen displays by expanding the field of view rather than stretching or cropping the fitted view. The HUD retains its fitted pixel size and stays bottom-centered; software menus and movies retain their original aspect fitting.
 - Ships bulk assets in a zero-owned, dereferenced `gamedata.tar.gz`; extraction preserves the original `data/` paths and does not touch `conf/`.
 
 The launcher uses the current standard header. Read-only inspection found that both installed PortMaster `control.txt` files already import the device/helper files and define `GPTOKEYB2`; redundant imports and the manual mapper command were removed. No firmware files are modified.
