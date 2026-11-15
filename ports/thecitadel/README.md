@@ -74,7 +74,7 @@ Download the exact upstream 1.1.0 release, verify it, and apply the supplied pat
 curl --fail --location --output cytadela-1.1.0.tar.bz2 https://downloads.sourceforge.net/project/cytadela/cytadela/1.1.0/cytadela-1.1.0.tar.bz2
 echo '90497fe473639ff2fefc68ab44d22936ea5b335e05595b966454cb53f1f42fbe  cytadela-1.1.0.tar.bz2' | sha256sum --check -
 tar -xjf cytadela-1.1.0.tar.bz2
-patch --directory=cytadela-1.1.0 -p1 < patches/cytadela-1.1.0-portmaster.patch
+patch --directory=cytadela-1.1.0 -p1 < thecitadel/patches/cytadela-1.1.0-portmaster.patch
 cmake -S cytadela-1.1.0 -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ```
