@@ -13,6 +13,8 @@ Changes made for this port:
 - Uses gptokeyb2 instead of the original raw joystick mapping.
 - Converts held-key checks to SDL2 scancodes and accumulates relative mouse events per frame.
 - Replaces accumulation-buffer fades with texture-based blending.
+- Removes the mid-frame GPU finish, reuses stencil references for door clipping, and avoids redundant texture-unit switching.
+- Batches only adjacent same-material solid submissions while preserving triangle order. Skips framebuffer blending only for solid materials with a proven RGB alpha witness; transparent objects, blood/decal interpolation and effects retain their rendering behavior. No clock-policy overrides are installed.
 - Adds Q/E and PageUp/PageDown weapon and keycard cycling for D-pad inventory selection without affecting movement.
 - R2 fires or uses the selected keycard, L2 provides precision turning, and A/B/X/Y and L1/R1 interact or confirm. Both sticks control movement/turning. D-pad up opens the map; left/right/down cycle inventory. Select returns to the menu, Start pauses, and stick clicks are unbound. Every firmware uses the same `thecitadel.ini` mapping.
 - Keeps settings and save slots in the port's `conf/` directory.
