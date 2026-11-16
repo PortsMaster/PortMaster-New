@@ -21,11 +21,9 @@ Button labels below use the Nintendo layout: A is east, B south, X north, Y west
 | Left stick | Move forward/backward and strafe |
 | Right stick | Turn; navigate menus |
 | A / B / X / Y | Interact with hand / use / open; confirm / skip movie |
-| L1 / R1 | Interact with hand / use / open; confirm / skip movie |
-| L2 | Hold for slower, more precise right-stick turning |
-| R2 | Fire selected weapon / use selected keycard |
-| Start | Pause / resume gameplay |
-| Select | Return to menu / exit from main menu |
+| L1 / L2 | Hold for slower, more precise right-stick turning |
+| R1 / R2 | Fire selected weapon / use selected keycard |
+| Start / Select | Pause / quit confirmation; A quits gameplay |
 | Start + Select | Force exit |
 
 ## Compile
@@ -70,17 +68,15 @@ echo '08ec0e1f44cfa0929f3c97c2b9bc65712f8b44e1777bdd36d52f4442cc37bc61  glu-pack
 
 ### 3. Game executable
 
-Download the exact upstream 1.1.0 release, verify it, and apply the supplied patch. Run from the directory containing this README.
+Download the exact upstream 1.1.0 release, verify it, and apply the supplied patch. Run from the directory containing this README:
 
 ```bash
 curl --fail --location --output cytadela-1.1.0.tar.bz2 https://downloads.sourceforge.net/project/cytadela/cytadela/1.1.0/cytadela-1.1.0.tar.bz2
 echo '90497fe473639ff2fefc68ab44d22936ea5b335e05595b966454cb53f1f42fbe  cytadela-1.1.0.tar.bz2' | sha256sum --check -
 tar -xjf cytadela-1.1.0.tar.bz2
-PATCH_DIR=thecitadel/patches
-[ -d "$PATCH_DIR" ] || PATCH_DIR=patches
-patch --directory=cytadela-1.1.0 -p1 < "$PATCH_DIR/cytadela-1.1.0-portmaster.patch"
+patch --directory=cytadela-1.1.0 -p1 < thecitadel/patches/cytadela-1.1.0-portmaster.patch
 cmake -S cytadela-1.1.0 -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ```
 
-On aarch64, the result is `build/cytadela.aarch64`. The native libraries must provide the same APIs as the target firmware. The supplied binary was cross-compiled with Zig 0.14.1 for aarch64 Linux, glibc 2.28 or later, and linked against the RG353V's library interfaces.
+On aarch64, the result is `build/cytadela.aarch64`. The native libraries must provide the same APIs as the target firmware. The supplied binary was cross-compiled with Zig 0.14.1 targeting aarch64 Linux/glibc 2.28 and linked against the RG353V's library interfaces. The highest required GLIBC symbol version across the executable and bundled libraries is 2.27.

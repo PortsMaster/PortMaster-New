@@ -26,7 +26,155 @@
 +set_target_properties(cytadela PROPERTIES OUTPUT_NAME "cytadela.${CMAKE_SYSTEM_PROCESSOR}")
 --- a/src/CCytadelaGame.cpp
 +++ b/src/CCytadelaGame.cpp
-@@ -999,15 +999,15 @@
+@@ -31,6 +31,7 @@
+ #include <memory.h>
+ #include "CCytadelaGame.h"
+ #include "cmf/CMFile.h"
++#include "FrameProfile.h"
+ 
+ using namespace std;
+ 
+@@ -501,6 +502,9 @@
+ 	mSDL->clearEventQueue();
+ 	//get the current time and enter the main loop
+ 	mLastTime = mSDL->getTicks();
++#ifdef CYTADELA_PROFILE
++	FrameProfile profile;
++#endif
+ #if defined(DEBUG) || defined(CALC_FPS)
+ double fps = 0.0;
+ double avfps = 0.0;
+@@ -514,6 +518,10 @@
+ 		if(mDiff == 0)
+ 			continue;
+ 		mLastTime = curTime;
++#ifdef CYTADELA_PROFILE
++		Uint64 timing[6] = {profile.now()};
++		uint32_t rawDelta = mDiff;
++#endif
+ 		if(mEnergy < 10) {
+ 			lowEnergySoundDelay -= mDiff;
+ 			if(lowEnergySoundDelay <= 0) {
+@@ -537,6 +545,9 @@
+ 			mDiff = 100;
+ 		//handle the input
+ 		if(not processInput()) break;
++#ifdef CYTADELA_PROFILE
++		timing[1] = profile.now();
++#endif
+ 		if(mPause) {
+ 			//mPauseStartTime sometimes can be greater than curTime
+ 			//so we need a signed variable for the difference
+@@ -545,17 +556,44 @@
+ 				mOGL->osd.addText(mLocInterface->getText(LOC_GAME_PAUSED));
+ 				mPauseStartTime = curTime;
+ 			}
++#ifdef CYTADELA_PROFILE
++			timing[2] = profile.now();
++#endif
+ 			mOGL->renderFrame();
++#ifdef CYTADELA_PROFILE
++			timing[3] = profile.now();
++#endif
+ 			mOGL->osd.draw(mSin, mCos, mDiff);
++#ifdef CYTADELA_PROFILE
++			timing[4] = profile.now();
++#endif
+ 			mSDL->swapBuffers();
++#ifdef CYTADELA_PROFILE
++			timing[5] = profile.now();
++			profile.write(timing, mX, mZ, mRotY, mPause, mMap, rawDelta);
++#endif
+ 			continue;
+ 		}
+ 		if(mMap) {
+ 			//draw map and OSD (the map is redrawn because on slow systems
+ 			//it may flicker if it is not redrawn, but don't know why)
++#ifdef CYTADELA_PROFILE
++			timing[2] = profile.now();
++			renderProfile() = RenderProfile();
++#endif
+ 			mOGL->osd.drawMap(mPosition[0], mPosition[1]);
++#ifdef CYTADELA_PROFILE
++			timing[3] = profile.now();
++#endif
+ 			mOGL->osd.draw(mSin, mCos, mDiff);
++#ifdef CYTADELA_PROFILE
++			timing[4] = profile.now();
++#endif
+ 			mSDL->swapBuffers();
++#ifdef CYTADELA_PROFILE
++			timing[5] = profile.now();
++			profile.write(timing, mX, mZ, mRotY, mPause, mMap, rawDelta);
++#endif
+ 			continue;
+ 		}
+ 		mTotalTime += mDiff;
+@@ -622,10 +660,23 @@
+ 			deathTimeDelay += mDiff;
+ 		}
+ 		//draw frame
++#ifdef CYTADELA_PROFILE
++		timing[2] = profile.now();
++#endif
+ 		mOGL->setCamMatrix(mX, mZ, mSin, mCos);
+ 		mOGL->renderFrame();
++#ifdef CYTADELA_PROFILE
++		timing[3] = profile.now();
++#endif
+ 		mOGL->osd.draw(mSin, mCos, mDiff);
++#ifdef CYTADELA_PROFILE
++		timing[4] = profile.now();
++#endif
+ 		mSDL->swapBuffers();
++#ifdef CYTADELA_PROFILE
++		timing[5] = profile.now();
++		profile.write(timing, mX, mZ, mRotY, mPause, mMap, rawDelta);
++#endif
+ 	}
+ 	//copy game state
+ 	state->totalTime = mTotalTime;
+@@ -824,17 +875,30 @@
+ 	InputArray inputArray;
+ 	memset(&inputArray, 0, sizeof(inputArray));
+ 	mSDL->readInputGame(&inputArray);
++	// Consume the confirmation input before it can fire, move or interact.
++	if(mPause) {
++		for(uint32_t i = 0; i < 5; ++i) {
++			if(not inputArray.status[i]) continue;
++			if(inputArray.key[i] == SDLK_HOME)
++				return false;
++			mPause = false;
++			mOGL->osd.setPause(false);
++			return true;
++		}
++		if(inputArray.lmb or inputArray.rmb or inputArray.mouseX or inputArray.mouseY) {
++			mPause = false;
++			mOGL->osd.setPause(false);
++		}
++		return true;
++	}
+ 	//check actions
+ 	for(uint32_t i = 0; i < 5; ++i) {
+-		if(inputArray.key[i] == SDLK_ESCAPE and not mMap)
+-			return false;
+-		if(inputArray.key[i] == SDLK_p and inputArray.status[i] and not mMap) {
+-			mPause = not mPause;
+-			mOGL->osd.setPause(mPause);
+-			if(mPause) {
+-				mPauseStartTime = mSDL->getTicks();
+-				mOGL->osd.addText(mTexts[PAUSE_ON_TEXTS].getText());
+-			} else mOGL->osd.addText(mTexts[PAUSE_OFF_TEXTS].getText());
++		if((inputArray.key[i] == SDLK_ESCAPE or inputArray.key[i] == SDLK_p) and inputArray.status[i]) {
++			mPause = true;
++			mPauseStartTime = mSDL->getTicks();
++			mOGL->osd.setPause(true);
++			memset(mActionMap, 0, sizeof(mActionMap));
++			return true;
+ 		}
+ 		//in map we don't check for codes
+ 		if(mMap) continue;
+@@ -999,15 +1063,15 @@
  	}
  
  	//actualize action map
@@ -46,7 +194,7 @@
  				//if status was left 'true' it would turn on the map again
  				//in handleInput()
  				inputArray.status[i] = false;
-@@ -1034,36 +1034,36 @@
+@@ -1034,36 +1098,36 @@
  	}
  
  	//fire
@@ -91,7 +239,17 @@
  		mActionMap[ACT_STRAFE_RIGHT] = true;
  	else mActionMap[ACT_STRAFE_RIGHT] = false;
  
-@@ -1208,9 +1208,39 @@
+@@ -1081,7 +1145,8 @@
+ 
+ 	//mouse rotation (only if mouse moved)
+ 	if(inputArray.mouseX) {
+-		mRotY += inputArray.mouseX * 0.01f * mConfig->getMouseSpeed();
++		float precision = keyMap[SDL_SCANCODE_LCTRL] ? 0.5f : 1.0f;
++		mRotY += inputArray.mouseX * 0.01f * mConfig->getMouseSpeed() * precision;
+ 		processRotationAngle();
+ 	}
+ 	return true;
+@@ -1208,9 +1273,40 @@
  	}
  }
  
@@ -129,10 +287,11 @@
 +			return;
 +		}
 +		case SDLK_f:
++		case SDLK_HOME:
  		case SDLK_SPACE:
  			mGameCtrl->useItem(mUsableItems[UIT_HAND]);
  			return;
-@@ -1321,6 +1351,7 @@
+@@ -1321,6 +1417,7 @@
  			mOGL->osd.setImage(OSDIMG_WEAPON_BC, OSD_WEAPON);
  			break;
  		//map
@@ -233,39 +392,91 @@
  			case SDLK_ESCAPE: {
 --- a/src/COGLClass.cpp
 +++ b/src/COGLClass.cpp
-@@ -30,7 +30,7 @@
+@@ -28,10 +28,56 @@
+ #include "farread.h"
+ #include <cstdlib>
  #include <algorithm>
++#include <limits>
  #include <math.h>
  #include <memory.h>
 -#include <SDL/SDL_video.h>
 +#include <SDL2/SDL_video.h>
++#ifdef CYTADELA_PROFILE
++#include <SDL2/SDL_loadso.h>
++#endif
  #include "COGLClass.h"
++#include "FrameProfile.h"
++#include "GameplayViewport.h"
++
++static bool useDoorStencilReferences()
++{
++#ifdef CYTADELA_PROFILE
++	static const bool enabled = std::getenv("CYTADELA_PROFILE_LEGACY_STENCIL") == nullptr;
++	return enabled;
++#else
++	return true;
++#endif
++}
++
++static bool useLegacyTextureUnits()
++{
++#ifdef CYTADELA_PROFILE
++	static const bool legacy = std::getenv("CYTADELA_PROFILE_LEGACY_TEXTURE_UNITS") != nullptr;
++	return legacy;
++#else
++	return false;
++#endif
++}
++
++static bool useOpaqueDrawBatching()
++{
++#ifdef CYTADELA_PROFILE
++	static const bool enabled = std::getenv("CYTADELA_PROFILE_LEGACY_OPAQUE") == nullptr;
++	return enabled;
++#else
++	return true;
++#endif
++}
++
++static bool useOpaqueBlendSuppression()
++{
++#ifdef CYTADELA_PROFILE
++	static const bool enabled = std::getenv("CYTADELA_PROFILE_LEGACY_BLEND") == nullptr;
++	return enabled;
++#else
++	return true;
++#endif
++}
  
  //echm... that windows...
-@@ -44,6 +44,41 @@
+ #if defined(__WIN32__)
+@@ -44,6 +90,53 @@
  	//check the Open GL version and extensions
  	if(not checkOGL())
  		return false;
 +
-+	// The drawable can be larger than the requested fullscreen mode on handhelds.
-+	// Keep the selected aspect ratio and center all gameplay and HUD viewports.
++	// Gameplay can use the extra height of square displays; software menus/videos
++	// keep their independent aspect-fit presentation in CSDLClass.
 +	int drawableWidth = 0, drawableHeight = 0;
 +	SDL_Window *window = SDL_GL_GetCurrentWindow();
 +	if(window)
 +		SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
-+	osd.mViewportX = osd.mViewportY = 0;
-+	if(width > 0 and height > 0 and drawableWidth > 0 and drawableHeight > 0) {
-+		int scaledWidth = drawableWidth;
-+		int scaledHeight = int(int64_t(drawableWidth) * height / width);
-+		if(scaledHeight > drawableHeight) {
-+			scaledHeight = drawableHeight;
-+			scaledWidth = int(int64_t(drawableHeight) * width / height);
-+		}
-+		osd.mViewportX = (drawableWidth - scaledWidth) / 2;
-+		osd.mViewportY = (drawableHeight - scaledHeight) / 2;
-+		width = scaledWidth;
-+		height = scaledHeight;
-+	}
++	bool fillTallScreen = true;
++#ifdef CYTADELA_PROFILE
++	fillTallScreen = std::getenv("CYTADELA_PROFILE_LETTERBOX_GAMEPLAY") == nullptr;
++#endif
++	GameplayViewport viewport = gameplayViewport(width, height, drawableWidth, drawableHeight, fillTallScreen);
++	osd.mViewportX = viewport.x;
++	osd.mViewportY = viewport.y;
++	osd.mHudHeight = viewport.hudHeight;
++	osd.mCanvasHeight = viewport.canvasHeight;
++	osd.mCanvasWidth = viewport.canvasWidth;
++	mVerticalFov = viewport.verticalFov;
++	mReferenceWorldAspect = viewport.referenceWorldAspect;
++	width = viewport.width;
++	height = viewport.height;
++	fprintf(stdout, "Gameplay viewport: %dx%d at %d,%d; HUD=%d; world=%dx%d; vertical FOV=%.3f\n",
++		width, height, viewport.x, viewport.y, viewport.hudHeight, width, viewport.worldHeight(), mVerticalFov);
 +
 +	//SDL's menu renderer can leave a shader selected in GL4ES's cached state.
 +	auto useProgram = reinterpret_cast<PFNGLUSEPROGRAMPROC>(SDL_GL_GetProcAddress("glUseProgram"));
@@ -279,29 +490,174 @@
 +	glDepthMask(GL_TRUE);
 +	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 +	glStencilMask(~0u);
++	GLint stencilBits = 0;
++	glGetIntegerv(GL_STENCIL_BITS, &stencilBits);
++	mDoorStencilMask = stencilBits > 0 ? (1u << std::min(stencilBits, 8)) - 1 : 0;
++	mDoorStencilLimit = mDoorStencilMask;
++#ifdef CYTADELA_PROFILE
++	const char *limit = std::getenv("CYTADELA_PROFILE_STENCIL_LIMIT");
++	if(limit and std::atoi(limit) > 0)
++		mDoorStencilLimit = std::min(mDoorStencilMask, unsigned(std::atoi(limit)));
++#endif
 +	glDepthFunc(GL_LESS);
 +	glColor4f(1, 1, 1, 1);
  
  	//z-buffer
  	glEnable(GL_DEPTH_TEST);
-@@ -101,6 +136,7 @@
+@@ -101,8 +194,135 @@
  	projectionMatrix(width, height);
  	//init OSD interface
  	osd.init(width, height);
 +	glGenTextures(1, &mTransitionTexture);
++#ifdef CYTADELA_PROFILE
++	if(std::getenv("CYTADELA_PROFILE_BLEND_TEST") and not profileAlphaBackend()) return false;
++#endif
  	return true;
  }
++
++#ifdef CYTADELA_PROFILE
++bool COGLClass::profileAlphaBackend()
++{
++	// Compare blended/unblended draws in the live backend, including minification,
++	// border sampling, two-texture alpha ADD, and non-opaque negative controls.
++	glPushAttrib(GL_ALL_ATTRIB_BITS);
++	glMatrixMode(GL_PROJECTION);
++	glPushMatrix();
++	glLoadIdentity();
++	glMatrixMode(GL_MODELVIEW);
++	glPushMatrix();
++	glLoadIdentity();
++	glViewport(0, 0, 8, 4);
++	glDisable(GL_DEPTH_TEST);
++	glDisable(GL_STENCIL_TEST);
++	glDisable(GL_SCISSOR_TEST);
++	glDisable(GL_CULL_FACE);
++	glDisable(GL_FOG);
++	glDisable(GL_ALPHA_TEST);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++	GLint alphaBits = 0;
++	glGetIntegerv(GL_ALPHA_BITS, &alphaBits);
++	fprintf(stdout, "Blend alpha backend storage: alpha_bits=%d\n", alphaBits);
++	GLuint textures[3];
++	glGenTextures(3, textures);
++	bool passed = true;
++	for(unsigned index = 0; index < 3; ++index) {
++		bool rgba = index != 0;
++		unsigned stride = rgba ? 4 : 3;
++		std::vector<unsigned char> data(16 * 16 * stride);
++		for(unsigned i = 0; i < 16 * 16; ++i) {
++			data[i * stride] = rgba ? 30 : 220;
++			data[i * stride + 1] = rgba ? 70 : 135;
++			data[i * stride + 2] = rgba ? 210 : 45;
++			if(rgba) data[i * stride + 3] = index == 1 ? 96 : 0;
++		}
++		glActiveTexture(GL_TEXTURE0);
++		glBindTexture(GL_TEXTURE_2D, textures[index]);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++		if(gluBuild2DMipmaps(GL_TEXTURE_2D, stride, 16, 16, rgba ? GL_BGRA : GL_BGR,
++			GL_UNSIGNED_BYTE, data.data()) != GL_NO_ERROR) passed = false;
++	}
++	using ReadPixels = void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
++	ReadPixels read = glReadPixels;
++	void *native = nullptr;
++	const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
++	if(driver and strstr(driver, "/gl4es.")) {
++		native = SDL_LoadObject("libGLESv2.so");
++		if(native) read = reinterpret_cast<ReadPixels>(SDL_LoadFunction(native, "glReadPixels"));
++	}
++	struct Test { bool rgb; int second; float primary; bool equal; };
++	const Test tests[] = {{true, -1, 1, true}, {true, -1, 0.25f, false}, {false, -1, 1, false},
++		{true, 0, 1, true}, {true, 0, 0.25f, false}, {false, 1, 1, true},
++		{false, 1, 0.25f, true}, {false, 0, 1, false}, {true, 2, 1, true},
++		{true, 2, 0.25f, false}, {false, 2, 1, false}};
++	const GLint wraps[] = {GL_REPEAT, GL_CLAMP, GL_CLAMP_TO_BORDER};
++	for(GLint wrap : wraps) for(const Test &test : tests) {
++		glActiveTexture(GL_TEXTURE0);
++		glEnable(GL_TEXTURE_2D);
++		glBindTexture(GL_TEXTURE_2D, textures[test.rgb ? 0 : 1]);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
++		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
++		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
++		glActiveTexture(GL_TEXTURE1);
++		if(test.second >= 0) {
++			glEnable(GL_TEXTURE_2D);
++			glBindTexture(GL_TEXTURE_2D, textures[test.second == 1 ? 0 : test.second == 2 ? 2 : 1]);
++			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
++			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
++		} else glDisable(GL_TEXTURE_2D);
++		glActiveTexture(GL_TEXTURE0);
++		glClearColor(0.125f, 0.25f, 0.375f, 0.5f);
++		glClear(GL_COLOR_BUFFER_BIT);
++		glColor4f(1, 1, 1, test.primary);
++		for(unsigned side = 0; side < 2; ++side) {
++			if(side == 0) glEnable(GL_BLEND); else glDisable(GL_BLEND);
++			float left = side == 0 ? -1.0f : 0.0f, right = left + 1;
++			glBegin(GL_QUADS);
++			glMultiTexCoord2f(GL_TEXTURE0, -0.25f, -0.25f); glMultiTexCoord2f(GL_TEXTURE1, -0.25f, -0.25f); glVertex2f(left, -1);
++			glMultiTexCoord2f(GL_TEXTURE0, 1.25f, -0.25f); glMultiTexCoord2f(GL_TEXTURE1, 1.25f, -0.25f); glVertex2f(right, -1);
++			glMultiTexCoord2f(GL_TEXTURE0, 1.25f, 1.25f); glMultiTexCoord2f(GL_TEXTURE1, 1.25f, 1.25f); glVertex2f(right, 1);
++			glMultiTexCoord2f(GL_TEXTURE0, -0.25f, 1.25f); glMultiTexCoord2f(GL_TEXTURE1, -0.25f, 1.25f); glVertex2f(left, 1);
++			glEnd();
++		}
++		glFlush(); // Drain the wrapper before the capture-only native readback.
++		unsigned char pixels[8 * 4 * 4] = {};
++		if(read) read(0, 0, 8, 4, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
++		bool equal = read != nullptr;
++		for(unsigned y = 0; y < 4; ++y) for(unsigned x = 0; x < 4; ++x)
++			if(memcmp(pixels + (y * 8 + x) * 4, pixels + (y * 8 + x + 4) * 4, 4)) equal = false;
++		const float rgb[3] = {45, 135, 220}, rgba[3] = {210, 70, 30};
++		float expectedRGB[3];
++		for(unsigned c = 0; c < 3; ++c) expectedRGB[c] = test.rgb ? rgb[c] : rgba[c];
++		if(test.second >= 0) {
++			float alpha = test.second == 1 ? 1.0f : test.second == 2 ? 0.0f : 96.0f / 255;
++			for(unsigned c = 0; c < 3; ++c)
++				expectedRGB[c] = (test.second == 1 ? rgb[c] : rgba[c]) * alpha + expectedRGB[c] * (1 - alpha);
++		}
++		bool colors = read != nullptr;
++		// Interior samples avoid border-color ambiguity while checking that the
++		// contrasting fractional/transparent decal really contributes correctly.
++		for(unsigned y = 1; y < 3; ++y) for(unsigned x = 1; x < 3; ++x)
++			for(unsigned c = 0; c < 3; ++c)
++				if(fabsf(pixels[(y * 8 + x + 4) * 4 + c] - expectedRGB[c]) > 3) colors = false;
++		fprintf(stdout, "Blend alpha backend: wrap=%d rgb=%d second=%d primary=%.2f equal=%d expected=%d decal_rgb=%d\n",
++			wrap, test.rgb, test.second, test.primary, equal, test.equal, colors);
++		passed = passed and equal == test.equal and colors;
++	}
++	if(native) SDL_UnloadObject(native);
++	glDeleteTextures(3, textures);
++	glMatrixMode(GL_MODELVIEW);
++	glPopMatrix();
++	glMatrixMode(GL_PROJECTION);
++	glPopMatrix();
++	glMatrixMode(GL_MODELVIEW);
++	glPopAttrib();
++	fprintf(stdout, "Blend alpha backend result: %s\n", passed ? "PASS" : "FAIL");
++	return passed;
++}
++#endif
  
-@@ -192,6 +228,8 @@
+ //yeah... I know - there is gluCheckExtension, but in GLU v1.3, and guess what... I couldn't find any GLU 1.3
+ //development files (namely: libglu32.a v1.3) for windows :[ I guess for windows there is only GLU 1.2
+@@ -192,6 +412,9 @@
  
  void COGLClass::freeOGL()
  {
++	mOpaqueBatch.reset();
 +	glDeleteTextures(1, &mTransitionTexture);
 +	mTransitionTexture = 0;
  	osd.deleteFXTextures();
  	osd.deleteImages();
  
-@@ -208,50 +246,65 @@
+@@ -202,79 +425,109 @@
+ 	osd.clear();
+ 	//clear all lists
+ 	mTextureIDs.clear();
++	mRGBTextures.clear();
+ 	mTransparentMeshes.clear();
+ 	mOpaqueMeshes.clear();
+ }
  
  void COGLClass::preDissolve(float r, float g, float b, DissolveType disType)
  {
@@ -398,11 +754,381 @@
  {
  	//set the viewport
 -	glViewport(0, (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
-+	glViewport(osd.mViewportX, osd.mViewportY + (GLsizei)(height * 0.2f), width, (GLsizei)(height * 0.8f));
++	glViewport(osd.mViewportX, osd.mViewportY + osd.mHudHeight, width, height - osd.mHudHeight);
  
  	//set the projection matrix
  	glMatrixMode(GL_PROJECTION);
-@@ -818,7 +871,7 @@
+ 	glLoadIdentity();
+ 
+-	float aspectRatio = (height != 0) ? (float)width / (height * 0.8) : (float)width;
+-	gluPerspective(45.0f, aspectRatio, 1.0f, 3200.0f);
+-	//now calculate cosinus of horizontal view angle
+-	//coshva = 1 / sqrt(l^2 + 1); l = aspectRatio / tan(fovy);
+-	//fovy = 45deg = pi/2 (vertical view angle); tan(pi/2) = 1
+-	mCosHVA = (float)(1.0 / sqrt(aspectRatio * aspectRatio + 1.0));
++	float aspectRatio = float(width) / std::max(height - osd.mHudHeight, 1);
++	gluPerspective(mVerticalFov, aspectRatio, 1.0f, 3200.0f);
++	// Include the wider display in the existing conservative horizontal culling cone.
++	mCosHVA = (float)(1.0 / sqrt(mReferenceWorldAspect * mReferenceWorldAspect + 1.0));
+ 	glMatrixMode(GL_MODELVIEW);
+ 	glLoadIdentity();
+ }
+ 
+ void COGLClass::renderFrame()
+ {
++#ifdef CYTADELA_PROFILE
++	renderProfile().opaque = renderProfile().transparent = 0;
++	renderProfile().opaqueRuns = 0;
++	renderProfile().opaqueDraws = renderProfile().opaqueSingletons = renderProfile().batchBytes = 0;
++	renderProfile().opaqueAlphaOne = renderProfile().alphaOneDraws = renderProfile().floorAlphaOne = 0;
++	renderProfile().masks = renderProfile().clears = 0;
++	renderProfile().maskTicks = 0;
++#endif
++	mDoorStencilRef = 0;
+ 	glClearColor(0.188f, 0.188f, 0.188f, 1.0f);
+-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
++	// Clear stencil with depth/color instead of interrupting the world pass per door.
++	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
++		(useDoorStencilReferences() and mDoorStencilMask ? GL_STENCIL_BUFFER_BIT : 0));
+ 
+ 	drawMeshes();
+ 
+-	glFinish();
++#ifdef CYTADELA_PROFILE
++	// A/B control for diagnosing the original mid-frame synchronization.
++	static const bool finish = std::getenv("CYTADELA_PROFILE_FINISH") != nullptr;
++	if(finish) glFinish();
++#endif
++	// Do not finish here: the HUD and buffer swap belong to the same frame.
+ }
+ 
+ void COGLClass::setCamMatrix(float x, float z, float sin, float cos)
+@@ -292,11 +545,13 @@
+ 
+ bool COGLClass::setGOManager(GameObjectsManager *objects)
+ {
++	mOpaqueBatch.reset();
+ 	mObjects = objects;
+ 
+ 	//set the capacity of texture ids' vector and set all it's entries to 0
+ 	//(OpenGL begins numbering the textures from 1)
+ 	mTextureIDs.assign(mObjects->getTexturesQuantity(), 0);
++	mRGBTextures.assign(mObjects->getTexturesQuantity(), false);
+ 	//create transparent and opaque mesh lists
+ 	createMeshLists();
+ 
+@@ -398,20 +653,122 @@
+ 	return true;
+ }
+ 
++bool COGLClass::materialHasOpaqueAlpha(Mesh3Dg *mesh)
++{
++	Material3Dg *material = mObjects->materials[mesh->materialNumber];
++	for(unsigned t = 0; t < std::min(material->texturesQuantity, 2u); ++t) {
++		int texture = material->getTexture(t);
++		if(texture >= 0 and size_t(texture) < mRGBTextures.size() and mRGBTextures[texture])
++			return true;
++	}
++	return false;
++}
++
++void COGLClass::selectOpaqueBlend(Mesh3Dg *mesh)
++{
++	if(not useOpaqueBlendSuppression()) return;
++	// World primary alpha is explicitly one. RGB REPLACE preserves it;
++	// a second RGB texture supplies alpha one to the saturating alpha ADD.
++	// RGBA-only/unknown materials retain the original framebuffer blending.
++	bool blend = not materialHasOpaqueAlpha(mesh);
++	if(blend != mOpaqueBlendEnabled) {
++		if(blend) glEnable(GL_BLEND);
++		else glDisable(GL_BLEND);
++		mOpaqueBlendEnabled = blend;
++	}
++}
++
++void COGLClass::drawOpaqueRun(Mesh3Dg *mesh, const Point3Dg *vertices, const float *texCoords,
++	size_t count, bool offset, bool copied)
++{
++	selectOpaqueBlend(mesh);
++	if(offset) {
++		glPolygonOffset(-1.0f, -15.0f);
++		glEnable(GL_POLYGON_OFFSET_FILL);
++	}
++	setTextures(mesh);
++	size_t first = 0;
++	const size_t limit = size_t(std::numeric_limits<GLsizei>::max() / 3) * 3;
++	while(first < count) {
++		size_t chunk = std::min(count - first, limit);
++		// The setter selects the material's original UVs. Replace both enabled
++		// arrays only after it has run, retaining exact vertex/triangle order.
++		if(copied or first) {
++			glClientActiveTexture(GL_TEXTURE0);
++			glTexCoordPointer(2, GL_FLOAT, 0, texCoords + first * 2);
++			if(mObjects->materials[mesh->materialNumber]->texturesQuantity >= 2) {
++				glClientActiveTexture(GL_TEXTURE1);
++				glTexCoordPointer(2, GL_FLOAT, 0, texCoords + first * 2);
++				glClientActiveTexture(GL_TEXTURE0);
++			}
++		}
++		glVertexPointer(3, GL_FLOAT, 0, vertices + first);
++		glDrawArrays(GL_TRIANGLES, 0, GLsizei(chunk));
++		first += chunk;
++#ifdef CYTADELA_PROFILE
++		++renderProfile().opaqueDraws;
++		if(materialHasOpaqueAlpha(mesh)) ++renderProfile().alphaOneDraws;
++#endif
++	}
++	if(useOpaqueDrawBatching()) {
++		glActiveTexture(GL_TEXTURE0);
++		glClientActiveTexture(GL_TEXTURE0);
++	}
++#ifdef CYTADELA_PROFILE
++	if(copied) renderProfile().batchBytes += count * (sizeof(Point3Dg) + 2 * sizeof(float));
++	else ++renderProfile().opaqueSingletons;
++#endif
++	glDisable(GL_POLYGON_OFFSET_FILL);
++}
++
+ void COGLClass::drawMeshes()
+ {
++	mOpaqueBatch.reset();
++	if(useOpaqueBlendSuppression()) {
++		glColor4f(1, 1, 1, 1);
++		glDisableClientState(GL_COLOR_ARRAY);
++		glEnable(GL_BLEND);
++		mOpaqueBlendEnabled = true;
++	}
++	if(not useLegacyTextureUnits()) {
++		// Reset at the world-pass boundary: HUD/menu code also uses these units.
++		glActiveTexture(GL_TEXTURE1);
++		glDisable(GL_TEXTURE_2D);
++		glClientActiveTexture(GL_TEXTURE1);
++		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
++		glActiveTexture(GL_TEXTURE0);
++		glClientActiveTexture(GL_TEXTURE0);
++		mSecondTextureEnabled = false;
++	}
+ 	//floor and celling (render 'em here 'cause they wouldn't pass the visiblity test
+ 	//in some cases and they should be visible always)
++#ifdef CYTADELA_PROFILE
++	Uint64 passTime = SDL_GetPerformanceCounter();
++#endif
+ 	MeshBase3Dg *floorBase = mObjects->meshes[0]->getBase();
++	selectOpaqueBlend(mObjects->meshes[0]);
+ 	setTextures(mObjects->meshes[0]);
+ 	glVertexPointer(3, GL_FLOAT, 0, floorBase->getVCoordsStream());
+ 	glDrawArrays(GL_TRIANGLES, 0, floorBase->getTriansQuantity() * 3);
+ 
+ 	MeshBase3Dg *ceilingBase = mObjects->meshes[1]->getBase();
++	selectOpaqueBlend(mObjects->meshes[1]);
+ 	setTextures(mObjects->meshes[1]);
+ 	glVertexPointer(3, GL_FLOAT, 0, ceilingBase->getVCoordsStream());
+ 	glDrawArrays(GL_TRIANGLES, 0, ceilingBase->getTriansQuantity() * 3);
+-
++#ifdef CYTADELA_PROFILE
++	renderProfile().floorAlphaOne = materialHasOpaqueAlpha(mObjects->meshes[0]) + materialHasOpaqueAlpha(mObjects->meshes[1]);
++	Uint64 nextPass = SDL_GetPerformanceCounter();
++	renderProfile().floorTicks = nextPass - passTime;
++	passTime = nextPass;
++	bool havePrevious = false, previousOffset = false;
++	uint32_t previousMaterial = 0;
++#endif
++
++	auto drawOpaque = [this](Mesh3Dg *mesh, const Point3Dg *vertices, const float *texCoords,
++		size_t count, bool offset, bool copied) {
++		drawOpaqueRun(mesh, vertices, texCoords, count, offset, copied);
++	};
+ 	for(Mesh3DgList::iterator i = mOpaqueMeshes.begin(); i != mOpaqueMeshes.end(); i++) {
+ 		Mesh3Dg *mesh = *i;
+ 		MeshBase3Dg *base = mesh->getBase();
+@@ -430,20 +787,44 @@
+ 		//we need -cosinus, so in dot product we can substract in stead of adding
+ 		if((((vx / length) * mSin) - ((vz / length) * mCos)) < mCosHVA or length > 3200.0f)
+ 			continue;
+-		//polygon offset
+-		if(mesh->getProperty(MRP_Z_MINUS_OFFSET)) {
+-			glPolygonOffset(-1.0f, -15.0f);
+-			glEnable(GL_POLYGON_OFFSET_FILL);
+-		}
+-		setTextures(mesh);
+-		glVertexPointer(3, GL_FLOAT, 0, base->getVCoordsStream());
+-		glDrawArrays(GL_TRIANGLES, 0, base->getTriansQuantity() * 3);
+-		glDisable(GL_POLYGON_OFFSET_FILL);
++#ifdef CYTADELA_PROFILE
++		bool offset = mesh->getProperty(MRP_Z_MINUS_OFFSET);
++		if(not havePrevious or previousMaterial != mesh->materialNumber or previousOffset != offset)
++			++renderProfile().opaqueRuns;
++		havePrevious = true;
++		previousMaterial = mesh->materialNumber;
++		previousOffset = offset;
++#endif
++		if(useOpaqueDrawBatching())
++			mOpaqueBatch.add(mesh, mesh->getProperty(MRP_Z_MINUS_OFFSET), drawOpaque);
++		else
++			drawOpaque(mesh, base->getVCoordsStream(), base->getTCoordsStream(),
++				size_t(base->getTriansQuantity()) * 3, mesh->getProperty(MRP_Z_MINUS_OFFSET), false);
++#ifdef CYTADELA_PROFILE
++		++renderProfile().opaque;
++		if(materialHasOpaqueAlpha(mesh)) ++renderProfile().opaqueAlphaOne;
++#endif
++	}
++	mOpaqueBatch.flush(drawOpaque);
++	if(useOpaqueBlendSuppression()) {
++		// Door masks, transparent meshes, HUD and effects retain their blending.
++		glEnable(GL_BLEND);
++		mOpaqueBlendEnabled = true;
+ 	}
+ 
+ 	//sort transparent objects
++#ifdef CYTADELA_PROFILE
++	nextPass = SDL_GetPerformanceCounter();
++	renderProfile().opaqueTicks = nextPass - passTime;
++	passTime = nextPass;
++#endif
+ 	gPosition = Vector3Dg(mX, 0.0f, mZ);
+ 	mTransparentMeshes.sort(transpSort);
++#ifdef CYTADELA_PROFILE
++	nextPass = SDL_GetPerformanceCounter();
++	renderProfile().sortTicks = nextPass - passTime;
++	passTime = nextPass;
++#endif
+ 
+ 	for(Mesh3DgList::iterator i = mTransparentMeshes.begin(); i != mTransparentMeshes.end(); i++) {
+ 		Mesh3Dg *mesh = *i;
+@@ -484,25 +865,58 @@
+ 		setTextures(mesh);
+ 		glVertexPointer(3, GL_FLOAT, 0, base->getVCoordsStream());
+ 		glDrawArrays(GL_TRIANGLES, 0, base->getTriansQuantity() * 3);
++#ifdef CYTADELA_PROFILE
++		++renderProfile().transparent;
++#endif
+ 		glDisable(GL_STENCIL_TEST);
+ 		glDisable(GL_POLYGON_OFFSET_FILL);
+ 		glPopMatrix();
+ 	}
+ 	glDepthMask(GL_TRUE);
++#ifdef CYTADELA_PROFILE
++	renderProfile().transparentTicks = SDL_GetPerformanceCounter() - passTime;
++#endif
+ }
+ 
+ void COGLClass::drawStencilMask(Mesh3Dg *mesh)
+ {
+-	glClear(GL_STENCIL_BUFFER_BIT);
+-	glStencilFunc(GL_ALWAYS, 1, 1);
++#ifdef CYTADELA_PROFILE
++	Uint64 maskTime = SDL_GetPerformanceCounter();
++#endif
++	unsigned reference = 1, mask = 1;
++	if(useDoorStencilReferences() and mDoorStencilMask) {
++		// Unique references isolate overlapping door masks without clearing each one.
++		// Clear before recycling a reference, including on smaller stencil buffers.
++		if(mDoorStencilRef == mDoorStencilLimit) {
++			glClear(GL_STENCIL_BUFFER_BIT);
++			mDoorStencilRef = 0;
++#ifdef CYTADELA_PROFILE
++			++renderProfile().clears;
++#endif
++		}
++		reference = ++mDoorStencilRef;
++		mask = mDoorStencilMask;
++	} else {
++		glClear(GL_STENCIL_BUFFER_BIT);
++#ifdef CYTADELA_PROFILE
++		++renderProfile().clears;
++#endif
++	}
++#ifdef CYTADELA_PROFILE
++	++renderProfile().masks;
++#endif
++	glStencilFunc(GL_ALWAYS, reference, mask);
+ 	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+ 	MeshBase3Dg *base = mesh->getBase();
+ 	glVertexPointer(3, GL_FLOAT, 0, base->getVCoordsStream());
+ 	setTextures(mesh);
+ 	glDrawArrays(GL_TRIANGLES, 0, base->getTriansQuantity() * 3);
+ 
+-	glStencilFunc(GL_EQUAL, 1, 1);
++	glStencilFunc(GL_EQUAL, reference, mask);
+ 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
++#ifdef CYTADELA_PROFILE
++	renderProfile().maskTicks += SDL_GetPerformanceCounter() - maskTime;
++#endif
+ }
+ 
+ void COGLClass::setTextures(Mesh3Dg *mesh)
+@@ -515,6 +929,30 @@
+ 	glClientActiveTexture(GL_TEXTURE0);
+ 	glTexCoordPointer(2, GL_FLOAT, 0, base->getTCoordsStream());
+ 	glBindTexture(GL_TEXTURE_2D, mTextureIDs[mtl->getTexture(0)]);
++	if(not useLegacyTextureUnits()) {
++		bool second = mtl->texturesQuantity >= 2;
++		// Avoid switching client units for every single-texture mesh. On GL4ES
++		// those switches flush pending draws, even when unit 1 was already disabled.
++		if(second or mSecondTextureEnabled) {
++			glActiveTexture(GL_TEXTURE1);
++			glClientActiveTexture(GL_TEXTURE1);
++			if(second) {
++				if(not mSecondTextureEnabled) {
++					glEnable(GL_TEXTURE_2D);
++					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
++				}
++				glTexCoordPointer(2, GL_FLOAT, 0, base->getTCoordsStream());
++				glBindTexture(GL_TEXTURE_2D, mTextureIDs[mtl->getTexture(1)]);
++			} else {
++				glDisable(GL_TEXTURE_2D);
++				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
++			}
++			mSecondTextureEnabled = second;
++			glActiveTexture(GL_TEXTURE0);
++			glClientActiveTexture(GL_TEXTURE0);
++		}
++		return;
++	}
+ 
+ 	//if only one texture, then disable the texture unit 1
+ 	if(mtl->texturesQuantity < 2) {
+@@ -623,6 +1061,31 @@
+ 			break;
+ 	}
+ 
++#ifdef CYTADELA_PROFILE
++	bool auditAlphaOne = false;
++	if(std::getenv("CYTADELA_PROFILE_TEXTURE_AUDIT")) {
++		unsigned minimum = 255, maximum = 0;
++		uint64_t below255 = 0, pixels = uint64_t(imgDims.width) * imgDims.height;
++		bool valid = bytesPerPixel == 3 or (pixels > 0 and pixels * 4 == imgDims.size);
++		if(bytesPerPixel == 4 and valid) {
++			for(uint64_t i = 0; i < pixels; ++i) {
++				unsigned alpha = data[i * 4 + 3];
++				minimum = std::min(minimum, alpha);
++				maximum = std::max(maximum, alpha);
++				below255 += alpha < 255;
++			}
++		} else if(bytesPerPixel == 3) maximum = 255;
++		auto noBorder = [](TextureWrapMode3Dg wrap) {
++			return wrap == TEX_WRAP_REPEAT or wrap == TEX_WRAP_MIRRORED_REPEAT or wrap == TEX_WRAP_CLAMP_TO_EDGE;
++		};
++		auditAlphaOne = valid and (bytesPerPixel == 3 or
++			(below255 == 0 and noBorder(texture->wrapModeS) and noBorder(texture->wrapModeT)));
++		fprintf(stdout, "Texture alpha audit: id=%u bpp=%u size=%ux%u wraps=%u,%u min=%u max=%u below255=%llu alpha_one=%d file=%s/%s\n",
++			texNum, imgDims.bitsPerPixel, imgDims.width, imgDims.height,
++			unsigned(texture->wrapModeS), unsigned(texture->wrapModeT), minimum, maximum,
++			static_cast<unsigned long long>(below255), auditAlphaOne, farFileName, texFileName);
++	}
++#endif
+ 	//turn on mipmapping for new texture and generate mipmaps
+ 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+ 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+@@ -636,6 +1099,7 @@
+ 		        farFileName, texFileName, gluErrorString(result));
+ 		return false;
+ 	}
++	mRGBTextures[texNum] = bytesPerPixel == 3;
+ 	return true;
+ }
+ 
+@@ -818,12 +1282,12 @@
  {
  	//now we draw on whole screen
  	//(vision noise and map are also drawn by OSDClass)
@@ -411,18 +1137,167 @@
  
  	glMatrixMode(GL_PROJECTION);
  	glPushMatrix();
-@@ -833,7 +886,7 @@
+ 	glLoadIdentity();
+-	glOrtho(0.0, 320.0, 0.0, 200.0, 1.0, -1.0);
++	glOrtho((320.0f - mCanvasWidth) / 2, (320.0f + mCanvasWidth) / 2, 0.0, mCanvasHeight, 1.0, -1.0);
+ 
+ 	glMatrixMode(GL_MODELVIEW);
+ 	glPushMatrix();
+@@ -833,7 +1297,7 @@
  void COSDClass::disable2D()
  {
  	//set the viewport back to its original size and position
 -	glViewport(0, (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
-+	glViewport(mViewportX, mViewportY + (GLsizei)(mScreenH * 0.2f), mScreenW, (GLsizei)(mScreenH * 0.8f));
++	glViewport(mViewportX, mViewportY + mHudHeight, mScreenW, mScreenH - mHudHeight);
  	//every matrix mode has its own stack, so the order doesn't matter;
  	//the modelview matrix is poped at the end so we don't need to set is as
  	//the current matrix mode again
+@@ -909,9 +1373,41 @@
+ 	//vision noise
+ 	if(mVisionNoise and not mMap)
+ 		drawNoise();
++	if(mPause)
++		drawPausePrompt();
+ 
+ 	glEnable(GL_DEPTH_TEST);
+ 	disable2D();
++}
++
++void COSDClass::drawPausePrompt()
++{
++	const char *text = "PAUSED - PRESS A TO QUIT";
++	float width = strlen(text) * 8.0f;
++	float x = 160.0f - width / 2;
++	float y = (40.0f + mCanvasHeight) / 2 - 3.5f;
++	glDisable(GL_TEXTURE_2D);
++	glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
++	glBegin(GL_QUADS);
++	glVertex2f(x - 8.0f, y - 8.0f);
++	glVertex2f(x + width + 8.0f, y - 8.0f);
++	glVertex2f(x + width + 8.0f, y + 15.0f);
++	glVertex2f(x - 8.0f, y + 15.0f);
++	glEnd();
++	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
++	glEnable(GL_TEXTURE_2D);
++	glBindTexture(GL_TEXTURE_2D, mImages[mElementTex[OSD_TEXT]]);
++	for(const char *c = text; *c; ++c, x += 8.0f) {
++		int column = *c % 16, row = 15 - *c / 16;
++		float left = column * 0.0625f, bottom = row * 0.0625f + 0.0078125f;
++		float right = (column + 1) * 0.0625f, top = (row + 1) * 0.0625f;
++		glBegin(GL_TRIANGLE_STRIP);
++		glTexCoord2f(left, bottom); glVertex2f(x, y);
++		glTexCoord2f(right, bottom); glVertex2f(x + 8.0f, y);
++		glTexCoord2f(left, top); glVertex2f(x, y + 7.0f);
++		glTexCoord2f(right, top); glVertex2f(x + 8.0f, y + 7.0f);
++		glEnd();
++	}
+ }
+ 
+ void COSDClass::addText(const char *text)
+@@ -1047,7 +1543,8 @@
+ 	glDisable(GL_DEPTH_TEST);
+ 	//background
+ 	glBindTexture(GL_TEXTURE_2D, mImages[mElementTex[OSD_PANEL]]);
+-	float bkgndV[] = {0.0f, 40.0f, 320.0f, 40.0f, 0.0f, 200.0f, 320.0f, 200.0f};
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
++	float bkgndV[] = {left, 40.0f, right, 40.0f, left, mCanvasHeight, right, mCanvasHeight};
+ 	float bkgndT[] = {0.0f, 0.15625f, 0.625f, 0.15625f, 0.0f, 0.78125f, 0.625f, 0.78125f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, bkgndT);
+ 	glVertexPointer(2, GL_FLOAT, 0, bkgndV);
+@@ -1055,22 +1552,23 @@
+ 
+ 	//map
+ 	float posX = 8.0f * playerPosX, posY = 8.0f * playerPosY;
++	float centerOffset = (mCanvasHeight - 200.0f) / 2;
+ 	glEnable(GL_STENCIL_TEST);
+ 	//stencil mask for map
+ 	glClear(GL_STENCIL_BUFFER_BIT);
+ 	glStencilFunc(GL_ALWAYS, 1, 1);
+ 	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+ 	glBegin(GL_TRIANGLE_STRIP);
+-	glVertex2f(64.0f, 56.0f);
+-	glVertex2f(256.0f, 56.0f);
+-	glVertex2f(64.0f, 184.0f);
+-	glVertex2f(256.0f, 184.0f);
++	glVertex2f(64.0f, 56.0f + centerOffset);
++	glVertex2f(256.0f, 56.0f + centerOffset);
++	glVertex2f(64.0f, 184.0f + centerOffset);
++	glVertex2f(256.0f, 184.0f + centerOffset);
+ 	glEnd();
+ 	glStencilFunc(GL_EQUAL, 1, 1);
+ 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+ 	glBindTexture(GL_TEXTURE_2D, mMapTextureNum);
+-	float mapV[] = {160.0f - posX, 112.0f - posY, 672.0f - posX, 112.0f - posY,
+-	                160.0f - posX, 624.0f - posY, 672.0f - posX, 624.0f - posY};
++	float mapV[] = {160.0f - posX, 112.0f - posY + centerOffset, 672.0f - posX, 112.0f - posY + centerOffset,
++	                160.0f - posX, 624.0f - posY + centerOffset, 672.0f - posX, 624.0f - posY + centerOffset};
+ 	float mapT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, mapT);
+ 	glVertexPointer(2, GL_FLOAT, 0, mapV);
+@@ -1078,7 +1576,8 @@
+ 	glDisable(GL_STENCIL_TEST);
+ 	//position cursor
+ 	glBindTexture(GL_TEXTURE_2D, mPosCursorTexNum);
+-	float curV[] = {160.0f, 112.0f, 168.0f, 112.0f, 160.0f, 120.0f, 168.0f, 120.0f};
++	float curV[] = {160.0f, 112.0f + centerOffset, 168.0f, 112.0f + centerOffset,
++	               160.0f, 120.0f + centerOffset, 168.0f, 120.0f + centerOffset};
+ 	float curT[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+ 	glTexCoordPointer(2, GL_FLOAT, 0, curT);
+ 	glVertexPointer(2, GL_FLOAT, 0, curV);
+@@ -1271,6 +1770,7 @@
+ 
+ void COSDClass::drawNoise()
+ {
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
+ 	if(mNoiseTime <= 500) {
+ 		if(not mPause)
+ 			mNoiseTime += mDiff;
+@@ -1280,13 +1780,13 @@
+ 			glBindTexture(GL_TEXTURE_2D, mNoiseTexNum[1]);
+ 		glBegin(GL_TRIANGLE_STRIP);
+ 		glTexCoord2f(0.0f, 0.0f);
+-		glVertex2f(0.0f, 40.0f);
++		glVertex2f(left, 40.0f);
+ 		glTexCoord2f(0.625f, 0.0f);
+-		glVertex2f(320.0f, 40.0f);
++		glVertex2f(right, 40.0f);
+ 		glTexCoord2f(0.0f, 0.625f);
+-		glVertex2f(0.0f, 200.0f);
++		glVertex2f(left, mCanvasHeight);
+ 		glTexCoord2f(0.625f, 0.625f);
+-		glVertex2f(320.0f, 200.0f);
++		glVertex2f(right, mCanvasHeight);
+ 		glEnd();
+ 	} else freeNoise();
+ }
+@@ -1322,19 +1822,20 @@
+ 
+ void COSDClass::drawBlood()
+ {
++	float left = (320.0f - mCanvasWidth) / 2, right = (320.0f + mCanvasWidth) / 2;
+ 	enable2D();
+ 	glDisable(GL_DEPTH_TEST);
+ 
+ 	glBindTexture(GL_TEXTURE_2D, mBloodTexNum);
+ 	glBegin(GL_TRIANGLE_STRIP);
+ 	glTexCoord2f(1.0f, 0.0f);
+-	glVertex2f(0.0f, 0.0f);
++	glVertex2f(left, 0.0f);
+ 	glTexCoord2f(1.0f, 0.625f);
+-	glVertex2f(320.0f, 0.0f);
++	glVertex2f(right, 0.0f);
+ 	glTexCoord2f(0.0f, 0.0f);
+-	glVertex2f(0.0f, 200.0f);
++	glVertex2f(left, mCanvasHeight);
+ 	glTexCoord2f(0.0f, 0.625f);
+-	glVertex2f(320.0f, 200.0f);
++	glVertex2f(right, mCanvasHeight);
+ 	glEnd();
+ 
+ 	glEnable(GL_DEPTH_TEST);
 --- a/src/COGLClass.h
 +++ b/src/COGLClass.h
-@@ -25,7 +25,8 @@
+@@ -25,10 +25,12 @@
  #ifndef _COGLClass_H_
  #define _COGLClass_H_
  
@@ -432,27 +1307,63 @@
  #include <list>
  #include <vector>
  #include "cmf/GameObjectsManager.h"
-@@ -97,6 +98,8 @@
++#include "OpaqueDrawBatch.h"
+ 
+ typedef enum {
+ 	DT_DISSOLVE,
+@@ -97,9 +99,15 @@
  
  	GLsizei mScreenW;
  	GLsizei mScreenH;
 +	GLint mViewportX = 0;
 +	GLint mViewportY = 0;
++	GLsizei mHudHeight = 0;
++	float mCanvasHeight = 200.0f;
++	float mCanvasWidth = 320.0f;
  	void enable2D();
  	void disable2D();
  	void drawText();
-@@ -141,6 +144,8 @@
++	void drawPausePrompt();
+ 	void drawHeartPlotter();
+ 	void drawNoise();
+ 	void deleteFXTextures();
+@@ -139,8 +147,24 @@
+ 	float mSin;
+ 	float mCos;
  	float mCosHVA;
++	float mVerticalFov = 45.0f;
++	float mReferenceWorldAspect = 1.0f;
  	float mX;
  	float mZ;
 +	GLuint mTransitionTexture = 0;
 +	float mTransitionColor[3];
++	unsigned mDoorStencilRef = 0;
++	unsigned mDoorStencilMask = 0;
++	unsigned mDoorStencilLimit = 0;
++	bool mSecondTextureEnabled = false;
++	OpaqueDrawBatch mOpaqueBatch;
++	std::vector<bool> mRGBTextures;
++	bool mOpaqueBlendEnabled = true;
++	bool materialHasOpaqueAlpha(Mesh3Dg *mesh);
++	void selectOpaqueBlend(Mesh3Dg *mesh);
++#ifdef CYTADELA_PROFILE
++	bool profileAlphaBackend();
++#endif
  
  	bool checkOGL();
  
+@@ -148,6 +172,8 @@
+ 	void setTextures(Mesh3Dg *mesh);
+ 
+ 	void drawMeshes();
++	void drawOpaqueRun(Mesh3Dg *mesh, const Point3Dg *vertices, const float *texCoords,
++		size_t count, bool offset, bool copied);
+ 	void drawStencilMask(Mesh3Dg *mesh);
+ 	bool loadTexture(uint32_t texNum);
+ 
 --- a/src/CSDLClass.cpp
 +++ b/src/CSDLClass.cpp
-@@ -20,9 +20,32 @@
+@@ -20,9 +20,33 @@
  */
  
  #include <memory.h>
@@ -466,6 +1377,7 @@
  #include "videoplayer.h"
  
 +#ifdef CYTADELA_CAPTURE
++static void captureRequestedFrame(SDL_Window *window);
 +namespace {
 +struct AudioCapture { FILE *file = nullptr; size_t remaining = 0; bool started = false; } audioCapture;
 +void captureAudio(void *, Uint8 *stream, int length)
@@ -485,7 +1397,7 @@
  CSDLClass *CSDLClass::instance()
  {
  	static CSDLClass inst;
-@@ -30,37 +53,25 @@
+@@ -30,37 +54,25 @@
  }
  
  //init/free functions
@@ -528,7 +1440,7 @@
  	static ScreenSize sizes[] = {{{CSDL_DEFAULT_SCREEN_W_TXT, CSDL_DEFAULT_SCREEN_H_TXT},
  	                               {CSDL_DEFAULT_SCREEN_W, CSDL_DEFAULT_SCREEN_H}, true},
  	                              {{"800", "600"}, {800, 600}, true},
-@@ -76,35 +87,13 @@
+@@ -76,35 +88,13 @@
  	                              {{"1920", "1080"}, {1920, 1080}, true},
  	                              {{"1920", "1200"}, {1920, 1200}, true},
  	                              {{"2048", "1536"}, {2048, 1536}, true}};
@@ -565,7 +1477,7 @@
  
  	//audio initialization
  	if(0 == Mix_OpenAudio(44100, AUDIO_S16, 2, 4096))
-@@ -122,35 +111,74 @@
+@@ -122,35 +112,74 @@
  	if(smode != NoChange)
  		mScreenMode = smode;
  
@@ -667,7 +1579,7 @@
  	return true;
  }
  
-@@ -158,14 +186,175 @@
+@@ -158,14 +187,198 @@
  {
  	freeSounds();
  	Mix_CloseAudio();
@@ -771,41 +1683,64 @@
 +	glPopMatrix();
 +	glMatrixMode(GL_MODELVIEW);
 +	glPopAttrib();
++#ifdef CYTADELA_CAPTURE
++	captureRequestedFrame(mWindow);
++#endif
 +	SDL_GL_SwapWindow(mWindow);
 +}
 +
  //input functions
 +#ifdef CYTADELA_CAPTURE
++static void captureCurrentFrame(SDL_Window *window, const char *path)
++{
++	if(not path) return;
++	int size[2];
++	SDL_GL_GetDrawableSize(window, &size[0], &size[1]);
++	std::vector<unsigned char> pixels(size_t(size[0]) * size[1] * 4);
++	using ReadPixels = void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
++	ReadPixels read = glReadPixels;
++	void *native = nullptr;
++	const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
++	if(driver and strstr(driver, "/gl4es.")) {
++		native = SDL_LoadObject("libGLESv2.so");
++		if(native) read = reinterpret_cast<ReadPixels>(SDL_LoadFunction(native, "glReadPixels"));
++	}
++	glFlush(); // Capture-only: drain wrapper batches before native readback.
++	if(read) read(0, 0, size[0], size[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
++	if(native) SDL_UnloadObject(native);
++	FILE *file = fopen(path, "wb");
++	if(file) {
++		fwrite(size, sizeof(size), 1, file);
++		fwrite(pixels.data(), 1, pixels.size(), file);
++		fclose(file);
++	}
++}
++
++static void captureRequestedFrame(SDL_Window *window)
++{
++#ifdef CYTADELA_PROFILE
++	char requested[1024];
++	const char *request = std::getenv("CYTADELA_CAPTURE_REQUEST");
++	if(request) {
++		FILE *file = fopen(request, "r");
++		if(file) {
++			bool parsed = fscanf(file, "%1023[^\n]", requested) == 1;
++			fclose(file);
++			if(parsed) {
++				std::remove(request);
++				captureCurrentFrame(window, requested);
++			}
++		}
++	}
++#endif
++}
++
 +void CSDLClass::swapBuffers()
 +{
 +	checkQuit();
 +	static unsigned frames = 0;
-+	if(++frames == 60) {
-+		const char *path = std::getenv("CYTADELA_CAPTURE_FRAME");
-+		if(path) {
-+			int size[2];
-+			SDL_GL_GetDrawableSize(mWindow, &size[0], &size[1]);
-+			std::vector<unsigned char> pixels(size_t(size[0]) * size[1] * 4);
-+			using ReadPixels = void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *);
-+			ReadPixels read = glReadPixels;
-+			void *native = nullptr;
-+			const char *driver = std::getenv("SDL_VIDEO_GL_DRIVER");
-+			if(driver and strstr(driver, "/gl4es.")) {
-+				native = SDL_LoadObject("libGLESv2.so");
-+				if(native)
-+					read = reinterpret_cast<ReadPixels>(SDL_LoadFunction(native, "glReadPixels"));
-+			}
-+			if(read)
-+				read(0, 0, size[0], size[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-+			if(native) SDL_UnloadObject(native);
-+			FILE *file = fopen(path, "wb");
-+			if(file) {
-+				fwrite(size, sizeof(size), 1, file);
-+				fwrite(pixels.data(), 1, pixels.size(), file);
-+				fclose(file);
-+			}
-+		}
-+	}
++	if(++frames == 60) captureCurrentFrame(mWindow, std::getenv("CYTADELA_CAPTURE_FRAME"));
++	captureRequestedFrame(mWindow);
 +	SDL_GL_SwapWindow(mWindow);
 +}
 +#endif
@@ -844,7 +1779,7 @@
  void CSDLClass::delayInput()
  {
  	uint32_t time = SDL_GetTicks();
-@@ -176,20 +365,37 @@
+@@ -176,20 +389,38 @@
  void CSDLClass::clearEventQueue()
  {
  	SDL_Event event;
@@ -867,6 +1802,7 @@
  				switch(event.key.keysym.sym) {
 +				case SDLK_c:
 +				case SDLK_f:
++				case SDLK_HOME:
  				case SDLK_KP_ENTER:
  					return SDLK_RETURN;
 +				case SDLK_PAGEUP:
@@ -887,7 +1823,7 @@
  				case SDLK_ESCAPE:
  				case SDLK_RETURN:
  				case SDLK_SPACE:
-@@ -270,7 +476,7 @@
+@@ -270,9 +501,10 @@
  	SDL_Event event;
  	//check if there are any events
  	uint32_t readCounter = 0;
@@ -895,8 +1831,11 @@
 +	while(pollEvent(&event)) {
  		switch(event.type) {
  			case SDL_KEYDOWN: {
++				if(event.key.repeat) break;
  				if(readCounter == 5)
-@@ -289,15 +495,15 @@
+ 					break;
+ 				inputArray->key[readCounter] = event.key.keysym.sym;
+@@ -289,15 +521,15 @@
  				break;
  			}
  			case SDL_MOUSEMOTION: {
@@ -915,7 +1854,7 @@
  	//if left mouse button is pressed
  	if(SDL_GetMouseState(0, 0) & SDL_BUTTON(SDL_BUTTON_LEFT))
  		inputArray->lmb = true;
-@@ -433,6 +639,15 @@
+@@ -433,6 +665,15 @@
  {
  	if(mAudioEnabled and mAudioAvailable and -1 == Mix_PlayMusic(mMusic, loops))
  		fprintf(stderr, "!Mix_PlayMusic(): %s\n", Mix_GetError());
@@ -931,7 +1870,7 @@
  }
  
  void CSDLClass::stopMusic()
-@@ -594,7 +809,7 @@
+@@ -594,7 +835,7 @@
  #endif
  
  	//create the surface (in video memory - SDL_HWSURFACE)
@@ -1015,9 +1954,102 @@
  	int32_t getScreenSizesCount() { return mScreenSizesCount; }
  	const ScreenSize *getScreenSizes() { return mScreenSizes; }
  	int32_t findFirstAvailableScreenSize(int32_t start);
+--- /dev/null
++++ b/src/FrameProfile.h
+@@ -0,0 +1,59 @@
++// Optional diagnostics: excluded entirely from release builds.
++#ifndef FRAME_PROFILE_H
++#define FRAME_PROFILE_H
++#ifdef CYTADELA_PROFILE
++#include <SDL2/SDL_timer.h>
++#include <cstdio>
++#include <cstdlib>
++#include <time.h>
++
++struct RenderProfile {
++	unsigned opaque = 0, transparent = 0, masks = 0, clears = 0;
++	unsigned opening = 0, closing = 0;
++	Uint64 floorTicks = 0, opaqueTicks = 0, sortTicks = 0, transparentTicks = 0, maskTicks = 0;
++	unsigned opaqueRuns = 0;
++	unsigned opaqueDraws = 0, opaqueSingletons = 0, batchBytes = 0;
++	unsigned opaqueAlphaOne = 0, alphaOneDraws = 0, floorAlphaOne = 0;
++};
++inline RenderProfile &renderProfile() { static RenderProfile data; return data; }
++
++class FrameProfile {
++	FILE *mFile;
++	Uint64 mLast;
++	double mScale;
++	double mClockOffset;
++	unsigned mFrames = 0;
++public:
++	FrameProfile() : mFile(nullptr), mLast(SDL_GetPerformanceCounter()),
++		mScale(1000.0 / SDL_GetPerformanceFrequency()) {
++		// SDL may use CLOCK_MONOTONIC_RAW; align event timestamps to the probe's clock.
++		timespec mono;
++		clock_gettime(CLOCK_MONOTONIC, &mono);
++		mClockOffset = mono.tv_sec + mono.tv_nsec / 1000000000.0 -
++			SDL_GetPerformanceCounter() * mScale / 1000.0;
++		const char *path = std::getenv("CYTADELA_PROFILE_PATH");
++		if(path) mFile = std::fopen(path, "a");
++		if(mFile) std::fprintf(mFile, "frame_ms,input_ms,update_ms,world_ms,hud_ms,swap_ms,x,z,rotation,pause,map,raw_delta_ms,monotonic_s,opaque,transparent,door_masks,door_clears,opening,closing,floor_ms,opaque_ms,sort_ms,transparent_ms,mask_ms,opaque_runs,opaque_draws,opaque_singletons,batch_bytes,opaque_alpha_one,alpha_one_draws,floor_alpha_one\n");
++	}
++	~FrameProfile() { if(mFile) std::fclose(mFile); }
++	Uint64 now() const { return SDL_GetPerformanceCounter(); }
++	void write(const Uint64 *t, float x, float z, float rotation, bool pause, bool map, unsigned delta) {
++		if(not mFile) return;
++		const RenderProfile &r = renderProfile();
++		std::fprintf(mFile, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.5f,%d,%d,%u,%.6f,%u,%u,%u,%u,%u,%u,%.4f,%.4f,%.4f,%.4f,%.4f,%u,%u,%u,%u,%u,%u,%u\n",
++			(t[5] - mLast) * mScale, (t[1] - t[0]) * mScale,
++			(t[2] - t[1]) * mScale, (t[3] - t[2]) * mScale,
++			(t[4] - t[3]) * mScale, (t[5] - t[4]) * mScale,
++			x, z, rotation, pause, map, delta, t[5] * mScale / 1000.0 + mClockOffset,
++			r.opaque, r.transparent, r.masks, r.clears, r.opening, r.closing,
++			r.floorTicks * mScale, r.opaqueTicks * mScale, r.sortTicks * mScale,
++			r.transparentTicks * mScale, r.maskTicks * mScale,
++			r.opaqueRuns, r.opaqueDraws, r.opaqueSingletons, r.batchBytes,
++			r.opaqueAlphaOne, r.alphaOneDraws, r.floorAlphaOne);
++		mLast = t[5];
++		// Flush only complete batches, never add a GL synchronization for profiling.
++		if(++mFrames % 120 == 0) std::fflush(mFile);
++	}
++};
++#endif
++#endif
 --- a/src/GameControl.cpp
 +++ b/src/GameControl.cpp
-@@ -1983,49 +1983,7 @@
+@@ -26,6 +26,7 @@
+ #include <cassert>
+ #include <math.h>
+ #include "GameControl.h"
++#include "FrameProfile.h"
+ 
+ #define MACHINEGUN_FIRE_DELAY 450
+ #define PLAYER_BURN_DELAY 250
+@@ -204,6 +205,9 @@
+ 
+ void GameControl::animate()
+ {
++#ifdef CYTADELA_PROFILE
++	renderProfile().opening = renderProfile().closing = 0;
++#endif
+ 	//animations
+ 	uint32_t diff = mMiliseconds;
+ 
+@@ -217,6 +221,12 @@
+ 		//if the object isn't beeing animated at the moment
+ 		if(animation->animStatus == ANIM_STOP)
+ 			continue;
++#ifdef CYTADELA_PROFILE
++		if(obj->getType() == GOTYPE_DOOR) {
++			if(animation->animStatus > 0) ++renderProfile().opening;
++			else ++renderProfile().closing;
++		}
++#endif
+ 		//inc/dec anim time
+ 		animation->elapsedTime += diff * animation->animStatus;
+ 		//if the object has animated texture
+@@ -1983,49 +1993,7 @@
  		//(can happen after going through a wall from the back)
  		if(dotProd > SQR2BY2)
  			return 0;
@@ -1068,6 +2100,132 @@
  		normal *= mCamRay - dist;
  		mVelocity += normal;
  	}
+--- /dev/null
++++ b/src/GameplayViewport.h
+@@ -0,0 +1,44 @@
++#ifndef GAMEPLAY_VIEWPORT_H
++#define GAMEPLAY_VIEWPORT_H
++
++#include <algorithm>
++#include <cmath>
++#include <cstdint>
++
++struct GameplayViewport {
++	int x, y, width, height, hudHeight;
++	float canvasHeight, verticalFov, referenceWorldAspect, canvasWidth;
++	int worldHeight() const { return height - hudHeight; }
++};
++
++inline GameplayViewport gameplayViewport(int requestedWidth, int requestedHeight,
++	int drawableWidth, int drawableHeight, bool fillTallScreen = true)
++{
++	requestedWidth = std::max(requestedWidth, 1);
++	requestedHeight = std::max(requestedHeight, 1);
++	if(drawableWidth <= 0 or drawableHeight <= 0) {
++		drawableWidth = requestedWidth;
++		drawableHeight = requestedHeight;
++	}
++	int fitWidth = drawableWidth;
++	int64_t fittedHeight = int64_t(drawableWidth) * requestedHeight / requestedWidth;
++	int fitHeight;
++	if(fittedHeight > drawableHeight) {
++		fitHeight = drawableHeight;
++		fitWidth = int(int64_t(drawableHeight) * requestedWidth / requestedHeight);
++	} else fitHeight = int(fittedHeight);
++	fitWidth = std::max(fitWidth, 1);
++	fitHeight = std::max(fitHeight, 1);
++	int height = fillTallScreen ? drawableHeight : fitHeight;
++	int width = fillTallScreen ? drawableWidth : fitWidth;
++	int hudHeight = std::min(fitHeight / 5, std::max(height - 1, 0));
++	int referenceWorldHeight = std::max(fitHeight - hudHeight, 1);
++	int worldHeight = std::max(height - hudHeight, 1);
++	// Expand the visible world on either axis, preserving the fitted view's pixel scale.
++	const double pi = 3.14159265358979323846;
++	float fov = float(2 * std::atan(std::tan(pi / 8) * worldHeight / referenceWorldHeight) * 180 / pi);
++	return {(drawableWidth - width) / 2, (drawableHeight - height) / 2,
++		width, height, hudHeight, 200.0f * height / fitHeight,
++		fov, float(width) / referenceWorldHeight, 320.0f * width / fitWidth};
++}
++#endif
+--- /dev/null
++++ b/src/OpaqueDrawBatch.h
+@@ -0,0 +1,76 @@
++// Coalesce only adjacent, same-state opaque submissions; never reorder triangles.
++#ifndef OPAQUE_DRAW_BATCH_H
++#define OPAQUE_DRAW_BATCH_H
++
++#include <algorithm>
++#include <cstring>
++#include <new>
++#include <vector>
++#include "cmf/I3Dg.h"
++
++class OpaqueDrawBatch {
++	Mesh3Dg *mFirst = nullptr;
++	uint32_t mMaterial = 0;
++	bool mOffset = false;
++	size_t mCount = 0;
++	size_t mLimit;
++	std::vector<Point3Dg> mVertices;
++	std::vector<float> mTexCoords;
++	void start(Mesh3Dg *mesh, bool offset, size_t count) {
++		mFirst = mesh;
++		mMaterial = mesh->materialNumber;
++		mOffset = offset;
++		mCount = count;
++	}
++public:
++	explicit OpaqueDrawBatch(size_t limit = 4095) : mLimit(std::min(limit, size_t(4095))) {}
++	void reset() {
++		mFirst = nullptr;
++		mCount = 0;
++		mVertices.clear();
++		mTexCoords.clear();
++	}
++	template<typename Draw> void flush(Draw draw) {
++		if(not mFirst) return;
++		bool copied = not mVertices.empty();
++		MeshBase3Dg *base = mFirst->getBase();
++		draw(mFirst, copied ? mVertices.data() : base->getVCoordsStream(),
++			copied ? mTexCoords.data() : base->getTCoordsStream(), mCount, mOffset, copied);
++		reset();
++	}
++	template<typename Draw> void add(Mesh3Dg *mesh, bool offset, Draw draw) {
++		size_t count = size_t(mesh->getBase()->getTriansQuantity()) * 3;
++		if(not count) return;
++		if(not mFirst) { start(mesh, offset, count); return; }
++		if(mMaterial != mesh->materialNumber or mOffset != offset or
++		   count > mLimit or mCount > mLimit - count) {
++			flush(draw);
++			start(mesh, offset, count);
++			return;
++		}
++		size_t total = mCount + count;
++		try {
++			// Reserve both arrays before changing contents, so failed allocations
++			// can submit the old run intact and retain the incoming singleton.
++			mVertices.reserve(total);
++			mTexCoords.reserve(total * 2);
++		} catch(const std::bad_alloc &) {
++			flush(draw);
++			start(mesh, offset, count);
++			return;
++		}
++		if(mVertices.empty()) {
++			MeshBase3Dg *first = mFirst->getBase();
++			mVertices.resize(mCount);
++			mTexCoords.resize(mCount * 2);
++			std::memcpy(mVertices.data(), first->getVCoordsStream(), mCount * sizeof(Point3Dg));
++			std::memcpy(mTexCoords.data(), first->getTCoordsStream(), mCount * 2 * sizeof(float));
++		}
++		mVertices.resize(total);
++		mTexCoords.resize(total * 2);
++		std::memcpy(mVertices.data() + mCount, mesh->getBase()->getVCoordsStream(), count * sizeof(Point3Dg));
++		std::memcpy(mTexCoords.data() + mCount * 2, mesh->getBase()->getTCoordsStream(), count * 2 * sizeof(float));
++		mCount = total;
++	}
++};
++#endif
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -78,8 +78,11 @@
