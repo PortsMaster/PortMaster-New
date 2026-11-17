@@ -4,7 +4,7 @@
 
 It is a small native program: it draws everything (orbs, skies, black holes, its own typeface) and generates all of its sound and music in real time through the system SDL2 library. No libraries, images, samples or fonts are bundled.
 
-The first launch asks for the language (English, Español, Italiano, Français, Deutsch, Português, Nederlands); it can be changed later in Settings. It renders at 1024×768 and scales to the screen, keeping the 4:3 shape.
+The first launch asks for the language (English, Español, Italiano, Français, Deutsch, Português, Nederlands); it can be changed later in Settings. It adapts to 4:3, 16:9 and 1:1 screens: the playfield is the same on all of them and the sky and the HUD fill the rest; other shapes get thin black bars.
 
 0RBE is freeware, distributed through PortMaster with the author's permission. See `0rbe/licenses/LICENSE.0rbe.txt`.
 
