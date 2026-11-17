@@ -1,0 +1,196 @@
+ChooChooTracker track insert DSP: sources and adaptations
+
+Work: https://github.com/timncox/schwung-work
+Commit c88ec1503da7835ae9b9b1270e5f07659bd6b72b
+Extracted m_comp and required SVF/log detector from src/work_core.c, parameter
+semantics from src/work_core.h. No other Work machines or host code imported.
+Byte controls, actual sample rate, cached coefficients, independent slot state.
+Detector choices restricted to the implemented stereo/left/right inputs.
+
+Airwindows: https://github.com/airwindows/airwindows
+Commit d22a25b7f7c0c8c05e9f3ae480e7f1da9769f49d
+DSP state, initialization, float processing extracted from:
+plugins/WinVST/Distortion/{Distortion.h,Distortion.cpp,DistortionProc.cpp}
+plugins/WinVST/StereoDoubler/{StereoDoubler.h,StereoDoubler.cpp,StereoDoublerProc.cpp}
+VST shell/SDK removed. Explicit sample rate and deterministic dither seeds;
+reset initializes complete arrays. Dither uses double precision (avoids ARM
+software float128) and ldexp for exact powers of two; gain coefficients cached. All five Distortion modes and the original
+StereoDoubler delay/splicing algorithm retained.
+
+TAPESCAM: https://github.com/charlesvestal/schwung-tapescam
+Commit 65bdfeeda17b9bf8905f8a47cc5c63277b74aed2
+src/dsp/tapescam.c DSP sections; host APIs, JSON, filesystem and logging removed.
+Float IO replaces int16 conversion; original output soft clipping retained.
+Preallocated delay arrays, instance sample rate replaces fixed 48000 constants,
+cached settled filters, original 128-frame/48k control cadence independent of
+caller block size, scaled delay storage through 192 kHz. Six macros exposed. Other options retain native defaults:
+noise=0, age=NEW, speed=HIGH, compression=OFF, widen=ON.
+Inherited source audit: https://github.com/charlesvestal/CVCHothouse
+Commit fd0fe1e4b43e532599af189da16f20c69b9fcdb2
+TapeScam/LICENSE is MIT. Audited TapeScam/shared_dsp: GainStageModule,
+TapeSatModule, WowFlutterModule, ToneModule, LoFiCompressor, HissDropModule,
+DropoutModule, local SVFFilter. No reverb/Daisy host components imported.
+GPL material elsewhere in CVCHothouse is not used.
+
+OTT: https://github.com/Rui-727/OTT
+Commit 312e32c7d77122c083b27b64040990a50107df47
+ott_dsp.c and ott_dsp.h copied unchanged. Stereo-linked API, no LV2 or UI.
+Adapter controls depth/time/upward/downward/input/output; native band thresholds,
+gains and crossover defaults retained. Rui-727 implementation; not official
+Xfer or Ableton code. Upstream standalone tests run against the copied core.
+
+JM Vowel Filter: https://github.com/jozmac/reapack-jm
+Inspected tree 4f507485554c90dcb6a3670058a8f4812c851518
+Effects/JM_fx_Filter_Vowel.jsfx: MIT, copyright 2023 Józef Maćkowiak.
+Native FORMANT follows its two cascaded stereo peaking EQs and logarithmic
+frequency mapping. Standard RBJ equations are implemented independently;
+REAPER GUI/runtime and Tale source are not copied. Tale/rbj_filter.jsfx-inc
+was audited: copyright 2012–2021 Theo Niessink, WTFPL v2, not reused.
+R1 adds calibrated vowel interpolation, mode-aware MOD, control-rate smoothing,
+fixed +18 dB peaks, wet compensation, dry/wet mixing and overload protection.
+
+All imported DSP uses MIT terms. Full copyright and license notices follow.
+
+--- LICENSE-Airwindows ---
+MIT License
+
+Copyright (c) 2018 Chris Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--- LICENSE-OTT ---
+MIT License
+
+Copyright (c) 2026 Rui-727
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+--- LICENSE-TAPESCAM ---
+MIT License
+
+Copyright (c) 2025 Charles Vestal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--- LICENSE-TapeScam-inherited ---
+MIT License
+
+Copyright (c) 2025 Charles Vestal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--- LICENSE-Work ---
+MIT License
+
+Copyright (c) 2026 Tim Cox
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+include/plugin_api_v1.h and include/audio_fx_api_v2.h are vendored from
+schwung (https://github.com/charlesvestal/schwung), MIT License,
+Copyright (c) 2025-2026 Charles Vestal.
+
+--- LICENSE-JM-Formant ---
+MIT License
+
+Copyright (c) 2023 Józef Maćkowiak
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
