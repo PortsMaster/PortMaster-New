@@ -1,0 +1,67 @@
+#!/bin/bash
+set -euo pipefail
+
+GAMEDIR="${GAMEDIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+cd "$GAMEDIR"
+
+LOGFILE="$GAMEDIR/patchlog.txt"
+rm -f "$GAMEDIR/rez.tmp"
+trap 'rm -f "$GAMEDIR/rez.tmp"' EXIT
+
+log_msg() {
+  echo "$@"
+  echo "$@" >> "$LOGFILE"
+}
+
+fail_patch() {
+  local msg="$1"
+  log_msg "Error: $msg"
+  log_msg "PATCH_FAIL_MSG:$msg"
+  log_msg "Patching process failed!"
+  exit 1
+}
+
+log_msg "=== Rez First-Time Disc Verification & Setup ==="
+
+mkdir -p "$GAMEDIR/conf/rez_recompiled" "$GAMEDIR/gamedata" "$GAMEDIR/extracted/fs"
+
+if [ -f "$GAMEDIR/rez.patch" ]; then
+  avail_kb=$(df -Pk "$GAMEDIR" 2>/dev/null | awk 'NR==2 {print $4}')
+  if [ -n "${avail_kb:-}" ] && [ "$avail_kb" -lt 122880 ]; then
+    fail_patch "Insufficient free disk space (${avail_kb} KB available, need at least 120 MB)."
+  fi
+fi
+
+shopt -s nullglob nocaseglob
+disc_files=("$GAMEDIR/gamedata/"*.chd "$GAMEDIR/"*.chd)
+shopt -u nullglob nocaseglob
+
+if [ ${#disc_files[@]} -eq 0 ]; then
+  fail_patch "No Rez .chd disc found! Copy your Japanese or European Rez .chd into ports/rez/gamedata/."
+fi
+
+CHD_FILE="${disc_files[0]}"
+log_msg "Found disc image: $(basename "$CHD_FILE")"
+
+log_msg "Verifying disc SHA-1 and extracting 1ST_READ.BIN..."
+if ! "$GAMEDIR/tools/rez-patch" --extract-verify "$CHD_FILE" "$GAMEDIR/extracted/fs/1ST_READ.BIN" 2>&1 | tee -a "$LOGFILE"; then
+  fail_patch "Unsupported or corrupted Rez .chd disc! Only the original Japanese (HDR-0178) and European (MK-5119250) Dreamcast releases are supported."
+fi
+
+TARGET_BIN="$GAMEDIR/${BINARY:-rez.${DEVICE_ARCH:-aarch64}}"
+if [ -f "$GAMEDIR/rez.patch" ]; then
+  log_msg "Reconstructing Rez executable from disc keystream..."
+  if ! "$GAMEDIR/tools/rez-patch" --crypt "$GAMEDIR/extracted/fs/1ST_READ.BIN" "$GAMEDIR/rez.patch" - 2>> "$LOGFILE" | gzip -dc > "$GAMEDIR/rez.tmp"; then
+    fail_patch "Failed to decrypt Rez executable."
+  fi
+  chmod +x "$GAMEDIR/rez.tmp"
+  mv "$GAMEDIR/rez.tmp" "$TARGET_BIN"
+  rm -f "$GAMEDIR/rez.patch" "$GAMEDIR/rez"
+fi
+
+SETTINGS_INI="$GAMEDIR/conf/rez_recompiled/settings.ini"
+if [ ! -f "$SETTINGS_INI" ] || ! grep -q '^disc[[:space:]]*=' "$SETTINGS_INI"; then
+  echo "disc = $CHD_FILE" >> "$SETTINGS_INI"
+fi
+
+log_msg "Patching process completed successfully!"
