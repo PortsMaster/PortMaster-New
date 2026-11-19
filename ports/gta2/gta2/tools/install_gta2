@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# PortMaster patcher
+#   unpacks GTA2INSTALLER.exe into gamedata/data
+#   runs from the port's folder
+#   Author: Kdog
+
+GAMEDIR="${PWD}"
+GAMEDATA="${GAMEDIR}/gamedata"
+TOOLDIR="${GAMEDIR}/tools"
+LOGFILE="${GAMEDIR}/patchlog.txt"
+
+exec > >(tee "${LOGFILE}") 2>&1
+
+export PATH="$GAMEDIR/tools:$PATH"
+export LD_LIBRARY_PATH="$GAMEDIR/tools:$LD_LIBRARY_PATH"
+
+fail() { echo "Error: $*"; echo "Patching process failed!"; exit 1; }
+
+chmod u+x "${TOOLDIR}/iss_extract" "${TOOLDIR}/unshield" || fail "cannot make the tools executable"
+
+mkdir -p "${GAMEDATA}"
+
+# Look for the EXE file that contains the CAB files
+PATH_EXE=$(find "${GAMEDIR}" -maxdepth 2 -type f -iname "gta*2*.exe" -print -quit)
+
+cd "${GAMEDATA}" || fail "no gamedata folder"
+
+if [ -f "${PATH_EXE}" ]; then 
+
+	echo "Found ${PATH_EXE##*/}"
+
+	echo "Extracting ${PATH_EXE##*/} (1/2)"
+	iss_extract x "${PATH_EXE}" data1.cab data1.hdr data2.cab || fail "cannot extract ${PATH_EXE##*/}"
+
+	echo "Extracting the CAB files (2/2)"
+	unshield x data1.cab || fail "cannot extract the CAB files"
+	[ -d App_Executables/data ] || fail "no data folder in the installer"
+
+	echo "Tidying gamedata"
+	mv App_Executables/data . || fail "cannot move the data folder"
+	rm -rf App_Executables _* data1.cab data1.hdr data2.cab
+	rm -f "${PATH_EXE}"
+
+elif [ -f data1.cab ] && [ -f data1.hdr ] && [ -d GTAudio ] ; then
+
+	echo "Found data1.cab and data1.hdr (CDROM install data)"
+
+	for wav in 1.wav 10.wav 101a.wav 10a.wav 11.wav 11a.wav 12.wav 2.wav 3.wav 4.wav 5.wav 5a.wav 6.wav 6a.wav 7.wav 7a.wav 8.wav 8a.wav 9.wav 9a.wav A.wav D.wav; do
+		[ -f "./GTAudio/$wav" ] || fail "./GTAudio/$wav missing"
+	done
+
+	echo "Extracting the CAB files"
+	unshield x data1.cab || fail "cannot extract the CAB files"
+	[ -d Program_Executable_Files/data ] || fail "no data folder in the installer"
+
+	echo "Tidying gamedata"
+	mv Program_Executable_Files/data . || fail "cannot move the data folder"
+	mv GTAudio ./data/ || fail "cannot move the GTAudio folder"
+	rm -rf Program_Executable_Files _* data1.cab data1.hdr
+
+else
+
+	fail "Gamefiles not found in gta2/gamedata"
+
+fi
+
+cd "${GAMEDIR}"
