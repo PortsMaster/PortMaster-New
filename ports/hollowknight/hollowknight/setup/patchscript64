@@ -29,6 +29,18 @@ S="${GAMEDIR:?}/setup"; GD="$GAMEDIR/gamedata"; W="$GD/.setup64"; I="$GAMEDIR/ar
 PLAYER_BACKEND=il2cpp; PLAYER_ABI=arm64-v8a; PLAYER_SHA256="libmain.so=74239fee829c3be83e5161f6aaf89b22c8ea6c8794b1e2c042274dcc9a02711a libunity.so=d42a6805f34630801f4056728d6f0e67df1028a2aa6f93c4e2e459f544ec914d"; READY=.setup_done64
 
 exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+# muOS: the setup is not idle time. With nobody at the pad muOS dims and drops to its idle CPU governor after
+# idle_display (powersave, 288 MHz: a 26-minute setup took 92). Its own per-app inhibit, the one its video
+# player and RetroArch launcher use, keeps that off while /run/muos/idle_game_inhibit names a live process;
+# muOS's settings and clocks are not touched. A file naming a dead process (a setup that was killed) is
+# taken over; another app's live one is left alone. Systems without /run/muos are not affected.
+if [ -d /run/muos ] && [ -w /run/muos ]; then
+  _inh=$(cat /run/muos/idle_game_inhibit 2>/dev/null)
+  if [ -z "$_inh" ] || ! kill -0 "$_inh" 2>/dev/null; then
+    echo $$ > /run/muos/idle_game_inhibit && echo "muOS: idle inhibited for the setup"
+    trap '[ "$(cat /run/muos/idle_game_inhibit 2>/dev/null)" = "$$" ] && rm -f /run/muos/idle_game_inhibit' EXIT
+  fi
+fi
 echo "=== $(date) $PORT_TITLE setup (64-bit) ==="
 fail() { echo "PATCH_FAIL_MSG:$1"; echo "Setup failed: $1"; echo "Patching process failed!"; exit 1; }
 step() { echo; echo "== $(date +%H:%M:%S) $*"; }
