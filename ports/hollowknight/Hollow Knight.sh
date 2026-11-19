@@ -73,8 +73,6 @@ fi
 rm -rf setup donor gamedata/.setup gamedata/.setup64   # the setup's files, not needed to play
 
 export SDL_GAMECONTROLLERCONFIG="${SDL_GAMECONTROLLERCONFIG:-$sdl_controllerconfig}"
-# the 32-bit ua_host has no 32-bit PipeWire/Pulse client
-[ "$HK_ROUTE" = 32 ] && export SDL_AUDIODRIVER=${SDL_AUDIODRIVER:-alsa}
 [ "$HK_ROUTE" = 64 ] && export UM_PMHWDEC=pmhwdec64/libpmhwdec.so.1
 export UA_FPS=10   # a frame-rate line every 10 s in log.txt
 # the setup's answers (aspect.txt: fill or bars; buttons.txt: nintendo or xbox prompts)

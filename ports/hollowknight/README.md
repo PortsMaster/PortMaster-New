@@ -16,6 +16,15 @@ The picture fills 4:3 and 3:2 screens (the game's own rule for 16:10 carried dow
 asks, and `bars` in `aspect.txt` keeps the game's 16:9 with bars. On every handheld the picture gives a
 little for speed, the game play never ([what and why](https://github.com/wild1walker/portmaster-hollowknight)).
 
+A few more frames in big rooms, for less scenery: with this line at the top of `port.env` the far
+background (what the game shows blurred: far walls, waterfalls, far vines) is not drawn and the fog
+stands before black. The game play is the same (Greenpath: 53 -> 56 fps on an RG34XX-SP, 33 -> 35 on
+a G350).
+
+```bash
+export ASMPATCH_HK_BLUR=off,hide
+```
+
 ## Controls
 
 The buttons work by position (the bottom one jumps and confirms); the prompts show the letters
