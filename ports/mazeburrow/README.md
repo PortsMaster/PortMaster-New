@@ -14,6 +14,6 @@ Thanks to the PortMaster community which has helped in the development of the po
 |A|Grab|
 |Y|Undo|
 |R1|Restart|
-|Start / Select|Pause / Menu|
+|Start|Pause / Menu|
 
 
