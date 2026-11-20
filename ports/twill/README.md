@@ -2,9 +2,9 @@
 
 Thanks to Liminal Kid for creating Twill Studio, a groovebox whose piano roll is built for buttons, and to Emilie Gillet for the [open-source eurorack code](https://github.com/pichenettes/eurorack) (MIT) its synths are built on.
 
-Songs autosave as you work and are saved to `ports/twill/projects`. Put your own WAV samples in `ports/twill/samples`; song renders go to `ports/twill/renders`. A USB MIDI keyboard or synth can be plugged in to play, record or be played.
+Songs autosave as you work and are saved to `ports/twill/projects`. Put your own WAV samples in `ports/twill/samples`; song renders and stems go to `ports/twill/renders`. A USB MIDI keyboard or synth can be plugged in to play, record or be played.
 
-Tested on the TrimUI Brick Pro and the Anbernic RG28XX (KNULLI).
+Tested on KNULLI, muOS, dArkOS, AmberELEC and ROCKNIX, on screens from 640x480 to 1920x1080.
 
 Twill Studio's website, [liminalkid.github.io/TwillStudio](https://liminalkid.github.io/TwillStudio/), has a tour of the views and every control, and a version you can [play in your browser](https://liminalkid.github.io/TwillStudio/play/) before you install it.
 
