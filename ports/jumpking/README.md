@@ -13,4 +13,3 @@ Steam copies are **not** supported: only the DRM-free GOG build is supported.
 | D-Pad / Left Stick | Move |
 | A | Jump |
 | Start | Pause |
-
