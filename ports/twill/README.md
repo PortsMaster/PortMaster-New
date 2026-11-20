@@ -2,7 +2,7 @@
 
 Thanks to Liminal Kid for creating Twill Studio, a groovebox whose piano roll is built for buttons, and to Emilie Gillet for the [open-source eurorack code](https://github.com/pichenettes/eurorack) (MIT) its synths are built on.
 
-Songs autosave as you work and are saved to `ports/twill/projects`. Put your own WAV samples in `ports/twill/samples`; song renders and stems go to `ports/twill/renders`. A USB MIDI keyboard or synth can be plugged in to play, record or be played.
+Songs autosave as you work and are saved to `ports/twill/projects`. Put your own WAV samples in `ports/twill/samples`; song renders and stems go to `ports/twill/renders`. A USB MIDI keyboard or synth can be plugged in to play, record or be played. If the sound clicks now and then, set Audio buffer to Safe in the settings; Low plays a keyboard with less delay.
 
 Tested on KNULLI, muOS, dArkOS, AmberELEC and ROCKNIX, on screens from 640x480 to 1920x1080.
 

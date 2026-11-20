@@ -25,6 +25,11 @@ cd "$GAMEDIR" || exit 1
 
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 
+# KNULLI's battery saver mutes the sound after minutes without a button press; Twill holds it off
+# with this file while a song plays.
+PAUSE=/var/run/battery-saver/twill.pause
+[ -d "${PAUSE%/*}" ] && export TWILL_KEEP_AWAKE="$PAUSE"
+
 $ESUDO chmod +x "$GAMEDIR/$BINARY"
 
 $GPTOKEYB2 "$BINARY" > /dev/null 2>&1 &
@@ -32,5 +37,6 @@ $GPTOKEYB2 "$BINARY" > /dev/null 2>&1 &
 pm_platform_helper "$GAMEDIR/$BINARY"
 
 ./"$BINARY"
+rm -f "$PAUSE"
 
 pm_finish
