@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: hollowknight.zip, Hollow Knight.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -14,17 +13,16 @@ else
 fi
 
 source $controlfolder/control.txt
-[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
-get_controls
 
 GAMEDIR="/$directory/ports/hollowknight"
-cd "$GAMEDIR" || exit 1
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Unity's 32-bit player (ua_host) needs 32-bit libraries with glibc 2.35 or newer; elsewhere the 64-bit
-# build (ua_host64, the game in arm64/). A build that is set up, or being set up, keeps its route.
+# Unity's 32-bit player (ua_host, whose loader is /lib/ld-linux-armhf.so.3) needs glibc 2.35 or newer;
+# elsewhere the 64-bit build (ua_host64, the game in arm64/). A build that is set up, or being set up,
+# keeps its route.
 ARMHF=no
-if [ -e /lib/ld-linux-armhf.so.3 ]; then
+if [ "$DEVICE_HAS_ARMHF" = Y ] && [ -e /lib/ld-linux-armhf.so.3 ]; then
   ARMHF=yes
   read -r major minor < <(/lib/ld-linux-armhf.so.3 --version 2>/dev/null | sed -n '1s/.*version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
   [ -n "$minor" ] && [ $((major * 1000 + minor)) -lt 2035 ] && ARMHF="glibc $major.$minor"
@@ -37,6 +35,12 @@ elif [ -d gamedata/.setup ]; then HK_ROUTE=32
 elif [ -d gamedata/.setup64 ]; then HK_ROUTE=64
 elif [ "$ARMHF" = yes ]; then HK_ROUTE=32
 else HK_ROUTE=64; fi
+# the 32-bit build tells the firmware's mod file so (PORT_32BIT: ROCKNIX and Knulli then point PipeWire
+# at its 32-bit plugins; ua_host hands its 64-bit pw-cat, when it uses one, the system's own)
+[ "$HK_ROUTE" = 32 ] && export PORT_32BIT="Y"
+[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
+
 echo "$CFW_NAME, $DEVICE_NAME, ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}: $HK_ROUTE-bit build (32-bit libraries: $ARMHF)"
 if [ "$HK_ROUTE" = 64 ]; then
   SETUP=patchscript64; READY=.setup_done64; HOST=ua_host64; GAME="$GAMEDIR/arm64"
@@ -95,7 +99,7 @@ if [ "${ANALOG_STICKS:-2}" = 0 ]; then
 fi
 chmod +x "$HOST" pmhwdec/pmhwdec-cedard pmhwdec64/pmhwdec-cedard 2>/dev/null
 
-$GPTOKEYB2 "$HOST" -c "$GAMEDIR/hollowknight.ini" &   # exit hotkey only: the game reads the pad itself
+$GPTOKEYB2 "$HOST" &   # exit hotkey only: the game reads the pad itself
 pm_platform_helper "$GAMEDIR/$HOST"
 
 if [ "$HK_ROUTE" = 64 ]; then
