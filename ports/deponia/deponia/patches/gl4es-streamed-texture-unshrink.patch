@@ -1,0 +1,70 @@
+diff --git a/src/gl/texture.c b/src/gl/texture.c
+index c0d479a..6d5d27f 100644
+--- a/src/gl/texture.c
++++ b/src/gl/texture.c
+@@ -1105,10 +1105,22 @@ void APIENTRY_GL4ES gl4es_glTexImage2D(GLenum target, GLint level, GLint interna
+     int mipwidth = width << level;
+     int mipheight = height << level;
+     int shrink = 0;
+-    if(!bound->valid)
++    if(!bound->valid) {
+         bound->shrink = shrink = get_shrinklevel(width, height, level);
+-    else
++        bound->fullsub = 0;
++    } else {
++        // re-specified with new pixels more than once at full size: streamed texture, stop shrinking it
++        if (bound->shrink && level==0 && datab && rtarget==GL_TEXTURE_2D
++         && !bound->mipmap_need && !bound->mipmap_auto
++         && (bound->useratio ? ((int)(width*bound->ratiox)==bound->width && (int)(height*bound->ratioy)==bound->height)
++                             : (width==(bound->width<<bound->shrink) && height==(bound->height<<bound->shrink)))
++         && ++bound->fullsub>=2) {
++            bound->shrink = 0;
++            bound->useratio = 0;
++            bound->ratiox = bound->ratioy = 1.0f;
++        }
+         shrink = bound->shrink;
++    }
+ 
+     if(((width>>shrink)==0) && ((height>>shrink)==0)) return;   // nothing to do
+     if (datab) {
+@@ -1582,6 +1594,28 @@ void APIENTRY_GL4ES gl4es_glTexSubImage2D(GLenum target, GLint level, GLint xoff
+     if(level && bound->mipmap_auto)
+         return;
+ 
++    // a texture fully overwritten more than once is streamed (video, packed YUV planes):
++    // shrinking it destroys packed data and costs a downscale per frame, so give it back its full size
++    if (bound->shrink && level==0 && rtarget==GL_TEXTURE_2D
++     && !bound->mipmap_need && !bound->mipmap_auto
++     && xoffset==0 && yoffset==0
++     && (bound->useratio ? ((int)(width*bound->ratiox)==bound->width && (int)(height*bound->ratioy)==bound->height)
++                         : (width==(bound->width<<bound->shrink) && height==(bound->height<<bound->shrink)))
++     && ++bound->fullsub>=2) {
++        bound->useratio = 0;
++        bound->ratiox = bound->ratioy = 1.0f;
++        LOAD_GLES(glTexImage2D);
++        bound->width = width;
++        bound->height = height;
++        bound->nwidth = (hardext.npot>0 || hardext.esversion>1)?width:npot(width);
++        bound->nheight = (hardext.npot>0 || hardext.esversion>1)?height:npot(height);
++        bound->adjustxy[0] = (float)bound->width / bound->nwidth;
++        bound->adjustxy[1] = (float)bound->height / bound->nheight;
++        bound->adjust = (bound->width!=bound->nwidth || bound->height!=bound->nheight);
++        bound->shrink = 0;
++        gles_glTexImage2D(GL_TEXTURE_2D, 0, bound->format, bound->nwidth, bound->nheight, 0, bound->format, bound->type, NULL);
++    }
++
+     if ((glstate->texture.unpack_row_length && glstate->texture.unpack_row_length != width) || glstate->texture.unpack_skip_pixels || glstate->texture.unpack_skip_rows) {
+         int imgWidth, pixelSize, dstWidth;
+         pixelSize = pixel_sizeof(format, type);
+diff --git a/src/gl/texture.h b/src/gl/texture.h
+index 33e140a..24f9f8c 100644
+--- a/src/gl/texture.h
++++ b/src/gl/texture.h
+@@ -136,6 +136,7 @@ typedef struct {
+     GLenum  inter_format, inter_type;
+     int aniso;
+     int shrink;
++    int fullsub;    // full-size uploads into a shrunk texture (2nd one unshrinks it)
+     GLboolean alpha;
+     GLboolean compressed;
+     GLboolean streamed;
