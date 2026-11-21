@@ -1,1 +1,0 @@
-rddllrruu3ld3luruu4rdu4l3drruldlldd3ru3ruuluu4lddrdl3u4rdd3l3ruu4lddldru5rddluru5l4rddlludrruu3l3ruu4ldd

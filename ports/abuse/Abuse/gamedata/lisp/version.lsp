@@ -1,1 +1,0 @@
-(setq clive_version 1.2)
