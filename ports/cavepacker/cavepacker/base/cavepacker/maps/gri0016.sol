@@ -1,1 +1,0 @@
-rdl3r5ulldldrddluddrlddlluurlururrdlr3uldruur2(rddl)

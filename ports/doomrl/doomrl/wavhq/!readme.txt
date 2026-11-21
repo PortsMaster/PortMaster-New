@@ -1,1 +1,0 @@
-Sound files are neede to run the game are downloadable from http://drl.chaosforge.org/

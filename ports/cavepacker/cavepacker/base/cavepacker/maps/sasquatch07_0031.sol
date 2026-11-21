@@ -1,1 +1,0 @@
-3(dr)rulurlldululldrrd3r3ulddrddrrd3uruul3dlddrudrrulldllddl3rdrru3lulldrlddruuluullulldrrdrldlddruu
