@@ -1,0 +1,371 @@
+#!/bin/bash
+# First-run setup on the handheld, run by the launcher through PortMaster's patcher (made with
+# `pmunity port new`, android route): builds the game for Unity's Android player from the
+# player's own copy in ports/<port>/gamedata/:
+#   1. the game: its data folder, from the folder or archive (.zip, .7z, .tar.*, macOS .pkg, GOG's
+#      Linux installer .sh: its zip is unpacked, the script never runs) put there
+#   2. Unity's Android player of the game's exact version, from the port's donor (donor/: a small
+#      game of the port's own built with that Unity version, whose APK carries the player); then
+#      Unity's class libraries the build lacks for it (pmunity winbcl: a Windows build of 2021.2+
+#      has Windows-only ones; a facade such as netstandard.dll), from the same Mono donor (nothing
+#      is read when the build needs none). Nothing is downloaded: no Wi-Fi
+#   3. the conversion (pmunity convert: GLES3 shaders, settings, the port's steps; a Windows
+#      build's Direct3D 11 shaders with setup/pmhlslcc)
+#   4. the APK + OBB the player reads (pmunity android-data; asmpatch when the port uses it)
+#   5. installing: the player's libraries (and only the Mono runtime the game needs), the game
+# Settings: setup/setup.env (from port.toml). Every step can be interrupted (battery, power button):
+# the next launch continues where it stopped. Log: ports/<port>/patchlog.txt.
+# PortMaster's patcher protocol: a line "PATCH_FAIL_MSG:<text>" says why the setup failed.
+S="${GAMEDIR:?}/setup"; GD="$GAMEDIR/gamedata"; W="$GD/.setup"
+. "$S/setup.env"
+
+exec > >(tee -a "$GAMEDIR/patchlog.txt") 2>&1
+# muOS: the setup is not idle time. With nobody at the pad muOS dims and drops to its idle CPU governor after
+# idle_display (powersave, 288 MHz: a 26-minute setup took 92). Its own per-app inhibit, the one its video
+# player and RetroArch launcher use, keeps that off while /run/muos/idle_game_inhibit names a live process;
+# muOS's settings and clocks are not touched. A file naming a dead process (a setup that was killed) is
+# taken over; another app's live one is left alone. Systems without /run/muos are not affected.
+if [ -d /run/muos ] && [ -w /run/muos ]; then
+  _inh=$(cat /run/muos/idle_game_inhibit 2>/dev/null)
+  if [ -z "$_inh" ] || ! kill -0 "$_inh" 2>/dev/null; then
+    echo $$ > /run/muos/idle_game_inhibit && echo "muOS: idle inhibited for the setup"
+    trap '[ "$(cat /run/muos/idle_game_inhibit 2>/dev/null)" = "$$" ] && rm -f /run/muos/idle_game_inhibit' EXIT
+  fi
+fi
+echo "=== $(date) $PORT_TITLE setup ==="
+fail() { echo "PATCH_FAIL_MSG:$1"; echo "Setup failed: $1"; echo "Patching process failed!"; exit 1; }
+step() { echo; echo "== $(date +%H:%M:%S) $*"; }
+hook() {                                # the port's own step at a fixed point (setup/hooks/<name>.sh)
+  [ -f "$S/hooks/$1.sh" ] || return 0
+  step "$PORT_TITLE: $1"
+  . "$S/hooks/$1.sh" || fail "The port's $1 step failed (see patchlog.txt)."
+}
+lower() { echo "$1" | tr 'A-Z' 'a-z'; }
+free_mb() { df -Pm "$GD" | awk 'NR==2{print $4}'; }
+room() { local f; f=$(free_mb); case "$f" in ""|*[!0-9]*) return 0;; esac; [ "$f" -gt "$1" ]; }   # room <MB>: that much free (or unknown)
+# a full card (or one pulled out) must stop the setup: a progress file that was not written would
+# let the next launch take a half-done step for a finished one
+nowrite() { fail "Could not write $1 to the card: is the card full? Free some space on it, then launch again."; }
+mark() { sync; touch "$W/.step_$1" || nowrite "the setup's progress"; }   # mark <step>: what it wrote is on the card, then its marker
+[ "$DEVICE_ARCH" = aarch64 ] || fail "The setup needs a 64-bit (aarch64) system for its tools (this one: $DEVICE_ARCH)."
+SEVENZ="$controlfolder/7zzs.$DEVICE_ARCH"
+mkdir -p "$W" || fail "Cannot write to ports/$PORT_NAME/gamedata."
+echo "RAM $(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null) MB, swap $(awk '/SwapTotal/{print int($2/1024)}' /proc/meminfo 2>/dev/null) MB, free on the card $(free_mb) MB"
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
+# ---- the setup's tools: setup/pmu, one static aarch64 program (portmaster-unity's setup-rs); a
+# port whose conversion needs what pmu does not do yet ships the setup's Python instead (CPython +
+# UnityPy and the image/audio libraries, aarch64: setup/python.tar.gz and the converter)
+if [ -f "$S/pmu" ]; then
+  chmod +x "$S/pmu" 2>/dev/null
+  "$S/pmu" >/dev/null 2>&1; [ $? = 2 ] || fail "The setup's tools (setup/pmu) do not run on this system (see patchlog.txt)."
+  pm() { "$S/pmu" "$@"; }
+else
+  PY=$(ls "$W"/python/bin/python3.[0-9]* 2>/dev/null | grep -v -- '-config' | head -1)
+  if [ -z "$PY" ] || ! "$PY" -c "import UnityPy, lz4, PIL" 2>/dev/null; then
+    step "unpacking the setup tools"
+    rm -rf "$W/python"
+    # (gunzip | tar: some firmwares' BusyBox tar has no -z, e.g. muOS)
+    ( set -o pipefail; gunzip -c "$S/python.tar.gz" | tar -xf - -C "$W" ) || fail "Could not unpack the setup's Python (see patchlog.txt)."
+    PY=$(ls "$W"/python/bin/python3.[0-9]* 2>/dev/null | grep -v -- '-config' | head -1)
+    [ -n "$PY" ] || fail "The setup's Python is incomplete."
+  fi
+  export PYTHONPATH="$S" PYTHONDONTWRITEBYTECODE=1
+  pm() { (cd "$S" && "$PY" -m pmunity "$@"); }
+fi
+
+# ---- answers to the port's questions: kept from the first run, else PortMaster's patcher (<ID> in
+# the environment), else setup.txt (<id>=<value>, older PortMaster), else the default
+CONVERT_SET=(); : > "$W/answers.env.new" || nowrite "the setup's answers"
+for id in $QUESTIONS; do
+  # (the question's lines of setup.env, Q_<ID>_OPTIONS and so on, read by name)
+  q="Q_${id}_OPTIONS"; opts=${!q}; q="Q_${id}_DEFAULT"; def=${!q}; q="Q_${id}_SET"; qset=${!q}; q="Q_${id}_ENV"; qenv=${!q}
+  v=$(cat "$W/answers/$id" 2>/dev/null)
+  [ -n "$v" ] || v=${!id}
+  [ -n "$v" ] || v=$(sed -n "s/^[[:space:]]*$(lower "$id")[[:space:]]*=[[:space:]]*\([A-Za-z0-9._:+-]*\).*/\1/p" "$GAMEDIR/setup.txt" 2>/dev/null | tail -1)
+  case " $opts " in *" $v "*) ;; *) v=$def;; esac
+  { mkdir -p "$W/answers" && echo "$v" > "$W/answers/$id"; } || nowrite "the setup's answers"
+  echo "$id: $v"
+  [ -n "$qset" ] && CONVERT_SET+=(--set "$qset=$v")
+  if [ -n "$qenv" ]; then echo "export $qenv='$v'" >> "$W/answers.env.new" || nowrite "the setup's answers"; fi
+done
+mv -f "$W/answers.env.new" "$W/answers.env" || nowrite "the setup's answers"
+# the picture shape and the button letters: files in the port folder the launcher reads at each launch
+# (the player changes them there later)
+for f in ASPECT:aspect BUTTONS:buttons; do
+  v=$(cat "$W/answers/${f%%:*}" 2>/dev/null); [ -n "$v" ] && echo "$v" > "$GAMEDIR/${f#*:}.txt"
+done
+
+# ---- the videos: where the port ships libpmhwdec (pmhwdec/) and it decodes VP8 on this handheld's
+# video engine (its test program says so in milliseconds; it steps aside where the engine needs
+# anything the port does not do), the convert's video step leaves the clips at full size: the
+# hardware plays them in time, which is what the step's smaller clips are for
+hw_vp8() {
+  local t="$GAMEDIR/pmhwdec/pmhwdec-test" r
+  [ -f "$t" ] || return 1
+  chmod +x "$t" "$GAMEDIR/pmhwdec/pmhwdec-cedard" 2>/dev/null
+  r=$("$t" -q 2>/dev/null | sed -n 's/^VP8: //p')
+  case "$r" in ""|"no hardware"*) echo "VP8: no hardware decoder here (the software decoder plays the videos)"; return 1;; esac
+  echo "VP8 on this handheld's video engine: $r"
+}
+if grep -q '"video"' "$S/convert.json" 2>/dev/null && hw_vp8; then
+  echo "the videos stay at full size"
+  CONVERT_SET+=(--set video.mode=off)
+fi
+
+# ---- 1. the game's data folder
+find_data() {   # find_data <dir> <glob>: the first folder named <glob> under <dir> with Unity's files
+  find "$1" -maxdepth 6 -name .setup -prune -o -type d -name "$2" -print 2>/dev/null | while read -r d; do
+    if [ -f "$d/globalgamemanagers" ] || [ -f "$d/data.unity3d" ] || [ -f "$d/mainData" ]; then echo "$d"; break; fi
+  done
+}
+find_any() {    # the port's data folder, else any Unity data folder
+  local d; d=$(find_data "$1" "$GAME_DATA")
+  [ -n "$d" ] || d=$(find_data "$1" '*_Data')
+  [ -n "$d" ] || d=$(find_data "$1" 'Data')
+  echo "$d"
+}
+# (a later launch: where the game's data is and its Unity version, as step 1 noted them. Notes the
+# card did not keep, or a data folder that is gone before it was packed, start again from the game)
+if [ -f "$W/.step_game" ]; then
+  D=$(cat "$W/.data" 2>/dev/null); V=$(cat "$W/.version" 2>/dev/null)
+  if [ -z "$D" ] || [ -z "$V" ] || { [ ! -d "$D" ] && [ ! -f "$W/.step_package" ]; }; then
+    echo "the setup's notes of the game are incomplete (or the game's folder is gone): starting again from the game"
+    rm -f "$W"/.step_*; rm -rf "$W/android"
+  fi
+fi
+if [ ! -f "$W/.step_game" ]; then
+  D=$(find_any "$GD")
+  if [ -z "$D" ]; then
+    need=$((GAME_SIZE_MB * 3 + 500)); [ "$SETUP_SPACE_MB" -gt 0 ] && need=$SETUP_SPACE_MB
+    for a in "$GD"/*; do
+      [ -f "$a" ] || continue
+      case "$(lower "$a")" in
+        *.zip|*.7z|*.rar|*.tar|*.tar.gz|*.tgz|*.tar.xz|*.txz|*.tar.bz2) ;;
+        *.sh) head -c 65536 "$a" | grep -aqE 'Makeself|MojoSetup' || continue;;   # GOG's Linux installer (read, never run)
+        *) continue;;
+      esac
+      room "$need" || fail "Unpacking $(basename "$a") needs about $need MB free on the card ($(free_mb) MB free)."
+      step "unpacking $(basename "$a")"
+      [ -x "$SEVENZ" ] || fail "PortMaster's 7-Zip is missing: update PortMaster, or unpack $(basename "$a") into gamedata/ yourself."
+      rm -rf "$W/unpacked"; mkdir -p "$W/unpacked"
+      case "$(lower "$a")" in
+        *.tar|*.zip|*.7z|*.rar) "$SEVENZ" x -y -o"$W/unpacked" "$a" >/dev/null ;;
+        *.sh) "$SEVENZ" x -tzip -y -o"$W/unpacked" "$a" >/dev/null ;;        # the zip after the installer's script
+        # (the decompressor's failure counts, and what it says goes to patchlog.txt: an archive with
+        # damaged data unpacks to a whole tar)
+        *) ( set -o pipefail; "$SEVENZ" x -so "$a" | "$SEVENZ" x -si -ttar -y -o"$W/unpacked" >/dev/null ) ;;
+      esac || fail "Could not unpack $(basename "$a") (see patchlog.txt)."
+      D=$(find_any "$W/unpacked")
+      [ -n "$D" ] && break
+      rm -rf "$W/unpacked"
+    done
+  fi
+  if [ -z "$D" ] && ls "$GD"/*.pkg >/dev/null 2>&1; then
+    need=$((GAME_SIZE_MB * 3 + 500)); [ "$SETUP_SPACE_MB" -gt 0 ] && need=$SETUP_SPACE_MB
+    room "$need" || fail "Unpacking the installers needs about $need MB free on the card ($(free_mb) MB free)."
+    step "unpacking the macOS installers"
+    rm -rf "$W/pkgroot"
+    pkgs=(); while IFS= read -r f; do pkgs+=("$f"); done < <(ls -S "$GD"/*.pkg)   # (the largest first; a name may have spaces)
+    pm macpkg "$W/pkgroot" "${pkgs[@]}" || fail "Could not unpack the installers (see patchlog.txt)."
+    D=$(find_any "$W/pkgroot")
+  fi
+  hook game                               # (a port's own way to find or unpack the game: sets D)
+  [ -n "$D" ] || fail "Put $GAME_WHAT in ports/$PORT_NAME/gamedata, then launch again."
+  echo "the game's data: ${D#$GAMEDIR/}"
+  if [ ! -f "$D/globalgamemanagers" ] && [ -f "$D/data.unity3d" ]; then
+    step "unpacking the game's data.unity3d"
+    pm unpack "$D" --remove || fail "Could not unpack the game's data.unity3d (see patchlog.txt)."
+  fi
+  V=$(pm version "$D") || fail "This is not a Unity game's data folder the setup can read: ${D#$GAMEDIR/}."
+  case "$V" in *"not supported"*) fail "Your copy was built with Unity ${V%% *}, which the converter does not support.";; esac
+  V=${V%% *}
+  echo "Unity $V"
+  if [ -n "$UNITY_VERSIONS" ]; then
+    case " $UNITY_VERSIONS " in *" $V "*) ;; *)
+      fail "This port is made for $PORT_TITLE built with Unity $UNITY_VERSIONS; your copy was built with Unity $V (another version of the game?).";;
+    esac
+  fi
+  { echo "$D" > "$W/.data" && echo "$V" > "$W/.version"; } || nowrite "the setup's progress"
+  mark game
+fi
+
+# ---- 2. Unity's Android player of exactly that version, from the port's donor (donor/: small
+# games of the port's own built with that Unity version by portmaster-unity's tools/donor, whose
+# APKs carry the player). The setup never downloads Unity's player.
+DONOR_DIR="$GAMEDIR/donor"
+donor() {   # donor <backend> <abi>: the port's donor of Unity $V for that player, in DONOR
+  local a=$2; case "$a" in armeabi-v7a) a=armv7;; arm64-v8a) a=arm64;; esac
+  DONOR="$DONOR_DIR/donor-$V-$1-$a.apk"
+  [ -f "$DONOR" ] || fail "This port ships no donor of Unity $V ($1, $2): donor/$(basename "$DONOR") is missing, and the setup never downloads Unity's player."
+}
+P="$W/player"
+if [ ! -f "$W/.step_player" ]; then
+  rm -rf "$P"
+  donor "$PLAYER_BACKEND" "$PLAYER_ABI"
+  step "Unity's Android player $V, from the port's donor $(basename "$DONOR")"
+  pm player donor "$V" "$P" --backend "$PLAYER_BACKEND" --abi "$PLAYER_ABI" --apk "$DONOR" \
+    || fail "Could not unpack Unity's player from the port's donor (see patchlog.txt)."
+  for kv in $PLAYER_SHA256; do
+    f=${kv%%=*}; h=${kv#*=}
+    got=$(sha256sum "$P/Variations/$PLAYER_BACKEND/Release/Libs/$PLAYER_ABI/$f" 2>/dev/null | cut -d' ' -f1)
+    [ "$got" = "$h" ] || fail "Unity's player file $f is not the one this port was made with (checksum)."
+  done
+  mark player
+fi
+
+# ---- 2b. Unity's own class libraries the build lacks for that player: a Windows build of 2021.2+
+# ships Windows-only ones (unityjit-win32: their Unix twins instead), and a build may lack a facade
+# Unity's Android engine modules reference (netstandard.dll); from the port's Mono donor (its own
+# build's class libraries: what it does not carry is named in patchlog.txt), never downloaded
+if [ ! -f "$W/.step_bcl" ]; then
+  rm -rf "$W/bcl"
+  if [ "${WINBCL:-auto}" != off ]; then
+    donor mono armeabi-v7a
+    step "Unity's class libraries for the player, from the port's donor (only those the game lacks)"
+    pm winbcl "$D" "$W/bcl" --version "$V" --player "$P" --donor "$DONOR" >/dev/null \
+      || fail "Could not read Unity's class libraries from the port's donor (see patchlog.txt)."
+  fi
+  mark bcl
+fi
+
+# ---- 3. the conversion
+if [ ! -f "$W/.step_convert" ]; then
+  hook pre_convert
+  need=$((GAME_SIZE_MB * 3 / 2 + 300)); [ "$SETUP_SPACE_MB" -gt 0 ] && need=$SETUP_SPACE_MB
+  room "$need" || fail "Converting the game needs about $need MB free on the card ($(free_mb) MB free)."
+  step "converting the game (if this is interrupted, the next launch continues where it stopped)"
+  sed "s|{setup}|$S|g" "$S/convert.json" > "$W/convert.json"
+  plugins=(); for f in "${CONVERT_PLUGINS[@]}"; do plugins+=(--plugin "$S/$f"); done
+  # a Windows build's Direct3D 11 shaders: HLSLcc (the release's pmhlslcc, aarch64)
+  if [ -f "$S/pmhlslcc" ]; then chmod +x "$S/pmhlslcc"; export PMHLSLCC="$S/pmhlslcc"; fi
+  # a Vulkan-only build's shaders: SPIRV-Cross (the release's pmspirvcross, aarch64)
+  if [ -f "$S/pmspirvcross" ]; then chmod +x "$S/pmspirvcross"; export PMSPIRVCROSS="$S/pmspirvcross"; fi
+  pm convert "$D" --config "$W/convert.json" "${plugins[@]}" "${CONVERT_SET[@]}" \
+    || { [ $? = 2 ] && [ -f "$S/pmu" ] && fail "The setup's tools cannot convert this game's files yet (see patchlog.txt): the port needs the setup's Python."
+         fail "Converting the game's files failed (see patchlog.txt). Launch again to continue."; }
+  hook post_convert
+  mark convert
+fi
+
+# ---- 3b. a Wwise game's soundbanks for ua_host's own Wwise player (pmu wwise; docs/wwise-player.md in
+# portmaster-unity): read once, before packing moves StreamingAssets into the OBB, into the port's
+# wwise/ folder on the card (the launcher points UA_WWISE_DATA there). Banks the player does not read
+# leave the game silent (ua_host's built-in Wwise still answers it): the setup goes on. Nothing of
+# Wwise's comes with the port: its Vorbis codebooks are read from the game's own Wwise library.
+if [ -n "$WWISE_BANKS" ] && [ ! -f "$W/.step_wwise" ]; then
+  B="$D/$WWISE_BANKS"
+  if [ -f "$S/pmu" ] && [ -d "$B" ]; then
+    need=$(( $(du -sm "$B" | cut -f1) + 50 ))
+    room "$need" || fail "Converting the game's sound banks needs about $need MB free on the card ($(free_mb) MB free)."
+    step "the game's sound banks for the port's Wwise player"
+    rm -rf "$GAMEDIR/wwise.new"
+    # Wwise Vorbis's codebooks come from the game's own Wwise library, in its plugins folder (a
+    # macOS app's is Contents/Plugins); without them only the Vorbis sounds stay silent
+    PL="$D/Plugins"; [ -d "$PL" ] || PL="$(dirname "$(dirname "$D")")/Plugins"
+    if pm wwise "$B" "$GAMEDIR/wwise.new" --wwise-lib "$PL"; then
+      rm -rf "$GAMEDIR/wwise" && mv "$GAMEDIR/wwise.new" "$GAMEDIR/wwise" || fail "Could not install the converted sound banks."
+    else
+      echo "The sound banks were not converted (above): the game runs without sound."
+      rm -rf "$GAMEDIR/wwise.new"
+    fi
+  else
+    echo "no sound banks in ${B#$GAMEDIR/} (or no setup/pmu): the game runs without sound."
+  fi
+  mark wwise
+fi
+
+# ---- 4. what Unity's Android player reads: APK + OBB (the data's files are moved into them)
+if [ ! -f "$W/.step_package" ]; then
+  step "packing the game for the player"
+  args=(--src "$D" --pkg "$P" --out "$W/android" --name "$APK_NAME" --package "$PACKAGE" --swappy "$SWAPPY"
+        --consume-src --verify-bundles 2 --pack all)
+  [ "$VIDEO_SHADER" = 1 ] || args+=(--no-video-shader)
+  # StreamingAssets the game reads as files: beside the APK too (Game_Data/StreamingAssets), and
+  # asmpatch's streaming-assets patch; files at Application.dataPath: Game_Data/ and data-path
+  # (android-data adds the patches to the asmpatch command)
+  SA=${STREAMING_ASSETS:-obb}; args+=(--streaming-assets "$SA")
+  [ "${DATA_PATH:-0}" = 1 ] && args+=(--data-path)
+  if { [ "$ASMPATCH" != off ] || [ "$SA" != obb ] || [ "${DATA_PATH:-0}" = 1 ]; } && [ -f "$S/asmpatch" ]; then
+    chmod +x "$S/asmpatch"
+    a="'$S/asmpatch'"
+    case "$ASMPATCH" in auto) ;; off) a="$a --only=";; auto,*) a="$a --with=${ASMPATCH#auto,}";; *) a="$a --only=$ASMPATCH";; esac
+    args+=(--asmpatch "$a")
+  fi
+  for f in "$W"/bcl/*.dll; do [ -f "$f" ] && args+=(--managed-file "$f"); done     # (step 2b's; the port's own win)
+  for f in "${MANAGED_FILES[@]}"; do args+=(--managed-file "$S/$f"); done
+  if [ ${#ASSEMBLY_PATCHES[@]} -gt 0 ]; then
+    args+=(--game-managed "$D/Managed")
+    for ((i = 0; i < ${#ASSEMBLY_PATCHES[@]}; i += 2)); do
+      args+=(--assembly-patch "${ASSEMBLY_PATCHES[i]}" "${ASSEMBLY_PATCHES[i+1]//\{setup\}/$S}")
+    done
+  fi
+  pm android-data "${args[@]}" "${ANDROID_DATA_ARGS[@]}" \
+    || fail "Packing the game failed (see patchlog.txt). Launch again to continue."
+  hook post_pack
+  mark package
+fi
+
+# ---- 5. into place: the player (only the Mono runtime the game needs: with both, libunity takes
+# the .NET 4.x one) and the APK, OBB, Mono's config
+step "installing"
+Z="$W/android/zip"
+# (the report's "unity" section names the scripting runtime: json.dump's one key a line)
+rt=$(sed -n 's/^  "scripting_runtime": "\(.*\)",\{0,1\}$/\1/p' "$W/android/android_data_report.json" 2>/dev/null | head -1)
+case "$rt" in "") other=;; *bdwgc*) other=libmono.so;; *) other=libmonobdwgc-2.0.so;; esac   # (no report: both, libunity picks)
+mkdir -p "$GAMEDIR/lib"
+rm -f "$GAMEDIR/lib/"*.so
+for f in "$P/Variations/$PLAYER_BACKEND/Release/Libs/$PLAYER_ABI/"*.so "$P/Variations/$PLAYER_BACKEND/Release/MonoLibs/$PLAYER_ABI/"*.so; do
+  [ -f "$f" ] || continue
+  [ "$(basename "$f")" = "$other" ] && continue
+  cp "$f" "$GAMEDIR/lib/" || fail "Could not install Unity's player."
+done
+[ -f "$GAMEDIR/lib/libunity.so" ] || fail "Unity's player is incomplete (see patchlog.txt)."
+[ -d "$Z/assets" ] && rm -rf "$GAMEDIR/assets"        # (an interrupted install moved it already)
+# Game_Data/ (StreamingAssets as files, the data folder's own files): the new ones replace the old;
+# files the game wrote there stay
+if [ -d "$Z/Game_Data" ] && [ -d "$GAMEDIR/Game_Data" ]; then
+  rm -rf "$GAMEDIR/Game_Data/StreamingAssets"
+  for f in "$Z/Game_Data"/*; do
+    [ -e "$f" ] || continue
+    rm -rf "$GAMEDIR/Game_Data/$(basename "$f")"
+    mv -f "$f" "$GAMEDIR/Game_Data/" || fail "Could not install $(basename "$f")."
+  done
+  rm -rf "$Z/Game_Data"
+fi
+for f in "$Z"/*; do
+  [ -e "$f" ] || continue
+  mv -f "$f" "$GAMEDIR/" || fail "Could not install $(basename "$f")."
+done
+cp "$W/answers.env" "$GAMEDIR/answers.env" || nowrite "the game's settings"
+hook post_install
+# the copy of the game the setup used up (its files went into the APK and OBB)
+top=${D#"$GD"/}; top=${top%%/*}
+case "$D" in "$W"/*) ;; *) [ -n "$top" ] && [ "$top" != "$(basename "$W")" ] && rm -rf "${GD:?}/$top";; esac
+# the game is marked set up, on the card, before the tools, the work folder and the donors go: a
+# power cut in between leaves a game that starts (the launcher removes what is left), never one
+# without the tools to finish it
+sync
+# (the mark names the code patches this game has had, for the launcher: a setting that needs one
+# stays off without it)
+# (and convert=lazy where the convert ran pmu's lazy step: the launcher gives back the other languages' text only then)
+lazy=; grep -q '"lazy"' "$S/convert.json" 2>/dev/null && lazy=" convert=lazy"
+echo "asmpatch=$ASMPATCH$lazy" > "$GAMEDIR/$READY" || nowrite "the setup's last mark"
+sync
+rm -rf "$W" "$S" "$DONOR_DIR"
+# archives and installers the setup unpacked (the game's; a Unity installer an older setup read) are not needed
+# any more: removed, as PortMaster ports' setups do, unless setup.txt says keep_installers=1
+keep=$(sed -n 's/^[[:space:]]*keep_installers[[:space:]]*=[[:space:]]*\([01]\).*/\1/p' "$GAMEDIR/setup.txt" 2>/dev/null | tail -1)
+for a in "$GD"/*; do
+  [ -f "$a" ] || continue
+  case "$(lower "$a")" in
+    *.zip|*.7z|*.rar|*.tar|*.tar.gz|*.tgz|*.tar.xz|*.txz|*.tar.bz2|*.pkg|*/unitysetup-*.exe|*/unitysetup64-*.exe) ;;
+    *.sh) head -c 65536 "$a" | grep -aqE 'Makeself|MojoSetup' || continue;;
+    *) continue;;
+  esac
+  if [ "$keep" = 1 ]; then echo "kept $(basename "$a") (keep_installers=1)"; continue; fi
+  echo "removing $(basename "$a"): not needed to play (keep_installers=1 in setup.txt keeps it)"
+  rm -f "$a"
+done
+sync
+step "setup finished: $(du -sm "$GAMEDIR" | cut -f1) MB."
