@@ -97,7 +97,7 @@ Run these commands from this port directory in an AArch64 Ubuntu build environme
 
 ```bash
 git clone --branch 0.7.5 --depth 1 https://github.com/teeworlds/teeworlds.git teeworlds-src
-patch -d teeworlds-src -p1 < patches/teeworlds-square-display-ui.patch
+patch -d teeworlds-src -p1 < teeworlds/patches/teeworlds-square-display-ui.patch
 cmake -S teeworlds-src -B teeworlds-build -DCMAKE_BUILD_TYPE=Release -DCLIENT=ON -DDOWNLOAD_GTEST=OFF -DPREFER_BUNDLED_LIBS=ON
 cmake --build teeworlds-build --target teeworlds
 ```

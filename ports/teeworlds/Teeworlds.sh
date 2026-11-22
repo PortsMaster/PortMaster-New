@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: teeworlds.zip, Teeworlds.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
@@ -25,7 +24,7 @@ SERVER_BINARY=teeworlds_srv.${DEVICE_ARCH}
 BOT_BINARY=teeworlds_bot_srv.${DEVICE_ARCH}
 
 mkdir -p "$GAMEDIR/conf/.teeworlds"
-cd "$GAMEDIR" || exit 1
+cd $GAMEDIR
 chmod +x "$GAMEDIR"/*.${DEVICE_ARCH}
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
@@ -55,15 +54,11 @@ export OMNI_RIGHT_KEY=d
 export OMNI_CONFIRM_KEY=t
 
 setup_gl4es() {
-  cd "$GAMEDIR" || exit 1
+  cd $GAMEDIR
   if [ -f "${controlfolder}/libgl_${CFW_NAME}.txt" ]; then
     source "${controlfolder}/libgl_${CFW_NAME}.txt"
   else
     source "${controlfolder}/libgl_default.txt"
-  fi
-  # muOS RGSP needs framebuffer+FBO when GBM is present but unusable.
-  if [ "${CFW_NAME:-}" = "muOS" ]; then
-    export LIBGL_FB=2
   fi
 }
 
@@ -87,7 +82,7 @@ pick_map() {
     LD_PRELOAD="$GAMEDIR/libs.${DEVICE_ARCH}/libomni_osk.so${LD_PRELOAD:+:$LD_PRELOAD}" \
     "./$MAP_BINARY" "$GAMEDIR/data/maps" "$GAMEDIR/conf/favorites.txt" \
     "$GAMEDIR/data/fonts/DejaVuSans.ttf" "$GAMEDIR/map_picker_bg.png" "$MAP_RESULT"
-  pm_finish
+  pm_gptokeyb_finish
 
   PICKED_MAP=$(cat "$MAP_RESULT" 2>/dev/null)
   if [[ "$PICKED_MAP" == *[\;\#\"\\]* ]] || [[ "$PICKED_MAP" == *$'\n'* ]]; then
