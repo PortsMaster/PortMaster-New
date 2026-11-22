@@ -18,9 +18,7 @@ GAMEDIR="/$directory/ports/hollowknight"
 cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Unity's 32-bit player (ua_host, whose loader is /lib/ld-linux-armhf.so.3) needs glibc 2.35 or newer;
-# elsewhere the 64-bit build (ua_host64, the game in arm64/). A build that is set up, or being set up,
-# keeps its route.
+# ua_host (32-bit) needs armhf libraries with glibc 2.35+, else ua_host64; a set-up or half-set-up build keeps its route
 ARMHF=no
 if [ "$DEVICE_HAS_ARMHF" = Y ] && [ -e /lib/ld-linux-armhf.so.3 ]; then
   ARMHF=yes
@@ -35,8 +33,7 @@ elif [ -d gamedata/.setup ]; then HK_ROUTE=32
 elif [ -d gamedata/.setup64 ]; then HK_ROUTE=64
 elif [ "$ARMHF" = yes ]; then HK_ROUTE=32
 else HK_ROUTE=64; fi
-# the 32-bit build tells the firmware's mod file so (PORT_32BIT: ROCKNIX and Knulli then point PipeWire
-# at its 32-bit plugins; ua_host hands its 64-bit pw-cat, when it uses one, the system's own)
+# PORT_32BIT before the mod file: ROCKNIX and Knulli then point PipeWire at their 32-bit plugins
 [ "$HK_ROUTE" = 32 ] && export PORT_32BIT="Y"
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
 get_controls
@@ -48,8 +45,7 @@ else
   SETUP=patchscript; READY=.setup_done; HOST=ua_host; GAME="$GAMEDIR"
 fi
 
-# Rockchip vendor kernels (dArkOS, ArkOS) keep the video decoder root-only: open it to the video group
-# for the game's videos (pmhwdec/) and put it back when the game ends.
+# Rockchip vendor kernels keep the video decoder root-only: open to the video group while the game runs
 nodes=()
 for n in /dev/vpu_service /dev/hevc_service; do
   [ -e "$n" ] && ! { [ -r "$n" ] && [ -w "$n" ]; } || continue
@@ -68,17 +64,19 @@ if [ ! -f "$READY" ]; then
     cd "$GAMEDIR"
   fi
   if [ ! -f "$READY" ]; then
-    pm_message "Hollow Knight is not set up yet. Put GOG's Linux installer, or the game folder from GOG or Steam, in ports/hollowknight/gamedata and launch again; a setup that stopped goes on from there (log: ports/hollowknight/patchlog.txt)."
-    sleep 8
+    if [ -f "setup/$SETUP" ]; then
+      pm_show_error "Hollow Knight is not set up yet. Put GOG's Linux installer, or the game folder from GOG or Steam, in ports/hollowknight/gamedata and launch again. A setup that stopped continues from there (log: ports/hollowknight/patchlog.txt)." --title "Setup needed"
+    else
+      pm_show_error "Hollow Knight's setup files are missing (older releases removed them after the setup). Install the port again from PortMaster, put GOG's Linux installer, or the game folder from GOG or Steam, in ports/hollowknight/gamedata and launch again." --title "Setup needed"
+    fi
     pm_finish
     exit 1
   fi
 fi
-rm -rf setup donor gamedata/.setup gamedata/.setup64   # the setup's files, not needed to play
+rm -rf gamedata/.setup gamedata/.setup64   # a finished setup's work folders
 
 export SDL_GAMECONTROLLERCONFIG="${SDL_GAMECONTROLLERCONFIG:-$sdl_controllerconfig}"
-# the bottom button jumps on every firmware: muOS's Retro button layout (its default; Modern is by
-# position) names the buttons by their printed letters (a = A, on the right), so A/B and X/Y swap back
+# the bottom button always jumps: muOS's Retro layout maps by printed letter (a = A, right), so A/B, X/Y swap back
 [ "$CFW_NAME" = muOS ] && case "$(readlink "$SDL_GAMECONTROLLERCONFIG_FILE" 2>/dev/null)" in *retro.txt)
   SDL_GAMECONTROLLERCONFIG=$(printf '%s\n' "$SDL_GAMECONTROLLERCONFIG" | sed 's/,a:/,@:/; s/,b:/,a:/; s/,@:/,b:/; s/,x:/,@:/; s/,y:/,x:/; s/,@:/,y:/') ;; esac
 [ "$HK_ROUTE" = 64 ] && export UM_PMHWDEC=pmhwdec64/libpmhwdec.so.1
@@ -89,8 +87,7 @@ case "$(cat buttons.txt 2>/dev/null)" in nintendo) export UA_PAD_LETTERS=nintend
 # settings that need a code patch or step of the setup stay off without it (the setup lists them in $READY)
 grep -qs hk-render-size "$READY" || export UA_RENDER_SIZE_VAR=
 grep -qs "convert=lazy" "$READY" || export UA_UNLOAD_ASSETS=
-# port.env gives back the other languages' fonts after the start, not for a game saved in (or not yet
-# set to) a language that uses them
+# port.env gives the other languages' fonts back after the start, unless the game uses them (or has no language yet)
 case "$(awk -F'\t' '$1 == "s" && $2 == "M2H_lastLanguage" { print $3 }' \
          "$GAME/data/shared_prefs/com.pmunity.hollowknight.v2.playerprefs.prefs" 2>/dev/null | tail -n 1)" in
   ""|JA|KO|ZH|ZH_TW|RU) export UA_UNLOAD_ASSETS= ;;
