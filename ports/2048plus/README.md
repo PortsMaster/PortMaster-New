@@ -4,13 +4,15 @@ Source Code: [GitHub Repository](https://github.com/saitamasahil/2048plus)
 
 ## Features
 
-- **Game Modes**: Classic, Plus Mode with Bomb, Swap, and Undo powerups, and 4 Arcade Modes — Time Attack, 5x5 Huge, No Mercy, and Goose.
-- **Store & Customization**: In-game Store with Coins currency, Cat & Dog pet companions, board skins, unlockable themes, and more.
-- **Achievements & Stats**: Many unlockable achievements and comprehensive stats tracking.
-- **Jukebox & Wireless Music Manager**: In-game music player with audio visualizer, seeking, shuffle, and a built-in wireless web server to manage, upload, and stream custom music tracks directly from your Phone or PC over Wi-Fi.
-- **Quality of Life**: Auto-save & resume after every move, interactive pause menu with active perks HUD, and instant theme switching.
+- **Multiple Game Modes**: Classic 2048, Plus mode with powerups like Undo, Swap, and Bomb, and Arcade modes including Time Attack, 5x5 Huge, No Mercy, and Goose.
+- **Theme Studio**: Design and save your own custom themes by picking base tones, styles, hues, and vibrancy, with a live board preview and quick randomizer.
+- **Customization & Companions**: Unlock lots of themes, board materials like wood and marble, and animated cat and dog companions that hang out while you play.
+- **In-Game Store**: Earn coins just by playing and use them to unlock themes, board skins, and upgrades.
+- **Achievements & Stats**: Plenty of achievements to unlock and stats tracking your high scores and records.
+- **Jukebox & Wi-Fi Music Manager**: Listen to background music with an audio visualizer, or easily upload your own songs from your phone or PC over local Wi-Fi.
+- **Built for Handhelds**: Auto-saves after every move, smooth controller navigation, haptics, and fast theme switching.
 
-*Note: Perhaps a well-known secret sequence of buttons might reveal something special...?*
+*Note: There might also be a secret minigame hidden behind a classic button code...*
 
 ## Controls
 
