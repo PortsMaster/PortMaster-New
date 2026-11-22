@@ -1,0 +1,542 @@
+diff --git a/src/config.c b/src/config.c
+index a6f7f93..5f9c03a 100644
+--- a/src/config.c
++++ b/src/config.c
+@@ -259,6 +259,7 @@ void omni_config_defaults(OmniConfig *config)
+     config->buffer_limit = OMNI_DEFAULT_BUFFER_LIMIT;
+     config->open_backspace_count = 0;
+     config->emit_return = 0;
++    config->pad = 0;
+     strcpy(config->charset_specs[0], "lower");
+     strcpy(config->charset_specs[1], "upper");
+     strcpy(config->charset_specs[2], "number");
+@@ -325,6 +326,7 @@ int omni_config_load(OmniConfig *config)
+                                                OMNI_MAX_OPEN_BACKSPACE_COUNT, "OMNI_OPEN_BACKSPACE_COUNT");
+     /* Unset: buffered confirms its submit with Return; instant leaves confirming to the player. */
+     config->emit_return = parse_bool(env_value("OMNI_EMIT_RETURN"), config->mode == OMNI_MODE_BUFFERED, "OMNI_EMIT_RETURN");
++    config->pad = parse_bool(env_value("OMNI_PAD"), 0, "OMNI_PAD");
+     parse_charsets(config, env_value("OMNI_CHARSETS"));
+     parse_choice(env_value("OMNI_STYLE"), "OMNI_STYLE", styles, 3, 0, &choice);
+     config->style = (OmniStyle)choice;
+diff --git a/src/config.h b/src/config.h
+index ddbf235..bcec64b 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -88,6 +88,7 @@ typedef struct OmniConfig {
+     size_t buffer_limit;
+     size_t open_backspace_count;
+     int emit_return;
++    int pad;
+     char charset_specs[OMNI_MAX_PAGES][OMNI_MAX_PAGE_SPEC];
+     size_t charset_count;
+     OmniAnchor anchor;
+diff --git a/src/generated_events.c b/src/generated_events.c
+index a77cf19..0cc4308 100644
+--- a/src/generated_events.c
++++ b/src/generated_events.c
+@@ -142,6 +142,24 @@ static int ascii_key(char character, SDL_Keycode *key, SDL_Keymod *mod)
+     }
+ }
+ 
++int omni_generated_key_char(SDL_Keycode key, SDL_Keymod mod)
++{
++    int shifted = (mod & KMOD_SHIFT) != 0;
++    int character;
++    if (key == SDLK_BACKSPACE || key == SDLK_RETURN) {
++        return (int)key;
++    }
++    for (character = ' '; character <= '~'; ++character) {
++        SDL_Keycode candidate;
++        SDL_Keymod candidate_mod;
++        if (ascii_key((char)character, &candidate, &candidate_mod) && candidate == key &&
++            ((candidate_mod & KMOD_SHIFT) != 0) == shifted) {
++            return character;
++        }
++    }
++    return 0;
++}
++
+ static void fill_key_event(SDL_Event *event, Uint32 type, SDL_Keycode key, SDL_Keymod mod, Uint32 window_id)
+ {
+     memset(event, 0, sizeof(*event));
+diff --git a/src/generated_events.h b/src/generated_events.h
+index 14335ee..0f6ab09 100644
+--- a/src/generated_events.h
++++ b/src/generated_events.h
+@@ -28,6 +28,9 @@ int omni_generated_ascii(OmniGeneratedQueue *queue, char character, int key_styl
+ int omni_generated_text(OmniGeneratedQueue *queue, const char *text, Uint32 window_id);
+ int omni_generated_commit(OmniGeneratedQueue *queue, Uint32 window_id);
+ int omni_generated_backspace(OmniGeneratedQueue *queue, Uint32 window_id);
++/* The character a generated key press stands for (0 if none), for targets
++ * that read SDL 1.2's keysym.unicode. */
++int omni_generated_key_char(SDL_Keycode key, SDL_Keymod mod);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/imgui_bridge.cpp b/src/imgui_bridge.cpp
+index 488f084..0c4248a 100644
+--- a/src/imgui_bridge.cpp
++++ b/src/imgui_bridge.cpp
+@@ -84,6 +84,7 @@ extern "C" int omni_imgui_gl_begin(SDL_Window *window, OmniRuntime *runtime)
+         glsl_version = major >= 3 ? "#version 300 es" : "#version 100";
+         IMGUI_CHECKVERSION();
+         ImGui::CreateContext();
++        ImGui::GetIO().IniFilename = nullptr;
+         ImGui::StyleColorsDark();
+         configure_font(runtime->config, window, nullptr);
+         if (!ImGui_ImplSDL2_InitForOpenGL(window, runtime->context) ||
+@@ -145,6 +146,7 @@ extern "C" int omni_imgui_renderer_begin(SDL_Renderer *renderer, OmniRuntime *ru
+     if (!renderer_ready) {
+         IMGUI_CHECKVERSION();
+         ImGui::CreateContext();
++        ImGui::GetIO().IniFilename = nullptr;
+         ImGui::StyleColorsDark();
+         configure_font(runtime->config, runtime->window, renderer);
+         if (!ImGui_ImplSDL2_InitForSDLRenderer(runtime->window, renderer) ||
+diff --git a/src/input_sdl.c b/src/input_sdl.c
+index a295de4..54aef4e 100644
+--- a/src/input_sdl.c
++++ b/src/input_sdl.c
+@@ -161,7 +161,16 @@ int omni_sdl_input_handle(OmniSdlInput *input, const OmniConfig *config,
+              * events (e.g. a gptokeyb left-stick-as-mouse-movement mapping)
+              * would otherwise keep receiving them underneath the overlay,
+              * moving the player around while the user thinks they're only
+-             * navigating the keyboard. */
++             * navigating the keyboard. A left click presses the focused key
++             * and a right click deletes, so a port whose A/B buttons are
++             * mouse clicks can still type and close the overlay. Acting on
++             * release keeps the button-up of a closing click away from the game. */
++            if (event->type == SDL_MOUSEBUTTONUP &&
++                (event->button.button == SDL_BUTTON_LEFT || event->button.button == SDL_BUTTON_RIGHT)) {
++                model_result = omni_osk_model_apply(model, event->button.button == SDL_BUTTON_LEFT
++                                                               ? OMNI_ACTION_CONFIRM : OMNI_ACTION_BACKSPACE);
++                emit_model_result(config, model, generated, &model_result, event->button.windowID, text_input_enabled);
++            }
+             return 1;
+         }
+         return model->active && (event->type == SDL_TEXTINPUT || event->type == SDL_TEXTEDITING);
+diff --git a/src/preload.c b/src/preload.c
+index 64fba75..aa2b78b 100644
+--- a/src/preload.c
++++ b/src/preload.c
+@@ -17,6 +17,15 @@
+ #include <dlfcn.h>
+ 
+ static OmniRuntime runtime;
++
++/* For a game that polls its gamepad (SDL_GameControllerGetButton/GetAxis)
++ * instead of only reading events: look this up with
++ * dlsym(RTLD_DEFAULT, "omni_osk_is_open") and ignore the pad while it
++ * returns nonzero. */
++int omni_osk_is_open(void)
++{
++    return omni_runtime_active(&runtime);
++}
+ static OmniSymbols symbols;
+ static pthread_once_t symbols_once = PTHREAD_ONCE_INIT;
+ static _Thread_local int initializing;
+@@ -67,9 +76,11 @@ static int process_event(SDL_Event *event)
+                 break;
+             case OMNI_SDL12_EVENT_MOUSEBUTTONDOWN:
+                 synth.type = SDL_MOUSEBUTTONDOWN;
++                synth.button.button = (Uint8)decoded.button;
+                 break;
+             case OMNI_SDL12_EVENT_MOUSEBUTTONUP:
+                 synth.type = SDL_MOUSEBUTTONUP;
++                synth.button.button = (Uint8)decoded.button;
+                 break;
+             default: {
+                 SDL_Keycode key = decoded.key_name[0] != '\0' ? SDL_GetKeyFromName(decoded.key_name) : SDLK_UNKNOWN;
+@@ -111,9 +122,9 @@ static int process_event(SDL_Event *event)
+  * "gap" already synthesizes a clean release, no need to model SDL 1.2's
+  * actual release timing.
+  *
+- * This is the *only* place runtime.generated gets drained for a bridge
+- * build (see pop_generated_dispatch() below, which deliberately never
+- * touches it): amuletsarmor's WindowsUpdateEvents() drains SDL_PollEvent
++ * Once a game has called SDL_GetKeyState(), this is the *only* place
++ * runtime.generated gets drained for a bridge build (pop_generated_bridge()
++ * below stops touching it): amuletsarmor's WindowsUpdateEvents() drains SDL_PollEvent
+  * every frame *before* calling KeyboardUpdate() (confirmed in main.c), so
+  * an event-queue-based drain would win that race and silently steal
+  * characters before this combo mechanism ever saw them. Writing OmniOSK's
+@@ -179,17 +190,73 @@ static void refill_combo_queue(void)
+ }
+ #endif
+ 
++#ifdef OMNI_HAVE_SDL12_BRIDGE
++/* Set once the game calls SDL_GetKeyState(). Such a game (amuletsarmor)
++ * gets typed text through the combo mechanism above, and the event queue
++ * must not drain runtime.generated as well (see that comment). */
++static int game_polls_key_state;
++/* A game that never polls key state (Berusky 2) reads typed text from
++ * SDL_KEYDOWN's keysym.unicode instead, so generated keys are written into
++ * its own SDL 1.2 event buffer. Berusky 2 pumps events several times per
++ * frame and only accepts a letter while the key still counts as held, so
++ * each press is held for a moment like a real key before its release. */
++#define OMNI_BRIDGE_KEY_HOLD_MS 60
++static Uint32 bridge_hold_until;
++static int bridge_holding;
++static OmniGeneratedQueue bridge_text_keys;
++
++static int pop_generated_bridge(SDL_Event *target)
++{
++    SDL_Event event;
++    int down;
++    if (game_polls_key_state) {
++        return 0;
++    }
++    if (bridge_holding) {
++        if ((Sint32)(SDL_GetTicks() - bridge_hold_until) < 0) {
++            return 0;
++        }
++        bridge_holding = 0;
++    }
++    for (;;) {
++        if (!omni_generated_pop(&bridge_text_keys, &event)) {
++            if (!omni_runtime_pop_generated(&runtime, &event)) {
++                return 0;
++            }
++            if (event.type == SDL_TEXTINPUT) {
++                const char *p;
++                for (p = event.text.text; *p != '\0'; ++p) {
++                    (void)omni_generated_ascii(&bridge_text_keys, *p, 1, 0);
++                }
++                continue;
++            }
++        }
++        if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
++            break;
++        }
++    }
++    down = event.type == SDL_KEYDOWN;
++    omni_sdl12_bridge_encode_key(target, down,
++                                 (int)omni_sdl12_equivalent(event.key.keysym.sym),
++                                 (int)event.key.keysym.mod,
++                                 down ? (unsigned short)omni_generated_key_char(event.key.keysym.sym,
++                                                                                (SDL_Keymod)event.key.keysym.mod)
++                                      : 0);
++    if (down && event.key.keysym.sym != SDLK_LSHIFT) {
++        bridge_hold_until = SDL_GetTicks() + OMNI_BRIDGE_KEY_HOLD_MS;
++        bridge_holding = 1;
++    }
++    return 1;
++}
++#endif
++
+ static int pop_generated_dispatch(SDL_Event *target)
+ {
+ #ifdef OMNI_HAVE_SDL12_BRIDGE
+-    /* Never drain runtime.generated from here for a bridge target -
+-     * delivery happens exclusively through SDL_GetKeyState()'s
+-     * combo-injection mechanism (refill_combo_queue() above), which is
+-     * what amuletsarmor's own text entry actually reads. See that
+-     * function's own comment for why draining here too would race it and
+-     * also reintroduce a real stack-buffer-overflow crash. */
+-    (void)target;
+-    return 0;
++    /* Never write runtime.generated's SDL2-shaped events into a bridge
++     * caller's smaller SDL 1.2 buffer (a real stack-buffer overflow on
++     * amuletsarmor); pop_generated_bridge() re-encodes them instead. */
++    return pop_generated_bridge(target);
+ #else
+     return omni_runtime_pop_generated(&runtime, target);
+ #endif
+@@ -511,6 +578,30 @@ int SDL_Flip(void *screen)
+     return real_fn != NULL ? real_fn(screen) : -1;
+ }
+ 
++/* SDL_OPENGL games (Berusky 2) present with SDL_GL_SwapBuffers, whose
++ * SDL_GL_SwapWindow call is internal to sdl12-compat. Draw the overlay into
++ * the game's finished frame here, then let the one real swap show both. */
++typedef void (*OmniSdl12GlSwapBuffersFn)(void);
++
++void SDL_GL_SwapBuffers(void)
++{
++    static OmniSdl12GlSwapBuffersFn real_fn;
++    ensure_initialized();
++    if (real_fn == NULL) {
++        real_fn = (OmniSdl12GlSwapBuffersFn)dlsym(RTLD_NEXT, "SDL_GL_SwapBuffers");
++    }
++    real_present_hook_seen = 1;
++    if (omni_runtime_active(&runtime) && runtime.context != NULL) {
++        SDL_Window *window = SDL_GL_GetCurrentWindow();
++        if (window != NULL) {
++            (void)omni_render_gl(window, &runtime);
++        }
++    }
++    if (real_fn != NULL) {
++        real_fn();
++    }
++}
++
+ /* AmuletsArmor (and old SDL 1.2-era games generally) don't read keyboard
+  * input from the event queue at all for their main gameplay loop - they
+  * poll SDL_GetKeyState() every frame instead (KEYBOARD.C's KeyboardUpdate()
+@@ -558,6 +649,7 @@ Uint8 *SDL_GetKeyState(int *numkeys)
+     int active_now;
+     int i;
+     ensure_initialized();
++    game_polls_key_state = 1;
+     if (real_fn == NULL) {
+         real_fn = (OmniSdl12GetKeyStateFn)dlsym(RTLD_NEXT, "SDL_GetKeyState");
+     }
+diff --git a/src/runtime.c b/src/runtime.c
+index 343aad9..2eae8a3 100644
+--- a/src/runtime.c
++++ b/src/runtime.c
+@@ -218,9 +218,100 @@ static void sync_vsync_to_active_state(OmniRuntime *runtime)
+ }
+ #endif
+ 
++/* OMNI_PAD=1: for games that read the gamepad natively. The left trigger
++ * toggles the overlay, and while it is open the d-pad and face buttons drive
++ * it through the configured keys. Every controller/joystick event is
++ * swallowed while open, so the game doesn't act on the same presses. */
++enum { OMNI_PAD_PASS, OMNI_PAD_SWALLOW, OMNI_PAD_KEY };
++
++static SDL_Keycode pad_button_key(const OmniConfig *config, int button)
++{
++    switch (button) {
++        case SDL_CONTROLLER_BUTTON_DPAD_UP: return config->up_key;
++        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return config->down_key;
++        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return config->left_key;
++        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return config->right_key;
++        case SDL_CONTROLLER_BUTTON_A: return config->confirm_key;
++        case SDL_CONTROLLER_BUTTON_B: return config->backspace_key;
++        case SDL_CONTROLLER_BUTTON_Y: return config->charset_key;
++        case SDL_CONTROLLER_BUTTON_X: return config->shift_key;
++        default: return SDLK_UNKNOWN;
++    }
++}
++
++static void pad_synth_key(SDL_Event *out, SDL_Keycode key, int down)
++{
++    memset(out, 0, sizeof(*out));
++    out->type = down ? SDL_KEYDOWN : SDL_KEYUP;
++    out->key.type = out->type;
++    out->key.timestamp = SDL_GetTicks();
++    out->key.state = down ? SDL_PRESSED : SDL_RELEASED;
++    out->key.keysym.sym = key;
++    out->key.keysym.scancode = SDL_GetScancodeFromKey(key);
++}
++
++static int pad_translate(OmniRuntime *runtime, const SDL_Event *event, SDL_Event *out)
++{
++    const OmniConfig *config = &runtime->config;
++    int active = runtime->model.active;
++    switch (event->type) {
++        case SDL_CONTROLLERAXISMOTION:
++            if (event->caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) {
++                int down = runtime->pad_trigger_down ? event->caxis.value > 8000 : event->caxis.value > 16000;
++                if (down == runtime->pad_trigger_down) {
++                    return OMNI_PAD_SWALLOW;
++                }
++                runtime->pad_trigger_down = down;
++                pad_synth_key(out, config->toggle_key, down);
++                return OMNI_PAD_KEY;
++            }
++            return active ? OMNI_PAD_SWALLOW : OMNI_PAD_PASS;
++        case SDL_CONTROLLERBUTTONDOWN:
++        case SDL_CONTROLLERBUTTONUP: {
++            int button = event->cbutton.button;
++            int down = event->type == SDL_CONTROLLERBUTTONDOWN;
++            SDL_Keycode key;
++            if (button < 0 || button >= SDL_CONTROLLER_BUTTON_MAX) {
++                return active ? OMNI_PAD_SWALLOW : OMNI_PAD_PASS;
++            }
++            if (down) {
++                if (!active) {
++                    return OMNI_PAD_PASS;
++                }
++                runtime->pad_held[button] = 1;
++            } else {
++                if (!runtime->pad_held[button]) {
++                    /* pressed before the overlay opened: the game saw the press, let it see the release */
++                    return OMNI_PAD_PASS;
++                }
++                runtime->pad_held[button] = 0;
++                if (!active) {
++                    return OMNI_PAD_SWALLOW;
++                }
++            }
++            key = pad_button_key(config, button);
++            if (key == SDLK_UNKNOWN) {
++                return OMNI_PAD_SWALLOW;
++            }
++            pad_synth_key(out, key, down);
++            return OMNI_PAD_KEY;
++        }
++        case SDL_JOYAXISMOTION:
++        case SDL_JOYBALLMOTION:
++        case SDL_JOYHATMOTION:
++        case SDL_JOYBUTTONDOWN:
++        case SDL_JOYBUTTONUP:
++            return active ? OMNI_PAD_SWALLOW : OMNI_PAD_PASS;
++        default:
++            return OMNI_PAD_PASS;
++    }
++}
++
+ int omni_runtime_process_event(OmniRuntime *runtime, SDL_Event *event, int text_enabled)
+ {
+     int result;
++    int pad_swallow = 0;
++    SDL_Event pad_event;
+     if (!omni_runtime_ensure(runtime) || runtime->state != OMNI_RUNTIME_READY) {
+         return 0;
+     }
+@@ -230,6 +321,16 @@ int omni_runtime_process_event(OmniRuntime *runtime, SDL_Event *event, int text_
+         return 0;
+     }
+     discover_presentation(runtime);
++    if (runtime->config.pad) {
++        int pad = pad_translate(runtime, event, &pad_event);
++        if (pad == OMNI_PAD_SWALLOW) {
++            return 1;
++        }
++        if (pad == OMNI_PAD_KEY) {
++            event = &pad_event;
++            pad_swallow = 1;
++        }
++    }
+     if (!runtime->model.active && event->type == SDL_KEYDOWN &&
+         (event->key.keysym.sym == runtime->config.toggle_key ||
+          event->key.keysym.sym == omni_sdl12_equivalent(runtime->config.toggle_key)) &&
+@@ -248,7 +349,7 @@ int omni_runtime_process_event(OmniRuntime *runtime, SDL_Event *event, int text_
+ #ifdef OMNI_HAVE_SDL12_BRIDGE
+     sync_vsync_to_active_state(runtime);
+ #endif
+-    return result;
++    return result || pad_swallow;
+ }
+ 
+ int omni_runtime_pop_generated(OmniRuntime *runtime, SDL_Event *event)
+@@ -293,6 +394,17 @@ static void discover_presentation(OmniRuntime *runtime)
+         return;
+     }
+     omni_runtime_set_window(runtime, window);
++    /* An SDL_OPENGL video mode has no renderer; creating one would take the
++     * window away from the game's GL context. Draw through that context. */
++    if ((SDL_GetWindowFlags(window) & SDL_WINDOW_OPENGL) != 0) {
++        SDL_GLContext context = SDL_GL_GetCurrentContext();
++        if (context == NULL || SDL_GL_GetCurrentWindow() != window) {
++            return;
++        }
++        omni_diag_once(34, OMNI_LOG_INFO, "presentation discovery adopted the current OpenGL context on the discovered window");
++        omni_runtime_set_context(runtime, context);
++        return;
++    }
+     renderer = SDL_GetRenderer(window);
+     if (renderer == NULL) {
+         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+diff --git a/src/runtime.h b/src/runtime.h
+index 3ae0c42..0ca144b 100644
+--- a/src/runtime.h
++++ b/src/runtime.h
+@@ -29,6 +29,8 @@ typedef struct OmniRuntime {
+     SDL_GLContext context;
+     int initialized;
+     int evdev_enabled;
++    int pad_trigger_down;
++    Uint8 pad_held[SDL_CONTROLLER_BUTTON_MAX];
+ } OmniRuntime;
+ 
+ int omni_runtime_ensure(OmniRuntime *runtime);
+diff --git a/src/sdl12_bridge.c b/src/sdl12_bridge.c
+index 8bfb92e..6e524c1 100644
+--- a/src/sdl12_bridge.c
++++ b/src/sdl12_bridge.c
+@@ -31,12 +31,26 @@ void omni_sdl12_bridge_decode(const void *raw_event, OmniSdl12Decoded *out)
+             break;
+         case SDL_MOUSEBUTTONDOWN:
+             out->kind = OMNI_SDL12_EVENT_MOUSEBUTTONDOWN;
++            out->button = event->button.button;
+             break;
+         case SDL_MOUSEBUTTONUP:
+             out->kind = OMNI_SDL12_EVENT_MOUSEBUTTONUP;
++            out->button = event->button.button;
+             break;
+         default:
+             out->kind = OMNI_SDL12_EVENT_OTHER;
+             break;
+     }
+ }
++
++void omni_sdl12_bridge_encode_key(void *raw_event, int down, int sym, int mod, unsigned short unicode)
++{
++    SDL_Event *event = (SDL_Event *)raw_event;
++    memset(event, 0, sizeof(*event));
++    event->type = down ? SDL_KEYDOWN : SDL_KEYUP;
++    event->key.type = event->type;
++    event->key.state = down ? SDL_PRESSED : SDL_RELEASED;
++    event->key.keysym.sym = (SDLKey)sym;
++    event->key.keysym.mod = (SDLMod)mod;
++    event->key.keysym.unicode = down ? unicode : 0;
++}
+diff --git a/src/sdl12_bridge.h b/src/sdl12_bridge.h
+index 0a477b4..e6a5749 100644
+--- a/src/sdl12_bridge.h
++++ b/src/sdl12_bridge.h
+@@ -35,6 +35,8 @@ typedef struct {
+      * genuinely correct SDL2 keysym - no hardcoded per-version value table
+      * needed on either side. */
+     char key_name[32];
++    /* Mouse button number for MOUSEBUTTONDOWN/UP (1 left, 3 right, as in SDL2). */
++    int button;
+ } OmniSdl12Decoded;
+ 
+ /* raw_event must point at a buffer of at least sizeof(SDL_Event) bytes as
+@@ -46,6 +48,11 @@ typedef struct {
+  */
+ void omni_sdl12_bridge_decode(const void *raw_event, OmniSdl12Decoded *out);
+ 
++/* Writes a keyboard event in real SDL 1.2 layout into raw_event, which must
++ * be the caller's own SDL 1.2 SDL_Event buffer. sym and mod are SDL 1.2
++ * values; unicode is only stored for a key press, as SDL 1.2 does. */
++void omni_sdl12_bridge_encode_key(void *raw_event, int down, int sym, int mod, unsigned short unicode);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/tests/unit/test_sdl_events.c b/tests/unit/test_sdl_events.c
+index fec8b95..55bd494 100644
+--- a/tests/unit/test_sdl_events.c
++++ b/tests/unit/test_sdl_events.c
+@@ -171,5 +171,36 @@ int main(void)
+     CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 1);
+     CHECK(model.active == 1);
+ 
++    /* Mouse clicks while open: left release types the focused key, right
++     * release deletes, button presses are only swallowed. */
++    omni_generated_clear(&generated);
++    memset(&event, 0, sizeof(event));
++    event.type = SDL_MOUSEBUTTONDOWN;
++    event.button.button = SDL_BUTTON_LEFT;
++    CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 1);
++    CHECK(omni_generated_empty(&generated));
++    event.type = SDL_MOUSEBUTTONUP;
++    CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 1);
++    CHECK(omni_generated_pop(&generated, &event) == 1 && event.type == SDL_TEXTINPUT && strcmp(event.text.text, "a") == 0);
++    omni_generated_clear(&generated);
++    memset(&event, 0, sizeof(event));
++    event.type = SDL_MOUSEBUTTONUP;
++    event.button.button = SDL_BUTTON_RIGHT;
++    CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 1);
++    CHECK(omni_generated_pop(&generated, &event) == 1 && event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKSPACE);
++    for (size_t i = 0; i < model.item_count; ++i) {
++        if (model.items[i].kind == OMNI_ITEM_CLOSE) {
++            model.focus = i;
++        }
++    }
++    omni_generated_clear(&generated);
++    memset(&event, 0, sizeof(event));
++    event.type = SDL_MOUSEBUTTONUP;
++    event.button.button = SDL_BUTTON_LEFT;
++    CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 1);
++    CHECK(model.active == 0);
++    event.type = SDL_MOUSEBUTTONDOWN;
++    CHECK(omni_sdl_input_handle(&input, &config, &model, &generated, &event, 1) == 0);
++
+     return 0;
+ }

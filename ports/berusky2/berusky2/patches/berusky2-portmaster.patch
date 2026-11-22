@@ -1,0 +1,213 @@
+diff --git a/configure.ac b/configure.ac
+index 90092a4..cd5b53d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -30,14 +30,10 @@ PKG_CHECK_MODULES(SDL, [sdl SDL_image])
+ AC_SUBST(SDL_CFLAGS)
+ AC_SUBST(SDL_LIBS)
+ 
+-PKG_CHECK_MODULES(OPENGL, [gl glu])
++PKG_CHECK_MODULES(OPENGL, [gl])
+ AC_SUBST(OPENGL_CFLAGS)
+ AC_SUBST(OPENGL_LIBS)
+ 
+-PKG_CHECK_MODULES(X11, [x11])
+-AC_SUBST(X11_CFLAGS)
+-AC_SUBST(X11_LIBS)
+-
+ PKG_CHECK_MODULES(ZLIB, [zlib])
+ AC_SUBST(ZLIB_CFLAGS)
+ AC_SUBST(ZLIB_LIBS)
+@@ -46,9 +42,9 @@ PKG_CHECK_MODULES(SOUND, [openal freealut vorbisfile])
+ AC_SUBST(SOUND_CFLAGS)
+ AC_SUBST(SOUND_LIBS)
+ 
+-CFLAGS="$CFLAGS $SDL_CFLAGS $OPENGL_CFLAGS $X11_CFLAGS $SOUND_CFLAGS $ZLIB_CFLAGS"
+-CXXFLAGS="$CXXFLAGS $SDL_CFLAGS $OPENGL_CFLAGS $X11_CFLAGS $SOUND_CFLAGS $ZLIB_CFLAGS"
+-LDFLAGS="$LDFLAGS $SDL_LIBS $OPENGL_LIBS $X11_LIBS $SOUND_LIBS $ZLIB_LIBS"
++CFLAGS="$CFLAGS $SDL_CFLAGS $OPENGL_CFLAGS $SOUND_CFLAGS $ZLIB_CFLAGS"
++CXXFLAGS="$CXXFLAGS $SDL_CFLAGS $OPENGL_CFLAGS $SOUND_CFLAGS $ZLIB_CFLAGS"
++LDFLAGS="$LDFLAGS $SDL_LIBS $OPENGL_LIBS $SOUND_LIBS $ZLIB_LIBS"
+ 
+ # https://github.com/stransky/berusky2/issues/23
+ LDFLAGS="$LDFLAGS -lpthread"
+diff --git a/src/age/graph/graph3d.cpp b/src/age/graph/graph3d.cpp
+index ae09a56..7fe40ec 100644
+--- a/src/age/graph/graph3d.cpp
++++ b/src/age/graph/graph3d.cpp
+@@ -35,6 +35,10 @@
+ 
+ #include "age.h"
+ 
++#ifdef PORTMASTER
++void ShowCursor(bool state);
++#endif
++
+ // -------------------------------------------------------
+ //   Graphics config
+ // -------------------------------------------------------
+@@ -115,7 +119,11 @@ void graph3d::config_draw_console(bool state)
+ void graph3d::config_draw_mouse_cursor(bool state)
+ {
+   config.draw_mouse_cursor = state;
++#ifdef PORTMASTER
++  ShowCursor(!state);
++#else
+   SDL_ShowCursor(!state);
++#endif
+ }
+ 
+ void graph3d::config_draw_pivots(bool state)
+diff --git a/src/age/graph/print.cpp b/src/age/graph/print.cpp
+index 954be28..7b976a1 100644
+--- a/src/age/graph/print.cpp
++++ b/src/age/graph/print.cpp
+@@ -29,7 +29,13 @@
+ 
+ #define TEXT_BUFFER_LEN 1000
+ 
+-#ifdef LINUX
++#if defined(LINUX) && defined(PORTMASTER)
++
++void grf_print::font_create(void)
++{
++}
++
++#elif defined(LINUX)
+ 
+ void grf_print::font_create(void)
+ {
+diff --git a/src/age/include/opengl.h b/src/age/include/opengl.h
+index aac261e..0db2058 100644
+--- a/src/age/include/opengl.h
++++ b/src/age/include/opengl.h
+@@ -32,7 +32,45 @@
+ 
+ #ifdef LINUX
+   #include <GL/glu.h>
++#ifndef PORTMASTER
+   #include <GL/glx.h>
++#endif
+ #endif // LINUX
+ 
++#ifdef PORTMASTER
++#include <stdlib.h>
++#include <string.h>
++
++// GLU is the only user of libOpenGL.so.0 (GLVND), which gl4es does not provide.
++static inline GLint pm_gluBuild1DMipmaps(GLenum target, GLint internal_format,
++                                         GLsizei width, GLenum format,
++                                         GLenum type, const void *data)
++{
++  if (format != GL_RGBA || type != GL_UNSIGNED_BYTE || width <= 0 || !data)
++    return GL_INVALID_ENUM;
++
++  unsigned char *level = (unsigned char *) malloc(width * 4);
++  if (!level)
++    return GL_OUT_OF_MEMORY;
++  memcpy(level, data, width * 4);
++
++  GLint i = 0;
++  glTexImage1D(target, i, internal_format, width, 0, format, type, level);
++  while (width > 1) {
++    GLsizei next = width / 2;
++    for (GLsizei x = 0; x < next; x++) {
++      for (int c = 0; c < 4; c++) {
++        level[x * 4 + c] = (level[x * 8 + c] + level[x * 8 + 4 + c] + 1) / 2;
++      }
++    }
++    width = next;
++    glTexImage1D(target, ++i, internal_format, width, 0, format, type, level);
++  }
++
++  free(level);
++  return 0;
++}
++#define gluBuild1DMipmaps pm_gluBuild1DMipmaps
++#endif // PORTMASTER
++
+ #endif //__OPENGL_H__
+diff --git a/src/komat/Berusky3d.cpp b/src/komat/Berusky3d.cpp
+index 9664123..43a4d2d 100644
+--- a/src/komat/Berusky3d.cpp
++++ b/src/komat/Berusky3d.cpp
+@@ -1156,6 +1156,19 @@ void ber_klavesy_hra(G_KONFIG * p_ber)
+       p_ber->ref_rot = TRUE;
+     }
+ 
++#ifdef PORTMASTER
++    // right stick free look: Home/End/PageUp/PageDown rotate like the screen-edge mouse rotation
++    {
++      int rx = (key[K_END] ? 1 : 0) - (key[K_HOME] ? 1 : 0);
++      int ry = (key[K_PGDN] ? 1 : 0) - (key[K_PGUP] ? 1 : 0);
++      if ((rx || ry) && !key[p_ber->conf_r_key] && !key[p_ber->conf_p_key]) {
++        ber_ovladani_mysi_rotace(p_ber, rx, ry);
++        p_ber->ref_zmena = TRUE;
++        p_ber->sflag1 |= SFL_ROTACE;
++      }
++    }
++#endif
++
+     if (key[K_PLUS] || key[K_MINUS]) {
+       ber_prikaz_scena_zoom(key[K_PLUS] ? -1 : 1);
+       p_ber->ref_zmena = TRUE;
+diff --git a/src/komat/Ddx.cpp b/src/komat/Ddx.cpp
+index 9f78041..2a50a89 100644
+--- a/src/komat/Ddx.cpp
++++ b/src/komat/Ddx.cpp
+@@ -239,6 +239,9 @@ void nastav_konfig(HW_KONFIG * p_hwconf, TXT_KONFIG * p_txt)
+ int nahraj_device_config(char *p_file, char *p_sekce)
+ {
+   hwconf.fullscreen = GetPrivateProfileInt(p_sekce, "fullscreen", 0, p_file);
++#ifdef PORTMASTER
++  hwconf.fullscreen = TRUE;
++#endif
+ 
+   // 0 in p_conf->xres, p_conf->yres and p_conf->bpp means use current
+   // screen resolution and color depth
+@@ -498,6 +501,12 @@ void rozeber_chybu(void)
+  * or for port-specific comments, questions, bugreports etc. 
+  * email to leggett@eecs.tulane.edu
+  */
++#ifdef PORTMASTER
++void BuildFont(void)
++{
++  hwconf.font_baze = glGenLists(96);
++}
++#else
+ void BuildFont(void)            // Build Our Bitmap Font
+ {
+   Display *dpy;                 /* Our current X display */
+@@ -533,6 +542,7 @@ void BuildFont(void)            // Build Our Bitmap Font
+   /* close the display now that we're done with it */
+   XCloseDisplay(dpy);
+ }
++#endif
+ 
+ void KillFont(void)             // Delete The Font
+ {
+diff --git a/src/tmp/compat.cpp b/src/tmp/compat.cpp
+index 6ee5146..a8fbc3e 100644
+--- a/src/tmp/compat.cpp
++++ b/src/tmp/compat.cpp
+@@ -628,7 +628,20 @@ int WideCharToMultiByte(int CodePage, int dwFlags, wchar_t * lpWideCharStr,
+ 
+ void ShowCursor(bool state)
+ {
++#ifdef PORTMASTER
++  // sdl12-compat turns a hidden cursor in fullscreen into relative mouse mode, which
++  // loses the pointer at the screen edges under sway; hide it with a blank shape instead
++  static SDL_Cursor *blank, *normal;
++  static Uint8 zero[4];
++  if (!blank) {
++    normal = SDL_GetCursor();
++    blank = SDL_CreateCursor(zero, zero, 8, 4, 0, 0);
++  }
++  SDL_ShowCursor(SDL_ENABLE);
++  SDL_SetCursor(state || !blank ? normal : blank);
++#else
+   SDL_ShowCursor(state ? SDL_ENABLE : SDL_DISABLE);
++#endif
+ }
+ 
+ void SetCursor(void *tmp)
