@@ -19,7 +19,7 @@ get_controls
 GAMEDIR="/$directory/ports/twill"
 BINARY=twill.${DEVICE_ARCH}
 
-cd "$GAMEDIR" || exit 1
+cd "$GAMEDIR"
 
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
