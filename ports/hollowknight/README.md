@@ -29,9 +29,8 @@ export ASMPATCH_HK_BLUR=off,hide
 
 The buttons work by position (the bottom one jumps and confirms); the prompts show the letters
 printed on the handheld (B at the bottom, A on the right); the setup asks, and `xbox` in `buttons.txt`
-shows the game's Xbox buttons instead, for handhelds printed like an Xbox pad. On muOS its button
-layout decides: with Retro, its default, the buttons go by their letters (A, on the right, jumps and
-confirms), with Modern by position; the prompts show the printed letters with both.
+shows the game's Xbox buttons instead, for handhelds printed like an Xbox pad. On muOS this holds
+with both of its button layouts, Retro and Modern.
 
 | Button | Action |
 |--|--|
