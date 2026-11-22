@@ -32,7 +32,7 @@ if not a or a < 1.59 then
 end
 table.insert(questions, {
   id = "BUTTONS",
-  question = "Which letters are on your handheld's buttons? The game's prompts show them (the bottom button always jumps). (Change it later in ports/hollowknight/buttons.txt: nintendo or xbox.)",
+  question = "Which letters are on your handheld's buttons? The game's prompts show them. (Change it later in ports/hollowknight/buttons.txt: nintendo or xbox.)",
   options = {
     { "nintendo", "Nintendo: A on the right, B at the bottom (recommended)" },
     { "xbox", "Xbox: A at the bottom, B on the right" },

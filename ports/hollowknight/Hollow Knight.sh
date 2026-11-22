@@ -82,6 +82,9 @@ export UA_FPS=10   # a frame-rate line every 10 s in log.txt
 # the setup's answers (aspect.txt: fill or bars; buttons.txt: nintendo or xbox prompts)
 case "$(cat aspect.txt 2>/dev/null)" in fill) export ASMPATCH_HK_ASPECT=fill ;; bars) export ASMPATCH_HK_ASPECT= ;; esac
 case "$(cat buttons.txt 2>/dev/null)" in nintendo) export UA_PAD_LETTERS=nintendo ;; xbox) export UA_PAD_LETTERS=xbox ;; esac
+# muOS's Retro button layout (its default; Modern is by position) gives SDL the buttons by their printed
+# letters, so the right button (A) jumps: the game's own letters are the printed ones there
+[ "$CFW_NAME" = muOS ] && case "$(readlink "$SDL_GAMECONTROLLERCONFIG_FILE" 2>/dev/null)" in *retro.txt) export UA_PAD_LETTERS=xbox ;; esac
 # settings that need a code patch or step of the setup stay off without it (the setup lists them in $READY)
 grep -qs hk-render-size "$READY" || export UA_RENDER_SIZE_VAR=
 grep -qs "convert=lazy" "$READY" || export UA_UNLOAD_ASSETS=
