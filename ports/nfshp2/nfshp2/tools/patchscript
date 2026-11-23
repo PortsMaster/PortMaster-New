@@ -1,0 +1,28 @@
+#!/bin/bash
+# The first run's install: the game's files from the disc image in
+# ports/nfshp2/gamedata, made by tools/nfshp2_install.py into
+# gamedata/NFSHP2. PortMaster's patcher runs this and shows its output,
+# which goes to patchlog.txt as well.
+
+# Retain the installer status even when tee successfully writes the log.
+set -o pipefail
+
+GAMEDIR="${GAMEDIR:-$PWD}"
+cd "$GAMEDIR" || exit 1
+LOG="$GAMEDIR/patchlog.txt"
+
+fail() {
+  echo "PATCH_FAIL_MSG:$1"
+  echo "$1"
+  echo "Patching process failed!"
+  exit 1
+}
+
+{
+  PYTHON=$(command -v python3)
+  [ -n "$PYTHON" ] || fail "This firmware has no python3, which the install from the disc needs. Install the game's files from a computer instead (README.md)."
+  [ -f "${NFSHP2_ISO:-}" ] || fail "There is no disc image (.iso) in ports/nfshp2/gamedata."
+  echo "Installing from $(basename "$NFSHP2_ISO")"
+  echo "This takes about 10 minutes."
+  "$PYTHON" -u -I "$GAMEDIR/tools/nfshp2_install.py" "$NFSHP2_ISO" "$GAMEDIR/gamedata" 2>&1
+} | tee "$LOG"
