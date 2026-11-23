@@ -87,16 +87,30 @@ dump_textures() {
     # Purge cache before operations
     rm -rf "$TMPDIR/"*
     
+    # Yellow Peppino fix: keep the player palettes uncompressed (see pepfix.csx)
+    rm -f "$DATADIR/keep_textures.txt" "$DATADIR/data_pepfix.win"
+    dotnet "$TOOLDIR/utmt-cli/UndertaleModCli.dll" \
+        load "$DATADIR/data.win" \
+        -s "$TOOLDIR/pepfix.csx" -o "$DATADIR/data_pepfix.win"
+
+    if [ $? -ne 0 ] || [ ! -f "$DATADIR/data_pepfix.win" ] || [ ! -f "$DATADIR/keep_textures.txt" ]; then
+        echo "[DOTNET]: Peppino palette fix failed to apply."
+        rm -f "$DATADIR/data_pepfix.win"
+        exit 1
+    fi
+    mv -f "$DATADIR/data_pepfix.win" "$DATADIR/data.win"
+
     # Begin texture operations
     dotnet "$TOOLDIR/utmt-cli/UndertaleModCli.dll" \
         dump "$DATADIR/data.win" \
-        -e "$DATADIR/textures" "$DATADIR/game.droid"
+        -e "$DATADIR/textures" "$DATADIR/game.droid" \
+        -k "$DATADIR/keep_textures.txt"
 
     if [ $? -ne 0 ]; then
         echo "[DOTNET]: Patch failed to apply."
         exit 1
     else
-        rm -f "$DATADIR/data.win"
+        rm -f "$DATADIR/data.win" "$DATADIR/keep_textures.txt"
         mv "$DATADIR/textures/" "$SAVEDIR/textures/"
         [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"/*
     fi
