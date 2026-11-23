@@ -45,5 +45,5 @@ The app is plain Python and runs on PortMaster's `python_3.11` runtime.
 - `pockettube/pylib/pygame` — pygame 2.6.1 built against the system SDL2 for `python_3.11` (taken from the `angrydd` port).
 - `pockettube/ytdlp_src` — the official yt-dlp release (`yt-dlp` zipapp) unpacked.
 - `pockettube/assets/fonts` — Inter.
-- `pockettube/libs` — OpenSSL 1.1 (`libssl.so.1.1`, `libcrypto.so.1.1`) and `libffi.so.7` for aarch64: the `python_3.11` runtime needs them for HTTPS, and newer firmware (muOS) only ships OpenSSL 3.
+- `pockettube/libs.aarch64` — OpenSSL 1.1 (`libssl.so.1.1`, `libcrypto.so.1.1`) and `libffi.so.7` for aarch64: the `python_3.11` runtime needs them for HTTPS, and newer firmware (muOS) only ships OpenSSL 3.
 - `pockettube/pylib/certifi` — CA certificates, used when the firmware has no certificate bundle.

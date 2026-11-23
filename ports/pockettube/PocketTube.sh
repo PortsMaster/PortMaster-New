@@ -60,7 +60,7 @@ export PYTHONPATH="${GAMEDIR}/pylib"
 export PYTHONPYCACHEPREFIX="${GAMEDIR}/${runtime}.cache"
 
 # The python_3.11 runtime is built against OpenSSL 1.1, which newer firmware (muOS) no longer ships
-export LD_LIBRARY_PATH="${GAMEDIR}/libs:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${GAMEDIR}/libs.${DEVICE_ARCH}:${LD_LIBRARY_PATH}"
 
 # OpenSSL 1.1 looks for certificates in the wrong place on most firmware
 for cert in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/cert.pem; do
