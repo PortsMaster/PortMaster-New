@@ -2183,7 +2183,35 @@ end
 -- outline and fill separately at partial alpha looks muddy). They share one
 -- large canvas instead of a new canvas each, which is slow to create on the
 -- handheld's GPU; a fresh sheet is started when one fills up.
-local textSheet = { w = 1024, h = 512, sprites = {} }
+local textSheet = { w = 1024, h = 512, sprites = {}, pending = {} }
+
+-- Draws every text added since the last frame into the sheet in one pass.
+-- Switching to the sheet once per text (a Blast adds many at once) stalled
+-- the handheld's GPU, which renders a whole target each time it switches.
+function D.flushTextSprites()
+  local S = textSheet
+  if #S.pending == 0 then return end
+  lg.push("all")
+  lg.setCanvas(S.canvas)
+  if S.needsClear then lg.clear(0, 0, 0, 0); S.needsClear = false end
+  lg.origin()
+  lg.setScissor()
+  lg.setBlendMode("alpha", "alphamultiply")
+  for i, p in ipairs(S.pending) do
+    lg.setFont(p.font)
+    lg.setColor(C.ink[1], C.ink[2], C.ink[3], 1)
+    for ox = -1, 1 do
+      for oy = -1, 1 do
+        if ox ~= 0 or oy ~= 0 then lg.print(p.text, p.x + 2 + ox, p.y + 2 + oy) end
+      end
+    end
+    setc(p.color)
+    lg.print(p.text, p.x + 2, p.y + 2)
+    S.pending[i] = nil
+  end
+  lg.pop()
+end
+
 function D.getTextSprite(text, size, color)
   local key = text .. "\0" .. size .. "\0" .. color[1] .. color[2] .. color[3]
   local sprite = textSheet.sprites[key]
@@ -2193,29 +2221,13 @@ function D.getTextSprite(text, size, color)
   local S = textSheet
   if S.canvas and S.x + w > S.w then S.x, S.y, S.rowH = 0, S.y + S.rowH, 0 end
   if not S.canvas or S.y + h > S.h then
+    D.flushTextSprites()
     S.canvas = lg.newCanvas(S.w, S.h)
+    S.needsClear = true
     S.x, S.y, S.rowH = 0, 0, 0
     S.sprites = {}
-    lg.push("all")
-    lg.setCanvas(S.canvas)
-    lg.clear(0, 0, 0, 0)
-    lg.pop()
   end
-  lg.push("all")
-  lg.setCanvas(S.canvas)
-  lg.origin()
-  lg.setScissor()
-  lg.setBlendMode("alpha", "alphamultiply")
-  lg.setFont(font)
-  lg.setColor(C.ink[1], C.ink[2], C.ink[3], 1)
-  for ox = -1, 1 do
-    for oy = -1, 1 do
-      if ox ~= 0 or oy ~= 0 then lg.print(text, S.x + 2 + ox, S.y + 2 + oy) end
-    end
-  end
-  setc(color)
-  lg.print(text, S.x + 2, S.y + 2)
-  lg.pop()
+  S.pending[#S.pending + 1] = { text = text, font = font, color = color, x = S.x, y = S.y }
   sprite = { canvas = S.canvas, quad = lg.newQuad(S.x, S.y, w, h, S.w, S.h), w = w, h = h }
   S.x, S.rowH = S.x + w + 2, max(S.rowH, h + 2)
   S.sprites[key] = sprite
@@ -2623,6 +2635,8 @@ function D.drawTitleScreen(time)
   end
   setc(deep, 0.65)
   printTracked(F("j700", 11), "START: PLAY   ·   SELECT + START: EXIT", tx, 447, 0.8)
+  setc(brown)
+  printTracked(F("j800", 11), "www.moviemaster.vip", right, 447, 0.6, "right")
 end
 
 function D.wrapText(font, text, width)
@@ -2857,11 +2871,11 @@ function D.prewarm()
   for _, def in pairs(K.ENEMY_DEFINITIONS) do D.getTextSprite("+" .. def.score, floor(max(10, sw(18)) + 0.5), C.goldLight) end
 end
 
--- Plays a few silent, invisible frames of a Blockbuster Blast with every
--- power-up active, and starts each sound muted, then resets. The handheld's
--- graphics and audio drivers prepare some work the first time it is used,
--- which otherwise lands on the first real Blast as a hitch. Records and
--- settings are put back afterwards.
+-- Plays a few silent frames of a Blockbuster Blast with every power-up active
+-- behind a loading screen, and starts each sound muted, then resets. The
+-- handheld's graphics and audio drivers prepare some work the first time it
+-- is used, which otherwise lands on the first real Blast as a hitch. Records
+-- and settings are put back afterwards.
 function D.rehearse()
   local saved = {}
   for mode, rec in pairs(records) do saved[mode] = { score = rec.score, streak = rec.streak } end
@@ -2883,6 +2897,13 @@ function D.rehearse()
     if flashTime > 0 then flashTime = max(0, flashTime - 1 / 60) end
     if combo.t < 2 then combo.t = combo.t + 1 / 60 end
     love.draw()
+    -- Show these frames to the driver for real (a frame that is never shown
+    -- can be skipped entirely), but cover them with a loading screen.
+    lg.setColor(C.ink[1], C.ink[2], C.ink[3], 1)
+    lg.rectangle("fill", 0, 0, lg.getWidth(), lg.getHeight())
+    setc(C.goldBright, 0.8)
+    printTracked(F("j800", 13), "LOADING", lg.getWidth() / 2, lg.getHeight() / 2 - 8, 2, "center")
+    lg.present()
   end
   moveInput.x, moveInput.y = 0, 0
   for _, cue in pairs(cues) do
@@ -2989,6 +3010,7 @@ end
 
 function love.draw()
   local dt = love.timer.getDelta()
+  D.flushTextSprites()
   lg.setCanvas(mainCanvas)
   lg.clear(C.ink[1], C.ink[2], C.ink[3], 1)
   lg.setLineStyle("smooth")
