@@ -1,0 +1,39 @@
+diff --git a/src/video/sdl2/SDL_sdl2events.c b/src/video/sdl2/SDL_sdl2events.c
+index 046c526..460f050 100644
+--- a/src/video/sdl2/SDL_sdl2events.c
++++ b/src/video/sdl2/SDL_sdl2events.c
+@@ -161,6 +161,14 @@ void SDL2_PumpEvents_Impl(SDL_VideoDevice *_this)
+     if (_this->windows && !SDL_GetKeyboardFocus()) {
+         SDL_SetKeyboardFocus(_this->windows);
+     }
++
++    /* Same for mouse focus: with mouse->focus NULL, SDL_RedrawCursor() ignores
++     * cursor_visible and shows def_cursor, so SDL_HideCursor() does nothing.
++     * Focus is otherwise only set from SDL2_WINDOWEVENT_ENTER, which a
++     * KMSDRM/fbdev setup with no window manager never sends. */
++    if (_this->windows && !SDL_GetMouseFocus()) {
++        SDL_SetMouseFocus(_this->windows);
++    }
+ }
+ 
+ #endif /* SDL_VIDEO_DRIVER_SDL2 */
+diff --git a/src/video/sdl2/SDL_sdl2mouse.c b/src/video/sdl2/SDL_sdl2mouse.c
+index edd8e47..6faaf68 100644
+--- a/src/video/sdl2/SDL_sdl2mouse.c
++++ b/src/video/sdl2/SDL_sdl2mouse.c
+@@ -257,7 +257,14 @@ bool SDL2_InitMouse(SDL_VideoDevice *_this)
+ 
+     const char *enable = getenv("SDL3SHIM_ENABLE_MOUSE");
+     if (!enable || !*enable || enable[0] == '0') {
+-        return true; /* opt-in; not enabled — leave SDL3 mouse vtable empty */
++        /* An empty vtable also means SDL_HideCursor() can never reach the
++           host -- SDL_RedrawCursor() ends at `if (mouse->ShowCursor)` -- so
++           SDL2 keeps drawing its arrow. Hide it once here; with no
++           forwarding nothing can ever want it shown. */
++        if (resolve_sdl2_mouse_syms() && p_SDL2_ShowCursor) {
++            p_SDL2_ShowCursor(0);
++        }
++        return true; /* vtable stays empty: no forwarding, just no arrow */
+     }
+ 
+     if (!resolve_sdl2_mouse_syms()) {
