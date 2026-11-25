@@ -1,8 +1,8 @@
-Movie Master vs Garbage is the arcade game from the official Movie Master website, rebuilt in Lua for the LÖVE engine. Keep the Movie Master moving, collect popcorn, and destroy garbage. He fires his recommendation stars automatically while he moves; popcorn streaks upgrade them, power-ups add shields, speed, super stars and a magnet, and a full meter unleashes the Blockbuster Blast.
+Movie Master vs Garbage is an arcade game made for the Movie Master, originally released on his website and rebuilt in Lua for the LÖVE engine by its developer. Keep the Movie Master moving, collect popcorn, and destroy garbage. He fires his recommendation stars automatically while he moves; popcorn streaks upgrade them, power-ups add shields, speed, super stars and a magnet, and a full meter unleashes the Blockbuster Blast.
 
-Play the original: [moviemaster.vip](https://moviemaster.vip/)
+Play the original: [moviemaster.vip/game](https://www.moviemaster.vip/game)
 
-Thanks to the Movie Master (Robert Cravens) for the game and for allowing it to be shared freely.
+Thanks to the Movie Master (Robert Cravens) for letting his photo be used and the game be shared freely.
 
 ## Controls
 
@@ -18,8 +18,8 @@ Your best score is saved automatically.
 
 ## Credits
 
-- Game and Movie Master photo: the Movie Master (Robert Cravens), used with permission
-- Port: ISASTO
+- Game and port: ISASTO
+- Movie Master photo: Robert Cravens, used with permission
 - Built with [LÖVE](https://love2d.org)
 - Fonts: Alfa Slab One and Jost (SIL OFL 1.1), DejaVu Sans (star symbols)
 - Icons: [Noto Emoji](https://github.com/googlefonts/noto-emoji) (SIL OFL 1.1)
