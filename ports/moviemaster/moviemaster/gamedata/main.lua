@@ -1749,12 +1749,15 @@ function love.gamepadpressed(joystick, buttonName)
   if K.CONFIRM_BUTTONS[buttonName] then onConfirm() end
 end
 
+-- L2 and R2 are analog triggers: fire once each time one is pressed past halfway.
+-- (A Joystick can't hold extra fields, so the pressed state is kept here.)
+local triggersDown = {}
 function love.gamepadaxis(joystick, axis, value)
   if axis == "triggerright" or axis == "triggerleft" then
-    joystick._triggerDown = joystick._triggerDown or {}
+    local key = joystick:getID() .. axis
     local down = value > 0.5
-    if down and not joystick._triggerDown[axis] and gameState == "running" then activateBlast() end
-    joystick._triggerDown[axis] = down
+    if down and not triggersDown[key] and gameState == "running" then activateBlast() end
+    triggersDown[key] = down
   end
 end
 
@@ -2226,7 +2229,7 @@ function D.drawFloatingTexts()
     local sprite = t.sprite
     lg.setColor(a, a, a, a)
     local x = clamp(t.x - sprite.w / 2, 2, W - 2 - sprite.w)
-    lg.draw(sprite.canvas, sprite.quad, floor(x + 0.5), floor(t.y - sprite.h / 2 + 0.5))
+    lg.draw(sprite.canvas, sprite.quad, floor(x + 0.5), t.y - sprite.h / 2)
   end
   lg.setBlendMode("alpha", "alphamultiply")
 end
@@ -2428,7 +2431,9 @@ function D.drawBannerAndCombo(dt)
     local tw = textWidth(f, bannerVisible.text, 1.2)
     local bw, bh = tw + 26, 20
     local bx = floor(W / 2 - bw / 2)
-    local by = floor(bounds.top + 4 - (1 - a) * 7)
+    local by = floor(bounds.top + 4)
+    lg.push()
+    lg.translate(0, -(1 - a) * 7)
     if bannerVisible.danger then lg.setColor(82 / 255, 20 / 255, 12 / 255, 0.92 * a) else lg.setColor(18 / 255, 10 / 255, 6 / 255, 0.82 * a) end
     lg.rectangle("fill", bx, by, bw, bh)
     if bannerVisible.danger then setc(C.red, a) else setc(C.gold, 0.65 * a) end
@@ -2436,6 +2441,7 @@ function D.drawBannerAndCombo(dt)
     lg.rectangle("line", bx + 0.5, by + 0.5, bw - 1, bh - 1)
     if bannerVisible.danger then setc(hex("#ffd8cb"), a) else setc(C.goldLight, a) end
     printTracked(f, bannerVisible.text, W / 2, by + (bh - f:getHeight()) / 2 + 0.5, 1.2, "center")
+    lg.pop()
   end
 
   -- Combo callout (1.2 s animation).
