@@ -17,6 +17,12 @@ firmwares PortMaster's own refresh does not take effect.
 Thanks to Titus Interactive, who created Prehistorik in 1991. Olduvai is not
 affiliated with or endorsed by them or by any rights holder.
 
+## Reporting problems
+
+Select + left saves a bug report into `ports/olduvai/bug_reports/`. Attach it to
+an issue at https://github.com/ksokolowski/olduvai/issues, or post it in the
+Olduvai thread on the PortMaster Discord.
+
 ## Controls
 
 | Button | Action |
