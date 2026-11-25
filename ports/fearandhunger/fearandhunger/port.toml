@@ -1,0 +1,475 @@
+# port.toml: el port de Fear & Hunger a quixjs.
+#
+# Es el archivo que describe el juego: quixjs -c port.toml. La primera parte
+# ([engine], [game], [saves], [fonts], [scripts]) salio de quixjs
+# --gen-config sobre Fear & Hunger 1.4.1 (la version que pide el port),
+# revisada a mano; despues, los hooks, los logros y los trucos. Sirve en
+# cualquier sitio donde corre quixjs (Linux de escritorio, portatiles...),
+# con el juego copiado en gamedata/.
+#
+# Cada forma de empaquetarlo tiene su seccion: [portmaster] es lo que pide
+# PortMaster (make portmaster PORT=fearandhunger genera con ella su
+# port.json, su gameinfo.xml y el script .sh del port).
+
+[engine]
+name    = "rpgmaker-mv"
+version = "1.6.0"
+pixi    = "4.5.4"
+nwjs    = true   # package.json de nw.js: require('fs'), process...
+# fps = 30: el juego se dibuja 30 veces por segundo en vez de 60.
+# En una portatil asi va estable y gasta menos bateria.
+# El juego no va mas lento: RPG Maker sigue calculando 60 pasos por segundo.
+fps     = 30
+# js_memory = 128: JavaScriptCore cree tener 128 MB de RAM, asi pasa el GC
+# antes y su heap no crece de mas. Con 256 llegaba a ~300 MB de heap y
+# ~200 MB de datos aparte en una partida larga: la RG CubeXX se quedaba sin
+# RAM (tirones de mas de 1 s y al final bloqueada). Con los hooks que quitan
+# la basura (logic/events-cache, interpreter-fast...) 128 ya no da tirones.
+js_memory = 128
+scaling   = "pixel_perfect"   # 1x, 2x... si cabe; en una pantalla mas pequena que
+                              # 816x624, reducido (Options > Scaling)
+
+# En el PC (el binario que no es el de PortMaster): 60 imagenes por segundo,
+# alli sobra potencia. [engine.handheld] haria lo mismo para las portatiles.
+[engine.pc]
+fps = 60
+
+[game]
+title     = "Fear & Hunger"     # el del menu y el de PortMaster
+version   = "1.0.2"             # la del port: subirla con cada cambio del port
+id        = "fear_and_hunger"   # el id del juego: Transfer Save solo pasa partidas del mismo
+# la rom: la carpeta www/ del juego comprimida en un .zip, junto a este
+# port.toml. game_dir: donde empieza el juego dentro de la rom (la carpeta
+# www/ de dentro). Lo que el juego escribe (partidas) va a gamedata/, la
+# carpeta de quixjs junto a este port.toml
+rom       = "www.zip"
+game_dir  = "www"
+width     = 816   # package.json
+height    = 624
+mods      = ["rumble", "party-bars"]   # mods activos (mods/<nombre>/ junto al port.toml, con las
+                                # mismas rutas que dentro de game_dir); si dos traen el
+                                # mismo archivo, gana el ultimo de la lista. rumble (la
+                                # vibracion) y party-bars (Hunger, Body y Mind en el
+                                # mapa) vienen activos
+developer = "Miro Haverinen"
+publisher = "Miro Haverinen"    # publisher y releasedate: van en gameinfo.xml (EmulationStation)
+releasedate = "20181211T000000" # el 11 de diciembre de 2018, en itch.io
+genres    = ["rpg"]                 # los de PortMaster: action, adventure, arcade, casino/card,
+                                # fps, platformer, puzzle, racing, rhythm, rpg, simulation,
+                                # sports, strategy, visual novel, other (otro se descarta)
+desc      = "A dark and unforgiving dungeon crawler RPG: a party of mercenaries descends into the dungeons of Fear & Hunger, where hunger, sanity and every limb count."
+
+# Transfer Save: que archivos pasa a otro dispositivo.
+#   dir    la carpeta de las partidas, desde [game] game_dir
+#   files  los archivos de esa carpeta:
+#            file*.rpgsave    las partidas guardadas (file1, file2...)
+#            global.rpgsave   la lista de partidas que ves al pulsar Continuar
+#            config.rpgsave   las opciones del juego (volumen, etc.)
+[saves]
+dir   = "save"   # en gamedata/: gamedata/save
+files = ["file*.rpgsave", "global.rpgsave", "config.rpgsave"]
+
+# fuentes de los @font-face de su CSS
+[fonts]
+"GameFont" = "fonts/Eczar-Regular.ttf"
+
+# los <script> del index.html, en el mismo orden
+[scripts]
+libs     = [
+  "js/libs/pixi.js",
+  "js/libs/pixi-tilemap.js",
+  "js/libs/pixi-picture.js",
+  "js/libs/fpsmeter.js",
+  "js/libs/lz-string.js",
+  "js/libs/iphone-inline-video.browser.js"
+]
+includes = [
+  "js/rpg_core.js",
+  "js/rpg_managers.js",
+  "js/rpg_objects.js",
+  "js/rpg_scenes.js",
+  "js/rpg_sprites.js",
+  "js/rpg_windows.js",
+  "js/plugins.js"
+]
+entry    = "js/main.js"
+
+[portmaster]
+script       = "Fear and Hunger.sh"
+porter       = ["lowlevel.1989"]
+inst         = "Needs Fear & Hunger 1.4.1 for Windows (itch.io or Steam). Compress its folder www/ into www.zip (a zip without compression is best; a compressed one also works, the first start takes longer) and copy it into ports/fearandhunger/, next to port.toml."
+store        = { name = "itch.io", url = "https://mirohaver.itch.io/fear-hunger" }
+availability = "paid"
+
+# ---------- hooks ----------
+# Los de RPG Maker MV (runtime/engines/rpgmaker-mv/hooks.toml): los datos,
+# las imagenes y los sonidos en C, el GC cuando no se nota, el
+# interprete de eventos, los plugins muy usados... Casi todos comprueban que
+# la funcion es la de RPG Maker MV o la del plugin; si no, dejan la original.
+[hooks]
+engine = "rpgmaker-mv"
+# Los de este juego (los demas vienen con engine = "rpgmaker-mv"); lo que
+# hace cada uno, en runtime/engines/rpgmaker-mv. TerraxLighting: su mascara
+# de luces en la GPU, y solo con los eventos que tienen luz
+"Spriteset_Map.prototype.createLightmask" = "gpu-canvas"
+"Spriteset_Map.prototype.update" = "rpgmaker-mv/extra/render/terrax-lights-only"
+
+# ---------- los logros ----------
+# Sacados de los datos del juego (data/System.json, los mapas y Troops.json):
+#   - los finales pasan todos por el mapa 86 (Fortress_ending), que ensena la
+#     imagen del final en la picture 26 (ending_A es el final E, el de escapar;
+#     ending_AA el A; los S llevan el nombre de cada uno)
+#   - Ma'habre: el interruptor 711 (location_MAHABRE) se enciende al entrar
+#   - Le'garde: 1985 al llegar a su sitio (Level 7), 2677 al encontrarlo en el
+#     Blood pit, 1005 si esta muerto, 1016 al intentar despertarlo
+#   - Terror & Starvation: el interruptor 3153 (STARVATION_MODE, tambien en Hard
+#     mode) y 952 (ENDING_SCENE) en un final
+#   - jefes: el grupo de enemigos ($gameTroop) y la vida de su cuerpo o cabeza
+# Para comprobarlos jugando: quixjs --debug y el comando ach de tools/console.py.
+
+# El mando: RPG Maker MV lo lee el mismo (Gamepad API). En el launcher,
+# Controls deja asignar todos los botones y las palancas (controller.map).
+[controls]
+gamepad = true
+# Select + R1: captura de pantalla; Select + L1: la lupa (cartas, notas). Con
+# true, Controls pide tambien un boton suelto para cada una (el combo sigue)
+screenshot = true
+magnifier  = true
+vibration = true   # el mod rumble vibra en los momentos fuertes; Options > Vibration la apaga
+
+# lo que hace cada boton en el juego, con los nombres de su YEP_KeyboardConfig:
+# Controls (que pide todos los botones) los muestra con su nombre
+[controls.buttons]
+dpup          = "Move up"
+dpdown        = "Move down"
+dpleft        = "Move left"
+dpright       = "Move right"
+a             = "OK"
+b             = "Cancel"
+x             = "Skill"
+y             = "Menu"
+leftshoulder  = "Previous (menu)"
+rightshoulder = "Next (menu)"
+
+# Torch y Phase el juego solo los escucha en el teclado (T y C,
+# YEP_ButtonCommonEvents): Controls pide un boton para cada una, y ese boton
+# pulsa la tecla
+[controls.keys]
+Torch = "T"
+Phase = "C"
+
+[symbols]
+ending_picture = "path:$gameScreen._pictures.26._name"
+ending_scene   = "switch:952"
+starvation     = "switch:3153"
+mahabre        = "switch:711"
+legarde_place  = "switch:1985"
+legarde_found  = "switch:2677"
+legarde_dead   = "switch:1005"
+legarde_awake  = "switch:1016"
+valteil        = "switch:1747"
+# la escena de RPG Maker en pantalla (Scene_Map, Scene_Battle, Scene_Gameover...)
+# y el mapa en el que esta el grupo
+scene          = "path:SceneManager._scene.constructor.name"
+map            = "path:$gameMap._mapId"
+troop          = "path:$gameTroop._troopId"
+enemy0_hp      = "path:$gameTroop._enemies.0._hp"
+enemy1_hp      = "path:$gameTroop._enemies.1._hp"
+enemy6_hp      = "path:$gameTroop._enemies.6._hp"
+# Estos dos los usan los trucos de abajo ([[cheat]]):
+#   encounters   si hay combates aleatorios al caminar; "No random encounters"
+#                lo pone a false. Es un dato de la partida: se guarda con ella
+#   torch_timer  lo que le queda a la antorcha encendida (la variable 398);
+#                "Endless torch" la mantiene llena
+encounters     = "path:$gameSystem._encounterEnabled"
+torch_timer    = "var:398"
+
+# La opcion "Achievements" del menu del juego (el hook achievements-menu, que
+# viene con engine = "rpgmaker-mv"): el menu de Fear & Hunger solo ensena iconos, asi que
+# lleva el 5 de su IconSet (el pergamino enmarcado, de Status, que este menu
+# no usa)
+[achievements_menu]
+icon = 5
+
+# Progression
+
+# Welcome: morir la primera vez. Toda muerte (en combate o de un evento) acaba
+# en la escena de Game Over, pero los finales tambien pasan por ella, despues
+# de los creditos: todos encienden ENDING_SCENE (952) menos el de la noche del
+# baile (mapa 181), que ensena ending_happy en la picture 26
+[[achievements]]
+id          = "welcome"
+title       = "Welcome"
+description = "Die for the first time."
+type        = "progression"
+conditions  = ['scene == "Scene_Gameover"', "ending_scene == 0", 'map != 181 || ending_picture != "ending_happy"']
+
+[[achievements]]
+id          = "mahabre"
+title       = "Ma'habre"
+description = "Reach the city of Ma'habre."
+type        = "progression"
+conditions  = ["mahabre"]
+
+[[achievements]]
+id          = "the_lost_knight"
+title       = "The Lost Knight"
+description = "Find Le'garde, dead or alive."
+type        = "progression"
+conditions  = ["legarde_place || legarde_found || legarde_dead || legarde_awake"]
+
+# Endings
+
+[[achievements]]
+id          = "ending_e"
+title       = "Escape?"
+description = "Get Ending E."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_A" || ending_picture == "ending_happy"']   # ending_happy: el mismo final, escapando por Under_dungeon (Map161)
+
+[[achievements]]
+id          = "ending_b"
+title       = "The Older One"
+description = "Get Ending B."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_B"']
+
+[[achievements]]
+id          = "ending_a"
+title       = "The God of Fear & Hunger"
+description = "Get Ending A."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_AA"']
+
+[[achievements]]
+id          = "ending_c"
+title       = "The Yellow King"
+description = "Get Ending C."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_C"']
+
+[[achievements]]
+id          = "ending_c2"
+title       = "The Prophecy"
+description = "Get Ending C-II."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_C_2"']
+
+[[achievements]]
+id          = "ending_d"
+title       = "A New God"
+description = "Get Ending D."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_D"']
+
+# Hard mode (Ending S)
+
+[[achievements]]
+id          = "ending_s_cahara"
+title       = "Happy Ending"
+description = "Get Cahara's Ending S."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_S_happy_ending"']
+
+[[achievements]]
+id          = "ending_s_darce"
+title       = "The True God of Fear and Hunger"
+description = "Get D'arce's Ending S."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_S_true_god"']
+
+[[achievements]]
+id          = "ending_s_enki"
+title       = "The Enlightenment"
+description = "Get Enki's Ending S."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_S_enlightenment"']
+
+[[achievements]]
+id          = "ending_s_ragnvaldr"
+title       = "The God of Ultra-Violence"
+description = "Get Ragnvaldr's Ending S."
+type        = "win_condition"
+conditions  = ['ending_picture == "ending_S_violence"']
+
+# Secondary
+
+[[achievements]]
+id          = "terror_starvation"
+title       = "Terror & Starvation"
+description = "Finish the game on Terror & Starvation."
+type        = "secondary"
+conditions  = ["starvation", "ending_scene"]
+
+# Crow Mauler: grupos 51, 52 y 135. El juego lo mata (paginas TORSO/HEAD(S)
+# DESTROYED de Troops.json) con el torso al 75%, con la cabeza en 51 y 52, o
+# con las dos cabezas en 135, y entonces hace 9999 de dano a todas sus partes:
+# el torso (0) solo llega a 0 ahi. Mirar una cabeza no vale: en 135 caer una
+# sola no lo mata
+[[achievements]]
+id          = "crow_mauler"
+title       = "Crow Mauler"
+description = "Defeat the Crow Mauler."
+type        = "secondary"
+conditions  = ["troop == 51 || troop == 52 || troop == 135", "enemy0_hp == 0"]
+
+# Iron Shakespeare: grupo 57, torso (0) o cabeza (1)
+[[achievements]]
+id          = "iron_shakespeare"
+title       = "Iron Shakespeare"
+description = "Defeat Iron Shakespeare."
+type        = "secondary"
+conditions  = ["troop == 57", "enemy0_hp == 0 || enemy1_hp == 0"]
+
+# Skin Granny: grupo 109; el cuerpo es el ultimo (6)
+[[achievements]]
+id          = "skin_granny"
+title       = "Skin Granny"
+description = "Defeat Skin Granny."
+type        = "secondary"
+conditions  = ["troop == 109", "enemy6_hp == 0"]
+
+[[achievements]]
+id          = "valteil"
+title       = "Valteil"
+description = "Defeat Valteil."
+type        = "secondary"
+conditions  = ["valteil"]
+
+# Trucos: se activan en el launcher (Cheats). La partida en la que se juega
+# con un truco activo queda sin logros, aunque luego se apague el truco; las
+# demas partidas los siguen consiguiendo (ver runtime/game/cheats/cheats.h).
+
+[[cheat]]
+id          = "no_encounters"
+name        = "No random encounters"
+description = "Random battles do not start while walking."
+set         = { encounters = false }
+
+# Los que cambian una funcion del juego llevan script (JS): se ejecuta una vez,
+# con la primera partida (con el juego y sus plugins ya cargados).
+
+[[cheat]]
+id          = "lucky_coin"
+name        = "Lucky coin"
+description = "Coin flips (heads or tails) always go your way."
+# en los eventos de moneda (los que dejan elegir HEADS/TAILS) coin_flip (14)
+# == 1 es el bueno (esquivas, te llevas el objeto) y coin_flip2 (358) es la
+# moneda que se ve: que salga como la elegiste (COIN_PICK, 357)
+script = '''
+(function () {
+  var coin = new WeakMap();
+  function isCoinEvent(list) {
+    if (!list) return false;
+    if (!coin.has(list)) {
+      coin.set(list, list.some(function (c) {
+        return c.code === 102 && c.parameters[0].indexOf('HEADS') >= 0;
+      }));
+    }
+    return coin.get(list);
+  }
+  var orig = Game_Interpreter.prototype.command122;
+  Game_Interpreter.prototype.command122 = function () {
+    var r = orig.apply(this, arguments);
+    var p = this._params;
+    if (p[3] === 2 && isCoinEvent(this._list)) {
+      if (p[0] <= 14 && 14 <= p[1]) $gameVariables.setValue(14, 1);
+      if (p[0] <= 358 && 358 <= p[1]) $gameVariables.setValue(358, $gameVariables.value(357));
+    }
+    return r;
+  };
+})();
+'''
+
+[[cheat]]
+id          = "never_hungry"
+name        = "Never hungry"
+description = "Your party is always well fed."
+# el hambre es la EXP de cada personaje: 128 es saciado (mas de 108, sin
+# Hunger LVL); el nivel 3 empieza en unos 178, asi que no sube de nivel
+script = '''
+(function () {
+  var orig = Game_Actor.prototype.changeExp;
+  Game_Actor.prototype.changeExp = function (exp, show) {
+    return orig.call(this, Math.max(exp, 128), show);
+  };
+})();
+'''
+
+[[cheat]]
+id          = "fearless"
+name        = "Fearless"
+description = "Fear never takes hold of your party."
+# los estados Fear LVL 1-5 (44-48): no se ponen y, si ya estaban, no cuentan
+script = '''
+(function () {
+  var blocked = [44, 45, 46, 47, 48];
+  var add = Game_Battler.prototype.addState;
+  Game_Battler.prototype.addState = function (id) {
+    if (this.isActor() && blocked.indexOf(id) >= 0) return;
+    return add.apply(this, arguments);
+  };
+  var affected = Game_BattlerBase.prototype.isStateAffected;
+  Game_BattlerBase.prototype.isStateAffected = function (id) {
+    if (this.isActor() && blocked.indexOf(id) >= 0) return false;
+    return affected.apply(this, arguments);
+  };
+  var states = Game_Actor.prototype.states;
+  Game_Actor.prototype.states = function () {
+    return states.apply(this, arguments).filter(function (s) { return blocked.indexOf(s.id) < 0; });
+  };
+})();
+'''
+
+[[cheat]]
+id          = "no_bleeding"
+name        = "No bleeding or infection"
+description = "Wounds never bleed or get infected."
+# Bleeding (5), Anus bleed (4), Infection leg (55), Infection arm (56)
+script = '''
+(function () {
+  var blocked = [4, 5, 55, 56];
+  var add = Game_Battler.prototype.addState;
+  Game_Battler.prototype.addState = function (id) {
+    if (this.isActor() && blocked.indexOf(id) >= 0) return;
+    return add.apply(this, arguments);
+  };
+  var affected = Game_BattlerBase.prototype.isStateAffected;
+  Game_BattlerBase.prototype.isStateAffected = function (id) {
+    if (this.isActor() && blocked.indexOf(id) >= 0) return false;
+    return affected.apply(this, arguments);
+  };
+  var states = Game_Actor.prototype.states;
+  Game_Actor.prototype.states = function () {
+    return states.apply(this, arguments).filter(function (s) { return blocked.indexOf(s.id) < 0; });
+  };
+})();
+'''
+
+[[cheat]]
+id          = "endless_torch"
+name        = "Endless torch"
+description = "A lit torch never burns out."
+# Light torch pone TORCH_TIMER (398) a 40 y un evento comun le resta 1; a 0 se
+# apaga. Sin antorcha encendida, el valor no hace nada
+set         = { torch_timer = 40 }
+
+[[cheat]]
+id          = "no_death"
+name        = "Can't die"
+description = "Your party never drops below 1 HP. Scripted deaths still happen."
+# la vida de los personajes no baja de 1 y no reciben el estado de muerte
+# (Knockout, 1); las muertes de los eventos (Game Over directo) siguen
+script = '''
+(function () {
+  var setHp = Game_Actor.prototype.setHp;
+  Game_Actor.prototype.setHp = function (hp) {
+    return setHp.call(this, Math.max(hp, 1));
+  };
+  var add = Game_Battler.prototype.addState;
+  Game_Battler.prototype.addState = function (id) {
+    if (this.isActor() && id === this.deathStateId()) return;
+    return add.apply(this, arguments);
+  };
+})();
+'''
