@@ -106,6 +106,9 @@ K.INFO_PAGES = {
   } },
 }
 K.INFO_PAGE_COUNT = #K.INFO_PAGES
+-- Speed-boost streaks: how much of the recent path they cover, how long a
+-- point lingers once he stops, and the most points kept.
+K.TRAIL_LENGTH, K.TRAIL_LIFE, K.TRAIL_POINTS = 92, 0.2, 40
 -- Every font size the game draws with, built at startup (see D.prewarm).
 K.FONT_SIZES = { alfa = { 13, 16, 24, 28, 34, 38, 46, 48 }, j400 = { 16 }, j700 = { 11, 13 },
   j800 = { 8, 9, 10, 11, 12, 13, 14, 15, 17, 22 } }
@@ -125,6 +128,7 @@ local function sw(v) return v * S end
 
 local player = {
   x = 0, y = 0, vx = 0, vy = 0, lives = K.MAX_LIVES, invulnerable = 0, bob = 0, moving = false, stationaryTime = 0,
+  trail = {},
 }
 player.drawHeight = sw(K.REFERENCE_PLAYER_HEIGHT)
 player.drawWidth = player.drawHeight * (705 / 2048)
@@ -680,6 +684,7 @@ local function resetGame()
   player.vx, player.vy = 0, 0
   player.lives = maximumLives()
   player.invulnerable, player.bob, player.moving, player.stationaryTime = 0, 0, false, 0
+  player.trail = {}
   combo.t = 99
   flashTime = 0
 end
@@ -1163,6 +1168,24 @@ local function updateMovement(dt)
   player.x, player.y = nx, ny
 end
 
+-- The speed-boost streaks follow the path the Movie Master actually took, so
+-- they bend smoothly behind him when he changes direction instead of snapping
+-- to the new one. When he stops or the boost ends, the streaks shrink away.
+function D.updateTrail(dt)
+  local trail = player.trail
+  for i = 1, #trail do trail[i].age = trail[i].age + dt end
+  if speedTime > 0 and player.moving then
+    table.insert(trail, 1, { x = player.x, y = player.y - sw(8), age = 0 })
+  end
+  local maxLength, length, keep = sw(K.TRAIL_LENGTH), 0, min(#trail, K.TRAIL_POINTS)
+  for i = 2, keep do
+    length = length + mag(trail[i].x - trail[i - 1].x, trail[i].y - trail[i - 1].y)
+    if length >= maxLength then keep = i; break end
+  end
+  for i = #trail, keep + 1, -1 do trail[i] = nil end
+  while #trail > 0 and trail[#trail].age > K.TRAIL_LIFE do trail[#trail] = nil end
+end
+
 local function updateEnemies(dt)
   if #enemies == 0 then return end
   local rushMargin = sw(90)
@@ -1414,6 +1437,7 @@ local function update(dt)
   end
 
   updateMovement(dt)
+  D.updateTrail(dt)
   spawnTimer = spawnTimer - dt
   if spawnTimer <= 0 then
     spawnEnemy()
@@ -1992,6 +2016,72 @@ function D.drawBlast()
   end
 end
 
+-- Five streaks drawn as one mesh along the recorded path: each fades in just
+-- behind him and out toward the tail, with a soft glow under a bright core.
+D.trail = { nx = {}, ny = {}, dist = {} }
+function D.drawSpeedTrail()
+  local TR = D.trail
+  local trail = player.trail
+  local n = #trail
+  if n < 2 then return end
+  local trailNx, trailNy, trailDist = TR.nx, TR.ny, TR.dist
+  if not TR.mesh then
+    local maxVerts = (K.TRAIL_POINTS - 1) * 6 * 10
+    TR.verts = {}
+    for v = 1, maxVerts do TR.verts[v] = { 0, 0, 0, 0, 1, 1, 1, 0 } end
+    TR.mesh = lg.newMesh(maxVerts, "triangles", "stream")
+  end
+  local trailVerts = TR.verts
+  -- Distance along the path and a smoothed sideways direction at each point.
+  trailDist[1] = 0
+  for k = 1, n do
+    local a, b = trail[max(1, k - 1)], trail[min(n, k + 1)]
+    local tx, ty = b.x - a.x, b.y - a.y
+    local len = mag(tx, ty)
+    if len > 0.001 then
+      trailNx[k], trailNy[k] = -ty / len, tx / len
+    else
+      trailNx[k], trailNy[k] = trailNx[k - 1] or 0, trailNy[k - 1] or 1
+    end
+    if k > 1 then trailDist[k] = trailDist[k - 1] + mag(trail[k].x - trail[k - 1].x, trail[k].y - trail[k - 1].y) end
+  end
+  local total = max(trailDist[n], 1)
+  local fadeIn = sw(18)
+  local r, g, b = C.speed[1], C.speed[2], C.speed[3]
+  local count = 0
+  local function vertex(x, y, a)
+    count = count + 1
+    local v = trailVerts[count]
+    v[1], v[2], v[5], v[6], v[7], v[8] = x, y, r, g, b, a
+  end
+  for layer = 1, 2 do
+    for i = -2, 2 do
+      local off = i * sw(9)
+      local core = sw(i == 0 and 4 or 2)
+      local half = (layer == 1 and core + sw(8) or core) / 2
+      local strength = (0.58 - abs(i) * 0.08) * (layer == 1 and 0.25 or 1)
+      for k = 1, n - 1 do
+        local x1, y1, x2, y2, a1, a2
+        for e = 0, 1 do
+          local q = k + e
+          local d = trailDist[q]
+          local alpha = strength * min(1, d / fadeIn) * clamp((total - d) / (total * 0.45), 0, 1)
+            * (1 - trail[q].age / K.TRAIL_LIFE)
+          local cx, cy = trail[q].x + trailNx[q] * off, trail[q].y + trailNy[q] * off
+          if e == 0 then x1, y1, a1 = cx, cy, max(0, alpha) else x2, y2, a2 = cx, cy, max(0, alpha) end
+        end
+        local n1x, n1y, n2x, n2y = trailNx[k] * half, trailNy[k] * half, trailNx[k + 1] * half, trailNy[k + 1] * half
+        vertex(x1 + n1x, y1 + n1y, a1); vertex(x1 - n1x, y1 - n1y, a1); vertex(x2 + n2x, y2 + n2y, a2)
+        vertex(x1 - n1x, y1 - n1y, a1); vertex(x2 - n2x, y2 - n2y, a2); vertex(x2 + n2x, y2 + n2y, a2)
+      end
+    end
+  end
+  TR.mesh:setVertices(trailVerts, 1, count)
+  TR.mesh:setDrawRange(1, count)
+  lg.setColor(1, 1, 1, 1)
+  lg.draw(TR.mesh)
+end
+
 function D.drawPlayer(time)
   local tilt = clamp(player.vx / max(1, player.speed), -1, 1) * 0.055
   local bob = player.moving and sin(player.bob) * sw(2.6) or sin(player.bob * 0.42) * sw(1.1)
@@ -1999,29 +2089,12 @@ function D.drawPlayer(time)
   local readyPulse = blastReady and (1 + sin(time * 7.2) * 0.055) or 1
   local vo = sw(8)
 
+  D.drawSpeedTrail()
+
   lg.push()
   lg.translate(player.x, player.y + bob)
   lg.rotate(tilt)
   lg.scale(readyPulse, readyPulse)
-
-  if speedTime > 0 and player.moving then
-    local motion = mag(player.vx, player.vy)
-    if motion == 0 then motion = 1 end
-    local tx, ty = -player.vx / motion, -player.vy / motion
-    local sx, sy = -ty, tx
-    for i = -2, 2 do
-      local off = i * sw(9)
-      local alpha = 0.58 - abs(i) * 0.08
-      local x1, y1 = tx * sw(24) + sx * off, ty * sw(24) + sy * off - sw(8)
-      local x2, y2 = tx * sw(76) + sx * off, ty * sw(76) + sy * off - sw(8)
-      setc(C.speed, alpha * 0.25)
-      lg.setLineWidth(sw(i == 0 and 4 or 2) + sw(8))
-      lg.line(x1, y1, x2, y2)
-      setc(C.speed, alpha)
-      lg.setLineWidth(sw(i == 0 and 4 or 2))
-      lg.line(x1, y1, x2, y2)
-    end
-  end
 
   lg.setColor(1, 1, 1, 1)
   D.drawCentered(blastReady and sprites.auraReady or sprites.auraNormal, 0, -vo)
@@ -2107,11 +2180,10 @@ end
 -- outline and fill separately at partial alpha looks muddy). They share one
 -- large canvas instead of a new canvas each, which is slow to create on the
 -- handheld's GPU; a fresh sheet is started when one fills up.
-local textSprites = {}
-local textSheet = { w = 1024, h = 512 }
+local textSheet = { w = 1024, h = 512, sprites = {} }
 function D.getTextSprite(text, size, color)
   local key = text .. "\0" .. size .. "\0" .. color[1] .. color[2] .. color[3]
-  local sprite = textSprites[key]
+  local sprite = textSheet.sprites[key]
   if sprite then return sprite end
   local font = F("j800", size)
   local w, h = font:getWidth(text) + 4, font:getHeight() + 4
@@ -2120,7 +2192,7 @@ function D.getTextSprite(text, size, color)
   if not S.canvas or S.y + h > S.h then
     S.canvas = lg.newCanvas(S.w, S.h)
     S.x, S.y, S.rowH = 0, 0, 0
-    textSprites = {}
+    S.sprites = {}
     lg.push("all")
     lg.setCanvas(S.canvas)
     lg.clear(0, 0, 0, 0)
@@ -2143,7 +2215,7 @@ function D.getTextSprite(text, size, color)
   lg.pop()
   sprite = { canvas = S.canvas, quad = lg.newQuad(S.x, S.y, w, h, S.w, S.h), w = w, h = h }
   S.x, S.rowH = S.x + w + 2, max(S.rowH, h + 2)
-  textSprites[key] = sprite
+  S.sprites[key] = sprite
   return sprite
 end
 
@@ -2774,7 +2846,52 @@ function D.prewarm()
     getStarSprite(outer, radius * 0.44 / outer, sw(12))
   end
   getStarSprite(sw(5.5), 2.4 / 5.5, sw(12))
+  starMesh(0.36)
+  starMesh(0.45)
   for _, def in pairs(K.ENEMY_DEFINITIONS) do D.getTextSprite("+" .. def.score, floor(max(10, sw(18)) + 0.5), C.goldLight) end
+end
+
+-- Plays a few silent, invisible frames of a Blockbuster Blast with every
+-- power-up active, and starts each sound muted, then resets. The handheld's
+-- graphics and audio drivers prepare some work the first time it is used,
+-- which otherwise lands on the first real Blast as a hitch. Records and
+-- settings are put back afterwards.
+function D.rehearse()
+  local saved = {}
+  for mode, rec in pairs(records) do saved[mode] = { score = rec.score, streak = rec.streak } end
+  local wasSound, wasHardcore = soundOn, hardcoreMode
+  soundOn, hardcoreMode = false, false
+  resetGame()
+  gameState = "running"
+  player.invulnerable = 99
+  speedTime, shieldTime, shieldHits, superStarsTime, magnetTime = 5, 5, 3, 5, 5
+  for _, kind in ipairs({ "standard", "fast", "heavy", "standard" }) do
+    addEnemy(player.x + sw(rb(-160, 160)), player.y + sw(rb(-120, 120)), kind)
+  end
+  spawnPopcorn()
+  spawnPowerup()
+  for frame = 1, 20 do
+    moveInput.x, moveInput.y = frame < 10 and 1 or 0.7, frame < 10 and 0 or -0.7
+    if frame == 5 then mastery = 1; activateBlast() end
+    update(1 / 60)
+    if flashTime > 0 then flashTime = max(0, flashTime - 1 / 60) end
+    if combo.t < 2 then combo.t = combo.t + 1 / 60 end
+    love.draw()
+  end
+  moveInput.x, moveInput.y = 0, 0
+  for _, cue in pairs(cues) do
+    for _, src in ipairs(cue.pool) do
+      local volume = src:getVolume()
+      src:setVolume(0)
+      src:play()
+      src:stop()
+      src:setVolume(volume)
+    end
+  end
+  for mode, rec in pairs(saved) do records[mode].score, records[mode].streak = rec.score, rec.streak end
+  soundOn, hardcoreMode = wasSound, wasHardcore
+  lg.setCanvas()
+  lg.clear(0, 0, 0, 1)
 end
 
 ----------------------------------------------------------------------------
@@ -2807,6 +2924,7 @@ function love.load()
   buildSprites()
   buildSounds()
   D.prewarm()
+  D.rehearse()
 
   for _, js in ipairs(love.joystick.getJoysticks()) do
     if js:isGamepad() then activeJoystick = js; break end
