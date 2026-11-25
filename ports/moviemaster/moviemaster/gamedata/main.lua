@@ -1761,7 +1761,17 @@ function love.gamepadaxis(joystick, axis, value)
   end
 end
 
+-- The first rumble on a controller sets up the vibration driver, which froze
+-- the game for a moment on the handheld (on the first Blast, or the first hit).
+-- Doing that setup when the controller connects, with no vibration, moves the
+-- wait to the loading screen.
+function D.armRumble(joystick)
+  pcall(joystick.isVibrationSupported, joystick)
+  pcall(joystick.setVibration, joystick, 0, 0)
+end
+
 function love.joystickadded(joystick)
+  D.armRumble(joystick)
   if not activeJoystick or not activeJoystick:isConnected() then activeJoystick = joystick end
 end
 function love.joystickremoved(joystick)
@@ -2953,6 +2963,7 @@ function love.load()
   D.prewarm()
   D.rehearse()
 
+  for _, js in ipairs(love.joystick.getJoysticks()) do D.armRumble(js) end
   for _, js in ipairs(love.joystick.getJoysticks()) do
     if js:isGamepad() then activeJoystick = js; break end
   end
