@@ -43,7 +43,6 @@ if [ -f ./assets/data.win ]; then
         export PATCHER_GAME="ElecHead"
         export PATCHER_TIME="5 to 10 minutes"
         source "$controlfolder/utils/patcher.txt"
-        $ESUDO kill -9 $(pidof gptokeyb)
     else
         pm_message "This port requires the latest version of PortMaster."
     fi
