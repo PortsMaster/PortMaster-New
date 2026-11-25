@@ -13,59 +13,59 @@ else
 fi
 
 source $controlfolder/control.txt
-source $controlfolder/device_info.txt
-
-get_controls
 [ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source "${controlfolder}/mod_${CFW_NAME}.txt"
+get_controls
 
-$ESUDO chmod 666 /dev/tty0
-
+# Variables
 GAMEDIR="/$directory/ports/elechead"
 
-export LD_LIBRARY_PATH="/usr/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
-
-# We log the execution of the script into log.txt
+# CD and set log
+cd $GAMEDIR
 > "$GAMEDIR/log.txt" && exec > >(tee "$GAMEDIR/log.txt") 2>&1
 
-# Patch game
-cd "$GAMEDIR"
+# Ensure executable permissions
+$ESUDO chmod +x "$GAMEDIR/gmloadernext.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/patchscript"
+$ESUDO chmod +x "$GAMEDIR/tools/gmtoolkit.aarch64"
+$ESUDO chmod +x "$GAMEDIR/tools/splash"
 
-# If "gamedata/data.win" exists and matches the checksum of the itch or steam versions
-if [ -f "./gamedata/data.win" ]; then
-    mv gamedata/data.win gamedata/game.droid
-    rm -f "$GAMEDIR/gamedata/ElecHead.exe"
-    mv "$GAMEDIR/gamedata"/* "$GAMEDIR" && rm -rf "$GAMEDIR/gamedata" || exit 1
-    echo "Moving and Cleaning of game files done"
-else    
-    echo "Error: Missing files in gamedata folder or game has been patched."
+# Exports
+export LD_LIBRARY_PATH="$GAMEDIR/lib:$GAMEDIR/libs:$LD_LIBRARY_PATH"
+export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+export ESUDO
+export controlfolder
+export DEVICE_ARCH
+
+# Check if we need to patch the game
+if [ -f ./assets/data.win ]; then
+    if [ -f "$controlfolder/utils/patcher.txt" ]; then
+        export PATCHER_FILE="$GAMEDIR/tools/patchscript"
+        export PATCHER_GAME="ElecHead"
+        export PATCHER_TIME="5 to 10 minutes"
+        source "$controlfolder/utils/patcher.txt"
+        $ESUDO kill -9 $(pidof gptokeyb)
+    else
+        pm_message "This port requires the latest version of PortMaster."
+    fi
 fi
 
-save_file="$GAMEDIR/savefile.sav"
+# Fix for 720x720 screens
+save_file="$GAMEDIR/saves/savefile.sav"
 
-if [ ! -f "$save_file" ]; then
-  mv $save_file.default $save_file
+if [[ "${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}" == "720x720" ]] && [[ -f "$save_file" ]]; then
+    sed -i 's/windowScale="[^"]*"/windowScale="1.500000"/' "$save_file"
+    sed -i 's/isFullscreen="[^"]*"/isFullscreen="0.000000"/' "$save_file"
 fi
-
-if [[ "${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}" == "720x720" ]]; then
-sed -i 's/windowScale="[^"]*"/windowScale="1.500000"/' "$save_file"
-sed -i 's/isFullscreen="[^"]*"/isFullscreen="0.000000"/' "$save_file"
-fi
-
-$ESUDO chmod 666 /dev/uinput
-
-$GPTOKEYB "gmloadernext" &
-
-$ESUDO chmod +x "$GAMEDIR/gmloadernext"
-$ESUDO chmod +x "$GAMEDIR/libs/splash"
 
 # Display loading splash
-if [ -f "$GAMEDIR/game.droid" ]; then
-    $ESUDO ./libs/splash "splash.png" 1 
-    $ESUDO ./libs/splash "splash.png" 8000
+if [ ! -f ./assets/data.win ]; then
+    $ESUDO "$GAMEDIR/tools/splash" "$GAMEDIR/splash.png" 8000 & 
 fi
 
-./gmloadernext game.apk
+# Assign gptokeyb and load the game
+$GPTOKEYB "gmloadernext.aarch64" -c "elechead.gptk" &
+pm_platform_helper "$GAMEDIR/gmloadernext.aarch64" >/dev/null
+./gmloadernext.aarch64 -c gmloader.json
 
-$ESUDO kill -9 $(pidof gptokeyb)
-$ESUDO systemctl restart oga_events &
-printf "\033c" > /dev/tty0
+# Cleanup
+pm_finish
