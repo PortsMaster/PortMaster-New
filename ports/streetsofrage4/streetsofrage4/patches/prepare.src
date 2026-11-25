@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""Verify the APK and publish one complete, locally generated game payload."""
+
+import argparse
+from collections import Counter
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import shutil
+import signal
+import subprocess
+import sys
+from zipfile import ZipFile, BadZipFile
+import zlib
+
+from assembly_store import MEMBER, assemblies
+from texture import TextureCodec
+
+
+APK_HASH = "b96068021a1c59758734843c25d584f4e168525735a5677fca748135ddc15b2b"
+PREVIOUS_PREPARE_HASHES = (
+    "9bbefb0d6b0beebdfb3d8cae523fc36208c29ccc9e8a098a59ccc145dcbb7507",
+    "25b5e755e2df47786d34de4c6e91306217b62e803dfc72770ab921b49a229e34",
+)
+APK_SIZE = 1683341863
+ASSET_COUNT = 25737
+CACHE_NAME = re.compile(r"[0-9a-f]{16}_(\d+)x(\d+)_([1-4])_([12])\.rgba")
+WWISE_MEMBER = "lib/arm64-v8a/libWwise.so"
+CODE = {
+    "SOR4.dll": "e014ee3e582d65c15821bcb7cfadfc9a47790a4bed831c996d3683e3c7584945",
+    "StandaloneTypeModel.Android.Retail.dll": "bdae217d665b64c4bf9e002b6ebc5b9b1ed59cba5e6167afd14480790e16746c",
+    "SharpFont.Core.dll": "82f4f15feac0f2a166350a429b2c51f9b06d75a5aae5032019aa26e06ee445b7",
+    "EOSSDK.Android.dll": "c6904949683949c1351d9f77378e008d1ba455c45e531d42681aa5bf49a56528",
+    "_Microsoft.Android.Resource.Designer.dll": "1e7312082aa7decdbeb1c90152502e5afe37a88fbf485461fd8283e23788c927",
+    "libWwise.real.so": "fbc761873f92b268dc15635dea9a1c2f5d7c1ed9503547b5b67fcd29f561b0f9",
+}
+PATCHES = (
+    ("patchgam", ("SORAGE4Bridge.dll",), "get_Assets->GetAssets patched: 1"),
+    ("skipcall", ("initialize", "save_save_game"), "total skipcall: 1"),
+    ("skipcall", ("save_save_game", "Exit"), "total skipcall: 1"),
+    ("fixplatform", (), "save path, Config.txt and in-game Quit patched"),
+    ("EnableVideo", (), "Linux video player connected"),
+    ("MenuCompatibility", (), "Android storefront entry suppressed"),
+    ("coopsplit", (), "OK coopsplit: A(trunc)=1 B(join-wired)=1"),
+)
+
+
+def log(message):
+    print("[setup] " + message, flush=True)
+
+
+def file_hash(path):
+    checksum = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            checksum.update(block)
+    return checksum.hexdigest()
+
+
+def ready(path, *fingerprints):
+    try:
+        state = json.loads((path / "manifest.json").read_text(encoding="utf-8"))
+        return (state["input"] in fingerprints and set(state["code"]) == set(CODE)
+                and all(file_hash(path / "code" / name) == checksum
+                        for name, checksum in state["code"].items())
+                and len(state["assets"]) == ASSET_COUNT
+                and all((path / "assets" / name).stat().st_size == size
+                        for name, size in state["assets"].items()))
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+
+
+def check_cache(directory):
+    if directory.is_symlink():
+        return
+    for path in directory.glob("*.rgba"):
+        name = CACHE_NAME.fullmatch(path.name)
+        if name is None or path.is_symlink() or not path.is_file():
+            continue
+        w, h, scale, kind = map(int, name.groups())
+        w, h = max(w // scale, 1), max(h // scale, 1)
+        lengths = {w * h * 4}
+        if kind == 2:
+            lengths = {w * h * 4 + 1, ((w + 3) // 4) * ((h + 3) // 4) * 8 + 1}
+        if path.stat().st_size not in lengths:
+            path.unlink()
+            log("Removed incomplete texture cache " + path.name)
+
+
+def members(apk):
+    files = {}
+    folded = set()
+    for member in apk.infolist():
+        if member.is_dir() or not member.filename.startswith("assets/"):
+            continue
+        name = member.filename.removeprefix("assets/")
+        path = PurePosixPath(name)
+        if (str(path) != name or path.is_absolute() or ".." in path.parts or "\\" in name
+                or ":" in name or name.casefold() in folded or (member.external_attr >> 28) == 10):
+            raise ValueError("Unsafe APK asset path " + name)
+        folded.add(name.casefold())
+        files[name] = member
+    if len(files) != ASSET_COUNT:
+        raise ValueError("Unexpected APK asset count")
+    return files
+
+
+def remove_stage(path):
+    if path.is_symlink():
+        raise ValueError("Refusing to replace linked path " + str(path))
+    if path.exists():
+        shutil.rmtree(path)
+
+
+def checkpoints(stage, files):
+    completed = {}
+    journal = stage / "progress.jsonl"
+    if not journal.is_file():
+        return completed
+    with journal.open(encoding="utf-8") as stream:
+        for line in stream:
+            try:
+                name, size, crc, block = json.loads(line)
+                if name not in files:
+                    continue
+                path = stage / "assets" / name
+                if path.stat().st_size == size and zlib.crc32(path.read_bytes()) == crc:
+                    completed[name] = (size, crc, block)
+            except (OSError, TypeError, ValueError):
+                continue
+    return completed
+
+
+def prepare_assets(apk, stage, codec):
+    files = members(apk)
+    completed = checkpoints(stage, files)
+    journal = stage / "progress.jsonl"
+    # Drop a possible trailing partial record from a power loss before appending.
+    with journal.open("w", encoding="utf-8") as stream:
+        for name, record in completed.items():
+            stream.write(json.dumps([name, *record]) + "\n")
+    if completed:
+        log(f"Resuming with {len(completed)} verified assets.")
+    log("Extracting assets and preparing ASTC 4x4, 5x5 and 6x6 textures.")
+    partial = stage / "asset.part"
+    with journal.open("a", encoding="utf-8", buffering=1) as stream:
+        for index, (name, member) in enumerate(files.items(), 1):
+            if name in completed:
+                continue
+            raw = apk.read(member)
+            try:
+                image, block = codec.repack(name, raw) if name.endswith(".xnb") else (raw, None)
+            except (ValueError, IndexError) as error:
+                raise ValueError(f"{name}: {error}") from error
+            destination = stage / "assets" / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            partial.write_bytes(image)
+            partial.replace(destination)
+            record = len(image), zlib.crc32(image), block
+            stream.write(json.dumps([name, *record]) + "\n")
+            completed[name] = record
+            if index % 200 == 0 or index == len(files):
+                log(f"Prepared {index}/{len(files)} assets ({index * 100 // len(files)}%)")
+    blocks = Counter(block for _, _, block in completed.values() if block)
+    log("ASTC textures " + ", ".join(f"{b}x{b}={blocks[b]}" for b in (4, 5, 6)))
+    savings = sum(member.file_size - completed[name][0] for name, member in files.items())
+    log(f"Prepared asset bytes saved {savings:+,}")
+    return {name: record[0] for name, record in completed.items()}
+
+
+def patch_code(apk, stage, root, lock_fd):
+    code = stage / "code"
+    code.mkdir(exist_ok=True)
+    selected = {name: data for name, data in assemblies(apk.read(MEMBER)) if name in CODE}
+    selected["libWwise.real.so"] = apk.read(WWISE_MEMBER)
+    if {name: hashlib.sha256(data).hexdigest() for name, data in selected.items()} != CODE:
+        raise ValueError("APK game code fingerprint differs")
+    for name, data in selected.items():
+        (code / name).write_bytes(data)
+    runtime = root / "runtime.aarch64"
+    shutil.copyfile(runtime / "SORAGE4Bridge.dll", code / "SORAGE4Bridge.dll")
+    log("Applying the Android compatibility patches.")
+    for tool, args, expected in PATCHES:
+        command = [str(root / "sorage4"), "--run-dll",
+                   str(root / "patches" / (tool + ".dll")), "SOR4.dll", *args]
+        with subprocess.Popen(command, cwd=code, pass_fds=(lock_fd,), text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as child:
+            try:
+                output, _ = child.communicate()
+            except BaseException:
+                if child.poll() is None:
+                    child.kill()
+                raise
+        print(output, end="", flush=True)
+        if child.returncode or expected not in output:
+            raise ValueError("Unexpected patch result from " + tool)
+    (code / "SORAGE4Bridge.dll").unlink()
+    return {name: file_hash(code / name) for name in CODE}
+
+
+def prepare(root, installed, fingerprint, previous_fingerprints, lock_fd):
+    if ready(installed, fingerprint, *previous_fingerprints):
+        log("Existing installation verified.")
+        return
+    data = root / "gamedata"
+    apk_path = data / "base.apk"
+    if not apk_path.is_file():
+        raise ValueError("Copy the supported Android 1.4.10 base.apk into gamedata")
+    apk_stat = apk_path.stat()
+    if apk_stat.st_size != APK_SIZE or file_hash(apk_path) != APK_HASH:
+        raise ValueError("Unsupported APK. Use the verified Epic Android 1.4.10 build.")
+    log("APK identity verified.")
+    stage = data / ".preparing"
+    previous = data / ".previous"
+    if stage.is_symlink() or installed.is_symlink():
+        raise ValueError("Prepared data paths must be local directories")
+    receipt = stage / "input.txt"
+    if not receipt.is_file() or receipt.read_text(encoding="utf-8") != fingerprint:
+        remove_stage(stage)
+        if shutil.disk_usage(data).free < 2_000_000_000:
+            raise ValueError("Setup requires at least 2 GB free for prepared game data")
+        stage.mkdir()
+        receipt.write_text(fingerprint, encoding="utf-8")
+    codec = TextureCodec(root / "libs.aarch64/libastc-repack.so")
+    with ZipFile(apk_path) as apk:
+        assets = prepare_assets(apk, stage, codec)
+        code = patch_code(apk, stage, root, lock_fd)
+    manifest = {"input": fingerprint, "assets": assets, "code": code}
+    (stage / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    if not ready(stage, fingerprint):
+        raise ValueError("Prepared game data failed verification. The APK was kept for retry.")
+    remove_stage(previous)
+    if installed.exists():
+        installed.replace(previous)
+    stage.replace(installed)
+    remove_stage(previous)
+    log("Verified assets and patched assemblies are ready.")
+    try:
+        current = apk_path.stat()
+        if (not os.path.samestat(apk_stat, current)
+                or (current.st_size, current.st_mtime_ns) != (apk_stat.st_size, apk_stat.st_mtime_ns)):
+            log("Kept base.apk because it changed during setup.")
+        else:
+            apk_path.unlink()
+            log("Removed the installed base.apk to free space.")
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        log(f"Could not remove base.apk: {error}")
+
+
+def abort_setup(_signum, _frame):
+    raise InterruptedError("Setup stopped. Launch again to resume.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("root", type=Path)
+    parser.add_argument("--ready", action="store_true")
+    args = parser.parse_args()
+    root = args.root.resolve()
+    installed = root / "gamedata/prepared"
+    dependency_hashes = [file_hash(root / file) for file in (
+        "patches/texture.py", "libs.aarch64/libastc-repack.so",
+        "runtime.aarch64/SorageVideo.dll",
+        *("patches/" + tool[0] + ".dll" for tool in PATCHES),
+    )]
+    fingerprint = "\n".join([APK_HASH, file_hash(root / "patches/prepare.src"), *dependency_hashes])
+    # Reuse verified data from video builds before APK cleanup and the apphost relocation.
+    previous_fingerprints = tuple("\n".join([APK_HASH, old, *dependency_hashes]) for old in PREVIOUS_PREPARE_HASHES)
+    if args.ready:
+        if not ready(installed, fingerprint, *previous_fingerprints):
+            return 1
+        check_cache(root / "texcache")
+        return 0
+    for name in ("SIGTERM", "SIGINT", "SIGHUP"):
+        signal.signal(getattr(signal, name), abort_setup)
+    with (root / "gamedata/.setup.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        prepare(root, installed, fingerprint, previous_fingerprints, lock.fileno())
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, ValueError, BadZipFile) as error:
+        log(str(error))
+        sys.exit(1)

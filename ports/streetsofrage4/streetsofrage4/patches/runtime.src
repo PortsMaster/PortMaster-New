@@ -1,0 +1,64 @@
+#!/bin/bash
+# Sourced after first-launch preparation. SDL comes from the firmware.
+# Reset the temporary alias directory before any step can fail.
+unset compatdir
+prepared="$GAMEDIR/gamedata/prepared"
+libraries="$GAMEDIR/libs.aarch64"
+mkdir -p "$GAMEDIR/texcache" || return 1
+compatdir=$(mktemp -d "${TMPDIR:-/tmp}/sorage4.XXXXXX") || return 1
+
+find_library() {
+  local soname=$1 path
+  for path in /usr/local/lib/aarch64-linux-gnu /usr/lib/aarch64-linux-gnu /lib/aarch64-linux-gnu \
+              /usr/lib /lib "$controlfolder/libs.aarch64" "$controlfolder/libs" "$libraries/fallback"; do
+    if [ -f "$path/$soname" ]; then
+      printf '%s\n' "$path/$soname"
+      return 0
+    fi
+  done
+  return 1
+}
+
+freetype=$(find_library libfreetype.so.6 || find_library libfreetype.so) || return 1
+harfbuzz=$(find_library libharfbuzz.so.0 || find_library libharfbuzz.so) || return 1
+for alias in freetype freetype.so libfreetype.so libfreetype.so.6; do
+  ln -s "$freetype" "$compatdir/$alias" || return 1
+done
+for alias in libharfbuzz libharfbuzz.so libharfbuzz.so.0; do
+  ln -s "$harfbuzz" "$compatdir/$alias" || return 1
+done
+
+export LD_LIBRARY_PATH="$compatdir:$LD_LIBRARY_PATH"
+export SDL_OPENGL_ES_DRIVER=1
+export SDL_NO_SIGNAL_HANDLERS=1
+export SDL_VIDEO_FULLSCREEN_DESKTOP=1
+
+probe="$GAMEDIR/utils/display-probe"
+if ! capabilities=$("$probe") && [ -n "${SDL_VIDEODRIVER:-}" ]; then
+  if capabilities=$(unset SDL_VIDEODRIVER; "$probe"); then
+    unset SDL_VIDEODRIVER
+  fi
+fi
+printf '%s\n' "$capabilities"
+SOR4_GLES=$(printf '%s\n' "$capabilities" | sed -n 's/^SOR4_GLES=\([23]\)$/\1/p')
+export SOR4_GLES=${SOR4_GLES:-2}
+export SOR4_NATIVE_ASTC=0 SOR4_ETC1=0 SOR4_TEXSCALE=2
+if printf '%s\n' "$capabilities" | grep -qx 'SOR4_ASTC=1' &&
+   ! printf '%s\n' "$capabilities" | grep -Eiq '^SOR4_GL_RENDERER=.*(llvmpipe|softpipe|swrast|software)'; then
+  export SOR4_NATIVE_ASTC=1 SOR4_TEXSCALE=1
+elif [ "$SOR4_GLES" = 2 ]; then
+  export SOR4_ETC1=1 SOR4_TEXSCALE=3
+fi
+
+export SOR4_PAGE=1 SOR4_PAGE_ASYNC=0 SOR4_PAGE_CAP_MB=48 SOR4_PAGE_FLOOR_MB=64
+export SOR4_PAGE_MIN_KB=16 SOR4_PAGE_UPLOADS=2
+export SOR4_PAGE_SWAP="$GAMEDIR/texswap"
+export SOR4_ASSETS="$prepared/assets"
+export SOR4_TEXCACHE="$GAMEDIR/texcache"
+export SOR4_BANKDIR="$SOR4_ASSETS"
+export WWISE_REAL="$prepared/code/libWwise.real.so"
+export WWISE_LOG="$GAMEDIR/wwise.log"
+> "$WWISE_LOG"
+export DOTNET_EnableWriteXorExecute=0 DOTNET_gcServer=0 DOTNET_GCConserveMemory=9 DOTNET_TieredPGO=0
+export MALLOC_ARENA_MAX=2 CUP_NOSIGH=1 CUP_GCSIG=1
+echo "Graphics profile uses GLES $SOR4_GLES, native ASTC $SOR4_NATIVE_ASTC, texture scale 1/$SOR4_TEXSCALE."
