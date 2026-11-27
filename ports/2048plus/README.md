@@ -12,7 +12,7 @@ Source Code: [GitHub Repository](https://github.com/saitamasahil/2048plus)
 - **Jukebox & Wi-Fi Music Manager**: Listen to background music with an audio visualizer, or easily upload your own songs from your phone or PC over local Wi-Fi.
 - **Built for Handhelds**: Auto-saves after every move, smooth controller navigation, haptics, and fast theme switching.
 
-*Note: There might also be a secret minigame hidden behind a classic button code...*
+*Note: There might also be a secret hidden behind a classic button sequence...*
 
 ## Controls
 
