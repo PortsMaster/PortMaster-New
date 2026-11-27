@@ -6,6 +6,8 @@ Credits to [Tsuyomi](https://x.com/tsuyomi0508) for the awesome sound/music!
 
 Source: https://namatakahashi.itch.io/elechead
 
+Thanks to Jeod for the gmtoolkit which is required for the patching of the port!
+
 ## Controls
 
 | Button | Action |
