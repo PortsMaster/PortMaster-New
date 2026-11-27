@@ -37,8 +37,15 @@ Read  ports/olduvai/log.txt .  Its first line names the build; quote it in a
 bug report.  A missing game file names the folder searched and the files wanted.
 
 
+REPORTING A PROBLEM
+-------------------
+Select + left saves a bug report into ports/olduvai/bug_reports/.  Attach it to
+an issue at https://github.com/ksokolowski/olduvai/issues, or post it in the
+Olduvai thread on the PortMaster Discord.
+
+
 LICENCE
 -------
-Olduvai is free software, GPL-3.0-or-later; with the xBRZ scaler the binaries
-are conveyed under GPL-3.0.  Every licence is in licenses/.  Source code:
+Olduvai is free software, GPL-3.0-or-later.  Every licence is in licenses/.
+Source code:
 https://github.com/ksokolowski/olduvai
