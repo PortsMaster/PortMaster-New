@@ -1,0 +1,945 @@
+diff --git a/LIB386/SYSTEM/KEYBOARD.CPP b/LIB386/SYSTEM/KEYBOARD.CPP
+index 42713d8..5d0800b 100644
+--- a/LIB386/SYSTEM/KEYBOARD.CPP
++++ b/LIB386/SYSTEM/KEYBOARD.CPP
+@@ -91,6 +91,18 @@ S32 GetAscii() {
+ }
+ 
+ S32 CheckKey(U32 key) {
++    /* 0 is the "unbound" sentinel everywhere in the config: DefKeysDefault95
++       leaves Key2 at 0, GamepadKeysDefault uses {0, 0} for actions a device has
++       no button for, and clearing a binding in the config menu writes 0. But 0
++       is also a real index here -- SDL_SCANCODE_UNKNOWN -- so without this guard
++       an unbound action reads TabKeys[0], and SDL sets that whenever a key it
++       cannot map is pressed. One unmappable key (a gpio-keys button on a
++       handheld, say) then fires *every* unbound action at once: the four item
++       shortcuts, the behaviour hotkeys, pause. Treat 0 as never pressed. */
++    if (key == 0) {
++        return 0;
++    }
++
+     return ((key) < 256 ? TabKeys[(key)] & 0x80
+                         : TabKeys[256 - 32 + ((key) >> 3)] & (1 << ((key) & 7)));
+ }
+diff --git a/SOURCES/CONSOLE/CONSOLE_CMD.CPP b/SOURCES/CONSOLE/CONSOLE_CMD.CPP
+index de387f4..fac4ad3 100644
+--- a/SOURCES/CONSOLE/CONSOLE_CMD.CPP
++++ b/SOURCES/CONSOLE/CONSOLE_CMD.CPP
+@@ -1982,4 +1982,6 @@ void Console_RegisterAll(void) {
+     Console_RegisterCvar("cam_ground_clear", &FollowCamGroundClearance, CONSOLE_CVAR_INT, "Ground clearance: keep the eye this far above the ground under it");
+     Console_RegisterCvar("cam_manual_hold", &FollowCamManualHoldFrames, CONSOLE_CVAR_INT, "Frames the pitch/distance auto-assist yields after a manual camera nudge");
+     Console_RegisterCvar("cam_hold_angle", &FollowCamHoldAngle, CONSOLE_CVAR_BOOL, "Hold the manual camera rotation (free-camera); off = classic auto-recenter drift");
++    Console_RegisterCvar("move_relative", &CameraRelativeMove, CONSOLE_CVAR_BOOL, "directional input names a camera-relative direction; hero auto-turns to it (off = classic tank controls)");
++    Console_RegisterCvar("move_turn_speed", &CameraRelativeTurnSpeed, CONSOLE_CVAR_INT, "Auto-turn rate for camera-relative movement (Beta units/sec; 4096 = full circle)");
+ }
+diff --git a/SOURCES/C_EXTERN.H b/SOURCES/C_EXTERN.H
+index 47d3614..b874cf8 100644
+--- a/SOURCES/C_EXTERN.H
++++ b/SOURCES/C_EXTERN.H
+@@ -243,6 +243,8 @@ extern S32 FollowCamGroundClearance;  /* keep the eye this far above the ground
+ extern S32 FollowCamManualHold;       /* frames the pitch/distance auto-assist yields after a manual nudge */
+ extern S32 FollowCamManualHoldFrames; /* manual-override hold length (cvar cam_manual_hold) */
+ extern S32 FollowCamHoldAngle;        /* free-camera mode: hold manual rotation, no auto-recenter drift (cvar cam_hold_angle) */
++extern S32 CameraRelativeMove;        /* directional input names a camera-relative direction; hero auto-turns to it (cvar move_relative) */
++extern S32 CameraRelativeTurnSpeed;   /* auto-turn rate for the above, Beta units/sec (cvar move_turn_speed) */
+ extern S32 ReverseStereo;
+ 
+ extern S32 ScaleFactorSprite;
+diff --git a/SOURCES/FOLLOWCAM_CFG.H b/SOURCES/FOLLOWCAM_CFG.H
+index 772f16f..19cd0ed 100644
+--- a/SOURCES/FOLLOWCAM_CFG.H
++++ b/SOURCES/FOLLOWCAM_CFG.H
+@@ -94,3 +94,22 @@
+  * (cvar cam_stick_max_x / cam_stick_max_y, cfg keys of the same name). */
+ #define GAMEPAD_CAM_BETA_MAX_DEFAULT 36  /* orbit units per frame at full deflection, sens 10 (the ceiling) */
+ #define GAMEPAD_CAM_ALPHA_MAX_DEFAULT 10 /* elevation units per frame at full deflection, sens 10 (the ceiling) */
++
++/* Camera-relative movement (community; handheld ports) -----------------------*/
++/* With CameraRelativeMove on, the 8-way directional input names a direction in
++ * the CAMERA's frame and the hero auto-turns to face it and walks, instead of
++ * stock's tank rotate-in-place. The reference yaw is latched on a direction
++ * change rather than read live: Auto camera tracks the hero with loop gain 1, so
++ * a live mapping feeds back on itself and one held direction walks a circle.
++ * docs/CONTROLLER.md has the geometry, the latch and the scope. */
++#define CAM_RELATIVE_DEFAULT 1         /* on by default in this handheld fork; 0 = stock tank controls */
++#define CAM_RELATIVE_TURN_DEFAULT 2560 /* auto-turn rate, Beta units/sec (4096 = full circle; stock manual turn is 1024) */
++#define CAM_RELATIVE_TURN_MIN 512
++#define CAM_RELATIVE_TURN_MAX 4096
++
++/* Screen "up" in an isometric interior, as a world heading. LongProjectPointIso
++ * (LIB386/3D/LPROJISO.CPP) has no camera-angle term -- screen X from (x - z),
++ * screen Y from (x + z) -- so screen-up is fixed at Beta 2560 and screen-right
++ * at 1536, exactly 1024 apart like the 8-way offsets. Interiors therefore need
++ * no latch and read no camera. */
++#define ISO_SCREEN_UP_BETA 2560
+diff --git a/SOURCES/GAMEMENU.CPP b/SOURCES/GAMEMENU.CPP
+index 81e5120..c93dd78 100644
+--- a/SOURCES/GAMEMENU.CPP
++++ b/SOURCES/GAMEMENU.CPP
+@@ -84,6 +84,7 @@ S32 FlagShowEndDemo = FALSE;
+ #define MENU_ID_DISPLAY 2114
+ #define MENU_ID_RESOLUTION 2115
+ #define MENU_ID_DISPLAY_VSYNC 2116
++#define MENU_ID_MOVE_RELATIVE 2117
+ 
+ // Resolution sub-page rows occupy a reserved id range: row i carries id
+ // MENU_ID_RESOLUTION_BASE + i, which BuildCustomMenuText and GereResolutionMenu
+@@ -185,7 +186,7 @@ static S32 s_menuMarkRow = -1;
+ // so adding the pad doesn't clutter the top-level Options screen.
+ U16 ControllerMenu[] = {
+     0,   // selected
+-    3,   // nb entries
++    4,   // nb entries
+     260, // y center
+     0,   // .dia num
+ 
+@@ -195,6 +196,8 @@ U16 ControllerMenu[] = {
+     14, // Configuration Clavier (existing keyboard remap screen)
+     0,
+     MENU_ID_GAMEPAD_CONFIG,
++    0,
++    MENU_ID_MOVE_RELATIVE,
+ };
+ 
+ U16 LanguageMenu[] = {
+@@ -468,6 +471,10 @@ static void BuildCustomMenuText(S32 num, char *string) {
+         CopyUtf8ToCp850(string, 256, GetLocalizedMenuLabel(FollowCamera ? MENU_LABEL_AUTO_CAMERA : MENU_LABEL_CLASSIC_CAMERA));
+         break;
+ 
++    case MENU_ID_MOVE_RELATIVE:
++        CopyUtf8ToCp850(string, 256, GetLocalizedMenuLabel(CameraRelativeMove ? MENU_LABEL_MOVE_RELATIVE : MENU_LABEL_MOVE_CLASSIC));
++        break;
++
+     case MENU_ID_DISPLAY_TEXT:
+         GetMultiText(16 + FlagDisplayText, string);
+         break;
+@@ -1303,6 +1310,18 @@ S32 InputPlayerName(S32 choice, char *name) {
+ #define TEMPO_SCREEN_SAVE 110
+ #define TEMPO_REPEAT_KEY 150
+ 
++/* Confirm / back in the save and load list.
++ *
++ * This list runs its own loop rather than DoGameMenu, and upstream confirms it
++ * on I_FIRE -- which is X, Y, B, R1 and L1, but NOT A. That is fine upstream,
++ * where B confirms in menus too. This port puts confirm on A/X and back on B
++ * (see DoGameMenu), so leaving this alone made the save list the one screen
++ * where A did nothing and B confirmed: the opposite of everywhere else.
++ *
++ * So A joins the set and B leaves it, and B backs out of the list like it backs
++ * out of every other menu. */
++#define SAVELIST_CONFIRM (((I_FIRE) & ~(I_RETURN)) | I_ACTION_ALWAYS)
++
+ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+     S32 flag = 3;
+     char *listplayername;
+@@ -1421,7 +1440,7 @@ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+     // again on every selection change via the flag==1 redraw below.
+     InitShakeChoice();
+ 
+-    while (MyKey != K_ESC AND !(Input & I_MENUS)) {
++    while (MyKey != K_ESC AND !(Input & (I_MENUS | I_RETURN))) {
+         ManageTime();
+ 
+         if (flag == 3) {
+@@ -1803,7 +1822,7 @@ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+             timerdraw = TimerRefHR + TEMPO_SCREEN_SAVE;
+         }
+ 
+-        if (Input & I_FIRE OR MyKey == K_ENTER OR MyKey == K_NUMPAD_ENTER OR mouse_fire) {
++        if (Input & SAVELIST_CONFIRM OR MyKey == K_ENTER OR MyKey == K_NUMPAD_ENTER OR mouse_fire) {
+             if (mouse_fire)
+                 mouse_fire = 0;
+             if (timerdraw) {
+@@ -1845,7 +1864,7 @@ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+                     strcpy(memoname, GamePathname);
+                 }
+ 
+-                while (Input & I_FIRE OR MyKey == K_ENTER)
++                while (Input & SAVELIST_CONFIRM OR MyKey == K_ENTER)
+                     MyGetInput();
+ 
+                 // Non-keyboard routing: unless the last input was a physical
+@@ -1962,7 +1981,7 @@ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+                     retval = 2;
+                     break;
+                 } else {
+-                    while (Input & I_FIRE OR MyKey == K_ENTER)
++                    while (Input & SAVELIST_CONFIRM OR MyKey == K_ENTER)
+                         MyGetInput();
+                     if (select == nb - 1)
+                         strcpy(PlayerName, NewGameTxt);
+@@ -1978,7 +1997,7 @@ S32 ChoosePlayerName(S32 mess, S32 flagflip, S32 flagnew) {
+ 
+     MenuMouseRelease();
+ 
+-    if (Key == K_ESC OR Input & I_MENUS) {
++    if (Key == K_ESC OR Input & (I_MENUS | I_RETURN)) {
+         NewCube = newcube;
+         strcpy(PlayerName, memoplayername);
+     } else if (retval == 1) {
+@@ -2929,7 +2948,12 @@ S32 DoGameMenu(U16 *ptrmenu) {
+             }
+         }
+ 
+-        if (Input & I_RETURN OR Input & I_ACTION_M OR MyKey == K_ENTER OR MyKey == K_NUMPAD_ENTER) {
++        /* Confirm / back, laid out for a gamepad: A / X confirm, B backs out
++           alongside Esc and Start. Every DoGameMenu caller already treats the
++           1000 sentinel as back/cancel, including the main menu, where it
++           resumes the game rather than quitting. ChoosePlayerName keeps its own
++           loop and confirms on I_FIRE, which still includes B. */
++        if (Input & I_ACTION_M OR Input & I_ACTION_ALWAYS OR MyKey == K_ENTER OR MyKey == K_NUMPAD_ENTER) {
+             WaitNoInput();
+             AsciiMode = FALSE;
+             return ptrmenu[4 + 1 + selected * 2]; // num mess
+@@ -2937,7 +2961,10 @@ S32 DoGameMenu(U16 *ptrmenu) {
+ 
+         if (MyKey == K_ESC
+                          OR Input &
+-            I_MENUS) {
++            I_MENUS
++                OR Input &
++            I_RETURN) {
++            WaitNoInput();
+             AsciiMode = FALSE;
+             return 1000;
+         }
+@@ -3366,6 +3393,16 @@ S32 GereControllerMenu(void) {
+         case MENU_ID_GAMEPAD_CONFIG:
+             MenuGamepadConfig();
+             break;
++
++        case MENU_ID_MOVE_RELATIVE:
++            /* Deliberately does NOT touch FollowCamera. An earlier cut turned
++             * Auto camera on with this, which cost ~15 ms/frame of terrain
++             * refresh on handheld hardware (measured: 52 vs 235 frames/s on an
++             * S922X at 848x480) -- so switching control scheme silently halved
++             * the frame rate. The scheme works against whatever camera is in
++             * use, including the cheap classic ones. */
++            CameraRelativeMove ^= 1;
++            break;
+         }
+     }
+ 
+diff --git a/SOURCES/GLOBAL.CPP b/SOURCES/GLOBAL.CPP
+index f6d99fd..a7335eb 100644
+--- a/SOURCES/GLOBAL.CPP
++++ b/SOURCES/GLOBAL.CPP
+@@ -238,6 +238,8 @@ S32 FollowCamGround = FOLLOW_CAM_GROUND_DEFAULT;
+ S32 FollowCamGroundClearance = FOLLOW_CAM_GROUND_CLEARANCE_DEFAULT;
+ S32 FollowCamManualHoldFrames = FOLLOW_CAM_MANUAL_HOLD_DEFAULT;
+ S32 FollowCamHoldAngle = FOLLOW_CAM_HOLD_ANGLE_DEFAULT;
++S32 CameraRelativeMove = CAM_RELATIVE_DEFAULT;
++S32 CameraRelativeTurnSpeed = CAM_RELATIVE_TURN_DEFAULT;
+ S32 ReverseStereo = FALSE;
+ S32 Island = 0;
+ S32 Planet = 0;
+diff --git a/SOURCES/HOLOGLOB.CPP b/SOURCES/HOLOGLOB.CPP
+index b8d3547..721fe0c 100644
+--- a/SOURCES/HOLOGLOB.CPP
++++ b/SOURCES/HOLOGLOB.CPP
+@@ -1034,7 +1034,7 @@ void HoloGlobe(S32 planet) {
+         ClearZBufMinMax();
+ 
+         if ((MyKey == K_ESC)
+-                OR(Input & (I_MENUS | I_HOLOMAP))) {
++                OR(Input & (I_MENUS | I_HOLOMAP | I_RETURN))) {
+             FlagHoloEnd = TRUE;
+             break;
+         }
+@@ -1053,7 +1053,7 @@ void HoloGlobe(S32 planet) {
+                 if (Input & I_DOWN)
+                     HoloAlpha = (HoloAlpha + holoRotStep) & 4095;
+ 
+-                if (((Input == I_ACTION_M) OR(Input == I_RETURN)) // espace
++                if (((Input == I_ACTION_M) OR(Input == I_ACTION_ALWAYS)) // espace
+                     AND(!FlagMap)) {
+                     //					If the player can or cannot Zoom an other island...
+                     if ((NumObjectif == 1000)     //	Twinsen
+diff --git a/SOURCES/HOLOPLAN.CPP b/SOURCES/HOLOPLAN.CPP
+index 74ac129..24f1815 100644
+--- a/SOURCES/HOLOPLAN.CPP
++++ b/SOURCES/HOLOPLAN.CPP
+@@ -800,7 +800,7 @@ void HoloPlan(S32 numplan) {
+         MyGetInput();
+ 
+         if ((MyKey == K_ESC)
+-                OR(Input & (I_MENUS | I_HOLOMAP))) {
++                OR(Input & (I_MENUS | I_HOLOMAP | I_RETURN))) {
+             FlagHoloEnd = TRUE;
+             break;
+         }
+@@ -813,7 +813,7 @@ void HoloPlan(S32 numplan) {
+             if (!(Input & I_FIRE))
+                 testnofire = FALSE;
+         } else if (!FlagMap) {
+-            if ((Input & I_ACTION_M) OR(Input & I_RETURN)) {
++            if (Input & I_CONFIRM) {
+                 break;
+             }
+ 
+diff --git a/SOURCES/INPUT.CPP b/SOURCES/INPUT.CPP
+index 1b1f4ef..497a6e9 100644
+--- a/SOURCES/INPUT.CPP
++++ b/SOURCES/INPUT.CPP
+@@ -83,43 +83,47 @@ static U32 CombinedInputMasks[INPUT_TABLE_SLOTS * 4];
+ 
+ T_DEF_KEY GamepadKeys[MAX_INPUT];
+ 
++/* Handheld-first defaults for this port; conf/lba2.cfg ships the same values and
++ * describes them. They live here too because the gamepad screen's "restore
++ * defaults" reads this table: with upstream's stick-only movement it would strand
++ * a stickless device in a layout it cannot steer back out of. */
+ const T_DEF_KEY GamepadKeysDefault[MAX_INPUT] = {
+-    {K_GAMEPAD_RTRIGGER, 0},                         // 0  I_UP
+-    {K_GAMEPAD_LTRIGGER, 0},                         // 1  I_DOWN
+-    {K_GAMEPAD_LSTICK_LEFT, 0},                      // 2  I_LEFT
+-    {K_GAMEPAD_LSTICK_RIGHT, 0},                     // 3  I_RIGHT
+-    {K_GAMEPAD_RSHOULDER, 0},                        // 4  I_THROW
+-    {K_GAMEPAD_LSHOULDER, 0},                        // 5  I_COMPORTEMENT
+-    {K_GAMEPAD_Y, 0},                                // 6  I_INVENTORY
+-    {K_GAMEPAD_X, 0},                                // 7  I_ACTION_M
+-    {K_GAMEPAD_A, 0},                                // 8  I_ACTION_ALWAYS
+-    {K_GAMEPAD_B, 0},                                // 9  I_RETURN
+-    {K_GAMEPAD_START, 0},                            // 10 I_MENUS
+-    {K_GAMEPAD_BACK, 0},                             // 11 I_HOLOMAP
+-    {0, 0},                                          // 12 I_PAUSE (unbound; Start opens the in-game menu)
+-    {K_GAMEPAD_LSTICK_BTN, K_GAMEPAD_RSTICK_BTN},    // 13 I_ESQUIVE
+-    {0, 0},                                          // 14 I_NORMAL
+-    {0, 0},                                          // 15 I_SPORTIF
+-    {0, 0},                                          // 16 I_AGRESSIF
+-    {0, 0},                                          // 17 I_DISCRET
+-    {0, 0},                                          // 18 I_HELP
+-    {0, 0},                                          // 19 I_SAVE
+-    {0, 0},                                          // 20 I_LOAD
+-    {0, 0},                                          // 21 I_OPTIONS
+-    {K_GAMEPAD_RSTICK_LEFT, K_GAMEPAD_RSTICK_RIGHT}, // 22 I_CAMERA (classic-mode turn; analog orbit owns Auto camera)
+-    {K_GAMEPAD_RSTICK_UP, 0},                        // 23 I_CAMERA_LEVEL_PLUS
+-    {K_GAMEPAD_RSTICK_DOWN, 0},                      // 24 I_CAMERA_LEVEL_MOINS
+-    {0, 0},                                          // 25 I_WEAPON_1
+-    {0, 0},                                          // 26
+-    {0, 0},                                          // 27
+-    {0, 0},                                          // 28
+-    {0, 0},                                          // 29
+-    {0, 0},                                          // 30
+-    {0, 0},                                          // 31
+-    {K_GAMEPAD_DPAD_RIGHT, 0},                       // 32 I_PINGOUIN
+-    {K_GAMEPAD_DPAD_DOWN, 0},                        // 33 I_JETPACK
+-    {K_GAMEPAD_DPAD_UP, 0},                          // 34 I_PROTECTION
+-    {K_GAMEPAD_DPAD_LEFT, 0},                        // 35 I_FOUDRE
++    {K_GAMEPAD_DPAD_UP, K_GAMEPAD_LSTICK_UP},       // 0  I_UP
++    {K_GAMEPAD_DPAD_DOWN, K_GAMEPAD_LSTICK_DOWN},   // 1  I_DOWN
++    {K_GAMEPAD_DPAD_LEFT, K_GAMEPAD_LSTICK_LEFT},   // 2  I_LEFT
++    {K_GAMEPAD_DPAD_RIGHT, K_GAMEPAD_LSTICK_RIGHT}, // 3  I_RIGHT
++    {K_GAMEPAD_RSHOULDER, 0},                       // 4  I_THROW
++    {K_GAMEPAD_LSHOULDER, 0},                       // 5  I_COMPORTEMENT
++    {K_GAMEPAD_Y, 0},                               // 6  I_INVENTORY
++    {K_GAMEPAD_X, 0},                               // 7  I_ACTION_M
++    {K_GAMEPAD_A, 0},                               // 8  I_ACTION_ALWAYS
++    {K_GAMEPAD_B, 0},                               // 9  I_RETURN
++    {K_GAMEPAD_START, 0},                           // 10 I_MENUS
++    {K_GAMEPAD_BACK, 0},                            // 11 I_HOLOMAP
++    {0, 0},                                         // 12 I_PAUSE (unbound; Start opens the in-game menu)
++    {K_GAMEPAD_RTRIGGER, K_GAMEPAD_LSTICK_BTN},     // 13 I_ESQUIVE (R2: stick clicks are absent on stickless handhelds)
++    {0, 0},                                         // 14 I_NORMAL
++    {0, 0},                                         // 15 I_SPORTIF
++    {0, 0},                                         // 16 I_AGRESSIF
++    {0, 0},                                         // 17 I_DISCRET
++    {0, 0},                                         // 18 I_HELP
++    {0, 0},                                         // 19 I_SAVE
++    {0, 0},                                         // 20 I_LOAD
++    {0, 0},                                         // 21 I_OPTIONS
++    {K_GAMEPAD_LTRIGGER, K_GAMEPAD_RSTICK_LEFT},    // 22 I_CAMERA (L2: 90-degree camera snap; analog orbit owns Auto camera where a stick exists)
++    {K_GAMEPAD_RSTICK_UP, 0},                       // 23 I_CAMERA_LEVEL_PLUS
++    {K_GAMEPAD_RSTICK_DOWN, 0},                     // 24 I_CAMERA_LEVEL_MOINS
++    {0, 0},                                         // 25 I_WEAPON_1
++    {0, 0},                                         // 26
++    {0, 0},                                         // 27
++    {0, 0},                                         // 28
++    {0, 0},                                         // 29
++    {0, 0},                                         // 30
++    {0, 0},                                         // 31
++    {0, 0},                                         // 32 I_PINGOUIN (D-pad is movement; use the inventory)
++    {0, 0},                                         // 33 I_JETPACK
++    {0, 0},                                         // 34 I_PROTECTION
++    {0, 0},                                         // 35 I_FOUDRE
+ };
+ 
+ /*══════════════════════════════════════════════════════════════════════════*
+diff --git a/SOURCES/INPUT.H b/SOURCES/INPUT.H
+index 125ffab..0cb5b19 100644
+--- a/SOURCES/INPUT.H
++++ b/SOURCES/INPUT.H
+@@ -55,6 +55,13 @@
+ #define I_FIRE (I_ACTION_M | I_INVENTORY | I_RETURN | I_THROW | I_COMPORTEMENT)
+ #define I_ACTION (I_ACTION_M | I_ACTION_ALWAYS)
+ 
++/* This port puts confirm on A/X and back on B (see DoGameMenu in GAMEMENU.CPP).
++   Upstream confirms on I_RETURN -- B -- which is fine there but leaves A doing
++   nothing on a pad. The modal screens that run their own input loops rather
++   than DoGameMenu (inventory, holomap, save list) go through these, so the rule
++   holds everywhere instead of being re-decided per screen. */
++#define I_CONFIRM (I_ACTION_M | I_ACTION_ALWAYS)
++
+ // Hero discrete-action input bits that the throttled object loop (OBJECT.CPP MOVE_MANUAL)
+ // consumes as EDGES, not held state: a melee/weapon attack starts on the press edge and weapon
+ // fire stops on the release edge. Unlike movement (I_JOY) -- held state the fixed-timestep sim
+diff --git a/SOURCES/INVENT.CPP b/SOURCES/INVENT.CPP
+index 100db53..0e0c9cc 100644
+--- a/SOURCES/INVENT.CPP
++++ b/SOURCES/INVENT.CPP
+@@ -1184,7 +1184,7 @@ void MenuInventory(U32 tempo) {
+                 flag = 0;
+         }
+ 
+-        if ((MyKey == K_ESC) OR(myinput & (I_INVENTORY | I_MENUS))) {
++        if ((MyKey == K_ESC) OR(myinput & (I_INVENTORY | I_MENUS | I_RETURN))) {
+             break;
+         }
+ 
+@@ -1330,7 +1330,7 @@ void MenuInventory(U32 tempo) {
+ 
+         DrawOneInventory(InvSelect);
+ 
+-        if (myinput & I_RETURN) {
++        if (myinput & I_CONFIRM) {
+ #ifdef LBA_EDITOR
+             if ((ListVarGame[TabIndir[InvSelect]].Value > 0)
+ #else
+diff --git a/SOURCES/MENU_LABELS.CPP b/SOURCES/MENU_LABELS.CPP
+index 764a777..989ad30 100644
+--- a/SOURCES/MENU_LABELS.CPP
++++ b/SOURCES/MENU_LABELS.CPP
+@@ -179,4 +179,22 @@ const struct MenuLabelRow LocalizedMenuLabels[MENU_LABEL_COUNT] = {
+       "<%s> Salir   <%s> Tecla   <%s> Borrar",
+       "<%s> Esci   <%s> Tasto   <%s> Cancella",
+       "<%s> Sair   <%s> Tecla   <%s> Apagar"}},
++    /* Movement scheme (community; handheld ports). Applies to every directional
++       input -- D-pad, left stick and keyboard alike -- so the label names the
++       movement, not the hardware. See OBJECT.CPP CamRelActive and
++       docs/CONTROLLER.md. */
++    {MENU_LABEL_MOVE_RELATIVE,
++     {"Movement: camera-relative",
++      "Déplacement : relatif caméra",
++      "Bewegung: kamerabezogen",
++      "Movimiento: relativo a cámara",
++      "Movimento: relativo alla telecamera",
++      "Movimento: relativo à câmera"}},
++    {MENU_LABEL_MOVE_CLASSIC,
++     {"Movement: classic turn",
++      "Déplacement : rotation classique",
++      "Bewegung: klassisch drehen",
++      "Movimiento: giro clásico",
++      "Movimento: rotazione classica",
++      "Movimento: rotação clássica"}},
+ };
+diff --git a/SOURCES/MENU_LABELS.H b/SOURCES/MENU_LABELS.H
+index 0b8226e..fc1ecc2 100644
+--- a/SOURCES/MENU_LABELS.H
++++ b/SOURCES/MENU_LABELS.H
+@@ -51,6 +51,8 @@ enum MenuLocalizedLabel {
+     MENU_LABEL_MOVIE_ORIGINAL,
+     MENU_LABEL_MOVIE_FIT,
+     MENU_LABEL_KEYCFG_FOOTER,
++    MENU_LABEL_MOVE_RELATIVE,
++    MENU_LABEL_MOVE_CLASSIC,
+     MENU_LABEL_COUNT,
+ };
+ 
+diff --git a/SOURCES/OBJECT.CPP b/SOURCES/OBJECT.CPP
+index 0762dc5..c40c770 100644
+--- a/SOURCES/OBJECT.CPP
++++ b/SOURCES/OBJECT.CPP
+@@ -1,6 +1,7 @@
+ #include "C_EXTERN.H"
+ 
+ #include "DEMO_SEED.H"
++#include "FOLLOWCAM_CFG.H" // ISO_SCREEN_UP_BETA
+ #include "SAVEGAME.H"
+ #include "ZONE_GEOM.H" // ZonePointInBox -- single source of truth for the zone box test
+ 
+@@ -3866,6 +3867,132 @@ void ManualRealAngle(T_OBJET *ptrobj) {
+     }
+ }
+ 
++/*--------------------------------------------------------------------------*/
++/* Camera-relative movement (community addition; opt-in via CameraRelativeMove).
++ * What the scheme is, and why the reference yaw is latched rather than read
++ * every frame, are in FOLLOWCAM_CFG.H.
++ *
++ * It reads the I_UP/I_DOWN/I_LEFT/I_RIGHT bits, so it applies to every
++ * directional source alike -- D-pad, left stick (JOYSTICK.CPP digitises it to
++ * the same 8 directions) and the keyboard. Nothing here is D-pad specific. */
++
++static S32 CamRelLatchYaw = 0;  /* camera yaw the current press was resolved against */
++static S32 CamRelLatchDir = -1; /* 8-way offset it was latched for; -1 = not driving */
++static S32 CamRelTarget = 0;    /* world Beta the hero is turning toward */
++
++/* Forget the latch, so the next press re-reads the camera. Called where the
++ * camera is deliberately re-oriented under the player (Center camera). */
++void CameraRelativeReset(void) {
++    CamRelLatchDir = -1;
++}
++
++/* The held 8-way direction as an offset from "away from the camera", in Beta
++ * units (4096 = full circle). +Beta is a left turn, matching ManualRealAngle's
++ * +1024 for I_LEFT. Returns -1 when nothing is held. */
++static S32 CamRelDirection(void) {
++    S32 up = (Input & I_UP) ? 1 : 0;
++    S32 down = (Input & I_DOWN) ? 1 : 0;
++    S32 left = (Input & I_LEFT) ? 1 : 0;
++    S32 right = (Input & I_RIGHT) ? 1 : 0;
++
++    /* Opposite pairs cancel. A physical D-pad cannot press both, but a stick, the
++     * keyboard and the console `input` harness can. */
++    if (up AND down)
++        up = down = 0;
++    if (left AND right)
++        left = right = 0;
++
++    if (up)
++        return left ? 512 : (right ? (4096 - 512) : 0);
++    if (down)
++        return left ? 1536 : (right ? (2048 + 512) : 2048);
++    if (left)
++        return 1024;
++    if (right)
++        return 4096 - 1024;
++
++    return -1;
++}
++
++/* Whether the scheme should drive the hero this frame: free player control only.
++ * It runs in interiors and exteriors and under every camera -- CamRelCameraYaw
++ * resolves the reference heading for each -- so nothing here tests CubeMode or
++ * the camera. Called at the top of the MOVE_MANUAL case, where Input is still
++ * the raw pad.
++ *
++ * Every term below is load-bearing; docs/CONTROLLER.md carries the reasoning.
++ * In short:
++ *   FlagAnim != ANIM_THEN / !(Jumping & 1023): a one-shot anim in flight. The
++ *     remap turns any held direction into a forward press, and the direction
++ *     block's unconditional InitAnim(GEN_ANIM_MARCHE, ANIM_REPEAT) overrides an
++ *     ANIM_THEN, restarting it every frame. Jumping needs its own term: stock
++ *     guards an in-flight jump on LastMyJoy, the previous frame's REAL pad,
++ *     which a synthetic Input makes miss.
++ *   !PtrZoneClimb: a ladder needs literal up AND down, and the remap only ever
++ *     emits up. The zone is known before the climb starts, so the scheme stands
++ *     down on approach rather than mid-climb.
++ *   !(Input & (I_ESQUIVE | I_THROW | I_ACTION_M)): while these are held, stock
++ *     steers by adding GetDeltaMove(&BoundAngle.Move) straight onto Beta -- the
++ *     same accumulator the auto-turn drives, so aiming snaps then crawls.
++ *
++ * Pushing, a jump in flight and an anim that owns rotation gate the auto-TURN
++ * (canturn at the call site), NOT the remap: it must keep feeding "forward"
++ * through them, or the stock block sees the real direction, never takes its
++ * `if (Pushing)` branch, and rotates out of contact. */
++static S32 CamRelActive(T_OBJET *ptrobj, U8 numobj) {
++    return CameraRelativeMove
++        AND(numobj == NUM_PERSO)
++            AND(ptrobj->Move == MOVE_MANUAL)
++                AND !CinemaMode
++                    AND !FlagClimbing
++                        AND !PtrZoneClimb
++                            AND(ptrobj->FlagAnim != ANIM_THEN)
++                                AND !(Jumping & 1023)
++                                    AND !(Input & (I_ESQUIVE | I_THROW | I_ACTION_M));
++}
++
++/* The world heading "away from the camera" -- what a forward press means.
++ * Interiors take the fixed isometric constant (derived in FOLLOWCAM_CFG.H).
++ * Outdoors, (2048 - BetaCam) is the heading the camera looks along, the same
++ * expression PERSO.CPP uses for the follow camera's forward lean: a stable
++ * per-scene angle under the classic cameras, hero-tracking under Auto camera,
++ * which is the case the caller's latch exists for. */
++static S32 CamRelCameraYaw(void) {
++    if (CubeMode == CUBE_INTERIEUR)
++        return ISO_SCREEN_UP_BETA;
++
++    return (2048 - BetaCam) & 4095;
++}
++
++/* Replaces ManualRealAngle while the scheme is driving: turn toward the latched
++ * world direction on the bound-angle MOVE accumulator (shortest arc, clamps on
++ * arrival, carries its sub-unit remainder so it is frame-rate independent --
++ * see README.md in the port's source package) instead of the rotation the tank
++ * path uses. */
++static void CamRelTurn(T_OBJET *ptrobj, S32 canturn) {
++    S32 beta = ptrobj->Obj.Beta & 4095;
++
++    /* The hero's facing is not ours to set: pushing a block, a jump in flight,
++     * or an anim that owns rotation. Park it exactly as ManualRealAngle does in
++     * the same situations, so no delta banks up in the accumulator and dumps
++     * into Beta the moment control comes back. */
++    if (!canturn) {
++        RestartMove(&ptrobj->BoundAngle.Move);
++        return;
++    }
++
++    /* BoundAngle.Cur is not maintained on the tank path (it only ever touches
++     * the raw .Move), and a collision, a script or a scene load can move Beta
++     * behind our back. Re-seed from the live Beta when they have drifted apart
++     * rather than turning from a stale origin. */
++    if (ptrobj->BoundAngle.Cur != beta)
++        InitBoundAngleMove(&ptrobj->BoundAngle, CameraRelativeTurnSpeed, beta, CamRelTarget);
++    else
++        ChangeSpeedBoundAngleMove(&ptrobj->BoundAngle, CameraRelativeTurnSpeed, CamRelTarget);
++
++    ptrobj->Obj.Beta = GetBoundAngleMove(&ptrobj->BoundAngle) & 4095;
++}
++
+ //▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ /*──────────────────────────────────────────────────────────────────────────*/
+ 
+@@ -4006,6 +4133,8 @@ void DoDir(U8 numobj) {
+     T_OBJET *ptrobj;
+     S32 info3;
+     S32 angle;
++    S32 camrel = FALSE; /* camera-relative scheme is driving this frame */
++    U32 camrelsaveinput = 0;
+ 
+     ptrobj = &ListObjet[numobj];
+ 
+@@ -4039,6 +4168,41 @@ void DoDir(U8 numobj) {
+         /*-------------------------------------------------------------------------*/
+     case MOVE_MANUAL:
+ 
++        /* --- Camera-relative movement (opt-in) --------------------------------
++         * Resolved here, at the very top of the case, so everything below sees
++         * it exactly as it would see a real forward press. That ordering is
++         * load-bearing twice over: the jetpack / Proto-Pack hover forces I_UP a
++         * little further down, which must NOT read as a player direction (it
++         * would latch and auto-turn the hero while he hovers on no input), and
++         * the "can't start the Proto-Pack in water" guard clears I_UP, which
++         * must still win over the remap.
++         *
++         * Re-latch the camera yaw when the 8-way direction changes -- or when
++         * the scheme was not driving last frame, which is how a scene load or a
++         * cutscene re-syncs it -- aim at latched-yaw + that direction, and hand
++         * everything below a plain "forward". Walking, pushing, the anim and the
++         * LastJoyFlag bookkeeping then all run exactly as on the tank path.
++         * Input is restored before LastInput / LastMyJoy are latched at the end
++         * of the case, so edge detection still sees the real pad. */
++        if (CamRelActive(ptrobj, numobj)) {
++            S32 camreldir = CamRelDirection();
++
++            if (camreldir < 0) {
++                CamRelLatchDir = -1;
++            } else {
++                if (camreldir != CamRelLatchDir) {
++                    CamRelLatchYaw = CamRelCameraYaw();
++                    CamRelLatchDir = camreldir;
++                }
++                CamRelTarget = (CamRelLatchYaw + camreldir) & 4095;
++                camrel = TRUE;
++                camrelsaveinput = Input;
++                Input = (Input & ~(U32)I_JOY) | I_UP;
++            }
++        } else {
++            CamRelLatchDir = -1;
++        }
++
+         if ((Input & I_ACTION_ALWAYS)
+                 AND !(ptrobj->WorkFlags & ANIM_MASTER_GRAVITY)
+                     AND(ptrobj->FlagAnim != ANIM_ALL_THEN)) {
+@@ -4387,6 +4551,10 @@ void DoDir(U8 numobj) {
+                     // si le joueur n'a pas relacher Up et Down
+                     // avant de reappuyer dessus
+ 
++                    /* The one early exit from the case, and unreachable while the
++                       remap drives: it needs Jumping & 1023, which CamRelActive
++                       excludes along with the I_ACTION_M that sets those bits.
++                       Restore Input here if either guard is ever dropped. */
+                     ManualRealAngle(ptrobj);
+                     LastMyJoy = (Input & I_JOY);
+                     LastMyFire = (Input & I_FIRE);
+@@ -4501,7 +4669,19 @@ void DoDir(U8 numobj) {
+             }
+         }
+ 
+-        ManualRealAngle(ptrobj);
++        if (camrel) {
++            /* Read Pushing / Jumping here, not at the top: the behaviour cases
++             * and the direction block above are what set them this frame. */
++            S32 camrelcanturn = !Pushing
++                                    AND !(Jumping & 1023)
++                                        AND !(ptrobj->WorkFlags & ANIM_MASTER_ROT);
++
++            Input = camrelsaveinput;
++            CamRelTurn(ptrobj, camrelcanturn);
++        } else {
++            ManualRealAngle(ptrobj);
++        }
++
+         LastInput = Input;
+         LastMyJoy = (Input & I_JOY);
+         LastMyFire = (Input & I_FIRE);
+diff --git a/SOURCES/OBJECT.H b/SOURCES/OBJECT.H
+index 1c1540c..ee6d02a 100644
+--- a/SOURCES/OBJECT.H
++++ b/SOURCES/OBJECT.H
+@@ -83,6 +83,7 @@ extern void GereObjAnim(U8 numobj);
+ extern Func_DoAnim DoAnim;
+ /*--------------------------------------------------------------------------*/
+ extern void ManualRealAngle(T_OBJET *ptrobj);
++extern void CameraRelativeReset(void); /* drop the camera-relative latch (Center camera) */
+ /*--------------------------------------------------------------------------*/
+ extern void ClearRealAngle(T_OBJET *ptrobj);
+ /*--------------------------------------------------------------------------*/
+diff --git a/SOURCES/PERSO.CPP b/SOURCES/PERSO.CPP
+index 29c32ed..0b1eab2 100644
+--- a/SOURCES/PERSO.CPP
++++ b/SOURCES/PERSO.CPP
+@@ -1881,6 +1881,11 @@ restartloop:
+                         FollowCamGroundSettling = 0;
+                     }
+ 
++                    /* The camera just swung to a new angle under the player, so
++                     * a latched reference yaw no longer matches what they see.
++                     * Drop it; the next press re-reads the camera. */
++                    CameraRelativeReset();
++
+                     RestoreTimer();
+ 
+ #ifndef DEBUG_TOOL
+@@ -2472,6 +2477,12 @@ void ReadConfigFile(void) {
+     if (FollowCamManualHoldFrames < 0)
+         FollowCamManualHoldFrames = 0;
+     FollowCamHoldAngle = DefFileBufferReadValueDefault("FollowCamHoldAngle", FOLLOW_CAM_HOLD_ANGLE_DEFAULT) ? TRUE : FALSE;
++    CameraRelativeMove = DefFileBufferReadValueDefault("CameraRelativeMove", CAM_RELATIVE_DEFAULT) ? TRUE : FALSE;
++    CameraRelativeTurnSpeed = DefFileBufferReadValueDefault("CameraRelativeTurnSpeed", CAM_RELATIVE_TURN_DEFAULT);
++    if (CameraRelativeTurnSpeed < CAM_RELATIVE_TURN_MIN)
++        CameraRelativeTurnSpeed = CAM_RELATIVE_TURN_MIN;
++    if (CameraRelativeTurnSpeed > CAM_RELATIVE_TURN_MAX)
++        CameraRelativeTurnSpeed = CAM_RELATIVE_TURN_MAX;
+ }
+ 
+ /*──────────────────────────────────────────────────────────────────────────*/
+@@ -2539,6 +2550,8 @@ void WriteConfigFile(void) {
+     DefFileBufferWriteValue("FollowCamGroundClearance", FollowCamGroundClearance);
+     DefFileBufferWriteValue("FollowCamManualHoldFrames", FollowCamManualHoldFrames);
+     DefFileBufferWriteValue("FollowCamHoldAngle", FollowCamHoldAngle);
++    DefFileBufferWriteValue("CameraRelativeMove", CameraRelativeMove);
++    DefFileBufferWriteValue("CameraRelativeTurnSpeed", CameraRelativeTurnSpeed);
+ 
+     if (batched) {
+         DefFileBufferEndBatch();
+diff --git a/docs/CONFIG.md b/docs/CONFIG.md
+index e5b0208..e60a879 100644
+--- a/docs/CONFIG.md
++++ b/docs/CONFIG.md
+@@ -31,6 +31,8 @@ lba2.cfg stores user preferences and last-save info. Read at startup, written at
+ | Shadow | int | 1–3 | 3 | Overwritten by DetailLevel when leaving Options. 1=none on extras, 2=no impact shadows, 3=full |
+ | AllCameras | int | 0, 1 | 1 | 0=OFF, 1=ON |
+ | FollowCamera | int | 0, 1 | 0 | Auto camera (user-facing name; Enhanced Edition–style third-person follow in exterior). Config key stays `FollowCamera` for stability. 0=classic (default), 1=auto. Also reads legacy key `AutoCameraCenter` |
++| CameraRelativeMove | int | 0, 1 | 1 | Directional input (D-pad, left stick or keyboard alike) names a direction in the camera's frame and the hero auto-turns to it, instead of classic tank turning. Works in exteriors and isometric interiors, under any camera; independent of `FollowCamera`. Community addition for stickless handhelds |
++| CameraRelativeTurnSpeed | int | 512–4096 | 2560 | Auto-turn rate for the above, Beta units/sec (4096 = full circle; the stock manual turn is 1024). Clamped on load |
+ | ReverseStereo | int | 0, 1 | 0 | 0=OFF, 1=ON |
+ | DetailLevel | int | 0–3 | 3 | 0=min (no rain, no sea, no horizon), 1=486, 2=base Pentium, 3=max. Drives Shadow, RainEnable, MaxPolySea, FlagDrawHorizon |
+ | FullScreen | int | 0, 1 | 1 | 0=small videos, 1=fullscreen videos. Invalid values → 1 |
+@@ -77,6 +79,7 @@ lba2.cfg stores user preferences and last-save info. Read at startup, written at
+ |-----|---------|--------|------|
+-| MenuMouse | Optional mouse UX in game menus (`FlagMenuMouse` in code). Default 1 (on). Set 0 to match classic keyboard/joystick-only menus. See [MENU.md](MENU.md) | ReadConfigFile / WriteConfigFile | Options → Advanced options |
++| MenuMouse | Optional mouse UX in game menus (`FlagMenuMouse` in code). Default 1 (on). Set 0 to match classic keyboard/joystick-only menus. See `README.md` in the port's source package | ReadConfigFile / WriteConfigFile | Options → Advanced options |
+ | FollowCamera | Auto camera for exterior scenes (0=classic, 1=auto). Community addition, not in original game; menu label is "Auto camera" / "Classic camera" | ReadConfigFile / WriteConfigFile | Options → Advanced options |
++| CameraRelativeMove | Camera-relative movement (0=classic tank, 1=camera-relative). Community addition; menu label is "Movement: camera-relative" / "Movement: classic turn". Independent of `FollowCamera` — deliberately, since Auto camera is much more expensive per frame | ReadConfigFile / WriteConfigFile | Options → Controls |
+ 
+ ## Code reference
+ 
+diff --git a/docs/CONTROLLER.md b/docs/CONTROLLER.md
+index 16f2739..2be9645 100644
+--- a/docs/CONTROLLER.md
++++ b/docs/CONTROLLER.md
+@@ -64,8 +64,151 @@ up/down change the camera preset (`I_CAMERA_LEVEL`). Tunables in `lba2.cfg`:
+ | `GamepadCameraInvertY` | 0 | invert elevation axis |
+ 
+ The deadzone is shared with the rest of the gamepad (`GamepadDeadzone`). There is
+-no stick zoom: the triggers are movement and the remaining buttons are bound, so
+-zoom stays on the keyboard and mouse.
++no stick zoom, so zoom stays on the keyboard and mouse.
++
++> **This build's pad defaults differ from upstream's.** Upstream puts movement on
++> the triggers and the left stick and the four item shortcuts on the D-pad, which
++> a stickless handheld cannot steer with at all. Here movement is on the D-pad
++> (stick as a second binding), and the freed triggers carry the two actions that
++> were otherwise stick-only: **L2** the 90-degree camera snap (`I_CAMERA`) and
++> **R2** the dodge (`I_ESQUIVE`, stock: the stick clicks). The item shortcuts are
++> unbound; those items stay reachable from the inventory. `GamepadKeysDefault` in
++> [SOURCES/INPUT.CPP](../SOURCES/INPUT.CPP) carries this layout, so the gamepad
++> config screen's "restore defaults" returns here rather than to a layout the
++> device cannot steer back out of.
++
++## Camera-relative movement (community; stickless handhelds)
++
++Stock hero control is "tank": `I_LEFT` / `I_RIGHT` rotate `Beta` on the spot and
++`I_UP` walks along it. On a handheld with no analog stick there is no free-look
++axis at all, so the hero's facing is the only thing that can steer — and tank
++turning is what most players bounce off.
++
++With `CameraRelativeMove` on (cfg key, cvar `move_relative`, menu
++Options → Controls; **on by default in this fork**, which differs from the
++engine's own opt-in default — see below), the 8-way directional input instead
++names a direction in the **camera's** frame.
++
++It is **not D-pad specific**, despite where it came from. It reads the
++`I_UP`/`I_DOWN`/`I_LEFT`/`I_RIGHT` bits, so every directional source gets it
++alike: the D-pad, the left stick (`ApplyStickDirection` in
++[JOYSTICK.CPP](../SOURCES/JOYSTICK.CPP) digitises the stick to the same eight
++directions before it reaches those bits, so a stick gets 8-way too, with no
++analog magnitude) and the keyboard arrows. The hero auto-turns to face that world
++direction and walks forward on the ordinary `GEN_ANIM_MARCHE`. There are no
++strafe frames in the animation set — only `GEN_ANIM_MARCHE` / `RECULE` /
++`GAUCHE` / `DROITE` plus the one-shot `GEN_ANIM_ESQUIVE_*` dodges — so
++turn-then-walk is the only way to reach an arbitrary heading. *Down*
++therefore turns the hero around and walks, rather than playing the backpedal.
++
++### Two reference frames
++
++`CamRelCameraYaw` supplies "away from the camera", and the two cases are not
++alike:
++
++- **Interior (isometric): a constant.** `LongProjectPointIso`
++  ([LIB386/3D/LPROJISO.CPP](../LIB386/3D/LPROJISO.CPP)) carries no camera-angle
++  term — screen X comes from `(x - z)`, screen Y from `(x + z)` — and the
++  interior camera never rotates. Screen-up is therefore the fixed world heading
++  `ISO_SCREEN_UP_BETA` (2560) and screen-right is 1536, exactly 1024 apart,
++  matching the 8-way offsets. No camera state is read and the latch is a no-op.
++  This is ordinary isometric 8-way control.
++- **Exterior: `(2048 - BetaCam)`.** Under the classic cameras that is a stable
++  per-scene angle. Under Auto camera it tracks the hero, which is the case the
++  latch below exists for.
++
++**It does not require Auto camera, and must not turn it on.** An earlier cut had
++the menu toggle enable `FollowCamera` alongside it, on the reasoning that the
++scheme needed a tracked camera yaw. It does not — and Auto camera's per-frame
++terrain refresh costs about 15 ms/frame on handheld hardware (measured on an
++Amlogic S922X at 848x480: 52 frames/s with it on, 235 with it off), so that
++coupling silently halved the frame rate as the price of changing control scheme.
++
++### The latch (why the reference yaw is frozen)
++
++The reference yaw is **latched when the 8-way direction changes**, not read every
++frame. This is the whole design, not an optimisation.
++
++Auto camera's yaw target is `(2048 - heroBeta)` ([PERSO.CPP](../SOURCES/PERSO.CPP),
++`UpdateFollowCameraExt`): the camera tracks the hero with loop gain 1, so it has
++no yaw of its own to be relative *to*. A live camera-relative mapping against it
++feeds back on itself — the hero turns, the camera follows, the mapping shifts,
++and holding one direction walks a circle. Latching freezes the frame for the
++duration of a press, which kills the feedback and has the nicer property that the
++mapping always matches what was on screen at the instant the player pressed.
++
++The latch is re-taken when the 8-way direction changes, when the scheme was not
++driving on the previous frame (so a scene load or a cutscene re-syncs it), and on
++Center camera (`CameraRelativeReset`, called from the `I_RETURN` handler), which
++swings the camera under the player.
++
++### Scope
++
++Active for free player control (`MOVE_MANUAL`) in **both** exterior and
++isometric interior scenes, and under **any** camera. Life-script-driven movement
++is untouched. It stands down while an aiming or attack input is held
++(`I_ESQUIVE`, `I_THROW`, `I_ACTION_M`) and for a jump in flight
++(`Jumping & 1023`), because those own the hero's facing or body.
++Dodges are one-shot moves keyed to it, and while throw or a combat action is held
++the stock code steers by adding `GetDeltaMove(&BoundAngle.Move)` straight onto
++`Beta` (*"control direction pendant visée"*) — the same accumulator this scheme's
++auto-turn drives. Leaving it active means both drive one accumulator, and the
++hero snaps toward the latched heading then crawls instead of aiming smoothly.
++Suppressing only the *turn* is not enough: the stock aim-steer needs the
++accumulator speed `ManualRealAngle` sets from the real left/right, which the
++remap clears. Standing the whole scheme down hands aiming back to the stock
++tank-style steer those actions were designed around.
++
++A jump in flight is excluded for a third reason again. Stock protects an
++in-flight jump with an early exit from the `MOVE_MANUAL` case, guarded on
++`LastMyJoy & (I_UP | I_DOWN)` — the previous frame's **real** pad. The remap
++makes the current frame synthetic while `LastMyJoy` stays real, so the guard
++misses, execution falls through to the direction block, and its unconditional
++`InitAnim(GEN_ANIM_MARCHE, ANIM_REPEAT)` overrides the `ANIM_THEN` jump — the
++hero never leaves the ground. Standing down for the whole jump keeps stock's own
++protection intact rather than trying to reproduce it. That early exit is also the
++only path out of the case that skips the `Input` restore, so it undoes the remap
++itself.
++
++**Two gates, not one.** The input remap and the auto-turn are suppressed
++separately, and conflating them is a bug:
++
++- **Ladders** suppress the *whole scheme*, and on `PtrZoneClimb` (the zone) rather
++  than on `FlagClimbing` (the state). A ladder needs literal up *and* down, and
++  the remap only ever emits up, so there would be no way back down. Keying on the
++  zone means the scheme stands down on approach instead of mid-climb.
++- **Pushing a block, a jump in flight, an anim that owns rotation
++  (`ANIM_MASTER_ROT`), and a held behaviour action** suppress only the
++  *auto-turn* (`canturn` at the call site). The remap must keep feeding "forward"
++  through them: the player entered those states by pressing a camera-relative
++  direction and their finger is still on it. Deactivating the whole scheme on
++  `Pushing` strands the push the instant it starts — the stock block then sees
++  the real (say) "left", never reaches its `if (Pushing)` branch, and rotates out
++  of contact. When turning is suppressed the accumulator is parked with
++  `RestartMove`, exactly as `ManualRealAngle` does, so no delta banks up and
++  dumps into `Beta` when control returns.
++
++Implementation: `CamRelActive` / `CamRelDirection` / `CamRelTurn` in
++[SOURCES/OBJECT.CPP](../SOURCES/OBJECT.CPP). It is resolved at the **top** of the
++`MOVE_MANUAL` case, before the `Comportement` cases, and that ordering is
++load-bearing: the jetpack / Proto-Pack hover forces `I_UP` further down, which
++must not read as a player direction (it would latch and auto-turn the hero on no
++input at all), and the "can't start the Proto-Pack in water" guard clears `I_UP`,
++which must still win over the remap.
++
++The scheme rewrites `Input` to a plain "forward", so walking, pushing, the anim
++and the `LastJoyFlag` bookkeeping all run exactly as they do on the tank path,
++then restores it before `LastInput` / `LastMyJoy` are latched so edge detection
++still sees the real pad. Turning rides the bound-angle `MOVE` accumulator
++(`ChangeSpeedBoundAngleMove` / `GetBoundAngleMove`) — shortest arc, clamps on
++arrival, carries its sub-unit remainder, so it is frame-rate independent (see
++`README.md` in the port's source package) unlike the animation-baked
++translation it steers.
++
++| Key | Default | Description |
++|-----|---------|-------------|
++| `CameraRelativeMove` | 1 | enable (0 = classic tank controls). Upstream's equivalent would be 0; this fork targets stickless handhelds, where tank control is the thing players bounce off |
++| `CameraRelativeTurnSpeed` | 2560 | auto-turn rate, Beta units/sec (4096 = full circle; stock manual turn is 1024) |
+ 
+ ## Live tuning (console cvars)
+ 
+@@ -87,6 +230,8 @@ changes persist to `lba2.cfg` on exit. `varlist` lists them; tab completes names
+ | `cam_smooth` | manual orbit lerp (1 = snap, higher = laggier) |
+ | `cam_recenter_delay` | frames before Auto cam re-centers after a manual pan |
+ | `cam_recenter_drift` | re-center drift divisor (higher = gentler) |
++| `move_relative` | camera-relative movement (off = classic tank controls) |
++| `move_turn_speed` | auto-turn rate for camera-relative movement (Beta units/sec) |
+ 
+ The `cam_stick_max_*` ceilings, `cam_recenter_delay`, and `cam_recenter_drift`
+ were the constants that previously needed a recompile to tune; they are now live.
+diff --git a/docs/MENU.md b/docs/MENU.md
+index e77d0a5..9d10279 100644
+--- a/docs/MENU.md
++++ b/docs/MENU.md
+@@ -36,11 +36,24 @@ Main Menu
+ │   │   ├── Small videos / Full screen videos (27/28)
+ │   │   ├── Fullscreen display OFF/ON     [custom localized label]
+ │   │   └── Don't display text / Display text (16/17)
+-│   ├── Keyboard Config (14)
++│   ├── Controls [custom localized label]
++│   │   ├── Back (26)
++│   │   ├── Keyboard Config (14)
++│   │   ├── Game controller [custom localized label]
++│   │   └── Movement: camera-relative / Movement: classic turn [custom localized label, community addition]
+ └── Quit (75)
+ ```
+ 
+-`DoGameMenu` returns the selected text ID, or `1000` for ESC.
++`DoGameMenu` returns the selected text ID, or `1000` for back/cancel.
++
++**Confirm / back differ from upstream in this port.** Upstream confirms on
++`I_RETURN` *and* `I_ACTION_M` and backs out only on Esc / `I_MENUS`, which on a
++gamepad means B and X both confirm, A does nothing, and only Start goes back.
++Here **`I_ACTION_M` / `I_ACTION_ALWAYS` (X / A) confirm** and **`I_RETURN` (B)
++backs out**, alongside Esc and Start — the console convention. Every caller
++already handles the `1000` sentinel as back/cancel, including the main menu,
++where it resumes the game rather than quitting. `ChoosePlayerName` runs its own
++loop and confirms on `I_FIRE`, so it is unaffected.
+ 
+ ## Terms
+ 

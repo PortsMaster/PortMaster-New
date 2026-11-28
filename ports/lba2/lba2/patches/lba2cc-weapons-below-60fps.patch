@@ -1,0 +1,82 @@
+diff --git a/SOURCES/PERSO.CPP b/SOURCES/PERSO.CPP
+index 0b1eab2..358caad 100644
+--- a/SOURCES/PERSO.CPP
++++ b/SOURCES/PERSO.CPP
+@@ -1923,10 +1923,13 @@ restartloop:
+              - N steps (below ~60 fps): sub-step so a long frame still advances the animation
+                the correct amount instead of losing it to the keyframe overshoot-discard.
+            Each sub-step drives TimerRefHR to its own value; the sub-step remainder carries via
+-           LastSimRefHR, and TimerRefHR is restored to the frame's value afterwards. Held input
+-           actions (jump, throw) would re-fire if their object-loop code ran every sub-step, so
+-           after the first sub-step only movement bits (I_JOY) are kept -- InitAnim is
+-           idempotent, so the walk anim does not reset. A game-clock rewind (a modal SaveTimer
++           LastSimRefHR, and TimerRefHR is restored to the frame's value afterwards. Every
++           sub-step sees the frame's whole Input. Masking the fire bits out of one opens the
++           object loop's `!(Input & I_FIRE)` gate, which drops the hero to the idle path and
++           resets a held weapon before its animation reaches the keyframe its projectile
++           spawns on: below ~60 fps, where a frame runs 2+ sub-steps, nothing can fire. The
++           repeat is safe -- InitAnim early-outs on an unchanged GenAnim, MagicBallFlags is a
++           latch, and the aim/turn delta is time-based. A game-clock rewind (a modal SaveTimer
+            restore, a cube change) re-anchors and skips one frame. Off (0) is the historical
+            per-frame path byte-for-byte, and at --fixed-dt 16 the on path is byte-identical too
+            (elapsed == 16 -> exactly 1 step). See docs/MOVEMENT_FRAMERATE.md. */
+@@ -1990,8 +1993,6 @@ restartloop:
+     sim_step:
+         if (FixedTimestep > 0) {
+             TimerRefHR = simBaseRef + (U32)(simStep + 1) * (U32)FixedTimestep;
+-            if (simStep > 0)
+-                Input = simSavedInput & I_JOY; // movement only after the first sub-step
+         }
+ 
+         /* vitesse de chute propor pour tous les objets */
+@@ -2263,8 +2264,9 @@ restartloop:
+         if (FixedTimestep > 0 && ++simStep < nSimSteps)
+             goto sim_step; // run the next fixed sub-step of this frame
+         if (FixedTimestep > 0) {
+-            // Restore the frame's clock for rendering / the next frame and undo the per-sub-step
+-            // input mask. LastSimRefHR was already advanced by Timer_PlanSimSteps (the carry).
++            // Restore the frame's clock and its input: the object loop rewrites Input in
++            // place (jetpack forces I_UP, a dodge clears I_FIRE) and the next frame takes
++            // LastInput from it. LastSimRefHR was advanced by Timer_PlanSimSteps (the carry).
+             TimerRefHR = simFinalRef;
+             Input = simSavedInput;
+         }
+diff --git a/docs/MOVEMENT_FRAMERATE.md b/docs/MOVEMENT_FRAMERATE.md
+index c19a871..a8c749d 100644
+--- a/docs/MOVEMENT_FRAMERATE.md
++++ b/docs/MOVEMENT_FRAMERATE.md
+@@ -156,10 +156,9 @@ mixes animation advancement (which we want to run `N` times) with `DoLife`, whic
+ hero input. Hero actions are level-triggered off the held input: e.g. the jump path at
+ [OBJECT.CPP:4056-4090](../SOURCES/OBJECT.CPP) falls into `InitAnim(GEN_ANIM_SAUTE)` whenever
+ it runs with the action button held. Running the object loop `N` times per frame re-fires
+-the jump (and combat, throw) `N` times. So `N`-step sub-stepping is only safe once `DoLife`
+-input/action processing is made once-per-frame (split from the per-object anim/physics
+-advance, or the momentary-action input bits are masked after the first step). That is real
+-surgery and its own correctness risk.
++the jump (and combat, throw) `N` times. That looked like it would need `DoLife` input/action
++processing made once-per-frame, or the momentary-action bits masked after the first step —
++real surgery. Neither turned out to be necessary; see Phase 2.
+ 
+ **Phased delivery.**
+ 
+@@ -193,11 +192,15 @@ surgery and its own correctness risk.
+   The implementation is much smaller than the clock-decoupling plan below anticipated: it reuses
+   `ManageTime` as-is, sets `TimerRefHR` per sub-step inside a `goto` loop, and restores it
+   afterward, so modals and the `--fixed-dt` harness are untouched and `--fixed-dt 16` stays
+-  byte-identical (elapsed == 16 -> exactly 1 step, verified). The input re-entrancy hazard is
+-  handled by masking `Input` down to movement bits (`I_JOY`) after the first sub-step so held
+-  actions (jump, throw) do not re-fire; `InitAnim` is idempotent
+-  ([OBJECT.CPP](../SOURCES/OBJECT.CPP)), so keeping the direction bits does not reset the walk
+-  anim. Verified by `tests/automation/test_move_substep.sh` (dt16 vs dt64 travel now match).
++  byte-identical (elapsed == 16 -> exactly 1 step, verified). Every sub-step sees the frame's
++  whole `Input`. The re-entrancy above does not materialise: the held-action branches sit behind
++  the object loop's `!(Input & I_FIRE)` gate and are idempotent there (`InitAnim` early-outs on
++  an unchanged `GenAnim`, `MagicBallFlags` is a latch), while the aim/turn delta is time-based
++  and *should* run per sub-step. Masking the fire bits opens that gate, drops the hero to the
++  idle path and resets a held weapon before its animation reaches the keyframe its projectile
++  spawns on: below ~60 fps nothing fires. Verified by `test_move_substep.sh`, the throttle
++  tests, and a throw that fires at every sub-step count (`--exec "fixedtimestep 8"` forces 2+
++  sub-steps under `--fixed-dt 16`).
+ 
+ **One-frame signals on a skipped frame -- the invariant.** A skip runs no simulation but still
+ presents a frame, so anything that must be *read/observed by the sim on the exact frame it changes*
