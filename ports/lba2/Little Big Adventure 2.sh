@@ -1,5 +1,4 @@
 #!/bin/bash
-# PORTMASTER: lba2.zip, Little Big Adventure 2.sh
 
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 
