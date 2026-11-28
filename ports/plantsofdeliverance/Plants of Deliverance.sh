@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# PortMaster preamble
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 if [ -d "/opt/system/Tools/PortMaster/" ]; then
   controlfolder="/opt/system/Tools/PortMaster"
@@ -67,10 +66,9 @@ cd $GAMEDIR
 
 
 $GPTOKEYB "$godot_executable" -c "$GAMEDIR/$gptk_filename" &
+pm_platform_helper "$godot_dir/$godot_executable"
 
 # Start Westonpack and Godot
-# Put CRUSTY_SHOW_CURSOR=1 after "env" if you need a mouse cursor
-# LD_PRELOAD is put here because Godot runtime links against libEGL.so, and crusty is interfering with that on some systems.
 $ESUDO env $weston_dir/westonwrap.sh headless noop kiosk crusty_x11egl \
 LD_PRELOAD= XDG_DATA_HOME=$CONFDIR $godot_dir/$godot_executable \
 --resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f \
