@@ -1,0 +1,36 @@
+diff --git a/src/init.c b/src/init.c
+index 8ab6b41..df1cf20 100644
+--- a/src/init.c
++++ b/src/init.c
+@@ -1,5 +1,6 @@
+ #include "common.h"
+ #include <assert.h>
++#include <dlfcn.h>
+ #include <SDL.h>
+ #include "config.h"
+ #include "mem.h"
+@@ -287,6 +288,24 @@ set_gl_extensions(void)
+             SDL_GL_GetProcAddress("glFramebufferTexture2DEXT");
+         glDeleteFramebuffers = (__typeof__(glDeleteFramebuffers))
+             SDL_GL_GetProcAddress("glDeleteFramebuffersEXT");
++
++        /*
++         * SDL may only know some of the functions (sdl12-compat over gl4es).
++         * Then take the whole set from the libGL we are linked against.
++         */
++        if (!(glGenFramebuffers && glBindFramebuffer &&
++              glFramebufferTexture2D && glDeleteFramebuffers)) {
++                glGenerateMipmap = (__typeof__(glGenerateMipmap))
++                    dlsym(RTLD_DEFAULT, "glGenerateMipmapEXT");
++                glGenFramebuffers = (__typeof__(glGenFramebuffers))
++                    dlsym(RTLD_DEFAULT, "glGenFramebuffersEXT");
++                glBindFramebuffer = (__typeof__(glBindFramebuffer))
++                    dlsym(RTLD_DEFAULT, "glBindFramebufferEXT");
++                glFramebufferTexture2D = (__typeof__(glFramebufferTexture2D))
++                    dlsym(RTLD_DEFAULT, "glFramebufferTexture2DEXT");
++                glDeleteFramebuffers = (__typeof__(glDeleteFramebuffers))
++                    dlsym(RTLD_DEFAULT, "glDeleteFramebuffersEXT");
++        }
+         assert((glGenFramebuffers && glBindFramebuffer &&
+                 glFramebufferTexture2D && glDeleteFramebuffers) ||
+                (!glGenFramebuffers && !glBindFramebuffer &&
